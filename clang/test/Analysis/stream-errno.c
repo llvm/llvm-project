@@ -51,6 +51,17 @@ void check_freopen(void) {
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
 }
 
+void check_popen(void) {
+  FILE *F = popen("xxx", "r");
+  if (!F) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
+    pclose(F);
+  }
+}
+
 void check_fclose(void) {
   FILE *F = tmpfile();
   if (!F)
@@ -62,6 +73,20 @@ void check_fclose(void) {
     return;
   }
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+}
+
+void check_pclose(void) {
+  FILE *F = popen("xx", "w");
+  if (!F)
+    return;
+  int Ret = pclose(F);
+  if (Ret == -1) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    clang_analyzer_eval(Ret >= 0);   // expected-warning{{TRUE}}
+    if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+  }
 }
 
 void check_fread_size0(void) {
