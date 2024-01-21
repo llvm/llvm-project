@@ -545,7 +545,7 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
                                                       ArrayRef<Fraction> b) {
   // The length of the convolution is the sum of the lengths
   // of the two sequences. We pad the shorter one with zeroes.
-  unsigned len = a.size() + b.size();
+  unsigned len = a.size() + b.size() - 1;
 
   // We define accessors to avoid out-of-bounds errors.
   auto getItem = [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
