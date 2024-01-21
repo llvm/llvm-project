@@ -216,7 +216,7 @@ std::string GetClangToolCommand() {
   SmallString<128> ClangToolPath;
   ClangToolPath = llvm::sys::path::parent_path(ClangExecutable);
   llvm::sys::path::append(ClangToolPath, "clang-tool");
-  return std::string(ClangToolPath.str());
+  return std::string(ClangToolPath);
 }
 
 } // namespace

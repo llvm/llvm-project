@@ -2081,13 +2081,7 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (!sym || !sym->isLazy())
-    return;
-
-  MemoryBufferRef mb;
-  mb = cast<LazyObject>(sym)->file->mb;
-
-  if (isBitcode(mb))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
     sym->extract();
 }
 

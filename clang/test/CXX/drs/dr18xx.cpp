@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx11-17,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -316,6 +316,41 @@ namespace dr1872 { // dr1872: 9
   constexpr int z = A<Z>().f();
   // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
   //   since-cxx11-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+#endif
+}
+
+namespace dr1878 { // dr1878: 18
+#if __cplusplus >= 201402L
+#if __cplusplus >= 202002L
+template <typename T>
+concept C = true;
+#endif
+
+struct S {
+  template <typename T>
+  operator auto() const { return short(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto() const { return int(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto&() const { return char(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto*() const { return long(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator decltype(auto)() const { return unsigned(); }
+  // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#if __cplusplus >= 202002L
+  template <typename T>
+  operator C auto() const { return float(); }
+  // since-cxx20-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator C decltype(auto)() const { return double(); }
+  // since-cxx20-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#endif
+};
 #endif
 }
 
