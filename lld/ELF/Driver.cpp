@@ -3103,7 +3103,7 @@ bool LinkerDriver::checkFile(StringRef path) {
 
   MemoryBufferRef mbref = *buffer;
 
-  switch (identify_magic(mbref.getBuffer())){
+  switch (identify_magic(mbref.getBuffer())) {
   case file_magic::unknown:
     return true;
   case file_magic::archive: {
