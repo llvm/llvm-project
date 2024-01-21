@@ -36,6 +36,12 @@ static Token getTokenAtLoc(SourceLocation Loc,
   return Tok;
 }
 
+namespace {
+AST_MATCHER(FunctionDecl, isUserDefineLiteral) {
+  return Node.getLiteralIdentifier() != nullptr;
+}
+} // namespace
+
 namespace tidy::google::runtime {
 
 IntegerTypesCheck::IntegerTypesCheck(StringRef Name, ClangTidyContext *Context)
@@ -60,8 +66,8 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
       typeLoc(loc(isInteger()),
               unless(anyOf(hasAncestor(callExpr(
                                callee(functionDecl(hasAttr(attr::Format))))),
-                           hasParent(parmVarDecl(hasAncestor(functionDecl(
-                               matchesName("operator\"\".*$"))))))))
+                           hasParent(parmVarDecl(hasAncestor(
+                               functionDecl(isUserDefineLiteral())))))))
           .bind("tl"),
       this);
   IdentTable = std::make_unique<IdentifierTable>(getLangOpts());
