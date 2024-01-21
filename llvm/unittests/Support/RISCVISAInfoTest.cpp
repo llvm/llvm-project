@@ -377,11 +377,23 @@ TEST(ParseArchString, AcceptsAmbiguousFromRelaxExtensions) {
   }
 }
 
+TEST(ParseArchString, RejectsRelaxExtensionsNotStartWithEorIorG) {
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32zba_im", true).takeError()),
+      "first letter should be 'e', 'i' or 'g'");
+}
+
 TEST(ParseArchString,
      RejectsMultiLetterExtensionFollowBySingleLetterExtensions) {
   for (StringRef Input : {"rv32izbam", "rv32i_zbam"})
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "unsupported standard user-level extension 'zbam'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32izbai_m", true).takeError()),
+      "unsupported standard user-level extension 'zbai'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rv32izbaim", true).takeError()),
+      "unsupported standard user-level extension 'zbaim'");
   EXPECT_EQ(
       toString(
           RISCVISAInfo::parseArchString("rv32i_zba1p0m", true).takeError()),
