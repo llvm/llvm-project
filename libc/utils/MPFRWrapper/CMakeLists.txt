@@ -6,8 +6,9 @@ if(LIBC_TESTS_CAN_USE_MPFR)
   )
   target_compile_options(libcMPFRWrapper PRIVATE -O3)
   if (LLVM_LIBC_FULL_BUILD)
-    # Target using this library will need to link against C++ and unwind libraries.
-    # Since we are using MPFR anyway, we directly specifies the GNU toolchain.
+    # It is not easy to make libcMPFRWrapper a standalone library because gmp.h may unconditionally
+    # pull in some STL headers. As a result, targets using this library will need to link against 
+    # C++ and unwind libraries. Since we are using MPFR anyway, we directly specifies the GNU toolchain.
     target_link_libraries(libcMPFRWrapper PUBLIC -lstdc++ -lgcc_s)
   endif()
   add_dependencies(
