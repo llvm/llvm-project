@@ -575,11 +575,13 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
+- Clang now diagnoses ``auto`` and ``decltype(auto)`` in declarations of conversion function template
+  (`CWG1878: <https://cplusplus.github.io/CWG/issues/1878.html>`_)
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
-
+- Clang now diagnoses incorrect usage of ``const`` and ``pure`` attributes, so ``-Wignored-attributes`` diagnoses more cases.
 - Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
   expressions on matrix types or builtin functions without an argument list) as placement-args
   to new-expressions.
@@ -1001,6 +1003,9 @@ Bug Fixes to C++ Support
 - Clang now allows parenthesized initialization of arrays in `operator new[]`.
   Fixes: (`#68198 <https://github.com/llvm/llvm-project/issues/68198>`_)
 
+- Fixes CTAD for aggregates on nested template classes. Fixes:
+  (`#77599 <https://github.com/llvm/llvm-project/issues/77599>`_)
+
 - Fix crash when importing the same module with an dynamic initializer twice
   in different visibility.
   Fixes (`#67893 <https://github.com/llvm/llvm-project/issues/67893>`_)
@@ -1234,6 +1239,7 @@ clang-format
 - Add ``PenaltyBreakScopeResolution`` option.
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
+- Add ``SkipMacroDefinitionBody`` option.
 
 libclang
 --------

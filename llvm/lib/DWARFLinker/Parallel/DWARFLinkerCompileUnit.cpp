@@ -294,7 +294,7 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
                ": " + Entry + " and " + Path + ".",
            &Die);
     }
-    Entry = std::string(ResolvedPath.str());
+    Entry = std::string(ResolvedPath);
   }
 }
 

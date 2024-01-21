@@ -218,7 +218,7 @@ static void analyzeImportedModule(
     ReportWarning(Twine("Conflicting parseable interfaces for Swift Module ") +
                       *Name + ": " + Entry + " and " + Path,
                   DIE);
-  Entry = std::string(ResolvedPath.str());
+  Entry = std::string(ResolvedPath);
 }
 
 /// The distinct types of work performed by the work loop in
