@@ -311,6 +311,17 @@ def int_amdgcn_iglp_opt : ClangBuiltin<"__builtin_amdgcn_iglp_opt">,
 def int_amdgcn_s_waitcnt : ClangBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// GFX12 intrinsics
+class AMDGPUWaitIntrinsic :
+  Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+def int_amdgcn_s_wait_bvhcnt         : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_dscnt          : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_expcnt         : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_kmcnt          : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_loadcnt        : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_samplecnt      : AMDGPUWaitIntrinsic;
+def int_amdgcn_s_wait_storecnt       : AMDGPUWaitIntrinsic;
+
 def int_amdgcn_div_scale : DefaultAttrsIntrinsic<
   // 1st parameter: Numerator
   // 2nd parameter: Denominator
