@@ -432,7 +432,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // This means that
     // the numerator is a polynomial in s, with coefficients as
     // quasipolynomials (given by binomial coefficients), and the denominator
-    // is polynomial in s, with fractional coefficients (given by taking the
+    // is polynomial in s, with integral coefficients (given by taking the
     // convolution over all j).
 
     // Step (3) We need to find the constant term in the expansion of each

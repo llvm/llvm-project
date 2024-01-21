@@ -157,11 +157,12 @@ TEST(BarvinokTest, computeNumTerms) {
   // the coefficient of total ⌊p/2⌋ is the sum of coefficients of all
   // terms with 1 affine function,
   Fraction pSquaredCoeff = 0, pCoeff = 0, constantTerm = 0;
+  SmallVector<Fraction> coefficients = numPoints.getCoefficients();
   for (unsigned i = 0; i < numPoints.getCoefficients().size(); i++)
     if (numPoints.getAffine()[i].size() == 2)
-      pSquaredCoeff = pSquaredCoeff + numPoints.getCoefficients()[i];
+      pSquaredCoeff = pSquaredCoeff + coefficients[i];
     else if (numPoints.getAffine()[i].size() == 1)
-      pCoeff = pCoeff + numPoints.getCoefficients()[i];
+      pCoeff = pCoeff + coefficients[i];
 
   // We expect the answer to be (1/2)⌊p/2⌋^2 + (3/2)⌊p/2⌋ + 1.
   EXPECT_EQ(pSquaredCoeff, Fraction(1, 2));
@@ -199,13 +200,11 @@ TEST(BarvinokTest, computeNumTerms) {
     for (const SmallVector<Fraction> &aff : term)
       EXPECT_EQ(aff[0] + aff[1] + aff[2] + aff[3], 1);
 
-  Fraction m = 0, n = 0, p = 0, mn = 0, np = 0, pm = 0, mnp = 0;
-
   // We store the coefficients of M, N and P in this array.
   Fraction count[2][2][2];
-  unsigned mIndex, nIndex, pIndex;
-  for (unsigned i = 0, e = numPoints.getCoefficients().size(); i < e; i++) {
-    mIndex = nIndex = pIndex = 0;
+  coefficients = numPoints.getCoefficients();
+  for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
+    unsigned mIndex = 0, nIndex = 0, pIndex = 0;
     for (const SmallVector<Fraction> &aff : numPoints.getAffine()[i]) {
       if (aff[0] == 1)
         mIndex = 1;
@@ -215,7 +214,7 @@ TEST(BarvinokTest, computeNumTerms) {
         pIndex = 1;
       EXPECT_EQ(aff[3], 0);
     }
-    count[mIndex][nIndex][pIndex] += numPoints.getCoefficients()[i];
+    count[mIndex][nIndex][pIndex] += coefficients[i];
   }
 
   // We expect the answer to be
