@@ -136,6 +136,7 @@ private:
   void onPrepareRename(const TextDocumentPositionParams &,
                        Callback<PrepareRenameResult>);
   void onRename(const RenameParams &, Callback<WorkspaceEdit>);
+  void onIndexedRename(const IndexedRenameParams &, Callback<WorkspaceEdit>);
   void onHover(const TextDocumentPositionParams &,
                Callback<std::optional<Hover>>);
   void onPrepareTypeHierarchy(const TypeHierarchyPrepareParams &,

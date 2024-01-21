@@ -1192,6 +1192,15 @@ bool fromJSON(const llvm::json::Value &Params, RenameParams &R,
          O.map("position", R.position) && O.map("newName", R.newName);
 }
 
+bool fromJSON(const llvm::json::Value &Params,
+              IndexedRenameParams &IndexedRename, llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", IndexedRename.textDocument) &&
+         O.map("oldName", IndexedRename.oldName) &&
+         O.map("newName", IndexedRename.newName) &&
+         O.map("positions", IndexedRename.positions);
+}
+
 llvm::json::Value toJSON(const DocumentHighlight &DH) {
   return llvm::json::Object{
       {"range", toJSON(DH.range)},

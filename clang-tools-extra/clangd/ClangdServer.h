@@ -341,6 +341,17 @@ public:
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
               const RenameOptions &Opts, Callback<RenameResult> CB);
 
+  /// Rename all occurrences of a symbol named `OldName` to `NewName` at the
+  /// given `Positions`.
+  ///
+  /// `PrimaryFile` is used to determine the language options for the symbol to
+  /// rename, eg. to decide whether `OldName` and `NewName` are Objective-C
+  /// selectors or normal identifiers.
+  void
+  indexedRename(const std::map<URIForFile, std::vector<Position>> &Positions,
+                PathRef PrimaryFile, llvm::StringRef OldName,
+                llvm::StringRef NewName, Callback<FileEdits> CB);
+
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
     std::string Title; /// A single-line message to show in the UI.
