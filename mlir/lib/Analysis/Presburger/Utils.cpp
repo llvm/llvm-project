@@ -546,15 +546,10 @@ std::vector<Fraction> presburger::convolution(ArrayRef<Fraction> a,
   unsigned len = a.size() + b.size();
 
   // We define accessors to avoid out-of-bounds errors.
-  std::function<Fraction(unsigned i)> aGetItem = [a](unsigned i) -> Fraction {
-    if (i < a.size())
-      return a[i];
-    else
-      return 0;
-  };
-  std::function<Fraction(unsigned i)> bGetItem = [b](unsigned i) -> Fraction {
-    if (i < b.size())
-      return b[i];
+  std::function<Fraction(ArrayRef<Fraction>, unsigned)> getItem =
+      [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
+    if (i < arr.size())
+      return arr[i];
     else
       return 0;
   };
@@ -564,7 +559,7 @@ std::vector<Fraction> presburger::convolution(ArrayRef<Fraction> a,
   for (unsigned k = 0; k < len; ++k) {
     Fraction sum(0, 1);
     for (unsigned l = 0; l <= k; ++l)
-      sum += aGetItem(l) * bGetItem(k - l);
+      sum += getItem(a, l) * getItem(b, k - l);
     convolution.push_back(sum);
   }
   return convolution;
