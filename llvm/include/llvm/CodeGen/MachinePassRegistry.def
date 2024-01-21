@@ -23,9 +23,10 @@ MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
-MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass, ())
+MODULE_PASS("global-merge", GlobalMergePass, (TM, GlobalMergeOptions()))
 MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass, ())
 MODULE_PASS("lower-emutls", LowerEmuTLSPass, ())
+MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass, ())
 MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 #undef MODULE_PASS
 

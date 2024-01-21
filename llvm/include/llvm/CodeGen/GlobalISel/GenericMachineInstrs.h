@@ -114,6 +114,21 @@ public:
   }
 };
 
+/// Represents either G_INDEXED_LOAD, G_INDEXED_ZEXTLOAD or G_INDEXED_SEXTLOAD.
+class GIndexedAnyExtLoad : public GIndexedLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_INDEXED_LOAD:
+    case TargetOpcode::G_INDEXED_ZEXTLOAD:
+    case TargetOpcode::G_INDEXED_SEXTLOAD:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
 /// Represents a G_ZEXTLOAD.
 class GIndexedZExtLoad : GIndexedExtLoad {
 public:

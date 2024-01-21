@@ -29,7 +29,7 @@ sparse_tensor::detail::stageWithSortImpl(StageWithSortSparseOp op,
 
   // Clones the original operation but changing the output to an unordered COO.
   Operation *cloned = rewriter.clone(*op.getOperation());
-  rewriter.updateRootInPlace(cloned, [cloned, srcCOOTp]() {
+  rewriter.modifyOpInPlace(cloned, [cloned, srcCOOTp]() {
     cloned->getOpResult(0).setType(srcCOOTp);
   });
   Value srcCOO = cloned->getOpResult(0);

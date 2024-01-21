@@ -80,7 +80,7 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
       opMeshAxes = opAxesIota;
     }
     if (llvm::all_of(opMeshAxes, [&mesh](MeshAxis axis) {
-          return ShapedType::isDynamic(mesh.getDimSizes()[axis]);
+          return ShapedType::isDynamic(mesh.getShape()[axis]);
         })) {
       // All mesh dimensions are dynamic. Nothing to fold.
       return failure();
@@ -91,7 +91,7 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
     SmallVector<size_t> newToOldResultsIndexMap;
 
     for (size_t i = 0; i < opMeshAxes.size(); ++i) {
-      auto meshAxisSize = mesh.getDimSizes()[opMeshAxes[i]];
+      auto meshAxisSize = mesh.getShape()[opMeshAxes[i]];
       if (ShapedType::isDynamic(meshAxisSize)) {
         newToOldResultsIndexMap.push_back(i);
         newShapeOpMeshAxes.push_back(opMeshAxes[i]);
@@ -103,13 +103,14 @@ struct ClusterShapeFolder : OpRewritePattern<ClusterShapeOp> {
     }
 
     // Leave only the dynamic mesh axes to be queried.
-    ClusterShapeOp newShapeOp =
-        builder.create<ClusterShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
-    for (size_t i = 0; i < newShapeOp->getResults().size(); ++i) {
-      newResults[newToOldResultsIndexMap[i]] = newShapeOp->getResults()[i];
+    if (!newShapeOpMeshAxes.empty()) {
+      ClusterShapeOp newShapeOp =
+          builder.create<ClusterShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
+      for (size_t i = 0; i < newShapeOp->getResults().size(); ++i) {
+        newResults[newToOldResultsIndexMap[i]] = newShapeOp->getResults()[i];
+      }
     }
-
-    rewriter.replaceAllUsesWith(op.getResults(), newResults);
+    rewriter.replaceOp(op, newResults);
 
     return success();
   }

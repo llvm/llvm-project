@@ -1,6 +1,6 @@
 // RUN: mlir-opt -test-mesh-process-multi-index-op-lowering %s | FileCheck %s
 
-mesh.cluster @mesh2d(rank = 2)
+mesh.cluster @mesh2d(shape = ?x?)
 
 // CHECK-LABEL: func.func @multi_index_2d_mesh
 func.func @multi_index_2d_mesh() -> (index, index) {

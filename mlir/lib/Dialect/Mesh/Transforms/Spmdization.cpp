@@ -88,8 +88,8 @@ ShapedType shardShapedType(ShapedType shape, ClusterOp mesh,
                            MeshShardingAttr sharding) {
   using Dim = std::decay_t<decltype(shape.getDimSize(0))>;
   SmallVector<Dim> resShapeArr(shape.getShape().size());
-  shardShape(shape.getShape(), mesh.canonicalDimSizes(),
-             sharding.getSplitAxes(), resShapeArr);
+  shardShape(shape.getShape(), mesh.getShape(), sharding.getSplitAxes(),
+             resShapeArr);
   return shape.clone(resShapeArr);
 }
 
@@ -212,9 +212,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
 
   MeshShardingAttr targetSharding = targetShardingInSplitLastAxis(
       ctx, sourceSharding, splitTensorAxis, splitMeshAxis);
-  ShapedType targetShape =
-      targetShapeInSplitLastAxis(sourceShard.getType(), splitTensorAxis,
-                                 mesh.canonicalDimSizes()[splitMeshAxis]);
+  ShapedType targetShape = targetShapeInSplitLastAxis(
+      sourceShard.getType(), splitTensorAxis, mesh.getShape()[splitMeshAxis]);
 
   Value meshAxisSize =
       builder
@@ -391,8 +390,7 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
   MeshShardingAttr targetSharding =
       targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitMeshAxis);
   ShapedType allGatherResultShape = allGatherResultShapeInUnsplitLastAxis(
-      sourceShard.getType(), mesh.canonicalDimSizes()[splitMeshAxis],
-      splitTensorAxis);
+      sourceShard.getType(), mesh.getShape()[splitMeshAxis], splitTensorAxis);
   Value allGatherResult = builder.create<AllGatherOp>(
       RankedTensorType::get(allGatherResultShape.getShape(),
                             allGatherResultShape.getElementType()),
@@ -526,8 +524,8 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, ClusterOp mesh,
   MeshShardingAttr targetSharding = targetShardingInMoveLastAxis(
       ctx, sourceSharding, sourceTensorAxis, targetTensorAxis);
   ShapedType allToAllResultShape = allToAllResultShapeInMoveLastAxis(
-      sourceShard.getType(), mesh.canonicalDimSizes()[meshAxis],
-      sourceTensorAxis, targetTensorAxis);
+      sourceShard.getType(), mesh.getShape()[meshAxis], sourceTensorAxis,
+      targetTensorAxis);
   Value allToAllResult = builder.create<AllToAllOp>(
       RankedTensorType::get(allToAllResultShape.getShape(),
                             allToAllResultShape.getElementType()),

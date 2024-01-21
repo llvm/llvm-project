@@ -95,7 +95,7 @@ public:
   /// level to the same indent.
   /// Note that \c nextLine must have been called before this method.
   void adjustToUnmodifiedLine(const AnnotatedLine &Line) {
-    if (Line.InPPDirective)
+    if (Line.InPPDirective || Line.IsContinuation)
       return;
     assert(Line.Level < IndentForLevel.size());
     if (Line.First->is(tok::comment) && IndentForLevel[Line.Level] != -1)

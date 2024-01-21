@@ -43,12 +43,18 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-/// A helper struct that stores finger prints of ops in order to detect broken
-/// RewritePatterns. A rewrite pattern is broken if it modifies IR without
-/// using the rewriter API or if it returns an inconsistent return value.
-struct DebugFingerPrints : public RewriterBase::ForwardingListener {
-  DebugFingerPrints(RewriterBase::Listener *driver)
-      : RewriterBase::ForwardingListener(driver) {}
+/// A helper struct that performs various "expensive checks" to detect broken
+/// rewrite patterns use the rewriter API incorrectly. A rewrite pattern is
+/// broken if:
+/// * IR does not verify after pattern application / folding.
+/// * Pattern returns "failure" but the IR has changed.
+/// * Pattern returns "success" but the IR has not changed.
+///
+/// This struct stores finger prints of ops to determine whether the IR has
+/// changed or not.
+struct ExpensiveChecks : public RewriterBase::ForwardingListener {
+  ExpensiveChecks(RewriterBase::Listener *driver, Operation *topLevel)
+      : RewriterBase::ForwardingListener(driver), topLevel(topLevel) {}
 
   /// Compute finger prints of the given op and its nested ops.
   void computeFingerPrints(Operation *topLevel) {
@@ -65,6 +71,13 @@ struct DebugFingerPrints : public RewriterBase::ForwardingListener {
   }
 
   void notifyRewriteSuccess() {
+    if (!topLevel)
+      return;
+
+    // Make sure that the IR still verifies.
+    if (failed(verify(topLevel)))
+      llvm::report_fatal_error("IR failed to verify after pattern application");
+
     // Pattern application success => IR must have changed.
     OperationFingerPrint afterFingerPrint(topLevel);
     if (*topLevelFingerPrint == afterFingerPrint) {
@@ -90,12 +103,24 @@ struct DebugFingerPrints : public RewriterBase::ForwardingListener {
   }
 
   void notifyRewriteFailure() {
+    if (!topLevel)
+      return;
+
     // Pattern application failure => IR must not have changed.
     OperationFingerPrint afterFingerPrint(topLevel);
     if (*topLevelFingerPrint != afterFingerPrint) {
       // Note: Run "mlir-opt -debug" to see which pattern is broken.
       llvm::report_fatal_error("pattern returned failure but IR did change");
     }
+  }
+
+  void notifyFoldingSuccess() {
+    if (!topLevel)
+      return;
+
+    // Make sure that the IR still verifies.
+    if (failed(verify(topLevel)))
+      llvm::report_fatal_error("IR failed to verify after folding");
   }
 
 protected:
@@ -348,6 +373,9 @@ private:
   /// Notify the driver that the given block was created.
   void notifyBlockCreated(Block *block) override;
 
+  /// Notify the driver that the given block is about to be removed.
+  void notifyBlockRemoved(Block *block) override;
+
   /// For debugging only: Notify the driver of a pattern match failure.
   LogicalResult
   notifyMatchFailure(Location loc,
@@ -362,7 +390,7 @@ private:
   PatternApplicator matcher;
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  DebugFingerPrints debugFingerPrints;
+  ExpensiveChecks expensiveChecks;
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 };
 } // namespace
@@ -373,7 +401,9 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
     : PatternRewriter(ctx), config(config), matcher(patterns)
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // clang-format off
-      , debugFingerPrints(this)
+      , expensiveChecks(
+          /*driver=*/this,
+          /*topLevel=*/config.scope ? config.scope->getParentOp() : nullptr)
 // clang-format on
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 {
@@ -384,7 +414,7 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // Send IR notifications to the debug handler. This handler will then forward
   // all notifications to this GreedyPatternRewriteDriver.
-  setListener(&debugFingerPrints);
+  setListener(&expensiveChecks);
 #else
   setListener(this);
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -458,8 +488,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-          if (config.scope && failed(verify(config.scope->getParentOp())))
-            llvm::report_fatal_error("IR failed to verify after folding");
+          expensiveChecks.notifyFoldingSuccess();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
           continue;
         }
@@ -513,8 +542,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
           changed = true;
           LLVM_DEBUG(logSuccessfulFolding(dumpRootOp));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-          if (config.scope && failed(verify(config.scope->getParentOp())))
-            llvm::report_fatal_error("IR failed to verify after folding");
+          expensiveChecks.notifyFoldingSuccess();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
           continue;
         }
@@ -551,33 +579,26 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     if (config.scope) {
-      debugFingerPrints.computeFingerPrints(config.scope->getParentOp());
+      expensiveChecks.computeFingerPrints(config.scope->getParentOp());
     }
     auto clearFingerprints =
-        llvm::make_scope_exit([&]() { debugFingerPrints.clear(); });
+        llvm::make_scope_exit([&]() { expensiveChecks.clear(); });
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
     LogicalResult matchResult =
         matcher.matchAndRewrite(op, *this, canApply, onFailure, onSuccess);
 
-#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-    if (config.scope && failed(verify(config.scope->getParentOp())))
-      llvm::report_fatal_error("IR failed to verify after pattern application");
-#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-
     if (succeeded(matchResult)) {
       LLVM_DEBUG(logResultWithLine("success", "pattern matched"));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-      if (config.scope)
-        debugFingerPrints.notifyRewriteSuccess();
+      expensiveChecks.notifyRewriteSuccess();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       changed = true;
       ++numRewrites;
     } else {
       LLVM_DEBUG(logResultWithLine("failure", "pattern failed to match"));
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-      if (config.scope)
-        debugFingerPrints.notifyRewriteFailure();
+      expensiveChecks.notifyRewriteFailure();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     }
   }
@@ -613,6 +634,11 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
 void GreedyPatternRewriteDriver::notifyBlockCreated(Block *block) {
   if (config.listener)
     config.listener->notifyBlockCreated(block);
+}
+
+void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {
+  if (config.listener)
+    config.listener->notifyBlockRemoved(block);
 }
 
 void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op) {

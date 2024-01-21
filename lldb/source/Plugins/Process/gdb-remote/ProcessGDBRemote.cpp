@@ -4189,52 +4189,55 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
       // Note that XML in general requires that each of these attributes only
       // appears once, so we don't have to handle that here.
       if (attr_name == "name") {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Found field node name \"{0}\"",
-                 attr_value.data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Found field node name \"{0}\"",
+            attr_value.data());
         name = attr_value;
       } else if (attr_name == "start") {
         unsigned parsed_start = 0;
         if (llvm::to_integer(attr_value, parsed_start)) {
           if (parsed_start > max_start_bit) {
-            LLDB_LOG(
-                log,
-                "ProcessGDBRemote::ParseFlags Invalid start {0} in field node, "
-                "cannot be > {1}",
-                parsed_start, max_start_bit);
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseFlagsFields Invalid start {0} in "
+                     "field node, "
+                     "cannot be > {1}",
+                     parsed_start, max_start_bit);
           } else
             start = parsed_start;
         } else {
-          LLDB_LOG(log,
-                   "ProcessGDBRemote::ParseFlags Invalid start \"{0}\" in "
-                   "field node",
-                   attr_value.data());
+          LLDB_LOG(
+              log,
+              "ProcessGDBRemote::ParseFlagsFields Invalid start \"{0}\" in "
+              "field node",
+              attr_value.data());
         }
       } else if (attr_name == "end") {
         unsigned parsed_end = 0;
         if (llvm::to_integer(attr_value, parsed_end))
           if (parsed_end > max_start_bit) {
-            LLDB_LOG(
-                log,
-                "ProcessGDBRemote::ParseFlags Invalid end {0} in field node, "
-                "cannot be > {1}",
-                parsed_end, max_start_bit);
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseFlagsFields Invalid end {0} in "
+                     "field node, "
+                     "cannot be > {1}",
+                     parsed_end, max_start_bit);
           } else
             end = parsed_end;
         else {
-          LLDB_LOG(
-              log,
-              "ProcessGDBRemote::ParseFlags Invalid end \"{0}\" in field node",
-              attr_value.data());
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseFlagsFields Invalid end \"{0}\" in "
+                   "field node",
+                   attr_value.data());
         }
       } else if (attr_name == "type") {
         // Type is a known attribute but we do not currently use it and it is
         // not required.
       } else {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Ignoring unknown attribute "
-                 "\"{0}\" in field node",
-                 attr_name.data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Ignoring unknown attribute "
+            "\"{0}\" in field node",
+            attr_name.data());
       }
 
       return true; // Walk all attributes of the field.
@@ -4242,10 +4245,11 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(XMLNode flags_node,
 
     if (name && start && end) {
       if (*start > *end) {
-        LLDB_LOG(log,
-                 "ProcessGDBRemote::ParseFlags Start {0} > end {1} in field "
-                 "\"{2}\", ignoring",
-                 *start, *end, name->data());
+        LLDB_LOG(
+            log,
+            "ProcessGDBRemote::ParseFlagsFields Start {0} > end {1} in field "
+            "\"{2}\", ignoring",
+            *start, *end, name->data());
       } else {
         fields.push_back(RegisterFlags::Field(name->str(), *start, *end));
       }

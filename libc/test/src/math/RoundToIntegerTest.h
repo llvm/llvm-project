@@ -31,11 +31,12 @@ public:
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const F zero = F(FPBits::zero());
-  const F neg_zero = F(FPBits::neg_zero());
+  const F neg_zero = F(FPBits::zero(Sign::NEG));
   const F inf = F(FPBits::inf());
-  const F neg_inf = F(FPBits::neg_inf());
+  const F neg_inf = F(FPBits::inf(Sign::NEG));
   const F nan = F(FPBits::build_quiet_nan(1));
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
@@ -127,7 +128,7 @@ public:
     // is set.
     FPBits bits(F(1.0));
     bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
-    bits.set_sign(1);
+    bits.set_sign(Sign::NEG);
     bits.set_mantissa(0);
 
     F x = F(bits);
@@ -191,7 +192,7 @@ public:
     // is set.
     FPBits bits(F(1.0));
     bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
-    bits.set_sign(1);
+    bits.set_sign(Sign::NEG);
     bits.set_mantissa(FPBits::FRACTION_MASK);
 
     F x = F(bits);

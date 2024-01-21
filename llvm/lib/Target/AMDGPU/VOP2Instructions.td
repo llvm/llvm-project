@@ -69,7 +69,7 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
   let mayStore = 0;
   let hasSideEffects = 0;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
 
@@ -2512,6 +2512,7 @@ defm V_FMAAK_F32        : VOP2_Real_MADK_gfx940 <0x18>;
 }
 
 multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : Base_VOP2_Real_e32e64_vi<op> {
+  let SubtargetPredicate = isGFX9Only in
   def _dpp_vi : VOP2_DPP<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
@@ -2520,22 +2521,28 @@ multiclass VOP2_Real_DOT_ACC_gfx10<bits<6> op> :
   VOP2_Real_dpp_gfx10<op>,
   VOP2_Real_dpp8_gfx10<op>;
 
-let SubtargetPredicate = HasDot5Insts in {
+multiclass VOP2Only_Real_DOT_ACC_gfx10<bits<6> op> : VOP2_Real_dpp_gfx10<op>,
+                                                     VOP2_Real_dpp8_gfx10<op> {
+  let IsSingle = 1 in
+    defm NAME : VOP2_Real_e32_gfx10<op>;
+}
+
+let OtherPredicates = [HasDot5Insts] in {
   defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx9<0x37>;
   // NB: Opcode conflicts with V_DOT8C_I32_I4
   // This opcode exists in gfx 10.1* only
-  defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx10<0x02>;
+  defm V_DOT2C_F32_F16 : VOP2Only_Real_DOT_ACC_gfx10<0x02>;
 }
 
-let SubtargetPredicate = HasDot6Insts in {
+let OtherPredicates = [HasDot6Insts] in {
   defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx9<0x39>;
-  defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx10<0x0d>;
+  defm V_DOT4C_I32_I8  : VOP2Only_Real_DOT_ACC_gfx10<0x0d>;
 }
 
-let SubtargetPredicate = HasDot4Insts in {
+let OtherPredicates = [HasDot4Insts] in {
   defm V_DOT2C_I32_I16 : VOP2_Real_DOT_ACC_gfx9<0x38>;
 }
-let SubtargetPredicate = HasDot3Insts in {
+let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
 

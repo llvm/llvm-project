@@ -1548,15 +1548,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Search paths");
     searchPaths.emplace_back("");
+    for (auto *arg : args.filtered(OPT_libpath))
+      searchPaths.push_back(arg->getValue());
     if (!config->mingw) {
       // Prefer the Clang provided builtins over the ones bundled with MSVC.
       // In MinGW mode, the compiler driver passes the necessary libpath
       // options explicitly.
       addClangLibSearchPaths(argsArr[0]);
-    }
-    for (auto *arg : args.filtered(OPT_libpath))
-      searchPaths.push_back(arg->getValue());
-    if (!config->mingw) {
       // Don't automatically deduce the lib path from the environment or MSVC
       // installations when operating in mingw mode. (This also makes LLD ignore
       // winsysroot and vctoolsdir arguments.)

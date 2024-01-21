@@ -1081,7 +1081,11 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
       error("--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
             "but got " +
             knownSafeName);
-    vtableSymbolsWithNoRTTI.remove(knownSafeName);
+    Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
+    if (!pat)
+      error("--lto-known-safe-vtables=: " + toString(pat.takeError()));
+    vtableSymbolsWithNoRTTI.remove_if(
+        [&](StringRef s) { return pat->match(s); });
   }
 
   ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
@@ -2077,13 +2081,7 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (!sym || !sym->isLazy())
-    return;
-
-  MemoryBufferRef mb;
-  mb = cast<LazyObject>(sym)->file->mb;
-
-  if (isBitcode(mb))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
     sym->extract();
 }
 

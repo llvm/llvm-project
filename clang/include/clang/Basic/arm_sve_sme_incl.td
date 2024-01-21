@@ -222,12 +222,13 @@ def ReverseMergeAnyBinOp      : FlagType<0x800000000>; // e.g. Implement SUBR_X 
 def ReverseMergeAnyAccOp      : FlagType<0x1000000000>; // e.g. Implement MSB_X using MLS_X.
 def IsStreaming               : FlagType<0x2000000000>;
 def IsStreamingCompatible     : FlagType<0x4000000000>;
-def IsSharedZA                : FlagType<0x8000000000>;
-def IsPreservesZA             : FlagType<0x10000000000>;
-def IsReadZA                  : FlagType<0x20000000000>;
-def IsWriteZA                 : FlagType<0x40000000000>;
-def IsReductionQV             : FlagType<0x80000000000>;
-def IsStreamingOrSVE2p1       : FlagType<0x80000000000>; // Use for intrinsics that are common between sme/sme2 and sve2p1.
+def IsReadZA                  : FlagType<0x8000000000>;
+def IsWriteZA                 : FlagType<0x10000000000>;
+def IsReductionQV             : FlagType<0x20000000000>;
+def IsStreamingOrSVE2p1       : FlagType<0x40000000000>; // Use for intrinsics that are common between sme/sme2 and sve2p1.
+def IsInZA                    : FlagType<0x80000000000>;
+def IsOutZA                   : FlagType<0x100000000000>;
+def IsInOutZA                 : FlagType<0x200000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
