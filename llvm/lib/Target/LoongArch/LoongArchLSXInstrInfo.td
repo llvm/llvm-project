@@ -1746,6 +1746,14 @@ foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in
 def : Pat<(fneg (v4f32 LSX128:$vj)), (VBITREVI_W LSX128:$vj, 31)>;
 def : Pat<(fneg (v2f64 LSX128:$vj)), (VBITREVI_D LSX128:$vj, 63)>;
 
+// VFFINT_{S_W/D_L}
+def : Pat<(v4f32 (sint_to_fp v4i32:$vj)), (VFFINT_S_W v4i32:$vj)>;
+def : Pat<(v2f64 (sint_to_fp v2i64:$vj)), (VFFINT_D_L v2i64:$vj)>;
+
+// VFFINT_{S_WU/D_LU}
+def : Pat<(v4f32 (uint_to_fp v4i32:$vj)), (VFFINT_S_WU v4i32:$vj)>;
+def : Pat<(v2f64 (uint_to_fp v2i64:$vj)), (VFFINT_D_LU v2i64:$vj)>;
+
 } // Predicates = [HasExtLSX]
 
 /// Intrinsic pattern
