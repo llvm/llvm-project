@@ -313,13 +313,15 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
 
   tooling::addTargetAndModeForProgramName(Cmd, Cmd.front());
 
-  // Check whether the flag exists, either as -flag or -flag=*
-  auto Has = [&](llvm::StringRef Flag) {
-    for (llvm::StringRef Arg : Cmd) {
-      if (Arg.consume_front(Flag) && (Arg.empty() || Arg[0] == '='))
-        return true;
-    }
-    return false;
+  // Check whether the flag exists in the command.
+  auto HasExact = [&](llvm::StringRef Flag) {
+    return llvm::any_of(Cmd, [&](llvm::StringRef Arg) { return Arg == Flag; });
+  };
+
+  // Check whether the flag appears in the command as a prefix.
+  auto HasPrefix = [&](llvm::StringRef Flag) {
+    return llvm::any_of(
+        Cmd, [&](llvm::StringRef Arg) { return Arg.starts_with(Flag); });
   };
 
   llvm::erase_if(Cmd, [](llvm::StringRef Elem) {
@@ -327,12 +329,13 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   });
 
   std::vector<std::string> ToAppend;
-  if (ResourceDir && !Has("-resource-dir"))
+  if (ResourceDir && !HasExact("-resource-dir") && !HasPrefix("-resource-dir="))
     ToAppend.push_back(("-resource-dir=" + *ResourceDir));
 
   // Don't set `-isysroot` if it is already set or if `--sysroot` is set.
   // `--sysroot` is a superset of the `-isysroot` argument.
-  if (Sysroot && !Has("-isysroot") && !Has("--sysroot")) {
+  if (Sysroot && !HasPrefix("-isysroot") && !HasExact("--sysroot") &&
+      !HasPrefix("--sysroot=")) {
     ToAppend.push_back("-isysroot");
     ToAppend.push_back(*Sysroot);
   }
@@ -343,7 +346,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   }
 
   if (!Cmd.empty()) {
-    bool FollowSymlink = !Has("-no-canonical-prefixes");
+    bool FollowSymlink = !HasExact("-no-canonical-prefixes");
     Cmd.front() =
         (FollowSymlink ? ResolvedDrivers : ResolvedDriversNoFollow)
             .get(Cmd.front(), [&, this] {

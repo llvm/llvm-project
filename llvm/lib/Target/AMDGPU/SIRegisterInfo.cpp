@@ -1657,8 +1657,12 @@ void SIRegisterInfo::buildSpillLoadStore(
     } else {
       MIB.addReg(SOffset, SOffsetRegState);
     }
-    MIB.addImm(Offset + RegOffset)
-       .addImm(0); // cpol
+
+    MIB.addImm(Offset + RegOffset);
+
+    bool LastUse = MMO->getFlags() & MOLastUse;
+    MIB.addImm(LastUse ? AMDGPU::CPol::TH_LU : 0); // cpol
+
     if (!IsFlat)
       MIB.addImm(0); // swz
     MIB.addMemOperand(NewMMO);
@@ -2241,6 +2245,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
                                   RS->isRegUsed(AMDGPU::SCC));
       }
+
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),

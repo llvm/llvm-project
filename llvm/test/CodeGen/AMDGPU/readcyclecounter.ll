@@ -1,15 +1,15 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
 ; -global-isel=1 SI run line skipped since store not yet implemented.
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GETREG,GETREG-GISEL -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GETREG,GETREG-GISEL -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=SIVI -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=MEMTIME -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GETREG,GETREG-GISEL -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GETREG,GETREG-SDAG -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GETREG,GETREG-GISEL -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 declare i64 @llvm.readcyclecounter() #0
 
@@ -21,9 +21,9 @@ declare i64 @llvm.readcyclecounter() #0
 ; GFX12:       s_getreg_b32 [[HI2:s[0-9]+]], hwreg(HW_REG_SHADER_CYCLES_HI)
 ; GFX12:       s_cmp_eq_u32 [[HI1]], [[HI2]]
 ; GFX12:       s_cselect_b32 {{s[0-9]+}}, [[LO1]], 0
-; GCN-DAG:     lgkmcnt
+; GCN-DAG:     kmcnt
 ; MEMTIME:     store_dwordx2
-; SIVI-NOT:    lgkmcnt
+; SIVI-NOT:    kmcnt
 ; MEMTIME:     s_memtime s{{\[[0-9]+:[0-9]+\]}}
 ; MEMTIME:     store_dwordx2
 

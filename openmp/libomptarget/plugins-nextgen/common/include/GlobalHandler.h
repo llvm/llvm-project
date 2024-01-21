@@ -138,7 +138,7 @@ public:
                              const GlobalTy &HostGlobal,
                              const GlobalTy &DeviceGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
-                                          /* D2H */ true);
+                                          /*D2H=*/true);
   }
 
   /// Copy the memory associated with a global from the device to its
@@ -147,7 +147,7 @@ public:
   Error readGlobalFromDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
                              const GlobalTy &HostGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          /* D2H */ true);
+                                          /*D2H=*/true);
   }
 
   /// Copy the memory associated with a global from the host to its counterpart
@@ -156,7 +156,7 @@ public:
   Error writeGlobalToDevice(GenericDeviceTy &Device, const GlobalTy &HostGlobal,
                             const GlobalTy &DeviceGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
-                                          /* D2H */ false);
+                                          /*D2H=*/false);
   }
 
   /// Copy the memory associated with a global from the host to its counterpart
@@ -165,7 +165,7 @@ public:
   Error writeGlobalToDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
                             const GlobalTy &HostGlobal) {
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          /* D2H */ false);
+                                          /*D2H=*/false);
   }
 };
 

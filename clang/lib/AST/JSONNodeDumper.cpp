@@ -930,7 +930,7 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
     JOS.attribute("storageClass", VarDecl::getStorageClassSpecifierString(SC));
   attributeOnlyIfTrue("inline", FD->isInlineSpecified());
   attributeOnlyIfTrue("virtual", FD->isVirtualAsWritten());
-  attributeOnlyIfTrue("pure", FD->isPure());
+  attributeOnlyIfTrue("pure", FD->isPureVirtual());
   attributeOnlyIfTrue("explicitlyDeleted", FD->isDeletedAsWritten());
   attributeOnlyIfTrue("constexpr", FD->isConstexpr());
   attributeOnlyIfTrue("variadic", FD->isVariadic());

@@ -367,6 +367,7 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
   case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     // Darwin defaults to "softfp" for v6 and v7.
     if (Triple.isWatchABI())
       return FloatABI::Hard;
@@ -836,8 +837,8 @@ fp16_fml_fallthrough:
     if (A->getOption().matches(options::OPT_mlong_calls))
       Features.push_back("+long-calls");
   } else if (KernelOrKext && (!Triple.isiOS() || Triple.isOSVersionLT(6)) &&
-             !Triple.isWatchOS()) {
-      Features.push_back("+long-calls");
+             !Triple.isWatchOS() && !Triple.isXROS()) {
+    Features.push_back("+long-calls");
   }
 
   // Generate execute-only output (no data access to code sections).

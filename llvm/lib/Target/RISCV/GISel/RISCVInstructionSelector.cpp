@@ -16,6 +16,7 @@
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -159,9 +160,71 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
-  // TODO: Also check if we are seeing the result of an AND operation which
-  // could be bypassed since we only check the lower log2(xlen) bits.
-  return {{[=](MachineInstrBuilder &MIB) { MIB.add(Root); }}};
+  if (!Root.isReg())
+    return std::nullopt;
+
+  using namespace llvm::MIPatternMatch;
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  Register RootReg = Root.getReg();
+  Register ShAmtReg = RootReg;
+  const LLT ShiftLLT = MRI.getType(RootReg);
+  unsigned ShiftWidth = ShiftLLT.getSizeInBits();
+  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  // Peek through zext.
+  Register ZExtSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GZExt(m_Reg(ZExtSrcReg)))) {
+    ShAmtReg = ZExtSrcReg;
+  }
+
+  APInt AndMask;
+  Register AndSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask)))) {
+    APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
+    if (ShMask.isSubsetOf(AndMask)) {
+      ShAmtReg = AndSrcReg;
+    } else {
+      // SimplifyDemandedBits may have optimized the mask so try restoring any
+      // bits that are known zero.
+      KnownBits Known = KB->getKnownBits(ShAmtReg);
+      if (ShMask.isSubsetOf(AndMask | Known.Zero))
+        ShAmtReg = AndSrcReg;
+    }
+  }
+
+  APInt Imm;
+  Register Reg;
+  if (mi_match(ShAmtReg, MRI, m_GAdd(m_Reg(Reg), m_ICst(Imm)))) {
+    if (Imm != 0 && Imm.urem(ShiftWidth) == 0)
+      // If we are shifting by X+N where N == 0 mod Size, then just shift by X
+      // to avoid the ADD.
+      ShAmtReg = Reg;
+  } else if (mi_match(ShAmtReg, MRI, m_GSub(m_ICst(Imm), m_Reg(Reg)))) {
+    if (Imm != 0 && Imm.urem(ShiftWidth) == 0) {
+      // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
+      // to generate a NEG instead of a SUB of a constant.
+      ShAmtReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      unsigned NegOpc = Subtarget->is64Bit() ? RISCV::SUBW : RISCV::SUB;
+      return {{[=](MachineInstrBuilder &MIB) {
+        MachineIRBuilder(*MIB.getInstr())
+            .buildInstr(NegOpc, {ShAmtReg}, {Register(RISCV::X0), Reg});
+        MIB.addReg(ShAmtReg);
+      }}};
+    }
+    if (Imm.urem(ShiftWidth) == ShiftWidth - 1) {
+      // If we are shifting by N-X where N == -1 mod Size, then just shift by ~X
+      // to generate a NOT instead of a SUB of a constant.
+      ShAmtReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      return {{[=](MachineInstrBuilder &MIB) {
+        MachineIRBuilder(*MIB.getInstr())
+            .buildInstr(RISCV::XORI, {ShAmtReg}, {Reg})
+            .addImm(-1);
+        MIB.addReg(ShAmtReg);
+      }}};
+    }
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
 }
 
 InstructionSelector::ComplexRendererFns
@@ -200,8 +263,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
       // Given (and (shl y, c2), mask) in which mask has no leading zeros and
       // c3 trailing zeros. We can use an SRLI by c3 - c2 followed by a SHXADD.
       if (*LeftShift && Leading == 0 && C2.ult(Trailing) && Trailing == ShAmt) {
-        Register DstReg =
-            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
@@ -213,8 +275,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
       // Given (and (lshr y, c2), mask) in which mask has c2 leading zeros and
       // c3 trailing zeros. We can use an SRLI by c2 + c3 followed by a SHXADD.
       if (!*LeftShift && Leading == C2 && Trailing == ShAmt) {
-        Register DstReg =
-            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
@@ -253,7 +314,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
              (Trailing - C2.getLimitedValue()) == ShAmt;
 
     if (Cond) {
-      Register DstReg = MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+      Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
       return {{[=](MachineInstrBuilder &MIB) {
         MachineIRBuilder(*MIB.getInstr())
             .buildInstr(RISCV::SRLIW, {DstReg}, {RegY})
@@ -292,8 +353,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
       unsigned Leading = Mask.countl_zero();
       unsigned Trailing = Mask.countr_zero();
       if (Leading == 32 - ShAmt && C2 == Trailing && Trailing > ShAmt) {
-        Register DstReg =
-            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SLLI, {DstReg}, {RegX})

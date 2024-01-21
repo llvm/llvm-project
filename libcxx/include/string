@@ -922,7 +922,7 @@ public:
       // Turning off ASan instrumentation for variable initialization with _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
       // does not work consistently during initialization of __r_, so we instead unpoison __str's memory manually first.
       // __str's memory needs to be unpoisoned only in the case where it's a short string.
-      : __r_(((__str.__is_long() ? 0 : (__str.__annotate_delete(), 0)), std::move(__str.__r_))) {
+      : __r_([](basic_string &__s) -> decltype(__s.__r_)&& { if(!__s.__is_long()) __s.__annotate_delete(); return std::move(__s.__r_); }(__str)) {
     __str.__r_.first() = __rep();
     __str.__annotate_new(0);
     if (!__is_long())
@@ -1891,8 +1891,7 @@ private:
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     const void* __begin = data();
     const void* __end   = data() + capacity() + 1;
-    if (!__libcpp_is_constant_evaluated() && __begin != nullptr &&
-        is_same<allocator_type, __default_allocator_type>::value)
+    if (__asan_annotate_container_with_allocator<allocator_type>::value && !__libcpp_is_constant_evaluated())
       __sanitizer_annotate_contiguous_container(__begin, __end, __old_mid, __new_mid);
 #endif
   }

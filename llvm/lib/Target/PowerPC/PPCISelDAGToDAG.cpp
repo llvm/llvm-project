@@ -565,7 +565,7 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
 /// operand. If so Imm will receive the 32-bit value.
 static bool isInt32Immediate(SDNode *N, unsigned &Imm) {
   if (N->getOpcode() == ISD::Constant && N->getValueType(0) == MVT::i32) {
-    Imm = cast<ConstantSDNode>(N)->getZExtValue();
+    Imm = N->getAsZExtVal();
     return true;
   }
   return false;
@@ -575,7 +575,7 @@ static bool isInt32Immediate(SDNode *N, unsigned &Imm) {
 /// operand.  If so Imm will receive the 64-bit value.
 static bool isInt64Immediate(SDNode *N, uint64_t &Imm) {
   if (N->getOpcode() == ISD::Constant && N->getValueType(0) == MVT::i64) {
-    Imm = cast<ConstantSDNode>(N)->getZExtValue();
+    Imm = N->getAsZExtVal();
     return true;
   }
   return false;
@@ -1500,7 +1500,7 @@ static SDNode *selectI64Imm(SelectionDAG *CurDAG, SDNode *N) {
   SDLoc dl(N);
 
   // Get 64 bit value.
-  int64_t Imm = cast<ConstantSDNode>(N)->getZExtValue();
+  int64_t Imm = N->getAsZExtVal();
   if (unsigned MinSize = allUsesTruncate(CurDAG, N)) {
     uint64_t SextImm = SignExtend64(Imm, MinSize);
     SDValue SDImm = CurDAG->getTargetConstant(SextImm, dl, MVT::i64);
@@ -4923,7 +4923,7 @@ bool PPCDAGToDAGISel::trySelectLoopCountIntrinsic(SDNode *N) {
   SDNode *NewDecrement = CurDAG->getMachineNode(DecrementOpcode, DecrementLoc,
                                                 MVT::i1, DecrementOps);
 
-  unsigned Val = cast<ConstantSDNode>(RHS)->getZExtValue();
+  unsigned Val = RHS->getAsZExtVal();
   bool IsBranchOnTrue = (CC == ISD::SETEQ && Val) || (CC == ISD::SETNE && !Val);
   unsigned Opcode = IsBranchOnTrue ? PPC::BC : PPC::BCn;
 
@@ -5765,7 +5765,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       break;
 
     // If the multiplier fits int16, we can handle it with mulli.
-    int64_t Imm = cast<ConstantSDNode>(Op1)->getZExtValue();
+    int64_t Imm = Op1->getAsZExtVal();
     unsigned Shift = llvm::countr_zero<uint64_t>(Imm);
     if (isInt<16>(Imm) || !Shift)
       break;
@@ -6612,8 +6612,7 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
 
     // For us to materialize these using one instruction, we must be able to
     // represent them as signed 16-bit integers.
-    uint64_t True  = cast<ConstantSDNode>(TrueRes)->getZExtValue(),
-             False = cast<ConstantSDNode>(FalseRes)->getZExtValue();
+    uint64_t True = TrueRes->getAsZExtVal(), False = FalseRes->getAsZExtVal();
     if (!isInt<16>(True) || !isInt<16>(False))
       break;
 

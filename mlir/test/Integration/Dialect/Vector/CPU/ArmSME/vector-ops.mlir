@@ -14,12 +14,9 @@ func.func @entry() -> i32 {
   %c1_i8 = arith.constant 1 : i8
   %c1_index = arith.constant 1 : index
 
-  %c16 = arith.constant 16 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_b" the number of
   // 8-bit elements in a vector of SVL bits.
-  %svl_b = arith.muli %c16, %vscale : index
+  %svl_b = arm_sme.streaming_vl <byte>
 
   // Allocate memory and fill with ones.
   //

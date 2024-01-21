@@ -142,6 +142,18 @@ static bool ShouldIgnoreArtificialField(llvm::StringRef FieldName) {
          || FieldName.starts_with("_vptr.");
 }
 
+/// Returns true for C++ constructs represented by clang::CXXRecordDecl
+static bool TagIsRecordType(dw_tag_t tag) {
+  switch (tag) {
+  case DW_TAG_class_type:
+  case DW_TAG_structure_type:
+  case DW_TAG_union_type:
+    return true;
+  default:
+    return false;
+  }
+}
+
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
                                                      const DWARFDIE &die,
                                                      Log *log) {
@@ -3304,11 +3316,18 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     return nullptr;
 
   switch (die.Tag()) {
-  case DW_TAG_variable:
   case DW_TAG_constant:
   case DW_TAG_formal_parameter:
   case DW_TAG_imported_declaration:
   case DW_TAG_imported_module:
+    break;
+  case DW_TAG_variable:
+    // This means 'die' is a C++ static data member.
+    // We don't want to create decls for such members
+    // here.
+    if (auto parent = die.GetParent();
+        parent.IsValid() && TagIsRecordType(parent.Tag()))
+      return nullptr;
     break;
   default:
     return nullptr;

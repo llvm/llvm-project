@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -4199,7 +4200,7 @@ static OverloadingResult ResolveConstructorOverload(
 /// \param IsListInit     Is this list-initialization?
 /// \param IsInitListCopy Is this non-list-initialization resulting from a
 ///                       list-initialization from {x} where x is the same
-///                       type as the entity?
+///                       aggregate type as the entity?
 static void TryConstructorInitialization(Sema &S,
                                          const InitializedEntity &Entity,
                                          const InitializationKind &Kind,
@@ -4229,6 +4230,14 @@ static void TryConstructorInitialization(Sema &S,
         Entity.getKind() !=
             InitializedEntity::EK_LambdaToBlockConversionBlockElement);
 
+  bool CopyElisionPossible = false;
+  auto ElideConstructor = [&] {
+    // Convert qualifications if necessary.
+    Sequence.AddQualificationConversionStep(DestType, VK_PRValue);
+    if (ILE)
+      Sequence.RewrapReferenceInitList(DestType, ILE);
+  };
+
   // C++17 [dcl.init]p17:
   //     - If the initializer expression is a prvalue and the cv-unqualified
   //       version of the source type is the same class as the class of the
@@ -4241,11 +4250,17 @@ static void TryConstructorInitialization(Sema &S,
   if (S.getLangOpts().CPlusPlus17 && !RequireActualConstructor &&
       UnwrappedArgs.size() == 1 && UnwrappedArgs[0]->isPRValue() &&
       S.Context.hasSameUnqualifiedType(UnwrappedArgs[0]->getType(), DestType)) {
-    // Convert qualifications if necessary.
-    Sequence.AddQualificationConversionStep(DestType, VK_PRValue);
-    if (ILE)
-      Sequence.RewrapReferenceInitList(DestType, ILE);
-    return;
+    if (ILE && !DestType->isAggregateType()) {
+      // CWG2311: T{ prvalue_of_type_T } is not eligible for copy elision
+      // Make this an elision if this won't call an initializer-list
+      // constructor. (Always on an aggregate type or check constructors first.)
+      assert(!IsInitListCopy &&
+             "IsInitListCopy only possible with aggregate types");
+      CopyElisionPossible = true;
+    } else {
+      ElideConstructor();
+      return;
+    }
   }
 
   const RecordType *DestRecordType = DestType->getAs<RecordType>();
@@ -4290,6 +4305,12 @@ static void TryConstructorInitialization(Sema &S,
           S, Kind.getLocation(), Args, CandidateSet, DestType, Ctors, Best,
           CopyInitialization, AllowExplicit,
           /*OnlyListConstructors=*/true, IsListInit, RequireActualConstructor);
+
+    if (CopyElisionPossible && Result == OR_No_Viable_Function) {
+      // No initializer list candidate
+      ElideConstructor();
+      return;
+    }
   }
 
   // C++11 [over.match.list]p1:
@@ -4571,9 +4592,9 @@ static void TryListInitialization(Sema &S,
     return;
   }
 
-  // C++11 [dcl.init.list]p3, per DR1467:
-  // - If T is a class type and the initializer list has a single element of
-  //   type cv U, where U is T or a class derived from T, the object is
+  // C++11 [dcl.init.list]p3, per DR1467 and DR2137:
+  // - If T is an aggregate class and the initializer list has a single element
+  //   of type cv U, where U is T or a class derived from T, the object is
   //   initialized from that element (by copy-initialization for
   //   copy-list-initialization, or by direct-initialization for
   //   direct-list-initialization).
@@ -4584,7 +4605,7 @@ static void TryListInitialization(Sema &S,
   // - Otherwise, if T is an aggregate, [...] (continue below).
   if (S.getLangOpts().CPlusPlus11 && InitList->getNumInits() == 1 &&
       !IsDesignatedInit) {
-    if (DestType->isRecordType()) {
+    if (DestType->isRecordType() && DestType->isAggregateType()) {
       QualType InitType = InitList->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, DestType) ||
           S.IsDerivedFrom(InitList->getBeginLoc(), InitType, DestType)) {
@@ -5495,7 +5516,7 @@ static void TryOrBuildParenListInitialization(
         return;
     }
     //   ...and value-initialized for each k < i <= n;
-    if (ArrayLength > Args.size()) {
+    if (ArrayLength > Args.size() || Entity.isVariableLengthArrayNew()) {
       InitializedEntity SubEntity = InitializedEntity::InitializeElement(
           S.getASTContext(), Args.size(), Entity);
       InitializationKind SubKind = InitializationKind::CreateValue(
@@ -7583,15 +7604,27 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
     Path.pop_back();
   };
 
-  if (ObjectArg && implicitObjectParamIsLifetimeBound(Callee))
-    VisitLifetimeBoundArg(Callee, ObjectArg);
-
   bool CheckCoroCall = false;
   if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
     CheckCoroCall = RD->hasAttr<CoroLifetimeBoundAttr>() &&
                     RD->hasAttr<CoroReturnTypeAttr>() &&
                     !Callee->hasAttr<CoroDisableLifetimeBoundAttr>();
   }
+
+  if (ObjectArg) {
+    bool CheckCoroObjArg = CheckCoroCall;
+    // Coroutine lambda objects with empty capture list are not lifetimebound.
+    if (auto *LE = dyn_cast<LambdaExpr>(ObjectArg->IgnoreImplicit());
+        LE && LE->captures().empty())
+      CheckCoroObjArg = false;
+    // Allow `get_return_object()` as the object param (__promise) is not
+    // lifetimebound.
+    if (Sema::CanBeGetReturnObject(Callee))
+      CheckCoroObjArg = false;
+    if (implicitObjectParamIsLifetimeBound(Callee) || CheckCoroObjArg)
+      VisitLifetimeBoundArg(Callee, ObjectArg);
+  }
+
   for (unsigned I = 0,
                 N = std::min<unsigned>(Callee->getNumParams(), Args.size());
        I != N; ++I) {
@@ -10377,11 +10410,6 @@ void InitializationSequence::dump() const {
   dump(llvm::errs());
 }
 
-static bool NarrowingErrs(const LangOptions &L) {
-  return L.CPlusPlus11 &&
-         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015));
-}
-
 static void DiagnoseNarrowingInInitList(Sema &S,
                                         const ImplicitConversionSequence &ICS,
                                         QualType PreNarrowingType,
@@ -10402,6 +10430,19 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     return;
   }
 
+  auto MakeDiag = [&](bool IsConstRef, unsigned DefaultDiagID,
+                      unsigned ConstRefDiagID, unsigned WarnDiagID) {
+    unsigned DiagID;
+    auto &L = S.getLangOpts();
+    if (L.CPlusPlus11 &&
+        (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015)))
+      DiagID = IsConstRef ? ConstRefDiagID : DefaultDiagID;
+    else
+      DiagID = WarnDiagID;
+    return S.Diag(PostInit->getBeginLoc(), DiagID)
+           << PostInit->getSourceRange();
+  };
+
   // C++11 [dcl.init.list]p7: Check whether this is a narrowing conversion.
   APValue ConstantValue;
   QualType ConstantType;
@@ -10417,13 +10458,9 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     // narrowing conversion even if the value is a constant and can be
     // represented exactly as an integer.
     QualType T = EntityType.getNonReferenceType();
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? (T == EntityType
-                      ? diag::ext_init_list_type_narrowing
-                      : diag::ext_init_list_type_narrowing_const_reference)
-               : diag::warn_init_list_type_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(T != EntityType, diag::ext_init_list_type_narrowing,
+             diag::ext_init_list_type_narrowing_const_reference,
+             diag::warn_init_list_type_narrowing)
         << PreNarrowingType.getLocalUnqualifiedType()
         << T.getLocalUnqualifiedType();
     break;
@@ -10431,14 +10468,10 @@ static void DiagnoseNarrowingInInitList(Sema &S,
 
   case NK_Constant_Narrowing: {
     // A constant value was narrowed.
-    QualType T = EntityType.getNonReferenceType();
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? (T == EntityType
-                      ? diag::ext_init_list_constant_narrowing
-                      : diag::ext_init_list_constant_narrowing_const_reference)
-               : diag::warn_init_list_constant_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(EntityType.getNonReferenceType() != EntityType,
+             diag::ext_init_list_constant_narrowing,
+             diag::ext_init_list_constant_narrowing_const_reference,
+             diag::warn_init_list_constant_narrowing)
         << ConstantValue.getAsString(S.getASTContext(), ConstantType)
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
@@ -10446,14 +10479,10 @@ static void DiagnoseNarrowingInInitList(Sema &S,
 
   case NK_Variable_Narrowing: {
     // A variable's value may have been narrowed.
-    QualType T = EntityType.getNonReferenceType();
-    S.Diag(PostInit->getBeginLoc(),
-           NarrowingErrs(S.getLangOpts())
-               ? (T == EntityType
-                      ? diag::ext_init_list_variable_narrowing
-                      : diag::ext_init_list_variable_narrowing_const_reference)
-               : diag::warn_init_list_variable_narrowing)
-        << PostInit->getSourceRange()
+    MakeDiag(EntityType.getNonReferenceType() != EntityType,
+             diag::ext_init_list_variable_narrowing,
+             diag::ext_init_list_variable_narrowing_const_reference,
+             diag::warn_init_list_variable_narrowing)
         << PreNarrowingType.getLocalUnqualifiedType()
         << EntityType.getNonReferenceType().getLocalUnqualifiedType();
     break;
@@ -10722,7 +10751,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     bool HasAnyDeductionGuide = false;
 
     auto SynthesizeAggrGuide = [&](InitListExpr *ListInit) {
-      auto *RD = cast<CXXRecordDecl>(Template->getTemplatedDecl());
+      auto *Pattern = Template;
+      while (Pattern->getInstantiatedFromMemberTemplate()) {
+        if (Pattern->isMemberSpecialization())
+          break;
+        Pattern = Pattern->getInstantiatedFromMemberTemplate();
+      }
+
+      auto *RD = cast<CXXRecordDecl>(Pattern->getTemplatedDecl());
       if (!(RD->getDefinition() && RD->isAggregate()))
         return;
       QualType Ty = Context.getRecordType(RD);

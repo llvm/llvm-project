@@ -11,7 +11,7 @@ define i32 @test_call_external(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call external_function@plt
+; RV32I-NEXT:    call external_function
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -20,7 +20,7 @@ define i32 @test_call_external(i32 %a) nounwind {
 ; RV32I-PIC:       # %bb.0:
 ; RV32I-PIC-NEXT:    addi sp, sp, -16
 ; RV32I-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-PIC-NEXT:    call external_function@plt
+; RV32I-PIC-NEXT:    call external_function
 ; RV32I-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-PIC-NEXT:    addi sp, sp, 16
 ; RV32I-PIC-NEXT:    ret
@@ -71,7 +71,7 @@ define i32 @test_call_defined(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    call defined_function@plt
+; RV32I-NEXT:    call defined_function
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -80,7 +80,7 @@ define i32 @test_call_defined(i32 %a) nounwind {
 ; RV32I-PIC:       # %bb.0:
 ; RV32I-PIC-NEXT:    addi sp, sp, -16
 ; RV32I-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-PIC-NEXT:    call defined_function@plt
+; RV32I-PIC-NEXT:    call defined_function
 ; RV32I-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-PIC-NEXT:    addi sp, sp, 16
 ; RV32I-PIC-NEXT:    ret
@@ -178,7 +178,7 @@ define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    call fastcc_function@plt
+; RV32I-NEXT:    call fastcc_function
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -191,7 +191,7 @@ define i32 @test_call_fastcc(i32 %a, i32 %b) nounwind {
 ; RV32I-PIC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-PIC-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-PIC-NEXT:    mv s0, a0
-; RV32I-PIC-NEXT:    call fastcc_function@plt
+; RV32I-PIC-NEXT:    call fastcc_function
 ; RV32I-PIC-NEXT:    mv a0, s0
 ; RV32I-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-PIC-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -219,7 +219,7 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV32I-NEXT:    mv a5, a0
 ; RV32I-NEXT:    mv a6, a0
 ; RV32I-NEXT:    mv a7, a0
-; RV32I-NEXT:    call external_many_args@plt
+; RV32I-NEXT:    call external_many_args
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -241,7 +241,7 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV32I-PIC-NEXT:    mv a5, a0
 ; RV32I-PIC-NEXT:    mv a6, a0
 ; RV32I-PIC-NEXT:    mv a7, a0
-; RV32I-PIC-NEXT:    call external_many_args@plt
+; RV32I-PIC-NEXT:    call external_many_args
 ; RV32I-PIC-NEXT:    mv a0, s0
 ; RV32I-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-PIC-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -282,7 +282,7 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV32I-NEXT:    mv a5, a0
 ; RV32I-NEXT:    mv a6, a0
 ; RV32I-NEXT:    mv a7, a0
-; RV32I-NEXT:    call defined_many_args@plt
+; RV32I-NEXT:    call defined_many_args
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -300,7 +300,7 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
 ; RV32I-PIC-NEXT:    mv a5, a0
 ; RV32I-PIC-NEXT:    mv a6, a0
 ; RV32I-PIC-NEXT:    mv a7, a0
-; RV32I-PIC-NEXT:    call defined_many_args@plt
+; RV32I-PIC-NEXT:    call defined_many_args
 ; RV32I-PIC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-PIC-NEXT:    addi sp, sp, 16
 ; RV32I-PIC-NEXT:    ret

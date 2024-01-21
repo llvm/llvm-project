@@ -1,3 +1,11 @@
+//===-- AssignmentTrackingAnalysis.cpp ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "LiveDebugValues/LiveDebugValues.h"
 #include "llvm/ADT/BitVector.h"
@@ -1843,8 +1851,7 @@ bool AssignmentTrackingLowering::join(
   // invalidated later, we will remove it when we revisit this block. This
   // is essentially the same as initialising all LocKinds and Assignments to
   // an implicit ⊥ value which is the identity value for the join operation.
-  for (auto I = pred_begin(&BB), E = pred_end(&BB); I != E; I++) {
-    const BasicBlock *Pred = *I;
+  for (const BasicBlock *Pred : predecessors(&BB)) {
     if (Visited.count(Pred))
       VisitedPreds.push_back(Pred);
   }
@@ -2551,6 +2558,32 @@ static void analyzeFunction(Function &Fn, const DataLayout &Layout,
     for (auto &BB : Fn)
       removeRedundantDbgLocs(&BB, *FnVarLocs);
   }
+}
+
+FunctionVarLocs
+DebugAssignmentTrackingAnalysis::run(Function &F,
+                                     FunctionAnalysisManager &FAM) {
+  if (!isAssignmentTrackingEnabled(*F.getParent()))
+    return FunctionVarLocs();
+
+  auto &DL = F.getParent()->getDataLayout();
+
+  FunctionVarLocsBuilder Builder;
+  analyzeFunction(F, DL, &Builder);
+
+  // Save these results.
+  FunctionVarLocs Results;
+  Results.init(Builder);
+  return Results;
+}
+
+AnalysisKey DebugAssignmentTrackingAnalysis::Key;
+
+PreservedAnalyses
+DebugAssignmentTrackingPrinterPass::run(Function &F,
+                                        FunctionAnalysisManager &FAM) {
+  FAM.getResult<DebugAssignmentTrackingAnalysis>(F).print(OS, F);
+  return PreservedAnalyses::all();
 }
 
 bool AssignmentTrackingAnalysis::runOnFunction(Function &F) {

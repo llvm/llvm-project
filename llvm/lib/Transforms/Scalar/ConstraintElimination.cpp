@@ -933,15 +933,20 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   DomTreeNode *DTN = DT.getNode(InLoopSucc);
-  auto Inc = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
-  bool MonotonicallyIncreasing =
-      Inc && *Inc == ScalarEvolution::MonotonicallyIncreasing;
-  if (MonotonicallyIncreasing) {
-    // SCEV guarantees that AR does not wrap, so PN >= StartValue can be added
-    // unconditionally.
+  auto IncUnsigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_UGT);
+  auto IncSigned = SE.getMonotonicPredicateType(AR, CmpInst::ICMP_SGT);
+  bool MonotonicallyIncreasingUnsigned =
+      IncUnsigned && *IncUnsigned == ScalarEvolution::MonotonicallyIncreasing;
+  bool MonotonicallyIncreasingSigned =
+      IncSigned && *IncSigned == ScalarEvolution::MonotonicallyIncreasing;
+  // If SCEV guarantees that AR does not wrap, PN >= StartValue can be added
+  // unconditionally.
+  if (MonotonicallyIncreasingUnsigned)
     WorkList.push_back(
         FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE, PN, StartValue));
-  }
+  if (MonotonicallyIncreasingSigned)
+    WorkList.push_back(
+        FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE, PN, StartValue));
 
   APInt StepOffset;
   if (auto *C = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
@@ -965,11 +970,17 @@ void State::addInfoForInductions(BasicBlock &BB) {
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGE, StartValue, PN,
         ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SGE, StartValue, PN,
+        ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
     // Add PN > B conditional on B <= StartValue which guarantees that the loop
     // exits when reaching B with a step of -1.
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGT, PN, B,
         ConditionTy(CmpInst::ICMP_ULE, B, StartValue)));
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SGT, PN, B,
+        ConditionTy(CmpInst::ICMP_SLE, B, StartValue)));
     return;
   }
 
@@ -990,14 +1001,21 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // AR may wrap. Add PN >= StartValue conditional on StartValue <= B which
   // guarantees that the loop exits before wrapping in combination with the
   // restrictions on B and the step above.
-  if (!MonotonicallyIncreasing) {
+  if (!MonotonicallyIncreasingUnsigned)
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, CmpInst::ICMP_UGE, PN, StartValue,
         ConditionTy(CmpInst::ICMP_ULE, StartValue, B)));
-  }
+  if (!MonotonicallyIncreasingSigned)
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SGE, PN, StartValue,
+        ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
+
   WorkList.push_back(FactOrCheck::getConditionFact(
       DTN, CmpInst::ICMP_ULT, PN, B,
       ConditionTy(CmpInst::ICMP_ULE, StartValue, B)));
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_SLT, PN, B,
+      ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
 }
 
 void State::addInfoFor(BasicBlock &BB) {

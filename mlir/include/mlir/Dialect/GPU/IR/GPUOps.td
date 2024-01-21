@@ -22,6 +22,7 @@ include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
 include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -678,6 +679,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
+               Optional<Index>:$clusterSizeX, 
+               Optional<Index>:$clusterSizeY, 
+               Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
@@ -700,8 +704,11 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     to the amount of dynamic shared memory a kernel's workgroup should be
     allocated; when this operand is not present, a zero size is assumed.
 
-    The body region has at least _twelve_ arguments, grouped as follows:
+    The body region has at least _twelve_ arguments, or _eighteen_ if cluster 
+    dimensions are present, grouped as follows:
 
+    -   three optional arguments that contain cluster identifiers along x,y,z
+        dimensions;
     -   three arguments that contain block identifiers along x,y,z dimensions;
     -   three arguments that contain thread identifiers along x,y,z dimensions;
     -   operands of the `gpu.launch` operation as is (i.e. the operands for
@@ -713,6 +720,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     ```
     operation ::= `gpu.launch` (`async` (`[` ssa-id-list `]`)? )?
+                             ( `clusters` `(` ssa-id-list `)` `in` ssa-reassignment )?
                              `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
                              `threads` `(` ssa-id-list `)` `in` ssa-reassignment
                              (dynamic_shared_memory_size ssa-use)?
@@ -763,6 +771,16 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       // Assuming %val1 is defined outside the gpu.launch region.
       %42 = load %workgroup[%bx] : memref<32xf32, 3>
     }
+
+    // Launch with clusters.
+    gpu.launch clusters(%cx, %cy, %cz) in (%sz_cx = %0, %sz_cy = %1, %sz_cz = %2)
+               blocks(%bx, %by, %bz) in (%sz_bx = %3, %sz_by = %4, %sz_bz = %5)
+               threads(%tx, %ty, %tz) in (%sz_tx = %6, %sz_ty = %7, %sz_tz = %8)
+    {
+      // Cluster, block and thread identifiers, as well as cluster/block/grid 
+      // sizes are immediately usable inside body region.
+      "some_op"(%cx, %bx, %tx) : (index, index, index) -> ()
+    }
     ```
 
     Rationale: using operation/block arguments gives analyses a clear way of
@@ -784,7 +802,10 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
-      CArg<"TypeRange", "{}">:$privateAttributions)>
+      CArg<"TypeRange", "{}">:$privateAttributions,
+      CArg<"Value", "nullptr">:$clusterSizeX,
+      CArg<"Value", "nullptr">:$clusterSizeY,
+      CArg<"Value", "nullptr">:$clusterSizeZ)>
   ];
 
   let extraClassDeclaration = [{
@@ -792,17 +813,24 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     KernelDim3 getBlockIds();
     /// Get the SSA values corresponding to kernel thread identifiers.
     KernelDim3 getThreadIds();
+    /// Get the SSA values corresponding to kernel cluster identifiers.
+    std::optional<KernelDim3> getClusterIds();
     /// Get the SSA values corresponding to kernel grid size.
     KernelDim3 getGridSize();
     /// Get the SSA values corresponding to kernel block size.
     KernelDim3 getBlockSize();
+    /// Get the SSA values corresponding to kernel cluster size.
+    std::optional<KernelDim3> getClusterSize();
 
     /// Get the SSA values passed as operands to specify the grid size.
     KernelDim3 getGridSizeOperandValues();
     /// Get the SSA values passed as operands to specify the block size.
     KernelDim3 getBlockSizeOperandValues();
+    /// Get the SSA values passed as operands to specify the cluster size.
+    std::optional<KernelDim3> getClusterSizeOperandValues();
 
     static StringRef getBlocksKeyword() { return "blocks"; }
+    static StringRef getClustersKeyword() { return "clusters"; }
     static StringRef getThreadsKeyword() { return "threads"; }
     static StringRef getDynamicSharedMemorySizeKeyword() {
       return "dynamic_shared_memory_size";
@@ -815,6 +843,21 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// The number of region attributes containing the launch configuration,
     /// placed in the leading positions of the argument list.
     static constexpr unsigned kNumConfigRegionAttributes = 12;
+
+    /// Returns true if cluster size is specified.
+    bool hasClusterSize() {
+      if (getClusterSizeX() && getClusterSizeY() && getClusterSizeZ())
+        return true;
+      return false;
+    }
+    /// Returns the number of operands including cluster size
+    unsigned getNumConfigOperands() {
+      return kNumConfigOperands + (hasClusterSize() ? 3 : 0);
+    }
+    /// Returns the number of region attributes including cluster size 
+    unsigned getNumConfigRegionAttributes() {
+      return kNumConfigRegionAttributes + (hasClusterSize() ? 6 : 0);
+    }
 
     /// Returns the keywords used in the custom syntax for this Op.
     static StringRef getWorkgroupKeyword() { return "workgroup"; }
@@ -831,7 +874,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// the workgroup memory
     ArrayRef<BlockArgument> getWorkgroupAttributions() {
       auto begin =
-          std::next(getBody().args_begin(), kNumConfigRegionAttributes);
+          std::next(getBody().args_begin(), getNumConfigRegionAttributes());
       auto end = std::next(begin, getNumWorkgroupAttributions());
       return {begin, end};
     }
@@ -842,7 +885,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     /// Returns the number of buffers located in the private memory.
     unsigned getNumPrivateAttributions() {
-      return getBody().getNumArguments() - kNumConfigRegionAttributes -
+      return getBody().getNumArguments() - getNumConfigRegionAttributes() -
           getNumWorkgroupAttributions();
     }
 
@@ -853,7 +896,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       // memory.
       auto begin =
           std::next(getBody().args_begin(),
-                    kNumConfigRegionAttributes + getNumWorkgroupAttributions());
+                    getNumConfigRegionAttributes() + getNumWorkgroupAttributions());
       return {begin, getBody().args_end()};
     }
 
@@ -871,6 +914,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasRegionVerifier = 1;
+  let hasVerifier = 1;
 }
 
 def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
@@ -918,7 +962,7 @@ def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">,
   let assemblyFormat = "attr-dict";
 }
 
-def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
+def GPU_YieldOp : GPU_Op<"yield", [Pure, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "GPU yield operation";
   let description = [{
@@ -931,6 +975,8 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
     gpu.yield %f0, %f1 : f32, f32
     ```
   }];
+
+  let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
 }
 
 // These mirror the reduction combining kinds from the vector dialect.
@@ -1148,7 +1194,9 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 def GPU_GPUModuleOp : GPU_Op<"module", [
       DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
       SymbolTable, Symbol, SingleBlockImplicitTerminator<"ModuleEndOp">
-    ]>, Arguments<(ins OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets)> {
+    ]>, Arguments<(ins
+          OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
+          OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler)> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
     GPU module contains code that is intended to be run on a GPU. A host device
@@ -1169,13 +1217,20 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     how to transform modules into binary strings and are used by the
     `gpu-module-to-binary` pass to transform modules into GPU binaries.
 
+    Modules can contain an optional `OffloadingTranslationAttr` attribute. This
+    attribute will be used during the `gpu-module-to-binary` pass to specify the
+    `OffloadingTranslationAttr` used when creating the `gpu.binary` operation.
+
     ```
     gpu.module @symbol_name {
       gpu.func {}
         ...
       gpu.module_end
     }
-    gpu.module @symbol_name2 [#nvvm.target, #rocdl.target<chip = "gfx90a">] {
+    // Module with offloading handler and target attributes.
+    gpu.module @symbol_name2 <#gpu.select_object<1>> [
+        #nvvm.target,
+        #rocdl.target<chip = "gfx90a">] {
       gpu.func {}
         ...
       gpu.module_end
@@ -1183,8 +1238,12 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     ```
   }];
   let builders = [
-    OpBuilder<(ins "StringRef":$name, CArg<"ArrayAttr", "{}">:$targets)>,
-    OpBuilder<(ins "StringRef":$name, "ArrayRef<Attribute>":$targets)>
+    OpBuilder<(ins "StringRef":$name,
+                   CArg<"ArrayAttr", "{}">:$targets,
+                   CArg<"Attribute", "{}">:$handler)>,
+    OpBuilder<(ins "StringRef":$name,
+                   "ArrayRef<Attribute>":$targets,
+                   CArg<"Attribute", "{}">:$handler)>
   ];
   let regions = (region SizedRegion<1>:$bodyRegion);
   let hasCustomAssemblyFormat = 1;

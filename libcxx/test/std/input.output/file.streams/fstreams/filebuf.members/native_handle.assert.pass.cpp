@@ -20,7 +20,7 @@
 
 #include <fstream>
 
-#include "../native_handle_test_helpers.h"
+#include "../native_handle_assert_test_helpers.h"
 
 int main(int, char**) {
   test_native_handle_assertion<std::basic_filebuf<char>>();

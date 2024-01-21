@@ -3,7 +3,12 @@
 
 - [Table of Contents](#table-of-contents)
 - [Introduction](#introduction)
-- [Installation for Visual Studio Code](#installation-for-visual-studio-code)
+- [Local Installation for Visual Studio Code](#local-installation-for-visual-studio-code)
+  - [Pre-requisites](#pre-requisites)
+  - [Packaging and installation](#packaging-and-installation)
+  - [Updating the extension](#updating-the-extension)
+  - [Deploying for Visual Studio Code](#deploying-for-visual-studio-code)
+- [Formatting the Typescript code](#formatting-the-typescript-code)
 - [Configurations](#configurations)
   - [Launch Configuration Settings](#launch-configuration-settings)
   - [Attaching Settings](#attaching-settings)
@@ -12,6 +17,8 @@
     - [Attach using PID](#attach-using-pid)
     - [Attach by Name](#attach-by-name)
     - [Loading a Core File](#loading-a-core-file)
+    - [Connect to a Debug Server on the Current Machine](#connect-to-a-debug-server-on-the-current-machine)
+    - [Connect to a Debug Server on Another Machine](#connect-to-a-debug-server-on-another-machine)
 - [Custom debugger commands](#custom-debugger-commands)
   - [startDebugging](#startdebugging)
   - [repl-mode](#repl-mode)
@@ -25,59 +32,92 @@ installed as an extension for Visual Studio Code and other IDEs supporting DAP.
 The protocol is easy to run remotely and also can allow other tools and IDEs to
 get a full featured debugger with a well defined protocol.
 
-# Installation for Visual Studio Code
+# Local Installation for Visual Studio Code
 
-Installing the plug-in involves creating a directory in any location outside of
-`~/.vscode/extensions`. For example, `~/vscode-lldb` is a valid one. You'll also
-need a subfolder `bin`, e.g. `~/vscode-lldb/bin`. Then copy the `package.json`
-file that is in the same directory as this documentation into it, and symlink
-the `lldb-dap` binary into the `bin` directory inside the plug-in directory.
+Installing the plug-in is very straightforward and involves just a few steps.
 
-Finally, on VS Code, execute the command
-`Developer: Install Extension from Location` and pick the folder you just
-created, which would be `~/vscode-lldb` following the example above.
+## Pre-requisites
 
-If you want to make a stand alone plug-in that you can send to others on UNIX
-systems:
+- Install a modern version of node (e.g. `v20.0.0`).
+- On VS Code, execute the command `Install 'code' command in PATH`. You need to
+  do it only once. This enables the command `code` in the PATH.
+
+## Packaging and installation
 
 ```bash
-mkdir -p ~/llvm-org.lldb-dap-0.1.0/bin
-cp package.json ~/llvm-org.lldb-dap-0.1.0
-cd ~/llvm-org.lldb-dap-0.1.0/bin
-cp /path/to/a/built/lldb-dap .
-cp /path/to/a/built/liblldb.so .
+cd /path/to/lldb/tools/lldb-dap
+npm run package # This also compiles the extension.
+npm run vscode-install
 ```
 
-If you want to make a stand alone plug-in that you can send to others on macOS
-systems:
+On VS Code, set the setting `lldb-dap.executable-path` to the path of your local
+build of `lldb-dap`.
+
+And then you are ready!
+
+## Updating the extension
+
+*Note: It's not necessary to update the extension if there has been changes
+to  `lldb-dap`. The extension needs to be updated only if the TypesScript code
+has changed.*
+
+Updating the extension is pretty much the same process as installing it from
+scratch. However, VS Code expects the version number of the upgraded extension
+to be greater than the previous one, otherwise the installation step might have
+no effect.
 
 ```bash
-mkdir -p ~/llvm-org.lldb-dap-0.1.0/bin
-cp package.json ~/llvm-org.lldb-dap-0.1.0
-cd ~/llvm-org.lldb-dap-0.1.0/bin
-cp /path/to/a/built/lldb-dap .
-rsync -av /path/to/a/built/LLDB.framework LLDB.framework
+# Bump version in package.json
+cd /path/to/lldb/tools/lldb-dap
+npm run package
+npm run vscode-install
 ```
 
-You might need to create additional directories for the `liblldb.so` or
-`LLDB.framework` inside or next to the `bin` folder depending on how the
-[rpath](https://en.wikipedia.org/wiki/Rpath) is set in your `lldb-dap`
-binary. By default the `Debug` builds of LLDB usually includes
-the current executable directory in the rpath, so these steps should work for
-most people.
-
-To create a plug-in that symlinks into your `lldb-dap` in your build
-directory:
+Another way upgrade without bumping the extension version is to first uninstall
+the extension, then reload VS Code, and then install it again. This is
+an unfortunate limitation of the editor.
 
 ```bash
-mkdir -p ~/llvm-org.lldb-dap-0.1.0/bin
-cp package.json ~/llvm-org.lldb-dap-0.1.0
-cd ~/llvm-org.lldb-dap-0.1.0/bin
-ln -s /path/to/a/built/lldb-dap
+cd /path/to/lldb/tools/lldb-dap
+npm run vscode-uninstall
+# Then reload VS Code: reopen the IDE or execute the `Developer: Reload Window`
+# command.
+npm run package
+npm run vscode-install
 ```
 
-This is handy if you want to debug and develop the `lldb-dap` executable
-when adding features or fixing bugs.
+## Deploying for Visual Studio Code
+
+The easiest way to deploy the extension for execution on other machines requires
+copying `lldb-dap` and its dependencies into a`./bin` subfolder and then create a
+standalone VSIX package.
+
+```bash
+cd /path/to/lldb/tools/lldb-dap
+mkdir -p ./bin
+cp /path/to/a/built/lldb-dap ./bin/
+cp /path/to/a/built/liblldb.so ./bin/
+npm run package
+```
+
+This will produce the file `./out/lldb-dap.vsix` that can be distributed. In
+this type of installation, users don't need to manually set the path to
+`lldb-dap`. The extension will automatically look for it in the `./bin`
+subfolder.
+
+*Note: It's not possible to use symlinks to `lldb-dap`, as the packaging tool
+forcefully performs a deep copy of all symlinks.*
+
+*Note: It's possible to use this kind flow for local installations, but it's
+not recommended because updating `lldb-dap` requires rebuilding the extension.*
+
+# Formatting the Typescript code
+
+This is also very simple, just run:
+
+```bash
+npm run format
+```
 
 # Configurations
 

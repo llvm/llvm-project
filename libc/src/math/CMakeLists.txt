@@ -105,6 +105,7 @@ add_math_entrypoint_object(expm1f)
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
+add_math_entrypoint_object(fabsf128)
 
 add_math_entrypoint_object(fdim)
 add_math_entrypoint_object(fdimf)

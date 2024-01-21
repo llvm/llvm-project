@@ -35,7 +35,7 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.vg2x2.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16x2_t zm) __arm_streaming __arm_shared_za
+void test_svmla2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16x2_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_f16,_vg2x2,,)(slice_base, zn, zm);
 }
@@ -58,7 +58,7 @@ void test_svmla2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16x2_t zm) __
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.vg2x2.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16x2_t zm) __arm_streaming __arm_shared_za
+void test_svmla2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16x2_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_bf16,_vg2x2,,)(slice_base, zn, zm);
 }
@@ -81,7 +81,7 @@ void test_svmla2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16x2_t zm)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.vg2x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16x2_t zm) __arm_streaming __arm_shared_za
+void test_svmla2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16x2_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_u16,_vg2x2,,)(slice_base, zn, zm);
 }
@@ -104,7 +104,7 @@ void test_svmla2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16x2_t zm) __ar
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.vg2x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla2_s16(uint32_t slice_base, svint16x2_t zn, svint16x2_t zm) __arm_streaming __arm_shared_za
+void test_svmla2_s16(uint32_t slice_base, svint16x2_t zn, svint16x2_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_s16,_vg2x2,,)(slice_base, zn, zm);
 }
@@ -135,7 +135,7 @@ void test_svmla2_s16(uint32_t slice_base, svint16x2_t zn, svint16x2_t zm) __arm_
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.vg2x4.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], <vscale x 8 x half> [[TMP4]], <vscale x 8 x half> [[TMP5]], <vscale x 8 x half> [[TMP6]], <vscale x 8 x half> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16x4_t zm) __arm_streaming __arm_shared_za
+void test_svmla4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16x4_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_f16,_vg2x4,,)(slice_base, zn, zm);
 }
@@ -166,7 +166,7 @@ void test_svmla4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16x4_t zm) __
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.vg2x4.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], <vscale x 8 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], <vscale x 8 x bfloat> [[TMP6]], <vscale x 8 x bfloat> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16x4_t zm) __arm_streaming __arm_shared_za
+void test_svmla4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16x4_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_bf16,_vg2x4,,)(slice_base, zn, zm);
 }
@@ -197,7 +197,7 @@ void test_svmla4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16x4_t zm)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.vg2x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t zm) __arm_streaming __arm_shared_za
+void test_svmla4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_u16,_vg2x4,,)(slice_base, zn, zm);
 }
@@ -228,7 +228,7 @@ void test_svmla4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16x4_t zm) __ar
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.vg2x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], <vscale x 8 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], <vscale x 8 x i16> [[TMP7]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm) __arm_streaming __arm_shared_za
+void test_svmla4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_s16,_vg2x4,,)(slice_base, zn, zm);
 }
@@ -245,7 +245,7 @@ void test_svmla4_s16(uint32_t slice_base, svint16x4_t zn, svint16x4_t zm) __arm_
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.single.vg2x1.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_f16,_vg2x1,,)(slice_base, zn, zm);
 }
@@ -260,7 +260,7 @@ void test_svmla_single1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.single.vg2x1.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_bf16,_vg2x1,,)(slice_base, zn, zm);
 }
@@ -275,7 +275,7 @@ void test_svmla_single1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t 
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.single.vg2x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_u16,_vg2x1,,)(slice_base, zn, zm);
 }
@@ -290,7 +290,7 @@ void test_svmla_single1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) _
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.single.vg2x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za")
 {
    SVE_ACLE_FUNC(svmla_za32,_s16,_vg2x1,,)(slice_base, zn, zm);
 }
@@ -309,9 +309,9 @@ void test_svmla_single1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __a
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.single.vg2x2.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_f16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_f16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single2_bf16(
@@ -328,9 +328,9 @@ void test_svmla_single2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t z
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.single.vg2x2.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_bf16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_bf16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single2_u16(
@@ -347,9 +347,9 @@ void test_svmla_single2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.single.vg2x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_u16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_u16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single2_s16(
@@ -366,9 +366,9 @@ void test_svmla_single2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.single.vg2x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_s16,,_vg2x2)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_s16,_vg2x2)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single4_f16(
@@ -389,9 +389,9 @@ void test_svmla_single2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) _
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.single.vg2x4.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], <vscale x 8 x half> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_f16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_f16,_vg2x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single4_bf16(
@@ -412,9 +412,9 @@ void test_svmla_single4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t z
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.single.vg2x4.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_bf16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_bf16,_vg2x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single4_u16(
@@ -435,9 +435,9 @@ void test_svmla_single4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.single.vg2x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_u16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_u16,_vg2x4)(slice_base, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmla_single4_s16(
@@ -458,9 +458,9 @@ void test_svmla_single4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.single.vg2x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_single4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_single4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_single_za32,,_s16,,_vg2x4)(slice_base, zn, zm);
+   SVE_ACLE_FUNC(svmla,_single,_za32,_s16,_vg2x4)(slice_base, zn, zm);
 }
 
 //
@@ -477,9 +477,9 @@ void test_svmla_single4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) _
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.lane.vg2x1.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[ZN:%.*]], <vscale x 8 x half> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_f16,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_f16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane1_bf16(
@@ -492,9 +492,9 @@ void test_svmla_lane1_f16(uint32_t slice_base, svfloat16_t zn, svfloat16_t zm) _
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.lane.vg2x1.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_bf16,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_bf16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane1_u16(
@@ -507,9 +507,9 @@ void test_svmla_lane1_bf16(uint32_t slice_base, svbfloat16_t zn, svbfloat16_t zm
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.lane.vg2x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_u16,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_u16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane1_s16(
@@ -522,9 +522,9 @@ void test_svmla_lane1_u16(uint32_t slice_base, svuint16_t zn, svuint16_t zm) __a
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.lane.vg2x1.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_s16,_vg2x1)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_s16,_vg2x1,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane2_f16(
@@ -541,9 +541,9 @@ void test_svmla_lane1_s16(uint32_t slice_base, svint16_t zn, svint16_t zm) __arm
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.lane.vg2x2.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_f16,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_f16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane2_bf16(
@@ -560,9 +560,9 @@ void test_svmla_lane2_f16(uint32_t slice_base, svfloat16x2_t zn, svfloat16_t zm)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.lane.vg2x2.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_bf16,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_bf16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane2_u16(
@@ -579,9 +579,9 @@ void test_svmla_lane2_bf16(uint32_t slice_base, svbfloat16x2_t zn, svbfloat16_t 
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.lane.vg2x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_u16,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_u16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane2_s16(
@@ -598,9 +598,9 @@ void test_svmla_lane2_u16(uint32_t slice_base, svuint16x2_t zn, svuint16_t zm) _
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.lane.vg2x2.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_s16,_vg2x2)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_s16,_vg2x2,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane4_f16(
@@ -621,9 +621,9 @@ void test_svmla_lane2_s16(uint32_t slice_base, svint16x2_t zn, svint16_t zm) __a
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.lane.vg2x4.nxv8f16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x half> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x half> [[TMP3]], <vscale x 8 x half> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_f16,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_f16,_vg2x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane4_bf16(
@@ -644,9 +644,9 @@ void test_svmla_lane4_f16(uint32_t slice_base, svfloat16x4_t zn, svfloat16_t zm)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.fmlal.lane.vg2x4.nxv8bf16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x bfloat> [[TMP0]], <vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_bf16,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_bf16,_vg2x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane4_u16(
@@ -667,9 +667,9 @@ void test_svmla_lane4_bf16(uint32_t slice_base, svbfloat16x4_t zn, svbfloat16_t 
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.umlal.lane.vg2x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_u16,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_u16,_vg2x4,,)(slice_base, zn, zm, 7);
 }
 
 // CHECK-LABEL: @test_svmla_lane4_s16(
@@ -690,7 +690,7 @@ void test_svmla_lane4_u16(uint32_t slice_base, svuint16x4_t zn, svuint16_t zm) _
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.smlal.lane.vg2x4.nxv8i16(i32 [[SLICE_BASE:%.*]], <vscale x 8 x i16> [[TMP0]], <vscale x 8 x i16> [[TMP1]], <vscale x 8 x i16> [[TMP2]], <vscale x 8 x i16> [[TMP3]], <vscale x 8 x i16> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svmla_lane4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_shared_za
+void test_svmla_lane4_s16(uint32_t slice_base, svint16x4_t zn, svint16_t zm) __arm_streaming __arm_inout("za")
 {
-   SVE_ACLE_FUNC(svmla_lane_za32,,,_s16,_vg2x4)(slice_base, zn, zm, 7);
+   SVE_ACLE_FUNC(svmla_lane_za32,_s16,_vg2x4,,)(slice_base, zn, zm, 7);
 }

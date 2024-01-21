@@ -1615,27 +1615,32 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Annotations = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
-    // into another module, composite types only need to be imported
-    // as type declarations (unless full type definitions requested).
-    // Create type declarations up front to save memory. Also, buildODRType
-    // handles the case where this is type ODRed with a definition needed
-    // by the importing module, in which case the existing definition is
-    // used.
-    if (IsImporting && !ImportFullTypeDefinitions && Identifier &&
+    // into another module, composite types only need to be imported as
+    // type declarations (unless full type definitions are requested).
+    // Create type declarations up front to save memory. This is only
+    // done for types which have an Identifier, and are therefore
+    // subject to the ODR.
+    //
+    // buildODRType handles the case where this is type ODRed with a
+    // definition needed by the importing module, in which case the
+    // existing definition is used.
+    //
+    // We always import full definitions for anonymous composite types,
+    // as without a name, debuggers cannot easily resolve a declaration
+    // to its definition.
+    if (IsImporting && !ImportFullTypeDefinitions && Identifier && Name &&
         (Tag == dwarf::DW_TAG_enumeration_type ||
          Tag == dwarf::DW_TAG_class_type ||
          Tag == dwarf::DW_TAG_structure_type ||
          Tag == dwarf::DW_TAG_union_type)) {
       Flags = Flags | DINode::FlagFwdDecl;
-      if (Name) {
-        // This is a hack around preserving template parameters for simplified
-        // template names - it should probably be replaced with a
-        // DICompositeType flag specifying whether template parameters are
-        // required on declarations of this type.
-        StringRef NameStr = Name->getString();
-        if (!NameStr.contains('<') || NameStr.starts_with("_STN|"))
-          TemplateParams = getMDOrNull(Record[14]);
-      }
+      // This is a hack around preserving template parameters for simplified
+      // template names - it should probably be replaced with a
+      // DICompositeType flag specifying whether template parameters are
+      // required on declarations of this type.
+      StringRef NameStr = Name->getString();
+      if (!NameStr.contains('<') || NameStr.starts_with("_STN|"))
+        TemplateParams = getMDOrNull(Record[14]);
     } else {
       BaseType = getDITypeRefOrNull(Record[6]);
       OffsetInBits = Record[9];

@@ -1355,8 +1355,8 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ule <4 x float> [[WIDE_LOAD1]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <4 x i1> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <4 x i1> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP7]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP11:%.*]] = and <4 x i1> [[TMP8]], [[TMP10]]

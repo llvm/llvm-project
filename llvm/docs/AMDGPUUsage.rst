@@ -1182,6 +1182,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
+  llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
+                                                   and ds_cond_sub_u32 based on address space on gfx12 targets. This
+                                                   performs subtraction only if the memory value is greater than or
+                                                   equal to the data value.
+
+  llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
+                                                   sign-extended from the width of the underlying PC hardware register even on
+                                                   processors where the s_getpc_b64 instruction returns a zero-extended value.
+
   ==============================================   ==========================================================
 
 .. TODO::

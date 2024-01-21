@@ -701,8 +701,7 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
 void HexagonDAGToDAGISel::SelectExtractSubvector(SDNode *N) {
   SDValue Inp = N->getOperand(0);
   MVT ResTy = N->getValueType(0).getSimpleVT();
-  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
-  unsigned Idx = IdxN->getZExtValue();
+  unsigned Idx = N->getConstantOperandVal(1);
 
   [[maybe_unused]] MVT InpTy = Inp.getValueType().getSimpleVT();
   [[maybe_unused]] unsigned ResLen = ResTy.getVectorNumElements();
@@ -743,7 +742,7 @@ void HexagonDAGToDAGISel::SelectConstantFP(SDNode *N) {
 //
 void HexagonDAGToDAGISel::SelectConstant(SDNode *N) {
   if (N->getValueType(0) == MVT::i1) {
-    assert(!(cast<ConstantSDNode>(N)->getZExtValue() >> 1));
+    assert(!(N->getAsZExtVal() >> 1));
     unsigned Opc = (cast<ConstantSDNode>(N)->getSExtValue() != 0)
                       ? Hexagon::PS_true
                       : Hexagon::PS_false;

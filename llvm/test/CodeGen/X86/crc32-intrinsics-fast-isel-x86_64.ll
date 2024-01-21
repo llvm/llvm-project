@@ -15,7 +15,7 @@ define i64 @test_mm_crc64_u8(i64 %a0, i32 %a1) nounwind{
 ;
 ; EGPR-LABEL: test_mm_crc64_u8:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    crc32b %sil, %edi # encoding: [0x62,0xf4,0x7c,0x08,0xf0,0xfe]
+; EGPR-NEXT:    crc32b %sil, %edi # EVEX TO LEGACY Compression encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xfe]
 ; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %trunc = trunc i32 %a1 to i8
@@ -34,7 +34,7 @@ define i64 @test_mm_crc64_u64(i64 %a0, i64 %a1) nounwind{
 ; EGPR-LABEL: test_mm_crc64_u64:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
-; EGPR-NEXT:    crc32q %rsi, %rax # encoding: [0x62,0xf4,0xfc,0x08,0xf1,0xc6]
+; EGPR-NEXT:    crc32q %rsi, %rax # EVEX TO LEGACY Compression encoding: [0xf2,0x48,0x0f,0x38,0xf1,0xc6]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %res = call i64 @llvm.x86.sse42.crc32.64.64(i64 %a0, i64 %a1)
   ret i64 %res
