@@ -29,7 +29,8 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __ass
   if (__libcpp_is_constant_evaluated()) {
     return __ptr;
   } else {
-    _LIBCPP_ASSERT_UNCATEGORIZED(reinterpret_cast<uintptr_t>(__ptr) % _Np == 0, "Alignment assumption is violated");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        reinterpret_cast<uintptr_t>(__ptr) % _Np == 0, "Alignment assumption is violated");
     return static_cast<_Tp*>(__builtin_assume_aligned(__ptr, _Np));
   }
 }

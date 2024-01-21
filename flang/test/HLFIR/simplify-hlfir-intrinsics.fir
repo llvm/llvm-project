@@ -1,6 +1,3 @@
-// XFail the following test case on AIX due to potential miscompilation
-// TODO: Crash fir-opt on AIX
-// XFAIL: system-aix
 // RUN: fir-opt --simplify-hlfir-intrinsics %s | FileCheck %s
 
 // box with known extents

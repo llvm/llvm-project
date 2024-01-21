@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-macro-fusion-pred -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-PREDICATOR
+// RUN: llvm-tblgen -gen-subtarget -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-SUBTARGET
 
 include "llvm/Target/Target.td"
 
@@ -33,7 +34,8 @@ let Namespace = "Test" in {
 def Inst0 : TestInst<0>;
 def Inst1 : TestInst<1>;
 
-def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
+def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
+                             CheckOpcode<[Inst0]>,
                              CheckAll<[
                               CheckOpcode<[Inst1]>,
                               CheckRegOperand<0, X0>
@@ -95,3 +97,15 @@ def TestFusion: SimpleFusion<CheckOpcode<[Inst0]>,
 // CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  #endif
+
+// Check that we have generated target subfeature.
+// CHECK-SUBTARGET: { "test-fusion", "Test Fusion", Test::TestFusion
+
+// Check that we have generated `getMacroFusions()` function.
+// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const override;
+
+// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> TestGenSubtargetInfo::getMacroFusions() const {
+// CHECK-SUBTARGET-NEXT:   std::vector<MacroFusionPredTy> Fusions;
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestFusion)) Fusions.push_back(llvm::isTestFusion);
+// CHECK-SUBTARGET-NEXT:   return Fusions;
+// CHECK-SUBTARGET-NEXT: }

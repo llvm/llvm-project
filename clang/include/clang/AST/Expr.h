@@ -1136,7 +1136,6 @@ public:
     return ConstantExprBits.APValueKind != APValue::None;
   }
   APValue getAPValueResult() const;
-  APValue &getResultAsAPValue() const { return APValueResult(); }
   llvm::APSInt getResultAsAPSInt() const;
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
@@ -4754,6 +4753,17 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == SourceLocExprClass;
+  }
+
+  static bool MayBeDependent(SourceLocIdentKind Kind) {
+    switch (Kind) {
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
+      return true;
+    default:
+      return false;
+    }
   }
 
 private:

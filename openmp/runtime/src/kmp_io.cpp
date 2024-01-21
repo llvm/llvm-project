@@ -50,7 +50,6 @@ static HANDLE __kmp_stderr = NULL;
 static int __kmp_console_exists = FALSE;
 static kmp_str_buf_t __kmp_console_buf;
 
-#if 0
 static int is_console(void) {
   char buffer[128];
   DWORD rc = 0;
@@ -68,7 +67,6 @@ static int is_console(void) {
   }
   return rc > 0 || err == 0;
 }
-#endif
 
 void __kmp_close_console(void) {
   /* wait until user presses return before closing window */
@@ -86,6 +84,7 @@ void __kmp_close_console(void) {
 static void __kmp_redirect_output(void) {
   __kmp_acquire_bootstrap_lock(&__kmp_console_lock);
 
+  (void)is_console;
   if (!__kmp_console_exists) {
     HANDLE ho;
     HANDLE he;

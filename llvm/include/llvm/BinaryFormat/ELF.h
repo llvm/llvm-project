@@ -787,6 +787,8 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50 = 0x050,
   // clang-format on
 
   // First/last AMDGCN-based processors.

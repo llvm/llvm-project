@@ -113,9 +113,9 @@ class NDD<bit ndd, Map map = OB> {
   Map OpMap = !if(!eq(ndd, 0), map, T_MAP4);
 }
 // NF - Helper for NF (no flags update) instructions
-class NF: T_MAP4, EVEX, EVEX_NF, NoCD8;
+class NF: T_MAP4, EVEX, EVEX_NF;
 // PL - Helper for promoted legacy instructions
-class PL: T_MAP4, EVEX, NoCD8, ExplicitEVEXPrefix;
+class PL: T_MAP4, EVEX, ExplicitEVEXPrefix;
 
 //===----------------------------------------------------------------------===//
 // X86 Type infomation definitions
@@ -961,7 +961,7 @@ class ITy<bits<8> o, Format f, X86TypeInfo t, dag outs, dag ins, string m,
           string args, list<dag> p>
   : I<{o{7}, o{6}, o{5}, o{4}, o{3}, o{2}, o{1},
        !if(!eq(t.HasEvenOpcode, 1), 0, o{0})}, f, outs, ins,
-      !strconcat(m, "{", t.InstrSuffix, "}\t", args), p> {
+      !strconcat(m, "{", t.InstrSuffix, "}\t", args), p>, NoCD8 {
   let hasSideEffects = 0;
   let hasREX_W  = t.HasREX_W;
 }

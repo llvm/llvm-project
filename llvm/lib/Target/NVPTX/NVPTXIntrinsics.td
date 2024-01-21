@@ -411,6 +411,22 @@ def CP_ASYNC_WAIT_ALL :
   [(int_nvvm_cp_async_wait_all)]>,
   Requires<[hasPTX<70>, hasSM<80>]>;
 
+// cp.async.bulk variants of the commit/wait group
+def CP_ASYNC_BULK_COMMIT_GROUP :
+  NVPTXInst<(outs), (ins), "cp.async.bulk.commit_group;",
+  [(int_nvvm_cp_async_bulk_commit_group)]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group $n;",
+  [(int_nvvm_cp_async_bulk_wait_group (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP_READ :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group.read $n;",
+  [(int_nvvm_cp_async_bulk_wait_group_read (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------
@@ -770,11 +786,14 @@ defm INT_NVVM_FMAN : MIN_MAX<"max">;
 // Multiplication
 //
 
+def INT_NVVM_MULHI_S : F_MATH_2<"mul.hi.s16 \t$dst, $src0, $src1;", Int16Regs,
+  Int16Regs, Int16Regs, int_nvvm_mulhi_s>;
+def INT_NVVM_MULHI_US : F_MATH_2<"mul.hi.u16 \t$dst, $src0, $src1;", Int16Regs,
+  Int16Regs, Int16Regs, int_nvvm_mulhi_us>;
 def INT_NVVM_MULHI_I : F_MATH_2<"mul.hi.s32 \t$dst, $src0, $src1;", Int32Regs,
   Int32Regs, Int32Regs, int_nvvm_mulhi_i>;
 def INT_NVVM_MULHI_UI : F_MATH_2<"mul.hi.u32 \t$dst, $src0, $src1;", Int32Regs,
   Int32Regs, Int32Regs, int_nvvm_mulhi_ui>;
-
 def INT_NVVM_MULHI_LL : F_MATH_2<"mul.hi.s64 \t$dst, $src0, $src1;", Int64Regs,
   Int64Regs, Int64Regs, int_nvvm_mulhi_ll>;
 def INT_NVVM_MULHI_ULL : F_MATH_2<"mul.hi.u64 \t$dst, $src0, $src1;", Int64Regs,
@@ -851,10 +870,18 @@ def INT_NVVM_DIV_RP_D : F_MATH_2<"div.rp.f64 \t$dst, $src0, $src1;",
 // Sad
 //
 
+def INT_NVVM_SAD_S : F_MATH_3<"sad.s16 \t$dst, $src0, $src1, $src2;",
+  Int16Regs, Int16Regs, Int16Regs, Int16Regs, int_nvvm_sad_s>;
+def INT_NVVM_SAD_US : F_MATH_3<"sad.u16 \t$dst, $src0, $src1, $src2;",
+  Int16Regs, Int16Regs, Int16Regs, Int16Regs, int_nvvm_sad_us>;
 def INT_NVVM_SAD_I : F_MATH_3<"sad.s32 \t$dst, $src0, $src1, $src2;",
   Int32Regs, Int32Regs, Int32Regs, Int32Regs, int_nvvm_sad_i>;
 def INT_NVVM_SAD_UI : F_MATH_3<"sad.u32 \t$dst, $src0, $src1, $src2;",
   Int32Regs, Int32Regs, Int32Regs, Int32Regs, int_nvvm_sad_ui>;
+def INT_NVVM_SAD_LL : F_MATH_3<"sad.s64 \t$dst, $src0, $src1, $src2;",
+  Int64Regs, Int64Regs, Int64Regs, Int64Regs, int_nvvm_sad_ll>;
+def INT_NVVM_SAD_ULL : F_MATH_3<"sad.u64 \t$dst, $src0, $src1, $src2;",
+  Int64Regs, Int64Regs, Int64Regs, Int64Regs, int_nvvm_sad_ull>;
 
 //
 // Floor  Ceil

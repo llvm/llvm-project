@@ -25,11 +25,12 @@ public:
   template <typename T>
   void test_special_numbers(typename ILogbFunc<T>::Func func) {
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero())));
-    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::neg_zero())));
+    using Sign = LIBC_NAMESPACE::fputil::Sign;
+    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero(Sign::POS))));
+    EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero(Sign::NEG))));
     EXPECT_EQ(FP_ILOGBNAN, func(T(FPBits::build_quiet_nan(1))));
-    EXPECT_EQ(INT_MAX, func(T(FPBits::inf())));
-    EXPECT_EQ(INT_MAX, func(T(FPBits::neg_inf())));
+    EXPECT_EQ(INT_MAX, func(T(FPBits::inf(Sign::POS))));
+    EXPECT_EQ(INT_MAX, func(T(FPBits::inf(Sign::NEG))));
   }
 
   template <typename T>

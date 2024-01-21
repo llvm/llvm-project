@@ -153,7 +153,7 @@ lookupExtensionByID(llvm::AArch64::ArchExtKind ExtID) {
   for (const auto &E : llvm::AArch64::Extensions)
     if (E.ID == ExtID)
       return E;
-  assert(false && "Invalid extension ID");
+  llvm_unreachable("Invalid extension ID");
 }
 
 void AArch64::ExtensionSet::enable(ArchExtKind E) {

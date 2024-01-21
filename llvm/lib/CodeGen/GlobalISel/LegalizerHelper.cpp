@@ -5314,6 +5314,17 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_ICMP: {
+    // TODO: the symmetric MoreTy works for targets like, e.g. NEON.
+    // For targets, like e.g. MVE, the result is a predicated vector (i1).
+    // This will need some refactoring.
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 2);
+    moreElementsVectorSrc(MI, MoreTy, 3);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   default:
     return UnableToLegalize;
   }

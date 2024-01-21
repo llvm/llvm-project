@@ -2302,7 +2302,7 @@ void SITargetLowering::allocateSpecialInputSGPRs(
 
   const Module *M = MF.getFunction().getParent();
   if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getCodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5)
+      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5)
     allocateSGPR64Input(CCInfo, ArgInfo.QueuePtr);
 
   // Implicit arg ptr takes the place of the kernarg segment pointer. This is a
@@ -2355,7 +2355,7 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
 
   const Module *M = MF.getFunction().getParent();
   if (UserSGPRInfo.hasQueuePtr() &&
-      AMDGPU::getCodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
+      AMDGPU::getAMDHSACodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
@@ -6438,7 +6438,7 @@ SDValue SITargetLowering::lowerTrapHsaQueuePtr(
   SDValue QueuePtr;
   // For code object version 5, QueuePtr is passed through implicit kernarg.
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  if (AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
+  if (AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
     QueuePtr =
         loadImplicitKernelArgument(DAG, MVT::i64, SL, Align(8), QUEUE_PTR);
   } else {
@@ -6542,7 +6542,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   // For code object version 5, private_base and shared_base are passed through
   // implicit kernargs.
   const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  if (AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
+  if (AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5) {
     ImplicitParameter Param =
         (AS == AMDGPUAS::LOCAL_ADDRESS) ? SHARED_BASE : PRIVATE_BASE;
     return loadImplicitKernelArgument(DAG, MVT::i32, DL, Align(4), Param);
@@ -7296,17 +7296,17 @@ static SDValue padEltsToUndef(SelectionDAG &DAG, const SDLoc &DL, EVT CastVT,
 // Re-construct the required return value for a image load intrinsic.
 // This is more complicated due to the optional use TexFailCtrl which means the required
 // return type is an aggregate
-static SDValue constructRetValue(SelectionDAG &DAG,
-                                 MachineSDNode *Result,
-                                 ArrayRef<EVT> ResultTypes,
-                                 bool IsTexFail, bool Unpacked, bool IsD16,
-                                 int DMaskPop, int NumVDataDwords,
+static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
+                                 ArrayRef<EVT> ResultTypes, bool IsTexFail,
+                                 bool Unpacked, bool IsD16, int DMaskPop,
+                                 int NumVDataDwords, bool IsAtomicPacked16Bit,
                                  const SDLoc &DL) {
   // Determine the required return type. This is the same regardless of IsTexFail flag
   EVT ReqRetVT = ResultTypes[0];
   int ReqRetNumElts = ReqRetVT.isVector() ? ReqRetVT.getVectorNumElements() : 1;
-  int NumDataDwords = (!IsD16 || (IsD16 && Unpacked)) ?
-    ReqRetNumElts : (ReqRetNumElts + 1) / 2;
+  int NumDataDwords = ((IsD16 && !Unpacked) || IsAtomicPacked16Bit)
+                          ? (ReqRetNumElts + 1) / 2
+                          : ReqRetNumElts;
 
   int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
     DMaskPop : (DMaskPop + 1) / 2;
@@ -7331,7 +7331,7 @@ static SDValue constructRetValue(SelectionDAG &DAG,
     }
   }
 
-  if (DataDwordVT.isVector())
+  if (DataDwordVT.isVector() && !IsAtomicPacked16Bit)
     Data = padEltsToUndef(DAG, DL, DataDwordVT, Data,
                           NumDataDwords - MaskPopDwords);
 
@@ -7438,6 +7438,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SDValue VData;
   int NumVDataDwords;
   bool AdjustRetType = false;
+  bool IsAtomicPacked16Bit = false;
 
   // Offset of intrinsic arguments
   const unsigned ArgOffset = WithChain ? 2 : 1;
@@ -7447,6 +7448,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
 
   if (BaseOpcode->Atomic) {
     VData = Op.getOperand(2);
+
+    IsAtomicPacked16Bit =
+        (Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
+         Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16);
 
     bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
@@ -7776,10 +7781,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   }
   if (BaseOpcode->Store)
     return SDValue(NewNode, 0);
-  return constructRetValue(DAG, NewNode,
-                           OrigResultTypes, IsTexFail,
-                           Subtarget->hasUnpackedD16VMem(), IsD16,
-                           DMaskLanes, NumVDataDwords, DL);
+  return constructRetValue(DAG, NewNode, OrigResultTypes, IsTexFail,
+                           Subtarget->hasUnpackedD16VMem(), IsD16, DMaskLanes,
+                           NumVDataDwords, IsAtomicPacked16Bit, DL);
 }
 
 SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
@@ -8653,9 +8657,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
+    return lowerRawBufferAtomicIntrin(Op, DAG,
+                                      AMDGPUISD::BUFFER_ATOMIC_FADD_BF16);
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_FADD_BF16);
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FMIN);
@@ -9443,6 +9453,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
+    assert(!AMDGPU::isGFX12Plus(*Subtarget));
     unsigned Opc;
     bool HasVIndex =
         IntrinsicID == Intrinsic::amdgcn_struct_buffer_load_lds ||
@@ -9495,8 +9506,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Aux = Op.getConstantOperandVal(8 + OpOffset);
     Ops.push_back(
       DAG.getTargetConstant(Aux & AMDGPU::CPol::ALL, DL, MVT::i8)); // cpol
-    Ops.push_back(
-      DAG.getTargetConstant((Aux >> 3) & 1, DL, MVT::i8));          // swz
+    Ops.push_back(DAG.getTargetConstant(
+        Aux & AMDGPU::CPol::SWZ_pregfx12 ? 1 : 0, DL, MVT::i8)); // swz
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
 
@@ -14376,8 +14387,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
   case ISD::LOAD: {
-    if (SDValue Widended = widenLoad(cast<LoadSDNode>(N), DCI))
-      return Widended;
+    if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
+      return Widened;
     [[fallthrough]];
   }
   default: {
@@ -15576,6 +15587,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case AMDGPUISD::BUFFER_ATOMIC_CMPSWAP:
   case AMDGPUISD::BUFFER_ATOMIC_CSUB:
   case AMDGPUISD::BUFFER_ATOMIC_FADD:
+  case AMDGPUISD::BUFFER_ATOMIC_FADD_BF16:
   case AMDGPUISD::BUFFER_ATOMIC_FMIN:
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:
     // Target-specific read-modify-write atomics are sources of divergence.

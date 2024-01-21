@@ -4029,6 +4029,22 @@ public:
   /// because TrailingObjects cannot handle repeated types.
   struct ExceptionType { QualType Type; };
 
+  /// A simple holder for various uncommon bits which do not fit in
+  /// FunctionTypeBitfields. Aligned to alignof(void *) to maintain the
+  /// alignment of subsequent objects in TrailingObjects.
+  struct alignas(void *) FunctionTypeExtraBitfields {
+    /// The number of types in the exception specification.
+    /// A whole unsigned is not needed here and according to
+    /// [implimits] 8 bits would be enough here.
+    unsigned NumExceptionType : 10;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasArmTypeAttributes : 1;
+
+    FunctionTypeExtraBitfields()
+        : NumExceptionType(0), HasArmTypeAttributes(false) {}
+  };
+
   /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
   /// of function type attributes that can be set on function types, including
   /// function pointers.
@@ -4042,7 +4058,8 @@ public:
     SME_ZAMask = 0b111 << SME_ZAShift,
 
     SME_AttributeMask = 0b111'111 // We only support maximum 6 bits because of
-                                  // the bitmask in FunctionTypeExtraBitfields.
+                                  // the bitmask in FunctionTypeArmAttributes
+                                  // and ExtProtoInfo.
   };
 
   enum ArmStateValue : unsigned {
@@ -4057,20 +4074,15 @@ public:
     return (ArmStateValue)((AttrBits & SME_ZAMask) >> SME_ZAShift);
   }
 
-  /// A simple holder for various uncommon bits which do not fit in
-  /// FunctionTypeBitfields. Aligned to alignof(void *) to maintain the
-  /// alignment of subsequent objects in TrailingObjects.
-  struct alignas(void *) FunctionTypeExtraBitfields {
-    /// The number of types in the exception specification.
-    /// A whole unsigned is not needed here and according to
-    /// [implimits] 8 bits would be enough here.
-    unsigned NumExceptionType : 10;
-
+  /// A holder for Arm type attributes as described in the Arm C/C++
+  /// Language extensions which are not particularly common to all
+  /// types and therefore accounted separately from FunctionTypeBitfields.
+  struct alignas(void *) FunctionTypeArmAttributes {
     /// Any AArch64 SME ACLE type attributes that need to be propagated
     /// on declarations and function pointers.
     unsigned AArch64SMEAttributes : 6;
-    FunctionTypeExtraBitfields()
-        : NumExceptionType(0), AArch64SMEAttributes(SME_NormalFunction) {}
+
+    FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
   };
 
 protected:
@@ -4169,7 +4181,8 @@ class FunctionProtoType final
       public llvm::FoldingSetNode,
       private llvm::TrailingObjects<
           FunctionProtoType, QualType, SourceLocation,
-          FunctionType::FunctionTypeExtraBitfields, FunctionType::ExceptionType,
+          FunctionType::FunctionTypeExtraBitfields,
+          FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
@@ -4276,7 +4289,11 @@ public:
 
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
-             AArch64SMEAttributes != SME_NormalFunction;
+             requiresFunctionProtoTypeArmAttributes();
+    }
+
+    bool requiresFunctionProtoTypeArmAttributes() const {
+      return AArch64SMEAttributes != SME_NormalFunction;
     }
 
     void setArmSMEAttribute(AArch64SMETypeAttributes Kind, bool Enable = true) {
@@ -4294,6 +4311,10 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
     return isVariadic();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<FunctionTypeArmAttributes>) const {
+    return hasArmTypeAttributes();
   }
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
@@ -4382,6 +4403,12 @@ private:
            "ExtraBitfields are required for given ExceptionSpecType");
     return FunctionTypeBits.HasExtraBitfields;
 
+  }
+
+  bool hasArmTypeAttributes() const {
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasArmTypeAttributes;
   }
 
   bool hasExtQualifiers() const {
@@ -4595,9 +4622,9 @@ public:
   /// Return a bitmask describing the SME attributes on the function type, see
   /// AArch64SMETypeAttributes for their values.
   unsigned getAArch64SMEAttributes() const {
-    if (!hasExtraBitfields())
+    if (!hasArmTypeAttributes())
       return SME_NormalFunction;
-    return getTrailingObjects<FunctionTypeExtraBitfields>()
+    return getTrailingObjects<FunctionTypeArmAttributes>()
         ->AArch64SMEAttributes;
   }
 

@@ -82,27 +82,17 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= encodeZT0State(StateValue::New);
 }
 
-std::optional<bool>
-SMEAttrs::requiresSMChange(const SMEAttrs &Callee,
-                           bool BodyOverridesInterface) const {
-  // If the transition is not through a call (e.g. when considering inlining)
-  // and Callee has a streaming body, then we can ignore the interface of
-  // Callee.
-  if (BodyOverridesInterface && Callee.hasStreamingBody()) {
-    return hasStreamingInterfaceOrBody() ? std::nullopt
-                                         : std::optional<bool>(true);
-  }
-
+bool SMEAttrs::requiresSMChange(const SMEAttrs &Callee) const {
   if (Callee.hasStreamingCompatibleInterface())
-    return std::nullopt;
+    return false;
 
   // Both non-streaming
   if (hasNonStreamingInterfaceAndBody() && Callee.hasNonStreamingInterface())
-    return std::nullopt;
+    return false;
 
   // Both streaming
   if (hasStreamingInterfaceOrBody() && Callee.hasStreamingInterface())
-    return std::nullopt;
+    return false;
 
-  return Callee.hasStreamingInterface();
+  return true;
 }
