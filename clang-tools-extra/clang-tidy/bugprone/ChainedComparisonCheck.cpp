@@ -138,12 +138,12 @@ void ChainedComparisonCheck::check(const MatchFinder::MatchResult &Result) {
        "chained comparison '%0' may generate unintended results, use "
        "parentheses to specify order of evaluation or a logical operator to "
        "separate comparison expressions")
-      << llvm::StringRef(Data.Name).trim();
+      << llvm::StringRef(Data.Name).trim() << MatchedOperator->getSourceRange();
 
   for (std::size_t Index = 0U; Index < Data.Operands.size(); ++Index) {
     diag(Data.Operands[Index]->getBeginLoc(), "operand 'v%0' is here",
          DiagnosticIDs::Note)
-        << Index;
+        << Index << Data.Operands[Index]->getSourceRange();
   }
 }
 
