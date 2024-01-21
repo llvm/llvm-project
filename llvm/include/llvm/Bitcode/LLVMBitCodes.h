@@ -369,6 +369,7 @@ enum MetadataCodes {
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
   METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
+  METADATA_PARAM_ATTACHMENT = 48, // [ [valueid ,] [valueid, [n x [id, mdnode]]]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each

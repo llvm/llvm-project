@@ -398,8 +398,13 @@ ValueEnumerator::ValueEnumerator(const Module &M,
 
   // Enumerate types used by function bodies and argument lists.
   for (const Function &F : M) {
-    for (const Argument &A : F.args())
+    for (const Argument &A : F.args()) {
       EnumerateType(A.getType());
+      MDs.clear();
+      A.getAllMetadata(MDs);
+      for (const auto &I : MDs)
+        EnumerateMetadata(F.isDeclaration() ? nullptr : &F, I.second);
+    }
 
     // Enumerate metadata attached to this function.
     MDs.clear();

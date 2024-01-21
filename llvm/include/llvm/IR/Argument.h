@@ -177,6 +177,14 @@ public:
   static bool classof(const Value *V) {
     return V->getValueID() == ArgumentVal;
   }
+
+  using Value::addMetadata;
+  using Value::clearMetadata;
+  using Value::eraseMetadata;
+  using Value::getAllMetadata;
+  using Value::getMetadata;
+  using Value::hasMetadata;
+  using Value::setMetadata;
 };
 
 } // End llvm namespace

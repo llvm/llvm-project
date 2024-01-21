@@ -319,7 +319,7 @@ added in the future:
     not be used lightly but only for specific situations such as an
     alternative to the *register pinning* performance technique often
     used when implementing functional programming languages. At the
-    moment only X86, AArch64, and RISCV support this convention. The 
+    moment only X86, AArch64, and RISCV support this convention. The
     following limitations exist:
 
     -  On *X86-32* only up to 4 bit type parameters are supported. No
@@ -643,10 +643,10 @@ implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
 ``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
 Similar restrictions apply to intrinsics that might examine the pointer bits,
-such as :ref:`llvm.ptrmask<int_ptrmask>`. 
+such as :ref:`llvm.ptrmask<int_ptrmask>`.
 
 The alignment information provided by the frontend for a non-integral pointer
-(typically using attributes or metadata) must be valid for every possible 
+(typically using attributes or metadata) must be valid for every possible
 representation of the pointer.
 
 .. _globalvars:
@@ -824,7 +824,8 @@ an optional :ref:`calling convention <callingconv>`,
 an optional ``unnamed_addr`` attribute, a return type, an optional
 :ref:`parameter attribute <paramattrs>` for the return type, a function
 name, a (possibly empty) argument list (each with optional :ref:`parameter
-attributes <paramattrs>`), optional :ref:`function attributes <fnattrs>`,
+attributes <paramattrs>` and an optional list of attached :ref:`metadata <metadata>`),
+optional :ref:`function attributes <fnattrs>`,
 an optional address space, an optional section, an optional partition,
 an optional alignment, an optional :ref:`comdat <langref_comdats>`,
 an optional :ref:`garbage collector name <gc>`, an optional :ref:`prefix <prefixdata>`,
@@ -848,7 +849,7 @@ argument is of the following form:
 
 Syntax::
 
-   <type> [parameter Attrs] [name]
+   <type> [parameter Attrs] (!name !N)* [name]
 
 LLVM function declarations consist of the "``declare``" keyword, an
 optional :ref:`linkage type <linkage>`, an optional :ref:`visibility style

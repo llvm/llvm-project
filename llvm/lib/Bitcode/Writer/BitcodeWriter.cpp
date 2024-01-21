@@ -29,6 +29,7 @@
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
@@ -378,6 +379,8 @@ private:
   void writeFunctionMetadataAttachment(const Function &F);
   void pushGlobalMetadataAttachment(SmallVectorImpl<uint64_t> &Record,
                                     const GlobalObject &GO);
+  void pushParamMetadataAttachment(SmallVectorImpl<uint64_t> &Record,
+                                   const Argument &A);
   void writeModuleMetadataKinds();
   void writeOperandBundleTags();
   void writeSyncScopeNames();
@@ -2393,8 +2396,17 @@ void ModuleBitcodeWriter::writeModuleMetadata() {
     Stream.EmitRecord(bitc::METADATA_GLOBAL_DECL_ATTACHMENT, Record);
   };
   for (const Function &F : M)
-    if (F.isDeclaration() && F.hasMetadata())
-      AddDeclAttachedMetadata(F);
+    if (F.isDeclaration()) {
+      if (F.hasMetadata())
+        AddDeclAttachedMetadata(F);
+      for (const auto &A : F.args())
+        if (A.hasMetadata()) {
+          Record.push_back(VE.getValueID(&F));
+          pushParamMetadataAttachment(Record, A);
+          Stream.EmitRecord(bitc::METADATA_PARAM_ATTACHMENT, Record);
+          Record.clear();
+        }
+    }
   // FIXME: Only store metadata for declarations here, and move data for global
   // variable definitions to a separate block (PR28134).
   for (const GlobalVariable &GV : M.globals())
@@ -2426,10 +2438,29 @@ void ModuleBitcodeWriter::pushGlobalMetadataAttachment(
   }
 }
 
+void ModuleBitcodeWriter::pushParamMetadataAttachment(
+    SmallVectorImpl<uint64_t> &Record, const Argument &A) {
+  Record.push_back(A.getArgNo());
+  // [n x [id, mdnode]]
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  A.getAllMetadata(MDs);
+  for (const auto &I : MDs) {
+    Record.push_back(I.first);
+    Record.push_back(VE.getMetadataID(I.second));
+  }
+}
+
 void ModuleBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   Stream.EnterSubblock(bitc::METADATA_ATTACHMENT_ID, 3);
 
   SmallVector<uint64_t, 64> Record;
+
+  for (const auto &A : F.args())
+    if (A.hasMetadata()) {
+      pushParamMetadataAttachment(Record, A);
+      Stream.EmitRecord(bitc::METADATA_PARAM_ATTACHMENT, Record);
+      Record.clear();
+    }
 
   if (F.hasMetadata()) {
     pushGlobalMetadataAttachment(Record, F);
@@ -3475,6 +3506,9 @@ void ModuleBitcodeWriter::writeFunction(
   unsigned InstID = CstEnd;
 
   bool NeedsMetadataAttachment = F.hasMetadata();
+
+  for (auto IA = F.arg_begin(), E = F.arg_end(); IA != E; ++IA)
+    NeedsMetadataAttachment |= IA->hasMetadata();
 
   DILocation *LastDL = nullptr;
   SmallSetVector<Function *, 4> BlockAddressUsers;

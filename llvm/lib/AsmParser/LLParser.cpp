@@ -1929,6 +1929,19 @@ bool LLParser::parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam) {
   }
 }
 
+/// Parse a potentially empty list of parameter or return attributes.
+bool LLParser::parseOptionalParamMetadata(
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) {
+  while (Lex.getKind() == lltok::MetadataVar) {
+    unsigned MDK;
+    MDNode *N;
+    if (parseMetadataAttachment(MDK, N))
+      return true;
+    MDs.emplace_back(MDK, N);
+  }
+  return false;
+}
+
 static unsigned parseOptionalLinkageAux(lltok::Kind Kind, bool &HasLinkage) {
   HasLinkage = true;
   switch (Kind) {
@@ -3058,7 +3071,9 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       LocTy TypeLoc = Lex.getLoc();
       Type *ArgTy = nullptr;
       AttrBuilder Attrs(M->getContext());
-      if (parseType(ArgTy) || parseOptionalParamAttrs(Attrs))
+      SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+      if (parseType(ArgTy) || parseOptionalParamAttrs(Attrs) ||
+          parseOptionalParamMetadata(MDs))
         return true;
 
       if (ArgTy->isVoidTy())
@@ -3087,7 +3102,7 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
 
       ArgList.emplace_back(TypeLoc, ArgTy,
                            AttributeSet::get(ArgTy->getContext(), Attrs),
-                           std::move(Name));
+                           std::move(Name), std::move(MDs));
     } while (EatIfPresent(lltok::comma));
   }
 
@@ -3115,6 +3130,8 @@ bool LLParser::parseFunctionType(Type *&Result) {
     if (ArgList[i].Attrs.hasAttributes())
       return error(ArgList[i].Loc,
                    "argument attributes invalid in function type");
+    if (!ArgList[i].MDs.empty())
+      return error(ArgList[i].Loc, "metadata invalid in function type");
   }
 
   SmallVector<Type*, 16> ArgListTy;
@@ -6223,6 +6240,8 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   // Add all of the arguments we parsed to the function.
   Function::arg_iterator ArgIt = Fn->arg_begin();
   for (unsigned i = 0, e = ArgList.size(); i != e; ++i, ++ArgIt) {
+    for (const auto &MD : ArgList[i].MDs)
+      ArgIt->addMetadata(MD.first, *MD.second);
     // If the argument has a name, insert it into the argument symbol table.
     if (ArgList[i].Name.empty()) continue;
 

@@ -285,6 +285,8 @@ namespace llvm {
     };
     bool parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
                             bool InAttrGroup);
+    bool parseOptionalParamMetadata(
+        SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs);
     bool parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam);
     bool parseOptionalParamAttrs(AttrBuilder &B) {
       return parseOptionalParamOrReturnAttrs(B, true);
@@ -607,8 +609,10 @@ namespace llvm {
       Type *Ty;
       AttributeSet Attrs;
       std::string Name;
-      ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
-          : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
+      SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+      ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N,
+              const SmallVector<std::pair<unsigned, MDNode *>, 8> &mds)
+          : Loc(L), Ty(ty), Attrs(Attr), Name(N), MDs(mds) {}
     };
     bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
                            SmallVectorImpl<unsigned> &UnnamedArgNums,

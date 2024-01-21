@@ -26,6 +26,11 @@ define void @test3() !bar !3 {
   unreachable, !bar !4
 }
 
+; CHECK: define void @test4(i32 noundef !foo [[M2]] !baz [[M5:![0-9]+]] %a, i32 !range [[M6:![0-9]+]] %b)
+define void @test4(i32 noundef !foo !2 !baz !8 %a, i32 !range !9 %b) {
+  unreachable
+}
+
 ; CHECK-LABEL: define void @test_attachment_name() {
 ; CHECK:   unreachable, !\342abc [[M4]]
 define void @test_attachment_name() {
@@ -38,6 +43,8 @@ define void @test_attachment_name() {
 ; CHECK: [[M0]] = !DILocation
 ; CHECK: [[M1]] = distinct !DISubprogram
 ; CHECK: [[M4]] = distinct !{}
+; CHECK: [[M5]] = distinct !{}
+; CHECK: [[M6]] = !{i32 1, i32 0}
 
 !llvm.module.flags = !{!7}
 !llvm.dbg.cu = !{!5}
@@ -52,6 +59,8 @@ define void @test_attachment_name() {
                              splitDebugFilename: "abc.debug", emissionKind: 2)
 !6 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
 !7 = !{i32 2, !"Debug Info Version", i32 3}
+!8 = distinct !{}
+!9 = !{ i32 1, i32 0 }
 
 declare void @llvm.dbg.func.start(metadata) nounwind readnone
 

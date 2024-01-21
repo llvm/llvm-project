@@ -1477,7 +1477,8 @@ void Value::getAllMetadata(
 }
 
 void Value::setMetadata(unsigned KindID, MDNode *Node) {
-  assert(isa<Instruction>(this) || isa<GlobalObject>(this));
+  assert(isa<Instruction>(this) || isa<GlobalObject>(this) ||
+         isa<Argument>(this));
 
   // Handle the case when we're adding/updating metadata on a value.
   if (Node) {
@@ -1511,7 +1512,8 @@ void Value::setMetadata(StringRef Kind, MDNode *Node) {
 }
 
 void Value::addMetadata(unsigned KindID, MDNode &MD) {
-  assert(isa<Instruction>(this) || isa<GlobalObject>(this));
+  assert(isa<Instruction>(this) || isa<GlobalObject>(this) ||
+         isa<Argument>(this));
   if (!HasMetadata)
     HasMetadata = true;
   getContext().pImpl->ValueMetadata[this].insert(KindID, MD);

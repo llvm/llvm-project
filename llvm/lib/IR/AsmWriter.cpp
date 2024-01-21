@@ -857,6 +857,9 @@ private:
   /// Add all of the metadata from a function.
   void processFunctionMetadata(const Function &F);
 
+  /// Add all of the metadata from a argument.
+  void processParamMetadata(const Argument &A);
+
   /// Add all of the metadata from an instruction.
   void processInstructionMetadata(const Instruction &I);
 
@@ -1128,6 +1131,9 @@ void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
 
 void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
+  for (const auto &A : F.args()) {
+    processParamMetadata(A);
+  }
   for (auto &BB : F) {
     for (auto &I : BB) {
       for (const DPValue &DPV : I.getDbgValueRange())
@@ -1158,6 +1164,14 @@ void SlotTracker::processInstructionMetadata(const Instruction &I) {
   // Process metadata attached to this instruction.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   I.getAllMetadata(MDs);
+  for (auto &MD : MDs)
+    CreateMetadataSlot(MD.second);
+}
+
+void SlotTracker::processParamMetadata(const Argument &A) {
+  // Process metadata attached to this instruction.
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  A.getAllMetadata(MDs);
   for (auto &MD : MDs)
     CreateMetadataSlot(MD.second);
 }
@@ -3918,6 +3932,12 @@ void AssemblyWriter::printFunction(const Function *F) {
         Out << ' ';
         writeAttributeSet(ArgAttrs);
       }
+      auto *Arg = F->getArg(I);
+      if (Arg->hasMetadata()) {
+        SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+        Arg->getAllMetadata(MDs);
+        printMetadataAttachments(MDs, " ");
+      }
     }
   } else {
     // The arguments are meaningful here, print them in detail.
@@ -4009,6 +4029,10 @@ void AssemblyWriter::printArgument(const Argument *Arg, AttributeSet Attrs) {
     Out << ' ';
     writeAttributeSet(Attrs);
   }
+
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  Arg->getAllMetadata(MDs);
+  printMetadataAttachments(MDs, " ");
 
   // Output name, if available...
   if (Arg->hasName()) {

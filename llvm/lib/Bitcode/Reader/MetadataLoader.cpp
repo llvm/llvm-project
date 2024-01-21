@@ -26,6 +26,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -60,9 +61,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-namespace llvm {
-class Argument;
-}
 
 using namespace llvm;
 
@@ -477,6 +475,7 @@ class MetadataLoader::MetadataLoaderImpl {
                              function_ref<void(StringRef)> CallBack);
   Error parseGlobalObjectAttachment(GlobalObject &GO,
                                     ArrayRef<uint64_t> Record);
+  Error parseParamAttachment(Function &F, ArrayRef<uint64_t> Record);
   Error parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record);
 
   void resolveForwardRefsAndPlaceholders(PlaceholderQueue &Placeholders);
@@ -2263,6 +2262,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_PARAM_ATTACHMENT: {
+    unsigned RecordLength = Record.size();
+    if (Record.empty() || (RecordLength - 2) % 2 == 1)
+      return error("Invalid record");
+    unsigned ValueID = Record[0];
+    if (ValueID >= ValueList.size())
+      return error("Invalid record");
+    if (auto *F = dyn_cast<Function>(ValueList[ValueID]))
+      if (Error Err =
+              parseParamAttachment(*F, ArrayRef<uint64_t>(Record).slice(1)))
+        return Err;
+    break;
+  }
   }
   return Error::success();
 #undef GET_OR_DISTINCT
@@ -2317,6 +2329,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseGlobalObjectAttachment(
     if (!MD)
       return error("Invalid metadata attachment: expect fwd ref to MDNode");
     GO.addMetadata(K->second, *MD);
+  }
+  return Error::success();
+}
+
+Error MetadataLoader::MetadataLoaderImpl::parseParamAttachment(
+    Function &F, ArrayRef<uint64_t> Record) {
+  assert((Record.size() - 1) % 2 == 0);
+
+  auto *A = F.getArg(Record[0]);
+  for (unsigned I = 1, E = Record.size(); I != E; I += 2) {
+    auto K = MDKindMap.find(Record[I]);
+    if (K == MDKindMap.end())
+      return error("Invalid ID");
+    MDNode *MD =
+        dyn_cast_or_null<MDNode>(getMetadataFwdRefOrLoad(Record[I + 1]));
+    if (!MD)
+      return error("Invalid metadata attachment: expect fwd ref to MDNode");
+    A->addMetadata(K->second, *MD);
   }
   return Error::success();
 }
@@ -2404,6 +2434,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
         }
         Inst->setMetadata(I->second, MD);
       }
+      break;
+    }
+    case bitc::METADATA_PARAM_ATTACHMENT: {
+      unsigned RecordLength = Record.size();
+      if (Record.empty() || (RecordLength - 1) % 2 == 1)
+        return error("Invalid record");
+      if (Error Err = parseParamAttachment(F, Record))
+        return Err;
       break;
     }
     }
