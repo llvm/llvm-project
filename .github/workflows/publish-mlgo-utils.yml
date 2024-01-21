@@ -1,0 +1,40 @@
+name: Release mlgo-utils
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch'
+        required: true
+        type: string
+
+jobs:
+  release-mlgo-utils:
+    name: Release mlgo-utils
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4.1.1
+        with:
+          ref: "${{ inputs.branch }}"
+      - name: Install dependencies
+        run: |
+          pip3 install build==0.10.0 setuptools==68.0.00
+      - name: Package mlgo-utils
+        run: |
+          cd llvm/utils/mlgo-utils
+          python3 -m build
+      - name: Upload mlgo-utils to test.pypi.org
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.MLGO_UTILS_TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: llvm/utils/mlgo-utils/dist/
+      - name: Upload mlgo-utils to pypi.org
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.MLGO_UTILS_PYPI_API_TOKEN }}
+          packages-dir: llvm/utils/mlgo-utils/dist/
