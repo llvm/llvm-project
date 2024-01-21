@@ -2,6 +2,8 @@
 #define UTILS_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/SourceLocation.h"

@@ -1,7 +1,7 @@
 #include "FunctionInfo.h"
+#include "VarFinder.h"
 #include "utils.h"
 
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 
 class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
@@ -50,7 +50,7 @@ int main(int argc, const char **argv) {
     Tool.buildASTs(ASTs);
 
     for (auto &AST : ASTs) {
-        const ASTContext &Context = AST->getASTContext();
+        ASTContext &Context = AST->getASTContext();
 
         auto *TUD = Context.getTranslationUnitDecl();
         llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
@@ -68,4 +68,25 @@ int main(int argc, const char **argv) {
             llvm::errs() << "  " << fi->name << "\n";
         }
     }
+
+    llvm::errs() << "\n--- FindVarVisitor ---\n";
+    VarLocation targetLoc(
+        "/home/thebesttv/vul/llvm-project/graph-generation/test4.cpp", 2, 7);
+    FindVarVisitor::findVar(functionsInFile, targetLoc);
+
+    targetLoc.line = 2;
+    targetLoc.column = 14;
+    FindVarVisitor::findVar(functionsInFile, targetLoc);
+
+    targetLoc.line = 23;
+    targetLoc.column = 7;
+    FindVarVisitor::findVar(functionsInFile, targetLoc);
+
+    targetLoc.line = 23;
+    targetLoc.column = 11;
+    FindVarVisitor::findVar(functionsInFile, targetLoc);
+
+    targetLoc.line = 23;
+    targetLoc.column = 15;
+    FindVarVisitor::findVar(functionsInFile, targetLoc);
 }
