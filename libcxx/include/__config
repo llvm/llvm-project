@@ -297,10 +297,9 @@
 // - `_LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN` -- checks that the given argument is within the domain of valid arguments
 //   for the function. Violating this typically produces an incorrect result (e.g. the clamp algorithm returns the
 //   original value without clamping it due to incorrect functors) or puts an object into an invalid state (e.g.
-//   a string view where only a subset of elements is possible to access). This doesn't cause an immediate issue within
-//   the library but is always a logic bug and is likely to cause problems within user code.
-//   This is somewhat of a catch-all (or fallback) category -- it covers errors triggered by user input that don't have
-//   a more specific category defined (which is always preferable when available).
+//   a string view where only a subset of elements is possible to access). This category is for assertions violating
+//   which doesn't cause any immediate issues in the library -- whatever the consequences are, they will happen in the
+//   user code.
 //
 // - `_LIBCPP_ASSERT_PEDANTIC` -- checks prerequisites which are imposed by the Standard, but violating which happens to
 //   be benign in our implementation.
