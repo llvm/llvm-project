@@ -467,8 +467,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     std::vector<Fraction> denominatorCoefficients;
     denominatorCoefficients = eachTermDenCoefficients[0];
     for (unsigned j = 1, e = eachTermDenCoefficients.size(); j < e; ++j)
-      denominatorCoefficients =
-          convolution(denominatorCoefficients, eachTermDenCoefficients[j]);
+      denominatorCoefficients = multiplyPolynomials(denominatorCoefficients,
+                                                    eachTermDenCoefficients[j]);
 
     totalTerm =
         totalTerm + getCoefficientInRationalFunction(r, numeratorCoefficients,

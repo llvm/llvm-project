@@ -539,8 +539,10 @@ Fraction presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b) {
   return sum;
 }
 
-std::vector<Fraction> presburger::convolution(ArrayRef<Fraction> a,
-                                              ArrayRef<Fraction> b) {
+/// Find the product of two polynomials, each given by an array of
+/// coefficients, by taking the convolution.
+std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
+                                                      ArrayRef<Fraction> b) {
   // The length of the convolution is the sum of the lengths
   // of the two sequences. We pad the shorter one with zeroes.
   unsigned len = a.size() + b.size();

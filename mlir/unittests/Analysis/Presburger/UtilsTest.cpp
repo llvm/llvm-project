@@ -71,7 +71,7 @@ TEST(UtilsTest, convolution) {
   ArrayRef<Fraction> x({1, 2, 3, 4});
   ArrayRef<Fraction> y({7, 3, 1, 6});
 
-  std::vector<Fraction> conv = convolution(x, y);
+  std::vector<Fraction> conv = multiplyPolynomials(x, y);
 
   EXPECT_EQ(conv, std::vector<Fraction>({7, 17, 28, 45, 27, 22, 24}));
 }
