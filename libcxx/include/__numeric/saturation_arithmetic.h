@@ -32,8 +32,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
     return std::numeric_limits<_Tp>::max();
   } else {
     // Signed addition overflow
-    if (__x >= 0)
-      // Overflows if (x >= 0 && y > 0)
+    if (__x > 0)
+      // Overflows if (x > 0 && y > 0)
       return std::numeric_limits<_Tp>::max();
     else
       // Overflows if  (x < 0 && y < 0)
@@ -52,7 +52,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
   } else {
     // Signed subtration overflow
     if (__x >= 0)
-      // Overflows if (x > 0 && y < 0)
+      // Overflows if (x >= 0 && y < 0)
       return std::numeric_limits<_Tp>::max();
     else
       // Overflows if (x < 0 && y > 0)
@@ -91,8 +91,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
 
 template <__libcpp_integer _Rp, __libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
-  // Saturation is impossible edge case when min _Rp < min _Tp and max _Rp > _Tp is expected to be optimized out by the
-  // compiler.
+  // Saturation is impossible edge case when ((min _Rp) < (min _Tp) && (max _Rp) > (max _Tp)) and it is expected to be
+  // optimized out by the compiler.
 
   // Handle overflow
   if (std::cmp_less(__x, std::numeric_limits<_Rp>::min()))
