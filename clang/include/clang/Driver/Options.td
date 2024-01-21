@@ -3910,9 +3910,16 @@ def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>
   HelpText<"Give global types 'default' visibility and global functions and "
            "variables 'hidden' visibility by default">;
 def fvisibility_global_new_delete_hidden : Flag<["-"], "fvisibility-global-new-delete-hidden">, Group<f_Group>,
-  HelpText<"Give global C++ operator new and delete declarations hidden visibility">,
+  HelpText<"Give global C++ operator new and delete declarations hidden visibility">;
+class MarshallingInfoVisibilityGlobalNewDelete<KeyPathAndMacro kpm, code default>
+  : MarshallingInfoEnum<kpm, default>,
+    Values<"force-default,force-protected,force-hidden,source">,
+    NormalizedValuesScope<"LangOptions::VisibilityForcedKinds">,
+    NormalizedValues<["ForceDefault", "ForceProtected", "ForceHidden", "Source"]> {}
+def fvisibility_global_new_delete_EQ : Joined<["-"], "fvisibility-global-new-delete=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"GlobalAllocationFunctionVisibilityHidden">>;
+  HelpText<"The visibility for global C++ operator new and delete declarations. If 'source' is specified the visibility is not adjusted">,
+  MarshallingInfoVisibilityGlobalNewDelete<LangOpts<"GlobalAllocationFunctionVisibility">, "ForceDefault">;
 def mdefault_visibility_export_mapping_EQ : Joined<["-"], "mdefault-visibility-export-mapping=">,
   Values<"none,explicit,all">,
   NormalizedValuesScope<"LangOptions::DefaultVisiblityExportMapping">,
