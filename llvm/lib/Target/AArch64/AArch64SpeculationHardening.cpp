@@ -296,17 +296,9 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
     // The RegScavenger represents registers available *after* the MI
     // instruction pointed to by RS.getCurrentPosition().
     // We need to have a register that is available *before* the MI is executed.
-    if (I == MBB.begin())
-      RS.enterBasicBlock(MBB);
-    else
-      RS.backward(I);
-    // FIXME: The below just finds *a* unused register. Maybe code could be
-    // optimized more if this looks for the register that isn't used for the
-    // longest time around this place, to enable more scheduling freedom. Not
-    // sure if that would actually result in a big performance difference
-    // though. Maybe RegisterScavenger::findSurvivorBackwards has some logic
-    // already to do this - but it's unclear if that could easily be used here.
-    Register TmpReg = RS.FindUnusedReg(&AArch64::GPR64commonRegClass);
+    RS.backward(I);
+    Register TmpReg = RS.scavengeRegisterBackwards(AArch64::GPR64commonRegClass,
+                                                   I, false, 0, false);
     LLVM_DEBUG(dbgs() << "RS finds "
                       << ((TmpReg == 0) ? "no register " : "register ");
                if (TmpReg != 0) dbgs() << printReg(TmpReg, TRI) << " ";
