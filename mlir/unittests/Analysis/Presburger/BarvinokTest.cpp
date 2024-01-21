@@ -169,8 +169,7 @@ TEST(BarvinokTest, computeNumTerms) {
   EXPECT_EQ(numPoints.getConstantTerm(), Fraction(1, 1));
 
   // The following generating function corresponds to a cuboid
-  // with length (x-axis) M, width (y-axis) N, and height (z-axis)
-  // P.
+  // with length M (x-axis), width N (y-axis), and height P (z-axis).
   // There are eight terms.
   gf = GeneratingFunction(
       3, {1, 1, 1, 1, 1, 1, 1, 1},

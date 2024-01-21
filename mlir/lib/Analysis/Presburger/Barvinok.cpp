@@ -247,15 +247,12 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
   return coefficients[power].simplify();
 }
 
-/// Substitute x_i = t^μ_i in one term of a generating function,
-/// returning
+/// Substitute x_i = t^μ_i in one term of a generating function, returning
 /// a quasipolynomial which represents the exponent of the numerator
-/// of the result, and
-/// a vector which represents the exponents of the denominator of the
-/// result.
-/// v represents the affine functions whose floors are multiplied by
-/// by the generators, and
-/// ds represents the list of generators.
+/// of the result, and a vector which represents the exponents of the
+/// denominator of the result.
+/// v represents the affine functions whose floors are multiplied by the
+/// generators, and ds represents the list of generators.
 std::pair<QuasiPolynomial, std::vector<Fraction>>
 substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
                    Point mu) {
@@ -405,7 +402,6 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   Point mu = getNonOrthogonalVector(allDenominators);
 
   unsigned numParams = gf.getNumParams();
-
   const std::vector<std::vector<Point>> &ds = gf.getDenominators();
   QuasiPolynomial totalTerm(numParams, 0);
   for (unsigned i = 0, e = ds.size(); i < e; ++i) {

@@ -546,8 +546,7 @@ std::vector<Fraction> presburger::convolution(ArrayRef<Fraction> a,
   unsigned len = a.size() + b.size();
 
   // We define accessors to avoid out-of-bounds errors.
-  std::function<Fraction(ArrayRef<Fraction>, unsigned)> getItem =
-      [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
+  auto getItem = [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
     if (i < arr.size())
       return arr[i];
     else
