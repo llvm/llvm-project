@@ -56,6 +56,7 @@ struct __debug_less {
 // Pass the comparator by lvalue reference. Or in the extensive hardening mode and above, using a debugging wrapper that
 // stores a reference.
 #if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE || _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+template <class _Comp>
 using __comp_ref_type = __debug_less<_Comp>;
 #else
 template <class _Comp>
