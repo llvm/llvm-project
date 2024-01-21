@@ -1013,6 +1013,11 @@ Bug Fixes to C++ Support
 - Fix a false-positive ODR violation for different definitions for `std::align_val_t`.
   Fixes (`#76638 <https://github.com/llvm/llvm-project/issues/76638>`_)
 
+- Fix crash when calling the constructor of an invalid class.
+  Fixes (`#10518 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  (`#67914 <https://github.com/llvm/llvm-project/issues/10518>`_),
+  and (`#78388 <https://github.com/llvm/llvm-project/issues/78388>`_)
+
 - Remove recorded `#pragma once` state for headers included in named modules.
   Fixes (`#77995 <https://github.com/llvm/llvm-project/issues/77995>`_)
 
