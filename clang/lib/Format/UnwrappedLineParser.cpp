@@ -2762,7 +2762,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
 
   // TableGen's if statement has the form of `if <cond> then { ... }`.
   if (Style.isTableGen()) {
-    while (!eof() && !(FormatTok->is(Keywords.kw_then))) {
+    while (!eof() && FormatTok->isNot(Keywords.kw_then)) {
       // Simply skip until then. This range only contains a value.
       nextToken();
     }
