@@ -18,7 +18,6 @@ namespace clang::tidy::google::readability {
 
 void AvoidCStyleCastsCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-
   Finder->addMatcher(
       cStyleCastExpr(
           // Filter out (EnumType)IntegerLiteral construct, which is generated
