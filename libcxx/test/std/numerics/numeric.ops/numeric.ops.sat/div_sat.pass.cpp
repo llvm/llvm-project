@@ -98,10 +98,13 @@ constexpr bool test_unsigned() {
 
   assert(std::div_sat(IntegerT{0}, IntegerT{1}) == IntegerT{0});
   assert(std::div_sat(IntegerT{0},      maxVal) == IntegerT{0});
+
   assert(std::div_sat(IntegerT{1}, IntegerT{1}) == IntegerT{1});
   assert(std::div_sat(IntegerT{1},      maxVal) == IntegerT{0});
+
   assert(std::div_sat(     minVal, IntegerT{1}) == minVal);
   assert(std::div_sat(     minVal,      maxVal) == IntegerT{0});
+
   assert(std::div_sat(     maxVal, IntegerT{1}) == maxVal);
   assert(std::div_sat(     maxVal,      maxVal) == IntegerT{1});
 

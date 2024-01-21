@@ -40,21 +40,25 @@ constexpr bool test_signed() {
   assert(std::add_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{ 0});
   assert(std::add_sat(IntegerT{-1},       minVal) == minVal); // saturated
   assert(std::add_sat(IntegerT{-1},       maxVal) == IntegerT{-1} + maxVal);
+
   assert(std::add_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{-1});
   assert(std::add_sat(IntegerT{ 0}, IntegerT{ 0}) == IntegerT{ 0});
   assert(std::add_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 1});
   assert(std::add_sat(IntegerT{ 0},       minVal) == minVal);
   assert(std::add_sat(IntegerT{ 0},       maxVal) == maxVal);
+
   assert(std::add_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{ 0});
   assert(std::add_sat(IntegerT{ 1}, IntegerT{ 0}) == IntegerT{ 1});
   assert(std::add_sat(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 2});
   assert(std::add_sat(IntegerT{ 1},       minVal) == IntegerT{ 1} + minVal);
   assert(std::add_sat(IntegerT{ 1},       maxVal) == maxVal); // saturated
+
   assert(std::add_sat(      minVal, IntegerT{-1}) == minVal); // saturated
   assert(std::add_sat(      minVal, IntegerT{ 0}) == minVal);
   assert(std::add_sat(      minVal, IntegerT{ 1}) == minVal + IntegerT{ 1});
   assert(std::add_sat(      minVal,       minVal) == minVal); // saturated
   assert(std::add_sat(      minVal,       maxVal) == IntegerT{-1});
+
   assert(std::add_sat(      maxVal, IntegerT{-1}) == maxVal + IntegerT{-1});
   assert(std::add_sat(      maxVal, IntegerT{ 0}) == maxVal);
   assert(std::add_sat(      maxVal, IntegerT{ 1}) == maxVal); // saturated
@@ -76,12 +80,12 @@ constexpr bool test_signed() {
   {
     constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{-27};
     constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{-28};
-    assert(std::add_sat(x, y) == minVal);
+    assert(std::add_sat(x, y) == minVal); // saturated
   }
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::add_sat(x, y) == maxVal);
+    assert(std::add_sat(x, y) == maxVal); // saturated
   }
 
   // clang-format on

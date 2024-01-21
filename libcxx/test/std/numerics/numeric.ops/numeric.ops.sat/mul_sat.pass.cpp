@@ -33,61 +33,65 @@ constexpr bool test_signed() {
 
   // clang-format off
 
-  // No saturation (-1, 0, 1)
+  // Limit values (-1, 0, 1, min, max)
 
   assert(std::mul_sat(IntegerT{-1}, IntegerT{-1}) == IntegerT{ 1});
   assert(std::mul_sat(IntegerT{-1}, IntegerT{ 0}) == IntegerT{ 0});
   assert(std::mul_sat(IntegerT{-1}, IntegerT{ 1}) == IntegerT{-1});
+  assert(std::mul_sat(IntegerT{-1},       minVal) == maxVal); // saturated
   assert(std::mul_sat(IntegerT{-1},       maxVal) == -maxVal);
+
   assert(std::mul_sat(IntegerT{ 0}, IntegerT{-1}) == IntegerT{ 0});
   assert(std::mul_sat(IntegerT{ 0}, IntegerT{ 0}) == IntegerT{ 0});
   assert(std::mul_sat(IntegerT{ 0}, IntegerT{ 1}) == IntegerT{ 0});
+  assert(std::mul_sat(IntegerT{ 0},       minVal) == IntegerT{ 0});
+  assert(std::mul_sat(IntegerT{ 0},       maxVal) == IntegerT{ 0});
+
   assert(std::mul_sat(IntegerT{ 1}, IntegerT{-1}) == IntegerT{-1});
   assert(std::mul_sat(IntegerT{ 1}, IntegerT{ 0}) == IntegerT{ 0});
   assert(std::mul_sat(IntegerT{ 1}, IntegerT{ 1}) == IntegerT{ 1});
   assert(std::mul_sat(IntegerT{ 1},       minVal) == minVal);
+  assert(std::mul_sat(IntegerT{ 1},       maxVal) == maxVal);
 
-  // No saturation (large values)
+  assert(std::mul_sat(      minVal, IntegerT{-1}) == maxVal); // saturated
+  assert(std::mul_sat(      minVal, IntegerT{ 0}) == IntegerT{ 0});
+  assert(std::mul_sat(      minVal, IntegerT{ 1}) == minVal);
+  assert(std::mul_sat(      minVal,       minVal) == maxVal); // saturated
+  assert(std::mul_sat(      minVal,       maxVal) == minVal); // saturated
+
+  assert(std::mul_sat(      maxVal, IntegerT{-1}) == -maxVal);
+  assert(std::mul_sat(      maxVal, IntegerT{ 0}) == IntegerT{ 0});
+  assert(std::mul_sat(      maxVal, IntegerT{ 1}) == maxVal); // saturated
+  assert(std::mul_sat(      maxVal,       minVal) == minVal); // saturated
+  assert(std::mul_sat(      maxVal,       maxVal) == maxVal); // saturated
+
+  // No saturation (no limit values)
 
   assert(std::mul_sat(IntegerT{27}, IntegerT{ 2}) == IntegerT{54});
   assert(std::mul_sat(IntegerT{ 2}, IntegerT{28}) == IntegerT{56});
 
-  // No saturation (min, max)
-
-  assert(std::mul_sat(      minVal, IntegerT{ 1}) == minVal);
-  assert(std::mul_sat(      maxVal, IntegerT{-1}) == -maxVal);
-
-  // Saturation
+  // Saturation (no limit values)
 
   {
     constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{28};
-    assert(std::mul_sat(x, y) == maxVal);
+    assert(std::mul_sat(x, y) == maxVal); // saturated
   }
   {
     constexpr IntegerT x = minVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::mul_sat(x, y) == minVal);
+    assert(std::mul_sat(x, y) == minVal); // saturated
   }
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = minVal / IntegerT{2} + IntegerT{28};
-    assert(std::mul_sat(x, y) == minVal);
+    assert(std::mul_sat(x, y) == minVal); // saturated
   }
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::mul_sat(x, y) == maxVal);
+    assert(std::mul_sat(x, y) == maxVal); // saturated
   }
-
-  // e.g. signed char range -128 to 127
-  assert(std::mul_sat(minVal, IntegerT{-1}) == maxVal);
-  assert(std::mul_sat(minVal, IntegerT{ 1}) == minVal);
-  assert(std::mul_sat(minVal,       minVal) == maxVal);
-  assert(std::mul_sat(minVal,       maxVal) == minVal);
-  assert(std::mul_sat(maxVal, IntegerT{ 1}) == maxVal);
-  assert(std::mul_sat(maxVal,       maxVal) == maxVal);
-  assert(std::mul_sat(maxVal,       minVal) == minVal);
 
   // clang-format on
 
@@ -110,32 +114,33 @@ constexpr bool test_unsigned() {
   assert(std::mul_sat(IntegerT{0}, IntegerT{1}) == IntegerT{0});
   assert(std::mul_sat(IntegerT{0},      minVal) == IntegerT{0});
   assert(std::mul_sat(IntegerT{0},      maxVal) == IntegerT{0});
+
   assert(std::mul_sat(IntegerT{1}, IntegerT{0}) == IntegerT{0});
   assert(std::mul_sat(IntegerT{1}, IntegerT{1}) == IntegerT{1});
+  assert(std::mul_sat(IntegerT{1},      minVal) == minVal);
+  assert(std::mul_sat(IntegerT{1},      maxVal) == maxVal);
 
-  // No saturation (large value)
+  assert(std::mul_sat(     minVal, IntegerT{0}) == IntegerT{0});
+  assert(std::mul_sat(     minVal, IntegerT{1}) == minVal);
+  assert(std::mul_sat(     minVal,      maxVal) == minVal);
+  assert(std::mul_sat(     minVal,      maxVal) == minVal);
+
+  assert(std::mul_sat(     maxVal, IntegerT{0}) == IntegerT{0});
+  assert(std::mul_sat(     maxVal, IntegerT{1}) == maxVal);
+  assert(std::mul_sat(     maxVal,      minVal) == IntegerT{0});
+  assert(std::mul_sat(     maxVal,      maxVal) == maxVal); // saturated
+
+  // No saturation (no limit values)
 
   assert(std::mul_sat(IntegerT{28}, IntegerT{2}) == IntegerT{56});
 
-  // No saturation (min, max)
+  // Saturation (no limit values
 
-  assert(std::mul_sat(minVal, IntegerT{0}) == IntegerT{0});
-  assert(std::mul_sat(minVal, IntegerT{1}) == IntegerT{0});
-  assert(std::mul_sat(minVal,      maxVal) == IntegerT{0});
-  assert(std::mul_sat(maxVal, IntegerT{0}) == IntegerT{0});
-  assert(std::mul_sat(maxVal, IntegerT{1}) == maxVal);
-  assert(std::mul_sat(maxVal,      minVal) == IntegerT{0});
-
-  // Saturation
-
-  assert(std::mul_sat(IntegerT{1}, maxVal) == maxVal);
-  assert(std::mul_sat(maxVal, IntegerT{1}) == maxVal);
   {
     constexpr IntegerT x = maxVal / IntegerT{2} + IntegerT{27};
     constexpr IntegerT y = maxVal / IntegerT{2} + IntegerT{28};
-    assert(std::mul_sat(x, y) == maxVal);
+    assert(std::mul_sat(x, y) == maxVal); // saturated
   }
-  assert(std::mul_sat(maxVal, maxVal) == maxVal);
 
   // clang-format on
 
