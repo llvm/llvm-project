@@ -9,7 +9,16 @@
 #ifndef __LLVM_LIBC_MACROS_FLOAT_MACROS_H
 #define __LLVM_LIBC_MACROS_FLOAT_MACROS_H
 
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-include-next"
+#endif //__clang__
+
 #include_next <float.h>
+
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif //__clang__
 
 #ifndef FLT_RADIX
 #define FLT_RADIX __FLT_RADIX__
