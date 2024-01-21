@@ -42,7 +42,8 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<uns
 
 // Tests
 
- bool test() {
+// constexpr
+bool test() {
   // clang-format off
 
 #ifndef TEST_HAS_NO_INT128
@@ -362,13 +363,13 @@ static_assert(noexcept(std::saturate_cast<unsigned char>(std::numeric_limits<uns
 
   { [[maybe_unused]] std::same_as<unsigned long long int> decltype(auto) _ = std::saturate_cast<unsigned long long int>(uBigMax); }
   assert(std::saturate_cast<unsigned long long int>(     uZero) == 0ULL);
-  assert(std::saturate_cast<unsigned long long int>(   uBigMax) == ULLONG_MAX); // (128-bit) saturated
   constexpr auto a1 = std::saturate_cast<unsigned long long int>(   uBigMax);
   constexpr auto a2 = ULLONG_MAX;
   std::println(stderr, "{}", a1);
   std::println(stderr, "{}", a2);
   std::println(stderr, "{}", uBigMax);
   assert(false);
+  assert(std::saturate_cast<unsigned long long int>(   uBigMax) == ULLONG_MAX); // (128-bit) saturated
 
 #ifndef TEST_HAS_NO_INT128
   { [[maybe_unused]] std::same_as<__uint128_t> decltype(auto) _ = std::saturate_cast<__uint128_t>(SCHAR_MIN); }
