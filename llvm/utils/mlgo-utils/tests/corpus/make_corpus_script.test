@@ -1,3 +1,5 @@
+# REQUIRES: python-38, absl, system-linux
+
 ## Testing that the make_corpus script works as expected when invoked.
 
 # RUN: rm -rf %t.dir && mkdir %t.dir

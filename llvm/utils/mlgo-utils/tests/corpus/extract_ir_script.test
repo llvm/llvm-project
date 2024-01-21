@@ -1,3 +1,5 @@
+# REQUIRES: python-38, absl, system-linux
+
 ## Test that invoking the extract_ir script work as expected.
 
 # RUN: rm -rf %t.dir && mkdir %t.dir
