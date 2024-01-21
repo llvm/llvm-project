@@ -46,46 +46,48 @@ struct Graph {
 };
 
 struct BlockGraph {
-    const ASTContext &Context;
     const CFG *cfg;
     Graph g;
 
-    std::map<const Stmt *, int> blockIdOfStmt;
-    BlockGraph(const ASTContext &Context, const CFG *cfg)
-        : Context(Context), cfg(cfg), g(cfg->size()) {
+    BlockGraph(const CFG *cfg) : g(cfg->size()) {
         for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
             const CFGBlock &B = **BI;
+            // add edges to successors
+            for (auto SI = B.succ_begin(); SI != B.succ_end(); ++SI) {
+                const CFGBlock *Succ = *SI;
+                g.addEdge(B.getBlockID(), Succ->getBlockID());
+            }
+        }
+    }
+};
 
-            llvm::errs() << "Block " << B.getBlockID() << ":\n";
+struct CFGInfo {
+    const ASTContext &Context;
+    std::set<const Stmt *> stmts;
+    // map stmt to its residing block
+    std::map<const Stmt *, const CFGBlock *> blockOfStmt;
+
+    CFGInfo(ASTContext &Context, const CFG *cfg) : Context(Context) {
+        for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
+            const CFGBlock &B = **BI;
 
             // map stmts to block ids
             for (auto EI = B.begin(); EI != B.end(); ++EI) {
                 const CFGElement &E = *EI;
                 if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
-                    const Stmt &S = *CS->getStmt();
-                    blockIdOfStmt[&S] = B.getBlockID();
-
-                    llvm::errs() << "  " << S.getStmtClassName() << " ("
-                                 << S.getID(Context) << ")\n";
+                    const Stmt *S = CS->getStmt();
+                    int id = S->getID(Context);
+                    stmts.insert(S);
+                    blockOfStmt[S] = &B;
                 }
             }
-
-            llvm::errs() << "  successors:";
-            // add edges
-            for (auto SI = B.succ_begin(); SI != B.succ_end(); ++SI) {
-                const CFGBlock *Succ = *SI;
-                g.addEdge(B.getBlockID(), Succ->getBlockID());
-
-                llvm::errs() << " " << Succ->getBlockID();
-            }
-            llvm::errs() << "\n";
         }
     }
 
-    int getBlockId(const Stmt &s) {
-        auto it = blockIdOfStmt.find(&s);
-        if (it == blockIdOfStmt.end())
-            return -1;
+    const CFGBlock *getBlock(const Stmt *s) {
+        auto it = blockOfStmt.find(s);
+        if (it == blockOfStmt.end())
+            return nullptr;
         return it->second;
     }
 };
@@ -98,6 +100,7 @@ struct FunctionInfo {
     int column;
 
     const CFG *cfg;
+    CFGInfo *cfgInfo;
     BlockGraph *bg;
 
     static FunctionInfo *fromDecl(FunctionDecl *D) {
@@ -122,7 +125,9 @@ struct FunctionInfo {
             D, D->getBody(), &D->getASTContext(), CFG::BuildOptions());
 
         // build graph for each CFGBlock
-        BlockGraph *bg = new BlockGraph(D->getASTContext(), cfg.get());
+        BlockGraph *bg = new BlockGraph(cfg.get());
+
+        CFGInfo *cfgInfo = new CFGInfo(D->getASTContext(), cfg.get());
 
         FunctionInfo *fi = new FunctionInfo();
         fi->D = D;
@@ -131,6 +136,7 @@ struct FunctionInfo {
         fi->line = line;
         fi->column = column;
         fi->cfg = cfg.get();
+        fi->cfgInfo = cfgInfo;
         fi->bg = bg;
         return fi;
     }

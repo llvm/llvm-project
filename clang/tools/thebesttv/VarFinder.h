@@ -9,6 +9,8 @@ struct VarLocation {
     int line;
     int column;
 
+    VarLocation() : VarLocation("", -1, -1) {}
+
     VarLocation(std::string file, int line, int column)
         : file(file), line(line), column(column) {}
 
@@ -35,30 +37,18 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
   private:
     ASTContext *Context;
     VarLocation targetLoc;
-
-    std::vector<const Stmt *> resultStmtChain;
-
-    explicit FindVarVisitor(ASTContext *Context, VarLocation targetLoc)
-        : Context(Context), targetLoc(targetLoc) {}
+    bool found = false;
 
   public:
-    template <typename NodeT> void visitParentsRecursively(const NodeT &base) {
-        const DynTypedNodeList &parents = Context->getParents(base);
-        requireTrue(parents.size() == 1, "parent size is not 1");
+    FindVarVisitor() {}
 
-        if (const Stmt *parent = parents.begin()->get<Stmt>()) {
-            llvm::errs() << "    " << parent->getStmtClassName() << "\n";
-            resultStmtChain.push_back(parent);
-            if (isa<CompoundStmt>(parent))
-                return;
-            visitParentsRecursively(*parent);
-        } else if (const Decl *parent = parents.begin()->get<Decl>()) {
-            llvm::errs() << "    " << parent->getDeclKindName() << "\n";
-            visitParentsRecursively(*parent);
-        } else {
-            llvm::errs() << "    unknown parent\n";
-            exit(1);
-        }
+    bool findVarInStmt(ASTContext *Context, const Stmt *S,
+                       VarLocation targetLoc) {
+        this->Context = Context;
+        this->targetLoc = targetLoc;
+        this->found = false;
+        TraverseStmt(const_cast<Stmt *>(S));
+        return found;
     }
 
     bool findMatch(const Stmt *S, const NamedDecl *decl,
@@ -66,17 +56,8 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
         FullSourceLoc FullLocation = Context->getFullLoc(loc);
         VarLocation varLoc(FullLocation);
         bool match = varLoc == targetLoc;
-        if (match) {
-            const auto &var = decl->getQualifiedNameAsString();
-            llvm::errs() << "Found VarDecl: " << var << "\n";
-            llvm::errs() << "  at " << varLoc.file << ":" << varLoc.line << ":"
-                         << varLoc.column << "\n";
-            llvm::errs() << "  parents:\n";
-
-            requireTrue(resultStmtChain.empty());
-            resultStmtChain.push_back(S);
-            visitParentsRecursively(*S);
-        }
+        if (match)
+            found = true;
 
         return match;
     }
@@ -84,28 +65,17 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
     bool VisitDeclStmt(DeclStmt *ds) {
         for (Decl *d : ds->decls()) {
             if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
-                findMatch(ds, vd, vd->getLocation());
+                if (findMatch(ds, vd, vd->getLocation()))
+                    return false;
             }
         }
         return true;
     }
 
     bool VisitDeclRefExpr(DeclRefExpr *dre) {
-        findMatch(dre, dre->getDecl(), dre->getBeginLoc());
+        if (findMatch(dre, dre->getDecl(), dre->getBeginLoc()))
+            return false;
         return true;
-    }
-
-    static std::vector<const Stmt *> findVar(const fif &functionsInFile,
-                                             VarLocation targetLoc) {
-        for (const FunctionInfo *fi : functionsInFile.at(targetLoc.file)) {
-            ASTContext *Context = &fi->D->getASTContext();
-            FindVarVisitor fv(Context, targetLoc);
-            TranslationUnitDecl *TUD = Context->getTranslationUnitDecl();
-            fv.TraverseDecl(TUD);
-            if (!fv.resultStmtChain.empty())
-                return fv.resultStmtChain;
-        }
-        requireTrue(false, "no match found!");
     }
 };
 
