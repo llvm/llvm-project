@@ -122,6 +122,78 @@ public:
 };
 
 /**
+ * Visit all DeclRefExprs and print their parents.
+ */
+class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
+public:
+  struct VarLocation {
+    std::string file; // absolute path
+    int line;
+    int column;
+
+    VarLocation(std::string file, int line, int column)
+      : file(file), line(line), column(column) {}
+
+    VarLocation(const FullSourceLoc &fullLoc) {
+      requireTrue(fullLoc.hasManager(), "no source manager!");
+      requireTrue(fullLoc.isValid(), "invalid location!");
+
+      file = fullLoc.getFileEntry()->tryGetRealPathName();
+      line = fullLoc.getLineNumber();
+      column = fullLoc.getColumnNumber();
+      requireTrue(!file.empty(), "empty file path!");
+    }
+
+    bool operator==(const VarLocation &other) const {
+      return file == other.file && line == other.line && column == other.column;
+    }
+  };
+
+private:
+  ASTContext *Context;
+  VarLocation targetLoc;
+
+public:
+
+  explicit FindVarVisitor(ASTContext *Context, VarLocation targetLoc)
+   : Context(Context), targetLoc(targetLoc) {}
+
+  void visitParents(const Stmt &base) {
+    const Stmt *s = &base;
+    llvm::errs() << "    parents:\n";
+    while (true) {
+      const auto &parents = Context->getParents(*s);
+      requireTrue(parents.size() == 1, "parent size is not 1");
+
+      const Stmt *parent = parents.begin()->get<Stmt>();
+      requireTrue(parent != nullptr, "parent is null");
+
+      llvm::errs() << "      " << parent->getStmtClassName() << "\n";
+      if (isa<CompoundStmt>(parent)) {
+        break;
+      }
+
+      s = parent;
+    }
+  }
+
+  bool VisitStmt(Stmt *s) {
+    // DeclRefExpr
+    if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(s)) {
+      FullSourceLoc FullLocation = Context->getFullLoc(s->getBeginLoc());
+      VarLocation varLoc(FullLocation);
+      if (varLoc == targetLoc) {
+        const auto &var = dre->getDecl()->getQualifiedNameAsString();
+        llvm::errs() << "Found DeclRefExpr: " << var << "\n";
+        llvm::errs() << "  at " << varLoc.file << ":" << varLoc.line << ":" << varLoc.column << "\n";
+        visitParents(*s);
+      }
+    }
+    return true;
+  }
+};
+
+/**
  * Visit all FunctionDecls and print their CFGs.
  */
 class FunctionDeclVisitor : public RecursiveASTVisitor<FunctionDeclVisitor>, public HasContextVisitor {
@@ -225,8 +297,11 @@ public:
     llvm::errs() << "\n--- FunctionDeclVisitor ---\n";
     FunctionDeclVisitor(&Context).TraverseDecl(TUD);
 
-    llvm::errs() << "\n--- VarVisitor ---\n";
-    VarVisitor(&Context).TraverseDecl(TUD);
+    llvm::errs() << "\n--- FindVarVisitor ---\n";
+    FindVarVisitor::VarLocation targetLoc = {
+      "/home/thebesttv/vul/llvm-project/graph-generation/test4.cpp", 23, 5
+    };
+    FindVarVisitor(&Context, targetLoc).TraverseDecl(TUD);
   }
 };
 

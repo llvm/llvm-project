@@ -7,8 +7,10 @@ int loop(int n) {
             break;
         } else if (i > 10) {
             continue;
-        } else {
+        } else if (i > 20) {
             x *= 2 * i;
+        } else {
+            x = x / 2 * i;
         }
         s += i;
     }
