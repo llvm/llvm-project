@@ -158,6 +158,8 @@ class CodeGenTBAA {
   llvm::MDNode *createScalarTypeNode(StringRef Name, llvm::MDNode *Parent,
                                      uint64_t Size);
 
+  void appendPointeeName(raw_ostream &OS, const Type *Ty);
+
   /// getTypeInfoHelper - An internal helper function to generate metadata used
   /// to describe accesses to objects of the given type.
   llvm::MDNode *getTypeInfoHelper(const Type *Ty);

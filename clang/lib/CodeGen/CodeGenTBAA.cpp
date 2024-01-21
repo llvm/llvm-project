@@ -94,7 +94,7 @@ static bool TypeHasMayAlias(QualType QTy) {
 }
 
 /// Check if the given type is a valid base type to be used in access tags.
-static bool isValidBaseType(QualType QTy) {
+static bool isValidBaseType(QualType QTy, const CodeGenOptions &CodeGenOpts) {
   if (QTy->isReferenceType())
     return false;
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
@@ -105,13 +105,154 @@ static bool isValidBaseType(QualType QTy) {
     if (RD->hasFlexibleArrayMember())
       return false;
     // RD can be struct, union, class, interface or enum.
-    // For now, we only handle struct and class.
-    if (RD->isStruct() || RD->isClass())
+    if (RD->isStruct() || RD->isClass() ||
+        (RD->isUnion() && CodeGenOpts.UnionTBAA))
       return true;
   }
   return false;
 }
 
+// Appends unique tag for compatible pointee types.
+void CodeGenTBAA::appendPointeeName(llvm::raw_ostream &OS, const Type *Ty) {
+  // Although type compatibilty in C standard requires cv-qualification
+  // match and exact type match, here more relaxed rules are applied.
+  //
+  // For built-in types consider them 'compatible' if their respective
+  // TBAA metadata tag is same(e.g. that makes 'int' and 'unsigned'
+  // compatible).
+  if (isa<BuiltinType>(Ty)) {
+    llvm::MDNode *ScalarMD = getTypeInfoHelper(Ty);
+    auto &Op = ScalarMD->getOperand(CodeGenOpts.NewStructPathTBAA ? 2 : 0);
+    assert(isa<llvm::MDString>(Op) && "Expected MDString operand");
+    OS << cast<llvm::MDString>(Op)->getString().str();
+  }
+
+  // Non-builtin types are considered compatible if their tag matches.
+  OS << Ty->getUnqualifiedDesugaredType()
+      ->getCanonicalTypeInternal()
+      .getAsString();
+}
+
+/// Return an LLVM TBAA metadata node appropriate for an access through
+/// an l-value of the given type.  Type-based alias analysis takes advantage
+/// of the following rules from the language standards:
+///
+/// C 6.5p7:
+///   An object shall have its stored value accessed only by an lvalue
+///   expression that has one of the following types:
+///   - a type compatible with the effective type of the object,
+///   - a qualified version of a type compatible with the effective
+///     type of the object,
+///   - a type that is the signed or unsigned type corresponding
+///     to the effective type of the object,
+///   - a type that is the signed or unsigned type corresponding
+///     to a qualified version of the effective type of the object,
+///   - an aggregate or union type that includes one of the
+///     aforementioned types among its members (including,
+///     recursively, a member of a subaggregate or contained union), or
+///   - a character type.
+///
+/// C++ [basic.lval]p11:
+///   If a program attempts to access the stored value of an object
+///   through a glvalue whose type is not similar to one of the following
+///   types the behavior is undefined:
+///   - the dynamic type of the object,
+///   - a type that is the signed or unsigned type corresponding
+///     to the dynamic type of the object, or
+///   - a char, unsigned char, or std::byte type.
+///
+/// The C and C++ rules about effective/dynamic type are broadly similar
+/// and permit memory to be reused with a different type.  C does not have
+/// an explicit operation to change the effective type of memory; any store
+/// can do it.  While C++ arguably does have such an operation (the standard
+/// global `operator new(void*, size_t)`), in practice it is important to
+/// be just as permissive as C.  We therefore treat all stores as being able to
+/// change the effective type of memory, regardless of language mode.  That is,
+/// loads have both a precondition and a postcondition on the effective
+/// type of the memory, but stores only have a postcondition.  This imposes
+/// an inherent limitation that TBAA can only be used to reorder loads
+/// before stores.  This is quite restrictive, but we don't have much of a
+/// choice.  In practice, hoisting loads is the most important optimization
+/// for alias analysis to enable anyway.
+///
+/// Therefore, given a load (and its precondition) and an earlier store
+/// (and its postcondition), the question posed to TBAA is whether there
+/// exists a type that is consistent with both accesses.  If there isn't,
+/// it's fine to hoist the load because either the memory is non-overlapping
+/// or the precondition on the load is wrong (which would be UB).
+///
+/// LLVM TBAA says that two accesses with TBAA metadata nodes may alias if:
+/// - the metadata nodes are the same,
+/// - one of the metadata nodes is a base of the other (this can be
+///   recursive, but it has to be the original node that's a base,
+///   not just that the nodes have a common base), or
+/// - one of the metadata nodes is a `tbaa.struct` node (the access
+///   necessarily being a `memcpy`) with a subobject node that would
+///   be allowed to alias with the other.
+///
+/// Our job here is to produce metadata nodes that will never say that
+/// an alias is not allowed when there exists a type that would be consistent
+/// with the types of the accesses from which the nodes were produced.
+///
+/// The last clause in both language rules permits character types to
+/// alias objects of any type.  We handle this by converting all character
+/// types (as well as `std::byte` and types with the `mayalias` attribute)
+/// to a single metadata node (the `char` node), then making sure that
+/// that node is a base of every other metadata node we generate.
+/// We can always just conservatively use this node if we aren't otherwise
+/// sure how to implement the language rules for a type.
+///
+/// Read literally, the C rule for aggregates permits an aggregate l-value
+/// (e.g. of type `struct { int x; }`) to be used to access an object that
+/// is not part of an aggregate object of that type (e.g. a local variable
+/// of type `int`).  That case is perhaps sensical, but it would also permit
+/// e.g. an l-value of type `struct { int x; float f; }` to be used to
+/// access an object of type `float`, which is nonsense.  We interpret this
+/// clause as just intending to permit objects to be accessed through an
+/// l-value that properly references a containing object.
+///
+/// C++ does not have an explicit rule for aggregates because in C++
+/// a non-member access to an aggregate l-value is always a call to a
+/// constructor or assignment operator, which then accesses all the
+/// subobjects.  In general, however, our interpretation of member
+/// accesses is that they are also an access to the containing object
+/// and therefore require such an object to exist at that address;
+/// this permits us to just use the C rule for the accesses done by
+/// trivial copy/move constructors/operators.
+///
+/// Both C and C++ permit some qualification differences.  In C, however,
+/// qualification can only differ at the outermost level, whereas C++
+/// allows qualification to differ in nested positions through the
+/// similar-types rule.  This means that e.g. an l-value of type
+/// `const float *` is not permitted to access an object of type
+/// `float *` in C, but it is in C++.  We use the C++ rule
+/// unconditionally; the C rule is needlessly strict and frequently
+/// violated in practice by code that we don't want to say is wrong.
+/// We implement this by just discarding type qualifiers within pointer-like
+/// types when deriving TBAA nodes; basically, we produce the TBAA node
+/// for the type that is unqualified at all the recursive positions
+/// considered by the C++ similar type rule.  The implementation
+/// doesn't actually construct this recursively-qualified type as a
+/// `QualType`; it just ignores qualifiers when recursing into types.
+///
+/// The similar-type rule only really applies to the standard CVR
+/// qualifiers, which never affect representations.  Qualifiers such as
+/// address spaces that may involve a representation difference would
+/// be totally appropriate to distinguish for TBAA purposes.  However,
+/// the current implementation just discards all qualifiers.
+///
+/// We handle the signed/unsigned clause by just making unsigned types
+/// use the the metadata node for the signed variant of the type.  In the
+/// language rules, this only applies at the outermost level, and e.g. an
+/// l-value of type `signed int *` is not permitted to alias an object of
+/// type `unsigned int *`.  We choose not to distinguish those types when
+/// pointer-type TBAA is enabled, however.
+///
+/// After discarding qualifiers and signedness differences as above,
+/// the language rules come down to whether the types are compatible
+/// (in C) or identical (in C++).  Even in C, most types are compatible
+/// only with themselves.  The exceptions will be considered in the cases
+/// below.
 llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   uint64_t Size = Context.getTypeSizeInChars(Ty).getQuantity();
 
@@ -184,13 +325,40 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getChar();
 
   // Handle pointers and references.
-  // TODO: Implement C++'s type "similarity" and consider dis-"similar"
-  // pointers distinct.
-  if (Ty->isPointerType() || Ty->isReferenceType())
-    return createScalarTypeNode("any pointer", getChar(), Size);
+  //
+  // When PointerTBAA is disabled, all pointers and references use the same
+  // "any pointer" TBAA node. Otherwise, we generate a type-specific TBAA
+  // node and use the "any pointer" node as its base for compatibility between
+  // TUs with different settings.  To implement the C++ similar-type rules
+  // (which we also adopt in C), we need to ignore qualifiers on the
+  // pointee type, and that has to be done recursively if the pointee type
+  // is itself a pointer-like type.
+  //
+  // Currently we ignore the differences between pointer-like types and just
+  // and use this tag for the type: `p<pointer depth> <inner type tag>`.
+  // This means we give e.g. `char **` and `char A::**` the same TBAA tag.
+  if ((Ty->isPointerType() || Ty->isReferenceType())) {
+    llvm::MDNode *AnyPtr = createScalarTypeNode("any pointer", getChar(), Size);
+    if (!CodeGenOpts.PointerTBAA)
+      return AnyPtr;
+    unsigned PtrDepth = 0;
+    do {
+      PtrDepth++;
+      Ty = Ty->getPointeeType().getTypePtr()->getUnqualifiedDesugaredType();
+      // Any array-like type is considered a pointer-to qualification.
+      if (Ty && Ty->isArrayType()) {
+        Ty = Ty->getAsArrayTypeUnsafe()->getElementType().getTypePtr();
+      }
+    } while (!Ty->getPointeeType().isNull());
+    std::string PtrName;
+    llvm::raw_string_ostream OS{PtrName};
+    OS << "p" << PtrDepth << " ";
+    appendPointeeName(OS, Ty);
+    return createScalarTypeNode(PtrName, AnyPtr, Size);
+  }
 
   // Accesses to arrays are accesses to objects of their element types.
-  if (CodeGenOpts.NewStructPathTBAA && Ty->isArrayType())
+  if (CodeGenOpts.ArrayTBAA && Ty->isArrayType())
     return getTypeInfo(cast<ArrayType>(Ty)->getElementType());
 
   // Enum types are distinct types. In C++ they have "underlying types",
@@ -241,7 +409,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // subsequent accesses to direct and indirect members of that aggregate will
   // be considered may-alias too.
   // TODO: Combine getTypeInfo() and getBaseTypeInfo() into a single function.
-  if (isValidBaseType(QTy))
+  if (isValidBaseType(QTy, CodeGenOpts))
     return getBaseTypeInfo(QTy);
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
@@ -353,7 +521,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
         const CXXRecordDecl *BaseRD = BaseQTy->getAsCXXRecordDecl();
         if (BaseRD->isEmpty())
           continue;
-        llvm::MDNode *TypeNode = isValidBaseType(BaseQTy)
+        llvm::MDNode *TypeNode = isValidBaseType(BaseQTy, CodeGenOpts)
                                      ? getBaseTypeInfo(BaseQTy)
                                      : getTypeInfo(BaseQTy);
         if (!TypeNode)
@@ -378,8 +546,9 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       if (Field->isZeroSize(Context) || Field->isUnnamedBitfield())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
-          getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
+      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy, CodeGenOpts)
+                                   ? getBaseTypeInfo(FieldQTy)
+                                   : getTypeInfo(FieldQTy);
       if (!TypeNode)
         return nullptr;
 
@@ -417,7 +586,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
 }
 
 llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  if (!isValidBaseType(QTy))
+  if (!isValidBaseType(QTy, CodeGenOpts))
     return nullptr;
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();

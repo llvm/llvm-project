@@ -28,6 +28,9 @@ struct TBAATestCompiler : public TestCompiler {
     clang::CodeGenOptions CGOpts;
     CGOpts.StructPathTBAA = 1;
     CGOpts.OptimizationLevel = 1;
+    CGOpts.UnionTBAA = 1;
+    CGOpts.PointerTBAA = 1;
+    CGOpts.ArrayTBAA = 1;
     return CGOpts;
   }
 };
@@ -49,6 +52,8 @@ auto OmnipotentCharCXX = MMTuple(
 
 
 TEST(TBAAMetadataTest, BasicTypes) {
+  auto AnyPointerC =
+      MMTuple(MMString("any pointer"), OmnipotentCharC, MConstInt(0, 64));
   const char TestProgram[] = R"**(
     void func(char *CP, short *SP, int *IP, long long *LP, void **VPP,
               int **IPP) {
@@ -111,28 +116,20 @@ TEST(TBAAMetadataTest, BasicTypes) {
           MConstInt(0))));
   ASSERT_TRUE(I);
 
-  I = matchNext(I,
-      MInstruction(Instruction::Store,
-        MValType(PointerType::getUnqual(Compiler.Context)),
-        MMTuple(
-          MMTuple(
-            MMString("any pointer"),
-            OmnipotentCharC,
-            MConstInt(0)),
-          MSameAs(0),
-          MConstInt(0))));
+  I = matchNext(
+      I, MInstruction(
+             Instruction::Store,
+             MValType(PointerType::getUnqual(Compiler.Context)),
+             MMTuple(MMTuple(MMString("p1 void"), AnyPointerC, MConstInt(0)),
+                     MSameAs(0), MConstInt(0))));
   ASSERT_TRUE(I);
 
-  I = matchNext(I,
-      MInstruction(Instruction::Store,
-        MValType(PointerType::getUnqual(Compiler.Context)),
-        MMTuple(
-          MMTuple(
-            MMString("any pointer"),
-            OmnipotentCharC,
-            MConstInt(0)),
-          MSameAs(0),
-          MConstInt(0))));
+  I = matchNext(
+      I, MInstruction(
+             Instruction::Store,
+             MValType(PointerType::getUnqual(Compiler.Context)),
+             MMTuple(MMTuple(MMString("p1 int"), AnyPointerC, MConstInt(0)),
+                     MSameAs(0), MConstInt(0))));
   ASSERT_TRUE(I);
 }
 
@@ -889,15 +886,10 @@ TEST(TBAAMetadataTest, ArrayFields) {
       MConstInt(0)),
     MConstInt(0));
 
-  auto StructOuter = MMTuple(
-    MMString("_ZTS5Outer"),
-    MMTuple(
-      MMString("short"),
-      OmnipotentCharCXX,
-      MConstInt(0)),
-    MConstInt(0),
-    OmnipotentCharCXX,    // FIXME: Info about array field is lost.
-    MConstInt(4));
+  auto StructOuter =
+      MMTuple(MMString("_ZTS5Outer"),
+              MMTuple(MMString("short"), OmnipotentCharCXX, MConstInt(0)),
+              MConstInt(0), StructInner, MConstInt(4));
 
   const Instruction *I = match(BB,
       MInstruction(Instruction::Store,
@@ -911,28 +903,20 @@ TEST(TBAAMetadataTest, ArrayFields) {
           MConstInt(0))));
   ASSERT_TRUE(I);
 
-  I = matchNext(I,
-      MInstruction(Instruction::Store,
-        MConstInt(35, 32),
-        MMTuple(
-          StructInner,
-          MMTuple(
-            MMString("int"),
-            OmnipotentCharCXX,
-            MConstInt(0)),
-          MConstInt(0))));
+  I = matchNext(
+      I, MInstruction(
+             Instruction::Store, MConstInt(35, 32),
+             MMTuple(StructOuter,
+                     MMTuple(MMString("int"), OmnipotentCharCXX, MConstInt(0)),
+                     MConstInt(4))));
   ASSERT_TRUE(I);
 
-  I = matchNext(I,
-      MInstruction(Instruction::Store,
-        MConstInt(77, 32),
-        MMTuple(
-          StructInner,
-          MMTuple(
-            MMString("int"),
-            OmnipotentCharCXX,
-            MConstInt(0)),
-          MConstInt(0))));
+  I = matchNext(
+      I, MInstruction(
+             Instruction::Store, MConstInt(77, 32),
+             MMTuple(StructOuter,
+                     MMTuple(MMString("int"), OmnipotentCharCXX, MConstInt(0)),
+                     MConstInt(4))));
   ASSERT_TRUE(I);
 }
 

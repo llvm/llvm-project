@@ -121,6 +121,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
+#include <stack>
 
 using namespace llvm;
 
@@ -299,9 +300,10 @@ public:
     return TBAAStructTypeNode(TypeNode);
   }
 
-  /// Get this TBAAStructTypeNode's field in the type DAG with
+  /// Get this TBAAStructTypeNode's fields in the type DAG with
   /// given offset. Update the offset to be relative to the field type.
-  TBAAStructTypeNode getField(uint64_t &Offset) const {
+  /// There could be multiple fields with same offset.
+  std::vector<TBAAStructTypeNode> getField(uint64_t &Offset) const {
     bool NewFormat = isNewFormat();
     const ArrayRef<MDOperand> Operands = Node->operands();
     const unsigned NumOperands = Operands.size();
@@ -309,11 +311,11 @@ public:
     if (NewFormat) {
       // New-format root and scalar type nodes have no fields.
       if (NumOperands < 6)
-        return TBAAStructTypeNode();
+        return {TBAAStructTypeNode()};
     } else {
       // Parent can be omitted for the root node.
       if (NumOperands < 2)
-        return TBAAStructTypeNode();
+        return {TBAAStructTypeNode()};
 
       // Fast path for a scalar type node and a struct type node with a single
       // field.
@@ -325,8 +327,8 @@ public:
         Offset -= Cur;
         MDNode *P = dyn_cast_or_null<MDNode>(Operands[1]);
         if (!P)
-          return TBAAStructTypeNode();
-        return TBAAStructTypeNode(P);
+          return {TBAAStructTypeNode()};
+        return {TBAAStructTypeNode(P)};
       }
     }
 
@@ -335,6 +337,8 @@ public:
     unsigned FirstFieldOpNo = NewFormat ? 3 : 1;
     unsigned NumOpsPerField = NewFormat ? 3 : 2;
     unsigned TheIdx = 0;
+
+    std::vector<TBAAStructTypeNode> Ret;
 
     for (unsigned Idx = FirstFieldOpNo; Idx < NumOperands;
          Idx += NumOpsPerField) {
@@ -353,10 +357,20 @@ public:
     uint64_t Cur =
         mdconst::extract<ConstantInt>(Operands[TheIdx + 1])->getZExtValue();
     Offset -= Cur;
+
+    // Collect all fields that have right offset.
     MDNode *P = dyn_cast_or_null<MDNode>(Operands[TheIdx]);
-    if (!P)
-      return TBAAStructTypeNode();
-    return TBAAStructTypeNode(P);
+    Ret.emplace_back(P ? TBAAStructTypeNode(P) : TBAAStructTypeNode());
+
+    while (TheIdx > FirstFieldOpNo) {
+      TheIdx -= NumOpsPerField;
+      auto Val = mdconst::extract<ConstantInt>(Operands[TheIdx + 1]);
+      if (Cur != Val->getZExtValue())
+        break;
+      MDNode *P = dyn_cast_or_null<MDNode>(Operands[TheIdx]);
+      P ? Ret.emplace_back(P) : Ret.emplace_back();
+    }
+    return Ret;
   }
 };
 
@@ -599,11 +613,19 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
   // from the base type, follow the edge with the correct offset in the type DAG
   // and adjust the offset until we reach the field type or until we reach the
   // access type.
+  // If multiple fields have same offset in some base type, then scan each such
+  // field.
   bool NewFormat = BaseTag.isNewFormat();
   TBAAStructTypeNode BaseType(BaseTag.getBaseType());
   uint64_t OffsetInBase = BaseTag.getOffset();
 
+  SmallVector<std::pair<TBAAStructTypeNode, uint64_t>, 4> ToCheck;
+  ToCheck.emplace_back(BaseType, OffsetInBase);
   for (;;) {
+    assert(!ToCheck.empty() && "check list should not be empty");
+    std::tie(BaseType, OffsetInBase) = ToCheck.back();
+    ToCheck.pop_back();
+
     // In the old format there is no distinction between fields and parent
     // types, so in this case we consider all nodes up to the root.
     if (!BaseType.getNode()) {
@@ -627,7 +649,9 @@ static bool mayBeAccessToSubobjectOf(TBAAStructTagNode BaseTag,
 
     // Follow the edge with the correct offset. Offset will be adjusted to
     // be relative to the field type.
-    BaseType = BaseType.getField(OffsetInBase);
+    for (auto &&F : BaseType.getField(OffsetInBase)) {
+      ToCheck.emplace_back(F, OffsetInBase);
+    }
   }
 
   // If the base object has a direct or indirect field of the subobject's type,

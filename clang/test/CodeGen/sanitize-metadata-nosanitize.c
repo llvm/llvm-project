@@ -27,9 +27,9 @@ __attribute__((noinline, not_tail_called)) void escape(const volatile void *p) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NEXT:    store atomic i32 1, ptr [[X]] monotonic, align 4, !pcsections !10
+// CHECK-NEXT:    store atomic i32 1, ptr [[X]] monotonic, align 4, !pcsections !11
 // CHECK-NEXT:    notail call void @escape(ptr noundef nonnull [[X_ADDR]])
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA12:![0-9]+]]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int normal_function(int *x, int *y) {
@@ -46,7 +46,7 @@ int normal_function(int *x, int *y) {
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    store atomic i32 1, ptr [[X]] monotonic, align 4
 // CHECK-NEXT:    notail call void @escape(ptr noundef nonnull [[X_ADDR]])
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA12]]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 __attribute__((disable_sanitizer_instrumentation)) int test_disable_sanitize_instrumentation(int *x, int *y) {
@@ -57,13 +57,13 @@ __attribute__((disable_sanitizer_instrumentation)) int test_disable_sanitize_ins
 
 // CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none)
 // CHECK-LABEL: define dso_local i32 @test_no_sanitize_thread
-// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] !pcsections !13 {
+// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] !pcsections !14 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store atomic i32 1, ptr [[X]] monotonic, align 4, !pcsections !10
+// CHECK-NEXT:    store atomic i32 1, ptr [[X]] monotonic, align 4, !pcsections !11
 // CHECK-NEXT:    notail call void @escape(ptr noundef nonnull [[X_ADDR]])
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA12]]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 __attribute__((no_sanitize("thread"))) int test_no_sanitize_thread(int *x, int *y) {
@@ -74,13 +74,13 @@ __attribute__((no_sanitize("thread"))) int test_no_sanitize_thread(int *x, int *
 
 // CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none)
 // CHECK-LABEL: define dso_local i32 @test_no_sanitize_all
-// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR3]] !pcsections !13 {
+// CHECK-SAME: (ptr noundef [[X:%.*]], ptr nocapture noundef readonly [[Y:%.*]]) local_unnamed_addr #[[ATTR3]] !pcsections !14 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store atomic i32 1, ptr [[X]] monotonic, align 4, !pcsections !10
+// CHECK-NEXT:    store atomic i32 1, ptr [[X]] monotonic, align 4, !pcsections !11
 // CHECK-NEXT:    notail call void @escape(ptr noundef nonnull [[X_ADDR]])
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA12]]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 __attribute__((no_sanitize("all"))) int test_no_sanitize_all(int *x, int *y) {
@@ -100,12 +100,13 @@ __attribute__((no_sanitize("all"))) int test_no_sanitize_all(int *x, int *y) {
 // CHECK: !4 = !{!"sanmd_covered!C", !5}
 // CHECK: !5 = !{i64 3}
 // CHECK: !6 = !{!7, !7, i64 0}
-// CHECK: !7 = !{!"any pointer", !8, i64 0}
-// CHECK: !8 = !{!"omnipotent char", !9, i64 0}
-// CHECK: !9 = !{!"Simple C/C++ TBAA"}
-// CHECK: !10 = !{!"sanmd_atomics!C"}
-// CHECK: !11 = !{!12, !12, i64 0}
-// CHECK: !12 = !{!"int", !8, i64 0}
-// CHECK: !13 = !{!"sanmd_covered!C", !14}
-// CHECK: !14 = !{i64 2}
+// CHECK: !7 = !{!"p1 int", !8, i64 0}
+// CHECK: !8 = !{!"any pointer", !9, i64 0}
+// CHECK: !9 = !{!"omnipotent char", !10, i64 0}
+// CHECK: !10 = !{!"Simple C/C++ TBAA"}
+// CHECK: !11 = !{!"sanmd_atomics!C"}
+// CHECK: !12 = !{!13, !13, i64 0}
+// CHECK: !13 = !{!"int", !9, i64 0}
+// CHECK: !14 = !{!"sanmd_covered!C", !15}
+// CHECK: !15 = !{i64 2}
 //.

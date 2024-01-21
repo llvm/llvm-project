@@ -4285,7 +4285,11 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getType(), !getLangOpts().isSignedOverflowDefined(), SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
-    EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    // If array is member of some aggregate, keep struct path TBAA information
+    // about it.
+    EltTBAAInfo = isa<MemberExpr>(Array) && CGM.getCodeGenOpts().ArrayTBAA
+                      ? ArrayLV.getTBAAInfo()
+                      : CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
@@ -4803,8 +4807,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
   if (base.getTBAAInfo().isMayAlias() ||
           rec->hasAttr<MayAliasAttr>() || FieldType->isVectorType()) {
     FieldTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
-  } else if (rec->isUnion()) {
-    // TODO: Support TBAA for unions.
+  } else if (rec->isUnion() && !CGM.getCodeGenOpts().UnionTBAA) {
     FieldTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
   } else {
     // If no base type been assigned for the base access, then try to generate
