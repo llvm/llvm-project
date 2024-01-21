@@ -14,9 +14,9 @@
 ## Check that we get the expected command in the global command override
 # CHECK: "-test"
 # CHECK: "has_thinlto": false
-## Check that the modules are in the corpus description
-# CHECK: "test1"
-# CHECK: "test2"
+## Check that the modules are in the corpus description (order invariant)
+# CHECK-DAG: "test1"
+# CHECK-DAG: "test2"
 
 # RUN: ls %t.out.dir | FileCheck %s --check-prefix CHECK-DIR
 
