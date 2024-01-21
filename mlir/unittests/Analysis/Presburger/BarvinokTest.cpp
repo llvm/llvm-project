@@ -195,10 +195,19 @@ TEST(BarvinokTest, computeNumTerms) {
   numPoints = numPoints.collectTerms().simplify();
 
   // First, we make sure all the affine functions are either
-  // M, N, or P.
-  for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine())
-    for (const SmallVector<Fraction> &aff : term)
+  // M, N, P, or 1.
+  for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine()) {
+    for (const SmallVector<Fraction> &aff : term) {
+      // First, ensure that the coefficients are all nonnegative integers.
+      for (const Fraction &c : aff) {
+        EXPECT_TRUE(c >= 0);
+        EXPECT_EQ(c, c.getAsInteger());
+      }
+      // Now, if the coefficients add up to 1, we can be sure the term is
+      // either M, N, P, or 1.
       EXPECT_EQ(aff[0] + aff[1] + aff[2] + aff[3], 1);
+    }
+  }
 
   // We store the coefficients of M, N and P in this array.
   Fraction count[2][2][2];
