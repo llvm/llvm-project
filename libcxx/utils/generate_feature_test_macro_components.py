@@ -1093,7 +1093,6 @@ feature_test_macros = [
             "name": "__cpp_lib_span_initializer_list",
             "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_spanstream",
@@ -1268,7 +1267,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_variant",
-            "values": {"c++17": 202102},
+            "values": {
+                "c++17": 202102,  # std::visit for classes derived from std::variant
+                # "c++20": 202106,  # Fully constexpr std::variant
+                # "c++26": 202306,  # Member visit (implemented)
+            },
             "headers": ["variant"],
         },
         {
