@@ -1,4 +1,4 @@
-# REQUIRES: python-38, absl, system-linux
+# REQUIRES: python-38, system-linux
 
 ## Test that invoking the extract_ir script work as expected.
 
