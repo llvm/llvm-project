@@ -359,16 +359,16 @@ BENIGN_ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
              "default visibility for types [-ftype-visibility]")
 LANGOPT(SetVisibilityForExternDecls, 1, 0,
         "apply global symbol visibility to external declarations without an explicit visibility")
-LANGOPT(VisibilityFromDLLStorageClass, 1, 0,
-        "set the visiblity of globals from their DLL storage class [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(DLLExportVisibility, Visibility, 3, DefaultVisibility,
-             "visibility for functions and variables with dllexport annotations [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(NoDLLStorageClassVisibility, Visibility, 3, HiddenVisibility,
-             "visibility for functions and variables without an explicit DLL storage class [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(ExternDeclDLLImportVisibility, Visibility, 3, DefaultVisibility,
-             "visibility for external declarations with dllimport annotations [-fvisibility-from-dllstorageclass]")
-ENUM_LANGOPT(ExternDeclNoDLLStorageClassVisibility, Visibility, 3, HiddenVisibility,
-             "visibility for external declarations without an explicit DLL storage class [-fvisibility-from-dllstorageclass]")
+BENIGN_LANGOPT(VisibilityFromDLLStorageClass, 1, 0,
+               "override the visibility of globals based on their final DLL storage class [-fvisibility-from-dllstorageclass]")
+BENIGN_ENUM_LANGOPT(DLLExportVisibility, VisibilityFromDLLStorageClassKinds, 3, VisibilityFromDLLStorageClassKinds::Default,
+             "how to adjust the visibility for functions and variables with dllexport annotations [-fvisibility-dllexport]")
+BENIGN_ENUM_LANGOPT(NoDLLStorageClassVisibility, VisibilityFromDLLStorageClassKinds, 3, VisibilityFromDLLStorageClassKinds::Hidden,
+             "how to adjust the visibility for functions and variables without an explicit DLL storage class [-fvisibility-nodllstorageclass]")
+BENIGN_ENUM_LANGOPT(ExternDeclDLLImportVisibility, VisibilityFromDLLStorageClassKinds, 3, VisibilityFromDLLStorageClassKinds::Default,
+             "how to adjust the visibility for external declarations with dllimport annotations [-fvisibility-externs-dllimport]")
+BENIGN_ENUM_LANGOPT(ExternDeclNoDLLStorageClassVisibility, VisibilityFromDLLStorageClassKinds, 3,  VisibilityFromDLLStorageClassKinds::Hidden,
+             "how to adjust the visibility for external declarations without an explicit DLL storage class [-fvisibility-externs-nodllstorageclass]")
 BENIGN_LANGOPT(SemanticInterposition        , 1, 0, "semantic interposition")
 BENIGN_LANGOPT(HalfNoSemanticInterposition, 1, 0,
                "Like -fno-semantic-interposition but don't use local aliases")

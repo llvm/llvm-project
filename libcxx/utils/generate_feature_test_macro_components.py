@@ -1093,7 +1093,6 @@ feature_test_macros = [
             "name": "__cpp_lib_span_initializer_list",
             "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_spanstream",
