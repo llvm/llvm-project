@@ -122,6 +122,7 @@ public:
   void linkerMain(ArrayRef<const char *> args);
   void addFile(StringRef path, bool withLOption);
   void addLibrary(StringRef name);
+  bool checkFile(StringRef name);
 
 private:
   void createFiles(llvm::opt::InputArgList &args);
@@ -424,11 +425,11 @@ struct Config {
   // not supported on Android 11 & 12.
   bool androidMemtagStack;
 
+  bool CheckFormat = true;
   // When using a unified pre-link LTO pipeline, specify the backend LTO mode.
   LtoKind ltoKind = LtoKind::Default;
 
   unsigned threadCount;
-
   // If an input file equals a key, remap it to the value.
   llvm::DenseMap<llvm::StringRef, llvm::StringRef> remapInputs;
   // If an input file matches a wildcard pattern, remap it to the value.
