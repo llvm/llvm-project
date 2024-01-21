@@ -564,8 +564,10 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib -static)
   endif()
   target_link_libraries(
     ${fq_build_target_name}
@@ -741,8 +743,10 @@ function(add_libc_hermetic_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib -static)
   endif()
   target_link_libraries(
     ${fq_build_target_name}
