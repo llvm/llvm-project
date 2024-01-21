@@ -909,6 +909,7 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   CallingConv::ID CalleeCC = Info.CallConv;
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &CallerF = MF.getFunction();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
 
   LLVM_DEBUG(dbgs() << "Attempting to lower call as tail call\n");
 
@@ -925,6 +926,11 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     LLVM_DEBUG(dbgs() << "... Calling convention cannot be tail called.\n");
     return false;
   }
+
+  // Arm64EC varargs calls expect that x4 = sp at entry, this complicates tail
+  // call handling so disable for now.
+  if (Info.IsVarArg && Subtarget.isWindowsArm64EC())
+    return false;
 
   // Byval parameters hand the function a pointer directly into the stack area
   // we want to reuse during a tail call. Working around this *is* possible (see

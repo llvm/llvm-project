@@ -7235,6 +7235,11 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
 
+  // Arm64EC varargs calls expect that x4 = sp at entry, this complicates tail
+  // call handling so disable for now.
+  if (IsVarArg && Subtarget->isWindowsArm64EC())
+    return false;
+
   // SME Streaming functions are not eligible for TCO as they may require
   // the streaming mode or ZA to be restored after returning from the call.
   SMEAttrs CallerAttrs(MF.getFunction());
