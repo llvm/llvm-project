@@ -3202,6 +3202,13 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (Callee && !computeCallAddress(Callee, Addr))
     return false;
 
+  // MO_GOT is not handled. -fno-plt compiled intrinsic calls do not have the
+  // nonlazybind attribute. Check "RtLibUseGOT" instead.
+  if ((Subtarget->classifyGlobalFunctionReference(Addr.getGlobalValue(), TM) !=
+       AArch64II::MO_NO_FLAG) ||
+      MF->getFunction().getParent()->getRtLibUseGOT())
+    return false;
+
   // The weak function target may be zero; in that case we must use indirect
   // addressing via a stub on windows as it may be out of range for a
   // PC-relative jump.

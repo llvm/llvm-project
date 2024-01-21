@@ -144,9 +144,16 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
-  if (const Function *F = dyn_cast<Function>(CalleeV))
-    Info.Callee = MachineOperand::CreateGA(F, 0);
-  else if (isa<GlobalIFunc>(CalleeV) || isa<GlobalAlias>(CalleeV)) {
+  if (const Function *F = dyn_cast<Function>(CalleeV)) {
+    if (F->hasFnAttribute(Attribute::NonLazyBind)) {
+      auto Reg =
+          MRI.createGenericVirtualRegister(getLLTForType(*F->getType(), DL));
+      MIRBuilder.buildGlobalValue(Reg, F);
+      Info.Callee = MachineOperand::CreateReg(Reg, false);
+    } else {
+      Info.Callee = MachineOperand::CreateGA(F, 0);
+    }
+  } else if (isa<GlobalIFunc>(CalleeV) || isa<GlobalAlias>(CalleeV)) {
     // IR IFuncs and Aliases can't be forward declared (only defined), so the
     // callee must be in the same TU and therefore we can direct-call it without
     // worrying about it being out of range.
