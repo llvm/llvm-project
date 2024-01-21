@@ -567,14 +567,14 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
                                  const CoverageMappingRecord &Record) {
   unsigned MaxBitmapID = 0;
   unsigned NumConditions = 0;
-  // The last DecisionRegion has the highest bitmap byte index used in the
-  // function, which when combined with its number of conditions, yields the
-  // full bitmap size.
+  // Scan max(BitmapIdx).
+  // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
+  // and `MaxbitmapID is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
-    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
+    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion &&
+        MaxBitmapID <= Region.MCDCParams.BitmapIdx) {
       MaxBitmapID = Region.MCDCParams.BitmapIdx;
       NumConditions = Region.MCDCParams.NumConditions;
-      break;
     }
   }
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
