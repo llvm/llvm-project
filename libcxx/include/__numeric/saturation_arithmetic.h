@@ -69,18 +69,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
     return std::numeric_limits<_Tp>::max();
   } else {
     // Signed multiplication overflow
-    if (__x > 0) {
-      if (__y > 0)
-        // Overflows if (x > 0 && y > 0)
-        return std::numeric_limits<_Tp>::max();
-      // Overflows if (x > 0 && y < 0)
-      return std::numeric_limits<_Tp>::min();
-    }
-    if (__y > 0)
-      // Overflows if (x < 0 && y > 0)
-      return std::numeric_limits<_Tp>::min();
-    // Overflows if (x < 0 && y < 0)
-    return std::numeric_limits<_Tp>::max();
+    if ((__x > 0 && __y > 0) || (__x < 0 && __y < 0))
+      return std::numeric_limits<_Tp>::max();
+    // Overflows if (x < 0 && y > 0) || (x > 0 && y < 0)
+    return std::numeric_limits<_Tp>::min();
   }
 }
 
