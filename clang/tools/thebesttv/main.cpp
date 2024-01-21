@@ -30,199 +30,12 @@ std::map<std::string, std::set<const FunctionInfo *>> functionsInFile;
  * Main body
  *****************************************************************/
 
-// Apply a custom category to all command-line options so that they are the
-// only ones displayed.
-static cl::OptionCategory MyToolCategory("my-tool options");
-
-// CommonOptionsParser declares HelpMessage with a description of the common
-// command-line options related to the compilation database and input files.
-// It's nice to have this help message in all tools.
-static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
-
-// A help message for this specific tool can be added afterwards.
-static cl::extrahelp MoreHelp("\nMore help text...\n");
-
-// class tbtASTDumpAction : public ASTFrontendAction {
-// protected:
-//   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-//                                                  StringRef InFile) override;
-// public:
-//   void ExecuteAction() override {
-//     llvm::errs() << "tbtASTDumpAction::ExecuteAction\n";
-//     llvm::errs() << "  " << getCurrentFile() << "\n";
-//     // get declarations in ast
-//     ASTContext &Context = getCompilerInstance().getASTContext();
-//     TranslationUnitDecl *TUD = Context.getTranslationUnitDecl();
-//     for (Decl *D : TUD->decls()) {
-//       llvm::errs() << "  " << D->getDeclKindName() << "\n";
-//     }
-//   }
-// };
-
-// std::unique_ptr<ASTConsumer>
-// tbtASTDumpAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-//   const FrontendOptions &Opts = CI.getFrontendOpts();
-//   return CreateASTDumper(nullptr /*Dump to stdout.*/, Opts.ASTDumpFilter,
-//                          Opts.ASTDumpDecls, Opts.ASTDumpAll,
-//                          Opts.ASTDumpLookups, Opts.ASTDumpDeclTypes,
-//                          Opts.ASTDumpFormat);
-// }
-
 void requireTrue(bool condition, std::string message = "") {
     if (!condition) {
         llvm::errs() << "requireTrue failed: " << message << "\n";
         exit(1);
     }
 }
-
-class HasContextVisitor {
-  protected:
-    ASTContext *Context;
-
-    std::string getLocation(const SourceLocation &loc) {
-        PresumedLoc PLoc = Context->getSourceManager().getPresumedLoc(loc);
-        if (PLoc.isInvalid())
-            return "<invalid>";
-
-        std::string filename = PLoc.getFilename();
-        std::string line = std::to_string(PLoc.getLine());
-        std::string column = std::to_string(PLoc.getColumn());
-        return filename + ":" + line + ":" + column;
-    }
-
-    void printStmtLocation(const Stmt &s) {
-        llvm::errs() << "    beg: " << getLocation(s.getBeginLoc()) << "\n";
-        llvm::errs() << "    end: " << getLocation(s.getEndLoc()) << "\n";
-    }
-
-  public:
-    explicit HasContextVisitor(ASTContext *Context) : Context(Context) {}
-};
-
-/**
- * Visit all DeclRefExprs and print their parents.
- */
-class VarVisitor : public RecursiveASTVisitor<VarVisitor>,
-                   public HasContextVisitor {
-  public:
-    explicit VarVisitor(ASTContext *Context) : HasContextVisitor(Context) {}
-
-    void visitParents(const Stmt &base) {
-        const Stmt *s = &base;
-        llvm::errs() << "    parents:\n";
-        while (true) {
-            const auto &parents = Context->getParents(*s);
-            requireTrue(parents.size() == 1, "parent size is not 1");
-
-            const Stmt *parent = parents.begin()->get<Stmt>();
-            requireTrue(parent != nullptr, "parent is null");
-
-            llvm::errs() << "      " << parent->getStmtClassName() << "\n";
-            if (isa<CompoundStmt>(parent)) {
-                break;
-            }
-
-            s = parent;
-        }
-    }
-
-    bool VisitStmt(Stmt *s) {
-        // DeclRefExpr
-        if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(s)) {
-            llvm::errs() << "  DeclRefExpr: "
-                         << dre->getDecl()->getQualifiedNameAsString() << "\n";
-            printStmtLocation(*s);
-            visitParents(*s);
-        }
-        return true;
-    }
-};
-
-struct VarLocation {
-    std::string file; // absolute path
-    int line;
-    int column;
-
-    VarLocation(std::string file, int line, int column)
-        : file(file), line(line), column(column) {}
-
-    VarLocation(const FullSourceLoc &fullLoc) {
-        requireTrue(fullLoc.hasManager(), "no source manager!");
-        requireTrue(fullLoc.isValid(), "invalid location!");
-
-        file = fullLoc.getFileEntry()->tryGetRealPathName();
-        line = fullLoc.getLineNumber();
-        column = fullLoc.getColumnNumber();
-        requireTrue(!file.empty(), "empty file path!");
-    }
-
-    bool operator==(const VarLocation &other) const {
-        return file == other.file && line == other.line &&
-               column == other.column;
-    }
-};
-
-/**
- * Visit all DeclRefExprs and print their parents.
- */
-class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
-  private:
-    ASTContext *Context;
-    VarLocation targetLoc;
-
-  public:
-    explicit FindVarVisitor(ASTContext *Context, VarLocation targetLoc)
-        : Context(Context), targetLoc(targetLoc) {}
-
-    template <typename NodeT> void visitParentsRecursively(const NodeT &base) {
-        const DynTypedNodeList &parents = Context->getParents(base);
-        requireTrue(parents.size() == 1, "parent size is not 1");
-
-        if (const Stmt *parent = parents.begin()->get<Stmt>()) {
-            llvm::errs() << "    " << parent->getStmtClassName() << "\n";
-            if (isa<CompoundStmt>(parent))
-                return;
-            visitParentsRecursively(*parent);
-        } else if (const Decl *parent = parents.begin()->get<Decl>()) {
-            llvm::errs() << "    " << parent->getDeclKindName() << "\n";
-            visitParentsRecursively(*parent);
-        } else {
-            llvm::errs() << "    unknown parent\n";
-            exit(1);
-        }
-    }
-
-    bool findMatch(const Stmt *S, const NamedDecl *decl,
-                   const SourceLocation &loc) {
-        FullSourceLoc FullLocation = Context->getFullLoc(loc);
-        VarLocation varLoc(FullLocation);
-        bool match = varLoc == targetLoc;
-        if (match) {
-            const auto &var = decl->getQualifiedNameAsString();
-            llvm::errs() << "Found VarDecl: " << var << "\n";
-            llvm::errs() << "  at " << varLoc.file << ":" << varLoc.line << ":"
-                         << varLoc.column << "\n";
-            llvm::errs() << "  parents:\n";
-            visitParentsRecursively(*S);
-        }
-
-        return match;
-    }
-
-    bool VisitDeclStmt(DeclStmt *ds) {
-        for (Decl *d : ds->decls()) {
-            if (VarDecl *vd = dyn_cast<VarDecl>(d)) {
-                findMatch(ds, vd, vd->getLocation());
-            }
-        }
-        return true;
-    }
-
-    bool VisitDeclRefExpr(DeclRefExpr *dre) {
-        findMatch(dre, dre->getDecl(), dre->getBeginLoc());
-        return true;
-    }
-};
 
 struct Graph {
     int n; // 0-indexed
@@ -303,6 +116,13 @@ struct BlockGraph {
             llvm::errs() << "\n";
         }
     }
+
+    int getBlockId(const Stmt &s) {
+        auto it = blockIdOfStmt.find(&s);
+        if (it == blockIdOfStmt.end())
+            return -1;
+        return it->second;
+    }
 };
 
 struct FunctionInfo {
@@ -351,126 +171,15 @@ struct FunctionInfo {
     }
 };
 
-class FindPathVisitor : public RecursiveASTVisitor<FindPathVisitor> {
-  private:
-    ASTContext *Context;
-    std::set<const FunctionDecl *> functionDecls;
-    std::map<const FunctionDecl *, const FunctionInfo *> infoOfFunction;
-
+class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
   public:
-    explicit FindPathVisitor(ASTContext *Context) : Context(Context) {}
-
     bool VisitFunctionDecl(FunctionDecl *D) {
 
         FunctionInfo *fi = FunctionInfo::fromDecl(D);
         if (fi == nullptr)
             return true;
 
-        functionDecls.insert(D);
-        infoOfFunction[D] = fi;
-
-        return true;
-    }
-
-    void collect(/**/) {
-        for (const FunctionDecl *D : functionDecls) {
-            llvm::errs() << "------ FunctionDecl: "
-                         << D->getQualifiedNameAsString() << "\n";
-            const FunctionInfo *fi = infoOfFunction[D];
-        }
-    }
-};
-
-/**
- * Visit all FunctionDecls and print their CFGs.
- */
-class FunctionDeclVisitor : public RecursiveASTVisitor<FunctionDeclVisitor>,
-                            public HasContextVisitor {
-  public:
-    explicit FunctionDeclVisitor(ASTContext *Context)
-        : HasContextVisitor(Context) {}
-
-    bool VisitFunctionDecl(FunctionDecl *D) {
-        FullSourceLoc FullLocation = Context->getFullLoc(D->getBeginLoc());
-        requireTrue(FullLocation.hasManager(), "no source manager!");
-        if (FullLocation.isInvalid())
-            return true;
-
-        llvm::errs() << "------ FunctionDecl: " << D->getQualifiedNameAsString()
-                     << " at " << FullLocation.getSpellingLineNumber() << ":"
-                     << FullLocation.getSpellingColumnNumber() << "\n";
-
-        if (!D->hasBody())
-            return true;
-
-        // show call graph
-        // TranslationUnitDecl *TUD = Context->getTranslationUnitDecl();
-        // CallGraph CG;
-        // CG.addToCallGraph(TUD);
-        // CG.viewGraph();
-
-        llvm::errs() << "--------- CFG dump: " << D->getQualifiedNameAsString()
-                     << "\n";
-        // build CFG
-        auto cfg = CFG::buildCFG(D, D->getBody(), &D->getASTContext(),
-                                 CFG::BuildOptions());
-        cfg->dump(D->getASTContext().getLangOpts(), true);
-        cfg->viewCFG(D->getASTContext().getLangOpts());
-
-        int n = cfg->size(); // num of blocks
-        llvm::errs() << "Num of blocks: " << n << "\n";
-
-        // traverse each block
-        llvm::errs() << "--------- Block traversal: "
-                     << D->getQualifiedNameAsString() << "\n";
-        for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
-            const CFGBlock &B = **BI;
-            // print block ID
-            llvm::errs() << "Block " << B.getBlockID();
-            if (&B == &cfg->getEntry()) {
-                llvm::errs() << " (Entry)";
-            } else if (&B == &cfg->getExit()) {
-                llvm::errs() << " (Exit)";
-            }
-            llvm::errs() << ":\n";
-
-            // traverse & print block contents
-            for (auto EI = B.begin(); EI != B.end(); ++EI) {
-                const CFGElement &E = *EI;
-                llvm::errs() << "  ";
-                E.dump();
-                if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
-                    // CS->getStmt()->dump();
-                    // printStmtLocation(*CS->getStmt());
-                }
-            }
-
-            // print block terminator
-            if (B.getTerminator().isValid()) {
-                const CFGTerminator &T = B.getTerminator();
-                if (T.getStmt()) {
-                    const Stmt &S = *T.getStmt();
-                    llvm::errs() << "  T: <" << S.getStmtClassName() << ">\n";
-                    // printStmtLocation(S);
-                }
-            }
-
-            // print predecessors
-            llvm::errs() << "  Preds:";
-            for (auto PI = B.pred_begin(); PI != B.pred_end(); ++PI) {
-                const CFGBlock *Pred = *PI;
-                llvm::errs() << " B" << Pred->getBlockID();
-            }
-            llvm::errs() << "\n";
-
-            // print successors
-            llvm::errs() << "  Succs:";
-            for (auto SI = B.succ_begin(); SI != B.succ_end(); ++SI) {
-                const CFGBlock *Succ = *SI;
-                llvm::errs() << " B" << Succ->getBlockID();
-            }
-            llvm::errs() << "\n";
-        }
+        functionsInFile[fi->file].insert(fi);
 
         return true;
     }
@@ -514,10 +223,6 @@ int main(int argc, const char **argv) {
         llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
         TUD->dump();
 
-        // call different visitors
-        // llvm::errs() << "\n--- FunctionDeclVisitor ---\n";
-        // FunctionDeclVisitor(&Context).TraverseDecl(TUD);
-
         llvm::errs() << "\n--- FunctionAccumulator ---\n";
         FunctionAccumulator fpv;
         fpv.TraverseDecl(TUD);
@@ -530,25 +235,4 @@ int main(int argc, const char **argv) {
             llvm::errs() << "  " << fi->name << "\n";
         }
     }
-
-    // llvm::errs() << "\n--- FindVarVisitor ---\n";
-    // VarLocation targetLoc(
-    //     "/home/thebesttv/vul/llvm-project/graph-generation/test4.cpp", 2, 7);
-    // FindVarVisitor::findVar(functionsInFile, targetLoc);
-
-    // targetLoc.line = 2;
-    // targetLoc.column = 14;
-    // FindVarVisitor::findVar(&Context, targetLoc);
-
-    // targetLoc.line = 23;
-    // targetLoc.column = 7;
-    // FindVarVisitor::findVar(&Context, targetLoc);
-
-    // targetLoc.line = 23;
-    // targetLoc.column = 11;
-    // FindVarVisitor::findVar(&Context, targetLoc);
-
-    // targetLoc.line = 23;
-    // targetLoc.column = 15;
-    // FindVarVisitor::findVar(&Context, targetLoc);
 }
