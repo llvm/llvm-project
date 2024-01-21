@@ -50,10 +50,7 @@ SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
                                const StringRef &FS, const TargetMachine &TM,
                                bool is64Bit)
     : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
-      ReserveGRegister(SP::IntRegsRegClass.getNumRegs() / 4),
-      ReserveORegister(SP::IntRegsRegClass.getNumRegs() / 4),
-      ReserveLRegister(SP::IntRegsRegClass.getNumRegs() / 4),
-      ReserveIRegister(SP::IntRegsRegClass.getNumRegs() / 4),
+      ReserveRegister(SP::IntRegsRegClass.getNumRegs()),
       TargetTriple(TM.getTargetTriple()), Is64Bit(is64Bit),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this) {}

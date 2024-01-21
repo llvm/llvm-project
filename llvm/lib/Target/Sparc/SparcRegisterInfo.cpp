@@ -96,26 +96,13 @@ BitVector SparcRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (unsigned n = 0; n < 31; n++)
     Reserved.set(SP::ASR1 + n);
 
-  for (size_t i = 0; i < SP::IntRegsRegClass.getNumRegs() / 4; ++i) {
-    // Mark both single register and register pairs.
-    if (MF.getSubtarget<SparcSubtarget>().isGRegisterReserved(i)) {
-      Reserved.set(SP::G0 + i);
-      Reserved.set(SP::G0_G1 + i / 2);
-    }
-    if (MF.getSubtarget<SparcSubtarget>().isORegisterReserved(i)) {
-      Reserved.set(SP::O0 + i);
-      Reserved.set(SP::O0_O1 + i / 2);
-    }
-    if (MF.getSubtarget<SparcSubtarget>().isLRegisterReserved(i)) {
-      Reserved.set(SP::L0 + i);
-      Reserved.set(SP::L0_L1 + i / 2);
-    }
-    if (MF.getSubtarget<SparcSubtarget>().isIRegisterReserved(i)) {
-      Reserved.set(SP::I0 + i);
-      Reserved.set(SP::I0_I1 + i / 2);
-    }
+  for (TargetRegisterClass::iterator i = SP::IntRegsRegClass.begin();
+       i != SP::IntRegsRegClass.end(); ++i) {
+    if (MF.getSubtarget<SparcSubtarget>().isRegisterReserved(*i))
+      markSuperRegs(Reserved, *i);
   }
 
+  assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
 

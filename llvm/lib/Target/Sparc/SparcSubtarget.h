@@ -13,12 +13,14 @@
 #ifndef LLVM_LIB_TARGET_SPARC_SPARCSUBTARGET_H
 #define LLVM_LIB_TARGET_SPARC_SPARCSUBTARGET_H
 
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "SparcFrameLowering.h"
 #include "SparcISelLowering.h"
 #include "SparcInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <string>
 
@@ -29,11 +31,9 @@ namespace llvm {
 class StringRef;
 
 class SparcSubtarget : public SparcGenSubtargetInfo {
-  // Reserve*Register[i] - *#i is not available as a general purpose register.
-  BitVector ReserveGRegister;
-  BitVector ReserveORegister;
-  BitVector ReserveLRegister;
-  BitVector ReserveIRegister;
+  // ReserveRegister[i] - Register #i is not available as a general purpose
+  // register.
+  BitVector ReserveRegister;
 
   Triple TargetTriple;
   virtual void anchor();
@@ -88,10 +88,12 @@ public:
     return is64Bit() ? 2047 : 0;
   }
 
-  bool isGRegisterReserved(size_t i) const { return ReserveGRegister[i]; }
-  bool isORegisterReserved(size_t i) const { return ReserveORegister[i]; }
-  bool isLRegisterReserved(size_t i) const { return ReserveLRegister[i]; }
-  bool isIRegisterReserved(size_t i) const { return ReserveIRegister[i]; }
+  bool isRegisterReserved(MCPhysReg PhysReg) const {
+    if (PhysReg >= SP::G0 && PhysReg <= SP::O7)
+      return ReserveRegister[PhysReg - SP::G0];
+
+    llvm_unreachable("Invalid physical register passed!");
+  }
 
   /// Given a actual stack size as determined by FrameInfo, this function
   /// returns adjusted framesize which includes space for register window
