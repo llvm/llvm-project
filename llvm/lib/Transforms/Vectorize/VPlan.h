@@ -480,8 +480,6 @@ public:
 
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
 
-  virtual VPBlockBase *clone() = 0;
-
   virtual ~VPBlockBase() = default;
 
   const std::string &getName() const { return Name; }
@@ -1393,7 +1391,8 @@ public:
 
   VPRecipeBase *clone() override {
     return new VPWidenCallRecipe(*cast<CallInst>(getUnderlyingInstr()),
-                                 operands(), VectorIntrinsicID, Variant);
+                                 operands(), VectorIntrinsicID, getDebugLoc(),
+                                 Variant);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1508,7 +1507,7 @@ public:
 
   VPRecipeBase *clone() override {
     return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
-                                     getDebugLoc());
+                                     isInBounds(), getDebugLoc());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2468,28 +2467,28 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
-public:
-  VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
-                    Type *TruncResultTy)
-      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        TruncResultTy(TruncResultTy), Kind(IndDesc.getKind()),
-        FPBinOp(dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())) {
-  }
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPValue *Start,
                     VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
                     Type *TruncResultTy)
-      : VPRecipeBase(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        VPValue(this), TruncResultTy(TruncResultTy), Kind(Kind),
-        FPBinOp(FPBinOp) {}
+      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
+        TruncResultTy(TruncResultTy), Kind(Kind), FPBinOp(FPBinOp) {}
+
+public:
+  VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
+                    Type *TruncResultTy)
+      : VPDerivedIVRecipe(
+            IndDesc.getKind(),
+            dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
+            Start, CanonicalIV, Step, TruncResultTy) {}
 
   ~VPDerivedIVRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPDerivedIVRecipe(Kind, FPBinOp, getOperand(0),
-                                 cast<VPCanonicalIVPHIRecipe>(getOperand(1)),
-                                 getOperand(2), TruncResultTy);
+    return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(),
+                                 getCanonicalIV(), getStepValue(),
+                                 TruncResultTy);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPDerivedIVSC)
@@ -2510,7 +2509,9 @@ public:
   }
 
   VPValue *getStartValue() const { return getOperand(0); }
-  VPValue *getCanonicalIV() const { return getOperand(1); }
+  VPCanonicalIVPHIRecipe *getCanonicalIV() const {
+    return cast<VPCanonicalIVPHIRecipe>(getOperand(1));
+  }
   VPValue *getStepValue() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
@@ -2591,13 +2592,6 @@ public:
   ~VPBasicBlock() override {
     while (!Recipes.empty())
       Recipes.pop_back();
-  }
-
-  VPBlockBase *clone() override {
-    auto *NewBlock = new VPBasicBlock(getName());
-    for (VPRecipeBase &R : *this)
-      NewBlock->appendRecipe(R.clone());
-    return NewBlock;
   }
 
   /// Instruction iterators...
@@ -2737,8 +2731,6 @@ public:
       deleteCFG(Entry);
     }
   }
-
-  VPBlockBase *clone() override;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -3052,6 +3044,7 @@ public:
   VPBasicBlock *getPreheader() { return Preheader; }
   const VPBasicBlock *getPreheader() const { return Preheader; }
 
+  /// Clone the current VPlan and return it.
   VPlan *clone();
 
 private:
@@ -3216,17 +3209,6 @@ public:
       return cast<BlockTy>(&Block);
     });
   }
-
-  /// Clone the CFG for all nodes reachable from \p Entry, this includes cloning
-  /// the blocks and their recipes. Operands of cloned recipes will be updated
-  /// to use new VPValues from \p Old2NewValues. If \p FullRemapping is set to
-  /// true, then all old VPValues from outside the cloned nodes must be mapped
-  /// in \p Old2NewValues.
-  static VPBlockBase *
-  cloneCFG(VPBlockBase *Entry,
-           DenseMap<VPBlockBase *, VPBlockBase *> &Old2NewBBs,
-           DenseMap<VPValue *, VPValue *> &Old2NewValues,
-           bool FullRemapping = false);
 };
 
 class VPInterleavedAccessInfo {
