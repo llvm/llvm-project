@@ -1,21 +1,15 @@
 if(LIBC_TESTS_CAN_USE_MPFR)
-  if (LLVM_LIBC_FULL_BUILD)
-    add_compile_options(
-      -ffreestanding
-      -fno-exceptions
-      -fno-rtti
-      -fno-unwind-tables
-      -fno-asynchronous-unwind-tables
-    )
-  endif()
   add_library(libcMPFRWrapper
     MPFRUtils.cpp
     MPFRUtils.h
     mpfr_inc.h
   )
-  add_compile_options(
-    -O3
-  )
+  target_compile_options(libcMPFRWrapper PRIVATE -O3)
+  if (LLVM_LIBC_FULL_BUILD)
+    # Target using this library will need to link against C++ and unwind libraries.
+    # Since we are using MPFR anyway, we directly specifies the GNU toolchain.
+    target_link_libraries(libcMPFRWrapper PUBLIC -lstdc++ -lgcc_s)
+  endif()
   add_dependencies(
     libcMPFRWrapper 
     libc.src.__support.CPP.string_view 
@@ -28,7 +22,7 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     target_include_directories(libcMPFRWrapper PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/include)
     target_link_directories(libcMPFRWrapper PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/lib)
   endif()
-  target_link_libraries(libcMPFRWrapper LibcFPTestHelpers.unit LibcTest.unit mpfr gmp)
+  target_link_libraries(libcMPFRWrapper PUBLIC LibcFPTestHelpers.unit LibcTest.unit mpfr gmp)
 elseif(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   message(WARNING "Math tests using MPFR will be skipped.")
 endif()

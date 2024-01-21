@@ -14,9 +14,8 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "test/UnitTest/FPMatcher.h"
 
-#include <cmath>
 #include <fenv.h>
-#include <memory>
+#include <math.h>
 #include <stdint.h>
 
 #include "mpfr_inc.h"
@@ -474,8 +473,8 @@ public:
     // If the control reaches here, it means that this number and input are
     // of the same sign but different exponent. In such a case, ULP error is
     // calculated as sum of two parts.
-    thisAsT = std::abs(thisAsT);
-    input = std::abs(input);
+    thisAsT = ::abs(thisAsT);
+    input = ::abs(input);
     T min = thisAsT > input ? input : thisAsT;
     T max = thisAsT > input ? thisAsT : input;
     int minExponent = FPBits<T>(min).get_exponent();
