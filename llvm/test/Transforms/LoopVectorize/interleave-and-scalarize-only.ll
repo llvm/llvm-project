@@ -184,7 +184,7 @@ exit:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
-; DBG-NEXT:   UNIFORM-PER-UF vp<[[CAST:%.+]]> = trunc ir<1> to i32
+; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {

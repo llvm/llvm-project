@@ -164,7 +164,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     auto *R = cast<VPReplicateRecipe>(this);
     return R->getUnderlyingInstr()->mayHaveSideEffects();
   }
-  case VPUniformPerUFSC:
+  case VPScalarCastSC:
     return false;
   default:
     return true;
@@ -1465,7 +1465,9 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-Value *VPUniformPerUFRecipe ::generate(VPTransformState &State, unsigned Part) {
+Value *VPScalarCastRecipe ::generate(VPTransformState &State, unsigned Part) {
+  assert(vputils::onlyFirstLaneUsed(this) &&
+         "Codegen only implemented for first lane only.");
   switch (Opcode) {
   case Instruction::SExt:
   case Instruction::ZExt:
@@ -1478,7 +1480,7 @@ Value *VPUniformPerUFRecipe ::generate(VPTransformState &State, unsigned Part) {
   }
 }
 
-void VPUniformPerUFRecipe ::execute(VPTransformState &State) {
+void VPScalarCastRecipe ::execute(VPTransformState &State) {
   bool UniformAcrossUFs = all_of(operands(), [](VPValue *Op) {
     return Op->isDefinedOutsideVectorRegions();
   });
@@ -1494,9 +1496,9 @@ void VPUniformPerUFRecipe ::execute(VPTransformState &State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPUniformPerUFRecipe ::print(raw_ostream &O, const Twine &Indent,
-                                  VPSlotTracker &SlotTracker) const {
-  O << Indent << "UNIFORM-PER-UF ";
+void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
+                                VPSlotTracker &SlotTracker) const {
+  O << Indent << "SCALAR-CAST ";
   printAsOperand(O, SlotTracker);
   O << " = " << Instruction::getOpcodeName(Opcode) << " ";
   printOperands(O, SlotTracker);
