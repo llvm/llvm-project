@@ -172,4 +172,18 @@ void foo() {
 
   // No suggestion needed here
   MY_IF_MACRO(value1 < value2, value1 = value2;)
+
+  // No suggestion needed here
+  if(value1<value2){
+    value1 = value2;
+  }
+  else if(value1>value2){
+    value2 = value1;
+  }
+
+  // No suggestions needed here
+  if(value1 == value2){
+    if(value1<value3)
+      value1 = value3;
+  }
 }

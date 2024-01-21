@@ -30,7 +30,7 @@ void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      ifStmt(
+      ifStmt(unless(hasAncestor(ifStmt())),
           hasCondition(binaryOperator(hasAnyOperatorName("<", ">", "<=", ">="),
                                       hasLHS(expr().bind("CondLhs")),
                                       hasRHS(expr().bind("CondRhs")))),
