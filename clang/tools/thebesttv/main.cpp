@@ -44,11 +44,9 @@ int main(int argc, const char **argv) {
         getCompilationDatabase(BUILD_PATH);
 
     const auto &allFiles = cb->getAllFiles();
-
     llvm::errs() << "All files:\n";
-    for (auto &file : allFiles) {
+    for (auto &file : allFiles)
         llvm::errs() << "  " << file << "\n";
-    }
 
     ClangTool Tool(*cb, allFiles);
     std::vector<std::unique_ptr<ASTUnit>> ASTs;
@@ -67,11 +65,13 @@ int main(int argc, const char **argv) {
         fpv.TraverseDecl(TUD);
     }
 
+    llvm::errs() << "\n--- All functions from all files ---\n";
     // traverse functionInFile
     for (const auto &[file, functions] : functionsInFile) {
         llvm::errs() << "File: " << file << "\n";
         for (const auto *fi : functions) {
-            llvm::errs() << "  " << fi->name << "\n";
+            llvm::errs() << "  Fun: " << fi->name << " at " << fi->line << ":"
+                         << fi->column << "\n";
         }
     }
 
