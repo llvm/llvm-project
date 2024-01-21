@@ -311,11 +311,6 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
       numNegExps += 1;
       sumNegExps += dens[j];
     }
-    // All exponents will be made positive; then reduce
-    // (1 - (s+1)^x)
-    // to
-    // (-s)*(Σ_{x-1} (s+1)^j) because x > 0
-    dens[j] = abs(dens[j]) - 1;
   }
 
   // If we have (1 - (s+1)^-c) in the denominator,
@@ -329,11 +324,6 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
   if (numNegExps % 2 == 1)
     sign = -sign;
   num = num - QuasiPolynomial(num.getNumInputs(), sumNegExps);
-
-  // Take all the (-s) out.
-  unsigned r = dens.size();
-  if (r % 2 == 1)
-    sign = -sign;
 }
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
@@ -421,10 +411,21 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // absolute values by multiplying and dividing by (s+1)^(-dens[j]) if it is
     // negative. We change the sign accordingly to keep the denominator in the
     // same form.
+    normalizeDenominatorExponents(sign, numExp, dens);
+
     // Then, using the formula for geometric series, we replace each (1 -
     // (s+1)^(dens[j])) with
     // (-s)(\sum_{0 ≤ k < dens[j]} (s+1)^k).
-    normalizeDenominatorExponents(sign, numExp, dens);
+    for (unsigned j = 0, e = dens.size(); j < e; ++j)
+      dens[j] = abs(dens[j]) - 1;
+    // Note that at this point, the semantics of `dens[j]` changes to mean
+    // the limit of summation of (s+1)^t terms, and not the actual exponent.
+
+    // Since the -s are taken out, the sign changes if there is an odd number
+    // of such terms.
+    unsigned r = dens.size();
+    if (dens.size() % 2 == 1)
+      sign = -sign;
 
     // Thus the term overall has now the form
     // sign'_i * (s+1)^numExp /
@@ -442,7 +443,6 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // Letting P(s) = (s+1)^numExp and Q(s) = \prod_j (...),
     // we need to find the coefficient of s^r in P(s)/Q(s),
     // for which we use the `getCoefficientInRationalFunction()` function.
-    unsigned r = dens.size();
 
     // First, we compute the coefficients of P(s),
     // which are binomial coefficients.
