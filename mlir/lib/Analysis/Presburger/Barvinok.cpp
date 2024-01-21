@@ -408,9 +408,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // sign_i * (s+1)^numExp / (\prod_j (1 - (s+1)^dens[j]))
     // For the i'th term, we first normalize the denominator to have only
     // positive exponents. We convert all the dens[j] to their
-    // absolute values by multiplying and dividing by (s+1)^(-dens[j]) if it is
-    // negative. We change the sign accordingly to keep the denominator in the
-    // same form.
+    // absolute values and change the sign and exponent in the numerator.
     normalizeDenominatorExponents(sign, numExp, dens);
 
     // Then, using the formula for geometric series, we replace each (1 -
