@@ -3103,6 +3103,10 @@ bool LinkerDriver::checkFile(StringRef path) {
 
   MemoryBufferRef mbref = *buffer;
 
+  if (config->formatBinary) {
+    return checkFileFormat(make<BinaryFile>(mbref));
+  }
+
   switch (identify_magic(mbref.getBuffer())) {
   case file_magic::unknown:
     return true;
@@ -3118,14 +3122,14 @@ bool LinkerDriver::checkFile(StringRef path) {
       }
     }
     for (const auto &p : members) {
-      switch (identify_magic(p.first.getBuffer())) {
+      auto magic = identify_magic(p.first.getBuffer());
+      switch (magic) {
       case file_magic::elf_relocatable:
-        if (!checkFileFormat(createObjFile(p.first, path, true)))
-          return false;
+        if (!tryAddFatLTOFile(p.first, path, p.second, true))
+          return checkFileFormat(createObjFile(p.first, path, true));
         break;
       case file_magic::bitcode:
-        if (!checkFileFormat(make<BitcodeFile>(p.first, path, p.second, true)))
-          return false;
+        return checkFileFormat(make<BitcodeFile>(p.first, path, p.second, true));
         break;
       default: {
         warn(path + ": archive member '" + p.first.getBufferIdentifier() +
@@ -3141,11 +3145,16 @@ bool LinkerDriver::checkFile(StringRef path) {
       return false;
     }
     path = mbref.getBufferIdentifier();
-    return checkFileFormat(make<SharedFile>(mbref, path));
+    auto *f =
+        make<SharedFile>(mbref, withLOption ? path::filename(path) : path);
+    f->init();
+    return checkFileFormat(f);
   case file_magic::bitcode:
     return checkFileFormat(make<BitcodeFile>(mbref, "", 0, inLib));
   case file_magic::elf_relocatable:
-    return checkFileFormat(createObjFile(mbref, "", inLib));
+    if (!tryAddFatLTOFile(mbref, "", 0, inLib))
+      return checkFileFormat(createObjFile(mbref, "", inLib));
+    break;
   default:
     warn(path + ": unknown file type");
     return false;
