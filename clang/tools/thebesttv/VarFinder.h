@@ -4,48 +4,48 @@
 #include "FunctionInfo.h"
 #include "utils.h"
 
-struct VarLocation {
-    std::string file; // absolute path
-    int line;
-    int column;
-
-    VarLocation() : VarLocation("", -1, -1) {}
-
-    VarLocation(std::string file, int line, int column)
-        : file(file), line(line), column(column) {}
-
-    VarLocation(const FullSourceLoc &fullLoc) {
-        requireTrue(fullLoc.hasManager(), "no source manager!");
-        requireTrue(fullLoc.isValid(), "invalid location!");
-
-        file = fullLoc.getFileEntry()->tryGetRealPathName();
-        line = fullLoc.getLineNumber();
-        column = fullLoc.getColumnNumber();
-        requireTrue(!file.empty(), "empty file path!");
-    }
-
-    bool operator==(const VarLocation &other) const {
-        return file == other.file && line == other.line &&
-               column == other.column;
-    }
-};
-
 /**
  * Visit all DeclRefExprs and print their parents.
  */
 class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
   private:
+    struct Location {
+        std::string file; // absolute path
+        int line;
+        int column;
+
+        Location() : Location("", -1, -1) {}
+
+        Location(std::string file, int line, int column)
+            : file(file), line(line), column(column) {}
+
+        Location(const FullSourceLoc &fullLoc) {
+            requireTrue(fullLoc.hasManager(), "no source manager!");
+            requireTrue(fullLoc.isValid(), "invalid location!");
+
+            file = fullLoc.getFileEntry()->tryGetRealPathName();
+            line = fullLoc.getLineNumber();
+            column = fullLoc.getColumnNumber();
+            requireTrue(!file.empty(), "empty file path!");
+        }
+
+        bool operator==(const Location &other) const {
+            return file == other.file && line == other.line &&
+                   column == other.column;
+        }
+    };
+
     ASTContext *Context;
-    VarLocation targetLoc;
+    Location targetLoc;
     bool found = false;
 
   public:
     FindVarVisitor() {}
 
-    bool findVarInStmt(ASTContext *Context, const Stmt *S,
-                       VarLocation targetLoc) {
+    bool findVarInStmt(ASTContext *Context, const Stmt *S, std::string file,
+                       int line, int column) {
         this->Context = Context;
-        this->targetLoc = targetLoc;
+        this->targetLoc = Location{file, line, column};
         this->found = false;
         TraverseStmt(const_cast<Stmt *>(S));
         return found;
@@ -54,7 +54,7 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
     bool findMatch(const Stmt *S, const NamedDecl *decl,
                    const SourceLocation &loc) {
         FullSourceLoc FullLocation = Context->getFullLoc(loc);
-        VarLocation varLoc(FullLocation);
+        Location varLoc = Location(FullLocation);
         bool match = varLoc == targetLoc;
         if (match)
             found = true;
