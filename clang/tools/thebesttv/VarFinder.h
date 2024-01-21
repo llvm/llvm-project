@@ -95,10 +95,9 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
         return true;
     }
 
-    static std::vector<const Stmt *> findVar(
-        std::map<std::string, std::set<const FunctionInfo *>> functionsInFile,
-        VarLocation targetLoc) {
-        for (const FunctionInfo *fi : functionsInFile[targetLoc.file]) {
+    static std::vector<const Stmt *> findVar(const fif &functionsInFile,
+                                             VarLocation targetLoc) {
+        for (const FunctionInfo *fi : functionsInFile.at(targetLoc.file)) {
             ASTContext *Context = &fi->D->getASTContext();
             FindVarVisitor fv(Context, targetLoc);
             TranslationUnitDecl *TUD = Context->getTranslationUnitDecl();

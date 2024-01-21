@@ -20,14 +20,14 @@ using namespace clang::tooling;
 using namespace llvm;
 namespace fs = std::filesystem;
 
+struct FunctionInfo;
+typedef std::map<std::string, std::set<const FunctionInfo *>> fif;
+
 /*****************************************************************
  * Global Variables
  *****************************************************************/
 
 extern fs::path BUILD_PATH;
-
-struct FunctionInfo;
-extern std::map<std::string, std::set<const FunctionInfo *>> functionsInFile;
 
 /*****************************************************************
  * Utility functions

@@ -5,9 +5,14 @@
 #include "clang/Tooling/CompilationDatabase.h"
 
 class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
-  public:
-    bool VisitFunctionDecl(FunctionDecl *D) {
+  private:
+    fif &functionsInFile;
 
+  public:
+    explicit FunctionAccumulator(fif &functionsInFile)
+        : functionsInFile(functionsInFile) {}
+
+    bool VisitFunctionDecl(FunctionDecl *D) {
         FunctionInfo *fi = FunctionInfo::fromDecl(D);
         if (fi == nullptr)
             return true;
@@ -49,6 +54,7 @@ int main(int argc, const char **argv) {
     std::vector<std::unique_ptr<ASTUnit>> ASTs;
     Tool.buildASTs(ASTs);
 
+    fif functionsInFile;
     for (auto &AST : ASTs) {
         ASTContext &Context = AST->getASTContext();
 
@@ -57,7 +63,7 @@ int main(int argc, const char **argv) {
         TUD->dump();
 
         llvm::errs() << "\n--- FunctionAccumulator ---\n";
-        FunctionAccumulator fpv;
+        FunctionAccumulator fpv(functionsInFile);
         fpv.TraverseDecl(TUD);
     }
 
