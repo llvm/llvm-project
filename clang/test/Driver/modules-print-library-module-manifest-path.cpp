@@ -29,7 +29,7 @@
 
 //--- libcxx.cpp
 
-// CHECK: {{.*}}/Inputs/usr/lib/x86_64-linux-gnu{{/|.}}modules.json
+// CHECK: {{.*}}/Inputs/usr/lib/x86_64-linux-gnu{{/|\\}}modules.json
 
 //--- libstdcxx.cpp
 
