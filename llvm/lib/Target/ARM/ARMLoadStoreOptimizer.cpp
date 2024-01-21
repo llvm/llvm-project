@@ -525,13 +525,21 @@ void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
         // Merge it with the update; if the merged offset is too large,
         // insert a new sub instead.
         MachineOperand &MO =
-          MBBI->getOperand(MBBI->getDesc().getNumOperands() - 3);
-        Offset = (Opc == ARM::tSUBi8) ?
-          MO.getImm() + WordOffset * 4 :
-          MO.getImm() - WordOffset * 4 ;
-        if (Offset >= 0 && TL->isLegalAddImmediate(Offset)) {
-          // FIXME: Swap ADDS<->SUBS if Offset < 0, erase instruction if
-          // Offset == 0.
+            MBBI->getOperand(MBBI->getDesc().getNumOperands() - 3);
+        Offset = (Opc == ARM::tSUBi8) ? MO.getImm() + WordOffset * 4
+                                      : MO.getImm() - WordOffset * 4;
+        if (TL->isLegalAddImmediate(Offset)) {
+          if (Offset < 0) {
+            // Swap ADDS<->SUBS if Offset < 0
+            Opc = (Opc == ARM::tSUBi8) ? ARM::tADDi8 : ARM::tSUBi8;
+            Offset = -Offset;
+          } else if (Offset == 0) {
+            // Erase instruction if Offset == 0
+            LLVM_DEBUG(dbgs() << "  Erasing instruction due to offset being 0: "
+                              << *MBBI);
+            MBB.erase(MBBI);
+            return;
+          }
           MO.setImm(Offset);
           // The base register has now been reset, so exit early.
           return;
