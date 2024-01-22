@@ -1785,13 +1785,13 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
 
   // ZT0
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Preserves)
-    FuncAttrs.addAttribute("aarch64_zt0_preserved");
+    FuncAttrs.addAttribute("aarch64_preserves_zt0");
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_In)
-    FuncAttrs.addAttribute("aarch64_zt0_in");
+    FuncAttrs.addAttribute("aarch64_in_zt0");
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Out)
-    FuncAttrs.addAttribute("aarch64_zt0_out");
+    FuncAttrs.addAttribute("aarch64_out_zt0");
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
-    FuncAttrs.addAttribute("aarch64_zt0_inout");
+    FuncAttrs.addAttribute("aarch64_inout_zt0");
 }
 
 static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,

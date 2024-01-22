@@ -50,8 +50,8 @@ __arm_new("za", "zt0") void new_za_zt0() { }
 
 }
 
-// CHECK: attributes #[[ZT0_IN]] = {{{.*}} "aarch64_zt0_in" {{.*}}}
-// CHECK: attributes #[[ZT0_OUT]] = {{{.*}} "aarch64_zt0_out" {{.*}}}
-// CHECK: attributes #[[ZT0_INOUT]] = {{{.*}} "aarch64_zt0_inout" {{.*}}}
-// CHECK: attributes #[[ZT0_PRESERVED]] = {{{.*}} "aarch64_zt0_preserved" {{.*}}}
-// CHECK: attributes #[[ZT0_NEW]] = {{{.*}} "aarch64_zt0_new" {{.*}}}
+// CHECK: attributes #[[ZT0_IN]] = {{{.*}} "aarch64_in_zt0" {{.*}}}
+// CHECK: attributes #[[ZT0_OUT]] = {{{.*}} "aarch64_out_zt0" {{.*}}}
+// CHECK: attributes #[[ZT0_INOUT]] = {{{.*}} "aarch64_inout_zt0" {{.*}}}
+// CHECK: attributes #[[ZT0_PRESERVED]] = {{{.*}} "aarch64_preserves_zt0" {{.*}}}
+// CHECK: attributes #[[ZT0_NEW]] = {{{.*}} "aarch64_new_zt0" {{.*}}}
