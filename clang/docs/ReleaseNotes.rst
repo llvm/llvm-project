@@ -811,7 +811,7 @@ Bug Fixes in This Version
   invalidation by invalid initializer Expr.
   Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
-  and `if consteval` branches.
+  and `if consteval` branches. Untaken branches are now skipped.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
 - Fix assertion failure when declaring a template friend function with
   a constrained parameter in a template class that declares a class method
