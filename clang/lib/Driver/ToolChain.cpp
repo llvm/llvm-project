@@ -608,7 +608,7 @@ std::string ToolChain::getCompilerRTPath() const {
   } else {
     llvm::sys::path::append(Path, "lib", getOSLibName());
   }
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 std::string ToolChain::getCompilerRTBasename(const ArgList &Args,
@@ -661,7 +661,7 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     SmallString<128> P(LibPath);
     llvm::sys::path::append(P, CRTBasename);
     if (getVFS().exists(P))
-      return std::string(P.str());
+      return std::string(P);
   }
 
   // Fall back to the old expected compiler-rt name if the new one does not
@@ -670,7 +670,7 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
   SmallString<128> Path(getCompilerRTPath());
   llvm::sys::path::append(Path, CRTBasename);
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
@@ -785,7 +785,7 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
     llvm::sys::path::append(Path, "lib");
     for (auto &S : SS)
       llvm::sys::path::append(Path, S);
-    Paths.push_back(std::string(Path.str()));
+    Paths.push_back(std::string(Path));
   };
 
   AddPath({getTriple().str()});
