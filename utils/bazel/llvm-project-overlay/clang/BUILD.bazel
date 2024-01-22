@@ -462,8 +462,8 @@ gentbl(
             "include/clang/Basic/AttrSubMatchRulesList.inc",
         ),
         (
-            "-gen-clang-attr-token-kinds",
-            "include/clang/Basic/AttrTokenKinds.inc",
+            "-gen-clang-regular-keyword-attr-info",
+            "include/clang/Basic/RegularKeywordAttrInfo.inc",
         ),
     ],
     tblgen = ":clang-tblgen",
@@ -2455,8 +2455,6 @@ cc_binary(
     name = "clang-linker-wrapper",
     srcs = [
         "tools/clang-linker-wrapper/ClangLinkerWrapper.cpp",
-        "tools/clang-linker-wrapper/OffloadWrapper.cpp",
-        "tools/clang-linker-wrapper/OffloadWrapper.h",
     ],
     copts = [
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/tools/clang-linker-wrapper",

@@ -308,9 +308,9 @@ public:
     if (T out; Wrapper::pre_check(x, y, out))
       return out;
     FPB sx(x), sy(y);
-    bool sign = sx.get_sign();
-    sx.set_sign(false);
-    sy.set_sign(false);
+    Sign sign = sx.sign();
+    sx.set_sign(Sign::POS);
+    sy.set_sign(Sign::POS);
     FPB result = eval_internal(sx, sy);
     result.set_sign(sign);
     return result.get_val();

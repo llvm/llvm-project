@@ -97,16 +97,18 @@ void AddDebugFoundationPass::runOnOperation() {
     // Only definitions need a distinct identifier and a compilation unit.
     mlir::DistinctAttr id;
     mlir::LLVM::DICompileUnitAttr compilationUnit;
+    auto subprogramFlags = mlir::LLVM::DISubprogramFlags::Optimized;
     if (!funcOp.isExternal()) {
       id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
       compilationUnit = cuAttr;
+      subprogramFlags =
+          subprogramFlags | mlir::LLVM::DISubprogramFlags::Definition;
     }
-    mlir::LLVM::DISubprogramAttr spAttr = mlir::LLVM::DISubprogramAttr::get(
+    auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, fileAttr, funcName, funcName,
         funcFileAttr,
         /*line=*/1,
-        /*scopeline=*/1, mlir::LLVM::DISubprogramFlags::Definition,
-        subTypeAttr);
+        /*scopeline=*/1, subprogramFlags, subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
   });
 }

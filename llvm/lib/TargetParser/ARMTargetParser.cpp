@@ -596,6 +596,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::TvOS:
   case llvm::Triple::WatchOS:
   case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     if (MArch == "v7k")
       return "cortex-a7";
     break;

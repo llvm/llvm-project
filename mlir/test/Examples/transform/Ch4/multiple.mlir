@@ -79,11 +79,11 @@ module @transforms attributes { transform.with_named_sequence } {
       %add: !transform.any_op {transform.readonly},
       %max: !transform.any_op {transform.readonly},
       %pos: !transform.param<i32> {transform.readonly}) {
-    transform.test_print_param %pos, "matmul #" at %matmul
+    transform.debug.emit_param_as_remark %pos, "matmul #" at %matmul
       : !transform.param<i32>, !transform.any_op
-    transform.test_print_param %pos, "add #" at %add
+    transform.debug.emit_param_as_remark %pos, "add #" at %add
       : !transform.param<i32>, !transform.any_op
-    transform.test_print_param %pos, "max #" at %max
+    transform.debug.emit_param_as_remark %pos, "max #" at %max
       : !transform.param<i32>, !transform.any_op
     transform.yield
   }

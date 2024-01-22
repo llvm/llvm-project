@@ -544,6 +544,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = tryDecodeInst(DecoderTableGFX1296, MI, DecW, Address, CS);
       if (Res)
         break;
+
+      Res = tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS);
+      if (Res)
+        break;
     }
     // Reinitialize Bytes
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
@@ -2180,7 +2184,8 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
 
-    if (AMDGPU::getAmdhsaCodeObjectVersion() >= AMDGPU::AMDHSA_COV5)
+    // FIXME: We should be looking at the ELF header ABI version for this.
+    if (AMDGPU::getDefaultAMDHSACodeObjectVersion() >= AMDGPU::AMDHSA_COV5)
       PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
 

@@ -877,6 +877,23 @@ multiclass VPatMultiplyAddSDNode_VV_VX<SDNode op, string instruction_name> {
   }
 }
 
+multiclass VPatAVGADD_VV_VX_RM<SDNode vop, int vxrm> {
+  foreach vti = AllIntegerVectors in {
+    let Predicates = GetVTypePredicates<vti>.Predicates in {
+      def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
+                     (vti.Vector vti.RegClass:$rs2)),
+                (!cast<Instruction>("PseudoVAADDU_VV_"#vti.LMul.MX)
+                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, vti.RegClass:$rs2,
+                  vxrm, vti.AVL, vti.Log2SEW, TA_MA)>;
+      def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
+                     (vti.Vector (SplatPat (XLenVT GPR:$rs2)))),
+                (!cast<Instruction>("PseudoVAADDU_VX_"#vti.LMul.MX)
+                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, GPR:$rs2,
+                  vxrm, vti.AVL, vti.Log2SEW, TA_MA)>;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -1132,20 +1149,8 @@ defm : VPatBinarySDNode_VV_VX<ssubsat, "PseudoVSSUB">;
 defm : VPatBinarySDNode_VV_VX<usubsat, "PseudoVSSUBU">;
 
 // 12.2. Vector Single-Width Averaging Add and Subtract
-foreach vti = AllIntegerVectors in {
-  let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(avgflooru (vti.Vector vti.RegClass:$rs1),
-                         (vti.Vector vti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVAADDU_VV_"#vti.LMul.MX)
-                (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, vti.RegClass:$rs2,
-                0b10, vti.AVL, vti.Log2SEW, TA_MA)>;
-    def : Pat<(avgflooru (vti.Vector vti.RegClass:$rs1),
-                         (vti.Vector (SplatPat (XLenVT GPR:$rs2)))),
-              (!cast<Instruction>("PseudoVAADDU_VX_"#vti.LMul.MX)
-                (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, GPR:$rs2,
-                0b10, vti.AVL, vti.Log2SEW, TA_MA)>;
-  }
-}
+defm : VPatAVGADD_VV_VX_RM<avgflooru, 0b10>;
+defm : VPatAVGADD_VV_VX_RM<avgceilu, 0b00>;
 
 // 15. Vector Mask Instructions
 

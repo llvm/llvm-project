@@ -1106,6 +1106,27 @@ bool lldb_private::formatters::LibcxxChronoMonthSummaryProvider(
   return true;
 }
 
+bool lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // FIXME: These are the names used in the C++20 ostream operator. Since LLVM
+  // uses C++17 it's not possible to use the ostream operator directly.
+  static const std::array<std::string_view, 7> weekdays = {
+      "Sunday",   "Monday", "Tuesday", "Wednesday",
+      "Thursday", "Friday", "Saturday"};
+
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__wd_");
+  if (!ptr_sp)
+    return false;
+
+  const unsigned weekday = ptr_sp->GetValueAsUnsigned(0);
+  if (weekday >= 0 && weekday < 7)
+    stream << "weekday=" << weekdays[weekday];
+  else
+    stream.Printf("weekday=%u", weekday);
+
+  return true;
+}
+
 bool lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__y_");

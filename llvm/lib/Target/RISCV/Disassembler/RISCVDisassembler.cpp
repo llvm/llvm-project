@@ -546,6 +546,10 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                       !STI.hasFeature(RISCV::Feature64Bit),
                   DecoderTableRV32Zdinx32,
                   "RV32Zdinx table (Double in Integer and rv32)");
+    TRY_TO_DECODE(STI.hasFeature(RISCV::FeatureStdExtZacas) &&
+                      !STI.hasFeature(RISCV::Feature64Bit),
+                  DecoderTableRV32Zacas32,
+                  "RV32Zacas table (Compare-And-Swap and rv32)");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureStdExtZfinx, DecoderTableRVZfinx32,
                           "RVZfinx table (Float in Integer)");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXVentanaCondOps,

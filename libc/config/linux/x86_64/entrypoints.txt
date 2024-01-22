@@ -370,6 +370,7 @@ if(LIBC_COMPILER_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.copysignf128
+    libc.src.math.fabsf128
   )
 endif()
 

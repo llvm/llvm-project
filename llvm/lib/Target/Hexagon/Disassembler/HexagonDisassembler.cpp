@@ -512,6 +512,8 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
         const bool Rev = HexagonMCInstrInfo::IsReverseVecRegPair(Producer);
         const unsigned ProdPairIndex =
             Rev ? Producer - Hexagon::WR0 : Producer - Hexagon::W0;
+        if (Rev)
+          SubregBit = !SubregBit;
         Producer = (ProdPairIndex << 1) + SubregBit + Hexagon::V0;
       } else if (SubregBit)
         // Hexagon PRM 10.11 New-value operands

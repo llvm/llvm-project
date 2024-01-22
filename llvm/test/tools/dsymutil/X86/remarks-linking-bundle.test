@@ -7,7 +7,7 @@ RUN: dsymutil -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs 
 Check that the remark file in the bundle exists and is sane:
 RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.x86_64 | FileCheck %s
 
-RUN: dsymutil --linker llvm -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.x86_64
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.x86_64
 
 Check that the remark file in the bundle exists and is sane:
 RUN: llvm-bcanalyzer -dump %t/basic.macho.remarks.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.x86_64 | FileCheck %s
@@ -16,7 +16,7 @@ Now emit it in a different format: YAML.
 RUN: dsymutil -remarks-output-format=yaml -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.x86_64
 RUN: cat %t/basic.macho.remarks.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.x86_64 | FileCheck %s --check-prefix=CHECK-YAML
 
-RUN: dsymutil --linker llvm -remarks-output-format=yaml -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.x86_64
+RUN: dsymutil --linker parallel -remarks-output-format=yaml -oso-prepend-path=%p/../Inputs -remarks-prepend-path=%p/../Inputs %t/basic.macho.remarks.x86_64
 RUN: cat %t/basic.macho.remarks.x86_64.dSYM/Contents/Resources/Remarks/basic.macho.remarks.x86_64 | FileCheck %s --check-prefix=CHECK-YAML
 
 CHECK: <Meta

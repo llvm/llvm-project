@@ -1140,6 +1140,9 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
 void SlotTracker::processDPValueMetadata(const DPValue &DPV) {
   CreateMetadataSlot(DPV.getVariable());
   CreateMetadataSlot(DPV.getDebugLoc());
+  if (DPV.isDbgAssign()) {
+    CreateMetadataSlot(DPV.getAssignID());
+  }
 }
 
 void SlotTracker::processInstructionMetadata(const Instruction &I) {
@@ -4571,7 +4574,22 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
 void AssemblyWriter::printDPValue(const DPValue &Value) {
   // There's no formal representation of a DPValue -- print purely as a
   // debugging aid.
-  Out << "  DPValue { ";
+  Out << "  DPValue ";
+
+  switch (Value.getType()) {
+  case DPValue::LocationType::Value:
+    Out << "value";
+    break;
+  case DPValue::LocationType::Declare:
+    Out << "declare";
+    break;
+  case DPValue::LocationType::Assign:
+    Out << "assign";
+    break;
+  default:
+    llvm_unreachable("Tried to print a DPValue with an invalid LocationType!");
+  }
+  Out << " { ";
   auto WriterCtx = getContext();
   WriteAsOperandInternal(Out, Value.getRawLocation(), WriterCtx, true);
   Out << ", ";
@@ -4579,6 +4597,14 @@ void AssemblyWriter::printDPValue(const DPValue &Value) {
   Out << ", ";
   WriteAsOperandInternal(Out, Value.getExpression(), WriterCtx, true);
   Out << ", ";
+  if (Value.isDbgAssign()) {
+    WriteAsOperandInternal(Out, Value.getAssignID(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, Value.getRawAddress(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, Value.getAddressExpression(), WriterCtx, true);
+    Out << ", ";
+  }
   WriteAsOperandInternal(Out, Value.getDebugLoc().get(), WriterCtx, true);
   Out << " marker @" << Value.getMarker();
   Out << " }";

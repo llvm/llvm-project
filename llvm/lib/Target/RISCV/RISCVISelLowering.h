@@ -255,6 +255,8 @@ enum NodeType : unsigned {
 
   // Averaging adds of unsigned integers.
   AVGFLOORU_VL,
+  // Rounding averaging adds of unsigned integers.
+  AVGCEILU_VL,
 
   MULHS_VL,
   MULHU_VL,
@@ -631,9 +633,7 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
-  ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
-    return ISD::SIGN_EXTEND;
-  }
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;
@@ -995,7 +995,7 @@ bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                   CCState &State);
 
-ArrayRef<MCPhysReg> getArgGPRs();
+ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
 
 } // end namespace RISCV
 

@@ -44,7 +44,7 @@ LIBC_INLINE float log(double x) {
   uint64_t x_u = xbits.uintval();
 
   if (LIBC_UNLIKELY(x_u > FPBits::MAX_NORMAL)) {
-    if (xbits.get_sign() && !xbits.is_nan()) {
+    if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return fputil::FPBits<float>::build_quiet_nan(0);
@@ -106,7 +106,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
     case 0xbf800000U: // x = -1.0
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<float>(fputil::FPBits<float>::neg_inf());
+      return static_cast<float>(fputil::FPBits<float>::inf(fputil::Sign::NEG));
 #ifndef LIBC_TARGET_CPU_HAS_FMA
     case 0x4cc1c80bU: // x = 0x1.839016p+26f
       return fputil::round_result_slightly_down(0x1.26fc04p+4f);

@@ -34,6 +34,10 @@ static llvm::StringRef GetName(XcodeSDK::Type type) {
     return "WatchSimulator";
   case XcodeSDK::watchOS:
     return "WatchOS";
+  case XcodeSDK::XRSimulator:
+    return "XRSimulator";
+  case XcodeSDK::XROS:
+    return "XROS";
   case XcodeSDK::bridgeOS:
     return "bridgeOS";
   case XcodeSDK::Linux:
@@ -75,6 +79,10 @@ static XcodeSDK::Type ParseSDKName(llvm::StringRef &name) {
     return XcodeSDK::WatchSimulator;
   if (name.consume_front("WatchOS"))
     return XcodeSDK::watchOS;
+  if (name.consume_front("XRSimulator"))
+    return XcodeSDK::XRSimulator;
+  if (name.consume_front("XROS"))
+    return XcodeSDK::XROS;
   if (name.consume_front("bridgeOS"))
     return XcodeSDK::bridgeOS;
   if (name.consume_front("Linux"))
@@ -183,6 +191,12 @@ std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
   case watchOS:
     name = "watchos";
     break;
+  case XRSimulator:
+    name = "xrsimulator";
+    break;
+  case XROS:
+    name = "xros";
+    break;
   case bridgeOS:
     name = "bridgeos";
     break;
@@ -212,6 +226,9 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
   case Type::watchOS:
   case Type::WatchSimulator:
     return version >= llvm::VersionTuple(6);
+  case Type::XROS:
+  case Type::XRSimulator:
+    return true;
   default:
     return false;
   }
@@ -233,6 +250,8 @@ bool XcodeSDK::SupportsSwift() const {
   case Type::WatchSimulator:
   case Type::watchOS:
     return info.version.empty() || info.version >= llvm::VersionTuple(2);
+  case Type::XROS:
+  case Type::XRSimulator:
   case Type::Linux:
     return true;
   default:
@@ -276,6 +295,10 @@ XcodeSDK::Type XcodeSDK::GetSDKTypeForTriple(const llvm::Triple &triple) {
     if (triple.getEnvironment() == Triple::Simulator)
       return XcodeSDK::WatchSimulator;
     return XcodeSDK::watchOS;
+  case Triple::XROS:
+    if (triple.getEnvironment() == Triple::Simulator)
+      return XcodeSDK::XRSimulator;
+    return XcodeSDK::XROS;
   case Triple::Linux:
     return XcodeSDK::Linux;
   default:

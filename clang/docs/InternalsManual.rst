@@ -931,7 +931,7 @@ the option appears on the command line, the argument value is simply copied.
 .. code-block:: text
 
   def isysroot : JoinedOrSeparate<["-"], "isysroot">,
-    Visibility<[ClangOption, CC1Option]>,
+    Visibility<[ClangOption, CC1Option, FlangOption]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 
 **List of Strings**

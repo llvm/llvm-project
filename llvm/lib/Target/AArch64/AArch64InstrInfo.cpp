@@ -4214,6 +4214,9 @@ static bool canPairLdStOpc(unsigned FirstOpc, unsigned SecondOpc) {
   switch (FirstOpc) {
   default:
     return false;
+  case AArch64::LDRQui:
+  case AArch64::LDURQi:
+    return SecondOpc == AArch64::LDRQui || SecondOpc == AArch64::LDURQi;
   case AArch64::LDRWui:
   case AArch64::LDURWi:
     return SecondOpc == AArch64::LDRSWui || SecondOpc == AArch64::LDURSWi;

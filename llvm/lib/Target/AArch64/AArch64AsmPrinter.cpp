@@ -256,6 +256,11 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (BTE->getZExtValue())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
+  if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("guarded-control-stack")))
+    if (GCS->getZExtValue())
+      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("sign-return-address")))
     if (Sign->getZExtValue())

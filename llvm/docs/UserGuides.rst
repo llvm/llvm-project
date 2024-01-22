@@ -43,6 +43,7 @@ intermediate LLVM representation.
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstrProfileFormat
    InstrRefDebugInfo
    LinkTimeOptimization
    LoopTerminology
@@ -176,6 +177,9 @@ Optimizations
    This document explains how LLVM uses value tracking, or instruction
    referencing, to determine variable locations for debug info in the final
    stages of compilation.
+
+:doc:`InstrProfileFormat`
+   This document explains two binary formats of instrumentation-based profiles.
 
 Code Generation
 ---------------

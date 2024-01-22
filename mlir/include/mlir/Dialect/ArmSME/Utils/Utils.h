@@ -16,8 +16,15 @@
 #define MLIR_DIALECT_ARMSME_UTILS_UTILS_H_
 
 #include "mlir/Dialect/ArmSME/IR/ArmSMEEnums.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include <optional>
+
+namespace mlir {
+class Location;
+class PatternRewriter;
+class Value;
+} // namespace mlir
 
 namespace mlir::arm_sme {
 
@@ -41,6 +48,13 @@ std::optional<ArmSMETileType> getSMETileType(VectorType);
 
 /// Verifies the tile ID (if set) on this tile operation is valid.
 LogicalResult verifyOperationHasValidTileId(Operation *);
+
+/// Generates a for loop over ZA tile slices where the induction variable is
+/// the tile slice index and each iteration yields a new tile. Loop body is
+/// built via `makeLoopBody`, which returns the next tile value.
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody);
 
 } // namespace mlir::arm_sme
 

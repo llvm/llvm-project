@@ -35,6 +35,8 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
   switch (ELFType) {
   case ELF::R_ARM_ABS32:
     return aarch32::Data_Pointer32;
+  case ELF::R_ARM_GOT_PREL:
+    return aarch32::Data_RequestGOTAndTransformToDelta32;
   case ELF::R_ARM_REL32:
     return aarch32::Data_Delta32;
   case ELF::R_ARM_CALL:
@@ -71,6 +73,8 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_REL32;
   case aarch32::Data_Pointer32:
     return ELF::R_ARM_ABS32;
+  case aarch32::Data_RequestGOTAndTransformToDelta32:
+    return ELF::R_ARM_GOT_PREL;
   case aarch32::Arm_Call:
     return ELF::R_ARM_CALL;
   case aarch32::Arm_Jump24:
@@ -216,12 +220,15 @@ public:
         ArmCfg(std::move(ArmCfg)) {}
 };
 
-template <aarch32::StubsFlavor Flavor>
+template <typename StubsManagerType>
 Error buildTables_ELF_aarch32(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  aarch32::StubsManager<Flavor> PLT;
-  visitExistingEdges(G, PLT);
+  StubsManagerType StubsManager;
+  visitExistingEdges(G, StubsManager);
+  aarch32::GOTBuilder GOT;
+  visitExistingEdges(G, GOT);
+
   return Error::success();
 }
 
@@ -257,7 +264,7 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case v7:
   case v8_A:
     ArmCfg = aarch32::getArmConfigForCPUArch(Arch);
-    assert(ArmCfg.Stubs != aarch32::Unsupported &&
+    assert(ArmCfg.Stubs != aarch32::StubsFlavor::Unsupported &&
            "Provide a config for each supported CPU");
     break;
   default:
@@ -309,11 +316,11 @@ void link_ELF_aarch32(std::unique_ptr<LinkGraph> G,
       PassCfg.PrePrunePasses.push_back(markAllSymbolsLive);
 
     switch (ArmCfg.Stubs) {
-    case aarch32::Thumbv7:
+    case aarch32::StubsFlavor::v7:
       PassCfg.PostPrunePasses.push_back(
-          buildTables_ELF_aarch32<aarch32::Thumbv7>);
+          buildTables_ELF_aarch32<aarch32::StubsManager_v7>);
       break;
-    case aarch32::Unsupported:
+    case aarch32::StubsFlavor::Unsupported:
       llvm_unreachable("Check before building graph");
     }
   }

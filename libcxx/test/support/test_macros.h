@@ -451,6 +451,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_SHORT_WCHAR
 #endif
 
+#ifdef _LIBCPP_ABI_MICROSOFT
+#  define TEST_ABI_MICROSOFT
+#endif
+
 // This is a temporary workaround for user-defined `operator new` definitions
 // not being picked up on Apple platforms in some circumstances. This is under
 // investigation and should be short-lived.
@@ -464,6 +468,11 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_IF_AIX(arg_true, arg_false) arg_true
 #else
 #  define TEST_IF_AIX(arg_true, arg_false) arg_false
+#endif
+
+// Clang-18 has support for deducing this, but it does not set the FTM.
+#ifdef _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

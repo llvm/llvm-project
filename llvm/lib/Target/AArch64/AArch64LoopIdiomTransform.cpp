@@ -53,7 +53,7 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "aarch64-loop-idiom-transform"
 
 static cl::opt<bool>
-    DisableAll("disable-aarch64-lit-all", cl::Hidden, cl::init(true),
+    DisableAll("disable-aarch64-lit-all", cl::Hidden, cl::init(false),
                cl::desc("Disable AArch64 Loop Idiom Transform Pass."));
 
 static cl::opt<bool> DisableByteCmp(
@@ -367,11 +367,12 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
       Value *WhileBodyVal = EndPN.getIncomingValueForBlock(WhileBB);
 
       // The value of the index when leaving the while.cond block is always the
-      // same as the end value (MaxLen) so we permit either. Otherwise for any
-      // other value defined outside the loop we only allow values that are the
-      // same as the exit value for while.body.
-      if (WhileCondVal != Index && WhileCondVal != MaxLen &&
-          WhileCondVal != WhileBodyVal)
+      // same as the end value (MaxLen) so we permit either. The value when
+      // leaving the while.body block should only be the index. Otherwise for
+      // any other values we only allow ones that are same for both blocks.
+      if (WhileCondVal != WhileBodyVal &&
+          ((WhileCondVal != Index && WhileCondVal != MaxLen) ||
+           (WhileBodyVal != Index)))
         return false;
     }
   }

@@ -124,6 +124,11 @@ LogicalResult moduleSerializer(GPUModuleOp op,
     }
     objects.push_back(object);
   }
+  if (auto moduleHandler =
+          dyn_cast_or_null<OffloadingLLVMTranslationAttrInterface>(
+              op.getOffloadingHandlerAttr());
+      !handler && moduleHandler)
+    handler = moduleHandler;
   builder.setInsertionPointAfter(op);
   builder.create<gpu::BinaryOp>(op.getLoc(), op.getName(), handler,
                                 builder.getArrayAttr(objects));

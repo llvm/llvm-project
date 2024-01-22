@@ -104,6 +104,10 @@ void *__dso_handle = nullptr;
 
 } // extern "C"
 
+void *operator new(size_t size) { return malloc(size); }
+
+void *operator new[](size_t size) { return malloc(size); }
+
 void operator delete(void *) {
   // The libc runtime should not use the global delete operator. Hence,
   // we just trap here to catch any such accidental usages.

@@ -243,9 +243,16 @@ const Stmt *ExprMutationAnalyzer::findMutationMemoized(
 
 const Stmt *ExprMutationAnalyzer::tryEachDeclRef(const Decl *Dec,
                                                  MutationFinder Finder) {
-  const auto Refs =
-      match(findAll(declRefExpr(to(equalsNode(Dec))).bind(NodeID<Expr>::value)),
-            Stm, Context);
+  const auto Refs = match(
+      findAll(
+          declRefExpr(to(
+                          // `Dec` or a binding if `Dec` is a decomposition.
+                          anyOf(equalsNode(Dec),
+                                bindingDecl(forDecomposition(equalsNode(Dec))))
+                          //
+                          ))
+              .bind(NodeID<Expr>::value)),
+      Stm, Context);
   for (const auto &RefNodes : Refs) {
     const auto *E = RefNodes.getNodeAs<Expr>(NodeID<Expr>::value);
     if ((this->*Finder)(E))

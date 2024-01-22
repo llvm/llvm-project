@@ -3463,6 +3463,74 @@ bool X86::isX87Instruction(MachineInstr &MI) {
   return false;
 }
 
+int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
+  auto IsMemOp = [](const MCOperandInfo &OpInfo) {
+    return OpInfo.OperandType == MCOI::OPERAND_MEMORY;
+  };
+
+  const MCInstrDesc &Desc = MI.getDesc();
+
+  // Directly invoke the MC-layer routine for real (i.e., non-pseudo)
+  // instructions (fast case).
+  if (!X86II::isPseudo(Desc.TSFlags)) {
+    int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+    if (MemRefIdx >= 0)
+      return MemRefIdx + X86II::getOperandBias(Desc);
+#ifdef EXPENSIVE_CHECKS
+    assert(none_of(Desc.operands(), IsMemOp) &&
+           "Got false negative from X86II::getMemoryOperandNo()!");
+#endif
+    return -1;
+  }
+
+  // Otherwise, handle pseudo instructions by examining the type of their
+  // operands (slow case). An instruction cannot have a memory reference if it
+  // has fewer than AddrNumOperands (= 5) explicit operands.
+  unsigned NumOps = Desc.getNumOperands();
+  if (NumOps < X86::AddrNumOperands) {
+#ifdef EXPENSIVE_CHECKS
+    assert(none_of(Desc.operands(), IsMemOp) &&
+           "Expected no operands to have OPERAND_MEMORY type!");
+#endif
+    return -1;
+  }
+
+  // The first operand with type OPERAND_MEMORY indicates the start of a memory
+  // reference. We expect the following AddrNumOperand-1 operands to also have
+  // OPERAND_MEMORY type.
+  for (unsigned I = 0, E = NumOps - X86::AddrNumOperands; I != E; ++I) {
+    if (IsMemOp(Desc.operands()[I])) {
+#ifdef EXPENSIVE_CHECKS
+      assert(std::all_of(Desc.operands().begin() + I,
+                         Desc.operands().begin() + I + X86::AddrNumOperands,
+                         IsMemOp) &&
+             "Expected all five operands in the memory reference to have "
+             "OPERAND_MEMORY type!");
+#endif
+      return I;
+    }
+  }
+
+  return -1;
+}
+
+const Constant *X86::getConstantFromPool(const MachineInstr &MI,
+                                         const MachineOperand &Op) {
+  if (!Op.isCPI() || Op.getOffset() != 0)
+    return nullptr;
+
+  ArrayRef<MachineConstantPoolEntry> Constants =
+      MI.getParent()->getParent()->getConstantPool()->getConstants();
+  const MachineConstantPoolEntry &ConstantEntry = Constants[Op.getIndex()];
+
+  // Bail if this is a machine constant pool entry, we won't be able to dig out
+  // anything useful.
+  if (ConstantEntry.isMachineConstantPoolEntry())
+    return nullptr;
+
+  return ConstantEntry.Val.ConstVal;
+}
+
 bool X86InstrInfo::isUnconditionalTailCall(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case X86::TCRETURNdi:
@@ -4314,7 +4382,10 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
   case 1024:
     assert(X86::TILERegClass.hasSubClassEq(RC) && "Unknown 1024-byte regclass");
     assert(STI.hasAMXTILE() && "Using 8*1024-bit register requires AMX-TILE");
-    return Load ? X86::TILELOADD : X86::TILESTORED;
+#define GET_EGPR_IF_ENABLED(OPC) (STI.hasEGPR() ? OPC##_EVEX : OPC)
+    return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
+                : GET_EGPR_IF_ENABLED(X86::TILESTORED);
+#undef GET_EGPR_IF_ENABLED
   }
 }
 
@@ -4507,6 +4578,8 @@ static bool isAMXOpcode(unsigned Opc) {
     return false;
   case X86::TILELOADD:
   case X86::TILESTORED:
+  case X86::TILELOADD_EVEX:
+  case X86::TILESTORED_EVEX:
     return true;
   }
 }
@@ -4518,7 +4591,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
   switch (Opc) {
   default:
     llvm_unreachable("Unexpected special opcode!");
-  case X86::TILESTORED: {
+  case X86::TILESTORED:
+  case X86::TILESTORED_EVEX: {
     // tilestored %tmm, (%sp, %idx)
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -4531,7 +4605,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
     MO.setIsKill(true);
     break;
   }
-  case X86::TILELOADD: {
+  case X86::TILELOADD:
+  case X86::TILELOADD_EVEX: {
     // tileloadd (%sp, %idx), %tmm
     MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);

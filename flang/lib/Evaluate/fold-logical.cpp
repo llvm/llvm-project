@@ -31,11 +31,12 @@ static Expr<T> FoldAllAnyParity(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Logical);
   std::optional<int> dim;
-  if (std::optional<Constant<T>> array{
-          ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
+  if (std::optional<ArrayAndMask<T>> arrayAndMask{
+          ProcessReductionArgs<T>(context, ref.arguments(), dim,
               /*ARRAY(MASK)=*/0, /*DIM=*/1)}) {
-    OperationAccumulator accumulator{*array, operation};
-    return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
+    OperationAccumulator accumulator{arrayAndMask->array, operation};
+    return Expr<T>{DoReduction<T>(
+        arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
