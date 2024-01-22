@@ -1974,6 +1974,7 @@ genACC(Fortran::lower::AbstractConverter &converter,
 
   assert(loopDirective.v == llvm::acc::ACCD_loop &&
          "Unsupported OpenACC loop construct");
+  (void)loopDirective;
 
   const auto &accClauseList =
       std::get<Fortran::parser::AccClauseList>(beginLoopDirective.t);
