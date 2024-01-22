@@ -3106,23 +3106,31 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
             if (auto specificCall{
                     matchOrBufferMessages(*genIter->second, specificBuffer)}) {
               // Force the call result type to the specific intrinsic result
-              // type
+              // type, if possible.
+              DynamicType genericType{
+                  DEREF(specificCall->specificIntrinsic.characteristics.value()
+                            .functionResult.value()
+                            .GetTypeAndShape())
+                      .type()};
               DynamicType newType{GetReturnType(*specIter->second, defaults_)};
-              if (context.languageFeatures().ShouldWarn(
-                      common::LanguageFeature::
-                          UseGenericIntrinsicWhenSpecificDoesntMatch)) {
-                context.messages().Say(
-                    "Argument types do not match specific intrinsic '%s' "
-                    "requirements; using '%s' generic instead and converting "
-                    "the "
-                    "result to %s if needed"_port_en_US,
-                    call.name, genericName, newType.AsFortran());
+              if (genericType.category() == newType.category() ||
+                  ((genericType.category() == TypeCategory::Integer ||
+                       genericType.category() == TypeCategory::Real) &&
+                      (newType.category() == TypeCategory::Integer ||
+                          newType.category() == TypeCategory::Real))) {
+                if (context.languageFeatures().ShouldWarn(
+                        common::LanguageFeature::
+                            UseGenericIntrinsicWhenSpecificDoesntMatch)) {
+                  context.messages().Say(
+                      "Argument types do not match specific intrinsic '%s' requirements; using '%s' generic instead and converting the result to %s if needed"_port_en_US,
+                      call.name, genericName, newType.AsFortran());
+                }
+                specificCall->specificIntrinsic.name = call.name;
+                specificCall->specificIntrinsic.characteristics.value()
+                    .functionResult.value()
+                    .SetType(newType);
+                return specificCall;
               }
-              specificCall->specificIntrinsic.name = call.name;
-              specificCall->specificIntrinsic.characteristics.value()
-                  .functionResult.value()
-                  .SetType(newType);
-              return specificCall;
             }
           }
         }
