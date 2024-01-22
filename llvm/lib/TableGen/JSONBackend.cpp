@@ -15,6 +15,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 #define DEBUG_TYPE "json-emitter"
@@ -158,6 +159,7 @@ void JSONEmitter::run(raw_ostream &OS) {
 
     obj["!name"] = Name;
     obj["!anonymous"] = Def.isAnonymous();
+    obj["!loc"] = SrcMgr.getFormattedLocationNoOffset(Def.getLoc().front());
 
     root[Name] = std::move(obj);
 
