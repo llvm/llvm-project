@@ -1540,22 +1540,16 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     MPM.addPass(buildLTOPreLinkDefaultPipeline(Level));
   MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary));
 
-  if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
-    if (ThinLTO) {
-      // Use the ThinLTO post-link pipeline with sample profiling
-      MPM.addPass(
-          buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
-      return MPM;
-    }
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
-                                        PGOOpt->ProfileRemappingFile,
-                                        ThinOrFullLTOPhase::FullLTOPostLink));
+  // Use the ThinLTO post-link pipeline with sample profiling
+  if (ThinLTO && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
+    MPM.addPass(buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
+  else {
+    // otherwise, just use module optimization
+    MPM.addPass(
+        buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
+    // Emit annotation remarks.
+    addAnnotationRemarksPass(MPM);
   }
-  MPM.addPass(buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
-
-  // Emit annotation remarks.
-  addAnnotationRemarksPass(MPM);
-
   return MPM;
 }
 
