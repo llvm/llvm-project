@@ -18,30 +18,44 @@ namespace clang::tidy::readability {
 
 static const llvm::StringRef AlgorithmHeader("<algorithm>");
 
-static bool MinCondition(const BinaryOperator::Opcode &Op,const Expr *CondLhs,const Expr *CondRhs,const Expr *AssignLhs,const Expr *AssignRhs,const ASTContext &Context){
-  return ((Op == BO_LT || Op == BO_LE) &&
-       (tidy::utils::areStatementsIdentical(CondLhs, AssignRhs, Context) &&
-        tidy::utils::areStatementsIdentical(CondRhs, AssignLhs, Context))) || 
-        ((Op == BO_GT || Op == BO_GE) && 
-        (tidy::utils::areStatementsIdentical(CondLhs, AssignLhs, Context) &&
-        tidy::utils::areStatementsIdentical(CondRhs, AssignRhs, Context)));
+static bool MinCondition(const BinaryOperator::Opcode &Op, const Expr *CondLhs,
+                         const Expr *CondRhs, const Expr *AssignLhs,
+                         const Expr *AssignRhs, const ASTContext &Context) {
+  if ((Op == BO_LT || Op == BO_LE) &&
+      (tidy::utils::areStatementsIdentical(CondLhs, AssignRhs, Context) &&
+       tidy::utils::areStatementsIdentical(CondRhs, AssignLhs, Context)))
+    return true;
+
+  if ((Op == BO_GT || Op == BO_GE) &&
+      (tidy::utils::areStatementsIdentical(CondLhs, AssignLhs, Context) &&
+       tidy::utils::areStatementsIdentical(CondRhs, AssignRhs, Context)))
+    return true;
+
+  return false;
 }
 
-static bool MaxCondition(const BinaryOperator::Opcode &Op,const Expr *CondLhs,const Expr *CondRhs,const Expr *AssignLhs,const Expr *AssignRhs,const ASTContext &Context){
-  return ((Op == BO_LT || Op == BO_LE) &&
-              (tidy::utils::areStatementsIdentical(CondLhs, AssignLhs,
-                                                   Context) &&
-               tidy::utils::areStatementsIdentical(CondRhs, AssignRhs,
-                                                   Context))) ||
-             ((Op == BO_GT || Op == BO_GE) &&
-              (tidy::utils::areStatementsIdentical(CondLhs, AssignRhs,
-                                                   Context) &&
-               tidy::utils::areStatementsIdentical(CondRhs, AssignLhs,
-                                                   Context)));
+static bool MaxCondition(const BinaryOperator::Opcode &Op, const Expr *CondLhs,
+                         const Expr *CondRhs, const Expr *AssignLhs,
+                         const Expr *AssignRhs, const ASTContext &Context) {
+  if ((Op == BO_LT || Op == BO_LE) &&
+      (tidy::utils::areStatementsIdentical(CondLhs, AssignLhs, Context) &&
+       tidy::utils::areStatementsIdentical(CondRhs, AssignRhs, Context)))
+    return true;
+
+  if ((Op == BO_GT || Op == BO_GE) &&
+      (tidy::utils::areStatementsIdentical(CondLhs, AssignRhs, Context) &&
+       tidy::utils::areStatementsIdentical(CondRhs, AssignLhs, Context)))
+    return true;
+
+  return false;
 }
 
-static std::string CreateReplacement(const bool UseMax,const BinaryOperator::Opcode &Op,const Expr *CondLhs,const Expr *CondRhs,const Expr *AssignLhs,const ASTContext &Context,const SourceManager &Source,const LangOptions &LO){
-  const auto *FunctionName = UseMax ? "std::max" : "std::min";
+static std::string
+CreateReplacement(const bool UseMax, const BinaryOperator::Opcode &Op,
+                  const Expr *CondLhs, const Expr *CondRhs,
+                  const Expr *AssignLhs, const ASTContext &Context,
+                  const SourceManager &Source, const LangOptions &LO,
+                  const StringRef &FunctionName) {
   const auto CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
   const auto CondRhsStr = Lexer::getSourceText(
@@ -55,7 +69,6 @@ static std::string CreateReplacement(const bool UseMax,const BinaryOperator::Opc
           CondLhsStr + ", " + CondRhsStr + ");")
       .str();
 }
-
 
 UseStdMinMaxCheck::UseStdMinMaxCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -112,23 +125,25 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   // Ignore Macros
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
     return;
-  
+
   auto ReplaceAndDiagnose = [&](bool UseMax) {
+    const llvm::StringRef FunctionName = UseMax ? "std::max" : "std::min";
     diag(IfLocation, "use `std::%0` instead of `%1`")
-        << (UseMax ? "max" : "min")
-        << OperatorStr
+        << (UseMax ? "max" : "min") << OperatorStr
         << FixItHint::CreateReplacement(
-               SourceRange(IfLocation, Lexer::getLocForEndOfToken(ThenLocation, 0, Source, LO)),
+               SourceRange(IfLocation, Lexer::getLocForEndOfToken(
+                                           ThenLocation, 0, Source, LO)),
                CreateReplacement(UseMax, BinaryOpcode, CondLhs, CondRhs,
-                                 AssignLhs, Context, Source, LO))
-        << IncludeInserter.createIncludeInsertion(Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
+                                 AssignLhs, Context, Source, LO, FunctionName))
+        << IncludeInserter.createIncludeInsertion(
+               Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };
 
-  
-  if (MinCondition(BinaryOpcode,CondLhs,CondRhs,AssignLhs,AssignRhs,Context)) {
+  if (MinCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
+                   Context)) {
     ReplaceAndDiagnose(/*UseMax=*/false);
-  } 
-  else if (MaxCondition(BinaryOpcode,CondLhs,CondRhs,AssignLhs,AssignRhs,Context)) {
+  } else if (MaxCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
+                          Context)) {
     ReplaceAndDiagnose(/*UseMax=*/true);
   }
 }
