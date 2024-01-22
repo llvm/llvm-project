@@ -9,15 +9,14 @@ define i1 @test(i32 %c) {
 ; CHECK-NEXT:      i32 115, label [[BB9:%.*]]
 ; CHECK-NEXT:      i32 109, label [[BB9]]
 ; CHECK-NEXT:      i32 104, label [[BB9]]
+; CHECK-NEXT:      i32 100, label [[BB9]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    [[_3_0:%.*]] = phi i1 [ false, [[BB8]] ], [ true, [[ENTRY:%.*]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    [[_10:%.*]] = icmp eq i32 [[C]], 100
-; CHECK-NEXT:    [[SPEC_SELECT1:%.*]] = select i1 [[_3_0]], i1 true, i1 [[_10]]
+; CHECK-NEXT:    [[_3_0:%.*]] = phi i1 [ false, [[BB8]] ], [ true, [[ENTRY:%.*]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
 ; CHECK-NEXT:    [[_12:%.*]] = icmp eq i32 [[C]], 119
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SPEC_SELECT1]], i1 true, i1 [[_12]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[_3_0]], i1 true, i1 [[_12]]
 ; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
 ;
 entry:

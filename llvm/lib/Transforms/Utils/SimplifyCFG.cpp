@@ -254,7 +254,8 @@ class SimplifyCFGOpt {
                                                     Instruction *PTI,
                                                     IRBuilder<> &Builder);
   bool FoldValueComparisonIntoPredecessors(Instruction *TI,
-                                           IRBuilder<> &Builder);
+                                           IRBuilder<> &Builder,
+                                           Value *CV = nullptr);
 
   bool simplifyResume(ResumeInst *RI, IRBuilder<> &Builder);
   bool simplifySingleResume(ResumeInst *RI);
@@ -280,6 +281,8 @@ class SimplifyCFGOpt {
                                   uint32_t TrueWeight, uint32_t FalseWeight);
   bool SimplifyBranchOnICmpChain(BranchInst *BI, IRBuilder<> &Builder,
                                  const DataLayout &DL);
+  bool SimplifyEqualityComparisonOnSelectIntoSwitchPredecessors(BranchInst *BI,
+                                                                IRBuilder<> &);
   bool SimplifySwitchOnSelect(SwitchInst *SI, SelectInst *Select);
   bool SimplifyIndirectBrOnSelect(IndirectBrInst *IBI, SelectInst *SI);
   bool TurnSwitchRangeIntoICmp(SwitchInst *SI, IRBuilder<> &Builder);
@@ -809,7 +812,13 @@ BasicBlock *SimplifyCFGOpt::GetValueEqualityComparisonCases(
   }
 
   BranchInst *BI = cast<BranchInst>(TI);
-  ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
+  ICmpInst *ICI = nullptr;
+  if (auto *SI = dyn_cast<SelectInst>(BI->getCondition())) {
+    // We have already checked that the comparison is on the false arm.
+    ICI = cast<ICmpInst>(SI->getFalseValue());
+  } else {
+    ICI = cast<ICmpInst>(BI->getCondition());
+  }
   BasicBlock *Succ = BI->getSuccessor(ICI->getPredicate() == ICmpInst::ICMP_NE);
   Cases.push_back(ValueEqualityComparisonCase(
       GetConstantInt(ICI->getOperand(1), DL), Succ));
@@ -1204,7 +1213,23 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
   } else if (PredHasWeights)
     SuccWeights.assign(1 + BBCases.size(), 1);
 
-  if (PredDefault == BB) {
+  auto I = BB->instructionsWithoutDebug(true).begin();
+  if (auto *BI = dyn_cast<BranchInst>(TI);
+      BI && isa<SelectInst>(BI->getCondition())) {
+    if (!isa<SwitchInst>(PTI))
+      return false;
+    // TODO: Preserve branch weight metadata
+    // We handle a phi node by the time we fold the select of a comparison.
+    PHINode &PHI = cast<PHINode>(*I);
+    if (PHI.getBasicBlockIndex(PredDefault) == -1)
+      return false;
+    auto *OldCond = BI->getCondition();
+    BI->setCondition(&PHI);
+    // We have harvested only one comparison.
+    PredCases.push_back(ValueEqualityComparisonCase(BBCases[0].Value, BB));
+    ++NewSuccessors[BB];
+    RecursivelyDeleteTriviallyDeadInstructions(OldCond);
+  } else if (PredDefault == BB) {
     // If this is the default destination from PTI, only the edges in TI
     // that don't occur in PTI, or that branch to BB will be activated.
     std::set<ConstantInt *, ConstantIntOrdering> PTIHandled;
@@ -1315,7 +1340,10 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
        NewSuccessors) {
     for (auto I : seq(NewSuccessor.second)) {
       (void)I;
-      AddPredecessorToBlock(NewSuccessor.first, Pred, BB);
+      // If the new successor happens to be `BB` itself, we are dealing with the
+      // case of the select of a comparison.
+      AddPredecessorToBlock(NewSuccessor.first, Pred,
+                            NewSuccessor.first != BB ? BB : Pred);
     }
     if (DTU && !SuccsOfPred.contains(NewSuccessor.first))
       Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor.first});
@@ -1345,30 +1373,36 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
 
   EraseTerminatorAndDCECond(PTI);
 
-  // Okay, last check.  If BB is still a successor of PSI, then we must
-  // have an infinite loop case.  If so, add an infinitely looping block
-  // to handle the case to preserve the behavior of the code.
+  // Okay, last check. If we are not handling a select of comparison, and BB is
+  // still a successor of PSI, then we must have an infinite loop case.  If so,
+  // add an infinitely looping block to handle the case to preserve the behavior
+  // of the code.
   BasicBlock *InfLoopBlock = nullptr;
-  for (unsigned i = 0, e = NewSI->getNumSuccessors(); i != e; ++i)
-    if (NewSI->getSuccessor(i) == BB) {
-      if (!InfLoopBlock) {
-        // Insert it at the end of the function, because it's either code,
-        // or it won't matter if it's hot. :)
-        InfLoopBlock =
-            BasicBlock::Create(BB->getContext(), "infloop", BB->getParent());
-        BranchInst::Create(InfLoopBlock, InfLoopBlock);
-        if (DTU)
-          Updates.push_back(
-              {DominatorTree::Insert, InfLoopBlock, InfLoopBlock});
+  if (!isa<PHINode>(*I)) {
+    for (unsigned i = 0, e = NewSI->getNumSuccessors(); i != e; ++i)
+      if (NewSI->getSuccessor(i) == BB) {
+        if (!InfLoopBlock) {
+          // Insert it at the end of the function, because it's either code,
+          // or it won't matter if it's hot. :)
+          InfLoopBlock =
+              BasicBlock::Create(BB->getContext(), "infloop", BB->getParent());
+          BranchInst::Create(InfLoopBlock, InfLoopBlock);
+          if (DTU)
+            Updates.push_back(
+                {DominatorTree::Insert, InfLoopBlock, InfLoopBlock});
+        }
+        NewSI->setSuccessor(i, InfLoopBlock);
       }
-      NewSI->setSuccessor(i, InfLoopBlock);
-    }
+  }
 
   if (DTU) {
     if (InfLoopBlock)
       Updates.push_back({DominatorTree::Insert, Pred, InfLoopBlock});
 
-    Updates.push_back({DominatorTree::Delete, Pred, BB});
+    if (!isa<PHINode>(*I))
+      Updates.push_back({DominatorTree::Delete, Pred, BB});
+    else
+      Updates.push_back({DominatorTree::Insert, Pred, BB});
 
     DTU->applyUpdates(Updates);
   }
@@ -1377,14 +1411,26 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
   return true;
 }
 
-/// The specified terminator is a value equality comparison instruction
-/// (either a switch or a branch on "X == c").
-/// See if any of the predecessors of the terminator block are value comparisons
-/// on the same value.  If so, and if safe to do so, fold them together.
+/// The specified terminator is a value equality comparison instruction, either
+/// a switch or a branch on "X == c", or a branch on select whose false arm is
+/// "X == c". If we happen to have a select, previously generated after
+/// speculatively executing its fall-through basic block, of the following kind:
+/// \code
+///   BB:
+///     %phi = phi i1 [ false, %edge ], [ true, %switch ], [ true, %switch ]
+///     %icmp = icmp eq i32 %c, X
+///     %spec.select = select i1 %phi, i1 true, i1 %icmp
+///     br i1 %spec.select1, label %EndBB, label %ThenBB
+/// \endcode
+/// We attempt folding them into its predecessor. To do so, see if any of the
+/// predecessors of the terminator block are value comparisons on the same
+/// value.
 bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
-                                                         IRBuilder<> &Builder) {
+                                                         IRBuilder<> &Builder,
+                                                         Value *CV) {
   BasicBlock *BB = TI->getParent();
-  Value *CV = isValueEqualityComparison(TI); // CondVal
+  if (!CV)
+    CV = isValueEqualityComparison(TI); // CondVal
   assert(CV && "Not a comparison?");
 
   bool Changed = false;
@@ -1411,8 +1457,8 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       }
     }
 
-    PerformValueComparisonIntoPredecessorFolding(TI, CV, PTI, Builder);
-    Changed = true;
+    Changed =
+        PerformValueComparisonIntoPredecessorFolding(TI, CV, PTI, Builder);
   }
   return Changed;
 }
@@ -7255,6 +7301,29 @@ static BasicBlock *allPredecessorsComeFromSameSource(BasicBlock *BB) {
   return PredPred;
 }
 
+bool SimplifyCFGOpt::SimplifyEqualityComparisonOnSelectIntoSwitchPredecessors(
+    BranchInst *BI, IRBuilder<> &Builder) {
+  auto I = BI->getParent()->instructionsWithoutDebug(true).begin();
+  if (!isa<PHINode>(*I))
+    return false;
+
+  Value *CV = nullptr;
+  SelectInst *SI = nullptr;
+  if ((SI = dyn_cast<SelectInst>(BI->getCondition())) && SI->hasOneUse() &&
+      SI->getCondition() == &*I)
+    if (auto *ICI = dyn_cast<ICmpInst>(SI->getFalseValue()))
+      if (ICI->hasOneUse() && ICI->getPredicate() == ICmpInst::ICMP_EQ &&
+          GetConstantInt(ICI->getOperand(1), DL))
+        CV = ICI->getOperand(0);
+
+  if (CV)
+    if (auto *CI = dyn_cast<ConstantInt>(SI->getTrueValue()); CI && CI->isOne())
+      if (FoldValueComparisonIntoPredecessors(BI, Builder, CV))
+        return true;
+
+  return false;
+}
+
 bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   assert(
       !isa<ConstantInt>(BI->getCondition()) &&
@@ -7287,6 +7356,9 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
         return requestResimplify();
     }
   }
+
+  if (SimplifyEqualityComparisonOnSelectIntoSwitchPredecessors(BI, Builder))
+    return requestResimplify();
 
   // Try to turn "br (X == 0 | X == 1), T, F" into a switch instruction.
   if (SimplifyBranchOnICmpChain(BI, Builder, DL))
