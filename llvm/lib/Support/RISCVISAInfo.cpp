@@ -190,6 +190,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 };
 
 // NOTE: This table should be sorted alphabetically by extension name.
+// clang-format off
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zaamo", {0, 1}},
     {"zacas", {1, 0}},
@@ -211,6 +212,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zvfbfmin", {1, 0}},
     {"zvfbfwma", {1, 0}},
 };
+// clang-format on
 
 static void verifyTables() {
 #ifndef NDEBUG
