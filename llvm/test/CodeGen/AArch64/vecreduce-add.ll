@@ -4,7 +4,13 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI,CHECK-GI-BASE
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=2 %s -o - -mattr=+dotprod 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI,CHECK-GI-DOT
 
-; CHECK-GI-BASE:        warning: Instruction selection used fallback path for full
+; CHECK-GI-BASE:        warning: Instruction selection used fallback path for test_udot_v24i8
+; CHECK-GI-BASE-NEXT:   warning: Instruction selection used fallback path for test_udot_v48i8
+; CHECK-GI-BASE-NEXT:   warning: Instruction selection used fallback path for test_sdot_v24i8
+; CHECK-GI-BASE-NEXT:   warning: Instruction selection used fallback path for test_sdot_v48i8
+; CHECK-GI-BASE-NEXT:   warning: Instruction selection used fallback path for full
+
+; CHECK-GI-DOT:         warning: Instruction selection used fallback path for full
 
 define i32 @addv_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: addv_v2i32:
