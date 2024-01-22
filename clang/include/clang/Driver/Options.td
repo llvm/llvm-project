@@ -8479,3 +8479,6 @@ def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   HelpText<"Embed PDB in shader container (ignored)">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
+def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
+  HelpText<"Specify the target environment">,
+  Values<"vulkan1.2, vulkan1.3">;
