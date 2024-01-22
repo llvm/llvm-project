@@ -45,11 +45,11 @@ class MyResponder(MockGDBServerResponder):
         if packet[0:13] == "qRegisterInfo":
             return self.qRegisterInfo(packet[13:])
         if packet.startswith("qWasmCallStack"):
-            return self.qWasmCallStack();
+            return self.qWasmCallStack()
         if packet.startswith("qWasmLocal"):
-            return self.qWasmLocal(packet);
+            return self.qWasmLocal(packet)
         if packet.startswith("qWasmMem"):
-            return self.qWasmMem(packet);
+            return self.qWasmMem(packet)
         return MockGDBServerResponder.respond(self, packet)
 
     def qSupported(self, client_supported):
@@ -79,7 +79,7 @@ class MyResponder(MockGDBServerResponder):
         return "T05thread-pcs:300000083;thread:1;library:;"
 
     def readRegister(self, register):
-        assert(register == 0)
+        assert register == 0
         return format_register_value(self.current_pc)
 
     def qXferRead(self, obj, annex, offset, length):
@@ -117,12 +117,16 @@ class MyResponder(MockGDBServerResponder):
 
     def cont(self):
         # Continue execution. Simulates running the Wasm engine until a breakpoint is hit.
-        return "T05thread-pcs:" + format(int(self._bp_address, 16) & 0x3fffffffffffffff, 'x') + ";thread:1"
+        return (
+            "T05thread-pcs:"
+            + format(int(self._bp_address, 16) & 0x3FFFFFFFFFFFFFFF, "x")
+            + ";thread:1"
+        )
 
     def qWasmCallStack(self):
         if len(self._wasm_call_stacks) == 0:
             return ""
-        result = self._wasm_call_stacks[self._call_stack_request_count].format();
+        result = self._wasm_call_stacks[self._call_stack_request_count].format()
         self._call_stack_request_count = self._call_stack_request_count + 1
         return result
 
@@ -132,11 +136,11 @@ class MyResponder(MockGDBServerResponder):
         data = data[1].split(";")
         frame_index = data[0]
         local_index = data[1]
-        if frame_index == '0' and local_index == '4':
+        if frame_index == "0" and local_index == "4":
             return "b0ff0000"
-        if frame_index == '1' and local_index == '5':
+        if frame_index == "1" and local_index == "5":
             return "c0ff0000"
-        return "E03";
+        return "E03"
 
     def qWasmMem(self, packet):
         # Format: qWasmMem:module_id;addr;len
@@ -145,12 +149,13 @@ class MyResponder(MockGDBServerResponder):
         module_id = data[0]
         addr = int(data[1], 16)
         length = int(data[2])
-        if module_id != '4':
+        if module_id != "4":
             return "E03"
-        if addr >= 0xffb8 and addr < 0x10000:
-            chunk = self._memory_view[addr:addr+length]
+        if addr >= 0xFFB8 and addr < 0x10000:
+            chunk = self._memory_view[addr : addr + length]
             return chunk.hex()
-        return "E03";
+        return "E03"
+
 
 class WasmStackFrame:
     pass
@@ -161,6 +166,7 @@ class WasmStackFrame:
 
     def format(self):
         return format_register_value(make_code_address(self._module_id, self._address))
+
 
 class WasmCallStack:
     pass
@@ -173,6 +179,7 @@ class WasmCallStack:
         for frame in self._wasm_stack_frames:
             result += frame.format()
         return result
+
 
 class WasmMemorySpan:
     pass
@@ -197,7 +204,7 @@ class TestWasm(GDBRemoteTestBase):
         return process
 
     def store_bytes(self, offset, bytes_obj):
-        chunk = self.memory_view[offset:offset+len(bytes_obj)]
+        chunk = self.memory_view[offset : offset + len(bytes_obj)]
         for i in range(len(bytes_obj)):
             chunk[i] = bytes_obj[i]
 
@@ -326,7 +333,7 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEquals(
             LLDB_INVALID_ADDRESS, debug_line_section.GetLoadAddress(target)
         )
-    
+
     @skipIfAsan
     @skipIfXmlSupportMissing
     def test_simple_wasm_debugging_session(self):
@@ -339,21 +346,32 @@ class TestWasm(GDBRemoteTestBase):
 
         self.memory = bytearray(65536)
         self.memory_view = memoryview(self.memory)
-        self.store_bytes(0xffb8, bytes.fromhex("d8ff0000"))
-        self.store_bytes(0xffbc, bytes.fromhex("e0ff0000"))
-        self.store_bytes(0xffe0, bytes.fromhex("0000000000000000"))
-        self.store_bytes(0xffe8, bytes.fromhex("0000000000004540"))
-        self.store_bytes(0xfff0, bytes.fromhex("0000000000003640"))
-        self.store_bytes(0xfff8, bytes.fromhex("0000000000003440"))
+        self.store_bytes(0xFFB8, bytes.fromhex("d8ff0000"))
+        self.store_bytes(0xFFBC, bytes.fromhex("e0ff0000"))
+        self.store_bytes(0xFFE0, bytes.fromhex("0000000000000000"))
+        self.store_bytes(0xFFE8, bytes.fromhex("0000000000004540"))
+        self.store_bytes(0xFFF0, bytes.fromhex("0000000000003640"))
+        self.store_bytes(0xFFF8, bytes.fromhex("0000000000003440"))
 
         call_stacks = [
-            WasmCallStack([WasmStackFrame(3, 0x00000083), WasmStackFrame(3, 0x0000000f)]),
-            WasmCallStack([WasmStackFrame(4, 0x000002ad), WasmStackFrame(4, 0x0000014a), WasmStackFrame(3, 0x00000083), WasmStackFrame(3, 0x0000000f)])
+            WasmCallStack(
+                [WasmStackFrame(3, 0x00000083), WasmStackFrame(3, 0x0000000F)]
+            ),
+            WasmCallStack(
+                [
+                    WasmStackFrame(4, 0x000002AD),
+                    WasmStackFrame(4, 0x0000014A),
+                    WasmStackFrame(3, 0x00000083),
+                    WasmStackFrame(3, 0x0000000F),
+                ]
+            ),
         ]
-        self.server.responder = MyResponder(obj_path, "test_wasm", call_stacks, self.memory_view)
+        self.server.responder = MyResponder(
+            obj_path, "test_wasm", call_stacks, self.memory_view
+        )
 
         target = self.dbg.CreateTarget("")
-        breakpoint = target.BreakpointCreateByLocation("calc.cpp", 9);
+        breakpoint = target.BreakpointCreateByLocation("calc.cpp", 9)
 
         process = self.connect_to_wasm_engine(target)
         lldbutil.expect_state_changes(
@@ -375,16 +393,18 @@ class TestWasm(GDBRemoteTestBase):
             thread.IsValid(), "There should be a thread stopped due to breakpoint"
         )
         frame0 = thread.GetFrameAtIndex(0)
-        self.server.responder.SetCurrentPC(0x000002ad);
+        self.server.responder.SetCurrentPC(0x000002AD)
 
         # Update Wasm server memory state
-        self.store_bytes(0xffe0, bytes.fromhex("0000000000003440"))
+        self.store_bytes(0xFFE0, bytes.fromhex("0000000000003440"))
 
         # We should be in function 'bar'.
         self.assertTrue(frame0.IsValid())
         function_name = frame0.GetFunctionName()
         self.assertIn(
-            "Calc::add(Number const&)", function_name, "Unexpected function name {}".format(function_name)
+            "Calc::add(Number const&)",
+            function_name,
+            "Unexpected function name {}".format(function_name),
         )
 
         # We should be able to evaluate the expression "*this".
