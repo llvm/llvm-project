@@ -264,7 +264,7 @@ void Thumb2InstrInfo::expandLoadStackGuard(
   const GlobalValue *GV =
       cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 
-  if (MF.getSubtarget<ARMSubtarget>().isGVInGOT(GV))
+  if (!GV->isDSOLocal())
     expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
   else if (MF.getTarget().isPositionIndependent())
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
