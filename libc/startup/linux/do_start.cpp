@@ -30,6 +30,8 @@ extern uintptr_t __init_array_end[];
 extern uintptr_t __fini_array_start[];
 extern uintptr_t __fini_array_end[];
 // https://refspecs.linuxbase.org/elf/gabi4+/ch5.dynamic.html#dynamic_section
+// This symbol is provided by the dynamic linker. It can be undefined depending
+// on how the program is loaded exactly.
 [[gnu::weak,
   gnu::visibility("hidden")]] extern const Elf64_Dyn _DYNAMIC[]; // NOLINT
 }
@@ -102,7 +104,7 @@ static ThreadAttributes main_thread_attrib;
   Elf64_Phdr *tls_phdr = nullptr;
 
   for (uintptr_t i = 0; i < program_hdr_count; ++i) {
-    auto &phdr = program_hdr_table[i];
+    Elf64_Phdr &phdr = program_hdr_table[i];
     if (phdr.p_type == PT_PHDR)
       base = reinterpret_cast<ptrdiff_t>(program_hdr_table) - phdr.p_vaddr;
     if (phdr.p_type == PT_DYNAMIC && _DYNAMIC)
