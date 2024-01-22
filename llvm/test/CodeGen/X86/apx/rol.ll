@@ -14,6 +14,16 @@ entry:
   ret i8 %rol
 }
 
+define i8 @rol8m1_intrinsic(ptr %ptr)  {
+; CHECK-LABEL: rol8m1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolb (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x07]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a = load i8, ptr %ptr
+  %f = call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 7)
+  ret i8 %f
+}
+
 define i16 @rol16m1(ptr %ptr) {
 ; CHECK-LABEL: rol16m1:
 ; CHECK:       # %bb.0: # %entry
@@ -25,6 +35,16 @@ entry:
   %1 = lshr i16 %a, 15
   %rol = or i16 %0, %1
   ret i16 %rol
+}
+
+define i16 @rol16m1_intrinsic(ptr %ptr)  {
+; CHECK-LABEL: rol16m1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolw (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x07]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a = load i16, ptr %ptr
+  %f = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 15)
+  ret i16 %f
 }
 
 define i32 @rol32m1(ptr %ptr) {
@@ -40,6 +60,16 @@ entry:
   ret i32 %rol
 }
 
+define i32 @rol32m1_intrinsic(ptr %ptr)  {
+; CHECK-LABEL: rol32m1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    roll (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x07]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a = load i32, ptr %ptr
+  %f = call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
+  ret i32 %f
+}
+
 define i64 @rol64m1(ptr %ptr) {
 ; CHECK-LABEL: rol64m1:
 ; CHECK:       # %bb.0: # %entry
@@ -51,6 +81,16 @@ entry:
   %1 = lshr i64 %a, 63
   %rol = or i64 %0, %1
   ret i64 %rol
+}
+
+define i64 @rol64m1_intrinsic(ptr %ptr)  {
+; CHECK-LABEL: rol64m1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolq (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x07]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %a = load i64, ptr %ptr
+  %f = call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
+  ret i64 %f
 }
 
 define i8 @rol8mcl(ptr %ptr, i8 %cl) {
@@ -181,6 +221,15 @@ entry:
   ret i8 %rol
 }
 
+define i8 @rol8r1_intrinsic(i8 noundef %a)  {
+; CHECK-LABEL: rol8r1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolb %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %f = call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 7)
+  ret i8 %f
+}
+
 define i16 @rol16r1(i16 noundef %a) {
 ; CHECK-LABEL: rol16r1:
 ; CHECK:       # %bb.0: # %entry
@@ -191,6 +240,15 @@ entry:
   %1 = lshr i16 %a, 15
   %rol = or i16 %0, %1
   ret i16 %rol
+}
+
+define i16 @rol16r1_intrinsic(i16 noundef %a)  {
+; CHECK-LABEL: rol16r1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolw %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %f = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 15)
+  ret i16 %f
 }
 
 define i32 @rol32r1(i32 noundef %a) {
@@ -205,6 +263,15 @@ entry:
   ret i32 %rol
 }
 
+define i32 @rol32r1_intrinsic(i32 noundef %a)  {
+; CHECK-LABEL: rol32r1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    roll %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %f = call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
+  ret i32 %f
+}
+
 define i64 @rol64r1(i64 noundef %a) {
 ; CHECK-LABEL: rol64r1:
 ; CHECK:       # %bb.0: # %entry
@@ -215,6 +282,15 @@ entry:
   %1 = lshr i64 %a, 63
   %rol = or i64 %0, %1
   ret i64 %rol
+}
+
+define i64 @rol64r1_intrinsic(i64 noundef %a)  {
+; CHECK-LABEL: rol64r1_intrinsic:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rolq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xc7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %f = call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
+  ret i64 %f
 }
 
 define i8 @rol8rcl(i8 noundef %a, i8 %cl) {
