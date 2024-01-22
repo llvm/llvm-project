@@ -128,7 +128,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
 
       // When function return type is i1, it may be in a 64b register.
       if (VA.getLocVT() == MVT::i1) {
-        if (MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI) == 64)
+        if (MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
           CopyToBits = 64;
       }
 
@@ -243,7 +243,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     MIB.addUse(PhysReg, RegState::Implicit);
 
     if (VA.getLocVT() == MVT::i1 &&
-        MRI.getTargetRegisterInfo()->getRegSizeInBits(PhysReg, MRI) == 64) {
+        MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) {
       MIRBuilder.buildCopy(PhysReg, ValVReg);
       return;
     }
