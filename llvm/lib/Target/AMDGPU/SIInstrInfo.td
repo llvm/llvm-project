@@ -2282,6 +2282,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsSingle = 0;
   field bit IsWMMA = 0;
 
+  field bit IsFP8 = 0;
+
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
   field bit EmitDst = HasDst; // force dst encoding, see v_movreld_b32 special case
