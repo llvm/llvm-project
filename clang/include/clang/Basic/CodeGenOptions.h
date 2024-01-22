@@ -72,6 +72,11 @@ public:
     LocalExecTLSModel
   };
 
+  enum TLSDialect {
+    TraditionalTLSDialect,
+    TLSDescTLSDialect,
+  };
+
   enum StructReturnConventionKind {
     SRCK_Default,  // No special option was passed.
     SRCK_OnStack,  // Small structs on the stack (-fpcc-struct-return).

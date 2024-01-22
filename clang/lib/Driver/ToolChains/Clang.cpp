@@ -5812,6 +5812,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mtls_dialect_EQ)) {
+    // mlts-dialect= is ELF only
+    if (!Triple.isOSBinFormatELF())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+    Args.AddLastArg(CmdArgs, options::OPT_mtls_dialect_EQ);
+  }
+
   // Add the target cpu
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
   if (!CPU.empty()) {

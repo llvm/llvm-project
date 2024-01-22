@@ -359,6 +359,9 @@ ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibr
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 
+/// The default TLS model to use.
+ENUM_CODEGENOPT(DefaultTLSDialect, TLSDialect, 2, TraditionalTLSDialect)
+
 /// Bit size of immediate TLS offsets (0 == use the default).
 VALUE_CODEGENOPT(TLSSize, 8, 0)
 

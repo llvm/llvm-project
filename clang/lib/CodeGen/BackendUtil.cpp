@@ -401,6 +401,8 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.UniqueBasicBlockSectionNames =
       CodeGenOpts.UniqueBasicBlockSectionNames;
   Options.TLSSize = CodeGenOpts.TLSSize;
+  // TODO: Add correct codegen options in LLVM
+  // Options.TLSDesc = CodeGenOpts.getDefaultTLSDialect();
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
   Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
