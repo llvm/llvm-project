@@ -158,9 +158,49 @@ static std::optional<APInt> getSplatableConstant(const Constant *C,
   return std::nullopt;
 }
 
+// Split raw bits into a constant vector of elements of a specific bit width.
+// NOTE: We don't always bother converting to scalars if the vector length is 1.
+static Constant *rebuildConstant(LLVMContext &Ctx, Type *SclTy,
+                                 const APInt &Bits, unsigned NumSclBits) {
+  unsigned BitWidth = Bits.getBitWidth();
+
+  if (NumSclBits == 8) {
+    SmallVector<uint8_t> RawBits;
+    for (unsigned I = 0; I != BitWidth; I += 8)
+      RawBits.push_back(Bits.extractBits(8, I).getZExtValue());
+    return ConstantDataVector::get(Ctx, RawBits);
+  }
+
+  if (NumSclBits == 16) {
+    SmallVector<uint16_t> RawBits;
+    for (unsigned I = 0; I != BitWidth; I += 16)
+      RawBits.push_back(Bits.extractBits(16, I).getZExtValue());
+    if (SclTy->is16bitFPTy())
+      return ConstantDataVector::getFP(SclTy, RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
+  }
+
+  if (NumSclBits == 32) {
+    SmallVector<uint32_t> RawBits;
+    for (unsigned I = 0; I != BitWidth; I += 32)
+      RawBits.push_back(Bits.extractBits(32, I).getZExtValue());
+    if (SclTy->isFloatTy())
+      return ConstantDataVector::getFP(SclTy, RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
+  }
+
+  assert(NumSclBits == 64 && "Unhandled vector element width");
+
+  SmallVector<uint64_t> RawBits;
+  for (unsigned I = 0; I != BitWidth; I += 64)
+    RawBits.push_back(Bits.extractBits(64, I).getZExtValue());
+  if (SclTy->isDoubleTy())
+    return ConstantDataVector::getFP(SclTy, RawBits);
+  return ConstantDataVector::get(Ctx, RawBits);
+}
+
 // Attempt to rebuild a normalized splat vector constant of the requested splat
 // width, built up of potentially smaller scalar values.
-// NOTE: We don't always bother converting to scalars if the vector length is 1.
 static Constant *rebuildSplatableConstant(const Constant *C,
                                           unsigned SplatBitWidth) {
   std::optional<APInt> Splat = getSplatableConstant(C, SplatBitWidth);
@@ -173,40 +213,14 @@ static Constant *rebuildSplatableConstant(const Constant *C,
   Type *SclTy = OriginalType->getScalarType();
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
   NumSclBits = std::min<unsigned>(NumSclBits, SplatBitWidth);
-  LLVMContext &Ctx = OriginalType->getContext();
-
-  if (NumSclBits == 8) {
-    SmallVector<uint8_t> RawBits;
-    for (unsigned I = 0; I != SplatBitWidth; I += 8)
-      RawBits.push_back(Splat->extractBits(8, I).getZExtValue());
-    return ConstantDataVector::get(Ctx, RawBits);
-  }
-
-  if (NumSclBits == 16) {
-    SmallVector<uint16_t> RawBits;
-    for (unsigned I = 0; I != SplatBitWidth; I += 16)
-      RawBits.push_back(Splat->extractBits(16, I).getZExtValue());
-    if (SclTy->is16bitFPTy())
-      return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(Ctx, RawBits);
-  }
-
-  if (NumSclBits == 32) {
-    SmallVector<uint32_t> RawBits;
-    for (unsigned I = 0; I != SplatBitWidth; I += 32)
-      RawBits.push_back(Splat->extractBits(32, I).getZExtValue());
-    if (SclTy->isFloatTy())
-      return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(Ctx, RawBits);
-  }
 
   // Fallback to i64 / double.
-  SmallVector<uint64_t> RawBits;
-  for (unsigned I = 0; I != SplatBitWidth; I += 64)
-    RawBits.push_back(Splat->extractBits(64, I).getZExtValue());
-  if (SclTy->isDoubleTy())
-    return ConstantDataVector::getFP(SclTy, RawBits);
-  return ConstantDataVector::get(Ctx, RawBits);
+  NumSclBits = (NumSclBits == 8 || NumSclBits == 16 || NumSclBits == 32)
+                   ? NumSclBits
+                   : 64;
+
+  // Extract per-element bits.
+  return rebuildConstant(OriginalType->getContext(), SclTy, *Splat, NumSclBits);
 }
 
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
