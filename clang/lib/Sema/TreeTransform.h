@@ -6089,12 +6089,11 @@ QualType
 TreeTransform<Derived>::TransformFunctionProtoType(TypeLocBuilder &TLB,
                                                    FunctionProtoTypeLoc TL) {
   SmallVector<QualType, 4> ExceptionStorage;
-  TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
   return getDerived().TransformFunctionProtoType(
       TLB, TL, nullptr, Qualifiers(),
       [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-        return This->getDerived().TransformExceptionSpec(
-            TL.getBeginLoc(), ESI, ExceptionStorage, Changed);
+        return getDerived().TransformExceptionSpec(TL.getBeginLoc(), ESI,
+                                                   ExceptionStorage, Changed);
       });
 }
 
@@ -13645,12 +13644,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     auto TransformFunctionProtoTypeLoc =
         [this](TypeLocBuilder &TLB, FunctionProtoTypeLoc FPTL) -> QualType {
       SmallVector<QualType, 4> ExceptionStorage;
-      TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
       return this->TransformFunctionProtoType(
           TLB, FPTL, nullptr, Qualifiers(),
           [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-            return This->TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
-                                                ExceptionStorage, Changed);
+            return TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
+                                          ExceptionStorage, Changed);
           });
     };
 
