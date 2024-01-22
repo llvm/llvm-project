@@ -1484,50 +1484,55 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   return Comment;
 }
 
-static void printConstant(const APInt &Val, raw_ostream &CS) {
+static void printConstant(const APInt &Val, raw_ostream &CS,
+                          bool PrintZero = false) {
   if (Val.getBitWidth() <= 64) {
-    CS << Val.getZExtValue();
+    CS << (PrintZero ? 0ULL : Val.getZExtValue());
   } else {
     // print multi-word constant as (w0,w1)
     CS << "(";
     for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
       if (i > 0)
         CS << ",";
-      CS << Val.getRawData()[i];
+      CS << (PrintZero ? 0ULL : Val.getRawData()[i]);
     }
     CS << ")";
   }
 }
 
-static void printConstant(const APFloat &Flt, raw_ostream &CS) {
+static void printConstant(const APFloat &Flt, raw_ostream &CS,
+                          bool PrintZero = false) {
   SmallString<32> Str;
   // Force scientific notation to distinguish from integers.
-  Flt.toString(Str, 0, 0);
+  if (PrintZero)
+    APFloat::getZero(Flt.getSemantics()).toString(Str, 0, 0);
+  else
+    Flt.toString(Str, 0, 0);
   CS << Str;
 }
 
 static void printConstant(const Constant *COp, unsigned BitWidth,
-                          raw_ostream &CS) {
+                          raw_ostream &CS, bool PrintZero = false) {
   if (isa<UndefValue>(COp)) {
     CS << "u";
   } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-    printConstant(CI->getValue(), CS);
+    printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
-    printConstant(CF->getValueAPF(), CS);
+    printConstant(CF->getValueAPF(), CS, PrintZero);
   } else if (auto *CDS = dyn_cast<ConstantDataSequential>(COp)) {
     Type *EltTy = CDS->getElementType();
     bool IsInteger = EltTy->isIntegerTy();
     bool IsFP = EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
     unsigned EltBits = EltTy->getPrimitiveSizeInBits();
     unsigned E = std::min(BitWidth / EltBits, CDS->getNumElements());
-    assert((BitWidth % EltBits) == 0 && "Broadcast element size mismatch");
+    assert((BitWidth % EltBits) == 0 && "Element size mismatch");
     for (unsigned I = 0; I != E; ++I) {
       if (I != 0)
         CS << ",";
       if (IsInteger)
-        printConstant(CDS->getElementAsAPInt(I), CS);
+        printConstant(CDS->getElementAsAPInt(I), CS, PrintZero);
       else if (IsFP)
-        printConstant(CDS->getElementAsAPFloat(I), CS);
+        printConstant(CDS->getElementAsAPFloat(I), CS, PrintZero);
       else
         CS << "?";
     }
@@ -1545,31 +1550,17 @@ static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
   CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
 
   if (auto *C = X86::getConstantFromPool(*MI, 1)) {
-    int CstEltSize = C->getType()->getScalarSizeInBits();
-    if (SclWidth == CstEltSize) {
-      if (auto *CI = dyn_cast<ConstantInt>(C)) {
-        CS << "[";
-        printConstant(CI->getValue(), CS);
-        for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
-          CS << ",0";
-        }
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-        return; // early-out
+    if (isa<ConstantInt>(C) || isa<ConstantFP>(C) ||
+        isa<ConstantDataSequential>(C)) {
+      CS << "[";
+      printConstant(C, SclWidth, CS);
+      for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
+        CS << ",";
+        printConstant(C, SclWidth, CS, true);
       }
-
-      if (auto *CF = dyn_cast<ConstantFP>(C)) {
-        CS << "[";
-        printConstant(CF->getValue(), CS);
-        APFloat ZeroFP = APFloat::getZero(CF->getValue().getSemantics());
-        for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
-          CS << ",";
-          printConstant(ZeroFP, CS);
-        }
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-        return; // early-out
-      }
+      CS << "]";
+      OutStreamer.AddComment(CS.str());
+      return; // early-out
     }
   }
 
