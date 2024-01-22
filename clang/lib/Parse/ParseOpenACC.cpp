@@ -119,6 +119,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
+      .Case("vector_length", OpenACCClauseKind::VectorLength)
       .Case("worker", OpenACCClauseKind::Worker)
       .Default(OpenACCClauseKind::Invalid);
 }
@@ -469,6 +470,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
+  case OpenACCClauseKind::VectorLength:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -534,6 +536,12 @@ void Parser::ParseOpenACCClauseList(OpenACCDirectiveKind DirKind) {
       return;
     }
   }
+}
+
+ExprResult Parser::ParseOpenACCIntExpr() {
+  // FIXME: this is required to be an integer expression (or dependent), so we
+  // should ensure that is the case by passing this to SEMA here.
+  return getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
 }
 
 bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
@@ -665,7 +673,7 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
       tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Force,
                                          Kind);
       ExprResult NumLoops =
-          getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+          getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
       if (NumLoops.isInvalid())
         return true;
       break;
@@ -673,6 +681,12 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
     case OpenACCClauseKind::Bind: {
       ExprResult BindArg = ParseOpenACCBindClauseArgument();
       if (BindArg.isInvalid())
+        return true;
+      break;
+    }
+    case OpenACCClauseKind::VectorLength: {
+      ExprResult IntExpr = ParseOpenACCIntExpr();
+      if (IntExpr.isInvalid())
         return true;
       break;
     }
