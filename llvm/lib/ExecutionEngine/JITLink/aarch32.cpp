@@ -766,6 +766,7 @@ const char *getEdgeKindName(Edge::Kind K) {
     KIND_NAME_CASE(Thumb_MovtAbs)
     KIND_NAME_CASE(Thumb_MovwPrelNC)
     KIND_NAME_CASE(Thumb_MovtPrel)
+    KIND_NAME_CASE(None)
   default:
     return getGenericEdgeKindName(K);
   }

@@ -48,6 +48,8 @@ getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &ArmCfg) {
     return aarch32::Arm_MovwAbsNC;
   case ELF::R_ARM_MOVT_ABS:
     return aarch32::Arm_MovtAbs;
+  case ELF::R_ARM_NONE:
+    return aarch32::None;
   case ELF::R_ARM_TARGET1:
     return (ArmCfg.Target1Rel) ? aarch32::Data_Delta32
                                : aarch32::Data_Pointer32;
@@ -99,6 +101,8 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_THM_MOVW_PREL_NC;
   case aarch32::Thumb_MovtPrel:
     return ELF::R_ARM_THM_MOVT_PREL;
+  case aarch32::None:
+    return ELF::R_ARM_NONE;
   }
 
   return make_error<JITLinkError>(formatv("Invalid aarch32 edge {0:d}: ",
