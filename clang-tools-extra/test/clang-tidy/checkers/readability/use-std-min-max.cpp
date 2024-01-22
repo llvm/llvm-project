@@ -181,9 +181,24 @@ void foo() {
     value2 = value1;
   }
 
-  // No suggestions needed here
+  // CHECK-MESSAGES: :[[@LINE+3]]:5: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+  // CHECK-FIXES: value1 = std::max(value1, value3);
   if(value1 == value2){
     if(value1<value3)
       value1 = value3;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+5]]:7: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+  // CHECK-FIXES: value1 = std::max<int>(value1, value4);
+  if(value1 == value2){
+    if(value2 == value3){
+      value3+=1;
+      if(value1<value4){
+        value1 = value4;
+      }
+    }
+    else if(value3>value2){
+      value2 = value3;
+    }
   }
 }

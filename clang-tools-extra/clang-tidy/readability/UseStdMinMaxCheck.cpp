@@ -30,7 +30,8 @@ void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      ifStmt(unless(hasAncestor(ifStmt())),
+      ifStmt(
+          stmt().bind("if"),
           hasCondition(binaryOperator(hasAnyOperatorName("<", ">", "<=", ">="),
                                       hasLHS(expr().bind("CondLhs")),
                                       hasRHS(expr().bind("CondRhs")))),
@@ -41,8 +42,9 @@ void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
                                      has(binaryOperator(
                                          hasOperatorName("="),
                                          hasLHS(expr().bind("AssignLhs")),
-                                         hasRHS(expr().bind("AssignRhs"))))))))
-          .bind("if"),
+                                         hasRHS(expr().bind("AssignRhs"))))))),
+          hasParent(stmt(unless(ifStmt(hasElse(
+              equalsBoundNode("if"))))))), // Ensure `if` has no `else if`
       this);
 }
 
@@ -63,12 +65,14 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &Source = Context.getSourceManager();
 
   const auto *BinaryOp = dyn_cast<BinaryOperator>(If->getCond());
-  if (!BinaryOp || If->hasElseStorage())
+  // Ignore `if` statements with `else`
+  if (If->hasElseStorage())
     return;
 
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
 
+  // Ignore Macros
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
     return;
 
