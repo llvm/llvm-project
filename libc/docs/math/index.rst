@@ -108,171 +108,171 @@ Basic Operations
 |              +---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 |              | x86_64  | aarch64 | aarch32 | riscv64 | x86_64  | aarch64 | x86_64  | aarch64 | aarch32 | riscv32 | AMD     | nVidia  |
 +==============+=========+=========+=========+=========+=========+=========+=========+=========+=========+=========+=========+=========+
-| ceil         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ceil         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ceilf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ceilf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ceill        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ceill        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| copysign     | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| copysign     | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| copysignf    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| copysignf    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| copysignl    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| copysignl    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | copysignf128 | |check| | |check| |         |         |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fabs         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fabs         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fabsf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fabsf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fabsl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fabsl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | fabsf128     | |check| | |check| |         |         |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fdim         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fdim         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fdimf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fdimf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fdiml        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fdiml        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| floor        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| floor        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| floorf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| floorf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| floorl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| floorl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fmax         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fmax         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fmaxf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fmaxf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fmaxl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fmaxl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fmin         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fmin         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fminf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fminf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fminl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fminl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fmod         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fmod         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| fmodf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| fmodf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | fmodl        |         |         |         |         |         |         |         |         |         |         |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| frexp        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| frexp        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| frexpf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| frexpf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| frexpl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| frexpl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ilogb        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ilogb        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ilogbf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ilogbf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ilogbl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ilogbl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ldexp        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ldexp        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ldexpf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ldexpf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ldexpl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| ldexpl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| llrint       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| llrint       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| llrintf      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| llrintf      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| llrintl      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| llrintl      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| llround      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| llround      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| llroundf     | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| llroundf     | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| llroundl     | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| llroundl     | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| logb         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| logb         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| logbf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| logbf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| logbl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| logbl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| lrint        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| lrint        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| lrintf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| lrintf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| lrintl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| lrintl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| lround       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| lround       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| lroundf      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| lroundf      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| lroundl      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| lroundl      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| modf         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| modf         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| modff        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| modff        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| modfl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| modfl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nan          | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nan          | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nanf         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nanf         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nanl         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nanl         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nearbyint    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nearbyint    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nearbyintf   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nearbyintf   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nearbyintl   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nearbyintl   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nextafter    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nextafter    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nextafterf   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nextafterf   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nextafterl   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nextafterl   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nexttoward   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nexttoward   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nexttowardf  | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nexttowardf  | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| nexttowardl  | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| nexttowardl  | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| remainder    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| remainder    | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| remainderf   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| remainderf   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| remainderl   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| remainderl   | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| remquo       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| remquo       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| remquof      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| remquof      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| remquol      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| remquol      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| rint         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| rint         | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| rintf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| rintf        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| rintl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| rintl        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| round        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| round        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| roundf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| roundf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| roundl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| roundl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| scalbn       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| scalbn       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| scalbnf      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| scalbnf      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| scalbnl      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| scalbnl      | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| trunc        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| trunc        | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| truncf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| truncf       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| truncl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| |         |         |         |
+| truncl       | |check| | |check| | |check| | |check| | |check| |         |         | |check| | |check| | |check| |         |         |
 +--------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 
 
