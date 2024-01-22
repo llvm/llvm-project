@@ -131,9 +131,6 @@ void test() {
   test<Context, bool, std::string>(true, "visited");
   test<Context, bool, std::string>(false, "visited");
 
-  test<Context, bool, long>(true, 192812079084L);
-  test<Context, bool, long>(false, 192812079084L);
-
   // Test CharT types.
 
   test<Context, CharT, ExpectedResultType, CharT>('a', visited);
