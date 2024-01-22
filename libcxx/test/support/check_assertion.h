@@ -362,9 +362,19 @@ bool ExpectDeath(const std::array<DeathCause, N>& expected_causes, const char* s
   return test_result.success();
 }
 
+template <class Func>
+bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
+  return ExpectDeath(std::array<DeathCause, 1>{expected_cause}, stmt, func, matcher);
+}
+
 template <std::size_t N, class Func>
 bool ExpectDeath(const std::array<DeathCause, N>& expected_causes, const char* stmt, Func&& func) {
   return ExpectDeath(expected_causes, stmt, func, MakeAnyMatcher());
+}
+
+template <class Func>
+bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func) {
+  return ExpectDeath(std::array<DeathCause, 1>{expected_cause}, stmt, func, MakeAnyMatcher());
 }
 
 // clang-format off
@@ -373,20 +383,20 @@ bool ExpectDeath(const std::array<DeathCause, N>& expected_causes, const char* s
 #define EXPECT_ANY_DEATH(...)                         \
     assert(( ExpectDeath(std::array<DeathCause, 4>{DeathCause::VerboseAbort, DeathCause::StdAbort, DeathCause::StdTerminate, DeathCause::Trap}, #__VA_ARGS__, [&]() { __VA_ARGS__; } ) ))
 #define EXPECT_DEATH(...)                         \
-    assert(( ExpectDeath(std::array<DeathCause, 1>{DeathCause::VerboseAbort}, #__VA_ARGS__, [&]() { __VA_ARGS__; } ) ))
+    assert(( ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; } ) ))
 #define EXPECT_DEATH_MATCHES(matcher, ...)        \
-    assert(( ExpectDeath(std::array<DeathCause, 1>{DeathCause::VerboseAbort}, #__VA_ARGS__, [&]() { __VA_ARGS__; }, matcher) ))
+    assert(( ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; }, matcher) ))
 #define EXPECT_STD_ABORT(...)                 \
-    assert(  ExpectDeath(std::array<DeathCause, 1>{DeathCause::StdAbort}, #__VA_ARGS__, [&]() { __VA_ARGS__; })  )
+    assert(  ExpectDeath(DeathCause::StdAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; })  )
 #define EXPECT_STD_TERMINATE(...)                 \
-    assert(  ExpectDeath(std::array<DeathCause, 1>{DeathCause::StdTerminate}, #__VA_ARGS__, __VA_ARGS__)  )
+    assert(  ExpectDeath(DeathCause::StdTerminate, #__VA_ARGS__, __VA_ARGS__)  )
 
 #if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #define TEST_LIBCPP_ASSERT_FAILURE(expr, message) \
-    assert(( ExpectDeath(std::array<DeathCause, 1>{DeathCause::VerboseAbort}, #expr, [&]() { (void)(expr); }, MakeAssertionMessageMatcher(message)) ))
+    assert(( ExpectDeath(DeathCause::VerboseAbort, #expr, [&]() { (void)(expr); }, MakeAssertionMessageMatcher(message)) ))
 #else
 #define TEST_LIBCPP_ASSERT_FAILURE(expr, message) \
-    assert(( ExpectDeath(std::array<DeathCause, 1>{DeathCause::Trap},         #expr, [&]() { (void)(expr); }) ))
+    assert(( ExpectDeath(DeathCause::Trap,         #expr, [&]() { (void)(expr); }) ))
 #endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 
 // clang-format on
