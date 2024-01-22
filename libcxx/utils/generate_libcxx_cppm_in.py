@@ -9,6 +9,7 @@
 import os.path
 import sys
 
+from libcxx.header_information import module_c_headers
 from libcxx.header_information import module_headers
 from libcxx.header_information import header_restrictions
 from libcxx.header_information import headers_not_available
@@ -44,7 +45,7 @@ module;
 // and the headers of Table 25: C++ headers for C library facilities [tab:headers.cpp.c]
 """
         )
-        for header in module_headers:
+        for header in module_headers if module == "std" else module_c_headers:
             if header in header_restrictions:
                 module_cpp_in.write(
                     f"""\
@@ -69,8 +70,9 @@ module;
         module_cpp_in.write(
             f"""
 export module {module};
+{'export import std;' if module == 'std.compat' else ''}
 
-@LIBCXX_MODULE_STD_INCLUDE_SOURCES@
+{'@LIBCXX_MODULE_STD_INCLUDE_SOURCES@' if module == 'std' else ''}
 {'@LIBCXX_MODULE_STD_COMPAT_INCLUDE_SOURCES@' if module == 'std.compat' else ''}"""
         )
 

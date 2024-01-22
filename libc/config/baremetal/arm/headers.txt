@@ -2,10 +2,12 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.ctype
     libc.include.fenv
     libc.include.errno
+    libc.include.float
     libc.include.inttypes
     libc.include.math
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
     libc.include.strings
+    libc.include.sys_queue
 )

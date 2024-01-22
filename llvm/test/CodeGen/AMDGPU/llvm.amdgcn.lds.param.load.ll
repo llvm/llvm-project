@@ -15,16 +15,20 @@
 ; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr0.z
 ; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr0.w
 ; GFX12-DAG: ds_param_load v{{[0-9]+}}, attr1.x
-; GCN: s_waitcnt expcnt(4)
+; GFX11-DAG: s_waitcnt expcnt(4)
 ; GCN: v_add_f32
 ; GCN: buffer_store_b32
-; GCN: s_waitcnt expcnt(3)
+; GFX11-DAG: s_waitcnt expcnt(3)
+; GFX12-DAG: s_wait_expcnt 0x3
 ; GCN: buffer_store_b32
-; GCN: s_waitcnt expcnt(2)
+; GFX11-DAG: s_waitcnt expcnt(2)
+; GFX12-DAG: s_wait_expcnt 0x2
 ; GCN: buffer_store_b32
-; GCN: s_waitcnt expcnt(1)
+; GFX11-DAG: s_waitcnt expcnt(1)
+; GFX12-DAG: s_wait_expcnt 0x1
 ; GCN: buffer_store_b32
-; GCN: s_waitcnt expcnt(0)
+; GFX11-DAG: s_waitcnt expcnt(0)
+; GFX12-DAG: s_wait_expcnt 0x0
 ; GCN: buffer_store_b32
 ; GCN: buffer_store_b32
 define amdgpu_ps void @lds_param_load(ptr addrspace(8) inreg %buf, i32 inreg %arg) #0 {

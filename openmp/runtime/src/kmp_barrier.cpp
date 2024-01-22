@@ -2405,10 +2405,9 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #endif /* USE_ITT_BUILD */
   if (team)
 
-#ifdef KMP_DEBUG
-    KA_TRACE(10, ("__kmp_fork_barrier: T#%d(%d:%d) has arrived\n", gtid,
-                  (team != NULL) ? team->t.t_id : -1, tid));
-#endif
+  KA_TRACE(10, ("__kmp_fork_barrier: T#%d(%d:%d) has arrived\n", gtid,
+                (team != NULL) ? team->t.t_id : -1, tid));
+
   // th_team pointer only valid for primary thread here
   if (KMP_MASTER_TID(tid)) {
 #if USE_ITT_BUILD && USE_ITT_NOTIFY

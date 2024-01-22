@@ -51,7 +51,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   // When |x| > 25*log(2), or nan
   if (LIBC_UNLIKELY(x_abs >= 0x418a'a123U)) {
     // x < log(2^-25)
-    if (xbits.get_sign()) {
+    if (xbits.is_neg()) {
       // exp(-Inf) = 0
       if (xbits.is_inf())
         return -1.0f;

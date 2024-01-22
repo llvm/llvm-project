@@ -1646,7 +1646,7 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
 
           if (inline_block) {
             get_function_vars = false;
-            inline_info = sc->block->GetInlinedFunctionInfo();
+            inline_info = inline_block->GetInlinedFunctionInfo();
             if (inline_info)
               variable_list_sp = inline_block->GetBlockVariableList(true);
           }

@@ -253,9 +253,9 @@ private:
 
   Error copySwiftInterfaces(StringRef Architecture) const;
 
-  template <typename OutStreamer>
   void copySwiftReflectionMetadata(
-      const llvm::dsymutil::DebugMapObject *Obj, OutStreamer *Streamer,
+      const llvm::dsymutil::DebugMapObject *Obj,
+      classic::DwarfStreamer *Streamer,
       std::vector<uint64_t> &SectionToOffsetInDwarf,
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply);

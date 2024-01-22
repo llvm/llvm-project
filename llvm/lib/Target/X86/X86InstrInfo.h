@@ -86,6 +86,10 @@ bool isX87Instruction(MachineInstr &MI);
 /// real instructions (e.g., JMP64m).
 int getFirstAddrOperandIdx(const MachineInstr &MI);
 
+/// Find any constant pool entry associated with a specific instruction operand.
+const Constant *getConstantFromPool(const MachineInstr &MI,
+                                    const MachineOperand &Op);
+
 } // namespace X86
 
 /// isGlobalStubReference - Return true if the specified TargetFlag operand is

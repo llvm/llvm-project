@@ -22,6 +22,7 @@ using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
   libc_errno = 0;
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(aNaN));
@@ -57,7 +58,7 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-  bt.set_sign(true);
+  bt.set_sign(Sign::NEG);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(bt.get_val()));
   EXPECT_FP_EXCEPTION(FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
@@ -77,7 +78,7 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_FP_EXCEPTION(FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
-  bt.set_sign(true);
+  bt.set_sign(Sign::NEG);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(neg_inf));
   EXPECT_FP_EXCEPTION(FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
