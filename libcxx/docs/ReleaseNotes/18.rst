@@ -79,7 +79,6 @@ Implemented Papers
 - P1759R6 - Native handles and file streams
 - P2868R3 - Remove Deprecated ``std::allocator`` Typedef From C++26
 - P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
-- P2637R3 - Member ``visit``
 - P2447R6 - ``span`` over initializer list
 
 

@@ -1008,17 +1008,12 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
   llvm::SmallVector<mlir::Attribute> keywordOnlyDeviceTypeAttributes;
   bool needCommaBeforeOperands = false;
 
-  // Keyword only
-  if (failed(parser.parseOptionalLParen())) {
-    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    keywordOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
-    return success();
-  }
+  if (failed(parser.parseOptionalLParen()))
+    return failure();
 
   // Parse keyword only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
+    // Parse keyword only attributes
     if (failed(parser.parseCommaSeparatedList([&]() {
           if (parser.parseAttribute(
                   keywordOnlyDeviceTypeAttributes.emplace_back()))
@@ -1029,6 +1024,13 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
+  } else if (succeeded(parser.parseOptionalRParen())) {
+    // Keyword only
+    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    keywordOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
+    return success();
   }
 
   if (needCommaBeforeOperands && failed(parser.parseComma()))
@@ -1065,15 +1067,18 @@ static void printDeviceTypeOperandsWithKeywordOnly(
     mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
     std::optional<mlir::ArrayAttr> keywordOnlyDeviceTypes) {
 
+  p << "(";
+
   if (operands.begin() == operands.end() && keywordOnlyDeviceTypes &&
       keywordOnlyDeviceTypes->size() == 1) {
     auto deviceTypeAttr =
         mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*keywordOnlyDeviceTypes)[0]);
-    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
+    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None) {
+      p << ")";
       return;
+    }
   }
 
-  p << "(";
   printDeviceTypes(p, keywordOnlyDeviceTypes);
   if (hasDeviceTypeValues(keywordOnlyDeviceTypes) &&
       hasDeviceTypeValues(deviceTypes))
@@ -1323,17 +1328,12 @@ static ParseResult parseGangClause(
   bool needCommaBetweenValues = false;
   bool needCommaBeforeOperands = false;
 
-  // Gang only keyword
-  if (failed(parser.parseOptionalLParen())) {
-    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    gangOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
-    return success();
-  }
+  if (failed(parser.parseOptionalLParen()))
+    return failure();
 
   // Parse gang only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
+    // Parse gang only attributes
     if (failed(parser.parseCommaSeparatedList([&]() {
           if (parser.parseAttribute(
                   gangOnlyDeviceTypeAttributes.emplace_back()))
@@ -1344,6 +1344,13 @@ static ParseResult parseGangClause(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
+  } else if (succeeded(parser.parseOptionalRParen())) {
+    // Gang only keyword
+    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    gangOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
+    return success();
   }
 
   auto argNum = mlir::acc::GangArgTypeAttr::get(parser.getContext(),
@@ -1443,16 +1450,18 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
                      std::optional<mlir::DenseI32ArrayAttr> segments,
                      std::optional<mlir::ArrayAttr> gangOnlyDeviceTypes) {
 
+  p << "(";
   if (operands.begin() == operands.end() &&
       hasDeviceTypeValues(gangOnlyDeviceTypes) &&
       gangOnlyDeviceTypes->size() == 1) {
     auto deviceTypeAttr =
         mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*gangOnlyDeviceTypes)[0]);
-    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
+    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None) {
+      p << ")";
       return;
+    }
   }
 
-  p << "(";
   printDeviceTypes(p, gangOnlyDeviceTypes);
 
   if (hasDeviceTypeValues(gangOnlyDeviceTypes) &&
@@ -1516,6 +1525,11 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
 }
 
 LogicalResult acc::LoopOp::verify() {
+  if (!getUpperbound().empty() && getInclusiveUpperbound() &&
+      (getUpperbound().size() != getInclusiveUpperbound()->size()))
+    return emitError() << "inclusiveUpperbound size is expected to be the same"
+                       << " as upperbound size";
+
   // Check collapse
   if (getCollapseAttr() && !getCollapseDeviceTypeAttr())
     return emitOpError() << "collapse device_type attr must be define when"
@@ -1629,7 +1643,9 @@ unsigned LoopOp::getNumDataOperands() {
 }
 
 Value LoopOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getGangOperands().size();
+  unsigned numOptional =
+      getLowerbound().size() + getUpperbound().size() + getStep().size();
+  numOptional += getGangOperands().size();
   numOptional += getVectorOperands().size();
   numOptional += getWorkerNumOperands().size();
   numOptional += getTileOperands().size();
@@ -1746,6 +1762,58 @@ bool LoopOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
 
 bool LoopOp::hasGang(mlir::acc::DeviceType deviceType) {
   return hasDeviceType(getGang(), deviceType);
+}
+
+llvm::SmallVector<mlir::Region *> acc::LoopOp::getLoopRegions() {
+  return {&getRegion()};
+}
+
+/// loop-control ::= `(` ssa-id-and-type-list `)` `=` `(` ssa-id-and-type-list
+/// `)` `to` `(` ssa-id-and-type-list `)` `step` `(` ssa-id-and-type-list `)`
+ParseResult
+parseLoopControl(OpAsmParser &parser, Region &region,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerbound,
+                 SmallVectorImpl<Type> &lowerboundType,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperbound,
+                 SmallVectorImpl<Type> &upperboundType,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &step,
+                 SmallVectorImpl<Type> &stepType) {
+
+  SmallVector<OpAsmParser::Argument> inductionVars;
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseArgumentList(inductionVars, OpAsmParser::Delimiter::None,
+                                 /*allowType=*/true) ||
+        parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
+        parser.parseOperandList(lowerbound, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(lowerboundType) || parser.parseRParen() ||
+        parser.parseKeyword("to") || parser.parseLParen() ||
+        parser.parseOperandList(upperbound, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(upperboundType) || parser.parseRParen() ||
+        parser.parseKeyword("step") || parser.parseLParen() ||
+        parser.parseOperandList(step, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(stepType) || parser.parseRParen())
+      return failure();
+  }
+  return parser.parseRegion(region, inductionVars);
+}
+
+void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
+                      ValueRange lowerbound, TypeRange lowerboundType,
+                      ValueRange upperbound, TypeRange upperboundType,
+                      ValueRange steps, TypeRange stepType) {
+  ValueRange regionArgs = region.front().getArguments();
+  if (!regionArgs.empty()) {
+    p << "(";
+    llvm::interleaveComma(regionArgs, p,
+                          [&p](Value v) { p << v << " : " << v.getType(); });
+    p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
+      << upperbound << " : " << upperboundType << ") "
+      << " step (" << steps << " : " << stepType << ") ";
+  }
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
