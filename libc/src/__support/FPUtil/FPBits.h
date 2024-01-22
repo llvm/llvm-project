@@ -395,7 +395,7 @@ public:
   // Returns the mantissa with the implicit bit set iff the current
   // value is a valid normal number.
   LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
-    if (is_subnormal())
+    if (UP::is_subnormal())
       return sig_bits();
     return (StorageType(1) << UP::SIG_LEN) | sig_bits();
   }

@@ -1289,8 +1289,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 //   struct f.frame {
 //     ResumeFnTy ResumeFnAddr;
 //     ResumeFnTy DestroyFnAddr;
-//     int ResumeIndex;
 //     ... promise (if present) ...
+//     int ResumeIndex;
 //     ... spills ...
 //   };
 static StructType *buildFrameType(Function &F, coro::Shape &Shape,

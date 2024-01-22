@@ -1033,7 +1033,7 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
   return success();
 }
 
-bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
+static bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
   if (arrayAttr && *arrayAttr && arrayAttr->size() > 0)
     return true;
   return false;
@@ -1449,7 +1449,8 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
                      std::optional<mlir::DenseI32ArrayAttr> segments,
                      std::optional<mlir::ArrayAttr> gangOnlyDeviceTypes) {
 
-  if (operands.begin() == operands.end() && gangOnlyDeviceTypes &&
+  if (operands.begin() == operands.end() &&
+      hasDeviceTypeValues(gangOnlyDeviceTypes) &&
       gangOnlyDeviceTypes->size() == 1) {
     auto deviceTypeAttr =
         mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*gangOnlyDeviceTypes)[0]);
@@ -1464,7 +1465,7 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
       hasDeviceTypeValues(deviceTypes))
     p << ", ";
 
-  if (deviceTypes) {
+  if (hasDeviceTypeValues(deviceTypes)) {
     unsigned opIdx = 0;
     llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
       p << "{";
@@ -2090,55 +2091,281 @@ LogicalResult acc::DeclareOp::verify() {
 // RoutineOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult acc::RoutineOp::verify() {
-  int parallelism = 0;
-  parallelism += getGang() ? 1 : 0;
-  parallelism += getWorker() ? 1 : 0;
-  parallelism += getVector() ? 1 : 0;
-  parallelism += getSeq() ? 1 : 0;
+static bool hasDeviceType(std::optional<mlir::ArrayAttr> arrayAttr,
+                          mlir::acc::DeviceType deviceType) {
+  if (!hasDeviceTypeValues(arrayAttr))
+    return false;
 
-  if (parallelism > 1)
+  for (auto attr : *arrayAttr) {
+    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+    if (deviceTypeAttr.getValue() == deviceType)
+      return true;
+  }
+
+  return false;
+}
+
+static unsigned getParallelismForDeviceType(acc::RoutineOp op,
+                                            acc::DeviceType dtype) {
+  unsigned parallelism = 0;
+  parallelism += (op.hasGang(dtype) || op.getGangDimValue(dtype)) ? 1 : 0;
+  parallelism += op.hasWorker(dtype) ? 1 : 0;
+  parallelism += op.hasVector(dtype) ? 1 : 0;
+  parallelism += op.hasSeq(dtype) ? 1 : 0;
+  return parallelism;
+}
+
+LogicalResult acc::RoutineOp::verify() {
+  unsigned baseParallelism =
+      getParallelismForDeviceType(*this, acc::DeviceType::None);
+
+  if (baseParallelism > 1)
     return emitError() << "only one of `gang`, `worker`, `vector`, `seq` can "
                           "be present at the same time";
 
-  return success();
-}
+  for (uint32_t dtypeInt = 0; dtypeInt != acc::getMaxEnumValForDeviceType();
+       ++dtypeInt) {
+    auto dtype = static_cast<acc::DeviceType>(dtypeInt);
+    if (dtype == acc::DeviceType::None)
+      continue;
+    unsigned parallelism = getParallelismForDeviceType(*this, dtype);
 
-static ParseResult parseRoutineGangClause(OpAsmParser &parser, UnitAttr &gang,
-                                          IntegerAttr &gangDim) {
-  // Since gang clause exists, ensure that unit attribute is set.
-  gang = UnitAttr::get(parser.getBuilder().getContext());
-
-  // Next, look for dim on gang. Don't initialize `gangDim` yet since
-  // we leave it without attribute if there is no `dim` specifier.
-  if (succeeded(parser.parseOptionalLParen())) {
-    // Look for syntax that looks like `dim = 1 : i32`.
-    // Thus first look for `dim =`
-    if (failed(parser.parseKeyword(RoutineOp::getGangDimKeyword())) ||
-        failed(parser.parseEqual()))
-      return failure();
-
-    int64_t dimValue;
-    Type valueType;
-    // Now look for `1 : i32`
-    if (failed(parser.parseInteger(dimValue)) ||
-        failed(parser.parseColonType(valueType)))
-      return failure();
-
-    gangDim = IntegerAttr::get(valueType, dimValue);
-
-    if (failed(parser.parseRParen()))
-      return failure();
+    if (parallelism > 1 || (baseParallelism == 1 && parallelism == 1))
+      return emitError() << "only one of `gang`, `worker`, `vector`, `seq` can "
+                            "be present at the same time";
   }
 
   return success();
 }
 
-void printRoutineGangClause(OpAsmPrinter &p, Operation *op, UnitAttr gang,
-                            IntegerAttr gangDim) {
-  if (gangDim)
-    p << "(" << RoutineOp::getGangDimKeyword() << " = " << gangDim.getValue()
-      << " : " << gangDim.getType() << ")";
+static ParseResult parseBindName(OpAsmParser &parser, mlir::ArrayAttr &bindName,
+                                 mlir::ArrayAttr &deviceTypes) {
+  llvm::SmallVector<mlir::Attribute> bindNameAttrs;
+  llvm::SmallVector<mlir::Attribute> deviceTypeAttrs;
+
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseAttribute(bindNameAttrs.emplace_back()))
+          return failure();
+        if (failed(parser.parseOptionalLSquare())) {
+          deviceTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
+              parser.getContext(), mlir::acc::DeviceType::None));
+        } else {
+          if (parser.parseAttribute(deviceTypeAttrs.emplace_back()) ||
+              parser.parseRSquare())
+            return failure();
+        }
+        return success();
+      })))
+    return failure();
+
+  bindName = ArrayAttr::get(parser.getContext(), bindNameAttrs);
+  deviceTypes = ArrayAttr::get(parser.getContext(), deviceTypeAttrs);
+
+  return success();
+}
+
+static void printBindName(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                          std::optional<mlir::ArrayAttr> bindName,
+                          std::optional<mlir::ArrayAttr> deviceTypes) {
+  llvm::interleaveComma(llvm::zip(*bindName, *deviceTypes), p,
+                        [&](const auto &pair) {
+                          p << std::get<0>(pair);
+                          printSingleDeviceType(p, std::get<1>(pair));
+                        });
+}
+
+static ParseResult parseRoutineGangClause(OpAsmParser &parser,
+                                          mlir::ArrayAttr &gang,
+                                          mlir::ArrayAttr &gangDim,
+                                          mlir::ArrayAttr &gangDimDeviceTypes) {
+
+  llvm::SmallVector<mlir::Attribute> gangAttrs, gangDimAttrs,
+      gangDimDeviceTypeAttrs;
+  bool needCommaBeforeOperands = false;
+
+  // Gang keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    gangAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    gang = ArrayAttr::get(parser.getContext(), gangAttrs);
+    return success();
+  }
+
+  // Parse keyword only attributes
+  if (succeeded(parser.parseOptionalLSquare())) {
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (parser.parseAttribute(gangAttrs.emplace_back()))
+            return failure();
+          return success();
+        })))
+      return failure();
+    if (parser.parseRSquare())
+      return failure();
+    needCommaBeforeOperands = true;
+  }
+
+  if (needCommaBeforeOperands && failed(parser.parseComma()))
+    return failure();
+
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseKeyword(acc::RoutineOp::getGangDimKeyword()) ||
+            parser.parseColon() ||
+            parser.parseAttribute(gangDimAttrs.emplace_back()))
+          return failure();
+        if (succeeded(parser.parseOptionalLSquare())) {
+          if (parser.parseAttribute(gangDimDeviceTypeAttrs.emplace_back()) ||
+              parser.parseRSquare())
+            return failure();
+        } else {
+          gangDimDeviceTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
+              parser.getContext(), mlir::acc::DeviceType::None));
+        }
+        return success();
+      })))
+    return failure();
+
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  gang = ArrayAttr::get(parser.getContext(), gangAttrs);
+  gangDim = ArrayAttr::get(parser.getContext(), gangDimAttrs);
+  gangDimDeviceTypes =
+      ArrayAttr::get(parser.getContext(), gangDimDeviceTypeAttrs);
+
+  return success();
+}
+
+void printRoutineGangClause(OpAsmPrinter &p, Operation *op,
+                            std::optional<mlir::ArrayAttr> gang,
+                            std::optional<mlir::ArrayAttr> gangDim,
+                            std::optional<mlir::ArrayAttr> gangDimDeviceTypes) {
+
+  if (!hasDeviceTypeValues(gangDimDeviceTypes) && hasDeviceTypeValues(gang) &&
+      gang->size() == 1) {
+    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*gang)[0]);
+    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
+      return;
+  }
+
+  p << "(";
+
+  printDeviceTypes(p, gang);
+
+  if (hasDeviceTypeValues(gang) && hasDeviceTypeValues(gangDimDeviceTypes))
+    p << ", ";
+
+  if (hasDeviceTypeValues(gangDimDeviceTypes))
+    llvm::interleaveComma(llvm::zip(*gangDim, *gangDimDeviceTypes), p,
+                          [&](const auto &pair) {
+                            p << acc::RoutineOp::getGangDimKeyword() << ": ";
+                            p << std::get<0>(pair);
+                            printSingleDeviceType(p, std::get<1>(pair));
+                          });
+
+  p << ")";
+}
+
+static ParseResult parseDeviceTypeArrayAttr(OpAsmParser &parser,
+                                            mlir::ArrayAttr &deviceTypes) {
+  llvm::SmallVector<mlir::Attribute> attributes;
+  // Keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    attributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    deviceTypes = ArrayAttr::get(parser.getContext(), attributes);
+    return success();
+  }
+
+  // Parse device type attributes
+  if (succeeded(parser.parseOptionalLSquare())) {
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (parser.parseAttribute(attributes.emplace_back()))
+            return failure();
+          return success();
+        })))
+      return failure();
+    if (parser.parseRSquare() || parser.parseRParen())
+      return failure();
+  }
+  deviceTypes = ArrayAttr::get(parser.getContext(), attributes);
+  return success();
+}
+
+static void
+printDeviceTypeArrayAttr(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                         std::optional<mlir::ArrayAttr> deviceTypes) {
+
+  if (hasDeviceTypeValues(deviceTypes) && deviceTypes->size() == 1) {
+    auto deviceTypeAttr =
+        mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*deviceTypes)[0]);
+    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
+      return;
+  }
+
+  if (!hasDeviceTypeValues(deviceTypes))
+    return;
+
+  p << "([";
+  llvm::interleaveComma(*deviceTypes, p, [&](mlir::Attribute attr) {
+    auto dTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+    p << dTypeAttr;
+  });
+  p << "])";
+}
+
+bool RoutineOp::hasWorker() { return hasWorker(mlir::acc::DeviceType::None); }
+
+bool RoutineOp::hasWorker(mlir::acc::DeviceType deviceType) {
+  return hasDeviceType(getWorker(), deviceType);
+}
+
+bool RoutineOp::hasVector() { return hasVector(mlir::acc::DeviceType::None); }
+
+bool RoutineOp::hasVector(mlir::acc::DeviceType deviceType) {
+  return hasDeviceType(getVector(), deviceType);
+}
+
+bool RoutineOp::hasSeq() { return hasSeq(mlir::acc::DeviceType::None); }
+
+bool RoutineOp::hasSeq(mlir::acc::DeviceType deviceType) {
+  return hasDeviceType(getSeq(), deviceType);
+}
+
+std::optional<llvm::StringRef> RoutineOp::getBindNameValue() {
+  return getBindNameValue(mlir::acc::DeviceType::None);
+}
+
+std::optional<llvm::StringRef>
+RoutineOp::getBindNameValue(mlir::acc::DeviceType deviceType) {
+  if (!hasDeviceTypeValues(getBindNameDeviceType()))
+    return std::nullopt;
+  if (auto pos = findSegment(*getBindNameDeviceType(), deviceType)) {
+    auto attr = (*getBindName())[*pos];
+    auto stringAttr = dyn_cast<mlir::StringAttr>(attr);
+    return stringAttr.getValue();
+  }
+  return std::nullopt;
+}
+
+bool RoutineOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
+
+bool RoutineOp::hasGang(mlir::acc::DeviceType deviceType) {
+  return hasDeviceType(getGang(), deviceType);
+}
+
+std::optional<int64_t> RoutineOp::getGangDimValue() {
+  return getGangDimValue(mlir::acc::DeviceType::None);
+}
+
+std::optional<int64_t>
+RoutineOp::getGangDimValue(mlir::acc::DeviceType deviceType) {
+  if (!hasDeviceTypeValues(getGangDimDeviceType()))
+    return std::nullopt;
+  if (auto pos = findSegment(*getGangDimDeviceType(), deviceType)) {
+    auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>((*getGangDim())[*pos]);
+    return intAttr.getInt();
+  }
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

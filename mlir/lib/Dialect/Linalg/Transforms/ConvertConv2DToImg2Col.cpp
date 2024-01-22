@@ -26,7 +26,7 @@ namespace mlir {
 namespace linalg {
 static bool hasAllOneValues(DenseIntElementsAttr attr) {
   return llvm::all_of(
-      attr, [](APInt element) { return element.getSExtValue() == 1; });
+      attr, [](const APInt &element) { return element.getSExtValue() == 1; });
 }
 
 static Value createAdd(Location loc, Value x, Value y, OpBuilder &builder) {
