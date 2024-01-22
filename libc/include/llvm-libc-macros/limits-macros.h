@@ -9,19 +9,29 @@
 #ifndef __LLVM_LIBC_MACROS_LIMITS_MACROS_H
 #define __LLVM_LIBC_MACROS_LIMITS_MACROS_H
 
+#if __has_include_next(<limits.h>)
+
 // Suppress `#include_next is a language extension` warnings.
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-include-next"
-#else // gcc
+#elif defined(__GNUC__) // gcc
+#if !defined _GCC_LIMITS_H_
+#define _GCC_LIMITS_H_
+#endif
 #pragma GCC system_header
-#endif // __clang__
+#endif // __clang__, __GNUC__
 
+// Include compiler's header
 #include_next <limits.h>
 
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif // __clang__
+
+#endif // __has_include_next(<limits.h>)
+
+// Supplement missing macros.
 
 #ifndef CHAR_BIT
 #ifdef __CHAR_BIT__
