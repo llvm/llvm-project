@@ -200,7 +200,7 @@ static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
       break;
   }
 
-  assert(RegNum >= 0 && "Invalid Dwarf register number.");
+  assert(RegNum >= 0 && isUInt<16>(RegNum) && "Invalid Dwarf register number.");
   return (unsigned)RegNum;
 }
 

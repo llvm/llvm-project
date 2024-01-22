@@ -294,6 +294,13 @@
 // - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
 //   the containers have compatible allocators.
 //
+// - `_LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN` -- checks that the given argument is within the domain of valid arguments
+//   for the function. Violating this typically produces an incorrect result (e.g. the clamp algorithm returns the
+//   original value without clamping it due to incorrect functors) or puts an object into an invalid state (e.g.
+//   a string view where only a subset of elements is possible to access). This category is for assertions violating
+//   which doesn't cause any immediate issues in the library -- whatever the consequences are, they will happen in the
+//   user code.
+//
 // - `_LIBCPP_ASSERT_PEDANTIC` -- checks prerequisites which are imposed by the Standard, but violating which happens to
 //   be benign in our implementation.
 //
@@ -338,6 +345,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
@@ -353,8 +361,9 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                 _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
@@ -368,6 +377,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)    _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
@@ -382,6 +392,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_NON_NULL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)    _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
@@ -984,6 +995,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_IN_CXX23
 #  endif
 
+#  if _LIBCPP_STD_VER >= 26
+#    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
+#  else
+#    define _LIBCPP_DEPRECATED_IN_CXX26
+#  endif
+
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #  else
@@ -1511,6 +1528,11 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #  else
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+#  endif
+
+// Clang-18 has support for deducing this, but it does not set the FTM.
+#  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
+#    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  endif
 
 #endif // __cplusplus

@@ -692,6 +692,13 @@ def warn_maybe_falloff_nonvoid_function : Warning<
 def warn_falloff_nonvoid_function : Warning<
   "non-void function does not return a value">,
   InGroup<ReturnType>;
+def warn_const_attr_with_pure_attr : Warning<
+  "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def warn_pure_function_returns_void : Warning<
+  "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
+  InGroup<IgnoredAttributes>;
+
 def err_maybe_falloff_nonvoid_block : Error<
   "non-void block does not return a value in all control paths">;
 def err_falloff_nonvoid_block : Error<
@@ -2411,7 +2418,8 @@ def err_auto_not_allowed : Error<
   "|in type allocated by 'new'|in K&R-style function parameter"
   "|in template parameter|in friend declaration|in function prototype that is "
   "not a function declaration|in requires expression parameter"
-  "|in array declaration}1">;
+  "|in array declaration"
+  "|in declaration of conversion function template}1">;
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -5146,8 +5154,6 @@ def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<
   "template argument / label address difference / what did you expect?">;
-def err_non_type_template_arg_unsupported : Error<
-  "non-type template argument of type %0 is not yet supported">;
 def err_template_arg_not_convertible : Error<
   "non-type template argument of type %0 cannot be converted to a value "
   "of type %1">;
@@ -5199,9 +5205,6 @@ def err_template_arg_not_object_or_func : Error<
   "non-type template argument does not refer to an object or function">;
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
-def err_template_arg_member_ptr_base_derived_not_supported : Error<
-  "non-type template argument of pointer-to-member type %1 that refers "
-  "to member %q0 of a different class is not supported yet">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
 def ext_template_arg_extra_parens : ExtWarn<

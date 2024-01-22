@@ -3862,27 +3862,32 @@ def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
 defm visibility_from_dllstorageclass : BoolFOption<"visibility-from-dllstorageclass",
   LangOpts<"VisibilityFromDLLStorageClass">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Set the visibility of symbols in the generated code from their DLL storage class">,
+          "Override the visibility of globals based on their final DLL storage class.">,
   NegFlag<SetFalse>>;
+class MarshallingInfoVisibilityFromDLLStorage<KeyPathAndMacro kpm, code default>
+  : MarshallingInfoEnum<kpm, default>,
+    Values<"keep,hidden,protected,default">,
+    NormalizedValuesScope<"LangOptions::VisibilityFromDLLStorageClassKinds">,
+    NormalizedValues<["Keep", "Hidden", "Protected", "Default"]> {}
 def fvisibility_dllexport_EQ : Joined<["-"], "fvisibility-dllexport=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for dllexport definitions [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"DLLExportVisibility">, "DefaultVisibility">,
+  HelpText<"The visibility for dllexport definitions. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"DLLExportVisibility">, "Default">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_nodllstorageclass_EQ : Joined<["-"], "fvisibility-nodllstorageclass=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for definitions without an explicit DLL export class [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"NoDLLStorageClassVisibility">, "HiddenVisibility">,
+  HelpText<"The visibility for definitions without an explicit DLL storage class. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"NoDLLStorageClassVisibility">, "Hidden">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_externs_dllimport_EQ : Joined<["-"], "fvisibility-externs-dllimport=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for dllimport external declarations [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"ExternDeclDLLImportVisibility">, "DefaultVisibility">,
+  HelpText<"The visibility for dllimport external declarations. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"ExternDeclDLLImportVisibility">, "Default">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_externs_nodllstorageclass_EQ : Joined<["-"], "fvisibility-externs-nodllstorageclass=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The visibility for external declarations without an explicit DLL dllstorageclass [-fvisibility-from-dllstorageclass]">,
-  MarshallingInfoVisibility<LangOpts<"ExternDeclNoDLLStorageClassVisibility">, "HiddenVisibility">,
+  HelpText<"The visibility for external declarations without an explicit DLL storage class. If Keep is specified the visibility is not adjusted [-fvisibility-from-dllstorageclass]">,
+  MarshallingInfoVisibilityFromDLLStorage<LangOpts<"ExternDeclNoDLLStorageClassVisibility">, "Hidden">,
   ShouldParseIf<fvisibility_from_dllstorageclass.KeyPath>;
 def fvisibility_EQ : Joined<["-"], "fvisibility=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -6048,11 +6053,11 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
-// Features egpr, push2pop2 and ppx are validated with llvm-test-suite && cpu2017 on Intel SDE.
+// Features egpr, push2pop2, ppx and ndd are validated with llvm-test-suite && cpu2017 on Intel SDE.
 // For stability, we turn on these features only for -mapxf. After a feature pass the validation,
 // we will add it to -mapxf.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx", "ndd"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd"]>;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags
