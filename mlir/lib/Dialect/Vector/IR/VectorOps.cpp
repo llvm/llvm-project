@@ -1900,6 +1900,62 @@ public:
   }
 };
 
+/// Canonicalize extract(transpose(broadcast))) constructs, where the broadcast
+/// adds a new dimension and the extraction removes it again.
+class ExtractOpTransposedBroadcastDim final
+    : public OpRewritePattern<ExtractOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // Skip vector.extract ops that do not remove any dimensions.
+    if (extractOp.getNumIndices() == 0)
+      return failure();
+    // Look for extract(transpose(broadcast(x))) pattern.
+    auto transposeOp =
+        extractOp.getVector().getDefiningOp<vector::TransposeOp>();
+    if (!transposeOp || transposeOp.getPermutation().empty())
+      return failure();
+    auto broadcastOp =
+        transposeOp.getVector().getDefiningOp<vector::BroadcastOp>();
+    if (!broadcastOp)
+      return failure();
+    // Check if the first dimension that is being removed by the vector.extract
+    // was added by the vector.broadcast.
+    int64_t removedDim = transposeOp.getPermutation()[0];
+    llvm::SetVector<int64_t> rankExtendedDims =
+        broadcastOp.computeRankExtendedDims();
+    if (!rankExtendedDims.contains(removedDim))
+      return failure();
+
+    // 1. Create new vector.broadcast without the removed dimension.
+    SmallVector<int64_t> newBroadcastShape(
+        broadcastOp.getResultVectorType().getShape());
+    newBroadcastShape.erase(newBroadcastShape.begin() + removedDim);
+    auto newBroadcast = rewriter.create<vector::BroadcastOp>(
+        broadcastOp.getLoc(),
+        VectorType::get(newBroadcastShape,
+                        broadcastOp.getResultVectorType().getElementType()),
+        broadcastOp.getSource());
+
+    // 2. Create new vector.transpose.
+    SmallVector<int64_t> newPermutation;
+    for (int64_t dim : transposeOp.getPermutation().drop_front())
+      newPermutation.push_back(dim < transposeOp.getPermutation()[0] ? dim
+                                                                     : dim - 1);
+    auto newTranspose = rewriter.create<vector::TransposeOp>(
+        transposeOp.getLoc(), newBroadcast, newPermutation);
+
+    // 3. Create new vector.extract without the outermost dimension.
+    SmallVector<OpFoldResult> mixedPositions = extractOp.getMixedPosition();
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
+        extractOp, newTranspose, ArrayRef(mixedPositions).drop_front());
+
+    return success();
+  }
+};
+
 // Pattern to rewrite a ExtractOp(splat ConstantOp) -> ConstantOp.
 class ExtractOpSplatConstantFolder final : public OpRewritePattern<ExtractOp> {
 public:
@@ -2065,7 +2121,8 @@ LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ExtractOpSplatConstantFolder, ExtractOpNonSplatConstantFolder,
-              ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
+              ExtractOpFromBroadcast, ExtractOpTransposedBroadcastDim,
+              ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
 }
 
@@ -2113,6 +2170,20 @@ llvm::SetVector<int64_t> BroadcastOp::computeBroadcastedUnitDims() {
     return {};
   return ::computeBroadcastedUnitDims(srcVectorType.getShape(),
                                       getResultVectorType().getShape());
+}
+
+llvm::SetVector<int64_t> BroadcastOp::computeRankExtendedDims() {
+  llvm::SetVector<int64_t> broadcastedUnitDims = computeBroadcastedUnitDims();
+  llvm::SetVector<int64_t> result;
+  auto vecSrcType = dyn_cast<VectorType>(getSourceType());
+  int64_t rankDiff =
+      vecSrcType ? getResultVectorType().getRank() - vecSrcType.getRank()
+                 : getResultVectorType().getRank();
+  for (int64_t i = 0; i < rankDiff; ++i) {
+    if (!broadcastedUnitDims.contains(i))
+      result.insert(i);
+  }
+  return result;
 }
 
 /// Broadcast `value` to a vector of `dstShape`, knowing that exactly the
@@ -4012,36 +4083,42 @@ void TransferReadOp::getEffects(
 }
 
 namespace {
-/// Store to load forwarding for transfer operations with permuation maps.
-/// Even if the permutation maps are different we can still propagate the store
-/// into the load if the size of the dimensions read and written match. Then we
-/// can replace the transfer_read + transfer_write by vector.broadcast and
-/// vector.transpose.
-/// Example:
+/// Store to load forwarding for transfer operations with permutation maps.
+/// Even if the permutation maps and/or the rank of the read/written vectors are
+/// different, we can still propagate the store into the load if the accessed
+/// chunk of the shaped value matches.
+///
+/// The vector.transfer_read op is replaced by 3 ops:
+/// 1. A broadcast of the written vector with all broadcast dims of the reading
+///    op and unit dims for all shaped value dimensions that are not transfer
+///    dimensions of the writing op.
+/// 2. A transposition of the broadcasted value to account for differences
+///    in the permutation maps of the reading/writing op.
+/// 3. An extraction that removes shaped value dimensions that are not transfer
+///    dimensions of the reading op.
+///
+/// Running example:
 /// ```
-/// %w0 = vector.transfer_write %v0, %arg0[%c0, %c0, %c0]
-///  {in_bounds = [true, true],
-///   permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>} :
-///   vector<4x1xf32>, tensor<4x4x4xf32>
-///  %r = vector.transfer_read %w0[%c0, %c0, %c0], %cf0
-///   {in_bounds = [true, true, true, true],
-///   permutation_map = affine_map<(d0, d1, d2) -> (d1, 0, d2, 0)>} :
-///   tensor<4x4x4xf32>, vector<1x100x4x5xf32>
+/// %0 = vector.transfer_write %vec to %s[%a, %b, %c, %d, %e, %f]
+///     {permutation_map = affine_map<(d0, d1, d2, d3, d4, d5)
+///                                   -> (d2, d1, d4, d5)>}
+///     : vector<5x6x7x8xf32>, tensor<?x?x?x?x?x?xf32>
+/// %1 = vector.transfer_read %0[%a, %b, %c, %d, %e, %f]
+///     {permutation_map = affine_map<(d0, d1, d2, d3, d4, d5)
+///                                   -> (d1, d2, 0, d4, 0, d5, d0)>}
+///     : tensor<?x?x?x?x?x?xf32>, vector<6x5x100x7x200x8x1xf32>
 /// ```
-/// To:
-/// ```
-/// %0 = vector.broadcast %arg1 : vector<4x1xf32> to vector<100x5x4x1xf32>
-/// %r = vector.transpose %0, [3, 0, 2, 1] :
-///   vector<100x5x4x1xf32> to vector<1x100x4x5xf32>
-/// ```
-struct TransferReadAfterWriteToBroadcast
-    : public OpRewritePattern<TransferReadOp> {
+struct TransferReadAfterWrite : public OpRewritePattern<TransferReadOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
+    Location loc = readOp.getLoc();
     if (readOp.hasOutOfBoundsDim() ||
         !llvm::isa<RankedTensorType>(readOp.getShapedType()))
+      return failure();
+    if (readOp.getShapedType().getElementType() !=
+        readOp.getVectorType().getElementType())
       return failure();
     auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
@@ -4051,42 +4128,140 @@ struct TransferReadAfterWriteToBroadcast
     if (readOp.getTransferChunkAccessed() !=
         defWrite.getTransferChunkAccessed())
       return failure();
-    // TODO: Support cases where a dim is explicitly written but implicitly
-    // read (i.e., a unit dim that is rank reduced).
-    if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
-        getUnusedDimsBitVector({defWrite.getPermutationMap()}))
+    if (readOp.getIndices() != defWrite.getIndices())
       return failure();
-    if (readOp.getIndices() != defWrite.getIndices() ||
-        readOp.getMask() != defWrite.getMask())
+    Type elementType = readOp.getVectorType().getElementType();
+    if (elementType != defWrite.getVectorType().getElementType())
       return failure();
-    Value vec = defWrite.getVector();
-    // TODO: loop through the chain of transfer_write if we can prove that they
-    // don't overlap with the transfer_read. This requires improving
-    // `isDisjointTransferIndices` helper.
-    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
-    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
-    AffineMap map = readMap.compose(writeMap);
-    if (map.getNumResults() == 0)
-      return failure();
-    // Calculate the permutation to apply to go from the vector stored to the
-    // vector read.
-    SmallVector<unsigned> permutation;
-    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
+    if (defWrite.getShapedType().getElementType() !=
+        defWrite.getVectorType().getElementType())
       return failure();
 
-    Location loc = readOp.getLoc();
-    // Calculate the broadcast shape by applying the reverse permutation to the
-    // final shape we want.
-    ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
-    SmallVector<int64_t> broadcastShape(destShape.size());
-    for (const auto &pos : llvm::enumerate(permutation))
-      broadcastShape[pos.value()] = destShape[pos.index()];
-    VectorType broadcastedType = VectorType::get(
-        broadcastShape, defWrite.getVectorType().getElementType());
-    vec = rewriter.create<vector::BroadcastOp>(loc, broadcastedType, vec);
-    SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec,
-                                                     transposePerm);
+    // 1. Add rank-reduced unit dimensions and broadcast dimension to input
+    //    vector %vec. Broadcast dimensions are added at the beginning, followed
+    //    by rank-reduced unit dims, followed by the dimensions of %vec.
+    //
+    // %bc = vector.broadcast %vec
+    //     : vector<5x6x7x8xf32> to vector<100x200x1x1x5x6x7x8xf32>
+    //                                      |   |   \|
+    //                               broadcast dims  |
+    //                                               |
+    //                          rank-reduced dims (corresponding to %a and %d)
+
+    // Gather broadcast dimensions of the transfer_read.
+    SmallVector<int64_t> broadcastedShape;
+    int64_t numBroadcastDims = 0;
+    for (int64_t i = 0, e = readOp.getTransferRank(); i < e; ++i) {
+      if (readOp.isBroadcastDim(i)) {
+        broadcastedShape.push_back(readOp.getVectorType().getDimSize(i));
+        ++numBroadcastDims;
+      }
+    }
+    // Append unit dims for rank-reduced (unused) dimensions in the
+    // transfer_write.
+    // Note: `getLeadingShapedRank` is a misnomer: the dimensions that do not
+    // participate in the transfer are not necessarily leading dimensions.
+    broadcastedShape.append(defWrite.getLeadingShapedRank(), 1);
+    // Append input vector (%vec) shape.
+    llvm::append_range(broadcastedShape, defWrite.getVectorType().getShape());
+    // Emit vector.broadcast op.
+    Value broadcasted = rewriter.create<vector::BroadcastOp>(
+        loc, VectorType::get(broadcastedShape, elementType),
+        defWrite.getVector());
+
+    // 2. Transpose the broadcasted vector. Dimensions that are not needed must
+    //    be placed at the beginning (because vector.extract can remove only
+    //    leading dimensions).
+
+    // Build a mapping (`shapedDimToVecDim`) from shaped value dims to dims of
+    // the broadcasted vector. This is essentially an inverted version of the
+    // transfer_write permutation map that takes into account the newly added
+    // unit dims.
+    //                                                     %b    %f
+    //                                                       \    |
+    // Example: broadcasted vector type: vector<100x200x1x1x5x6x7x8xf32>
+    //                                                 /  |  \   \
+    //                                                /  %d   |   %e
+    //                                              %a        %c
+    //          mapping = [2, 5, 4, 3, 6, 7]
+
+    // Initialize the mapping with -1.
+    SmallVector<int64_t> shapedDimToVecDim(defWrite.getShapedType().getRank(),
+                                           -1);
+    // Fill in the dimensions from the inverted transfer_write permutation map.
+    int64_t numUnitDims = defWrite.getLeadingShapedRank();
+    for (const auto &it :
+         llvm::enumerate(defWrite.getPermutationMap().getResults())) {
+      shapedDimToVecDim[cast<AffineDimExpr>(it.value()).getPosition()] =
+          it.index() + numUnitDims + numBroadcastDims;
+    }
+    // Fill in missing unused dims (of the transfer_write) with the broadcasted
+    // unit dims (which are placed right after the broadcast dims).
+    int64_t nextUnitDim = numBroadcastDims;
+    for (int64_t i = 0, e = shapedDimToVecDim.size(); i < e; ++i) {
+      if (shapedDimToVecDim[i] == -1)
+        shapedDimToVecDim[i] = nextUnitDim++;
+    }
+    assert(nextUnitDim == numBroadcastDims + numUnitDims &&
+           "unexpected number of unit dims");
+
+    // Compute permutation. All dims that are not needed by the transfer_read
+    // are placed at the beginning.
+    SmallVector<int64_t> permutation(broadcastedShape.size(), -1);
+    // Helper data structure to keep track of dims that were not used yet.
+    SmallVector<int64_t> remainingDims =
+        llvm::to_vector(llvm::seq<int64_t>(0, broadcastedShape.size()));
+    int64_t numUnneededDims =
+        broadcastedShape.size() - readOp.getVectorType().getRank();
+    int64_t nextBroadcastDim = 0;
+    for (int64_t i = 0, e = readOp.getVectorType().getRank(); i < e; ++i) {
+      if (readOp.isBroadcastDim(i)) {
+        // This transfer_read result dim is a broadcast.
+        permutation[numUnneededDims + i] = nextBroadcastDim;
+        auto it = llvm::find(remainingDims, nextBroadcastDim);
+        assert(it != remainingDims.end() && "could not find broadcast dim");
+        remainingDims.erase(it);
+        nextBroadcastDim++;
+        continue;
+      }
+      // This transfer_read result dim is a dimension of the shape value. Look
+      // up its position in the broadcasted vector in the mapping.
+      int64_t shapedValueDim =
+          cast<AffineDimExpr>(readOp.getPermutationMap().getResult(i))
+              .getPosition();
+      permutation[numUnneededDims + i] = shapedDimToVecDim[shapedValueDim];
+      auto it = llvm::find(remainingDims, shapedDimToVecDim[shapedValueDim]);
+      assert(it != remainingDims.end() && "could not find regular dim");
+      remainingDims.erase(it);
+    }
+
+    // Fill up the dimensions at the beginning with all remaining dims.
+    assert(remainingDims.size() == numUnneededDims &&
+           "unexpected number of remaining dims");
+    for (int64_t i = 0; i < numUnneededDims; ++i) {
+      // All unneeded dims must be unit dimensions. Otherwise, the two transfer
+      // ops would be accessing different chunks.
+      assert(broadcastedShape[remainingDims[i]] == 1 && "expected unit dim");
+      permutation[i] = remainingDims[i];
+    }
+
+    // Build vector.transpose op.
+    //
+    //            unneeded dim (%d)    broadcast dims
+    //                       \          /   \
+    // %tp = vector.transpose %bc, [3, 5, 4, 0, 6, 1, 7, 2]
+    //     : vector<100x200x1x1x5x6x7x8xf32> to vector<1x6x5x100x7x200x8x1xf32>
+    Value transposed = rewriter.create<vector::TransposeOp>(
+        defWrite.getLoc(), broadcasted, permutation);
+
+    // 3. Remove unneeded dims.
+    //
+    // %1 = vector.extract %tp[0]
+    //     : vector<6x5x100x7x200x8x1xf32> from vector<1x6x5x100x7x200x8x1xf32>
+    SmallVector<int64_t> extractPositions(numUnneededDims, 0);
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(readOp, transposed,
+                                                   extractPositions);
+
     return success();
   }
 };
@@ -4094,7 +4269,7 @@ struct TransferReadAfterWriteToBroadcast
 
 void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add<TransferReadAfterWriteToBroadcast>(context);
+  results.add<TransferReadAfterWrite>(context);
 }
 
 //===----------------------------------------------------------------------===//
