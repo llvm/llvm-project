@@ -12,9 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hwasan_report.h"
-
 #include <dlfcn.h>
-
 #include "hwasan.h"
 #include "hwasan_allocator.h"
 #include "hwasan_globals.h"
@@ -221,9 +219,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       for (LocalInfo &local : frame.locals) {
         if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
           continue;
-        if (!(local.name && internal_strlen(local.name)) &&
-            !(local.function_name && internal_strlen(local.name)) &&
-            !(local.decl_file && internal_strlen(local.decl_file)))
+        if (!(local.name && internal_strlen(local.name)))
           continue;
         tag_t obj_tag = base_tag ^ local.tag_offset;
         if (obj_tag != addr_tag)
