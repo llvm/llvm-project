@@ -57,6 +57,14 @@ cl::opt<std::string> HTMLReportPath{
     cl::cat(IncludeCleaner),
 };
 
+cl::opt<std::string> OnlyHeaders{
+    "only-headers",
+    cl::desc("A comma-separated list of regexes to match against suffix of a "
+             "header. Only headers that match will be analyzed."),
+    cl::init(""),
+    cl::cat(IncludeCleaner),
+};
+
 cl::opt<std::string> IgnoreHeaders{
     "ignore-headers",
     cl::desc("A comma-separated list of regexes to match against suffix of a "
@@ -221,11 +229,12 @@ private:
   llvm::StringMap<std::string> EditedFiles;
 };
 
-std::function<bool(llvm::StringRef)> headerFilter() {
+// Compiles a regex list into a function that return true if any match a header.
+// Prints and returns nullptr if any regexes are invalid.
+std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag) {
   auto FilterRegs = std::make_shared<std::vector<llvm::Regex>>();
-
   llvm::SmallVector<llvm::StringRef> Headers;
-  llvm::StringRef(IgnoreHeaders).split(Headers, ',', -1, /*KeepEmpty=*/false);
+  RegexFlag.split(Headers, ',', -1, /*KeepEmpty=*/false);
   for (auto HeaderPattern : Headers) {
     std::string AnchoredPattern = "(" + HeaderPattern.str() + ")$";
     llvm::Regex CompiledRegex(AnchoredPattern);
@@ -242,6 +251,21 @@ std::function<bool(llvm::StringRef)> headerFilter() {
       if (F.match(Path))
         return true;
     }
+    return false;
+  };
+}
+
+std::function<bool(llvm::StringRef)> headerFilter() {
+  auto OnlyMatches = matchesAny(OnlyHeaders);
+  auto IgnoreMatches = matchesAny(IgnoreHeaders);
+  if (!OnlyMatches || !IgnoreMatches)
+    return nullptr;
+
+  return [OnlyMatches, IgnoreMatches](llvm::StringRef Header) {
+    if (OnlyHeaders.getNumOccurrences() && !OnlyMatches(Header))
+      return true;
+    if (IgnoreHeaders.getNumOccurrences() && IgnoreMatches(Header))
+      return true;
     return false;
   };
 }
