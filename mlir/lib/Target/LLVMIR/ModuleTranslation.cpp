@@ -458,10 +458,12 @@ static llvm::Constant *convertDenseResourceElementsAttr(
     llvm::Type *llvmType, const ModuleTranslation &moduleTranslation) {
   assert(denseResourceAttr && "expected non-null attribute");
 
-  // The set of types allowed by dense_resource elements are supported by LLVM.
   llvm::Type *innermostLLVMType = getInnermostElementType(llvmType);
-  assert(
-      llvm::ConstantDataSequential::isElementTypeCompatible(innermostLLVMType));
+  if (!llvm::ConstantDataSequential::isElementTypeCompatible(
+          innermostLLVMType)) {
+    emitError(loc, "no known conversion for innermost element type");
+    return nullptr;
+  }
 
   ShapedType type = denseResourceAttr.getType();
   assert(type.getNumElements() > 0 && "Expected non-empty elements attribute");

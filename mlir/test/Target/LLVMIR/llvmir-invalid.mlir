@@ -350,3 +350,18 @@ module @does_not_exist {
     }
   }
 #-}
+
+// -----
+
+module @no_known_conversion_innermost_eltype {
+  // expected-error @below{{no known conversion for innermost element type}}
+  llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xi4>) : !llvm.array<4 x i4>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      test1: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
