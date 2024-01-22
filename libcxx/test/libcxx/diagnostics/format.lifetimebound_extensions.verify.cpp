@@ -15,11 +15,13 @@
 int j;
 
 auto test_format() {
-    int i = 0;
-    return std::make_format_args(j, i); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
+  int i = 0;
+  return std::make_format_args(
+      j, i); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
 }
 
 auto test_wformat() {
-    int i = 0;
-    return std::make_wformat_args(i, j); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
+  int i = 0;
+  return std::make_wformat_args(
+      i, j); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
 }
