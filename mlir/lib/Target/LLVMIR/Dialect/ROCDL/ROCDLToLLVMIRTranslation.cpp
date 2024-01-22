@@ -81,7 +81,8 @@ public:
 
   /// Attaches module-level metadata for functions marked as kernels.
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
     if (attribute.getName() == ROCDL::ROCDLDialect::getKernelFuncAttrName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
@@ -92,15 +93,12 @@ public:
       // 1. Insert AMDGPU_KERNEL calling convention.
       // 2. Insert amdgpu-flat-work-group-size(1, 256) attribute unless the user
       // has overriden this value - 256 is the default in clang
-      // 3. Insert amdgpu-implicitarg-num-bytes=56 (which must be set on OpenCL
-      // and HIP kernels per Clang)
       llvm::Function *llvmFunc =
           moduleTranslation.lookupFunction(func.getName());
       llvmFunc->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
       if (!llvmFunc->hasFnAttribute("amdgpu-flat-work-group-size")) {
         llvmFunc->addFnAttr("amdgpu-flat-work-group-size", "1,256");
       }
-      llvmFunc->addFnAttr("amdgpu-implicitarg-num-bytes", "56");
     }
     // Override flat-work-group-size
     // TODO: update clients to rocdl.flat_work_group_size instead,

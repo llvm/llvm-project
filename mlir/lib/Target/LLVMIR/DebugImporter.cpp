@@ -50,10 +50,11 @@ DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
 DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
-  return DICompileUnitAttr::get(context, node->getSourceLanguage(),
-                                translate(node->getFile()),
-                                getStringAttrOrNull(node->getRawProducer()),
-                                node->isOptimized(), emissionKind.value());
+  return DICompileUnitAttr::get(
+      context, DistinctAttr::create(UnitAttr::get(context)),
+      node->getSourceLanguage(), translate(node->getFile()),
+      getStringAttrOrNull(node->getRawProducer()), node->isOptimized(),
+      emissionKind.value());
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
@@ -118,12 +119,19 @@ DebugImporter::translateImpl(llvm::DILexicalBlockFile *node) {
 
 DIGlobalVariableAttr
 DebugImporter::translateImpl(llvm::DIGlobalVariable *node) {
+  // Names of DIGlobalVariables can be empty. MLIR models them as null, instead
+  // of empty strings, so this special handling is necessary.
+  auto convertToStringAttr = [&](StringRef name) -> StringAttr {
+    if (name.empty())
+      return {};
+    return StringAttr::get(context, node->getName());
+  };
   return DIGlobalVariableAttr::get(
       context, translate(node->getScope()),
-      StringAttr::get(context, node->getName()),
-      StringAttr::get(context, node->getLinkageName()),
-      translate(node->getFile()), node->getLine(), translate(node->getType()),
-      node->isLocalToUnit(), node->isDefinition(), node->getAlignInBits());
+      convertToStringAttr(node->getName()),
+      convertToStringAttr(node->getLinkageName()), translate(node->getFile()),
+      node->getLine(), translate(node->getType()), node->isLocalToUnit(),
+      node->isDefinition(), node->getAlignInBits());
 }
 
 DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
@@ -155,6 +163,10 @@ DINamespaceAttr DebugImporter::translateImpl(llvm::DINamespace *node) {
 }
 
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
+  // Only definitions require a distinct identifier.
+  mlir::DistinctAttr id;
+  if (node->isDistinct())
+    id = DistinctAttr::create(UnitAttr::get(context));
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is a cyclic dependency.
@@ -164,7 +176,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
-  return DISubprogramAttr::get(context, translate(node->getUnit()), scope,
+  return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),

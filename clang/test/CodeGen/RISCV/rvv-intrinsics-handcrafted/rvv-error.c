@@ -11,7 +11,7 @@
 // CHECK-RV64V-NEXT:    ret i32 [[CONV]]
 //
 
-// CHECK-RV64-ERR: error: builtin requires at least one of the following extensions to be enabled: 'Zve32x'
+// CHECK-RV64-ERR: error: builtin requires at least one of the following extensions: 'Zve32x'
 
 int test() {
   return __builtin_rvv_vsetvli(1, 0, 0);

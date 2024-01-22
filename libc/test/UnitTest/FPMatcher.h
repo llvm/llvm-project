@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
 #define LLVM_LIBC_UTILS_UNITTEST_FPMATCHER_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
@@ -61,13 +62,16 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
 
 template <typename T> struct FPTest : public Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
-  static constexpr T zero = FPBits::zero();
-  static constexpr T neg_zero = FPBits::neg_zero();
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
+  static constexpr StorageType STORAGE_MAX =
+      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
+  static constexpr T zero = FPBits::zero(Sign::POS);
+  static constexpr T neg_zero = FPBits::zero(Sign::NEG);
   static constexpr T aNaN = FPBits::build_quiet_nan(1);
   static constexpr T sNaN = FPBits::build_nan(1);
-  static constexpr T inf = FPBits::inf();
-  static constexpr T neg_inf = FPBits::neg_inf();
+  static constexpr T inf = FPBits::inf(Sign::POS);
+  static constexpr T neg_inf = FPBits::inf(Sign::NEG);
   static constexpr T min_normal = FPBits::min_normal();
   static constexpr T max_normal = FPBits::max_normal();
   static constexpr T min_denormal = FPBits::min_denormal();
@@ -87,13 +91,16 @@ template <typename T> struct FPTest : public Test {
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
-  using UIntType = typename FPBits::UIntType;                                  \
-  const T zero = FPBits::zero();                                               \
-  const T neg_zero = FPBits::neg_zero();                                       \
+  using StorageType = typename FPBits::StorageType;                            \
+  using Sign = LIBC_NAMESPACE::fputil::Sign;                                   \
+  static constexpr StorageType STORAGE_MAX =                                   \
+      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
+  const T zero = FPBits::zero(Sign::POS);                                      \
+  const T neg_zero = FPBits::zero(Sign::NEG);                                  \
   const T aNaN = FPBits::build_quiet_nan(1);                                   \
   const T sNaN = FPBits::build_nan(1);                                         \
-  const T inf = FPBits::inf();                                                 \
-  const T neg_inf = FPBits::neg_inf();                                         \
+  const T inf = FPBits::inf(Sign::POS);                                        \
+  const T neg_inf = FPBits::inf(Sign::NEG);                                    \
   const T min_normal = FPBits::min_normal();                                   \
   const T max_normal = FPBits::max_normal();                                   \
   const T min_denormal = FPBits::min_denormal();                               \

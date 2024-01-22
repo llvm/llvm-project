@@ -446,7 +446,7 @@ extern "C" int64_t mlirAsyncRuntimGetNumWorkerThreads() {
 
 extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
   static thread_local std::thread::id thisId = std::this_thread::get_id();
-  std::cout << "Current thread id: " << thisId << std::endl;
+  std::cout << "Current thread id: " << thisId << '\n';
 }
 
 //===----------------------------------------------------------------------===//

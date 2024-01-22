@@ -434,12 +434,10 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   Target *target = exe_scope->CalculateTarget().get();
   if (target) {
     const auto &images(target->GetImages());
-    ConstString cs_key(key);
-    llvm::DenseSet<SymbolFile *> searched_sym_files;
-    TypeList matches;
-    images.FindTypes(nullptr, cs_key, false, UINT32_MAX, searched_sym_files,
-                     matches);
-    for (const auto &match : matches.Types()) {
+    TypeQuery query(key);
+    TypeResults type_results;
+    images.FindTypes(nullptr, query, type_results);
+    for (const auto &match : type_results.GetTypeMap().Types()) {
       if (match) {
         CompilerType compiler_type(match->GetFullCompilerType());
         compiler_type = AdjustForInclusion(compiler_type);

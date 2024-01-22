@@ -291,6 +291,7 @@ public:
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }
+
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const {
     return isLegalMaskedGatherScatter(DataType);
   }
@@ -419,6 +420,8 @@ public:
 
     return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
   }
+
+  std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 
 } // end namespace llvm

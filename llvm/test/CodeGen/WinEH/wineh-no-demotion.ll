@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -winehprepare -disable-demotion -disable-cleanups < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s
 ; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)

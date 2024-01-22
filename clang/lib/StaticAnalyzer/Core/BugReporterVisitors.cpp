@@ -3372,7 +3372,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
   FullSourceLoc Loc = BR.getLocation().asLocation();
   while (Loc.isMacroID()) {
     Loc = Loc.getSpellingLoc();
-    if (SM.getFilename(Loc).endswith("sys/queue.h")) {
+    if (SM.getFilename(Loc).ends_with("sys/queue.h")) {
       BR.markInvalid(getTag(), nullptr);
       return;
     }

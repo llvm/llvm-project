@@ -57,7 +57,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
       if (!GV)
         continue;
 
-      if (GV->getName().startswith("llvm.bpf.btf.type.id")) {
+      if (GV->getName().starts_with("llvm.bpf.btf.type.id")) {
         if (!Call->getMetadata(LLVMContext::MD_preserve_access_index))
           report_fatal_error(
               "Missing metadata for llvm.bpf.btf.type.id intrinsic");

@@ -88,6 +88,10 @@ cmake \
 ninja
 ```
 
+On Darwin, to make flang able to link binaries with the default sysroot without
+having to specify additional flags, use the `DEFAULT_SYSROOT` CMake flag, e.g.
+`-DDEFAULT_SYSROOT="$(xcrun --show-sdk-path)"`.
+
 By default flang tests that do not specify an explicit `--target` flag use
 LLVM's default target triple. For these tests, if there is a need to test on a
 different triple by overriding the default, the following needs to be added to

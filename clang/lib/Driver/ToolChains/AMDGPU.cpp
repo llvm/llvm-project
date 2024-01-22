@@ -49,7 +49,7 @@ RocmInstallationDetector::findSPACKPackage(const Candidate &Cand,
                                      FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
     llvm::StringRef FileName = llvm::sys::path::filename(File->path());
-    if (FileName.startswith(Prefix)) {
+    if (FileName.starts_with(Prefix)) {
       SubDirs.push_back(FileName);
       if (SubDirs.size() > 1)
         break;
@@ -84,13 +84,13 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
        !EC && LI != LE; LI = LI.increment(EC)) {
     StringRef FilePath = LI->path();
     StringRef FileName = llvm::sys::path::filename(FilePath);
-    if (!FileName.endswith(Suffix))
+    if (!FileName.ends_with(Suffix))
       continue;
 
     StringRef BaseName;
-    if (FileName.endswith(Suffix2))
+    if (FileName.ends_with(Suffix2))
       BaseName = FileName.drop_back(Suffix2.size());
-    else if (FileName.endswith(Suffix))
+    else if (FileName.ends_with(Suffix))
       BaseName = FileName.drop_back(Suffix.size());
 
     const StringRef ABIVersionPrefix = "oclc_abi_version_";
@@ -124,7 +124,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       WavefrontSize64.On = FilePath;
     } else if (BaseName == "oclc_wavefrontsize64_off") {
       WavefrontSize64.Off = FilePath;
-    } else if (BaseName.startswith(ABIVersionPrefix)) {
+    } else if (BaseName.starts_with(ABIVersionPrefix)) {
       unsigned ABIVersionNumber;
       if (BaseName.drop_front(ABIVersionPrefix.size())
               .getAsInteger(/*Redex=*/0, ABIVersionNumber))
@@ -134,7 +134,7 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       // Process all bitcode filenames that look like
       // ocl_isa_version_XXX.amdgcn.bc
       const StringRef DeviceLibPrefix = "oclc_isa_version_";
-      if (!BaseName.startswith(DeviceLibPrefix))
+      if (!BaseName.starts_with(DeviceLibPrefix))
         continue;
 
       StringRef IsaVersionNumber =
@@ -230,7 +230,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     // <rocm_root>/llvm-amdgpu-<rocm_release_string>-<hash>/bin directory.
     // We only consider the parent directory of llvm-amdgpu package as ROCm
     // installation candidate for SPACK.
-    if (ParentName.startswith("llvm-amdgpu-")) {
+    if (ParentName.starts_with("llvm-amdgpu-")) {
       auto SPACKPostfix =
           ParentName.drop_front(strlen("llvm-amdgpu-")).split('-');
       auto SPACKReleaseStr = SPACKPostfix.first;
@@ -243,7 +243,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
-    if (ParentName == "llvm" || ParentName.startswith("aomp"))
+    if (ParentName == "llvm" || ParentName.starts_with("aomp"))
       ParentDir = llvm::sys::path::parent_path(ParentDir);
 
     return Candidate(ParentDir.str(), /*StrictChecking=*/true);
@@ -292,7 +292,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
            FileEnd;
        File != FileEnd && !EC; File.increment(EC)) {
     llvm::StringRef FileName = llvm::sys::path::filename(File->path());
-    if (!FileName.startswith("rocm-"))
+    if (!FileName.starts_with("rocm-"))
       continue;
     if (LatestROCm.empty()) {
       LatestROCm = FileName.str();

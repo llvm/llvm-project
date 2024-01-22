@@ -146,11 +146,11 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
     if (Thunk) {
       *Thunk = assignFunc;
-      return 1;
+      return 2;
     }
 
     assignFunc();
-    return 1;
+    return 2;
   }
 
 private:
@@ -266,7 +266,7 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
     MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
 
-    return 1;
+    return 2;
   }
 
   /// How the physical register gets marked varies between formal
@@ -431,7 +431,7 @@ void RISCVCallLowering::saveVarArgRegisters(
   MachineFunction &MF = MIRBuilder.getMF();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
-  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs();
+  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget.getTargetABI());
   MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -579,7 +579,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Select the recommended relocation type R_RISCV_CALL_PLT.
   if (!Info.Callee.isReg())
-    Info.Callee.setTargetFlags(RISCVII::MO_PLT);
+    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
 
   MachineInstrBuilder Call =
       MIRBuilder

@@ -129,12 +129,12 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.erase_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.test_print_remark_at_operand %1, "matched op" : !transform.any_op
+  transform.debug.emit_remark_at %1, "matched op" : !transform.any_op
   transform.apply_patterns to %0 {
     transform.apply_patterns.transform.test_patterns
   } : !transform.any_op
   // No marker should be printed.
-  transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+  transform.debug.emit_remark_at %1, "op was deleted" : !transform.any_op
 }
 
 // -----
@@ -164,10 +164,10 @@ module {
     ^bb1(%arg1: !transform.any_op):
       %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
       %1 = transform.structured.match ops{["test.erase_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      transform.test_print_remark_at_operand %1, "matched op" : !transform.any_op
+      transform.debug.emit_remark_at %1, "matched op" : !transform.any_op
       include @foo failures(propagate) (%0) : (!transform.any_op) -> ()
       // No marker should be printed.
-      transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+      transform.debug.emit_remark_at %1, "op was deleted" : !transform.any_op
     }
   }
 }
@@ -179,7 +179,6 @@ module {
 //       CHECK:   return %[[c5]]
 func.func @canonicalization(%t: tensor<5xf32>) -> index {
   %c0 = arith.constant 0 : index
-  // expected-remark @below {{op was replaced}}
   %dim = tensor.dim %t, %c0 : tensor<5xf32>
   return %dim : index
 }
@@ -191,7 +190,6 @@ transform.sequence failures(propagate) {
   transform.apply_patterns to %1 {
     transform.apply_patterns.canonicalization
   } : !transform.any_op
-  transform.test_print_remark_at_operand %0, "op was replaced" : !transform.any_op
 }
 
 // -----

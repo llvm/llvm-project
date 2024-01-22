@@ -13,6 +13,8 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_UTILS_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_UTILS_H_
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Support/LLVM.h"
 
 #include <string>
@@ -28,6 +30,9 @@ class LaunchOp;
 
 /// Returns the default annotation name for GPU binary blobs.
 std::string getDefaultGpuBinaryAnnotation();
+
+/// Returns the matching vector combining kind.
+vector::CombiningKind convertReductionKind(gpu::AllReduceOperation mode);
 } // namespace gpu
 
 /// Get a gpu.func created from outlining the region of a gpu.launch op with the

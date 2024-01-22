@@ -262,6 +262,7 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT32:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
+  case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
@@ -283,22 +284,15 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
-  case AMDGPU::OPERAND_REG_IMM_V2FP16: {
-    if (!isUInt<16>(Imm) && STI.hasFeature(AMDGPU::FeatureVOP3Literal))
-      return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
-    if (OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
-      return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
-    [[fallthrough]];
-  }
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
-    return getLit16IntEncoding(static_cast<uint16_t>(Imm), STI);
+    return AMDGPU::getInlineEncodingV2I16(static_cast<uint32_t>(Imm))
+        .value_or(255);
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
-    uint16_t Lo16 = static_cast<uint16_t>(Imm);
-    uint32_t Encoding = getLit16Encoding(Lo16, STI);
-    return Encoding;
-  }
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
+    return AMDGPU::getInlineEncodingV2F16(static_cast<uint32_t>(Imm))
+        .value_or(255);
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
     return MO.getImm();

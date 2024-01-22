@@ -142,7 +142,7 @@ void XCoreDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   default: break;
   case ISD::Constant: {
-    uint64_t Val = cast<ConstantSDNode>(N)->getZExtValue();
+    uint64_t Val = N->getAsZExtVal();
     if (immMskBitp(N)) {
       // Transformation function: get the size of a mask
       // Look for the first non-zero bit
@@ -250,7 +250,7 @@ bool XCoreDAGToDAGISel::tryBRIND(SDNode *N) {
   SDValue Addr = N->getOperand(1);
   if (Addr->getOpcode() != ISD::INTRINSIC_W_CHAIN)
     return false;
-  unsigned IntNo = cast<ConstantSDNode>(Addr->getOperand(1))->getZExtValue();
+  unsigned IntNo = Addr->getConstantOperandVal(1);
   if (IntNo != Intrinsic::xcore_checkevent)
     return false;
   SDValue nextAddr = Addr->getOperand(2);

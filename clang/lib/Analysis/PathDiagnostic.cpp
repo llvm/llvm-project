@@ -50,12 +50,7 @@
 using namespace clang;
 using namespace ento;
 
-static StringRef StripTrailingDots(StringRef s) {
-  for (StringRef::size_type i = s.size(); i != 0; --i)
-    if (s[i - 1] != '.')
-      return s.substr(0, i);
-  return {};
-}
+static StringRef StripTrailingDots(StringRef s) { return s.rtrim('.'); }
 
 PathDiagnosticPiece::PathDiagnosticPiece(StringRef s,
                                          Kind k, DisplayHint hint)

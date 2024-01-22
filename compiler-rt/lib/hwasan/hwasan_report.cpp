@@ -205,6 +205,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
                                   tag_t addr_tag, uptr untagged_addr) {
   uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
   bool found_local = false;
+  InternalScopedString location;
   for (uptr i = 0; i < frames; i++) {
     const uptr *record_addr = &(*sa)[i];
     uptr record = *record_addr;
@@ -220,24 +221,56 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
       for (LocalInfo &local : frame.locals) {
         if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
           continue;
+        if (!(local.name && internal_strlen(local.name)) &&
+            !(local.function_name && internal_strlen(local.function_name)) &&
+            !(local.decl_file && internal_strlen(local.decl_file)))
+          continue;
         tag_t obj_tag = base_tag ^ local.tag_offset;
         if (obj_tag != addr_tag)
           continue;
-        // Calculate the offset from the object address to the faulting
-        // address. Because we only store bits 4-19 of FP (bits 0-3 are
-        // guaranteed to be zero), the calculation is performed mod 2^20 and may
-        // harmlessly underflow if the address mod 2^20 is below the object
-        // address.
-        uptr obj_offset =
-            (untagged_addr - fp - local.frame_offset) & (kRecordFPModulus - 1);
-        if (obj_offset >= local.size)
-          continue;
+        // Guess top bits of local variable from the faulting address, because
+        // we only store bits 4-19 of FP (bits 0-3 are guaranteed to be zero).
+        uptr local_beg = (fp + local.frame_offset) |
+                         (untagged_addr & ~(uptr(kRecordFPModulus) - 1));
+        uptr local_end = local_beg + local.size;
+
         if (!found_local) {
-          Printf("Potentially referenced stack objects:\n");
+          Printf("\nPotentially referenced stack objects:\n");
           found_local = true;
         }
-        Printf("  %s in %s %s:%d\n", local.name, local.function_name,
-               local.decl_file, local.decl_line);
+
+        uptr offset;
+        const char *whence;
+        const char *cause;
+        if (local_beg <= untagged_addr && untagged_addr < local_end) {
+          offset = untagged_addr - local_beg;
+          whence = "inside";
+          cause = "use-after-scope";
+        } else if (untagged_addr >= local_end) {
+          offset = untagged_addr - local_end;
+          whence = "after";
+          cause = "stack-buffer-overflow";
+        } else {
+          offset = local_beg - untagged_addr;
+          whence = "before";
+          cause = "stack-buffer-overflow";
+        }
+        Decorator d;
+        Printf("%s", d.Error());
+        Printf("Cause: %s\n", cause);
+        Printf("%s", d.Default());
+        Printf("%s", d.Location());
+        StackTracePrinter::GetOrInit()->RenderSourceLocation(
+            &location, local.decl_file, local.decl_line, /* column= */ 0,
+            common_flags()->symbolize_vs_style,
+            common_flags()->strip_path_prefix);
+        Printf(
+            "%p is located %zd bytes %s a %zd-byte local variable %s [%p,%p) "
+            "in %s %s\n",
+            untagged_addr, offset, whence, local_end - local_beg, local.name,
+            local_beg, local_end, local.function_name, location.data());
+        location.clear();
+        Printf("%s\n", d.Default());
       }
       frame.Clear();
     }
@@ -259,12 +292,14 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
     uptr pc = record & pc_mask;
     frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
                        reinterpret_cast<uptr>(record_addr), record);
-    if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
+    SymbolizedStackHolder symbolized_stack(
+        Symbolizer::GetOrInit()->SymbolizePC(pc));
+    const SymbolizedStack *frame = symbolized_stack.get();
+    if (frame) {
       StackTracePrinter::GetOrInit()->RenderFrame(
           &frame_desc, " %F %L", 0, frame->info.address, &frame->info,
           common_flags()->symbolize_vs_style,
           common_flags()->strip_path_prefix);
-      frame->ClearAll();
     }
     Printf("%s\n", frame_desc.data());
     frame_desc.clear();
@@ -363,7 +398,7 @@ static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
   InternalScopedString s;
   addr = MemToShadow(addr);
   s.AppendF(
-      "Memory tags around the buggy address (one tag corresponds to %zd "
+      "\nMemory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n",
       kShadowAlignment);
   PrintTagInfoAroundAddr(addr, kShadowLines, s,
@@ -745,8 +780,6 @@ void BaseReport::PrintAddressDescription() const {
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
   for (const auto &sa : allocations.stack) {
-    // TODO(fmayer): figure out how to distinguish use-after-return and
-    // stack-buffer-overflow.
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());
@@ -803,8 +836,10 @@ void BaseReport::PrintAddressDescription() const {
   }
 
   // Print the remaining threads, as an extra information, 1 line per thread.
-  if (flags()->print_live_threads_info)
+  if (flags()->print_live_threads_info) {
+    Printf("\n");
     hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
+  }
 
   if (!num_descriptions_printed)
     // We exhausted our possibilities. Bail out.
@@ -1020,7 +1055,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
 // hwasan_tag_mismatch_{aarch64,riscv64}.S).
 void ReportRegisters(const uptr *frame, uptr pc) {
-  Printf("Registers where the failure occurred (pc %p):\n", pc);
+  Printf("\nRegisters where the failure occurred (pc %p):\n", pc);
 
   // We explicitly print a single line (4 registers/line) each iteration to
   // reduce the amount of logcat error messages printed. Each Printf() will

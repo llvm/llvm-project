@@ -200,12 +200,6 @@ private:
   /// create.
   unsigned SDNodeOrder;
 
-  /// Determine the rank by weight of CC in [First,Last]. If CC has more weight
-  /// than each cluster in the range, its rank is 0.
-  unsigned caseClusterRank(const SwitchCG::CaseCluster &CC,
-                           SwitchCG::CaseClusterIt First,
-                           SwitchCG::CaseClusterIt Last);
-
   /// Emit comparison and split W into two subtrees.
   void splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
                      const SwitchCG::SwitchWorkListItem &W, Value *Cond,
@@ -367,6 +361,9 @@ public:
   /// Create a record for a kill location debug intrinsic.
   void handleKillDebugValue(DILocalVariable *Var, DIExpression *Expr,
                             DebugLoc DbgLoc, unsigned Order);
+
+  void handleDebugDeclare(Value *Address, DILocalVariable *Variable,
+                          DIExpression *Expression, DebugLoc DL);
 
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();

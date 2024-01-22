@@ -1219,7 +1219,7 @@ SDValue CSKYTargetLowering::LowerFRAMEADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   Register FrameReg = RI.getFrameRegister(MF);
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);
   while (Depth--)
@@ -1240,7 +1240,7 @@ SDValue CSKYTargetLowering::LowerRETURNADDR(SDValue Op,
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   if (Depth) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(4, dl, MVT::i32);

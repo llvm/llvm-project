@@ -1,6 +1,6 @@
 // clang-format off
-// RUN: %clang-generic -fPIC -shared %S/../Inputs/declare_indirect_func.c -o %T/liba.so  -fopenmp-version=51
-// RUN: %libomptarget-compile-generic -rpath %T -L %T -l a -o %t  -fopenmp-version=51
+// RUN: %clang-generic -fPIC -shared %S/../Inputs/declare_indirect_func.c -o %T/libslfm.so  -fopenmp-version=51
+// RUN: %libomptarget-compile-generic -rpath %T -L %T -l slfm -o %t  -fopenmp-version=51
 // RUN: env LIBOMPTARGET_INFO=32 %t 2>&1 | %fcheck-generic
 // clang-format on
 

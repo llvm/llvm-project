@@ -42,13 +42,13 @@ LIBC_INLINE float exp10f(float x) {
       if (xbits.is_nan())
         return x;
       if (fputil::fenv_is_round_up())
-        return static_cast<float>(FPBits(FPBits::MIN_SUBNORMAL));
+        return FPBits::min_denormal();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
     }
     // x >= log10(2^128) or nan
-    if (!xbits.get_sign() && (x_u >= 0x421a'209bU)) {
+    if (xbits.is_pos() && (x_u >= 0x421a'209bU)) {
       // x is finite
       if (x_u < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();

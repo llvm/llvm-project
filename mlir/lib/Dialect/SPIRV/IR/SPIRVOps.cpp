@@ -374,8 +374,7 @@ LogicalResult spirv::CompositeConstructOp::verify() {
 
   auto coopElementType =
       llvm::TypeSwitch<Type, Type>(getType())
-          .Case<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType,
-                spirv::JointMatrixINTELType>(
+          .Case<spirv::CooperativeMatrixType, spirv::JointMatrixINTELType>(
               [](auto coopType) { return coopType.getElementType(); })
           .Default([](Type) { return nullptr; });
 
@@ -972,8 +971,73 @@ void spirv::FuncOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::FuncOp::verifyType() {
-  if (getFunctionType().getNumResults() > 1)
+  FunctionType fnType = getFunctionType();
+  if (fnType.getNumResults() > 1)
     return emitOpError("cannot have more than one result");
+
+  auto hasDecorationAttr = [&](spirv::Decoration decoration,
+                               unsigned argIndex) {
+    auto func = llvm::cast<FunctionOpInterface>(getOperation());
+    for (auto argAttr : cast<FunctionOpInterface>(func).getArgAttrs(argIndex)) {
+      if (argAttr.getName() != spirv::DecorationAttr::name)
+        continue;
+      if (auto decAttr = dyn_cast<spirv::DecorationAttr>(argAttr.getValue()))
+        return decAttr.getValue() == decoration;
+    }
+    return false;
+  };
+
+  for (unsigned i = 0, e = this->getNumArguments(); i != e; ++i) {
+    Type param = fnType.getInputs()[i];
+    auto inputPtrType = dyn_cast<spirv::PointerType>(param);
+    if (!inputPtrType)
+      continue;
+
+    auto pointeePtrType =
+        dyn_cast<spirv::PointerType>(inputPtrType.getPointeeType());
+    if (pointeePtrType) {
+      // SPIR-V spec, from SPV_KHR_physical_storage_buffer:
+      // > If an OpFunctionParameter is a pointer (or contains a pointer)
+      // > and the type it points to is a pointer in the PhysicalStorageBuffer
+      // > storage class, the function parameter must be decorated with exactly
+      // > one of AliasedPointer or RestrictPointer.
+      if (pointeePtrType.getStorageClass() !=
+          spirv::StorageClass::PhysicalStorageBuffer)
+        continue;
+
+      bool hasAliasedPtr =
+          hasDecorationAttr(spirv::Decoration::AliasedPointer, i);
+      bool hasRestrictPtr =
+          hasDecorationAttr(spirv::Decoration::RestrictPointer, i);
+      if (!hasAliasedPtr && !hasRestrictPtr)
+        return emitOpError()
+               << "with a pointer points to a physical buffer pointer must "
+                  "be decorated either 'AliasedPointer' or 'RestrictPointer'";
+      continue;
+    }
+    // SPIR-V spec, from SPV_KHR_physical_storage_buffer:
+    // > If an OpFunctionParameter is a pointer (or contains a pointer) in
+    // > the PhysicalStorageBuffer storage class, the function parameter must
+    // > be decorated with exactly one of Aliased or Restrict.
+    if (auto pointeeArrayType =
+            dyn_cast<spirv::ArrayType>(inputPtrType.getPointeeType())) {
+      pointeePtrType =
+          dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
+    } else {
+      pointeePtrType = inputPtrType;
+    }
+
+    if (!pointeePtrType || pointeePtrType.getStorageClass() !=
+                               spirv::StorageClass::PhysicalStorageBuffer)
+      continue;
+
+    bool hasAliased = hasDecorationAttr(spirv::Decoration::Aliased, i);
+    bool hasRestrict = hasDecorationAttr(spirv::Decoration::Restrict, i);
+    if (!hasAliased && !hasRestrict)
+      return emitOpError() << "with physical buffer pointer must be decorated "
+                              "either 'Aliased' or 'Restrict'";
+  }
+
   return success();
 }
 
@@ -1162,10 +1226,11 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     // TODO: Currently only variable initialization with specialization
     // constants and other variables is supported. They could be normal
     // constants in the module scope as well.
-    if (!initOp ||
-        !isa<spirv::GlobalVariableOp, spirv::SpecConstantOp>(initOp)) {
+    if (!initOp || !isa<spirv::GlobalVariableOp, spirv::SpecConstantOp,
+                        spirv::SpecConstantCompositeOp>(initOp)) {
       return emitOpError("initializer must be result of a "
-                         "spirv.SpecConstant or spirv.GlobalVariable op");
+                         "spirv.SpecConstant or spirv.GlobalVariable or "
+                         "spirv.SpecConstantCompositeOp op");
     }
   }
 
@@ -1611,8 +1676,7 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 LogicalResult spirv::MatrixTimesScalarOp::verify() {
   Type elementType =
       llvm::TypeSwitch<Type, Type>(getMatrix().getType())
-          .Case<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType,
-                spirv::MatrixType>(
+          .Case<spirv::CooperativeMatrixType, spirv::MatrixType>(
               [](auto matrixType) { return matrixType.getElementType(); })
           .Default([](Type) { return nullptr; });
 
@@ -1751,7 +1815,7 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
     return emitError("result type must be a composite type, but provided ")
            << getType();
 
-  if (llvm::isa<spirv::CooperativeMatrixNVType>(cType))
+  if (llvm::isa<spirv::CooperativeMatrixType>(cType))
     return emitError("unsupported composite type  ") << cType;
   if (llvm::isa<spirv::JointMatrixINTELType>(cType))
     return emitError("unsupported composite type  ") << cType;
@@ -1966,55 +2030,6 @@ LogicalResult spirv::ShiftRightArithmeticOp::verify() {
 
 LogicalResult spirv::ShiftRightLogicalOp::verify() {
   return verifyShiftOp(*this);
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.BtiwiseAndOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult
-spirv::BitwiseAndOp::fold(spirv::BitwiseAndOp::FoldAdaptor adaptor) {
-  APInt rhsMask;
-  if (!matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask)))
-    return {};
-
-  // x & 0 -> 0
-  if (rhsMask.isZero())
-    return getOperand2();
-
-  // x & <all ones> -> x
-  if (rhsMask.isAllOnes())
-    return getOperand1();
-
-  // (UConvert x : iN to iK) & <mask with N low bits set> -> UConvert x
-  if (auto zext = getOperand1().getDefiningOp<spirv::UConvertOp>()) {
-    int valueBits =
-        getElementTypeOrSelf(zext.getOperand()).getIntOrFloatBitWidth();
-    if (rhsMask.zextOrTrunc(valueBits).isAllOnes())
-      return getOperand1();
-  }
-
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.BtiwiseOrOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult spirv::BitwiseOrOp::fold(spirv::BitwiseOrOp::FoldAdaptor adaptor) {
-  APInt rhsMask;
-  if (!matchPattern(adaptor.getOperand2(), m_ConstantInt(&rhsMask)))
-    return {};
-
-  // x | 0 -> x
-  if (rhsMask.isZero())
-    return getOperand1();
-
-  // x | <all ones> -> <all ones>
-  if (rhsMask.isAllOnes())
-    return getOperand2();
-
-  return {};
 }
 
 //===----------------------------------------------------------------------===//

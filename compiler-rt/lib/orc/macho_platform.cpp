@@ -352,36 +352,13 @@ private:
   Error requestPushSymbols(JITDylibState &JDS,
                            span<std::pair<std::string_view, bool>> Symbols);
 
-  /// Visits the symbol table for the JITDylib associated with DSOHandle.
-  /// Visitor should be callable as
-  ///
-  ///   void (size_t,
-  ///         std::optional<std::pair<ExecutorAddr, MachOExecutorSymbolFlags>>)
-  ///
-  /// The visitor function will be called for each element of the Symbols, but
-  /// in an arbitrary order. The first argument of the callback will indicate
-  /// the index of the result. The second argument will be std::nullopt (if the
-  /// symbol at the given index was not present in the symbol table), or a
-  /// pair containing the symbol's address and flags.
-  ///
-  /// This function will remove all elements of Symbols that are found, leaving
-  /// only the symbols that were not. This allows it to dovetail with
-  /// requestPushSymbols, enabling the following idiom:
-  ///
-  /// ...
-  /// visitSymbolAddrs(DSO, Symbols);
-  /// if (!Symbols.empty()) {
-  ///   requestPushSymbols(DSO, Symbols);
-  ///   visitSymbolAddrs(DSO, Symbols);
-  ///   for (auto &Sym : Symbols) {
-  ///     -- handle symbols that were not found --
-  ///   }
-  /// }
-  ///
-  template <typename VisitorFn>
-  void visitSymbolAddrs(JITDylibState &JDS,
-                        std::vector<std::pair<std::string_view, bool>> &Symbols,
-                        VisitorFn &&Visit);
+  /// Attempts to look up the given symbols locally, requesting a push from the
+  /// remote if they're not found. Results are written to the Result span, which
+  /// must have the same size as the Symbols span.
+  Error
+  lookupSymbols(JITDylibState &JDS, std::unique_lock<std::mutex> &JDStatesLock,
+                span<std::pair<ExecutorAddr, MachOExecutorSymbolFlags>> Result,
+                span<std::pair<std::string_view, bool>> Symbols);
 
   bool lookupUnwindSections(void *Addr, unw_dynamic_unwind_sections &Info);
 
@@ -830,7 +807,7 @@ int MachOPlatformRuntimeState::dlclose(void *DSOHandle) {
 }
 
 void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, const char *Symbol) {
-  std::lock_guard<std::mutex> Lock(JDStatesMutex);
+  std::unique_lock<std::mutex> Lock(JDStatesMutex);
   auto *JDS = getJITDylibStateByHeader(DSOHandle);
   if (!JDS) {
     std::ostringstream ErrStream;
@@ -839,41 +816,20 @@ void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, const char *Symbol) {
     return nullptr;
   }
 
-  std::string MangledName("_");
-  MangledName += Symbol;
-  std::vector<std::pair<std::string_view, bool>> Symbols;
-  Symbols.push_back({MangledName, false});
+  std::string MangledName = std::string("_") + Symbol;
+  std::pair<std::string_view, bool> Lookup(MangledName, false);
+  std::pair<ExecutorAddr, MachOExecutorSymbolFlags> Result;
 
-  ExecutorAddr Result;
-  using ElemResult =
-      std::optional<std::pair<ExecutorAddr, MachOExecutorSymbolFlags>>;
-
-  // Try to resolve the symbol in the local symbol tables.
-  visitSymbolAddrs(*JDS, Symbols, [&](size_t Idx, ElemResult E) {
-    if (E)
-      Result = E->first;
-  });
-
-  // Return early if we found it.
-  if (Symbols.empty())
-    return Result.toPtr<void *>();
-
-  // Otherwise call back to the controller to try to request that the symbol
-  // be materialized.
-  if (auto Err = requestPushSymbols(*JDS, {Symbols.data(), Symbols.size()})) {
+  if (auto Err = lookupSymbols(*JDS, Lock, {&Result, 1}, {&Lookup, 1})) {
     DLFcnError = toString(std::move(Err));
     return nullptr;
   }
 
-  // Try another local resolution.
-  visitSymbolAddrs(*JDS, Symbols, [&](size_t Idx, ElemResult E) {
-    if (E)
-      Result = E->first;
-  });
-
-  // At this point Result has either been set (if we found the symbol) or is
-  // still null (if we didn't). Either way it's the right value.
-  return Result.toPtr<void *>();
+  // Sign callable symbols as functions, to match dyld.
+  if ((Result.second & MachOExecutorSymbolFlags::Callable) ==
+      MachOExecutorSymbolFlags::Callable)
+    return reinterpret_cast<void *>(Result.first.toPtr<void(void)>());
+  return Result.first.toPtr<void *>();
 }
 
 int MachOPlatformRuntimeState::registerAtExit(void (*F)(void *), void *Arg,
@@ -965,22 +921,71 @@ Error MachOPlatformRuntimeState::requestPushSymbols(
   return OpErr;
 }
 
-template <typename VisitorFn>
-void MachOPlatformRuntimeState::visitSymbolAddrs(
-    JITDylibState &JDS, std::vector<std::pair<std::string_view, bool>> &Symbols,
-    VisitorFn &&Visit) {
+Error MachOPlatformRuntimeState::lookupSymbols(
+    JITDylibState &JDS, std::unique_lock<std::mutex> &JDStatesLock,
+    span<std::pair<ExecutorAddr, MachOExecutorSymbolFlags>> Result,
+    span<std::pair<std::string_view, bool>> Symbols) {
+  assert(JDStatesLock.owns_lock() &&
+         "JDStatesLock should be locked at call-site");
+  assert(Result.size() == Symbols.size() &&
+         "Results and Symbols span sizes should match");
 
-  std::vector<std::pair<std::string_view, bool>> RemainingSymbols;
-
+  // Make an initial pass over the local symbol table.
+  std::vector<size_t> MissingSymbolIndexes;
   for (size_t Idx = 0; Idx != Symbols.size(); ++Idx) {
     auto I = JDS.SymbolTable.find(Symbols[Idx].first);
     if (I != JDS.SymbolTable.end())
-      Visit(Idx, I->second);
+      Result[Idx] = I->second;
     else
-      RemainingSymbols.push_back(Symbols[Idx]);
+      MissingSymbolIndexes.push_back(Idx);
   }
 
-  Symbols = std::move(RemainingSymbols);
+  // If everything has been resolved already then bail out early.
+  if (MissingSymbolIndexes.empty())
+    return Error::success();
+
+  // Otherwise call back to the controller to try to request that the symbol
+  // be materialized.
+  std::vector<std::pair<std::string_view, bool>> MissingSymbols;
+  MissingSymbols.reserve(MissingSymbolIndexes.size());
+  ORC_RT_DEBUG({
+    printdbg("requesting push of %i missing symbols...\n",
+             MissingSymbolIndexes.size());
+  });
+  for (auto MissingIdx : MissingSymbolIndexes)
+    MissingSymbols.push_back(Symbols[MissingIdx]);
+
+  JDStatesLock.unlock();
+  if (auto Err = requestPushSymbols(
+          JDS, {MissingSymbols.data(), MissingSymbols.size()}))
+    return Err;
+  JDStatesLock.lock();
+
+  // Try to resolve the previously missing symbols locally.
+  std::vector<size_t> MissingRequiredSymbols;
+  for (auto MissingIdx : MissingSymbolIndexes) {
+    auto I = JDS.SymbolTable.find(Symbols[MissingIdx].first);
+    if (I != JDS.SymbolTable.end())
+      Result[MissingIdx] = I->second;
+    else {
+      if (Symbols[MissingIdx].second)
+        MissingRequiredSymbols.push_back(MissingIdx);
+      else
+        Result[MissingIdx] = {ExecutorAddr(), {}};
+    }
+  }
+
+  // Error out if any missing symbols could not be resolved.
+  if (!MissingRequiredSymbols.empty()) {
+    std::ostringstream ErrStream;
+    ErrStream << "Lookup could not find required symbols: [ ";
+    for (auto MissingIdx : MissingRequiredSymbols)
+      ErrStream << "\"" << Symbols[MissingIdx].first << "\" ";
+    ErrStream << "]";
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  return Error::success();
 }
 
 // eh-frame registration functions.

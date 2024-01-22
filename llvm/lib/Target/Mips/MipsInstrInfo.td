@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 // Mips profiles and nodes
 //===----------------------------------------------------------------------===//
+include "MipsInstrCompiler.td"
 
 def SDT_MipsJmpLink      : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
 def SDT_MipsCMov         : SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
@@ -2079,17 +2080,17 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 let AdditionalPredicates = [NotInMicroMips] in {
   /// Shift Instructions
-  def SLL  : MMRel, shift_rotate_imm<"sll", uimm5, GPR32Opnd, II_SLL, shl,
+  def SLL  : MMRel, shift_rotate_imm<"sll", uimm5, GPR32Opnd, II_SLL, mshl_32,
                                      immZExt5>, SRA_FM<0, 0>, ISA_MIPS1;
-  def SRL  : MMRel, shift_rotate_imm<"srl", uimm5, GPR32Opnd, II_SRL, srl,
+  def SRL  : MMRel, shift_rotate_imm<"srl", uimm5, GPR32Opnd, II_SRL, msrl_32,
                                      immZExt5>, SRA_FM<2, 0>, ISA_MIPS1;
-  def SRA  : MMRel, shift_rotate_imm<"sra", uimm5, GPR32Opnd, II_SRA, sra,
+  def SRA  : MMRel, shift_rotate_imm<"sra", uimm5, GPR32Opnd, II_SRA, msra_32,
                                      immZExt5>, SRA_FM<3, 0>, ISA_MIPS1;
-  def SLLV : MMRel, shift_rotate_reg<"sllv", GPR32Opnd, II_SLLV, shl>,
+  def SLLV : MMRel, shift_rotate_reg<"sllv", GPR32Opnd, II_SLLV, mshl_32>,
              SRLV_FM<4, 0>, ISA_MIPS1;
-  def SRLV : MMRel, shift_rotate_reg<"srlv", GPR32Opnd, II_SRLV, srl>,
+  def SRLV : MMRel, shift_rotate_reg<"srlv", GPR32Opnd, II_SRLV, msrl_32>,
              SRLV_FM<6, 0>, ISA_MIPS1;
-  def SRAV : MMRel, shift_rotate_reg<"srav", GPR32Opnd, II_SRAV, sra>,
+  def SRAV : MMRel, shift_rotate_reg<"srav", GPR32Opnd, II_SRAV, msra_32>,
              SRLV_FM<7, 0>, ISA_MIPS1;
 
   // Rotate Instructions

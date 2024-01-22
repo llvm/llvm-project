@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
@@ -27,12 +28,13 @@
 namespace fir {
 
 LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
-                                     bool forceUnifiedTBAATree)
+                                     bool forceUnifiedTBAATree,
+                                     const mlir::DataLayout &dl)
     : mlir::LLVMTypeConverter(module.getContext()),
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(module.getContext(),
                                       getTargetTriple(module),
-                                      getKindMapping(module))),
+                                      getKindMapping(module), dl)),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
                                                 forceUnifiedTBAATree)) {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
@@ -163,7 +165,7 @@ mlir::Type LLVMTypeConverter::indexType() const {
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
 std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
-  auto name = derived.getName();
+  auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
 
   auto &callStack = getCurrentThreadRecursiveStack();

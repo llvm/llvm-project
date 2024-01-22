@@ -170,18 +170,16 @@ define i32 @PR49475(i32 %x, i16 %y) {
 
 define i8 @PR49475_infloop(i32 %t0, i16 %insert, i64 %e, i8 %i162) {
 ; CHECK-LABEL: @PR49475_infloop(
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[T0:%.*]], 0
 ; CHECK-NEXT:    [[B2:%.*]] = icmp eq i16 [[INSERT:%.*]], 0
-; CHECK-NEXT:    [[T1:%.*]] = or i1 [[B]], [[B2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0:%.*]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], 140
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[XOR1:%.*]] = select i1 [[T1]], i64 [[TMP3]], i64 140
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[B2]], i64 [[TMP3]], i64 140
 ; CHECK-NEXT:    [[CONV16:%.*]] = sext i8 [[I162:%.*]] to i64
 ; CHECK-NEXT:    [[SUB17:%.*]] = sub i64 [[CONV16]], [[E:%.*]]
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[SUB17]], 32
 ; CHECK-NEXT:    [[CONV18:%.*]] = ashr exact i64 [[SEXT]], 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[XOR1]], [[CONV18]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[XOR]], [[CONV18]]
 ; CHECK-NEXT:    [[CONV19:%.*]] = zext i1 [[CMP]] to i16
 ; CHECK-NEXT:    [[OR21:%.*]] = or i16 [[CONV19]], [[INSERT]]
 ; CHECK-NEXT:    [[TOBOOL23_NOT:%.*]] = icmp eq i16 [[OR21]], 0

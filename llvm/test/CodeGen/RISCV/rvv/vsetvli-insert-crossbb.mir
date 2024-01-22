@@ -378,8 +378,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.end:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vr = PHI [[PseudoVADD_VV_M1_]], %bb.1, [[PseudoVSUB_VV_M1_]], %bb.2
-  ; CHECK-NEXT:   [[PseudoVMV_X_S_M1_:%[0-9]+]]:gpr = PseudoVMV_X_S_M1 [[PHI]], 6 /* e64 */, implicit $vtype
-  ; CHECK-NEXT:   $x10 = COPY [[PseudoVMV_X_S_M1_]]
+  ; CHECK-NEXT:   [[PseudoVMV_X_S:%[0-9]+]]:gpr = PseudoVMV_X_S [[PHI]], 6 /* e64 */, implicit $vtype
+  ; CHECK-NEXT:   $x10 = COPY [[PseudoVMV_X_S]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.0.entry:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)
@@ -404,7 +404,7 @@ body:             |
 
   bb.3.if.end:
     %2:vr = PHI %0, %bb.1, %1, %bb.2
-    %8:gpr = PseudoVMV_X_S_M1 %2, 6
+    %8:gpr = PseudoVMV_X_S %2, 6
     $x10 = COPY %8
     PseudoRET implicit $x10
 
@@ -805,9 +805,9 @@ body:             |
   ; CHECK-NEXT: bb.2.middle.block:
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr = COPY $x0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[PseudoVMV_S_X_M1_:%[0-9]+]]:vr = PseudoVMV_S_X_M1 [[DEF]], [[COPY5]], 1, 5 /* e32 */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVMV_S_X:%[0-9]+]]:vr = PseudoVMV_S_X [[DEF]], [[COPY5]], 1, 5 /* e32 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vr = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[PseudoVREDSUM_VS_M1_E8_:%[0-9]+]]:vr = PseudoVREDSUM_VS_M1_E8 [[DEF1]], [[PseudoVADD_VV_M1_]], killed [[PseudoVMV_S_X_M1_]], 4, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   [[PseudoVREDSUM_VS_M1_E8_:%[0-9]+]]:vr = PseudoVREDSUM_VS_M1_E8 [[DEF1]], [[PseudoVADD_VV_M1_]], killed [[PseudoVMV_S_X]], 4, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 1, 208 /* e32, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   PseudoVSE32_V_M1 killed [[PseudoVREDSUM_VS_M1_E8_]], [[COPY]], 1, 5 /* e32 */, implicit $vl, implicit $vtype :: (store (s32) into %ir.res)
   ; CHECK-NEXT:   PseudoRET
@@ -842,7 +842,7 @@ body:             |
   bb.2.middle.block:
     %19:gpr = COPY $x0
     %21:vr = IMPLICIT_DEF
-    %20:vr = PseudoVMV_S_X_M1 %21, %19, 1, 5
+    %20:vr = PseudoVMV_S_X %21, %19, 1, 5
     %24:vr = IMPLICIT_DEF
     %23:vr = PseudoVREDSUM_VS_M1_E8 %24, %16, killed %20, 4, 5, 1
     PseudoVSE32_V_M1 killed %23, %8, 1, 5 :: (store (s32) into %ir.res)

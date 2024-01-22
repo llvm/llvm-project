@@ -429,6 +429,29 @@ def DISubprogramFlags : I32BitEnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// IntegerOverflowFlags
+//===----------------------------------------------------------------------===//
+
+def IOFnone : I32BitEnumAttrCaseNone<"none">;
+def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
+def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+
+def IntegerOverflowFlags : I32BitEnumAttr<
+    "IntegerOverflowFlags",
+    "LLVM integer overflow flags",
+    [IOFnone, IOFnsw, IOFnuw]> {
+  let separator = ", ";
+  let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def LLVM_IntegerOverflowFlagsAttr :
+    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // FastmathFlags
 //===----------------------------------------------------------------------===//
 

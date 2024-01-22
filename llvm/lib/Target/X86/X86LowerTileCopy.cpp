@@ -107,7 +107,8 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
       // mov 64 %rax
       BuildMI(MBB, MI, DL, TII->get(X86::MOV64ri), GR64Cand).addImm(64);
       // tilestored %tmm, (%sp, %idx)
-      unsigned Opc = X86::TILESTORED;
+#define GET_EGPR_IF_ENABLED(OPC) (ST.hasEGPR() ? OPC##_EVEX : OPC)
+      unsigned Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
       MachineInstr *NewMI =
           addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc)), TileSS)
               .addReg(SrcReg, getKillRegState(SrcMO.isKill()));
@@ -115,7 +116,8 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
       MO.setReg(GR64Cand);
       MO.setIsKill(true);
       // tileloadd (%sp, %idx), %tmm
-      Opc = X86::TILELOADD;
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
+#undef GET_EGPR_IF_ENABLED
       NewMI = addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc), DstReg),
                                 TileSS);
       // restore %rax

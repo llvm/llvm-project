@@ -63,23 +63,6 @@ FunctionPass *llvm::createX86FixupVectorConstants() {
   return new X86FixupVectorConstantsPass();
 }
 
-static const Constant *getConstantFromPool(const MachineInstr &MI,
-                                           const MachineOperand &Op) {
-  if (!Op.isCPI() || Op.getOffset() != 0)
-    return nullptr;
-
-  ArrayRef<MachineConstantPoolEntry> Constants =
-      MI.getParent()->getParent()->getConstantPool()->getConstants();
-  const MachineConstantPoolEntry &ConstantEntry = Constants[Op.getIndex()];
-
-  // Bail if this is a machine constant pool entry, we won't be able to dig out
-  // anything useful.
-  if (ConstantEntry.isMachineConstantPoolEntry())
-    return nullptr;
-
-  return ConstantEntry.Val.ConstVal;
-}
-
 // Attempt to extract the full width of bits data from the constant.
 static std::optional<APInt> extractConstantBits(const Constant *C) {
   unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
@@ -175,9 +158,49 @@ static std::optional<APInt> getSplatableConstant(const Constant *C,
   return std::nullopt;
 }
 
+// Split raw bits into a constant vector of elements of a specific bit width.
+// NOTE: We don't always bother converting to scalars if the vector length is 1.
+static Constant *rebuildConstant(LLVMContext &Ctx, Type *SclTy,
+                                 const APInt &Bits, unsigned NumSclBits) {
+  unsigned BitWidth = Bits.getBitWidth();
+
+  if (NumSclBits == 8) {
+    SmallVector<uint8_t> RawBits;
+    for (unsigned I = 0; I != BitWidth; I += 8)
+      RawBits.push_back(Bits.extractBits(8, I).getZExtValue());
+    return ConstantDataVector::get(Ctx, RawBits);
+  }
+
+  if (NumSclBits == 16) {
+    SmallVector<uint16_t> RawBits;
+    for (unsigned I = 0; I != BitWidth; I += 16)
+      RawBits.push_back(Bits.extractBits(16, I).getZExtValue());
+    if (SclTy->is16bitFPTy())
+      return ConstantDataVector::getFP(SclTy, RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
+  }
+
+  if (NumSclBits == 32) {
+    SmallVector<uint32_t> RawBits;
+    for (unsigned I = 0; I != BitWidth; I += 32)
+      RawBits.push_back(Bits.extractBits(32, I).getZExtValue());
+    if (SclTy->isFloatTy())
+      return ConstantDataVector::getFP(SclTy, RawBits);
+    return ConstantDataVector::get(Ctx, RawBits);
+  }
+
+  assert(NumSclBits == 64 && "Unhandled vector element width");
+
+  SmallVector<uint64_t> RawBits;
+  for (unsigned I = 0; I != BitWidth; I += 64)
+    RawBits.push_back(Bits.extractBits(64, I).getZExtValue());
+  if (SclTy->isDoubleTy())
+    return ConstantDataVector::getFP(SclTy, RawBits);
+  return ConstantDataVector::get(Ctx, RawBits);
+}
+
 // Attempt to rebuild a normalized splat vector constant of the requested splat
 // width, built up of potentially smaller scalar values.
-// NOTE: We don't always bother converting to scalars if the vector length is 1.
 static Constant *rebuildSplatableConstant(const Constant *C,
                                           unsigned SplatBitWidth) {
   std::optional<APInt> Splat = getSplatableConstant(C, SplatBitWidth);
@@ -191,38 +214,13 @@ static Constant *rebuildSplatableConstant(const Constant *C,
   unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
   NumSclBits = std::min<unsigned>(NumSclBits, SplatBitWidth);
 
-  if (NumSclBits == 8) {
-    SmallVector<uint8_t> RawBits;
-    for (unsigned I = 0; I != SplatBitWidth; I += 8)
-      RawBits.push_back(Splat->extractBits(8, I).getZExtValue());
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
-  }
-
-  if (NumSclBits == 16) {
-    SmallVector<uint16_t> RawBits;
-    for (unsigned I = 0; I != SplatBitWidth; I += 16)
-      RawBits.push_back(Splat->extractBits(16, I).getZExtValue());
-    if (SclTy->is16bitFPTy())
-      return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
-  }
-
-  if (NumSclBits == 32) {
-    SmallVector<uint32_t> RawBits;
-    for (unsigned I = 0; I != SplatBitWidth; I += 32)
-      RawBits.push_back(Splat->extractBits(32, I).getZExtValue());
-    if (SclTy->isFloatTy())
-      return ConstantDataVector::getFP(SclTy, RawBits);
-    return ConstantDataVector::get(OriginalType->getContext(), RawBits);
-  }
-
   // Fallback to i64 / double.
-  SmallVector<uint64_t> RawBits;
-  for (unsigned I = 0; I != SplatBitWidth; I += 64)
-    RawBits.push_back(Splat->extractBits(64, I).getZExtValue());
-  if (SclTy->isDoubleTy())
-    return ConstantDataVector::getFP(SclTy, RawBits);
-  return ConstantDataVector::get(OriginalType->getContext(), RawBits);
+  NumSclBits = (NumSclBits == 8 || NumSclBits == 16 || NumSclBits == 32)
+                   ? NumSclBits
+                   : 64;
+
+  // Extract per-element bits.
+  return rebuildConstant(OriginalType->getContext(), SclTy, *Splat, NumSclBits);
 }
 
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
@@ -243,7 +241,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
            "Unexpected number of operands!");
 
     MachineOperand &CstOp = MI.getOperand(OperandNo + X86::AddrDisp);
-    if (auto *C = getConstantFromPool(MI, CstOp)) {
+    if (auto *C = X86::getConstantFromPool(MI, CstOp)) {
       // Attempt to detect a suitable splat from increasing splat widths.
       std::pair<unsigned, unsigned> Broadcasts[] = {
           {8, OpBcst8},   {16, OpBcst16},   {32, OpBcst32},
@@ -285,7 +283,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
   case X86::VMOVUPSYrm:
-    return ConvertToBroadcast(0, X86::VBROADCASTF128, X86::VBROADCASTSDYrm,
+    return ConvertToBroadcast(0, X86::VBROADCASTF128rm, X86::VBROADCASTSDYrm,
                               X86::VBROADCASTSSYrm, 0, 0, 1);
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPSZ128rm:
@@ -318,7 +316,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm:
     return ConvertToBroadcast(
-        0, HasAVX2 ? X86::VBROADCASTI128 : X86::VBROADCASTF128,
+        0, HasAVX2 ? X86::VBROADCASTI128rm : X86::VBROADCASTF128rm,
         HasAVX2 ? X86::VPBROADCASTQYrm : X86::VBROADCASTSDYrm,
         HasAVX2 ? X86::VPBROADCASTDYrm : X86::VBROADCASTSSYrm,
         HasAVX2 ? X86::VPBROADCASTWYrm : 0, HasAVX2 ? X86::VPBROADCASTBYrm : 0,

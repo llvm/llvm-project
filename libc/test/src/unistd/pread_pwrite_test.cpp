@@ -17,6 +17,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   // The strategy here is that we first create a file and write to it. Next,
   // we open that file again and write at an offset. Finally, we open the

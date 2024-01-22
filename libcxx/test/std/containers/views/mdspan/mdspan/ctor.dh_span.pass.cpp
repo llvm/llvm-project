@@ -65,7 +65,7 @@ test_mdspan_ctor_span(const H& handle, const M& map, const A&, std::span<typenam
     }
   }
 
-  static_assert(!noexcept(MDS(handle, exts)));
+  LIBCPP_STATIC_ASSERT(!noexcept(MDS(handle, exts)));
 
   static_assert(check_mdspan_ctor_implicit<MDS, decltype(exts)> == (N == MDS::rank_dynamic()));
 

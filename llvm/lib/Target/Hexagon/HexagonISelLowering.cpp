@@ -669,8 +669,7 @@ HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     --NumOps;  // Ignore the flag operand.
 
   for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-    const InlineAsm::Flag Flags(
-        cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue());
+    const InlineAsm::Flag Flags(Op.getConstantOperandVal(i));
     unsigned NumVals = Flags.getNumOperandRegisters();
     ++i;  // Skip the ID value.
 
@@ -729,7 +728,7 @@ SDValue HexagonTargetLowering::LowerREADCYCLECOUNTER(SDValue Op,
 SDValue HexagonTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  unsigned IntNo = Op.getConstantOperandVal(1);
   // Lower the hexagon_prefetch builtin to DCFETCH, as above.
   if (IntNo == Intrinsic::hexagon_prefetch) {
     SDValue Addr = Op.getOperand(2);
@@ -1176,7 +1175,7 @@ HexagonTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   if (Depth) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(4, dl, MVT::i32);
@@ -1198,7 +1197,7 @@ HexagonTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
   SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
                                          HRI.getFrameRegister(), VT);
   while (Depth--)

@@ -329,34 +329,6 @@ std::string llvm::getUniqueModuleId(Module *M) {
   return ("." + Str).str();
 }
 
-void VFABI::setVectorVariantNames(CallInst *CI,
-                                  ArrayRef<std::string> VariantMappings) {
-  if (VariantMappings.empty())
-    return;
-
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const std::string &VariantMapping : VariantMappings)
-    Out << VariantMapping << ",";
-  // Get rid of the trailing ','.
-  assert(!Buffer.str().empty() && "Must have at least one char.");
-  Buffer.pop_back();
-
-  Module *M = CI->getModule();
-#ifndef NDEBUG
-  for (const std::string &VariantMapping : VariantMappings) {
-    LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
-    std::optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *CI);
-    assert(VI && "Cannot add an invalid VFABI name.");
-    assert(M->getNamedValue(VI->VectorName) &&
-           "Cannot add variant to attribute: "
-           "vector function declaration is missing.");
-  }
-#endif
-  CI->addFnAttr(
-      Attribute::get(M->getContext(), MappingsAttrName, Buffer.str()));
-}
-
 void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
                                StringRef SectionName, Align Alignment) {
   // Embed the memory buffer into the module.

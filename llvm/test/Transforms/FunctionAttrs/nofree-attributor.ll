@@ -225,9 +225,9 @@ define void @call_both() #0 {
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
-; FNATTR: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
+; FNATTR: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@call_floor
-; FNATTR-SAME: (float [[A:%.*]]) #[[ATTR7:[0-9]+]] {
+; FNATTR-SAME: (float [[A:%.*]]) #[[ATTR3]] {
 ; FNATTR-NEXT:    [[TMP1:%.*]] = tail call float @llvm.floor.f32(float [[A]])
 ; FNATTR-NEXT:    ret void
 ;

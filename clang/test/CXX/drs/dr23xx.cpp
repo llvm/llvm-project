@@ -1,9 +1,20 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1
-// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+
+namespace std {
+  __extension__ typedef __SIZE_TYPE__ size_t;
+
+  template<typename E> struct initializer_list {
+    const E *p; size_t n;
+    initializer_list(const E *p, size_t n);
+    initializer_list();
+  };
+}
 
 #if __cplusplus >= 201103L
 namespace dr2303 { // dr2303: 12
@@ -14,8 +25,14 @@ struct A<> {};
 template <typename T, typename... Ts>
 struct A<T, Ts...> : A<Ts...> {};
 struct B : A<int, int> {};
-struct C : A<int, int>, A<int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
-struct D : A<int>, A<int, int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
+struct C : A<int, int>, A<int> {};
+/* since-cxx11-warning@-1 {{direct base 'A<int>' is inaccessible due to ambiguity:
+    struct dr2303::C -> A<int, int> -> A<int>
+    struct dr2303::C -> A<int>}} */
+struct D : A<int>, A<int, int> {};
+/* since-cxx11-warning@-1 {{direct base 'A<int>' is inaccessible due to ambiguity:
+    struct dr2303::D -> A<int>
+    struct dr2303::D -> A<int, int> -> A<int>}} */
 struct E : A<int, int> {};
 struct F : B, E {};
 
@@ -32,12 +49,91 @@ void g() {
   f2(&b);
   f(C{});
   f(D{});
-  f(F{}); // expected-error {{ambiguous conversion from derived class}}
+  f(F{});
+  /* since-cxx11-error@-1 {{ambiguous conversion from derived class 'const F' to base class 'const A<int, int>':
+    struct dr2303::F -> B -> A<int, int>
+    struct dr2303::F -> E -> A<int, int>}} */
 }
 } //namespace dr2303
 #endif
 
+namespace dr2311 {  // dr2311: 18 open
+#if __cplusplus >= 201707L
+template<typename T>
+void test() {
+  // Ensure none of these try to call a move constructor.
+  T a = T{T(0)};
+  T b{T(0)};
+  auto c{T(0)};
+  T d = {T(0)};
+  auto e = {T(0)};
+#if __cplusplus >= 202302L
+  auto f = auto{T(0)};
+#endif
+  void(*fn)(T);
+  fn({T(0)});
+}
+
+struct NonMovable {
+  NonMovable(int);
+  NonMovable(NonMovable&&) = delete;
+};
+struct NonMovableNonApplicableIList {
+  NonMovableNonApplicableIList(int);
+  NonMovableNonApplicableIList(NonMovableNonApplicableIList&&) = delete;
+  NonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct ExplicitMovable {
+  ExplicitMovable(int);
+  explicit ExplicitMovable(ExplicitMovable&&);
+};
+struct ExplicitNonMovable {
+  ExplicitNonMovable(int);
+  explicit ExplicitNonMovable(ExplicitNonMovable&&) = delete;
+};
+struct ExplicitNonMovableNonApplicableIList {
+  ExplicitNonMovableNonApplicableIList(int);
+  explicit ExplicitNonMovableNonApplicableIList(ExplicitNonMovableNonApplicableIList&&) = delete;
+  ExplicitNonMovableNonApplicableIList(std::initializer_list<int>);
+};
+struct CopyOnly {
+  CopyOnly(int);
+  CopyOnly(const CopyOnly&);
+  CopyOnly(CopyOnly&&) = delete;
+};
+struct ExplicitCopyOnly {
+  ExplicitCopyOnly(int);
+  explicit ExplicitCopyOnly(const ExplicitCopyOnly&);
+  explicit ExplicitCopyOnly(ExplicitCopyOnly&&) = delete;
+};
+
+template void test<NonMovable>();
+template void test<NonMovableNonApplicableIList>();
+template void test<ExplicitMovable>();
+template void test<ExplicitNonMovable>();
+template void test<ExplicitNonMovableNonApplicableIList>();
+template void test<CopyOnly>();
+template void test<ExplicitCopyOnly>();
+
+struct any {
+    template<typename T>
+    any(T&&);
+};
+
+template<typename T>
+struct X {
+    X();
+    X(T) = delete; // #dr2311-X
+};
+
+X<std::initializer_list<any>> x{ X<std::initializer_list<any>>() };
+// since-cxx17-error@-1 {{call to deleted constructor of 'X<std::initializer_list<any>>'}}
+//   since-cxx17-note@#dr2311-X {{'X' has been explicitly marked deleted here}}
+#endif
+}
+
 // dr2331: na
+// dr2335 is in dr2335.cxx
 
 #if __cplusplus >= 201103L
 namespace dr2338 { // dr2338: 12
@@ -65,8 +161,10 @@ namespace dr2352 { // dr2352: 10
   int *const *const &f2() { return p; }
   int **const &f3() { return p; }
 
-  const int **const &f4() { return p; } // expected-error {{reference to type 'const int **const' could not bind to an lvalue of type 'int **'}}
-  const int *const *&f5() { return p; } // expected-error {{binding reference of type 'const int *const *' to value of type 'int **' not permitted due to incompatible qualifiers}}
+  const int **const &f4() { return p; }
+  // expected-error@-1 {{reference to type 'const int **const' could not bind to an lvalue of type 'int **'}}
+  const int *const *&f5() { return p; }
+  // expected-error@-1 {{binding reference of type 'const int *const *' to value of type 'int **' not permitted due to incompatible qualifiers}}
 
   // FIXME: We permit this as a speculative defect resolution, allowing
   // qualification conversions when forming a glvalue conditional expression.
@@ -76,7 +174,8 @@ namespace dr2352 { // dr2352: 10
   // FIXME: Should we compute the composite pointer type here and produce an
   // lvalue of type 'const int *const * const'?
   const int * const * r;
-  void *y = &(true ? p : r); // expected-error {{rvalue of type 'const int *const *'}}
+  void *y = &(true ? p : r);
+  // expected-error@-1 {{rvalue of type 'const int *const *'}}
 
   // FIXME: We order these as a speculative defect resolution.
   void f(const int * const * const &r);
@@ -124,12 +223,22 @@ namespace dr2353 { // dr2353: 9
 #pragma clang __debug dump not_use_2
 }
 
+namespace dr2354 { // dr2354: 15
+#if __cplusplus >= 201103L
+enum alignas(64) A {};
+// since-cxx11-error@-1 {{'alignas' attribute cannot be applied to an enumeration}}
+enum struct alignas(64) B {};
+// since-cxx11-error@-1 {{'alignas' attribute cannot be applied to an enumeration}}
+#endif
+} // namespace dr2354
+
 #if __cplusplus >= 201402L
 namespace dr2358 { // dr2358: 16
   void f2() {
     int i = 1;
     void g1(int = [xxx=1] { return xxx; }());  // OK
-    void g2(int = [xxx=i] { return xxx; }());  // expected-error {{default argument references local variable 'i' of enclosing function}}
+    void g2(int = [xxx=i] { return xxx; }());
+    // since-cxx14-error@-1 {{default argument references local variable 'i' of enclosing function}}
   }
 }
 #endif
@@ -148,7 +257,7 @@ class C {
 };
 } // namespace dr2370
 
-#if __cplusplus >= 201707L
+#if __cplusplus >= 201702L
 // Otherwise, if the qualified-id std::tuple_size<E> names a complete class
 // type **with a member value**, the expression std::tuple_size<E>::value shall
 // be a well-formed integral constant expression
@@ -165,7 +274,8 @@ template <> struct std::tuple_size<dr2386::Bad2> {
 } // namespace std
 namespace dr2386 {
 void no_value() { auto [x, y] = Bad1(); }
-void wrong_value() { auto [x, y] = Bad2(); } // expected-error {{decomposes into 42 elements}}
+void wrong_value() { auto [x, y] = Bad2(); }
+// since-cxx17-error@-1 {{type 'Bad2' decomposes into 42 elements, but only 2 names were provided}}
 } // namespace dr2386
 #endif
 
@@ -177,7 +287,8 @@ namespace dr2387 { // dr2387: 9
   extern template int a<0>; // ok
 
   template<int> static int b = 0;
-  extern template int b<0>; // expected-error {{internal linkage}}
+  extern template int b<0>;
+  // since-cxx14-error@-1 {{explicit instantiation declaration of 'b<0>' with internal linkage}}
 
   template<int> const int c = 0;
   extern template const int c<0>; // ok, has external linkage despite 'const'
@@ -187,6 +298,8 @@ namespace dr2387 { // dr2387: 9
   extern template const int d<const int>;
 #endif
 }
+
+// dr2390 is in dr2390.cpp
 
 namespace dr2394 { // dr2394: 15
 

@@ -583,6 +583,20 @@ void ASTDeclReader::Visit(Decl *D) {
 }
 
 void ASTDeclReader::VisitDecl(Decl *D) {
+  BitsUnpacker DeclBits(Record.readInt());
+  auto ModuleOwnership =
+      (Decl::ModuleOwnershipKind)DeclBits.getNextBits(/*Width=*/3);
+  D->setReferenced(DeclBits.getNextBit());
+  D->Used = DeclBits.getNextBit();
+  IsDeclMarkedUsed |= D->Used;
+  D->setAccess((AccessSpecifier)DeclBits.getNextBits(/*Width=*/2));
+  D->setImplicit(DeclBits.getNextBit());
+  bool HasStandaloneLexicalDC = DeclBits.getNextBit();
+  bool HasAttrs = DeclBits.getNextBit();
+  D->setTopLevelDeclInObjCContainer(DeclBits.getNextBit());
+  D->InvalidDecl = DeclBits.getNextBit();
+  D->FromASTFile = true;
+
   if (D->isTemplateParameter() || D->isTemplateParameterPack() ||
       isa<ParmVarDecl, ObjCTypeParamDecl>(D)) {
     // We don't want to deserialize the DeclContext of a template
@@ -592,7 +606,8 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     // return type of the function).  Use the translation unit DeclContext as a
     // placeholder.
     GlobalDeclID SemaDCIDForTemplateParmDecl = readDeclID();
-    GlobalDeclID LexicalDCIDForTemplateParmDecl = readDeclID();
+    GlobalDeclID LexicalDCIDForTemplateParmDecl =
+        HasStandaloneLexicalDC ? readDeclID() : 0;
     if (!LexicalDCIDForTemplateParmDecl)
       LexicalDCIDForTemplateParmDecl = SemaDCIDForTemplateParmDecl;
     Reader.addPendingDeclContextInfo(D,
@@ -601,7 +616,8 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     D->setDeclContext(Reader.getContext().getTranslationUnitDecl());
   } else {
     auto *SemaDC = readDeclAs<DeclContext>();
-    auto *LexicalDC = readDeclAs<DeclContext>();
+    auto *LexicalDC =
+        HasStandaloneLexicalDC ? readDeclAs<DeclContext>() : nullptr;
     if (!LexicalDC)
       LexicalDC = SemaDC;
     // If the context is a class, we might not have actually merged it yet, in
@@ -618,21 +634,6 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   }
   D->setLocation(ThisDeclLoc);
 
-  BitsUnpacker DeclBits(Record.readInt());
-  D->InvalidDecl = DeclBits.getNextBit();
-  bool HasAttrs = DeclBits.getNextBit();
-  D->setImplicit(DeclBits.getNextBit());
-  D->Used = DeclBits.getNextBit();
-  IsDeclMarkedUsed |= D->Used;
-  D->setReferenced(DeclBits.getNextBit());
-  D->setTopLevelDeclInObjCContainer(DeclBits.getNextBit());
-  D->setAccess((AccessSpecifier)DeclBits.getNextBits(/*Width=*/2));
-  D->FromASTFile = true;
-  auto ModuleOwnership =
-      (Decl::ModuleOwnershipKind)DeclBits.getNextBits(/*Width=*/3);
-  bool ModulePrivate =
-      (ModuleOwnership == Decl::ModuleOwnershipKind::ModulePrivate);
-
   if (HasAttrs) {
     AttrVec Attrs;
     Record.readAttributes(Attrs);
@@ -643,8 +644,9 @@ void ASTDeclReader::VisitDecl(Decl *D) {
 
   // Determine whether this declaration is part of a (sub)module. If so, it
   // may not yet be visible.
+  bool ModulePrivate =
+      (ModuleOwnership == Decl::ModuleOwnershipKind::ModulePrivate);
   if (unsigned SubmoduleID = readSubmoduleID()) {
-
     switch (ModuleOwnership) {
     case Decl::ModuleOwnershipKind::Visible:
       ModuleOwnership = Decl::ModuleOwnershipKind::VisibleWhenImported;
@@ -765,7 +767,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
   TD->setCompleteDefinitionRequired(TagDeclBits.getNextBit());
   TD->setBraceRange(readSourceRange());
 
-  switch (Record.readInt()) {
+  switch (TagDeclBits.getNextBits(/*Width=*/2)) {
   case 0:
     break;
   case 1: { // ExtInfo
@@ -908,7 +910,7 @@ void ASTDeclReader::VisitEnumConstantDecl(EnumConstantDecl *ECD) {
   VisitValueDecl(ECD);
   if (Record.readInt())
     ECD->setInitExpr(Record.readExpr());
-  ECD->setInitVal(Record.readAPSInt());
+  ECD->setInitVal(Reader.getContext(), Record.readAPSInt());
   mergeMergeable(ECD);
 }
 
@@ -1061,9 +1063,11 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   // after everything else is read.
   BitsUnpacker FunctionDeclBits(Record.readInt());
 
+  FD->setCachedLinkage((Linkage)FunctionDeclBits.getNextBits(/*Width=*/3));
   FD->setStorageClass((StorageClass)FunctionDeclBits.getNextBits(/*Width=*/3));
   FD->setInlineSpecified(FunctionDeclBits.getNextBit());
   FD->setImplicitlyInline(FunctionDeclBits.getNextBit());
+  FD->setHasSkippedBody(FunctionDeclBits.getNextBit());
   FD->setVirtualAsWritten(FunctionDeclBits.getNextBit());
   // We defer calling `FunctionDecl::setPure()` here as for methods of
   // `CXXTemplateSpecializationDecl`s, we may not have connected up the
@@ -1077,19 +1081,18 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setDefaulted(FunctionDeclBits.getNextBit());
   FD->setExplicitlyDefaulted(FunctionDeclBits.getNextBit());
   FD->setIneligibleOrNotSelected(FunctionDeclBits.getNextBit());
-  FD->setHasImplicitReturnZero(FunctionDeclBits.getNextBit());
   FD->setConstexprKind(
       (ConstexprSpecKind)FunctionDeclBits.getNextBits(/*Width=*/2));
-  FD->setUsesSEHTry(FunctionDeclBits.getNextBit());
-  FD->setHasSkippedBody(FunctionDeclBits.getNextBit());
+  FD->setHasImplicitReturnZero(FunctionDeclBits.getNextBit());
   FD->setIsMultiVersion(FunctionDeclBits.getNextBit());
   FD->setLateTemplateParsed(FunctionDeclBits.getNextBit());
   FD->setFriendConstraintRefersToEnclosingTemplate(
       FunctionDeclBits.getNextBit());
-  FD->setCachedLinkage((Linkage)FunctionDeclBits.getNextBits(/*Width=*/3));
+  FD->setUsesSEHTry(FunctionDeclBits.getNextBit());
 
   FD->EndRangeLoc = readSourceLocation();
-  FD->setDefaultLoc(readSourceLocation());
+  if (FD->isExplicitlyDefaulted())
+    FD->setDefaultLoc(readSourceLocation());
 
   FD->ODRHash = Record.readInt();
   FD->setHasODRHash(true);
@@ -1132,7 +1135,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
   // Defer calling `setPure` until merging above has guaranteed we've set
   // `DefinitionData` (as this will need to access it).
-  FD->setPure(Pure);
+  FD->setIsPureVirtual(Pure);
 
   // Read in the parameters.
   unsigned NumParams = Record.readInt();
@@ -1592,6 +1595,8 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
   VisitDeclaratorDecl(VD);
 
   BitsUnpacker VarDeclBits(Record.readInt());
+  auto VarLinkage = Linkage(VarDeclBits.getNextBits(/*Width=*/3));
+  bool DefGeneratedInModule = VarDeclBits.getNextBit();
   VD->VarDeclBits.SClass = (StorageClass)VarDeclBits.getNextBits(/*Width=*/3);
   VD->VarDeclBits.TSCSpec = VarDeclBits.getNextBits(/*Width=*/2);
   VD->VarDeclBits.InitStyle = VarDeclBits.getNextBits(/*Width=*/2);
@@ -1603,17 +1608,20 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->NonParmVarDeclBits.ExceptionVar = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.NRVOVariable = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.CXXForRangeDecl = VarDeclBits.getNextBit();
-    VD->NonParmVarDeclBits.ObjCForDecl = VarDeclBits.getNextBit();
+
     VD->NonParmVarDeclBits.IsInline = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.IsInlineSpecified = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.IsConstexpr = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.IsInitCapture = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.PreviousDeclInSameBlockScope =
         VarDeclBits.getNextBit();
-    VD->NonParmVarDeclBits.ImplicitParamKind =
-        VarDeclBits.getNextBits(/*Width*/ 3);
+
     VD->NonParmVarDeclBits.EscapingByref = VarDeclBits.getNextBit();
     HasDeducedType = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.ImplicitParamKind =
+        VarDeclBits.getNextBits(/*Width*/ 3);
+
+    VD->NonParmVarDeclBits.ObjCForDecl = VarDeclBits.getNextBit();
   }
 
   // If this variable has a deduced type, defer reading that type until we are
@@ -1625,7 +1633,6 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->setType(Reader.GetType(DeferredTypeID));
   DeferredTypeID = 0;
 
-  auto VarLinkage = Linkage(VarDeclBits.getNextBits(/*Width=*/3));
   VD->setCachedLinkage(VarLinkage);
 
   // Reconstruct the one piece of the IdentifierNamespace that we need.
@@ -1633,7 +1640,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
       VD->getLexicalDeclContext()->isFunctionOrMethod())
     VD->setLocalExternDecl();
 
-  if (VarDeclBits.getNextBit()) {
+  if (DefGeneratedInModule) {
     Reader.DefinitionSource[VD] =
         Loc.F->Kind == ModuleKind::MK_MainFile ||
         Reader.getContext().getLangOpts().BuildingPCHWithObjectFile;
@@ -1699,11 +1706,11 @@ void ASTDeclReader::VisitImplicitParamDecl(ImplicitParamDecl *PD) {
 void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
   VisitVarDecl(PD);
 
+  unsigned scopeIndex = Record.readInt();
   BitsUnpacker ParmVarDeclBits(Record.readInt());
   unsigned isObjCMethodParam = ParmVarDeclBits.getNextBit();
   unsigned scopeDepth = ParmVarDeclBits.getNextBits(/*Width=*/7);
-  unsigned scopeIndex = ParmVarDeclBits.getNextBits(/*Width=*/8);
-  unsigned declQualifier = Record.readInt();
+  unsigned declQualifier = ParmVarDeclBits.getNextBits(/*Width=*/7);
   if (isObjCMethodParam) {
     assert(scopeDepth == 0);
     PD->setObjCMethodScopeInfo(scopeIndex);
@@ -1716,7 +1723,9 @@ void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
   PD->ParmVarDeclBits.HasInheritedDefaultArg = ParmVarDeclBits.getNextBit();
   if (ParmVarDeclBits.getNextBit()) // hasUninstantiatedDefaultArg.
     PD->setUninstantiatedDefaultArg(Record.readExpr());
-  PD->ExplicitObjectParameterIntroducerLoc = Record.readSourceLocation();
+
+  if (ParmVarDeclBits.getNextBit()) // Valid explicit object parameter
+    PD->ExplicitObjectParameterIntroducerLoc = Record.readSourceLocation();
 
   // FIXME: If this is a redeclaration of a function from another module, handle
   // inheritance of default arguments.
@@ -2653,7 +2662,7 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
 
   D->setDeclaredWithTypename(Record.readInt());
 
-  if (Record.readBool()) {
+  if (D->hasTypeConstraint()) {
     ConceptReference *CR = nullptr;
     if (Record.readBool())
       CR = Record.readConceptReference();
@@ -3085,6 +3094,8 @@ public:
   }
 
   Expr *readExpr() { return Reader.readExpr(); }
+
+  Attr *readAttr() { return Reader.readAttr(); }
 
   std::string readString() {
     return Reader.readString();

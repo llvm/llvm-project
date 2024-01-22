@@ -250,7 +250,7 @@ bool COFFMasmParser::ParseDirectiveSegment(StringRef Directive, SMLoc Loc) {
   SmallVector<char, 247> SectionNameVector;
 
   StringRef Class;
-  if (SegmentName == "_TEXT" || SegmentName.startswith("_TEXT$")) {
+  if (SegmentName == "_TEXT" || SegmentName.starts_with("_TEXT$")) {
     if (SegmentName.size() == 5) {
       SectionName = ".text";
     } else {

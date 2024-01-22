@@ -1,4 +1,4 @@
-//===- Utility.cpp ------ Collection of geneirc offloading utilities ------===//
+//===- Utility.cpp ------ Collection of generic offloading utilities ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,11 +28,10 @@ StructType *offloading::getEntryTy(Module &M) {
 }
 
 // TODO: Rework this interface to be more generic.
-void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
-                                     uint64_t Size, int32_t Flags,
-                                     StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
-
+std::pair<Constant *, GlobalVariable *>
+offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
+                                          StringRef Name, uint64_t Size,
+                                          int32_t Flags, int32_t Data) {
   Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
@@ -51,9 +50,19 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
       ConstantInt::get(SizeTy, Size),
       ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, 0),
+      ConstantInt::get(Int32Ty, Data),
   };
   Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
+  return {EntryInitializer, Str};
+}
+
+void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
+                                     uint64_t Size, int32_t Flags, int32_t Data,
+                                     StringRef SectionName) {
+  llvm::Triple Triple(M.getTargetTriple());
+
+  auto [EntryInitializer, NameGV] =
+      getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
 
   auto *Entry = new GlobalVariable(
       M, getEntryTy(M),

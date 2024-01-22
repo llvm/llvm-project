@@ -158,16 +158,16 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
     }
   }
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL || x_u > FPBits::MAX_NORMAL)) {
     if (xbits.is_zero()) {
       // Return -inf and raise FE_DIVBYZERO
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
-      return static_cast<float>(FPBits::neg_inf());
+      return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
     }
-    if (xbits.get_sign() && !xbits.is_nan()) {
+    if (xbits.is_neg() && !xbits.is_nan()) {
       // Return NaN and raise FE_INVALID
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
@@ -177,7 +177,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
       return x;
     }
     // Normalize denormal inputs.
-    xbits.set_val(xbits.get_val() * 0x1.0p23f);
+    xbits = FPBits(xbits.get_val() * 0x1.0p23f);
     m -= 23;
     x_u = xbits.uintval();
   }
@@ -187,7 +187,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
   // Extract 7 leading fractional bits of the mantissa
   int index = (x_u >> 16) & 0x7F;
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x7F);
+  xbits.set_biased_exponent(0x7F);
 
   float u = static_cast<float>(xbits);
   double v;

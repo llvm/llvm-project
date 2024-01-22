@@ -36,14 +36,15 @@ namespace SendMsg {
 
 // Disable lint checking for this block since it makes the table unreadable.
 // NOLINTBEGIN
+// clang-format off
 const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{""}},
   {{"MSG_INTERRUPT"},           ID_INTERRUPT},
   {{"MSG_GS"},                  ID_GS_PreGFX11,             isNotGFX11Plus},
   {{"MSG_GS_DONE"},             ID_GS_DONE_PreGFX11,        isNotGFX11Plus},
   {{"MSG_SAVEWAVE"},            ID_SAVEWAVE,                isGFX8_GFX9_GFX10},
-  {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,          isGFX9Plus},
-  {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,              isGFX9Plus},
+  {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,          isGFX9_GFX10_GFX11},
+  {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,              isGFX9_GFX10_GFX11},
   {{"MSG_ORDERED_PS_DONE"},     ID_ORDERED_PS_DONE,         isGFX9_GFX10},
   {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,      isGFX9_GFX10},
   {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,            isGFX9Plus},
@@ -59,7 +60,9 @@ const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{"MSG_RTN_GET_REALTIME"},    ID_RTN_GET_REALTIME,        isGFX11Plus},
   {{"MSG_RTN_SAVE_WAVE"},       ID_RTN_SAVE_WAVE,           isGFX11Plus},
   {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
+  {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
 };
+// clang-format on
 // NOLINTEND
 
 const int MSG_SIZE = static_cast<int>(

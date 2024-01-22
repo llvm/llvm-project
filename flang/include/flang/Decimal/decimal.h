@@ -34,6 +34,7 @@ enum ConversionResultFlags {
   Overflow = 1,
   Inexact = 2,
   Invalid = 4,
+  Underflow = 8,
 };
 
 struct ConversionToDecimalResult {

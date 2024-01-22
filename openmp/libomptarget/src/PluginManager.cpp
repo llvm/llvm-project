@@ -12,6 +12,7 @@
 
 #include "PluginManager.h"
 #include "Shared/Debug.h"
+#include "Shared/Profile.h"
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -23,17 +24,12 @@ using namespace llvm::sys;
 PluginManager *PM;
 
 // List of all plugins that can support offloading.
-static const char *RTLNames[] = {
-    /* PowerPC target       */ "libomptarget.rtl.ppc64",
-    /* x86_64 target        */ "libomptarget.rtl.x86_64",
-    /* CUDA target          */ "libomptarget.rtl.cuda",
-    /* AArch64 target       */ "libomptarget.rtl.aarch64",
-    /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
-};
+static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
 
 Expected<std::unique_ptr<PluginAdaptorTy>>
 PluginAdaptorTy::create(const std::string &Name) {
   DP("Attempting to load library '%s'...\n", Name.c_str());
+  TIMESCOPE_WITH_NAME_AND_IDENT(Name, (const ident_t *)nullptr);
 
   std::string ErrMsg;
   auto LibraryHandler = std::make_unique<DynamicLibrary>(
@@ -51,7 +47,7 @@ PluginAdaptorTy::create(const std::string &Name) {
       new PluginAdaptorTy(Name, std::move(LibraryHandler)));
   if (auto Err = PluginAdaptor->init())
     return Err;
-  return PluginAdaptor;
+  return std::move(PluginAdaptor);
 }
 
 PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
@@ -67,7 +63,7 @@ Error PluginAdaptorTy::init() {
     return createStringError(inconvertibleErrorCode(),                         \
                              "Invalid plugin as necessary interface function " \
                              "(%s) was not found.\n",                          \
-                             NAME);                                            \
+                             std::string(#NAME).c_str());                      \
   }
 
 #include "Shared/PluginAPI.inc"
@@ -101,12 +97,13 @@ void PluginAdaptorTy::addOffloadEntries(DeviceImageTy &DI) {
                     toString(DeviceOrErr.takeError()).c_str());
 
     DeviceTy &Device = *DeviceOrErr;
-    for (OffloadEntryTy &Entry : DI.entries())
-      Device.addOffloadEntry(Entry);
+    for (__tgt_offload_entry &Entry : DI.entries())
+      Device.addOffloadEntry(OffloadEntryTy(DI, Entry));
   }
 }
 
 void PluginManager::init() {
+  TIMESCOPE();
   DP("Loading RTLs...\n");
 
   // Attempt to open all the plugins and, if they exist, check if the interface
@@ -129,6 +126,7 @@ void PluginManager::init() {
 void PluginAdaptorTy::initDevices(PluginManager &PM) {
   if (isUsed())
     return;
+  TIMESCOPE();
 
   // If this RTL is not already in use, initialize it.
   assert(getNumberOfPluginDevices() > 0 &&
@@ -209,20 +207,13 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   for (DeviceImageTy &DI : PM->deviceImages()) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &DI.getExecutableImage();
-    __tgt_image_info *Info = &DI.getImageInfo();
 
     PluginAdaptorTy *FoundRTL = nullptr;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : PM->pluginAdaptors()) {
-      if (R.is_valid_binary_info) {
-        if (!R.is_valid_binary_info(Img, Info)) {
-          DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-             DPxPTR(Img->ImageStart), R.Name.c_str());
-          continue;
-        }
-      } else if (!R.is_valid_binary(Img)) {
+      if (!R.is_valid_binary(Img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
            DPxPTR(Img->ImageStart), R.Name.c_str());
         continue;

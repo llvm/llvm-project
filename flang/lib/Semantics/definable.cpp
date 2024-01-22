@@ -89,7 +89,8 @@ static const Symbol &GetRelevantSymbol(const evaluate::DataRef &dataRef,
 
 // Check the leftmost (or only) symbol from a data-ref or expression.
 static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
-    const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+    const Scope &scope, DefinabilityFlags flags, const Symbol &original,
+    bool isWholeSymbol) {
   const Symbol &ultimate{original.GetUltimate()};
   bool isPointerDefinition{flags.test(DefinabilityFlag::PointerDefinition)};
   bool acceptAllocatable{flags.test(DefinabilityFlag::AcceptAllocatable)};
@@ -104,7 +105,8 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
     } else if (auto dataRef{evaluate::ExtractDataRef(
                    *association->expr(), true, true)}) {
       return WhyNotDefinableBase(at, scope, flags,
-          GetRelevantSymbol(*dataRef, isPointerDefinition, acceptAllocatable));
+          GetRelevantSymbol(*dataRef, isPointerDefinition, acceptAllocatable),
+          isWholeSymbol);
     }
   }
   if (isTargetDefinition) {
@@ -112,7 +114,8 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
     return BlameSymbol(at, "'%s' is not a variable"_en_US, original);
   } else if (IsProtected(ultimate) && IsUseAssociated(original, scope)) {
     return BlameSymbol(at, "'%s' is protected in this scope"_en_US, original);
-  } else if (IsIntentIn(ultimate)) {
+  } else if (IsIntentIn(ultimate) &&
+      (!IsPointer(ultimate) || (isWholeSymbol && isPointerDefinition))) {
     return BlameSymbol(
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
   }
@@ -165,6 +168,12 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
   const Symbol &ultimate{original.GetUltimate()};
+  if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()}) {
+    if (auto dataRef{
+            evaluate::ExtractDataRef(*association->expr(), true, true)}) {
+      return WhyNotDefinableLast(at, scope, flags, dataRef->GetLastSymbol());
+    }
+  }
   if (flags.test(DefinabilityFlag::PointerDefinition)) {
     if (flags.test(DefinabilityFlag::AcceptAllocatable)) {
       if (!IsAllocatableOrObjectPointer(&ultimate)) {
@@ -216,7 +225,8 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
   const Symbol &base{GetRelevantSymbol(dataRef,
       flags.test(DefinabilityFlag::PointerDefinition),
       flags.test(DefinabilityFlag::AcceptAllocatable))};
-  if (auto whyNot{WhyNotDefinableBase(at, scope, flags, base)}) {
+  if (auto whyNot{WhyNotDefinableBase(at, scope, flags, base,
+          std::holds_alternative<evaluate::SymbolRef>(dataRef.u))}) {
     return whyNot;
   } else {
     return WhyNotDefinableLast(at, scope, flags, dataRef.GetLastSymbol());
@@ -231,12 +241,13 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
   const Symbol &base{GetRelevantSymbol(dataRef, false, false)};
   DefinabilityFlags baseFlags{flags};
   baseFlags.reset(DefinabilityFlag::PointerDefinition);
-  return WhyNotDefinableBase(at, scope, baseFlags, base);
+  return WhyNotDefinableBase(at, scope, baseFlags, base,
+      std::holds_alternative<evaluate::SymbolRef>(dataRef.u));
 }
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
-  if (auto base{WhyNotDefinableBase(at, scope, flags, original)}) {
+  if (auto base{WhyNotDefinableBase(at, scope, flags, original, true)}) {
     return base;
   }
   return WhyNotDefinableLast(at, scope, flags, original);

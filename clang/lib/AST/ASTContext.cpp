@@ -1318,6 +1318,13 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     InitBuiltinType(OMPArrayShapingTy, BuiltinType::OMPArrayShaping);
     InitBuiltinType(OMPIteratorTy, BuiltinType::OMPIterator);
   }
+  // Placeholder type for OpenACC array sections.
+  if (LangOpts.OpenACC) {
+    // FIXME: Once we implement OpenACC array sections in Sema, this will either
+    // be combined with the OpenMP type, or given its own type. In the meantime,
+    // just use the OpenMP type so that parsing can work.
+    InitBuiltinType(OMPArraySectionTy, BuiltinType::OMPArraySection);
+  }
   if (LangOpts.MatrixTypes)
     InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
 
@@ -2748,21 +2755,20 @@ bool ASTContext::hasUniqueObjectRepresentations(
     QualType Ty, bool CheckIfTriviallyCopyable) const {
   // C++17 [meta.unary.prop]:
   //   The predicate condition for a template specialization
-  //   has_unique_object_representations<T> shall be
-  //   satisfied if and only if:
+  //   has_unique_object_representations<T> shall be satisfied if and only if:
   //     (9.1) - T is trivially copyable, and
   //     (9.2) - any two objects of type T with the same value have the same
-  //     object representation, where two objects
-  //   of array or non-union class type are considered to have the same value
-  //   if their respective sequences of
-  //   direct subobjects have the same values, and two objects of union type
-  //   are considered to have the same
-  //   value if they have the same active member and the corresponding members
-  //   have the same value.
+  //     object representation, where:
+  //     - two objects of array or non-union class type are considered to have
+  //       the same value if their respective sequences of direct subobjects
+  //       have the same values, and
+  //     - two objects of union type are considered to have the same value if
+  //       they have the same active member and the corresponding members have
+  //       the same value.
   //   The set of scalar types for which this condition holds is
-  //   implementation-defined. [ Note: If a type has padding
-  //   bits, the condition does not hold; otherwise, the condition holds true
-  //   for unsigned integral types. -- end note ]
+  //   implementation-defined. [ Note: If a type has padding bits, the condition
+  //   does not hold; otherwise, the condition holds true for unsigned integral
+  //   types. -- end note ]
   assert(!Ty.isNull() && "Null QualType sent to unique object rep check");
 
   // Arrays are unique only if their element type is unique.
@@ -4478,10 +4484,11 @@ QualType ASTContext::getFunctionTypeInternal(
       EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
-      FunctionType::ExceptionType, Expr *, FunctionDecl *,
-      FunctionProtoType::ExtParameterInfo, Qualifiers>(
+      FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
-      ESH.NumExceptionType, ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
+      EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
+      ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
@@ -6747,6 +6754,11 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
     case TemplateArgument::Integral:
       return TemplateArgument(Arg, getCanonicalType(Arg.getIntegralType()));
 
+    case TemplateArgument::StructuralValue:
+      return TemplateArgument(*this,
+                              getCanonicalType(Arg.getStructuralValueType()),
+                              Arg.getAsStructuralValue());
+
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()),
                               /*isNullPtr*/ false, Arg.getIsDefaulted());
@@ -8223,7 +8235,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       // Another legacy compatibility encoding. Some ObjC qualifier and type
       // combinations need to be rearranged.
       // Rewrite "in const" from "nr" to "rn"
-      if (StringRef(S).endswith("nr"))
+      if (StringRef(S).ends_with("nr"))
         S.replace(S.end()-2, S.end(), "rn");
     }
 
@@ -13519,7 +13531,7 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
     } else {
-      if (VersionStr.startswith("arch="))
+      if (VersionStr.starts_with("arch="))
         TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
       else if (VersionStr != "default")
         Features.push_back((StringRef{"+"} + VersionStr).str());

@@ -20,6 +20,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN_DEFINE(ProcessTrace)
+
 llvm::StringRef ProcessTrace::GetPluginDescriptionStatic() {
   return "Trace process plug-in.";
 }
@@ -50,7 +52,7 @@ ProcessTrace::~ProcessTrace() {
   // make sure all of the broadcaster cleanup goes as planned. If we destruct
   // this class, then Process::~Process() might have problems trying to fully
   // destroy the broadcaster.
-  Finalize();
+  Finalize(true /* destructing */);
 }
 
 void ProcessTrace::DidAttach(ArchSpec &process_arch) {

@@ -10,8 +10,7 @@ define void @test1(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    blez a1, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    slli a1, a1, 32
-; CHECK-NEXT:    srli a1, a1, 30
+; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zfh,+zvfh -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,NO-ZVBB,RV64-BITS-UNKNOWN
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zfh,+zvfh -riscv-v-vector-bits-max=256 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,NO-ZVBB,RV64-BITS-256
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zfh,+zvfh -riscv-v-vector-bits-max=512 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,NO-ZVBB,RV64-BITS-512
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+f,+d,+zfh,+zvfh,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVBB,RV32-ZVBB
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zfh,+zvfh,+experimental-zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVBB,RV64-ZVBB
+; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+f,+d,+zfh,+zvfh,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVBB,RV32-ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+f,+d,+zfh,+zvfh,+zvbb -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVBB,RV64-ZVBB
 
 ;
 ; VECTOR_REVERSE - masks

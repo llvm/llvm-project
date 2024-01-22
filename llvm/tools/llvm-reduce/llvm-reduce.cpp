@@ -157,7 +157,7 @@ int main(int Argc, char **Argv) {
   if (InputLanguage != InputLanguages::None) {
     if (InputLanguage == InputLanguages::MIR)
       ReduceModeMIR = true;
-  } else if (StringRef(InputFilename).endswith(".mir")) {
+  } else if (StringRef(InputFilename).ends_with(".mir")) {
     ReduceModeMIR = true;
   }
 

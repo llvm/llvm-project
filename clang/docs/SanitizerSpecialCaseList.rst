@@ -56,13 +56,18 @@ and lines starting with "#" are ignored.
 
 .. note::
 
-  In `D154014 <https://reviews.llvm.org/D154014>`_ we transitioned to using globs instead
-  of regexes to match patterns in special case lists. Since this was a
-  breaking change, we will temporarily support the original behavior using
-  regexes. If ``#!special-case-list-v2`` is the first line of the file, then
-  we will use the new behavior using globs. For more details, see
-  `this discourse post <https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666>`_.
+  Prior to Clang 18, section names and entries described below use a variant of
+  regex where ``*`` is translated to ``.*``. Clang 18 (`D154014
+  <https://reviews.llvm.org/D154014>`) switches to glob and plans to remove
+  regex support in Clang 19.
 
+  For Clang 18, regex is supported if ``#!special-case-list-v1`` is the first
+  line of the file.
+
+  Many special case lists use ``.`` to indicate the literal character and do
+  not use regex metacharacters such as ``(``, ``)``. They are unaffected by the
+  regex to glob transition. For more details, see `this discourse post
+  <https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666>`_.
 
 Section names are globs written in square brackets that denote
 which sanitizer the following entries apply to. For example, ``[address]``
@@ -80,7 +85,6 @@ tool-specific docs.
 
 .. code-block:: bash
 
-    #!special-case-list-v2
     # The line above is explained in the note above
     # Lines starting with # are ignored.
     # Turn off checks for the source file

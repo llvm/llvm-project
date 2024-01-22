@@ -51,7 +51,7 @@ static void basic_test()
         assert(!ec);
         assert(ret.is_absolute());
         assert(PathEqIgnoreSep(ret, TC.expect));
-        LIBCPP_ONLY(assert(PathEq(ret, TC.expect)));
+        LIBCPP_ASSERT(PathEq(ret, TC.expect));
     }
 }
 

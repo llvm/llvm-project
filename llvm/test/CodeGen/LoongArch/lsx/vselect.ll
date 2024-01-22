@@ -6,11 +6,11 @@ define void @select_v16i8_imm(ptr %res, ptr %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vrepli.h $vr1, -256
-; CHECK-NEXT:    vbitseli.b $vr0, $vr1, 255
-; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    vbitseli.b $vr1, $vr0, 255
+; CHECK-NEXT:    vst $vr1, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %a0
-  %sel = select <16 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <16 x i8> %v0, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  %sel = select <16 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> %v0
   store <16 x i8> %sel, ptr %res
   ret void
 }

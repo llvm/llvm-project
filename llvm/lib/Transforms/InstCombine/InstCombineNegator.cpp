@@ -43,14 +43,11 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
 namespace llvm {
-class AssumptionCache;
 class DataLayout;
-class DominatorTree;
 class LLVMContext;
 } // namespace llvm
 

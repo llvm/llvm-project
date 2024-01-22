@@ -100,16 +100,9 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #  define TEST_STD_VER 14
 #endif
 
-#define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
+#define TEST_SHORT_WCHAR
+#define TEST_ABI_MICROSOFT
 
-#ifdef __clang__
-#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                             \
-    _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")
-#  define _LIBCPP_SUPPRESS_DEPRECATED_POP _Pragma("GCC diagnostic pop")
-#else // ^^^ clang / MSVC vvv
-#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH                                                                             \
-    __pragma(warning(push)) __pragma(warning(disable : 4996)) __pragma(warning(disable : 5215))
-#  define _LIBCPP_SUPPRESS_DEPRECATED_POP __pragma(warning(pop))
-#endif // __clang__
+#define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 
 #endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H

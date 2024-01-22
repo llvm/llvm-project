@@ -1177,12 +1177,12 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
        "<4 x i32> <i32 0, i32 1, i32 2, i32 3>"},
-      {{false, true},
+      {{true, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
-       "<4 x i32> <i32 0, i32 1, i32 2, i32 undef>"},
-      {{false, true},
+       "<4 x i32> <i32 0, i32 1, i32 2, i32 poison>"},
+      {{true, false},
        "shufflevector <vscale x 4 x i32> %svx, "
-       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> undef"},
+       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> poison"},
       {{true, false}, "call i32 @g(i32 %x)"},
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},

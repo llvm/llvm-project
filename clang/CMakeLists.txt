@@ -167,6 +167,23 @@ endif()
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 
+# This check requires _GNU_SOURCE on linux
+check_include_file(dlfcn.h CLANG_HAVE_DLFCN_H)
+if( CLANG_HAVE_DLFCN_H )
+  include(CheckLibraryExists)
+  include(CheckSymbolExists)
+  check_library_exists(dl dlopen "" HAVE_LIBDL)
+  if( HAVE_LIBDL )
+    list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
+  endif()
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+  check_symbol_exists(dladdr dlfcn.h CLANG_HAVE_DLADDR)
+  list(REMOVE_ITEM CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+  if( HAVE_LIBDL )
+    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
+  endif()
+endif()
+
 set(CLANG_RESOURCE_DIR "" CACHE STRING
   "Relative directory from the Clang binary to its resource files.")
 
@@ -176,6 +193,12 @@ set(C_INCLUDE_DIRS "" CACHE STRING
 set(GCC_INSTALL_PREFIX "" CACHE PATH "Directory where gcc is installed." )
 set(DEFAULT_SYSROOT "" CACHE STRING
   "Default <path> to all compiler invocations for --sysroot=<path>." )
+if(GCC_INSTALL_PREFIX)
+  message(WARNING "GCC_INSTALL_PREFIX is deprecated and will be removed. Use "
+    "configuration files (https://clang.llvm.org/docs/UsersManual.html#configuration-files)"
+    "to specify the default --gcc-install-dir= or --gcc-triple=. --gcc-toolchain= is discouraged. "
+    "See https://github.com/llvm/llvm-project/pull/77537 for detail.")
+endif()
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 

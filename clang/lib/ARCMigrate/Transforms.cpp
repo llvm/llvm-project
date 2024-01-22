@@ -95,7 +95,7 @@ bool trans::isPlusOne(const Expr *E) {
           ento::cocoa::isRefType(callE->getType(), "CF",
                                  FD->getIdentifier()->getName())) {
         StringRef fname = FD->getIdentifier()->getName();
-        if (fname.endswith("Retain") || fname.contains("Create") ||
+        if (fname.ends_with("Retain") || fname.contains("Create") ||
             fname.contains("Copy"))
           return true;
       }

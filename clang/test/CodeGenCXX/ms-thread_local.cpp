@@ -29,9 +29,9 @@ thread_local A b;
 // CHECK-LD-LABEL: declare dso_local void @__dyn_tls_on_demand_init()
 // CHECK-LEGACY-NOT: declare dso_local void @__dyn_tls_on_demand_init()
 
-// CHECK-LABEL: define dso_local void @"?f@@YA?AUA@@XZ"(ptr noalias sret(%struct.A) align 1 %agg.result)
+// CHECK-LABEL: define dso_local void @"?f@@YA?AUA@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.A) align 1 %agg.result)
 // CHECK: call void @__dyn_tls_on_demand_init()
-// CHECK-LD-LABEL: define dso_local void @"?f@@YA?AUA@@XZ"(ptr noalias sret(%struct.A) align 1 %agg.result)
+// CHECK-LD-LABEL: define dso_local void @"?f@@YA?AUA@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.A) align 1 %agg.result)
 // CHECK-LD: call void @__dyn_tls_on_demand_init()
 // CHECK-LEGACY-NOT: call void @__dyn_tls_on_demand_init()
 

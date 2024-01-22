@@ -24,7 +24,7 @@
   ; RV32-NEXT:    addi a0, sp, 32
   ; RV32-NEXT:    addi a1, sp, 16
   ; RV32-NEXT:    addi a2, sp, 8
-  ; RV32-NEXT:    call extern@plt
+  ; RV32-NEXT:    call extern
   ; RV32-NEXT:    csrr a0, vlenb
   ; RV32-NEXT:    slli a0, a0, 1
   ; RV32-NEXT:    add sp, sp, a0
@@ -42,7 +42,7 @@
   ; RV64-NEXT:    addi a0, sp, 32
   ; RV64-NEXT:    addi a1, sp, 16
   ; RV64-NEXT:    addi a2, sp, 8
-  ; RV64-NEXT:    call extern@plt
+  ; RV64-NEXT:    call extern
   ; RV64-NEXT:    csrr a0, vlenb
   ; RV64-NEXT:    slli a0, a0, 1
   ; RV64-NEXT:    add sp, sp, a0
@@ -67,7 +67,7 @@
   ; RV32-NEXT:    addi a0, sp, 32
   ; RV32-NEXT:    addi a1, sp, 16
   ; RV32-NEXT:    addi a2, sp, 8
-  ; RV32-NEXT:    call extern@plt
+  ; RV32-NEXT:    call extern
   ; RV32-NEXT:    csrr a0, vlenb
   ; RV32-NEXT:    slli a0, a0, 1
   ; RV32-NEXT:    add sp, sp, a0
@@ -85,7 +85,7 @@
   ; RV64-NEXT:    addi a0, sp, 32
   ; RV64-NEXT:    addi a1, sp, 16
   ; RV64-NEXT:    addi a2, sp, 8
-  ; RV64-NEXT:    call extern@plt
+  ; RV64-NEXT:    call extern
   ; RV64-NEXT:    csrr a0, vlenb
   ; RV64-NEXT:    slli a0, a0, 1
   ; RV64-NEXT:    add sp, sp, a0
@@ -113,7 +113,7 @@
   ; RV32-NEXT:    addi a0, sp, 32
   ; RV32-NEXT:    addi a1, sp, 16
   ; RV32-NEXT:    addi a2, sp, 8
-  ; RV32-NEXT:    call extern@plt
+  ; RV32-NEXT:    call extern
   ; RV32-NEXT:    addi sp, s0, -48
   ; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
   ; RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
@@ -133,7 +133,7 @@
   ; RV64-NEXT:    addi a0, sp, 64
   ; RV64-NEXT:    addi a1, sp, 40
   ; RV64-NEXT:    addi a2, sp, 32
-  ; RV64-NEXT:    call extern@plt
+  ; RV64-NEXT:    call extern
   ; RV64-NEXT:    addi sp, s0, -80
   ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
   ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
@@ -188,7 +188,7 @@ body:             |
     $x10 = ADDI %stack.0.a, 0
     $x11 = ADDI %stack.1.b, 0
     $x12 = ADDI %stack.2.c, 0
-    PseudoCALL target-flags(riscv-plt) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
+    PseudoCALL target-flags(riscv-call) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     PseudoRET
 
@@ -233,7 +233,7 @@ body:             |
     $x10 = ADDI %stack.0.a, 0
     $x11 = ADDI %stack.1.b, 0
     $x12 = ADDI %stack.2.c, 0
-    PseudoCALL target-flags(riscv-plt) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
+    PseudoCALL target-flags(riscv-call) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     PseudoRET
 
@@ -278,7 +278,7 @@ body:             |
     $x10 = ADDI %stack.0.a, 0
     $x11 = ADDI %stack.1.b, 0
     $x12 = ADDI %stack.2.c, 0
-    PseudoCALL target-flags(riscv-plt) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
+    PseudoCALL target-flags(riscv-call) @extern, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     PseudoRET
 

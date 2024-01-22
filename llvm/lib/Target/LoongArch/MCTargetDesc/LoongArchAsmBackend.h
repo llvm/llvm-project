@@ -31,9 +31,14 @@ class LoongArchAsmBackend : public MCAsmBackend {
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                       const MCTargetOptions &Options)
-      : MCAsmBackend(llvm::endianness::little), STI(STI), OSABI(OSABI),
-        Is64Bit(Is64Bit), TargetOptions(Options) {}
+      : MCAsmBackend(llvm::endianness::little,
+                     LoongArch::fixup_loongarch_relax),
+        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
   ~LoongArchAsmBackend() override {}
+
+  bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
+                               const MCFixup &Fixup, const MCValue &Target,
+                               uint64_t &FixedValue) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -41,7 +46,8 @@ public:
                   const MCSubtargetInfo *STI) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -59,6 +65,14 @@ public:
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {}
+
+  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+                                    int64_t &Value) const override;
+
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF, MCAsmLayout &Layout,
+                          bool &WasRelaxed) const override;
+  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+                     bool &WasRelaxed) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;

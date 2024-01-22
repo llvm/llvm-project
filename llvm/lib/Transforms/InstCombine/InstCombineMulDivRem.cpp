@@ -300,8 +300,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     // Canonicalize (X|C1)*MulC -> X*MulC+C1*MulC.
     Value *X;
     Constant *C1;
-    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1)))) ||
-        match(Op0, m_OneUse(m_DisjointOr(m_Value(X), m_ImmConstant(C1))))) {
+    if (match(Op0, m_OneUse(m_AddLike(m_Value(X), m_ImmConstant(C1))))) {
       // C1*MulC simplifies to a tidier constant.
       Value *NewC = Builder.CreateMul(C1, MulC);
       auto *BOp0 = cast<BinaryOperator>(Op0);
@@ -331,6 +330,19 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(X, X);
   }
 
+  {
+    Value *X, *Y;
+    // abs(X) * abs(Y) -> abs(X * Y)
+    if (I.hasNoSignedWrap() &&
+        match(Op0,
+              m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One()))) &&
+        match(Op1, m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(Y), m_One()))))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(Intrinsic::abs,
+                                           Builder.CreateNSWMul(X, Y),
+                                           Builder.getTrue()));
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *Op1C;
@@ -350,6 +362,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // X * -Y --> -(X * Y)
   if (match(&I, m_c_Mul(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNeg(Builder.CreateMul(X, Y));
+
+  // (-X * Y) * -X --> (X * Y) * X
+  // (-X << Y) * -X --> (X << Y) * X
+  if (match(Op1, m_Neg(m_Value(X)))) {
+    if (Value *NegOp0 = Negator::Negate(false, /*IsNSW*/ false, Op0, *this))
+      return BinaryOperator::CreateMul(NegOp0, X);
+  }
 
   // (X / Y) *  Y = X - (X % Y)
   // (X / Y) * -Y = (X % Y) - X
@@ -480,13 +499,6 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
-
-  // min(X, Y) * max(X, Y) => X * Y.
-  if (match(&I, m_CombineOr(m_c_Mul(m_SMax(m_Value(X), m_Value(Y)),
-                                    m_c_SMin(m_Deferred(X), m_Deferred(Y))),
-                            m_c_Mul(m_UMax(m_Value(X), m_Value(Y)),
-                                    m_c_UMin(m_Deferred(X), m_Deferred(Y))))))
-    return BinaryOperator::CreateWithCopiedFlags(Instruction::Mul, X, Y, &I);
 
   // (mul Op0 Op1):
   //    if Log2(Op0) folds away ->
@@ -1206,6 +1218,38 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
   }
 
+  // (X * Y) / (X * Z) --> Y / Z (and commuted variants)
+  if (match(Op0, m_Mul(m_Value(X), m_Value(Y)))) {
+    auto OB0HasNSW = cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap();
+    auto OB0HasNUW = cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap();
+
+    auto CreateDivOrNull = [&](Value *A, Value *B) -> Instruction * {
+      auto OB1HasNSW = cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap();
+      auto OB1HasNUW =
+          cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap();
+      const APInt *C1, *C2;
+      if (IsSigned && OB0HasNSW) {
+        if (OB1HasNSW && match(B, m_APInt(C1)) && !C1->isAllOnes())
+          return BinaryOperator::CreateSDiv(A, B);
+      }
+      if (!IsSigned && OB0HasNUW) {
+        if (OB1HasNUW)
+          return BinaryOperator::CreateUDiv(A, B);
+        if (match(A, m_APInt(C1)) && match(B, m_APInt(C2)) && C2->ule(*C1))
+          return BinaryOperator::CreateUDiv(A, B);
+      }
+      return nullptr;
+    };
+
+    if (match(Op1, m_c_Mul(m_Specific(X), m_Value(Z)))) {
+      if (auto *Val = CreateDivOrNull(Y, Z))
+        return Val;
+    }
+    if (match(Op1, m_c_Mul(m_Specific(Y), m_Value(Z)))) {
+      if (auto *Val = CreateDivOrNull(X, Z))
+        return Val;
+    }
+  }
   return nullptr;
 }
 
@@ -1376,20 +1420,7 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   if (Instruction *NarrowDiv = narrowUDivURem(I, *this))
     return NarrowDiv;
 
-  // If the udiv operands are non-overflowing multiplies with a common operand,
-  // then eliminate the common factor:
-  // (A * B) / (A * X) --> B / X (and commuted variants)
-  // TODO: The code would be reduced if we had m_c_NUWMul pattern matching.
-  // TODO: If -reassociation handled this generally, we could remove this.
   Value *A, *B;
-  if (match(Op0, m_NUWMul(m_Value(A), m_Value(B)))) {
-    if (match(Op1, m_NUWMul(m_Specific(A), m_Value(X))) ||
-        match(Op1, m_NUWMul(m_Value(X), m_Specific(A))))
-      return BinaryOperator::CreateUDiv(B, X);
-    if (match(Op1, m_NUWMul(m_Specific(B), m_Value(X))) ||
-        match(Op1, m_NUWMul(m_Value(X), m_Specific(B))))
-      return BinaryOperator::CreateUDiv(A, X);
-  }
 
   // Look through a right-shift to find the common factor:
   // ((Op1 *nuw A) >> B) / Op1 --> A >> B

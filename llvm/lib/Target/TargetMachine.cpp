@@ -39,36 +39,27 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
 
 TargetMachine::~TargetMachine() = default;
 
-bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
+bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
 
-  if (isa<Function>(GO))
-    return getCodeModel() == CodeModel::Large;
+  auto *GO = GVal->getAliaseeObject();
 
-  auto *GV = cast<GlobalVariable>(GO);
+  // Be conservative if we can't find an underlying GlobalObject.
+  if (!GO)
+    return true;
+
+  auto *GV = dyn_cast<GlobalVariable>(GO);
+
+  // Functions/GlobalIFuncs are only large under the large code model.
+  if (!GV)
+    return getCodeModel() == CodeModel::Large;
 
   if (GV->isThreadLocal())
     return false;
 
-  // We should properly mark well-known section name prefixes as small/large,
-  // because otherwise the output section may have the wrong section flags and
-  // the linker will lay it out in an unexpected way.
-  StringRef Name = GV->getSection();
-  if (!Name.empty()) {
-    auto IsPrefix = [&](StringRef Prefix) {
-      StringRef S = Name;
-      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
-    };
-    if (IsPrefix(".bss") || IsPrefix(".data") || IsPrefix(".rodata"))
-      return false;
-    if (IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata"))
-      return true;
-  }
-
   // For x86-64, we treat an explicit GlobalVariable small code model to mean
   // that the global should be placed in a small section, and ditto for large.
-  // Well-known section names above take precedence for correctness.
   if (auto CM = GV->getCodeModel()) {
     if (*CM == CodeModel::Small)
       return false;
@@ -76,8 +67,24 @@ bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
       return true;
   }
 
+  // Treat all globals in explicit sections as small, except for the standard
+  // large sections of .lbss, .ldata, .lrodata. This reduces the risk of linking
+  // together small and large sections, resulting in small references to large
+  // data sections. The code model attribute overrides this above.
+  if (GV->hasSection()) {
+    StringRef Name = GV->getSection();
+    auto IsPrefix = [&](StringRef Prefix) {
+      StringRef S = Name;
+      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
+    };
+    return IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata");
+  }
+
+  // Respect large data threshold for medium and large code models.
   if (getCodeModel() == CodeModel::Medium ||
       getCodeModel() == CodeModel::Large) {
+    if (!GV->getValueType()->isSized())
+      return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
     uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
     return Size == 0 || Size > LargeDataThreshold;

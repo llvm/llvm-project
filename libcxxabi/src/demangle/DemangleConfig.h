@@ -19,7 +19,7 @@
 #include "../abort_message.h"
 #endif
 
-#include <ciso646>
+#include <version>
 
 #ifdef _MSC_VER
 // snprintf is implemented in VS 2015

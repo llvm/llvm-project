@@ -95,7 +95,7 @@ MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
 bool MultilibSet::select(const Multilib::flags_list &Flags,
-                         llvm::SmallVector<Multilib> &Selected) const {
+                         llvm::SmallVectorImpl<Multilib> &Selected) const {
   llvm::StringSet<> FlagSet(expandFlags(Flags));
   Selected.clear();
 

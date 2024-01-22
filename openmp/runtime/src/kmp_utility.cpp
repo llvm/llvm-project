@@ -294,6 +294,8 @@ void __kmp_expand_host_name(char *buffer, size_t size) {
     if (!GetComputerNameA(buffer, &s))
       KMP_STRCPY_S(buffer, size, unknown);
   }
+#elif KMP_OS_WASI
+  KMP_STRCPY_S(buffer, size, unknown);
 #else
   buffer[size - 2] = 0;
   if (gethostname(buffer, size) || buffer[size - 2] != 0)

@@ -16,6 +16,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
   constexpr int DUPFD = 0xD0;
   libc_errno = 0;

@@ -385,19 +385,17 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ implicit-def: $r11
 ; CHECK-NEXT:    mov.w r9, #12
 ; CHECK-NEXT:    str r4, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    add.w r0, r0, r2, lsr #1
 ; CHECK-NEXT:    add.w r1, r1, r2, lsr #1
-; CHECK-NEXT:    movw r2, #65532
-; CHECK-NEXT:    vdup.32 q6, r0
-; CHECK-NEXT:    movt r2, #32767
-; CHECK-NEXT:    and.w r3, r1, r2
+; CHECK-NEXT:    add.w r0, r0, r2, lsr #1
+; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    adr r1, .LCPI1_0
-; CHECK-NEXT:    vdup.32 q7, r0
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    adr r1, .LCPI1_1
 ; CHECK-NEXT:    vldrw.u32 q5, [r1]
-; CHECK-NEXT:    strd r3, r7, [sp, #4] @ 8-byte Folded Spill
+; CHECK-NEXT:    vdup.32 q6, r0
 ; CHECK-NEXT:    vadd.i32 q4, q0, r7
+; CHECK-NEXT:    vdup.32 q7, r0
+; CHECK-NEXT:    strd r3, r7, [sp, #4] @ 8-byte Folded Spill
 ; CHECK-NEXT:    b .LBB1_6
 ; CHECK-NEXT:  .LBB1_2: @ %for.body6.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1

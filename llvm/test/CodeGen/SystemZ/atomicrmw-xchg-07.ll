@@ -4,11 +4,10 @@
 
 define void @f1(ptr align 16 %ret, ptr align 16 %src, ptr align 16 %b) {
 ; CHECK-LABEL: f1:
-; CHECK:       lg      %r14, 8(%r4)
+; CHECK:       lg      %r1, 8(%r4)
 ; CHECK-NEXT:  lg      %r0, 0(%r4)
 ; CHECK-NEXT:  lg      %r4, 8(%r3)
 ; CHECK-NEXT:  lg      %r5, 0(%r3)
-; CHECK-NEXT:  lgr     %r1, %r14
 ; CHECK-NEXT:.LBB0_1:                          # %atomicrmw.start
 ; CHECK-NEXT:                                  # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:  lgr     %r12, %r5

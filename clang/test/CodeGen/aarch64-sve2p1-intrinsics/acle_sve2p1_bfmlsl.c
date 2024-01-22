@@ -2,12 +2,21 @@
 // REQUIRES: aarch64-registered-target
 
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 -S -DTEST_SME2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -DTEST_SME2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -target-feature -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme2 -DTEST_SME2 -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
+
+#ifndef TEST_SME2
+#define ATTR
+#else
+#define ATTR __arm_streaming
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -29,7 +38,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslb(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslb(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) ATTR
 {
   return SVE_ACLE_FUNC(svbfmlslb,_f32,,)(zda, zn, zm);
 }
@@ -45,7 +54,7 @@ svfloat32_t test_bfmlslb(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslb_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslb_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) ATTR
 {
   return SVE_ACLE_FUNC(svbfmlslb_lane,_f32,,)(zda, zn, zm, 7);
 }
@@ -63,7 +72,7 @@ svfloat32_t test_bfmlslb_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslt(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslt(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) ATTR
 {
   return SVE_ACLE_FUNC(svbfmlslt,_f32,,)(zda, zn, zm);
 }
@@ -79,7 +88,7 @@ svfloat32_t test_bfmlslt(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_bfmlslt_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
+svfloat32_t test_bfmlslt_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm) ATTR
 {
   return SVE_ACLE_FUNC(svbfmlslt_lane,_f32,,)(zda, zn, zm, 7);
 }

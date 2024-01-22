@@ -3,8 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from ._affine_ops_gen import *
-from ._affine_ops_gen import _Dialect, AffineForOp
-from .arith import constant
+from ._affine_ops_gen import _Dialect
 
 try:
     from ..ir import *
@@ -12,6 +11,9 @@ try:
         get_op_result_or_value as _get_op_result_or_value,
         get_op_results_or_values as _get_op_results_or_values,
         _cext as _ods_cext,
+        ResultValueTypeTuple as _ResultValueTypeTuple,
+        ResultValueT as _ResultValueT,
+        VariadicResultValueT as _VariadicResultValueT,
     )
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
@@ -21,17 +23,17 @@ from typing import Optional, Sequence, Union
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class AffineForOp(AffineForOp):
-    """Specialization for the Affine for op class"""
+    """Specialization for the Affine for op class."""
 
     def __init__(
         self,
-        lower_bound,
-        upper_bound,
-        step,
-        iter_args: Optional[Union[Operation, OpView, Sequence[Value]]] = None,
+        lower_bound: Union[int, _ResultValueT, AffineMap],
+        upper_bound: Optional[Union[int, _ResultValueT, AffineMap]],
+        step: Optional[Union[int, Attribute]] = None,
+        iter_args: Optional[_ResultValueT] = None,
         *,
-        lower_bound_operands=[],
-        upper_bound_operands=[],
+        lower_bound_operands: Optional[_VariadicResultValueT] = None,
+        upper_bound_operands: Optional[_VariadicResultValueT] = None,
         loc=None,
         ip=None,
     ):
@@ -43,25 +45,57 @@ class AffineForOp(AffineForOp):
         - `iter_args` is a list of additional loop-carried arguments or an operation
           producing them as results.
         - `lower_bound_operands` is the list of arguments to substitute the dimensions,
-          then symbols in the `lower_bound` affine map, in an increasing order
+          then symbols in the `lower_bound` affine map, in an increasing order.
         - `upper_bound_operands` is the list of arguments to substitute the dimensions,
-          then symbols in the `upper_bound` affine map, in an increasing order
+          then symbols in the `upper_bound` affine map, in an increasing order.
         """
+
+        if lower_bound_operands is None:
+            lower_bound_operands = []
+        if upper_bound_operands is None:
+            upper_bound_operands = []
+
+        if step is None:
+            step = 1
+
+        bounds_operands = [lower_bound_operands, upper_bound_operands]
+        bounds = [lower_bound, upper_bound]
+        bounds_names = ["lower", "upper"]
+        for i, name in enumerate(bounds_names):
+            if isinstance(bounds[i], int):
+                bounds[i] = AffineMap.get_constant(bounds[i])
+            elif isinstance(bounds[i], _ResultValueTypeTuple):
+                if len(bounds_operands[i]):
+                    raise ValueError(
+                        f"Either a concrete {name} bound or an AffineMap in combination "
+                        f"with {name} bound operands, but not both, is supported."
+                    )
+                if (
+                    isinstance(bounds[i], (OpView, Operation))
+                    and len(bounds[i].results) > 1
+                ):
+                    raise ValueError(
+                        f"Only a single concrete value is supported for {name} bound."
+                    )
+
+                bounds_operands[i].append(_get_op_result_or_value(bounds[i]))
+                bounds[i] = AffineMap.get_identity(1)
+
+            if not isinstance(bounds[i], AffineMap):
+                raise ValueError(
+                    f"{name} bound must be int | ResultValueT | AffineMap."
+                )
+            if len(bounds_operands[i]) != bounds[i].n_inputs:
+                raise ValueError(
+                    f"Wrong number of {name} bound operands passed to AffineForOp; "
+                    + f"Expected {bounds[i].n_inputs}, got {len(bounds_operands[i])}."
+                )
+
+        lower_bound, upper_bound = bounds
 
         if iter_args is None:
             iter_args = []
         iter_args = _get_op_results_or_values(iter_args)
-        if len(lower_bound_operands) != lower_bound.n_inputs:
-            raise ValueError(
-                f"Wrong number of lower bound operands passed to AffineForOp. "
-                + "Expected {lower_bound.n_symbols}, got {len(lower_bound_operands)}."
-            )
-
-        if len(upper_bound_operands) != upper_bound.n_inputs:
-            raise ValueError(
-                f"Wrong number of upper bound operands passed to AffineForOp. "
-                + "Expected {upper_bound.n_symbols}, got {len(upper_bound_operands)}."
-            )
 
         results = [arg.type for arg in iter_args]
         super().__init__(
@@ -71,7 +105,7 @@ class AffineForOp(AffineForOp):
             inits=list(iter_args),
             lowerBoundMap=AffineMapAttr.get(lower_bound),
             upperBoundMap=AffineMapAttr.get(upper_bound),
-            step=IntegerAttr.get(IndexType.get(), step),
+            step=step,
             loc=loc,
             ip=ip,
         )
@@ -98,37 +132,18 @@ class AffineForOp(AffineForOp):
 
 def for_(
     start,
-    stop=None,
+    stop,
     step=None,
     iter_args: Optional[Sequence[Value]] = None,
     *,
     loc=None,
     ip=None,
 ):
-    if step is None:
-        step = 1
-    if stop is None:
-        stop = start
-        start = 0
-    params = [start, stop]
-    for i, p in enumerate(params):
-        if isinstance(p, int):
-            p = constant(IntegerAttr.get(IndexType.get(), p))
-        elif isinstance(p, float):
-            raise ValueError(f"{p=} must be int.")
-        params[i] = p
-
-    start, stop = params
-    s0 = AffineSymbolExpr.get(0)
-    lbmap = AffineMap.get(0, 1, [s0])
-    ubmap = AffineMap.get(0, 1, [s0])
     for_op = AffineForOp(
-        lbmap,
-        ubmap,
+        start,
+        stop,
         step,
         iter_args=iter_args,
-        lower_bound_operands=[start],
-        upper_bound_operands=[stop],
         loc=loc,
         ip=ip,
     )

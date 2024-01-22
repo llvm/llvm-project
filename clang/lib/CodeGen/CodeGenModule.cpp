@@ -225,11 +225,12 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     StringRef ABIStr = Target.getABI();
     unsigned XLen = Target.getPointerWidth(LangAS::Default);
     unsigned ABIFLen = 0;
-    if (ABIStr.endswith("f"))
+    if (ABIStr.ends_with("f"))
       ABIFLen = 32;
-    else if (ABIStr.endswith("d"))
+    else if (ABIStr.ends_with("d"))
       ABIFLen = 64;
-    return createRISCVTargetCodeGenInfo(CGM, XLen, ABIFLen);
+    bool EABI = ABIStr.ends_with("e");
+    return createRISCVTargetCodeGenInfo(CGM, XLen, ABIFLen, EABI);
   }
 
   case llvm::Triple::systemz: {
@@ -308,9 +309,9 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::loongarch64: {
     StringRef ABIStr = Target.getABI();
     unsigned ABIFRLen = 0;
-    if (ABIStr.endswith("f"))
+    if (ABIStr.ends_with("f"))
       ABIFRLen = 32;
-    else if (ABIStr.endswith("d"))
+    else if (ABIStr.ends_with("d"))
       ABIFRLen = 64;
     return createLoongArchTargetCodeGenInfo(
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
@@ -721,43 +722,70 @@ void InstrProfStats::reportDiagnostics(DiagnosticsEngine &Diags,
   }
 }
 
+static std::optional<llvm::GlobalValue::VisibilityTypes>
+getLLVMVisibility(clang::LangOptions::VisibilityFromDLLStorageClassKinds K) {
+  // Map to LLVM visibility.
+  switch (K) {
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Keep:
+    return std::nullopt;
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Default:
+    return llvm::GlobalValue::DefaultVisibility;
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Hidden:
+    return llvm::GlobalValue::HiddenVisibility;
+  case clang::LangOptions::VisibilityFromDLLStorageClassKinds::Protected:
+    return llvm::GlobalValue::ProtectedVisibility;
+  }
+  llvm_unreachable("unknown option value!");
+}
+
+void setLLVMVisibility(llvm::GlobalValue &GV,
+                       std::optional<llvm::GlobalValue::VisibilityTypes> V) {
+  if (!V)
+    return;
+
+  // Reset DSO locality before setting the visibility. This removes
+  // any effects that visibility options and annotations may have
+  // had on the DSO locality. Setting the visibility will implicitly set
+  // appropriate globals to DSO Local; however, this will be pessimistic
+  // w.r.t. to the normal compiler IRGen.
+  GV.setDSOLocal(false);
+  GV.setVisibility(*V);
+}
+
 static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
                                              llvm::Module &M) {
   if (!LO.VisibilityFromDLLStorageClass)
     return;
 
-  llvm::GlobalValue::VisibilityTypes DLLExportVisibility =
-      CodeGenModule::GetLLVMVisibility(LO.getDLLExportVisibility());
-  llvm::GlobalValue::VisibilityTypes NoDLLStorageClassVisibility =
-      CodeGenModule::GetLLVMVisibility(LO.getNoDLLStorageClassVisibility());
-  llvm::GlobalValue::VisibilityTypes ExternDeclDLLImportVisibility =
-      CodeGenModule::GetLLVMVisibility(LO.getExternDeclDLLImportVisibility());
-  llvm::GlobalValue::VisibilityTypes ExternDeclNoDLLStorageClassVisibility =
-      CodeGenModule::GetLLVMVisibility(
-          LO.getExternDeclNoDLLStorageClassVisibility());
+  std::optional<llvm::GlobalValue::VisibilityTypes> DLLExportVisibility =
+      getLLVMVisibility(LO.getDLLExportVisibility());
+
+  std::optional<llvm::GlobalValue::VisibilityTypes>
+      NoDLLStorageClassVisibility =
+          getLLVMVisibility(LO.getNoDLLStorageClassVisibility());
+
+  std::optional<llvm::GlobalValue::VisibilityTypes>
+      ExternDeclDLLImportVisibility =
+          getLLVMVisibility(LO.getExternDeclDLLImportVisibility());
+
+  std::optional<llvm::GlobalValue::VisibilityTypes>
+      ExternDeclNoDLLStorageClassVisibility =
+          getLLVMVisibility(LO.getExternDeclNoDLLStorageClassVisibility());
 
   for (llvm::GlobalValue &GV : M.global_values()) {
     if (GV.hasAppendingLinkage() || GV.hasLocalLinkage())
       continue;
 
-    // Reset DSO locality before setting the visibility. This removes
-    // any effects that visibility options and annotations may have
-    // had on the DSO locality. Setting the visibility will implicitly set
-    // appropriate globals to DSO Local; however, this will be pessimistic
-    // w.r.t. to the normal compiler IRGen.
-    GV.setDSOLocal(false);
-
-    if (GV.isDeclarationForLinker()) {
-      GV.setVisibility(GV.getDLLStorageClass() ==
-                               llvm::GlobalValue::DLLImportStorageClass
-                           ? ExternDeclDLLImportVisibility
-                           : ExternDeclNoDLLStorageClassVisibility);
-    } else {
-      GV.setVisibility(GV.getDLLStorageClass() ==
-                               llvm::GlobalValue::DLLExportStorageClass
-                           ? DLLExportVisibility
-                           : NoDLLStorageClassVisibility);
-    }
+    if (GV.isDeclarationForLinker())
+      setLLVMVisibility(GV, GV.getDLLStorageClass() ==
+                                    llvm::GlobalValue::DLLImportStorageClass
+                                ? ExternDeclDLLImportVisibility
+                                : ExternDeclNoDLLStorageClassVisibility);
+    else
+      setLLVMVisibility(GV, GV.getDLLStorageClass() ==
+                                    llvm::GlobalValue::DLLExportStorageClass
+                                ? DLLExportVisibility
+                                : NoDLLStorageClassVisibility);
 
     GV.setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   }
@@ -995,12 +1023,7 @@ void CodeGenModule::Release() {
                               uint32_t(CLANG_VERSION_MINOR));
     getModule().addModuleFlag(llvm::Module::Warning, "zos_product_patchlevel",
                               uint32_t(CLANG_VERSION_PATCHLEVEL));
-    std::string ProductId;
-#ifdef CLANG_VENDOR
-    ProductId = #CLANG_VENDOR;
-#else
-    ProductId = "clang";
-#endif
+    std::string ProductId = getClangVendor() + "clang";
     getModule().addModuleFlag(llvm::Module::Error, "zos_product_id",
                               llvm::MDString::get(VMContext, ProductId));
 
@@ -1111,6 +1134,11 @@ void CodeGenModule::Release() {
     if (LangOpts.BranchTargetEnforcement)
       getModule().addModuleFlag(llvm::Module::Min, "branch-target-enforcement",
                                 1);
+    if (LangOpts.BranchProtectionPAuthLR)
+      getModule().addModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr",
+                                1);
+    if (LangOpts.GuardedControlStack)
+      getModule().addModuleFlag(llvm::Module::Min, "guarded-control-stack", 1);
     if (LangOpts.hasSignReturnAddress())
       getModule().addModuleFlag(llvm::Module::Min, "sign-return-address", 1);
     if (LangOpts.isSignReturnAddressScopeAll())
@@ -1201,7 +1229,7 @@ void CodeGenModule::Release() {
       llvm::CodeModel::Model codeModel = static_cast<llvm::CodeModel::Model>(CM);
       getModule().setCodeModel(codeModel);
 
-      if (CM == llvm::CodeModel::Medium &&
+      if ((CM == llvm::CodeModel::Medium || CM == llvm::CodeModel::Large) &&
           Context.getTargetInfo().getTriple().getArch() ==
               llvm::Triple::x86_64) {
         getModule().setLargeDataThreshold(getCodeGenOpts().LargeDataThreshold);
@@ -1715,7 +1743,7 @@ static void AppendTargetMangling(const CodeGenModule &CGM,
   llvm::sort(Info.Features, [&Target](StringRef LHS, StringRef RHS) {
     // Multiversioning doesn't allow "no-${feature}", so we can
     // only have "+" prefixes here.
-    assert(LHS.startswith("+") && RHS.startswith("+") &&
+    assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
     return Target.multiVersionSortPriority(LHS.substr(1)) >
            Target.multiVersionSortPriority(RHS.substr(1));
@@ -1769,7 +1797,7 @@ static void AppendTargetClonesMangling(const CodeGenModule &CGM,
   } else {
     Out << '.';
     StringRef FeatureStr = Attr->getFeatureStr(VersionIndex);
-    if (FeatureStr.startswith("arch="))
+    if (FeatureStr.starts_with("arch="))
       Out << "arch_" << FeatureStr.substr(sizeof("arch=") - 1);
     else
       Out << FeatureStr;
@@ -2380,8 +2408,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (D->hasAttr<ArmLocallyStreamingAttr>())
     B.addAttribute("aarch64_pstate_sm_body");
 
-  if (D->hasAttr<ArmNewZAAttr>())
-    B.addAttribute("aarch64_pstate_za_new");
+  if (auto *Attr = D->getAttr<ArmNewAttr>()) {
+    if (Attr->isNewZA())
+      B.addAttribute("aarch64_pstate_za_new");
+  }
 
   // Track whether we need to add the optnone LLVM attribute,
   // starting with the default for this optimization level.
@@ -3828,7 +3858,7 @@ namespace {
       if (!BuiltinID || !BI.isLibFunction(BuiltinID))
         return false;
       StringRef BuiltinName = BI.getName(BuiltinID);
-      if (BuiltinName.startswith("__builtin_") &&
+      if (BuiltinName.starts_with("__builtin_") &&
           Name == BuiltinName.slice(strlen("__builtin_"), StringRef::npos)) {
         return true;
       }
@@ -4164,7 +4194,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
               Feature.push_back(CurFeat.trim());
           }
         } else {
-          if (Version.startswith("arch="))
+          if (Version.starts_with("arch="))
             Architecture = Version.drop_front(sizeof("arch=") - 1);
           else if (Version != "default")
             Feature.push_back(Version);
@@ -4870,6 +4900,10 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
         D->getType().isConstant(Context) &&
         isExternallyVisible(D->getLinkageAndVisibility().getLinkage()))
       GV->setSection(".cp.rodata");
+
+    // Handle code model attribute
+    if (const auto *CMA = D->getAttr<CodeModelAttr>())
+      GV->setCodeModel(CMA->getModel());
 
     // Check if we a have a const declaration with an initializer, we may be
     // able to emit it as available_externally to expose it's value to the
@@ -6439,7 +6473,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
       VD, E->getManglingNumber(), Out);
 
   APValue *Value = nullptr;
-  if (E->getStorageDuration() == SD_Static && VD && VD->evaluateValue()) {
+  if (E->getStorageDuration() == SD_Static && VD->evaluateValue()) {
     // If the initializer of the extending declaration is a constant
     // initializer, we should have a cached constant initializer for this
     // temporary. Note that this might have a different value from the value
@@ -6454,8 +6488,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
       !EvalResult.hasSideEffects())
     Value = &EvalResult.Val;
 
-  LangAS AddrSpace =
-      VD ? GetGlobalVarAddressSpace(VD) : MaterializedType.getAddressSpace();
+  LangAS AddrSpace = GetGlobalVarAddressSpace(VD);
 
   std::optional<ConstantEmitter> emitter;
   llvm::Constant *InitialValue = nullptr;

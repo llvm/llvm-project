@@ -16,7 +16,10 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class BPFRegisterBankInfo;
+class BPFSubtarget;
 class BPFTargetMachine;
+class InstructionSelector;
 class PassRegistry;
 
 ModulePass *createBPFCheckAndAdjustIR();
@@ -26,6 +29,10 @@ FunctionPass *createBPFMISimplifyPatchablePass();
 FunctionPass *createBPFMIPeepholePass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
+
+InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
+                                                  const BPFSubtarget &,
+                                                  const BPFRegisterBankInfo &);
 
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
 void initializeBPFDAGToDAGISelPass(PassRegistry &);

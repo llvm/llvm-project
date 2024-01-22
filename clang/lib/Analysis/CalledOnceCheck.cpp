@@ -973,7 +973,7 @@ private:
   /// Return true if the given name has conventional suffixes.
   static bool hasConventionalSuffix(llvm::StringRef Name) {
     return llvm::any_of(CONVENTIONAL_SUFFIXES, [Name](llvm::StringRef Suffix) {
-      return Name.endswith(Suffix);
+      return Name.ends_with(Suffix);
     });
   }
 

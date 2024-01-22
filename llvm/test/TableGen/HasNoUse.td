@@ -16,20 +16,20 @@ def NO_RET_ATOMIC_ADD : I<(outs), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 // SDAG-NEXT: if (!SDValue(N, 0).use_empty()) return false;
 // SDAG-NEXT: return true;
 
-// GISEL: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_ATOMICRMW_ADD,
+// GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ATOMICRMW_ADD),
 // GISEL-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // GISEL-NEXT: GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/4,
+// GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(4),
 // GISEL-NEXT: GIM_CheckHasNoUse, /*MI*/0,
 // GISEL-NEXT: // MIs[0] src0
 // GISEL-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/0,
 // GISEL-NEXT: // (atomic_load_add:{ *:[i32] } iPTR:{ *:[iPTR] }:$src0, i32:{ *:[i32] }:$src1)<<P:Predicate_atomic_load_add_no_ret_32>>  =>  (NO_RET_ATOMIC_ADD GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
-// GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::NO_RET_ATOMIC_ADD,
+// GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::NO_RET_ATOMIC_ADD),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1
-// GISEL-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*MergeInsnID's*/0, GIU_MergeMemOperands_EndOfList,
-// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
+// GISEL-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/1, /*MergeInsnID's*/0,
 // GISEL-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// GISEL-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 let HasNoUse = true in
 defm atomic_load_add_no_ret : binary_atomic_op<atomic_load_add>;
 

@@ -104,10 +104,8 @@ define arm_aapcs_vfpcc void @test_1double_nosplit([4 x float], [4 x double], [3 
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, sp, #8
-; CHECK-NEXT:    movw r1, #0
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    movt r1, #16368
-; CHECK-NEXT:    strd r0, r1, [sp]
+; CHECK-NEXT:    vmov.f64 d16, #1.000000e+00
+; CHECK-NEXT:    vstr d16, [sp]
 ; CHECK-NEXT:    bl test_1double_nosplit
 ; CHECK-NEXT:    add sp, sp, #8
 ; CHECK-NEXT:    pop {r11, pc}
@@ -138,10 +136,8 @@ define arm_aapcs_vfpcc void @test_1double_misaligned([4 x double], [4 x double],
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    movw r1, #0
-; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    movt r1, #16368
-; CHECK-NEXT:    strd r0, r1, [sp, #8]
+; CHECK-NEXT:    vmov.f64 d16, #1.000000e+00
+; CHECK-NEXT:    vstr d16, [sp, #8]
 ; CHECK-NEXT:    bl test_1double_misaligned
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    pop {r11, pc}

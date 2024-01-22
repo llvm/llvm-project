@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_PPC_MCELFSTREAMER_PPCELFSTREAMER_H
 #define LLVM_LIB_TARGET_PPC_MCELFSTREAMER_PPCELFSTREAMER_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include <memory>
 

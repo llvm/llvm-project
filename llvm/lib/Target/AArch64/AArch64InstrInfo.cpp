@@ -3771,6 +3771,13 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MinOffset = -256;
     MaxOffset = 255;
     break;
+  case AArch64::LDR_PPXI:
+  case AArch64::STR_PPXI:
+    Scale = TypeSize::getScalable(2);
+    Width = TypeSize::getScalable(2 * 2);
+    MinOffset = -256;
+    MaxOffset = 254;
+    break;
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
     Scale = TypeSize::getScalable(16);
@@ -4089,6 +4096,16 @@ AArch64InstrInfo::getLdStOffsetOp(const MachineInstr &MI) {
   return MI.getOperand(Idx);
 }
 
+const MachineOperand &
+AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case AArch64::LDRBBroX:
+    return MI.getOperand(4);
+  }
+}
+
 static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
                                               Register Reg) {
   if (MI.getParent() == nullptr)
@@ -4197,6 +4214,9 @@ static bool canPairLdStOpc(unsigned FirstOpc, unsigned SecondOpc) {
   switch (FirstOpc) {
   default:
     return false;
+  case AArch64::LDRQui:
+  case AArch64::LDURQi:
+    return SecondOpc == AArch64::LDRQui || SecondOpc == AArch64::LDURQi;
   case AArch64::LDRWui:
   case AArch64::LDURWi:
     return SecondOpc == AArch64::LDRSWui || SecondOpc == AArch64::LDURSWi;
@@ -4238,8 +4258,9 @@ static bool shouldClusterFI(const MachineFrameInfo &MFI, int FI1,
 ///
 /// Only called for LdSt for which getMemOperandWithOffset returns true.
 bool AArch64InstrInfo::shouldClusterMemOps(
-    ArrayRef<const MachineOperand *> BaseOps1,
-    ArrayRef<const MachineOperand *> BaseOps2, unsigned ClusterSize,
+    ArrayRef<const MachineOperand *> BaseOps1, int64_t OpOffset1,
+    bool OffsetIsScalable1, ArrayRef<const MachineOperand *> BaseOps2,
+    int64_t OpOffset2, bool OffsetIsScalable2, unsigned ClusterSize,
     unsigned NumBytes) const {
   assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
   const MachineOperand &BaseOp1 = *BaseOps1.front();
@@ -4803,6 +4824,10 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         assert(SrcReg != AArch64::WSP);
     } else if (AArch64::FPR32RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRSui;
+    else if (AArch64::PPR2RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::STR_PPXI;
+      StackID = TargetStackID::ScalableVector;
+    }
     break;
   case 8:
     if (AArch64::GPR64allRegClass.hasSubClassEq(RC)) {
@@ -4979,6 +5004,10 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         assert(DestReg != AArch64::WSP);
     } else if (AArch64::FPR32RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRSui;
+    else if (AArch64::PPR2RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::LDR_PPXI;
+      StackID = TargetStackID::ScalableVector;
+    }
     break;
   case 8:
     if (AArch64::GPR64allRegClass.hasSubClassEq(RC)) {
@@ -8778,12 +8807,23 @@ AArch64InstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
   // Don't outline anything used for return address signing. The outlined
   // function will get signed later if needed
   switch (MI.getOpcode()) {
+  case AArch64::PACM:
   case AArch64::PACIASP:
   case AArch64::PACIBSP:
+  case AArch64::PACIASPPC:
+  case AArch64::PACIBSPPC:
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
+  case AArch64::AUTIASPPCi:
+  case AArch64::AUTIASPPCr:
+  case AArch64::AUTIBSPPCi:
+  case AArch64::AUTIBSPPCr:
   case AArch64::RETAA:
   case AArch64::RETAB:
+  case AArch64::RETAASPPCi:
+  case AArch64::RETAASPPCr:
+  case AArch64::RETABSPPCi:
+  case AArch64::RETABSPPCr:
   case AArch64::EMITBKEY:
   case AArch64::PAUTH_PROLOGUE:
   case AArch64::PAUTH_EPILOGUE:
@@ -9184,16 +9224,29 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // and zero immediate operands used as an alias for mov instruction.
   if (MI.getOpcode() == AArch64::ORRWrs &&
       MI.getOperand(1).getReg() == AArch64::WZR &&
-      MI.getOperand(3).getImm() == 0x0) {
+      MI.getOperand(3).getImm() == 0x0 &&
+      // Check that the w->w move is not a zero-extending w->x mov.
+      (!MI.getOperand(0).getReg().isVirtual() ||
+       MI.getOperand(0).getSubReg() == 0) &&
+      (!MI.getOperand(0).getReg().isPhysical() ||
+       MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
+                                    AArch64::X0) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-  }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&
-      MI.getOperand(3).getImm() == 0x0) {
+      MI.getOperand(3).getImm() == 0x0)
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-  }
 
+  return std::nullopt;
+}
+
+std::optional<DestSourcePair>
+AArch64InstrInfo::isCopyLikeInstrImpl(const MachineInstr &MI) const {
+  if (MI.getOpcode() == AArch64::ORRWrs &&
+      MI.getOperand(1).getReg() == AArch64::WZR &&
+      MI.getOperand(3).getImm() == 0x0)
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   return std::nullopt;
 }
 
@@ -9240,7 +9293,7 @@ static std::optional<ParamLoadedValue>
 describeORRLoadedValue(const MachineInstr &MI, Register DescribedReg,
                        const TargetInstrInfo *TII,
                        const TargetRegisterInfo *TRI) {
-  auto DestSrc = TII->isCopyInstr(MI);
+  auto DestSrc = TII->isCopyLikeInstr(MI);
   if (!DestSrc)
     return std::nullopt;
 
@@ -9531,9 +9584,9 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
       .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
       .setMIFlags(Flags);
 
-  //   STR XZR, [SP]
-  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(AArch64::STRXui))
-      .addReg(AArch64::XZR)
+  //   LDR XZR, [SP]
+  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(AArch64::LDRXui))
+      .addReg(AArch64::XZR, RegState::Define)
       .addReg(AArch64::SP)
       .addImm(0)
       .setMIFlags(Flags);

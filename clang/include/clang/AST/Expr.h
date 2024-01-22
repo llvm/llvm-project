@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_EXPR_H
 #define LLVM_CLANG_AST_EXPR_H
 
+#include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTVector.h"
 #include "clang/AST/ComputeDependence.h"
@@ -1135,7 +1136,6 @@ public:
     return ConstantExprBits.APValueKind != APValue::None;
   }
   APValue getAPValueResult() const;
-  APValue &getResultAsAPValue() const { return APValueResult(); }
   llvm::APSInt getResultAsAPSInt() const;
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
@@ -1476,57 +1476,6 @@ public:
 
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-};
-
-/// Used by IntegerLiteral/FloatingLiteral to store the numeric without
-/// leaking memory.
-///
-/// For large floats/integers, APFloat/APInt will allocate memory from the heap
-/// to represent these numbers.  Unfortunately, when we use a BumpPtrAllocator
-/// to allocate IntegerLiteral/FloatingLiteral nodes the memory associated with
-/// the APFloat/APInt values will never get freed. APNumericStorage uses
-/// ASTContext's allocator for memory allocation.
-class APNumericStorage {
-  union {
-    uint64_t VAL;    ///< Used to store the <= 64 bits integer value.
-    uint64_t *pVal;  ///< Used to store the >64 bits integer value.
-  };
-  unsigned BitWidth;
-
-  bool hasAllocation() const { return llvm::APInt::getNumWords(BitWidth) > 1; }
-
-  APNumericStorage(const APNumericStorage &) = delete;
-  void operator=(const APNumericStorage &) = delete;
-
-protected:
-  APNumericStorage() : VAL(0), BitWidth(0) { }
-
-  llvm::APInt getIntValue() const {
-    unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
-    if (NumWords > 1)
-      return llvm::APInt(BitWidth, NumWords, pVal);
-    else
-      return llvm::APInt(BitWidth, VAL);
-  }
-  void setIntValue(const ASTContext &C, const llvm::APInt &Val);
-};
-
-class APIntStorage : private APNumericStorage {
-public:
-  llvm::APInt getValue() const { return getIntValue(); }
-  void setValue(const ASTContext &C, const llvm::APInt &Val) {
-    setIntValue(C, Val);
-  }
-};
-
-class APFloatStorage : private APNumericStorage {
-public:
-  llvm::APFloat getValue(const llvm::fltSemantics &Semantics) const {
-    return llvm::APFloat(Semantics, getIntValue());
-  }
-  void setValue(const ASTContext &C, const llvm::APFloat &Val) {
-    setIntValue(C, Val.bitcastToAPInt());
   }
 };
 
@@ -4806,6 +4755,17 @@ public:
     return T->getStmtClass() == SourceLocExprClass;
   }
 
+  static bool MayBeDependent(SourceLocIdentKind Kind) {
+    switch (Kind) {
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
+      return true;
+    default:
+      return false;
+    }
+  }
+
 private:
   friend class ASTStmtReader;
 };
@@ -6498,7 +6458,7 @@ public:
     return cast<Expr>(SubExprs[ORDER_FAIL]);
   }
   Expr *getVal2() const {
-    if (Op == AO__atomic_exchange)
+    if (Op == AO__atomic_exchange || Op == AO__scoped_atomic_exchange)
       return cast<Expr>(SubExprs[ORDER_FAIL]);
     assert(NumSubExprs > VAL2);
     return cast<Expr>(SubExprs[VAL2]);
@@ -6539,7 +6499,9 @@ public:
            getOp() == AO__opencl_atomic_compare_exchange_weak ||
            getOp() == AO__hip_atomic_compare_exchange_weak ||
            getOp() == AO__atomic_compare_exchange ||
-           getOp() == AO__atomic_compare_exchange_n;
+           getOp() == AO__atomic_compare_exchange_n ||
+           getOp() == AO__scoped_atomic_compare_exchange ||
+           getOp() == AO__scoped_atomic_compare_exchange_n;
   }
 
   bool isOpenCL() const {
@@ -6569,13 +6531,13 @@ public:
   /// \return empty atomic scope model if the atomic op code does not have
   ///   scope operand.
   static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
-    auto Kind =
-        (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
-            ? AtomicScopeModelKind::OpenCL
-        : (Op >= AO__hip_atomic_load && Op <= AO__hip_atomic_fetch_max)
-            ? AtomicScopeModelKind::HIP
-            : AtomicScopeModelKind::None;
-    return AtomicScopeModel::create(Kind);
+    if (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
+      return AtomicScopeModel::create(AtomicScopeModelKind::OpenCL);
+    else if (Op >= AO__hip_atomic_load && Op <= AO__hip_atomic_fetch_max)
+      return AtomicScopeModel::create(AtomicScopeModelKind::HIP);
+    else if (Op >= AO__scoped_atomic_load && Op <= AO__scoped_atomic_fetch_max)
+      return AtomicScopeModel::create(AtomicScopeModelKind::Generic);
+    return AtomicScopeModel::create(AtomicScopeModelKind::None);
   }
 
   /// Get atomic scope model.

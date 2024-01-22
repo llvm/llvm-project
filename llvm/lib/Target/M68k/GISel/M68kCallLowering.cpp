@@ -25,6 +25,27 @@
 
 using namespace llvm;
 
+namespace {
+
+struct M68kFormalArgHandler : public M68kIncomingValueHandler {
+  M68kFormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : M68kIncomingValueHandler(MIRBuilder, MRI) {}
+};
+
+struct CallReturnHandler : public M68kIncomingValueHandler {
+  CallReturnHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                    MachineInstrBuilder &MIB)
+      : M68kIncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
+
+private:
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        const CCValAssign &VA) override;
+
+  MachineInstrBuilder &MIB;
+};
+
+} // end anonymous namespace
+
 M68kCallLowering::M68kCallLowering(const M68kTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
@@ -119,7 +140,7 @@ bool M68kCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   CCAssignFn *AssignFn =
       TLI.getCCAssignFn(F.getCallingConv(), false, F.isVarArg());
   IncomingValueAssigner ArgAssigner(AssignFn);
-  FormalArgHandler ArgHandler(MIRBuilder, MRI);
+  M68kFormalArgHandler ArgHandler(MIRBuilder, MRI);
   return determineAndHandleAssignments(ArgHandler, ArgAssigner, SplitArgs,
                                        MIRBuilder, F.getCallingConv(),
                                        F.isVarArg());

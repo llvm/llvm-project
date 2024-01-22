@@ -57,7 +57,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
-  int m = -FPBits::EXPONENT_BIAS;
+  int m = -FPBits::EXP_BIAS;
 
   using fputil::round_result_slightly_down;
   using fputil::round_result_slightly_up;
@@ -84,10 +84,10 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return static_cast<float>(FPBits::neg_inf());
+        return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
       }
       // Normalize denormal inputs.
-      xbits.set_val(xbits.get_val() * 0x1.0p23f);
+      xbits = FPBits(xbits.get_val() * 0x1.0p23f);
       m -= 23;
       x_u = xbits.uintval();
     }
@@ -117,9 +117,9 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return static_cast<float>(FPBits::neg_inf());
+        return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
       }
-      if (xbits.get_sign() && !xbits.is_nan()) {
+      if (xbits.is_neg() && !xbits.is_nan()) {
         // Return NaN and raise FE_INVALID
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
@@ -135,7 +135,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   // rounding mode.
   if (LIBC_UNLIKELY((x_u & 0x007f'ffffU) == 0))
     return static_cast<float>(
-        static_cast<double>(m + xbits.get_unbiased_exponent()) * LOG_2);
+        static_cast<double>(m + xbits.get_biased_exponent()) * LOG_2);
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
   uint32_t mant = xbits.get_mantissa();
@@ -146,7 +146,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   m += static_cast<int>((x_u + (1 << 16)) >> 23);
 
   // Set bits to 1.m
-  xbits.set_unbiased_exponent(0x7F);
+  xbits.set_biased_exponent(0x7F);
 
   float u = static_cast<float>(xbits);
   double v;

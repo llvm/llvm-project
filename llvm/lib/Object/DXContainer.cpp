@@ -301,7 +301,7 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
 
   // String table starts at a 4-byte offset.
   Current = reinterpret_cast<const char *>(
-      alignTo<4>(reinterpret_cast<const uintptr_t>(Current)));
+      alignTo<4>(reinterpret_cast<uintptr_t>(Current)));
 
   uint32_t StringTableSize = 0;
   if (Error Err = readInteger(Data, Current, StringTableSize))

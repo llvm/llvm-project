@@ -712,6 +712,13 @@ llvm.func @coro_resume(%arg0: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @coro_promise
+llvm.func @coro_promise(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : i1) {
+  // CHECK: call ptr @llvm.coro.promise
+  %0 = llvm.intr.coro.promise %arg0, %arg1, %arg2 : (!llvm.ptr, i32, i1) -> !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @eh_typeid_for
 llvm.func @eh_typeid_for(%arg0 : !llvm.ptr) {
     // CHECK: call i32 @llvm.eh.typeid.for
@@ -941,6 +948,15 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant
+llvm.func @invariant(%p: !llvm.ptr) {
+  // CHECK: call ptr @llvm.invariant.start
+  %1 = llvm.intr.invariant.start 16, %p : !llvm.ptr
+  // CHECK: call void @llvm.invariant.end
+  llvm.intr.invariant.end %1, 16, %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @ssa_copy
 llvm.func @ssa_copy(%arg: f32) -> f32 {
   // CHECK: call float @llvm.ssa.copy
@@ -1047,6 +1063,7 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
+// CHECK-DAG: declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -1101,6 +1118,9 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+
 // CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
 // CHECK-DAG: declare ptr @llvm.stacksave.p0()
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()

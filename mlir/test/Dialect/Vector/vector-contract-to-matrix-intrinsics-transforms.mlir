@@ -14,9 +14,9 @@
 // CHECK-SAME: %[[A:[a-zA-Z0-9]*]]: vector<2x4xf32>,
 // CHECK-SAME: %[[B:[a-zA-Z0-9]*]]: vector<4x3xf32>,
 // CHECK-SAME: %[[C:[a-zA-Z0-9]*]]: vector<2x3xf32>
-//      CHECK:  %[[vcst:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
-//      CHECK:  %[[vcst_0:.*]] = arith.constant dense<0.000000e+00> : vector<12xf32>
-//      CHECK:  %[[vcst_1:.*]] = arith.constant dense<0.000000e+00> : vector<2x3xf32>
+//  CHECK-DAG:  %[[vcst:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
+//  CHECK-DAG:  %[[vcst_0:.*]] = arith.constant dense<0.000000e+00> : vector<12xf32>
+//  CHECK-DAG:  %[[vcst_1:.*]] = arith.constant dense<0.000000e+00> : vector<2x3xf32>
 //      CHECK:  %[[a0:.*]] = vector.extract %[[A]][0] : vector<4xf32> from vector<2x4xf32>
 //      CHECK:  %[[a1:.*]] = vector.insert_strided_slice %[[a0]], %[[vcst]] {offsets = [0], strides = [1]} : vector<4xf32> into vector<8xf32>
 //      CHECK:  %[[a2:.*]] = vector.extract %[[A]][1] : vector<4xf32> from vector<2x4xf32>

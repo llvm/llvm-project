@@ -6,6 +6,13 @@
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-n1 -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=cortex-a710 -S < %s | FileCheck %s --check-prefix=CHECKOO
 ; RUN: opt -select-optimize -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=generic -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a55 -S < %s | FileCheck %s --check-prefix=CHECKII
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a510 -S < %s | FileCheck %s --check-prefix=CHECKII
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a72 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=neoverse-n1 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=cortex-a710 -S < %s | FileCheck %s --check-prefix=CHECKOO
+; RUN: opt -passes='require<profile-summary>,function(select-optimize)' -mtriple=aarch64-linux-gnu -mcpu=neoverse-v2 -S < %s | FileCheck %s --check-prefix=CHECKOO
 
 %struct.st = type { i32, i64, ptr, ptr, i16, ptr, ptr, i64, i64 }
 
@@ -260,4 +267,597 @@ if.end87:                                         ; preds = %if.then, %while.bod
 
 while.end:                                        ; preds = %land.rhs, %if.end87, %entry
   ret void
+}
+
+
+define void @replace_or(ptr nocapture noundef %newst, ptr noundef %t, ptr noundef %h, i64 noundef %c, i64 noundef %rc, i64 noundef %ma, i64 noundef %n) {
+; CHECKOO-LABEL: @replace_or(
+; CHECKOO-NEXT:  entry:
+; CHECKOO-NEXT:    [[T1:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[NEWST:%.*]], i64 0, i32 2
+; CHECKOO-NEXT:    store ptr [[T:%.*]], ptr [[T1]], align 8
+; CHECKOO-NEXT:    [[H3:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 3
+; CHECKOO-NEXT:    store ptr [[H:%.*]], ptr [[H3]], align 8
+; CHECKOO-NEXT:    [[ORG_C:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 8
+; CHECKOO-NEXT:    store i64 [[C:%.*]], ptr [[ORG_C]], align 8
+; CHECKOO-NEXT:    [[C6:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 1
+; CHECKOO-NEXT:    store i64 [[C]], ptr [[C6]], align 8
+; CHECKOO-NEXT:    [[FLOW:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 7
+; CHECKOO-NEXT:    store i64 [[RC:%.*]], ptr [[FLOW]], align 8
+; CHECKOO-NEXT:    [[CONV:%.*]] = trunc i64 [[N:%.*]] to i32
+; CHECKOO-NEXT:    store i32 [[CONV]], ptr [[NEWST]], align 8
+; CHECKOO-NEXT:    [[FLOW10:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 1, i32 7
+; CHECKOO-NEXT:    [[TMP0:%.*]] = load i64, ptr [[FLOW10]], align 8
+; CHECKOO-NEXT:    [[FLOW12:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 2, i32 7
+; CHECKOO-NEXT:    [[TMP1:%.*]] = load i64, ptr [[FLOW12]], align 8
+; CHECKOO-NEXT:    [[CMP13:%.*]] = icmp sgt i64 [[TMP0]], [[TMP1]]
+; CHECKOO-NEXT:    [[CONV15:%.*]] = select i1 [[CMP13]], i64 2, i64 3
+; CHECKOO-NEXT:    [[CMP16_NOT149:%.*]] = icmp sgt i64 [[CONV15]], [[MA:%.*]]
+; CHECKOO-NEXT:    br i1 [[CMP16_NOT149]], label [[WHILE_END:%.*]], label [[LAND_RHS:%.*]]
+; CHECKOO:       land.rhs:
+; CHECKOO-NEXT:    [[CMP_0151:%.*]] = phi i64 [ [[CMP_1:%.*]], [[IF_END87:%.*]] ], [ [[CONV15]], [[ENTRY:%.*]] ]
+; CHECKOO-NEXT:    [[POS_0150:%.*]] = phi i64 [ [[CMP_0151]], [[IF_END87]] ], [ 1, [[ENTRY]] ]
+; CHECKOO-NEXT:    [[SUB:%.*]] = add nsw i64 [[CMP_0151]], -1
+; CHECKOO-NEXT:    [[FLOW19:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 7
+; CHECKOO-NEXT:    [[TMP2:%.*]] = load i64, ptr [[FLOW19]], align 8
+; CHECKOO-NEXT:    [[CMP20:%.*]] = icmp sgt i64 [[TMP2]], [[RC]]
+; CHECKOO-NEXT:    br i1 [[CMP20]], label [[WHILE_BODY:%.*]], label [[WHILE_END]]
+; CHECKOO:       while.body:
+; CHECKOO-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]]
+; CHECKOO-NEXT:    [[T24:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 2
+; CHECKOO-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[T24]], align 8
+; CHECKOO-NEXT:    [[SUB25:%.*]] = add nsw i64 [[POS_0150]], -1
+; CHECKOO-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]]
+; CHECKOO-NEXT:    [[T27:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 2
+; CHECKOO-NEXT:    store ptr [[TMP3]], ptr [[T27]], align 8
+; CHECKOO-NEXT:    [[H30:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 3
+; CHECKOO-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[H30]], align 8
+; CHECKOO-NEXT:    [[H33:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 3
+; CHECKOO-NEXT:    store ptr [[TMP4]], ptr [[H33]], align 8
+; CHECKOO-NEXT:    [[C36:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 1
+; CHECKOO-NEXT:    [[TMP5:%.*]] = load i64, ptr [[C36]], align 8
+; CHECKOO-NEXT:    [[C39:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 1
+; CHECKOO-NEXT:    store i64 [[TMP5]], ptr [[C39]], align 8
+; CHECKOO-NEXT:    [[ORG_C45:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 8
+; CHECKOO-NEXT:    store i64 [[TMP5]], ptr [[ORG_C45]], align 8
+; CHECKOO-NEXT:    [[FLOW51:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 7
+; CHECKOO-NEXT:    store i64 [[TMP2]], ptr [[FLOW51]], align 8
+; CHECKOO-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX18]], align 8
+; CHECKOO-NEXT:    store i32 [[TMP6]], ptr [[ARRAYIDX26]], align 8
+; CHECKOO-NEXT:    store ptr [[T]], ptr [[T24]], align 8
+; CHECKOO-NEXT:    store ptr [[H]], ptr [[H30]], align 8
+; CHECKOO-NEXT:    store i64 [[C]], ptr [[C36]], align 8
+; CHECKOO-NEXT:    [[ORG_C69:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 8
+; CHECKOO-NEXT:    store i64 [[C]], ptr [[ORG_C69]], align 8
+; CHECKOO-NEXT:    store i64 [[RC]], ptr [[FLOW19]], align 8
+; CHECKOO-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX18]], align 8
+; CHECKOO-NEXT:    [[MUL:%.*]] = shl nsw i64 [[CMP_0151]], 1
+; CHECKOO-NEXT:    [[CMP77_NOT_NOT:%.*]] = icmp slt i64 [[MUL]], [[MA]]
+; CHECKOO-NEXT:    br i1 [[CMP77_NOT_NOT]], label [[IF_THEN:%.*]], label [[IF_END87]]
+; CHECKOO:       if.then:
+; CHECKOO-NEXT:    [[SUB79:%.*]] = add nsw i64 [[MUL]], -1
+; CHECKOO-NEXT:    [[FLOW81:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB79]], i32 7
+; CHECKOO-NEXT:    [[TMP7:%.*]] = load i64, ptr [[FLOW81]], align 8
+; CHECKOO-NEXT:    [[FLOW83:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[MUL]], i32 7
+; CHECKOO-NEXT:    [[TMP8:%.*]] = load i64, ptr [[FLOW83]], align 8
+; CHECKOO-NEXT:    [[CMP84:%.*]] = icmp slt i64 [[TMP7]], [[TMP8]]
+; CHECKOO-NEXT:    [[ADD:%.*]] = zext i1 [[CMP84]] to i64
+; CHECKOO-NEXT:    [[SPEC_SELECT:%.*]] = or disjoint i64 [[MUL]], [[ADD]]
+; CHECKOO-NEXT:    br label [[IF_END87]]
+; CHECKOO:       if.end87:
+; CHECKOO-NEXT:    [[CMP_1]] = phi i64 [ [[MUL]], [[WHILE_BODY]] ], [ [[SPEC_SELECT]], [[IF_THEN]] ]
+; CHECKOO-NEXT:    [[CMP16_NOT:%.*]] = icmp sgt i64 [[CMP_1]], [[MA]]
+; CHECKOO-NEXT:    br i1 [[CMP16_NOT]], label [[WHILE_END]], label [[LAND_RHS]]
+; CHECKOO:       while.end:
+; CHECKOO-NEXT:    ret void
+;
+; CHECKII-LABEL: @replace_or(
+; CHECKII-NEXT:  entry:
+; CHECKII-NEXT:    [[T1:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[NEWST:%.*]], i64 0, i32 2
+; CHECKII-NEXT:    store ptr [[T:%.*]], ptr [[T1]], align 8
+; CHECKII-NEXT:    [[H3:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 3
+; CHECKII-NEXT:    store ptr [[H:%.*]], ptr [[H3]], align 8
+; CHECKII-NEXT:    [[ORG_C:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 8
+; CHECKII-NEXT:    store i64 [[C:%.*]], ptr [[ORG_C]], align 8
+; CHECKII-NEXT:    [[C6:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 1
+; CHECKII-NEXT:    store i64 [[C]], ptr [[C6]], align 8
+; CHECKII-NEXT:    [[FLOW:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 0, i32 7
+; CHECKII-NEXT:    store i64 [[RC:%.*]], ptr [[FLOW]], align 8
+; CHECKII-NEXT:    [[CONV:%.*]] = trunc i64 [[N:%.*]] to i32
+; CHECKII-NEXT:    store i32 [[CONV]], ptr [[NEWST]], align 8
+; CHECKII-NEXT:    [[FLOW10:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 1, i32 7
+; CHECKII-NEXT:    [[TMP0:%.*]] = load i64, ptr [[FLOW10]], align 8
+; CHECKII-NEXT:    [[FLOW12:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 2, i32 7
+; CHECKII-NEXT:    [[TMP1:%.*]] = load i64, ptr [[FLOW12]], align 8
+; CHECKII-NEXT:    [[CMP13:%.*]] = icmp sgt i64 [[TMP0]], [[TMP1]]
+; CHECKII-NEXT:    [[CONV15:%.*]] = select i1 [[CMP13]], i64 2, i64 3
+; CHECKII-NEXT:    [[CMP16_NOT149:%.*]] = icmp sgt i64 [[CONV15]], [[MA:%.*]]
+; CHECKII-NEXT:    br i1 [[CMP16_NOT149]], label [[WHILE_END:%.*]], label [[LAND_RHS:%.*]]
+; CHECKII:       land.rhs:
+; CHECKII-NEXT:    [[CMP_0151:%.*]] = phi i64 [ [[CMP_1:%.*]], [[IF_END87:%.*]] ], [ [[CONV15]], [[ENTRY:%.*]] ]
+; CHECKII-NEXT:    [[POS_0150:%.*]] = phi i64 [ [[CMP_0151]], [[IF_END87]] ], [ 1, [[ENTRY]] ]
+; CHECKII-NEXT:    [[SUB:%.*]] = add nsw i64 [[CMP_0151]], -1
+; CHECKII-NEXT:    [[FLOW19:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 7
+; CHECKII-NEXT:    [[TMP2:%.*]] = load i64, ptr [[FLOW19]], align 8
+; CHECKII-NEXT:    [[CMP20:%.*]] = icmp sgt i64 [[TMP2]], [[RC]]
+; CHECKII-NEXT:    br i1 [[CMP20]], label [[WHILE_BODY:%.*]], label [[WHILE_END]]
+; CHECKII:       while.body:
+; CHECKII-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]]
+; CHECKII-NEXT:    [[T24:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 2
+; CHECKII-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[T24]], align 8
+; CHECKII-NEXT:    [[SUB25:%.*]] = add nsw i64 [[POS_0150]], -1
+; CHECKII-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]]
+; CHECKII-NEXT:    [[T27:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 2
+; CHECKII-NEXT:    store ptr [[TMP3]], ptr [[T27]], align 8
+; CHECKII-NEXT:    [[H30:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 3
+; CHECKII-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[H30]], align 8
+; CHECKII-NEXT:    [[H33:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 3
+; CHECKII-NEXT:    store ptr [[TMP4]], ptr [[H33]], align 8
+; CHECKII-NEXT:    [[C36:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 1
+; CHECKII-NEXT:    [[TMP5:%.*]] = load i64, ptr [[C36]], align 8
+; CHECKII-NEXT:    [[C39:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 1
+; CHECKII-NEXT:    store i64 [[TMP5]], ptr [[C39]], align 8
+; CHECKII-NEXT:    [[ORG_C45:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 8
+; CHECKII-NEXT:    store i64 [[TMP5]], ptr [[ORG_C45]], align 8
+; CHECKII-NEXT:    [[FLOW51:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB25]], i32 7
+; CHECKII-NEXT:    store i64 [[TMP2]], ptr [[FLOW51]], align 8
+; CHECKII-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX18]], align 8
+; CHECKII-NEXT:    store i32 [[TMP6]], ptr [[ARRAYIDX26]], align 8
+; CHECKII-NEXT:    store ptr [[T]], ptr [[T24]], align 8
+; CHECKII-NEXT:    store ptr [[H]], ptr [[H30]], align 8
+; CHECKII-NEXT:    store i64 [[C]], ptr [[C36]], align 8
+; CHECKII-NEXT:    [[ORG_C69:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB]], i32 8
+; CHECKII-NEXT:    store i64 [[C]], ptr [[ORG_C69]], align 8
+; CHECKII-NEXT:    store i64 [[RC]], ptr [[FLOW19]], align 8
+; CHECKII-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX18]], align 8
+; CHECKII-NEXT:    [[MUL:%.*]] = shl nsw i64 [[CMP_0151]], 1
+; CHECKII-NEXT:    [[CMP77_NOT_NOT:%.*]] = icmp slt i64 [[MUL]], [[MA]]
+; CHECKII-NEXT:    br i1 [[CMP77_NOT_NOT]], label [[IF_THEN:%.*]], label [[IF_END87]]
+; CHECKII:       if.then:
+; CHECKII-NEXT:    [[SUB79:%.*]] = add nsw i64 [[MUL]], -1
+; CHECKII-NEXT:    [[FLOW81:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[SUB79]], i32 7
+; CHECKII-NEXT:    [[TMP7:%.*]] = load i64, ptr [[FLOW81]], align 8
+; CHECKII-NEXT:    [[FLOW83:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[NEWST]], i64 [[MUL]], i32 7
+; CHECKII-NEXT:    [[TMP8:%.*]] = load i64, ptr [[FLOW83]], align 8
+; CHECKII-NEXT:    [[CMP84:%.*]] = icmp slt i64 [[TMP7]], [[TMP8]]
+; CHECKII-NEXT:    [[ADD:%.*]] = zext i1 [[CMP84]] to i64
+; CHECKII-NEXT:    [[SPEC_SELECT:%.*]] = or disjoint i64 [[MUL]], [[ADD]]
+; CHECKII-NEXT:    br label [[IF_END87]]
+; CHECKII:       if.end87:
+; CHECKII-NEXT:    [[CMP_1]] = phi i64 [ [[MUL]], [[WHILE_BODY]] ], [ [[SPEC_SELECT]], [[IF_THEN]] ]
+; CHECKII-NEXT:    [[CMP16_NOT:%.*]] = icmp sgt i64 [[CMP_1]], [[MA]]
+; CHECKII-NEXT:    br i1 [[CMP16_NOT]], label [[WHILE_END]], label [[LAND_RHS]]
+; CHECKII:       while.end:
+; CHECKII-NEXT:    ret void
+;
+entry:
+  %t1 = getelementptr inbounds %struct.st, ptr %newst, i64 0, i32 2
+  store ptr %t, ptr %t1, align 8
+  %h3 = getelementptr inbounds %struct.st, ptr %newst, i64 0, i32 3
+  store ptr %h, ptr %h3, align 8
+  %org_c = getelementptr inbounds %struct.st, ptr %newst, i64 0, i32 8
+  store i64 %c, ptr %org_c, align 8
+  %c6 = getelementptr inbounds %struct.st, ptr %newst, i64 0, i32 1
+  store i64 %c, ptr %c6, align 8
+  %flow = getelementptr inbounds %struct.st, ptr %newst, i64 0, i32 7
+  store i64 %rc, ptr %flow, align 8
+  %conv = trunc i64 %n to i32
+  store i32 %conv, ptr %newst, align 8
+  %flow10 = getelementptr inbounds %struct.st, ptr %newst, i64 1, i32 7
+  %0 = load i64, ptr %flow10, align 8
+  %flow12 = getelementptr inbounds %struct.st, ptr %newst, i64 2, i32 7
+  %1 = load i64, ptr %flow12, align 8
+  %cmp13 = icmp sgt i64 %0, %1
+  %conv15 = select i1 %cmp13, i64 2, i64 3
+  %cmp16.not149 = icmp sgt i64 %conv15, %ma
+  br i1 %cmp16.not149, label %while.end, label %land.rhs
+
+land.rhs:                                         ; preds = %entry, %if.end87
+  %cmp.0151 = phi i64 [ %cmp.1, %if.end87 ], [ %conv15, %entry ]
+  %pos.0150 = phi i64 [ %cmp.0151, %if.end87 ], [ 1, %entry ]
+  %sub = add nsw i64 %cmp.0151, -1
+  %flow19 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub, i32 7
+  %2 = load i64, ptr %flow19, align 8
+  %cmp20 = icmp sgt i64 %2, %rc
+  br i1 %cmp20, label %while.body, label %while.end
+
+while.body:                                       ; preds = %land.rhs
+  %arrayidx18 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub
+  %t24 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub, i32 2
+  %3 = load ptr, ptr %t24, align 8
+  %sub25 = add nsw i64 %pos.0150, -1
+  %arrayidx26 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub25
+  %t27 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub25, i32 2
+  store ptr %3, ptr %t27, align 8
+  %h30 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub, i32 3
+  %4 = load ptr, ptr %h30, align 8
+  %h33 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub25, i32 3
+  store ptr %4, ptr %h33, align 8
+  %c36 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub, i32 1
+  %5 = load i64, ptr %c36, align 8
+  %c39 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub25, i32 1
+  store i64 %5, ptr %c39, align 8
+  %org_c45 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub25, i32 8
+  store i64 %5, ptr %org_c45, align 8
+  %flow51 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub25, i32 7
+  store i64 %2, ptr %flow51, align 8
+  %6 = load i32, ptr %arrayidx18, align 8
+  store i32 %6, ptr %arrayidx26, align 8
+  store ptr %t, ptr %t24, align 8
+  store ptr %h, ptr %h30, align 8
+  store i64 %c, ptr %c36, align 8
+  %org_c69 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub, i32 8
+  store i64 %c, ptr %org_c69, align 8
+  store i64 %rc, ptr %flow19, align 8
+  store i32 %conv, ptr %arrayidx18, align 8
+  %mul = shl nsw i64 %cmp.0151, 1
+  %cmp77.not.not = icmp slt i64 %mul, %ma
+  br i1 %cmp77.not.not, label %if.then, label %if.end87
+
+if.then:                                          ; preds = %while.body
+  %sub79 = add nsw i64 %mul, -1
+  %flow81 = getelementptr inbounds %struct.st, ptr %newst, i64 %sub79, i32 7
+  %7 = load i64, ptr %flow81, align 8
+  %flow83 = getelementptr inbounds %struct.st, ptr %newst, i64 %mul, i32 7
+  %8 = load i64, ptr %flow83, align 8
+  %cmp84 = icmp slt i64 %7, %8
+  %add = zext i1 %cmp84 to i64
+  %spec.select = or disjoint i64 %mul, %add
+  br label %if.end87
+
+if.end87:                                         ; preds = %if.then, %while.body
+  %cmp.1 = phi i64 [ %mul, %while.body ], [ %spec.select, %if.then ]
+  %cmp16.not = icmp sgt i64 %cmp.1, %ma
+  br i1 %cmp16.not, label %while.end, label %land.rhs
+
+while.end:                                        ; preds = %if.end87, %land.rhs, %entry
+  ret void
+}
+
+
+; This `or` is not transformed as it is not the last instruction in the block
+define i32 @or_notatendofblock(ptr nocapture noundef %x, i32 noundef %n, ptr nocapture noundef readonly %z) {
+; CHECKOO-LABEL: @or_notatendofblock(
+; CHECKOO-NEXT:  entry:
+; CHECKOO-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKOO-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKOO:       for.body.preheader:
+; CHECKOO-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECKOO-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKOO:       for.cond.cleanup:
+; CHECKOO-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_1:%.*]], [[IF_END:%.*]] ]
+; CHECKOO-NEXT:    ret i32 [[Y_0_LCSSA]]
+; CHECKOO:       for.body:
+; CHECKOO-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END]] ]
+; CHECKOO-NEXT:    [[Y_020:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[Y_1]], [[IF_END]] ]
+; CHECKOO-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECKOO-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[Y_020]]
+; CHECKOO-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[ADD]], 0
+; CHECKOO-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECKOO:       if.then:
+; CHECKOO-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECKOO-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP0]], [[TMP1]]
+; CHECKOO-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV]], [[TMP1]]
+; CHECKOO-NEXT:    [[DIV2:%.*]] = sdiv i32 [[DIV1]], [[TMP1]]
+; CHECKOO-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[DIV2]], 0
+; CHECKOO-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
+; CHECKOO-NEXT:    [[OR1:%.*]] = or i32 [[CONV]], [[ADD]]
+; CHECKOO-NEXT:    [[OR:%.*]] = add i32 [[OR1]], 1
+; CHECKOO-NEXT:    br label [[IF_END]]
+; CHECKOO:       if.end:
+; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
+; CHECKOO-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
+; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKOO-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+; CHECKII-LABEL: @or_notatendofblock(
+; CHECKII-NEXT:  entry:
+; CHECKII-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKII-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKII:       for.body.preheader:
+; CHECKII-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECKII-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKII:       for.cond.cleanup:
+; CHECKII-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_1:%.*]], [[IF_END:%.*]] ]
+; CHECKII-NEXT:    ret i32 [[Y_0_LCSSA]]
+; CHECKII:       for.body:
+; CHECKII-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END]] ]
+; CHECKII-NEXT:    [[Y_020:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[Y_1]], [[IF_END]] ]
+; CHECKII-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECKII-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[Y_020]]
+; CHECKII-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[ADD]], 0
+; CHECKII-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECKII:       if.then:
+; CHECKII-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECKII-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP0]], [[TMP1]]
+; CHECKII-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV]], [[TMP1]]
+; CHECKII-NEXT:    [[DIV2:%.*]] = sdiv i32 [[DIV1]], [[TMP1]]
+; CHECKII-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[DIV2]], 0
+; CHECKII-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
+; CHECKII-NEXT:    [[OR1:%.*]] = or i32 [[CONV]], [[ADD]]
+; CHECKII-NEXT:    [[OR:%.*]] = add i32 [[OR1]], 1
+; CHECKII-NEXT:    br label [[IF_END]]
+; CHECKII:       if.end:
+; CHECKII-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
+; CHECKII-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
+; CHECKII-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKII-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKII-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+entry:
+  %cmp19 = icmp sgt i32 %n, 0
+  br i1 %cmp19, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:
+  %wide.trip.count = zext nneg i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup:
+  %y.0.lcssa = phi i32 [ 0, %entry ], [ %y.1, %if.end ]
+  ret i32 %y.0.lcssa
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
+  %y.020 = phi i32 [ 0, %for.body.preheader ], [ %y.1, %if.end ]
+  %arrayidx = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %y.020
+  %tobool.not = icmp eq i32 %add, 0
+  br i1 %tobool.not, label %if.end, label %if.then
+
+if.then:
+  %arrayidx4 = getelementptr inbounds i32, ptr %z, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx4, align 4
+  %div = sdiv i32 %0, %1
+  %div1 = sdiv i32 %div, %1
+  %div2 = sdiv i32 %div1, %1
+  %cmp5 = icmp sgt i32 %div2, 0
+  %conv = zext i1 %cmp5 to i32
+  %or1 = or i32 %conv, %add
+  %or = add i32 %or1, 1
+  br label %if.end
+
+if.end:
+  %y.1 = phi i32 [ %or, %if.then ], [ 0, %for.body ]
+  store i32 %y.1, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+
+; Similar to the last test, an artificial test with the or as the last instruction and a select in the same group.
+define i32 @or_samegroup(ptr nocapture noundef %x, i32 noundef %n, ptr nocapture noundef readonly %z) {
+; CHECKOO-LABEL: @or_samegroup(
+; CHECKOO-NEXT:  entry:
+; CHECKOO-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKOO-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKOO:       for.body.preheader:
+; CHECKOO-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECKOO-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKOO:       for.cond.cleanup:
+; CHECKOO-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_1:%.*]], [[IF_END:%.*]] ]
+; CHECKOO-NEXT:    ret i32 [[Y_0_LCSSA]]
+; CHECKOO:       for.body:
+; CHECKOO-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END]] ]
+; CHECKOO-NEXT:    [[Y_020:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[Y_1]], [[IF_END]] ]
+; CHECKOO-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECKOO-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[Y_020]]
+; CHECKOO-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[ADD]], 0
+; CHECKOO-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECKOO:       if.then:
+; CHECKOO-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECKOO-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y_020]], [[TMP1]]
+; CHECKOO-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV]], [[TMP1]]
+; CHECKOO-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[DIV1]], 0
+; CHECKOO-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
+; CHECKOO-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP5]]
+; CHECKOO-NEXT:    br i1 [[SEL_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
+; CHECKOO:       select.false:
+; CHECKOO-NEXT:    br label [[SELECT_END]]
+; CHECKOO:       select.end:
+; CHECKOO-NEXT:    [[SEL:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ 1, [[SELECT_FALSE]] ]
+; CHECKOO-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[SEL]]
+; CHECKOO-NEXT:    br label [[IF_END]]
+; CHECKOO:       if.end:
+; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[SEL]], [[SELECT_END]] ], [ 0, [[FOR_BODY]] ]
+; CHECKOO-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
+; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKOO-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+; CHECKII-LABEL: @or_samegroup(
+; CHECKII-NEXT:  entry:
+; CHECKII-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKII-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKII:       for.body.preheader:
+; CHECKII-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECKII-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKII:       for.cond.cleanup:
+; CHECKII-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_1:%.*]], [[IF_END:%.*]] ]
+; CHECKII-NEXT:    ret i32 [[Y_0_LCSSA]]
+; CHECKII:       for.body:
+; CHECKII-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END]] ]
+; CHECKII-NEXT:    [[Y_020:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[Y_1]], [[IF_END]] ]
+; CHECKII-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECKII-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[Y_020]]
+; CHECKII-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[ADD]], 0
+; CHECKII-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECKII:       if.then:
+; CHECKII-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECKII-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y_020]], [[TMP1]]
+; CHECKII-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV]], [[TMP1]]
+; CHECKII-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[DIV1]], 0
+; CHECKII-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
+; CHECKII-NEXT:    [[SEL:%.*]] = select i1 [[CMP5]], i32 [[ADD]], i32 1
+; CHECKII-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[SEL]]
+; CHECKII-NEXT:    br label [[IF_END]]
+; CHECKII:       if.end:
+; CHECKII-NEXT:    [[Y_1]] = phi i32 [ [[SEL]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
+; CHECKII-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
+; CHECKII-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKII-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKII-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+entry:
+  %cmp19 = icmp sgt i32 %n, 0
+  br i1 %cmp19, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:
+  %wide.trip.count = zext nneg i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup:
+  %y.0.lcssa = phi i32 [ 0, %entry ], [ %y.1, %if.end ]
+  ret i32 %y.0.lcssa
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
+  %y.020 = phi i32 [ 0, %for.body.preheader ], [ %y.1, %if.end ]
+  %arrayidx = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %y.020
+  %tobool.not = icmp eq i32 %add, 0
+  br i1 %tobool.not, label %if.end, label %if.then
+
+if.then:
+  %arrayidx4 = getelementptr inbounds i32, ptr %z, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx4, align 4
+  %div = sdiv i32 %y.020, %1
+  %div1 = sdiv i32 %div, %1
+  %cmp5 = icmp sgt i32 %div1, 0
+  %conv = zext i1 %cmp5 to i32
+  %sel = select i1 %cmp5, i32 %add, i32 1
+  %or = or i32 %conv, %sel
+  br label %if.end
+
+if.end:
+  %y.1 = phi i32 [ %sel, %if.then ], [ 0, %for.body ]
+  store i32 %y.1, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; Same test again with a one use value group of values on the or
+define i32 @or_oneusevalues(ptr nocapture noundef %x, i32 noundef %n, ptr nocapture noundef readonly %z) {
+; CHECKOO-LABEL: @or_oneusevalues(
+; CHECKOO-NEXT:  entry:
+; CHECKOO-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKOO-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKOO:       for.body.preheader:
+; CHECKOO-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECKOO-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKOO:       for.cond.cleanup:
+; CHECKOO-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_1:%.*]], [[IF_END:%.*]] ]
+; CHECKOO-NEXT:    ret i32 [[Y_0_LCSSA]]
+; CHECKOO:       for.body:
+; CHECKOO-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END]] ]
+; CHECKOO-NEXT:    [[Y_020:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[Y_1]], [[IF_END]] ]
+; CHECKOO-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECKOO-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[Y_020]]
+; CHECKOO-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[ADD]], 0
+; CHECKOO-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECKOO:       if.then:
+; CHECKOO-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 [[INDVARS_IV]]
+; CHECKOO-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECKOO-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y_020]], [[TMP1]]
+; CHECKOO-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV]], [[TMP1]]
+; CHECKOO-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[DIV1]], 0
+; CHECKOO-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
+; CHECKOO-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], 1
+; CHECKOO-NEXT:    [[ADD2:%.*]] = or i32 [[ADD1]], 1
+; CHECKOO-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[ADD2]]
+; CHECKOO-NEXT:    br label [[IF_END]]
+; CHECKOO:       if.end:
+; CHECKOO-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
+; CHECKOO-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
+; CHECKOO-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKOO-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKOO-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+; CHECKII-LABEL: @or_oneusevalues(
+; CHECKII-NEXT:  entry:
+; CHECKII-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECKII-NEXT:    br i1 [[CMP19]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECKII:       for.body.preheader:
+; CHECKII-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECKII-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECKII:       for.cond.cleanup:
+; CHECKII-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y_1:%.*]], [[IF_END:%.*]] ]
+; CHECKII-NEXT:    ret i32 [[Y_0_LCSSA]]
+; CHECKII:       for.body:
+; CHECKII-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END]] ]
+; CHECKII-NEXT:    [[Y_020:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[Y_1]], [[IF_END]] ]
+; CHECKII-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECKII-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[Y_020]]
+; CHECKII-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[ADD]], 0
+; CHECKII-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECKII:       if.then:
+; CHECKII-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 [[INDVARS_IV]]
+; CHECKII-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+; CHECKII-NEXT:    [[DIV:%.*]] = sdiv i32 [[Y_020]], [[TMP1]]
+; CHECKII-NEXT:    [[DIV1:%.*]] = sdiv i32 [[DIV]], [[TMP1]]
+; CHECKII-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[DIV1]], 0
+; CHECKII-NEXT:    [[CONV:%.*]] = zext i1 [[CMP5]] to i32
+; CHECKII-NEXT:    [[ADD1:%.*]] = add i32 [[ADD]], 1
+; CHECKII-NEXT:    [[ADD2:%.*]] = or i32 [[ADD1]], 1
+; CHECKII-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[ADD2]]
+; CHECKII-NEXT:    br label [[IF_END]]
+; CHECKII:       if.end:
+; CHECKII-NEXT:    [[Y_1]] = phi i32 [ [[OR]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
+; CHECKII-NEXT:    store i32 [[Y_1]], ptr [[ARRAYIDX]], align 4
+; CHECKII-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECKII-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECKII-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+entry:
+  %cmp19 = icmp sgt i32 %n, 0
+  br i1 %cmp19, label %for.body.preheader, label %for.cond.cleanup
+
+for.body.preheader:
+  %wide.trip.count = zext nneg i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup:
+  %y.0.lcssa = phi i32 [ 0, %entry ], [ %y.1, %if.end ]
+  ret i32 %y.0.lcssa
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end ]
+  %y.020 = phi i32 [ 0, %for.body.preheader ], [ %y.1, %if.end ]
+  %arrayidx = getelementptr inbounds i32, ptr %x, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %add = add nsw i32 %0, %y.020
+  %tobool.not = icmp eq i32 %add, 0
+  br i1 %tobool.not, label %if.end, label %if.then
+
+if.then:
+  %arrayidx4 = getelementptr inbounds i32, ptr %z, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx4, align 4
+  %div = sdiv i32 %y.020, %1
+  %div1 = sdiv i32 %div, %1
+  %cmp5 = icmp sgt i32 %div1, 0
+  %conv = zext i1 %cmp5 to i32
+  %add1 = add i32 %add, 1
+  %add2 = or i32 %add1, 1
+  %or = or i32 %conv, %add2
+  br label %if.end
+
+if.end:
+  %y.1 = phi i32 [ %or, %if.then ], [ 0, %for.body ]
+  store i32 %y.1, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }

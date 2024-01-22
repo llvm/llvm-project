@@ -119,6 +119,7 @@ protected:
   bool HasFmaMixInsts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
+  bool HasScalarDwordx3Loads = false;
   bool HasScalarStores = false;
   bool HasScalarAtomics = false;
   bool HasSDWAOmod = false;
@@ -154,6 +155,7 @@ protected:
   bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
@@ -164,6 +166,8 @@ protected:
   bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
+  bool HasDefaultComponentZero = false;
+  bool HasDefaultComponentBroadcast = false;
   bool SupportsSRAMECC = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
@@ -175,6 +179,7 @@ protected:
   bool HasGetWaveIdInst = false;
   bool HasSMemTimeInst = false;
   bool HasShaderCyclesRegister = false;
+  bool HasShaderCyclesHiLoRegisters = false;
   bool HasVOP3Literal = false;
   bool HasNoDataDepHazard = false;
   bool FlatAddressSpace = false;
@@ -197,6 +202,8 @@ protected:
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
   bool HasVGPRSingleUseHintInsts = false;
+  bool HasPseudoScalarTrans = false;
+  bool HasRestrictedSOffset = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -291,12 +298,16 @@ public:
 
   unsigned getMaxWaveScratchSize() const {
     // See COMPUTE_TMPRING_SIZE.WAVESIZE.
-    if (getGeneration() < GFX11) {
-      // 13-bit field in units of 256-dword.
-      return (256 * 4) * ((1 << 13) - 1);
+    if (getGeneration() >= GFX12) {
+      // 18-bit field in units of 64-dword.
+      return (64 * 4) * ((1 << 18) - 1);
     }
-    // 15-bit field in units of 64-dword.
-    return (64 * 4) * ((1 << 15) - 1);
+    if (getGeneration() == GFX11) {
+      // 15-bit field in units of 64-dword.
+      return (64 * 4) * ((1 << 15) - 1);
+    }
+    // 13-bit field in units of 256-dword.
+    return (256 * 4) * ((1 << 13) - 1);
   }
 
   /// Return the number of high bits known to be zero for a frame index.
@@ -418,6 +429,8 @@ public:
   bool hasScalarMulHiInsts() const {
     return GFX9Insts;
   }
+
+  bool hasScalarSubwordLoads() const { return getGeneration() >= GFX12; }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
@@ -677,6 +690,10 @@ public:
     return AddNoCarryInsts;
   }
 
+  bool hasScalarAddSub64() const { return getGeneration() >= GFX12; }
+
+  bool hasScalarSMulU64() const { return getGeneration() >= GFX12; }
+
   bool hasUnpackedD16VMem() const {
     return HasUnpackedD16VMem;
   }
@@ -764,6 +781,8 @@ public:
     return HasFP8Insts;
   }
 
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -794,6 +813,12 @@ public:
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
 
+  bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
+
+  bool hasDefaultComponentBroadcast() const {
+    return HasDefaultComponentBroadcast;
+  }
+
   bool hasNoSdstCMPX() const {
     return HasNoSdstCMPX;
   }
@@ -814,6 +839,10 @@ public:
     return HasShaderCyclesRegister;
   }
 
+  bool hasShaderCyclesHiLoRegisters() const {
+    return HasShaderCyclesHiLoRegisters;
+  }
+
   bool hasVOP3Literal() const {
     return HasVOP3Literal;
   }
@@ -826,7 +855,16 @@ public:
     return getGeneration() < SEA_ISLANDS;
   }
 
-  bool hasInstPrefetch() const { return getGeneration() >= GFX10; }
+  bool hasInstPrefetch() const {
+    // GFX12 can still encode the s_set_inst_prefetch_distance instruction but
+    // it has no effect.
+    return getGeneration() == GFX10 || getGeneration() == GFX11;
+  }
+
+  bool hasPrefetch() const { return GFX12Insts; }
+
+  // Has s_cmpk_* instructions.
+  bool hasSCmpK() const { return getGeneration() < GFX12; }
 
   // Scratch is allocated in 256 dword per wave blocks for the entire
   // wavefront. When viewed from the perspective of an arbitrary workitem, this
@@ -883,6 +921,8 @@ public:
   bool hasScalarCompareEq64() const {
     return getGeneration() >= VOLCANIC_ISLANDS;
   }
+
+  bool hasScalarDwordx3Loads() const { return HasScalarDwordx3Loads; }
 
   bool hasScalarStores() const {
     return HasScalarStores;
@@ -964,6 +1004,8 @@ public:
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
+
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
 
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
@@ -1084,7 +1126,7 @@ public:
   bool hasDstSelForwardingHazard() const { return GFX940Insts; }
 
   // Cannot use op_sel with v_dot instructions.
-  bool hasDOTOpSelHazard() const { return GFX940Insts; }
+  bool hasDOTOpSelHazard() const { return GFX940Insts || GFX11Insts; }
 
   // Does not have HW interlocs for VALU writing and then reading SGPRs.
   bool hasVDecCoExecHazard() const {
@@ -1109,15 +1151,17 @@ public:
 
   bool hasLdsDirect() const { return getGeneration() >= GFX11; }
 
+  bool hasLdsWaitVMSRC() const { return getGeneration() >= GFX12; }
+
   bool hasVALUPartialForwardingHazard() const {
-    return getGeneration() >= GFX11;
+    return getGeneration() == GFX11;
   }
 
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
-  bool hasVALUMaskWriteHazard() const { return getGeneration() >= GFX11; }
+  bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
@@ -1151,6 +1195,14 @@ public:
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
+
+  bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
+
+  bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
+
+  /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
+  /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
+  bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1204,11 +1256,35 @@ public:
     return hasKernargPreload() && !hasGFX940Insts();
   }
 
+  // \returns true if the target has split barriers feature
+  bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
+
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return true; }
 
-  // \returns true is CSUB atomics support a no-return form.
+  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
+  // no-return form.
   bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
+
+  // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
+  bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
+
+  // \returns true if the target has IEEE kernel descriptor mode bit
+  bool hasIEEEMode() const { return getGeneration() < GFX12; }
+
+  // \returns true if the target has IEEE fminimum/fmaximum instructions
+  bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
+
+  // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
+  bool hasRrWGMode() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
+  /// values.
+  bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
+
+  // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
+  // of sign-extending.
+  bool hasGetPCZeroExtension() const { return GFX12Insts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

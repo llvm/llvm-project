@@ -225,7 +225,8 @@ void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
-void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void NVPTXTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
   PB.registerPipelineParsingCallback(
       [](StringRef PassName, FunctionPassManager &PM,
          ArrayRef<PassBuilder::PipelineElement>) {

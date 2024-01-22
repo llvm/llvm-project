@@ -7,8 +7,6 @@
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 
 #include <omp.h>
 #include <stdio.h>

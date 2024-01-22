@@ -607,7 +607,7 @@ those in the caller.
    only if both threads entered the function by executing converged
    dynamic instances of the call-site.
 
-This intrinsic can occur at most once in a function, and only in the the entry
+This intrinsic can occur at most once in a function, and only in the entry
 block of the function. If this intrinsic occurs in a basic block, then it must
 precede any other convergent operation in the same basic block.
 

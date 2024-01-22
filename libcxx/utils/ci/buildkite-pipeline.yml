@@ -41,45 +41,6 @@ definitions:
       - "**/*.abilist"
       - "**/crash_diagnostics/*"
 
-# Define agents using YAML anchors to reduce duplication
-agents_definitions:
-  _windows_agent: &windows_agent
-    agents:
-      queue: windows
-
-  # Mac OS Builders
-  _mac_agent_x86: &mac_agent_x86
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: x86_64
-  _mac_agent_arm64: &mac_agent_arm64
-    agents:
-      queue: libcxx-builders
-      os: macos
-      arch: arm64
-  _mac_agent_any_arch: &mac_agent_any_arch
-    agents:
-      queue: libcxx-builders
-      os: macos
-  _arm_agent_aarch64: &arm_agent_aarch64
-    agents:
-      queue: libcxx-builders-linaro-arm
-      arch: aarch64
-  _arm_agent_armv8l: &arm_agent_armv8l
-    agents:
-      queue: libcxx-builders-linaro-arm
-      arch: armv8l
-  _aix_agent: &aix_agent
-    agents:
-      queue: libcxx-builders
-      os: aix
-  _android_agent: &android_agent
-    agents:
-      queue: libcxx-builders
-      os: android
-
-
 environment_definitions:
   _common_env: &common_env
       ENABLE_CLANG_TIDY: "On"
@@ -87,7 +48,6 @@ environment_definitions:
       CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
       CC: clang-${LLVM_HEAD_VERSION}
       CXX: clang++-${LLVM_HEAD_VERSION}
-      CMAKE: /opt/bin/cmake
 
   _absolute_path_clang: &absolute_path_clang
     # Note modules require and absolute path for clang-scan-deps
@@ -101,117 +61,173 @@ steps:
   steps:
   - label: Clang-cl (DLL)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-dll
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: Clang-cl (Static)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-static
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: Clang-cl (no vcruntime exceptions)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-no-vcruntime
     <<: *common
-    <<: *windows_agent
+    agents:
+      queue: windows
 
   - label: Clang-cl (Debug mode)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-debug
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: Clang-cl (Static CRT)
     command: bash libcxx/utils/ci/run-buildbot clang-cl-static-crt
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: MinGW (DLL, x86_64)
     command: bash libcxx/utils/ci/run-buildbot mingw-dll
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: MinGW (Static, x86_64)
     command: bash libcxx/utils/ci/run-buildbot mingw-static
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
   - label: MinGW (DLL, i686)
     command: bash libcxx/utils/ci/run-buildbot mingw-dll-i686
-    <<: *windows_agent
+    agents:
+      queue: windows
     <<: *common
 
 - group: ':mac: Apple'
   steps:
   - label: MacOS x86_64
     command: libcxx/utils/ci/run-buildbot generic-cxx23
-    <<: *mac_agent_x86
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64
     <<: *common
 
   - label: MacOS arm64
     command: libcxx/utils/ci/run-buildbot generic-cxx23
-    <<: *mac_agent_arm64
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: arm64
     <<: *common
 
   - label: MacOS with Modules
     command: libcxx/utils/ci/run-buildbot generic-modules
-    <<: *mac_agent_any_arch
+    agents:
+      queue: libcxx-builders
+      os: macos
+    <<: *common
+
+  - label: MacOS with C++03
+    command: libcxx/utils/ci/run-buildbot generic-cxx03
+    agents:
+      queue: libcxx-builders
+      os: macos
     <<: *common
 
     # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: Apple system
     command: libcxx/utils/ci/run-buildbot apple-system
-    <<: *mac_agent_arm64  # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: arm64 # This can technically run on any architecture, but we have more resources on arm64 so we pin this job to arm64
     <<: *common
 
   - label: Apple back-deployment macosx10.13
     command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13
-    <<: *mac_agent_x86 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
     <<: *common
 
   - label: Apple back-deployment macosx10.15
     command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.15
-    <<: *mac_agent_x86 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then
     <<: *common
 
   - label: Apple back-deployment with hardening enabled
     command: libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0
-    <<: *mac_agent_x86  # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
+    agents:
+      queue: libcxx-builders
+      os: macos
+      arch: x86_64 # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
     <<: *common
 
 - group: ARM
   steps:
   - label: AArch64
     command: libcxx/utils/ci/run-buildbot aarch64
-    <<: *arm_agent_aarch64
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
     <<: *common
 
   - label: AArch64 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot aarch64-no-exceptions
-    <<: *arm_agent_aarch64
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
     <<: *common
 
   - label: Armv8
     command: libcxx/utils/ci/run-buildbot armv8
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
     <<: *common
 
   - label: Armv8 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv8-no-exceptions
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
     <<: *common
 
   - label: Armv7
     command: libcxx/utils/ci/run-buildbot armv7
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
     <<: *common
 
   - label: Armv7 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7-no-exceptions
-    <<: *arm_agent_armv8l
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: armv8l
     <<: *common
 
   - label: Armv7-M picolibc
     command: libcxx/utils/ci/run-buildbot armv7m-picolibc
-    <<: *arm_agent_aarch64
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
+    <<: *common
+
+  - label: Armv7-M picolibc -fno-exceptions
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc-no-exceptions
+    agents:
+      queue: libcxx-builders-linaro-arm
+      arch: aarch64
     <<: *common
 
 - group: AIX
@@ -222,7 +238,9 @@ steps:
       CC: clang
       CXX: clang++
       OBJECT_MODE: '32'
-    <<: *aix_agent
+    agents:
+      queue: libcxx-builders
+      os: aix
     <<: *common
 
   - label: AIX (64-bit)
@@ -231,7 +249,9 @@ steps:
       CC: clang
       CXX: clang++
       OBJECT_MODE: '64'
-    <<: *aix_agent
+    agents:
+      queue: libcxx-builders
+      os: aix
     <<: *common
 
 - group: ':freebsd: FreeBSD'
@@ -241,7 +261,6 @@ steps:
     env:
       CC: clang16
       CXX: clang++16
-      ENABLE_STD_MODULES: 'Off'
     agents:
       queue: libcxx-builders
       os: freebsd
@@ -251,12 +270,16 @@ steps:
   steps:
   - label: Android 5.0, x86 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
-    <<: *android_agent
+    agents:
+      queue: libcxx-builders
+      os: android
     <<: *common
 
   - label: Android 13, x86_64 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-33-goog-x86_64
-    <<: *android_agent
+    agents:
+      queue: libcxx-builders
+      os: android
     <<: *common
 
 

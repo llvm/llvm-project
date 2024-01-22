@@ -7,20 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIModeRegisterDefaults.h"
+#include "GCNSubtarget.h"
 
 using namespace llvm;
 
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
+SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
+                                               const GCNSubtarget &ST) {
   *this = getDefaultForCallingConv(F.getCallingConv());
 
-  StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
-  if (!IEEEAttr.empty())
-    IEEE = IEEEAttr == "true";
+  if (ST.hasIEEEMode()) {
+    StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
+    if (!IEEEAttr.empty())
+      IEEE = IEEEAttr == "true";
+  }
 
-  StringRef DX10ClampAttr =
-      F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
-  if (!DX10ClampAttr.empty())
-    DX10Clamp = DX10ClampAttr == "true";
+  if (ST.hasDX10ClampMode()) {
+    StringRef DX10ClampAttr =
+        F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
+    if (!DX10ClampAttr.empty())
+      DX10Clamp = DX10ClampAttr == "true";
+  }
 
   StringRef DenormF32Attr =
       F.getFnAttribute("denormal-fp-math-f32").getValueAsString();

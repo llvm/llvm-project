@@ -9,9 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H
 
-#include "src/__support/CPP/string_view.h"
-#include "src/__support/common.h"
-#include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/int_converter.h"
 #include "src/stdio/printf_core/string_converter.h"

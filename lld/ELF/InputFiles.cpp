@@ -30,6 +30,7 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -1738,7 +1739,7 @@ void BitcodeFile::parseLazy() {
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined()) {
       auto *sym = symtab.insert(saver().save(irSym.getName()));
-      sym->resolve(LazyObject{*this});
+      sym->resolve(LazySymbol{*this});
       symbols[i] = sym;
     }
 }
@@ -1820,7 +1821,7 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
     symbols[i] = symtab.insert(CHECK(eSyms[i].getName(stringTable), this));
-    symbols[i]->resolve(LazyObject{*this});
+    symbols[i]->resolve(LazySymbol{*this});
     if (!lazy)
       break;
   }

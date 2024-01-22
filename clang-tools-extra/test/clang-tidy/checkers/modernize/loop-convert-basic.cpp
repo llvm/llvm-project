@@ -954,3 +954,16 @@ void dependenceArrayTest() {
 }
 
 } // namespace PseudoArray
+
+namespace PR78381 {
+  struct blocked_range {
+    int begin() const;
+    int end() const;
+  };
+
+  void test() {
+    blocked_range r;
+    for (auto i = r.begin(); i!=r.end(); ++i) {
+    }
+  }
+}

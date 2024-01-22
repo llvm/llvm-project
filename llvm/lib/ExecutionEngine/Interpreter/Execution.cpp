@@ -1074,7 +1074,7 @@ GenericValue Interpreter::executeGEPOperation(Value *Ptr, gep_type_iterator I,
         assert(BitWidth == 64 && "Invalid index type for getelementptr");
         Idx = (int64_t)IdxGV.IntVal.getZExtValue();
       }
-      Total += getDataLayout().getTypeAllocSize(I.getIndexedType()) * Idx;
+      Total += I.getSequentialElementStride(getDataLayout()) * Idx;
     }
   }
 

@@ -13,10 +13,10 @@
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/socket.h> // For AF_LOCAL and SOCK_DGRAM
+#include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 TEST(LlvmLibcSocketTest, LocalSocket) {
-  int sock = LIBC_NAMESPACE::socket(AF_LOCAL, SOCK_DGRAM, 0);
+  int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);
   ASSERT_EQ(libc_errno, 0);
 

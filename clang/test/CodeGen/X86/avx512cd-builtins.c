@@ -76,7 +76,7 @@ __m512i test_mm512_broadcastmb_epi64(__m512i a, __m512i b) {
   // CHECK-LABEL: @test_mm512_broadcastmb_epi64
   // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
   // CHECK: zext i8 %{{.*}} to i64
-  // CHECK: insertelement <8 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i64> poison, i64 %{{.*}}, i32 0
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 1
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 2
   // CHECK: insertelement <8 x i64> %{{.*}}, i64 %{{.*}}, i32 3
@@ -91,7 +91,7 @@ __m512i test_mm512_broadcastmw_epi32(__m512i a, __m512i b) {
   // CHECK-LABEL: @test_mm512_broadcastmw_epi32
   // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
   // CHECK: zext i16 %{{.*}} to i32
-  // CHECK: insertelement <16 x i32> undef, i32 %{{.*}}
+  // CHECK: insertelement <16 x i32> poison, i32 %{{.*}}
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}
   // CHECK: insertelement <16 x i32> %{{.*}}, i32 %{{.*}}

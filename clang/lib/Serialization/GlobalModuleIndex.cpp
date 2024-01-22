@@ -342,8 +342,8 @@ bool GlobalModuleIndex::loadedModuleFile(ModuleFile *File) {
   //  If the size and modification time match what we expected, record this
   // module file.
   bool Failed = true;
-  if (File->File->getSize() == Info.Size &&
-      File->File->getModificationTime() == Info.ModTime) {
+  if (File->File.getSize() == Info.Size &&
+      File->File.getModificationTime() == Info.ModTime) {
     Info.File = File;
     ModulesByFile[File] = Known->second;
 

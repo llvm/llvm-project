@@ -1,7 +1,7 @@
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -march=amdgcn -mcpu=tonga  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -mtriple=amdgcn -mcpu=tonga  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
 
 ; XXX - Why does it like to use vcc?
 
@@ -80,7 +80,7 @@ endif:                                            ; preds = %else, %if
 
 ; Force save and restore of m0 during SMEM spill
 ; GCN-LABEL: {{^}}m0_unavailable_spill:
-; GCN: s_load_dword [[REG0:s[0-9]+]], s[4:5], {{0x[0-9]+}}
+; GCN: s_load_dword [[REG0:s[0-9]+]], s[2:3], {{0x[0-9]+}}
 
 ; GCN: ; def m0, 1
 
@@ -190,3 +190,6 @@ declare float @llvm.amdgcn.wqm.f32(float) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

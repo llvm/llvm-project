@@ -1288,6 +1288,8 @@ public:
   explicit LazyCallGraphPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// A pass which prints the call graph as a DOT file to a \c raw_ostream.
@@ -1301,6 +1303,8 @@ public:
   explicit LazyCallGraphDOTPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

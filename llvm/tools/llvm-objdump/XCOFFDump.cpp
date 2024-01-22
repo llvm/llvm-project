@@ -43,6 +43,7 @@ objdump::createXCOFFDumper(const object::XCOFFObjectFile &Obj) {
 
 Error objdump::getXCOFFRelocationValueString(const XCOFFObjectFile &Obj,
                                              const RelocationRef &Rel,
+                                             bool SymbolDescription,
                                              SmallVectorImpl<char> &Result) {
   symbol_iterator SymI = Rel.getSymbol();
   if (SymI == Obj.symbol_end())
