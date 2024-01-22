@@ -1017,3 +1017,83 @@ TEST_F(SPIRVConvergenceRegionAnalysisTest, SimpleFunction) {
   EXPECT_THAT(R->Exits, ContainsBasicBlock(""));
   EXPECT_TRUE(R->contains(getBlock("")));
 }
+
+TEST_F(SPIRVConvergenceRegionAnalysisTest, NestedLoopInBreak) {
+  StringRef Assembly = R"(
+    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+      %t1 = call token @llvm.experimental.convergence.entry()
+      %1 = icmp ne i32 0, 0
+      br label %l1
+
+    l1:
+      %tl1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %t1) ]
+      br i1 %1, label %l1_body, label %l1_to_end
+
+    l1_body:
+      br i1 %1, label %cond_inner, label %l1_continue
+
+    cond_inner:
+      br label %l2
+
+    l2:
+      %tl2 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %tl1) ]
+      br i1 %1, label %l2_body, label %l2_end
+
+    l2_body:
+      %call = call spir_func i32 @_Z3absi(i32 0) [ "convergencectrl"(token %tl2) ]
+      br label %l2_continue
+
+    l2_continue:
+      br label %l2
+
+    l2_end:
+      br label %l2_exit
+
+    l2_exit:
+      %call2 = call spir_func i32 @_Z3absi(i32 0) [ "convergencectrl"(token %tl1) ]
+      br label %l1_end
+
+    l1_continue:
+      br label %l1
+
+    l1_to_end:
+      br label %l1_end
+
+    l1_end:
+      br label %end
+
+    end:
+      ret void
+    }
+
+    declare token @llvm.experimental.convergence.entry()
+    declare token @llvm.experimental.convergence.control()
+    declare token @llvm.experimental.convergence.loop()
+    declare spir_func i32 @_Z3absi(i32) convergent
+  )";
+
+  const auto *R = runAnalysis(Assembly).getTopLevelRegion();
+  ASSERT_NE(R, nullptr);
+
+  EXPECT_EQ(R->Children.size(), 1ul);
+
+  const auto *L1 = R->Children[0];
+  EXPECT_EQ(L1->Children.size(), 1ul);
+  EXPECT_EQ(L1->Entry->getName(), "l1");
+  EXPECT_EQ(L1->Exits.size(), 2ul);
+  EXPECT_THAT(L1->Exits, ContainsBasicBlock("l1"));
+  EXPECT_THAT(L1->Exits, ContainsBasicBlock("l2_exit"));
+  checkRegionBlocks(L1,
+                    {"l1", "l1_body", "l1_continue", "cond_inner", "l2",
+                     "l2_body", "l2_end", "l2_continue", "l2_exit"},
+                    {"", "l1_to_end", "l1_end", "end"});
+
+  const auto *L2 = L1->Children[0];
+  EXPECT_EQ(L2->Children.size(), 0ul);
+  EXPECT_EQ(L2->Entry->getName(), "l2");
+  EXPECT_EQ(L2->Exits.size(), 1ul);
+  EXPECT_THAT(L2->Exits, ContainsBasicBlock("l2"));
+  checkRegionBlocks(L2, {"l2", "l2_body", "l2_continue"},
+                    {"", "l1_to_end", "l1_end", "end", "l1", "l1_body",
+                     "l1_continue", "cond_inner", "l2_end", "l2_exit"});
+}

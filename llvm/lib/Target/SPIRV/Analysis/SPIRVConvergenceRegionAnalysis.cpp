@@ -83,6 +83,33 @@ getConvergenceTokenInternal(BasicBlockType *BB) {
   return std::nullopt;
 }
 
+// Given a ConvergenceRegion tree with |Start| as its root, finds the smallest
+// region |Entry| belongs to. If |Entry| does not belong to the region defined
+// by |Start|, this function returns |nullptr|.
+ConvergenceRegion *findParentRegion(ConvergenceRegion *Start,
+                                    BasicBlock *Entry) {
+  ConvergenceRegion *Candidate = nullptr;
+  ConvergenceRegion *NextCandidate = Start;
+
+  while (Candidate != NextCandidate && NextCandidate != nullptr) {
+    Candidate = NextCandidate;
+    NextCandidate = nullptr;
+
+    // End of the search, we can return.
+    if (Candidate->Children.size() == 0)
+      return Candidate;
+
+    for (auto *Child : Candidate->Children) {
+      if (Child->Blocks.count(Entry) != 0) {
+        NextCandidate = Child;
+        break;
+      }
+    }
+  }
+
+  return Candidate;
+}
+
 } // anonymous namespace
 
 std::optional<IntrinsicInst *> getConvergenceToken(BasicBlock *BB) {
@@ -193,7 +220,7 @@ private:
   }
 
   std::unordered_set<BasicBlock *>
-  findPathsToMatch(BasicBlock *From,
+  findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
     std::unordered_set<BasicBlock *> Output;
 
@@ -206,12 +233,18 @@ private:
       if (isBackEdge(From, To))
         continue;
 
-      auto ChildSet = findPathsToMatch(To, isMatch);
+      auto ChildSet = findPathsToMatch(LI, To, isMatch);
       if (ChildSet.size() == 0)
         continue;
 
       Output.insert(ChildSet.begin(), ChildSet.end());
       Output.insert(From);
+      if (LI.isLoopHeader(From)) {
+        auto *L = LI.getLoopFor(From);
+        for (auto *BB : L->getBlocks()) {
+          Output.insert(BB);
+        }
+      }
     }
 
     return Output;
@@ -236,18 +269,13 @@ private:
 public:
   ConvergenceRegionInfo analyze() {
     ConvergenceRegion *TopLevelRegion = new ConvergenceRegion(DT, LI, F);
-
-    std::unordered_map<Loop *, ConvergenceRegion *> LoopToRegion;
     std::queue<Loop *> ToProcess;
-    for (auto *L : LI)
+    for (auto *L : LI.getLoopsInPreorder())
       ToProcess.push(L);
 
     while (ToProcess.size() != 0) {
       auto *L = ToProcess.front();
       ToProcess.pop();
-      for (auto *Child : *L)
-        ToProcess.push(Child);
-
       assert(L->isLoopSimplifyForm());
 
       auto CT = getConvergenceToken(L->getHeader());
@@ -257,7 +285,7 @@ public:
       L->getExitingBlocks(LoopExits);
       if (CT.has_value()) {
         for (auto *Exit : LoopExits) {
-          auto N = findPathsToMatch(Exit, [&CT](const BasicBlock *block) {
+          auto N = findPathsToMatch(LI, Exit, [&CT](const BasicBlock *block) {
             auto Token = getConvergenceToken(block);
             if (Token == std::nullopt)
               return false;
@@ -271,13 +299,9 @@ public:
       ConvergenceRegion *Region = new ConvergenceRegion(
           DT, LI, CT, L->getHeader(), std::move(RegionBlocks),
           std::move(RegionExits));
-
-      auto It = LoopToRegion.find(L->getParentLoop());
-      assert(It != LoopToRegion.end() || L->getParentLoop() == nullptr);
-      Region->Parent = It != LoopToRegion.end() ? It->second : TopLevelRegion;
+      Region->Parent = findParentRegion(TopLevelRegion, Region->Entry);
+      assert(Region->Parent != nullptr && "This is impossible.");
       Region->Parent->Children.push_back(Region);
-
-      LoopToRegion.emplace(L, Region);
     }
 
     return ConvergenceRegionInfo(TopLevelRegion);
