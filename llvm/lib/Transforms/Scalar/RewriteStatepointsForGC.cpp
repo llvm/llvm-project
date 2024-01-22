@@ -1056,7 +1056,6 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   for (const auto &Pair : States) {
     LLVM_DEBUG(dbgs() << " " << Pair.second << " for " << *Pair.first << "\n");
   }
-#endif
 
   // since we do the conflict marking as part of the fixpoint iteration this
   // loop only asserts that invariants are met
@@ -1072,9 +1071,6 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
   }
-
-#ifndef NDEBUG
-  VerifyStates();
 #endif
 
   // Insert Phis for all conflicts
