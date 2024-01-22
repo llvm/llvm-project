@@ -2,22 +2,19 @@
 
 # We set up a file-system 'hosted' Debuginfod server
 
-# RUN: rm -rf %t || echo ok
 # RUN: mkdir -p %t/output
-# RUN: mkdir -p %t/tmpstuff
 # RUN: mkdir -p %t/cache
-# RUN: mkdir -p %t/buildid/b4927ea09a08ee63313299cf347043010d03cc5e
+# RUN: mkdir -p %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d
 
-# Scenario 1
+# Scenario 1a
 #  A simple stripped binary
-#  Debuginfod has the unstripped binary as the 'executable'
-# LLDB should ask Debuginfod for it's unstripped binary
+#  Debuginfod has the unstripped binary as the 'debuginfo'
 
-# Put the unstripped binary in the Debuginfod server as 'executable'
+# Put the unstripped binary in the Debuginfod server as 'debuginfo'
 
-# RUN: yaml2obj %p/Inputs/main-full.yaml -o %t/buildid/b4927ea09a08ee63313299cf347043010d03cc5e/executable
-# RUN: yaml2obj %p/Inputs/main-stripped.yaml -o %t/output/main-stripped
-# RUN: chmod a+x %t/output/main-stripped
+# RUN: yaml2obj %p/Inputs/bin-normal.yaml -o %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d/debuginfo
+# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/output/bin-stripped
+# RUN: chmod a+x %t/output/bin-stripped
 
 # First, run a negative test (make sure we don't have symbols)
 
@@ -28,11 +25,11 @@
 # RUN:       -o "settings set plugin.symbol-locator.debuginfod.cache-path %t/cache" \
 # RUN:       -o "settings clear plugin.symbol-locator.debuginfod.server-urls" \
 # RUN:       -o "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%t" \
-# RUN:       -o "target create %t/output/main-stripped" \
+# RUN:       -o "target create %t/output/bin-stripped" \
 # RUN:       -o "b func" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
 
 # Should have source file info:
 
-# CHECK: Breakpoint 1: where = main-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}
+# CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}

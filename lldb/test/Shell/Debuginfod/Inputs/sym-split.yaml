@@ -26,14 +26,14 @@ ProgramHeaders:
     LastSec:         .eh_frame
     VAddr:           0x402000
     Align:           0x1000
-    Offset:          0x2000
+    Offset:          0x1000
   - Type:            PT_LOAD
     Flags:           [ PF_W, PF_R ]
     FirstSec:        .data.rel.ro
     LastSec:         .data.rel.ro
     VAddr:           0x403FF8
     Align:           0x1000
-    Offset:          0x2FF8
+    Offset:          0x1FF8
   - Type:            PT_NOTE
     Flags:           [ PF_R ]
     FirstSec:        .note.gnu.build-id
@@ -50,7 +50,7 @@ ProgramHeaders:
     FirstSec:        .data.rel.ro
     LastSec:         .data.rel.ro
     VAddr:           0x403FF8
-    Offset:          0x2FF8
+    Offset:          0x1FF8
 Sections:
   - Name:            .note.gnu.build-id
     Type:            SHT_NOTE
@@ -59,54 +59,53 @@ Sections:
     AddressAlign:    0x4
     Notes:
       - Name:            GNU
-        Desc:            B4927EA09A08EE63313299CF347043010D03CC5E
+        Desc:            82B2C35129DAB19AD58F3DD0F426BDB0CC8AA094
         Type:            NT_PRPSINFO
   - Name:            .text
-    Type:            SHT_PROGBITS
+    Type:            SHT_NOBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Address:         0x401000
     AddressAlign:    0x10
     Offset:          0x1000
-    Content:         554889E5897DFC488975F08B45FC83C001488B4DF0486355FC488B0CD10FBE0983C1020FAFC15DC30F1F840000000000554889E54883E4F04883EC10488B05B52F00004889442408488D74240831FFE8ACFFFFFF48C7C03C00000048C7C7000000000F05
+    Size:            0x64
   - Name:            .rodata
-    Type:            SHT_PROGBITS
+    Type:            SHT_NOBITS
     Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
     Address:         0x402000
     AddressAlign:    0x1
     EntSize:         0x1
-    Offset:          0x2000
-    Content:         '00'
+    Size:            0x1
   - Name:            .eh_frame
-    Type:            SHT_X86_64_UNWIND
+    Type:            SHT_NOBITS
     Flags:           [ SHF_ALLOC ]
     Address:         0x402008
     AddressAlign:    0x8
-    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000D8EFFFFF2800000000410E108602430D06630C0708000000180000003C000000E8EFFFFF3400000000410E108602430D06000000
+    Size:            0x54
   - Name:            .data.rel.ro
-    Type:            SHT_PROGBITS
+    Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE, SHF_ALLOC ]
     Address:         0x403FF8
     AddressAlign:    0x8
-    Offset:          0x2FF8
-    Content:         '0020400000000000'
+    Offset:          0x1FF8
+    Size:            0x8
   - Name:            .comment
     Type:            SHT_PROGBITS
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
     AddressAlign:    0x1
     EntSize:         0x1
-    Content:         46616365626F6F6B20636C616E672076657273696F6E2031352E302E302028676974406769746875622E636F6D3A6B6576696E667265692F6C6C766D2E67697420393336636262353533363366386363363236643061303336666138343065383737313335373264392900
+    Content:         46616365626F6F6B20636C616E672076657273696F6E2031352E302E302028676974406769746875622E636F6D3A6B6576696E667265692F6C6C766D2E67697420663262383163623536396430363332613065623066643531373232643732356162313931616637322900
   - Name:            .debug_info
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         9A000000050001080000000001001D0001080000000000000002016400000008000000022D000000004C02A1000339000000043D0000000100050306010604080707012800000001560500447E0000000802917C0800447E00000008029170090044820000000009023400000001560700480A02770809004C9100000000050605040B870000000B8C0000000C390000000387000000043D000000010000
+    Content:         2400000005000408000000008094E89A08DB62C10100000000080000000001016400000008000000
   - Name:            .debug_abbrev
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         011101252513050325721710171B25111B12067317000002340049133A0B3B0B02180000030101491300000421004913370B000005240003253E0B0B0B000006240003250B0B3E0B0000072E01111B1206401803253A0B3B0B271949133F190000080500021803253A0B3B0B49130000092E01111B1206401803253A0B3B0B27193F1900000A3400021803253A0B3B0B491300000B0F00491300000C26004913000000
+    Content:         014A00101772171B25B442197625111B12067317000000
   - Name:            .debug_line
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         7B0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E013D000000004F0B089C0626CBD8AB443134CFE6DD950400000902001040000000000003C30001050B0AAD0510063C05183C0526E405153C05030B3C050006A1050F0ABE050BBB0503065806770210000101
+    Content:         7B0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E013D00000000AA7BC59AF617547916B47B73E78D55160400000902001040000000000003C30001050B0AAD0510063C05183C0526E405153C05030B3C050006A1050F0ABE050BBB0503065806770210000101
   - Name:            .debug_line_str
     Type:            SHT_PROGBITS
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
@@ -116,7 +115,15 @@ Sections:
   - Name:            .debug_str_offsets
     Type:            SHT_PROGBITS
     AddressAlign:    0x1
-    Content:         2C00000005000000000000006B00000072000000AF000000B4000000C8000000CD000000D1000000D8000000DD000000
+    Content:         0C00000005000000000000003D000000
+  - Name:            .debug_gnu_pubnames
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         2A000000020000000000280000001A000000A000380000003066756E63005E000000305F73746172740000000000
+  - Name:            .debug_gnu_pubtypes
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '2100000002000000000028000000300000009063686172007100000090696E740000000000'
 Symbols:
   - Name:            .note.gnu.build-id
     Type:            STT_SECTION
@@ -162,6 +169,12 @@ Symbols:
   - Name:            .debug_str_offsets
     Type:            STT_SECTION
     Section:         .debug_str_offsets
+  - Name:            .debug_gnu_pubnames
+    Type:            STT_SECTION
+    Section:         .debug_gnu_pubnames
+  - Name:            .debug_gnu_pubtypes
+    Type:            STT_SECTION
+    Section:         .debug_gnu_pubtypes
   - Name:            main.c
     Type:            STT_FILE
     Index:           SHN_ABS
@@ -191,22 +204,13 @@ Symbols:
     Value:           0x404000
 DWARF:
   debug_str:
-    - 'Facebook clang version 15.0.0 (git@github.com:kevinfrei/llvm.git 936cbb55363f8cc626d0a036fa840e87713572d9)'
-    - main.c
     - '/home/freik/llvm-sand/llvm/lldb/test/Shell/Debuginfod/Inputs'
-    - char
-    - __ARRAY_SIZE_TYPE__
-    - func
-    - int
-    - _start
-    - argc
-    - argv
+    - 'gen/bin-split.dwo'
   debug_addr:
-    - Length:          0x1C
+    - Length:          0x14
       Version:         0x5
       AddressSize:     0x8
       Entries:
         - Address:         0x402000
         - Address:         0x401000
-        - Address:         0x401030
 ...

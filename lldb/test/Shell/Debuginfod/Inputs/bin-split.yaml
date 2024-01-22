@@ -59,7 +59,7 @@ Sections:
     AddressAlign:    0x4
     Notes:
       - Name:            GNU
-        Desc:            B4927EA09A08EE63313299CF347043010D03CC5E
+        Desc:            82B2C35129DAB19AD58F3DD0F426BDB0CC8AA094
         Type:            NT_PRPSINFO
   - Name:            .text
     Type:            SHT_PROGBITS
@@ -94,7 +94,37 @@ Sections:
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
     AddressAlign:    0x1
     EntSize:         0x1
-    Content:         46616365626F6F6B20636C616E672076657273696F6E2031352E302E302028676974406769746875622E636F6D3A6B6576696E667265692F6C6C766D2E67697420393336636262353533363366386363363236643061303336666138343065383737313335373264392900
+    Content:         46616365626F6F6B20636C616E672076657273696F6E2031352E302E302028676974406769746875622E636F6D3A6B6576696E667265692F6C6C766D2E67697420663262383163623536396430363332613065623066643531373232643732356162313931616637322900
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         2400000005000408000000008094E89A08DB62C10100000000080000000001016400000008000000
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         014A00101772171B25B442197625111B12067317000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         7B0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E013D00000000AA7BC59AF617547916B47B73E78D55160400000902001040000000000003C30001050B0AAD0510063C05183C0526E405153C05030B3C050006A1050F0ABE050BBB0503065806770210000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         2F686F6D652F667265696B2F6C6C766D2D73616E642F6C6C766D2F6C6C64622F746573742F5368656C6C2F4465627567696E666F642F496E70757473006D61696E2E6300
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0C00000005000000000000003D000000
+  - Name:            .debug_gnu_pubnames
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         2A000000020000000000280000001A000000A000380000003066756E63005E000000305F73746172740000000000
+  - Name:            .debug_gnu_pubtypes
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '2100000002000000000028000000300000009063686172007100000090696E740000000000'
 Symbols:
   - Name:            .note.gnu.build-id
     Type:            STT_SECTION
@@ -119,6 +149,36 @@ Symbols:
   - Name:            .comment
     Type:            STT_SECTION
     Section:         .comment
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_addr
+    Type:            STT_SECTION
+    Section:         .debug_addr
+  - Name:            .debug_line_str
+    Type:            STT_SECTION
+    Section:         .debug_line_str
+  - Name:            .debug_str_offsets
+    Type:            STT_SECTION
+    Section:         .debug_str_offsets
+  - Name:            .debug_gnu_pubnames
+    Type:            STT_SECTION
+    Section:         .debug_gnu_pubnames
+  - Name:            .debug_gnu_pubtypes
+    Type:            STT_SECTION
+    Section:         .debug_gnu_pubtypes
+  - Name:            main.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
   - Name:            _start
     Type:            STT_FUNC
     Section:         .text
@@ -143,4 +203,15 @@ Symbols:
     Section:         .data.rel.ro
     Binding:         STB_GLOBAL
     Value:           0x404000
+DWARF:
+  debug_str:
+    - '/home/freik/llvm-sand/llvm/lldb/test/Shell/Debuginfod/Inputs'
+    - 'gen/bin-split.dwo'
+  debug_addr:
+    - Length:          0x14
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - Address:         0x402000
+        - Address:         0x401000
 ...

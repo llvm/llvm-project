@@ -59,7 +59,7 @@ Sections:
     AddressAlign:    0x4
     Notes:
       - Name:            GNU
-        Desc:            8B5B6416F61ADC140AE457E208F1699F89BFDA86
+        Desc:            725D47B7EE964F615C841A04712D6F43175F9D8D
         Type:            NT_PRPSINFO
   - Name:            .text
     Type:            SHT_PROGBITS
@@ -94,7 +94,29 @@ Sections:
     Flags:           [ SHF_MERGE, SHF_STRINGS ]
     AddressAlign:    0x1
     EntSize:         0x1
-    Content:         46616365626F6F6B20636C616E672076657273696F6E2031352E302E302028676974406769746875622E636F6D3A6B6576696E667265692F6C6C766D2E67697420393336636262353533363366386363363236643061303336666138343065383737313335373264392900
+    Content:         46616365626F6F6B20636C616E672076657273696F6E2031352E302E302028676974406769746875622E636F6D3A6B6576696E667265692F6C6C766D2E67697420663262383163623536396430363332613065623066643531373232643732356162313931616637322900
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         9A000000050001080000000001001D0001080000000000000002016400000008000000022D000000004C02A1000339000000043D0000000100050306010604080707012800000001560500447E0000000802917C0800447E00000008029170090044820000000009023400000001560700480A02770809004C9100000000050605040B870000000B8C0000000C390000000387000000043D000000010000
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101252513050325721710171B25111B12067317000002340049133A0B3B0B02180000030101491300000421004913370B000005240003253E0B0B0B000006240003250B0B3E0B0000072E01111B1206401803253A0B3B0B271949133F190000080500021803253A0B3B0B49130000092E01111B1206401803253A0B3B0B27193F1900000A3400021803253A0B3B0B491300000B0F00491300000C26004913000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         7B0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E013D00000000AA7BC59AF617547916B47B73E78D55160400000902001040000000000003C30001050B0AAD0510063C05183C0526E405153C05030B3C050006A1050F0ABE050BBB0503065806770210000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         2F686F6D652F667265696B2F6C6C766D2D73616E642F6C6C766D2F6C6C64622F746573742F5368656C6C2F4465627567696E666F642F496E70757473006D61696E2E6300
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         2C00000005000000000000006B00000072000000AF000000B4000000C8000000CD000000D1000000D8000000DD000000
 Symbols:
   - Name:            .note.gnu.build-id
     Type:            STT_SECTION
@@ -119,6 +141,30 @@ Symbols:
   - Name:            .comment
     Type:            STT_SECTION
     Section:         .comment
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_addr
+    Type:            STT_SECTION
+    Section:         .debug_addr
+  - Name:            .debug_line_str
+    Type:            STT_SECTION
+    Section:         .debug_line_str
+  - Name:            .debug_str_offsets
+    Type:            STT_SECTION
+    Section:         .debug_str_offsets
+  - Name:            main.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
   - Name:            _start
     Type:            STT_FUNC
     Section:         .text
@@ -143,4 +189,24 @@ Symbols:
     Section:         .data.rel.ro
     Binding:         STB_GLOBAL
     Value:           0x404000
+DWARF:
+  debug_str:
+    - 'Facebook clang version 15.0.0 (git@github.com:kevinfrei/llvm.git f2b81cb569d0632a0eb0fd51722d725ab191af72)'
+    - main.c
+    - '/home/freik/llvm-sand/llvm/lldb/test/Shell/Debuginfod/Inputs'
+    - char
+    - __ARRAY_SIZE_TYPE__
+    - func
+    - int
+    - _start
+    - argc
+    - argv
+  debug_addr:
+    - Length:          0x1C
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - Address:         0x402000
+        - Address:         0x401000
+        - Address:         0x401030
 ...

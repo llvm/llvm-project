@@ -1,12 +1,12 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# This is paranoia to make sure there's not a cached symbol file laying around
-
 # RUN: mkdir -p %t/output
 
 # Scenario 1
-#  A simple stripped binary, no symbols (negative test: nothing's been cached, right?)
+#  A simple stripped binary, add the unstripped binary as a symbol file
+#  (Sanity for comparison with Debuginfod-provided symbols)
 
+# RUN: yaml2obj %p/Inputs/bin-normal.yaml -o %t/output/bin-normal
 # RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/output/bin-stripped
 # RUN: chmod a+x %t/output/bin-stripped
 
@@ -14,10 +14,11 @@
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
 # RUN:       -o "target create %t/output/bin-stripped" \
+# RUN:       -o "target symbols add %t/output/bin-normal" \
 # RUN:       -o "b func" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
 
 # Should NOT have source file information:
 
-# CHECK: Breakpoint 1: where = bin-stripped`func, address = 0x{{[0-9a-f]+}}
+# CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}

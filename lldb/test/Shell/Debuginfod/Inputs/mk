@@ -1,51 +1,86 @@
 #!/bin/sh
 
-# I need 4 different scenarios:
+# I need 5 different scenarios:
 # 1 - A stripped binary with it's corresponding unstripped binary:
-# 2 - A stripped binary with a corresponding -only-keep-debug symbols file
+# 2 - A stripped binary with a corresponding --only-keep-debug symbols file
 # 3 - A split binary with it's corresponding DWP file
 # 4 - A stripped, split binary with an unstripped binary and a DWP file
+# 5 - A stripped, split binary with an --only-keep-debug symbols file and a DWP file
 
 mkdir -p gen
 mkdir -p run
 
-# First, compile & link the binary itself
-${builddir}/bin/clang -g -o gen/main-full.o -O0 -c main.c
-ld -nostdlib gen/main-full.o --build-id=sha1 -o gen/main-full
-${builddir}/bin/clang -g -gsplit-dwarf -o gen/main-split.o -O0 -c main.c
-ld -nostdlib gen/main-split.o --build-id=sha1 -o gen/main-split
-${builddir}/bin/llvm-dwp -e gen/main-split -o gen/main-split.dwp
+# First, compile & link the binaries (normal and split)
 
-# Scenario 1: main-strip -> main-full (both executable and debuginfo)
-${builddir}/bin/llvm-objcopy --strip-debug gen/main-full gen/main-stripped
-${builddir}/bin/obj2yaml gen/main-full > main-full.yaml
-${builddir}/bin/obj2yaml gen/main-stripped > main-stripped.yaml
-# MAKE: ${builddir}/bin/yaml2obj main-full.yaml > run/main-full
-# MAKE: ${builddir}/bin/yaml2obj main-stripped.yaml > run/main-stripped
+${builddir}/bin/clang -g -o gen/bin-normal.o -O0 -c main.c
+ld -nostdlib gen/bin-normal.o --build-id=sha1 -o gen/bin-normal
+${builddir}/bin/clang -g -gsplit-dwarf -o gen/bin-split.o -O0 -c main.c
+ld -nostdlib gen/bin-split.o --build-id=sha1 -o gen/bin-split
 
-# Scenario 2: main-nodbg -> main-dbg (debuginfo)
-${builddir}/bin/llvm-objcopy --only-keep-debug gen/main-full gen/main-dbg
-${builddir}/bin/llvm-objcopy --strip-debug gen/main-full gen/main-nodbg
-${builddir}/bin/obj2yaml gen/main-nodbg > main-nodbg.yaml
-${builddir}/bin/obj2yaml gen/main-dbg > main-dbg.yaml
-# MAKE: ${builddir}/bin/yaml2obj main-nodbg.yaml > gen/main-nodbg.tmp
-# MAKE: ${builddir}/bin/yaml2obj main-dbg.yaml > run/main-dbg
-# MAKE: ${builddir}/bin/llvm-objcopy gen/main-nodbg.tmp --add-gnu-debuglink=run/main-dbg run/main-nodbg
+# Next, create the file variations we need
 
-# Scenario 3: main-split, main-split.dwp (debuginfo)
-${builddir}/bin/obj2yaml gen/main-split > main-split.yaml
-${builddir}/bin/obj2yaml gen/main-split.dwp > main-dwp.yaml
-# MAKE: ${builddir}/bin/yaml2obj main-split.yaml > run/main-split
-# MAKE: ${builddir}/bin/yaml2obj main-dwp.yaml > run/main-split.dwp
+# Variation 1: -g, stripped
+${builddir}/bin/llvm-objcopy --strip-debug gen/bin-normal gen/bin-stripped
+# Variation 2: -g, stripped, --only-keep-debug symbols
+${builddir}/bin/llvm-objcopy --only-keep-debug gen/bin-normal gen/sym-stripped
+# Variation 3: -gsplit-dwarf: .dwp
+${builddir}/bin/llvm-dwp -e gen/bin-split -o gen/bin-split.dwp
+# Variation 4: -gsplit-dwarf: stripped, .dwp
+${builddir}/bin/llvm-objcopy --strip-debug gen/bin-split gen/bin-split-stripped
+# Variation 5: -gsplit-dwarf: stripped, --only-keep-debug + .dwp
+${builddir}/bin/llvm-objcopy --only-keep-debug gen/bin-split gen/sym-split
 
-# Scenario 4: main-split-nodbg, main-split-dbg (executable), main-split.dwp (debuginfo)
-${builddir}/bin/llvm-objcopy --only-keep-debug gen/main-split gen/main-split-dbg
-${builddir}/bin/llvm-objcopy --strip-debug gen/main-split gen/main-split-nodbg
-${builddir}/bin/obj2yaml gen/main-split-nodbg > main-split-nodbg.yaml
-${builddir}/bin/obj2yaml gen/main-split-dbg > main-split-dbg.yaml
-# MAKE: ${builddir}/bin/yaml2obj main-split-nodbg.yaml > gen/main-split-nodbg.tmp
-# MAKE: ${builddir}/bin/yaml2obj main-split-dbg.yaml > run/main-split-dbg
-# MAKE: ${builddir}/bin/llvm-objcopy gen/main-split-nodbg.tmp --add-gnu-debuglink=run/main-split-dbg run/main-split-nodbg
-# the main-dwp.yaml should be the same, I believe
+# Finally, produce the .yaml files for testing
 
-# MAKE: chmod a+x run/*
+# Scenario 1:
+# target:  bin-stripped
+# Scenario 1a:
+# symbols: bin-normal (hosted as debuginfo)
+# Scenario 1b:
+# symbols: bin-normal (hosted as executable)
+${builddir}/bin/obj2yaml gen/bin-stripped -o bin-stripped.yaml
+${builddir}/bin/obj2yaml gen/bin-normal -o bin-normal.yaml
+# @ testing time: yaml2obj bin-stripped.yaml -o ${out}/bin-stripped
+# @ testing time: yaml2obj bin-normal.yaml -o ${out}/bin-normal
+
+
+# Scenario 2:
+# target:  bin-stripped-okd
+# Scenario 2a:
+# symbols: sym-stripped (hosted as debuginfo)
+# Scenario 2b:
+# symbols: sym-stripped (hosted as executable)
+${builddir}/bin/obj2yaml gen/sym-stripped -o sym-stripped.yaml
+# To produce a correct .gnu.debuglink, you have to do it at test generation time.
+# The section includes a CRC that yaml2obj doesn't properly produce.
+# @ testing time: yaml2obj sym-stripped.yaml -o ${out}/sym-stripped
+# @ testing time: llvm-objcopy bin-stripped --add-gnu-debuglink=${out}/sym-stripped ${out}/bin-stripped-okd
+
+# Scenario 3:
+# target: bin-split
+# DWP:    bin-split.dwp (hosted as debuginfo)
+${builddir}/bin/obj2yaml gen/bin-split -o bin-split.yaml
+${builddir}/bin/obj2yaml gen/bin-split.dwp -o bin-split-dwp.yaml
+# @ testing time: yaml2obj bin-split.yaml -o ${out}/bin-split
+# @ testing time: yaml2obj bin-split-dwp.yaml -o ${out}/bin-split.dwp
+
+# Scenario 4:
+# target:  bin-split-stripped
+# symbols: bin-split (hosted as executable)
+# DWP      bin-split.dwp (hosted as debuginfo)
+# This doesn't work from a file system "as is".
+# I believe you can set the symbol file manually to the bin-split file.
+# TODO: Need to check for the -no-locator test to see what the name of
+# the .dwp is expected to be.
+${builddir}/bin/obj2yaml gen/bin-split-stripped -o bin-split-stripped.yaml
+# bin-split and bin-split.dwp already generated in Scenario 3
+# @ testing time: yaml2obj bin-split-stripped.yaml -o ${out}/bin-split-stripped
+
+# Scenario 5:
+# target:  bin-split-stripped-okd
+# symbols: sym-split (hosted as executable)
+# DWP:     bin-split.dwp (hosted as debuginfo)
+${builddir}/bin/obj2yaml gen/sym-split -o sym-split.yaml
+# @ testing time: yaml2obj main-split-nodbg.yaml -o gen/main-split-nodbg.tmp
+# @ testing time: yaml2obj main-split-dbg.yaml -o run/main-split-dbg
+# @ testing time: llvm-objcopy gen/main-split-nodbg.tmp --add-gnu-debuglink=run/main-split-dbg run/main-split-nodbg
