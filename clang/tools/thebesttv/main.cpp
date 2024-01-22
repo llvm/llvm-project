@@ -73,6 +73,33 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
     return VarLocResult();
 }
 
+void findPathBetween(const fif &functionsInFile, //
+                     const std::string &fileFrom, int lineFrom, int columnFrom,
+                     const std::string &fileTo, int lineTo, int columnTo) {
+    VarLocResult from =
+        locateVariable(functionsInFile, fileFrom, lineFrom, columnFrom);
+    VarLocResult to = locateVariable(functionsInFile, fileTo, lineTo, columnTo);
+
+    if (!from.isValid() || !to.isValid()) {
+        llvm::errs() << "Invalid variable location!\n";
+        return;
+    }
+
+    requireTrue(from.fi == to.fi, "different functions!");
+
+    const FunctionInfo *fi = from.fi;
+    int u = from.id;
+    int v = to.id;
+
+    fi->bg->dij(from.block);
+    llvm::errs() << "Dis from " << u << " to " << v << ": " << fi->bg->g.d[v]
+                 << "\n";
+
+    fi->bg->dij(to.block);
+    llvm::errs() << "Dis from " << v << " to " << u << ": " << fi->bg->g.d[u]
+                 << "\n";
+}
+
 int main(int argc, const char **argv) {
     BUILD_PATH = fs::canonical(fs::absolute(argv[1]));
     std::unique_ptr<CompilationDatabase> cb =
@@ -116,4 +143,6 @@ int main(int argc, const char **argv) {
     locateVariable(functionsInFile, file, 23, 7);
     locateVariable(functionsInFile, file, 23, 11);
     locateVariable(functionsInFile, file, 23, 15);
+
+    findPathBetween(functionsInFile, file, 3, 19, file, 15, 10);
 }

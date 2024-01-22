@@ -59,6 +59,8 @@ struct BlockGraph {
             }
         }
     }
+
+    void dij(const CFGBlock *s) { g.dij(s->getBlockID()); }
 };
 
 struct FunctionInfo {
