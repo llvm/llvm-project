@@ -17,25 +17,30 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include <optional>
 #include <queue>
 
 #define DEBUG_TYPE "spirv-convergence-region-analysis"
 
+using namespace llvm;
+
 namespace llvm {
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
+} // namespace llvm
 
 INITIALIZE_PASS_BEGIN(SPIRVConvergenceRegionAnalysisWrapperPass,
                       "convergence-region",
-                      "SPIRV convergence regions analysis", true, true);
+                      "SPIRV convergence regions analysis", true, true)
+INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(SPIRVConvergenceRegionAnalysisWrapperPass,
                     "convergence-region", "SPIRV convergence regions analysis",
-                    true, true);
+                    true, true)
 
+namespace llvm {
 namespace SPIRV {
-
 namespace {
 
 template <typename BasicBlockType, typename IntrinsicInstType>
@@ -52,24 +57,19 @@ getConvergenceTokenInternal(BasicBlockType *BB) {
 
   for (auto &I : *BB) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-      if (II->getIntrinsicID() != Intrinsic::experimental_convergence_entry &&
-          II->getIntrinsicID() != Intrinsic::experimental_convergence_loop &&
-          II->getIntrinsicID() != Intrinsic::experimental_convergence_anchor) {
-        continue;
-      }
-
-      if (II->getIntrinsicID() == Intrinsic::experimental_convergence_entry ||
-          II->getIntrinsicID() == Intrinsic::experimental_convergence_loop) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::experimental_convergence_entry:
+      case Intrinsic::experimental_convergence_loop:
         return II;
+      case Intrinsic::experimental_convergence_anchor: {
+        auto Bundle = II->getOperandBundle(LLVMContext::OB_convergencectrl);
+        assert(Bundle->Inputs.size() == 1 &&
+               Bundle->Inputs[0]->getType()->isTokenTy());
+        auto TII = dyn_cast<IntrinsicInst>(Bundle->Inputs[0].get());
+        assert(TII != nullptr);
+        return TII;
       }
-
-      auto Bundle = II->getOperandBundle(LLVMContext::OB_convergencectrl);
-      assert(Bundle->Inputs.size() == 1 &&
-             Bundle->Inputs[0]->getType()->isTokenTy());
-      auto TII = dyn_cast<IntrinsicInst>(Bundle->Inputs[0].get());
-      ;
-      assert(TII != nullptr);
-      return TII;
+      }
     }
 
     if (auto *CI = dyn_cast<CallInst>(&I)) {
