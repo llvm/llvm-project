@@ -768,21 +768,21 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
   // columns.
-  const auto IsOpeningBracket = [&](const FormatToken &Tok) {
-    const auto IsStartOfBracedList = [&]() {
+  auto IsOpeningBracket = [&](const FormatToken &Tok) {
+    auto IsStartOfBracedList = [&]() {
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
              Style.Cpp11BracedListStyle;
     };
-    if (Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) ||
-        IsStartOfBracedList()) {
-      if (!Tok.Previous)
-        return true;
-      if (Tok.Previous->isIf())
-        return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
-      return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                    tok::kw_switch);
+    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
+        !IsStartOfBracedList()) {
+      return false;
     }
-    return false;
+    if (!Tok.Previous)
+      return true;
+    if (Tok.Previous->isIf())
+      return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
+    return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
+                                  tok::kw_switch);
   };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
