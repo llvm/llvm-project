@@ -101,7 +101,11 @@ enum EdgeKind_aarch32 : Edge::Kind {
   Thumb_MovtPrel,
 
   LastThumbRelocation = Thumb_MovtPrel,
-  LastRelocation = LastThumbRelocation,
+
+  /// No-op relocation
+  None,
+
+  LastRelocation = None,
 };
 
 /// Flags enum for AArch32-specific symbol properties
@@ -293,7 +297,8 @@ inline Expected<int64_t> readAddend(LinkGraph &G, Block &B,
   if (Kind <= LastThumbRelocation)
     return readAddendThumb(G, B, Offset, Kind, ArmCfg);
 
-  llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
+  assert(Kind == None && "Not associated with a relocation class");
+  return 0;
 }
 
 /// Helper function to apply the fixup for Data-class relocations.
@@ -320,7 +325,8 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   if (Kind <= LastThumbRelocation)
     return applyFixupThumb(G, B, E, ArmCfg);
 
-  llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
+  assert(Kind == None && "Not associated with a relocation class");
+  return Error::success();
 }
 
 /// Populate a Global Offset Table from edges that request it.

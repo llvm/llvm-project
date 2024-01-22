@@ -49,7 +49,7 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind);
 TEST(AArch32_ELF, EdgeKinds) {
   // Fails: Invalid ELF type -> JITLink kind
   aarch32::ArmConfig Cfg;
-  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_NONE, Cfg);
+  Expected<uint32_t> ErrKind = getJITLinkEdgeKind(ELF::R_ARM_ME_TOO, Cfg);
   EXPECT_TRUE(errorToBool(ErrKind.takeError()));
 
   // Fails: Invalid JITLink kind -> ELF type
