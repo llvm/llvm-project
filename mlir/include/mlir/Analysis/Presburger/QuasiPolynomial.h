@@ -59,8 +59,13 @@ public:
   QuasiPolynomial operator*(const QuasiPolynomial &x) const;
   QuasiPolynomial operator/(const Fraction x) const;
 
-  // Removes terms which evaluate to zero from the expression.
+  // Removes terms which evaluate to zero from the expression
+  // and folds affine functions which are constant into the
+  // constant coefficients.
   QuasiPolynomial simplify();
+
+  // Group together like terms in the expression.
+  QuasiPolynomial collectTerms();
 
   Fraction getConstantTerm();
 
