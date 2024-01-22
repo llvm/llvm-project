@@ -7,8 +7,7 @@
 define i32 @src_srem_shl_demand_max_signbit(i32 %a0) {
 ; CHECK-LABEL: @src_srem_shl_demand_max_signbit(
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A0:%.*]], 2
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[SREM]], 30
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SHL]], -2147483648
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SREM]], -2147483648
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
   %srem = srem i32 %a0, 2           ; srem  = SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSD
@@ -20,8 +19,7 @@ define i32 @src_srem_shl_demand_max_signbit(i32 %a0) {
 define i32 @src_srem_shl_demand_min_signbit(i32 %a0) {
 ; CHECK-LABEL: @src_srem_shl_demand_min_signbit(
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A0:%.*]], 1073741823
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[SREM]], 1
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SHL]], -2147483648
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SREM]], -2147483648
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
   %srem = srem i32 %a0, 1073741823  ; srem  = SSDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
@@ -33,8 +31,7 @@ define i32 @src_srem_shl_demand_min_signbit(i32 %a0) {
 define i32 @src_srem_shl_demand_max_mask(i32 %a0) {
 ; CHECK-LABEL: @src_srem_shl_demand_max_mask(
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A0:%.*]], 2
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[SREM]], 1
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SHL]], -4
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SREM]], -4
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
   %srem = srem i32 %a0, 2           ; srem = SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSD
@@ -124,8 +121,8 @@ define <2 x i32> @src_srem_shl_mask_vector_nonconstant(<2 x i32> %a0, <2 x i32> 
 
 define i16 @sext_shl_trunc_same_size(i16 %x, i32 %y) {
 ; CHECK-LABEL: @sext_shl_trunc_same_size(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[Y:%.*]]
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
 ; CHECK-NEXT:    ret i16 [[T]]
 ;
@@ -137,8 +134,8 @@ define i16 @sext_shl_trunc_same_size(i16 %x, i32 %y) {
 
 define i5 @sext_shl_trunc_smaller(i16 %x, i32 %y) {
 ; CHECK-LABEL: @sext_shl_trunc_smaller(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[Y:%.*]]
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i5
 ; CHECK-NEXT:    ret i5 [[T]]
 ;
@@ -165,8 +162,8 @@ define i17 @sext_shl_trunc_larger(i16 %x, i32 %y) {
 
 define i32 @sext_shl_mask(i16 %x, i32 %y) {
 ; CHECK-LABEL: @sext_shl_mask(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV]], [[Y:%.*]]
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONV1]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = and i32 [[SHL]], 65535
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
