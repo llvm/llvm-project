@@ -78,7 +78,7 @@ define void @test_constant_v2i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v2i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [4.9406564584124654E-324,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
@@ -340,7 +340,7 @@ define void @test_constant_v4i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v4i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)
@@ -905,7 +905,7 @@ define void @test_constant_v8i64_align1(ptr %dst) nounwind {
 ;
 ; SSE4A-LABEL: test_constant_v8i64_align1:
 ; SSE4A:       # %bb.0:
-; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE4A-NEXT:    movsd {{.*#+}} xmm0 = [NaN,0.0E+0]
 ; SSE4A-NEXT:    movntsd %xmm0, 8(%rdi)
 ; SSE4A-NEXT:    xorl %eax, %eax
 ; SSE4A-NEXT:    movntiq %rax, (%rdi)

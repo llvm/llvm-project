@@ -170,7 +170,6 @@ public:
                    // ref-error {{has incomplete type 'const Bar'}}
 };
 constexpr Bar B; // expected-error {{must be initialized by a constant expression}} \
-                 // expected-error {{failed to evaluate an expression}} \
                  // ref-error {{must be initialized by a constant expression}}
 constexpr Bar *pb = nullptr;
 

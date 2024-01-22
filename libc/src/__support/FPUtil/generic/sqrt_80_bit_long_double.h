@@ -65,7 +65,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // Step 1a: Normalize denormal input
     if (bits.get_implicit_bit()) {
       x_mant |= ONE;
-    } else if (bits.get_biased_exponent() == 0) {
+    } else if (bits.is_subnormal()) {
       normalize(x_exp, x_mant);
     }
 

@@ -111,9 +111,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 /// Checks if a method is pure virtual.
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 
-/// Checks that all fields are initialized after a constructor call.
-bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
-
 /// Checks if reinterpret casts are legal in the current context.
 bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr);
@@ -1061,8 +1058,12 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   const Pointer &P = S.Stk.peek<Pointer>();
   APValue *Cached = Temp->getOrCreateValue(true);
 
-  *Cached = P.toRValue(S.getCtx());
-  return true;
+  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+    *Cached = *APV;
+    return true;
+  }
+
+  return false;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1861,11 +1862,6 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
     return false;
 
   return NarrowPtr(S, OpPC);
-}
-
-inline bool CheckGlobalCtor(InterpState &S, CodePtr OpPC) {
-  const Pointer &Obj = S.Stk.peek<Pointer>();
-  return CheckCtorCall(S, OpPC, Obj);
 }
 
 inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {

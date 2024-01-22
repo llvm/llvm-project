@@ -75,14 +75,7 @@ public:
 
   /// \return true if a call from Caller -> Callee requires a change in
   /// streaming mode.
-  /// If \p BodyOverridesInterface is true and Callee has a streaming body,
-  /// then requiresSMChange considers a call to Callee as having a Streaming
-  /// interface. This can be useful when considering e.g. inlining, where we
-  /// explicitly want the body to overrule the interface (because after inlining
-  /// the interface is no longer relevant).
-  std::optional<bool>
-  requiresSMChange(const SMEAttrs &Callee,
-                   bool BodyOverridesInterface = false) const;
+  bool requiresSMChange(const SMEAttrs &Callee) const;
 
   // Interfaces to query PSTATE.ZA
   bool hasNewZABody() const { return Bitmask & ZA_New; }
@@ -119,6 +112,15 @@ public:
            State == StateValue::InOut || State == StateValue::Preserved;
   }
   bool hasZT0State() const { return isNewZT0() || sharesZT0(); }
+  bool requiresPreservingZT0(const SMEAttrs &Callee) const {
+    return hasZT0State() && !Callee.sharesZT0();
+  }
+  bool requiresDisablingZABeforeCall(const SMEAttrs &Callee) const {
+    return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface();
+  }
+  bool requiresEnablingZAAfterCall(const SMEAttrs &Callee) const {
+    return requiresLazySave(Callee) || requiresDisablingZABeforeCall(Callee);
+  }
 };
 
 } // namespace llvm

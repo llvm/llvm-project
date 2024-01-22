@@ -74,9 +74,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-          NewRecipe =
-              new VPWidenCallRecipe(*CI, drop_end(Ingredient.operands()),
-                                    getVectorIntrinsicIDForCall(CI, &TLI));
+          NewRecipe = new VPWidenCallRecipe(
+              *CI, drop_end(Ingredient.operands()),
+              getVectorIntrinsicIDForCall(CI, &TLI), CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
@@ -103,7 +103,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
   bool Changed = false;
   // First, collect the operands of all recipes in replicate blocks as seeds for
   // sinking.
-  SetVector<std::pair<VPBasicBlock *, VPRecipeBase *>> WorkList;
+  SetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>> WorkList;
   for (VPRegionBlock *VPR : VPBlockUtils::blocksOnly<VPRegionBlock>(Iter)) {
     VPBasicBlock *EntryVPBB = VPR->getEntryBasicBlock();
     if (!VPR->isReplicator() || EntryVPBB->getSuccessors().size() != 2)
@@ -113,7 +113,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
       continue;
     for (auto &Recipe : *VPBB) {
       for (VPValue *Op : Recipe.operands())
-        if (auto *Def = Op->getDefiningRecipe())
+        if (auto *Def =
+                dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
           WorkList.insert(std::make_pair(VPBB, Def));
     }
   }
@@ -122,7 +123,7 @@ static bool sinkScalarOperands(VPlan &Plan) {
   // Try to sink each replicate or scalar IV steps recipe in the worklist.
   for (unsigned I = 0; I != WorkList.size(); ++I) {
     VPBasicBlock *SinkTo;
-    VPRecipeBase *SinkCandidate;
+    VPSingleDefRecipe *SinkCandidate;
     std::tie(SinkTo, SinkCandidate) = WorkList[I];
     if (SinkCandidate->getParent() == SinkTo ||
         SinkCandidate->mayHaveSideEffects() ||
@@ -146,12 +147,11 @@ static bool sinkScalarOperands(VPlan &Plan) {
         return false;
       if (UI->getParent() == SinkTo)
         return true;
-      NeedsDuplicating =
-          UI->onlyFirstLaneUsed(SinkCandidate->getVPSingleValue());
+      NeedsDuplicating = UI->onlyFirstLaneUsed(SinkCandidate);
       // We only know how to duplicate VPRecipeRecipes for now.
       return NeedsDuplicating && isa<VPReplicateRecipe>(SinkCandidate);
     };
-    if (!all_of(SinkCandidate->getVPSingleValue()->users(), CanSinkWithUser))
+    if (!all_of(SinkCandidate->users(), CanSinkWithUser))
       continue;
 
     if (NeedsDuplicating) {
@@ -163,14 +163,14 @@ static bool sinkScalarOperands(VPlan &Plan) {
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      SinkCandidate->getVPSingleValue()->replaceUsesWithIf(
-          Clone, [SinkTo](VPUser &U, unsigned) {
-            return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
-          });
+      SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
+        return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
+      });
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
     for (VPValue *Op : SinkCandidate->operands())
-      if (auto *Def = Op->getDefiningRecipe())
+      if (auto *Def =
+              dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
         WorkList.insert(std::make_pair(SinkTo, Def));
     Changed = true;
   }
@@ -412,16 +412,15 @@ void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
     auto &Casts = IV->getInductionDescriptor().getCastInsts();
     VPValue *FindMyCast = IV;
     for (Instruction *IRCast : reverse(Casts)) {
-      VPRecipeBase *FoundUserCast = nullptr;
+      VPSingleDefRecipe *FoundUserCast = nullptr;
       for (auto *U : FindMyCast->users()) {
-        auto *UserCast = cast<VPRecipeBase>(U);
-        if (UserCast->getNumDefinedValues() == 1 &&
-            UserCast->getVPSingleValue()->getUnderlyingValue() == IRCast) {
+        auto *UserCast = dyn_cast<VPSingleDefRecipe>(U);
+        if (UserCast && UserCast->getUnderlyingValue() == IRCast) {
           FoundUserCast = UserCast;
           break;
         }
       }
-      FindMyCast = FoundUserCast->getVPSingleValue();
+      FindMyCast = FoundUserCast;
     }
     FindMyCast->replaceAllUsesWith(IV);
   }
@@ -1139,7 +1138,7 @@ void VPlanTransforms::addActiveLaneMask(
          "Must have widened canonical IV when tail folding!");
   auto *WideCanonicalIV =
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
-  VPRecipeBase *LaneMask;
+  VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
@@ -1164,7 +1163,7 @@ void VPlanTransforms::addActiveLaneMask(
 
     assert(CompareToReplace->getOperand(0) == WideCanonicalIV &&
            "WidenCanonicalIV must be the first operand of the compare");
-    CompareToReplace->replaceAllUsesWith(LaneMask->getVPSingleValue());
+    CompareToReplace->replaceAllUsesWith(LaneMask);
     CompareToReplace->eraseFromParent();
   }
 }
