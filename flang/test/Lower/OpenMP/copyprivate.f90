@@ -12,6 +12,7 @@
 !CHECK-DAG: func private @_copy_c8x8(%{{.*}}: !fir.ref<!fir.char<1,8>>, %{{.*}}: !fir.ref<!fir.char<1,8>>)
 !CHECK-DAG: func private @_copy_c16x8(%{{.*}}: !fir.ref<!fir.char<2,8>>, %{{.*}}: !fir.ref<!fir.char<2,8>>)
 
+!CHECK-DAG: func private @_copy_box_Uxi32(%{{.*}}: !fir.ref<!fir.box<!fir.array<?xi32>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<?xi32>>>)
 !CHECK-DAG: func private @_copy_10xi32(%{{.*}}: !fir.ref<!fir.array<10xi32>>, %{{.*}}: !fir.ref<!fir.array<10xi32>>)
 !CHECK-DAG: func private @_copy_3x4xi32(%{{.*}}: !fir.ref<!fir.array<3x4xi32>>, %{{.*}}: !fir.ref<!fir.array<3x4xi32>>)
 !CHECK-DAG: func private @_copy_10xf32(%{{.*}}: !fir.ref<!fir.array<10xf32>>, %{{.*}}: !fir.ref<!fir.array<10xf32>>)
@@ -93,25 +94,32 @@ end subroutine
 
 !CHECK-LABEL: func @_QPtest_array
 !CHECK:         omp.parallel
+!CHECK:           %[[A:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 !CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEi1"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEi2"} : (!fir.ref<!fir.array<3x4xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x4xi32>>, !fir.ref<!fir.array<3x4xi32>>)
+!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEi3"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 !CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEr1"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 !CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEc1"} : (!fir.ref<!fir.array<3x4x!fir.complex<4>>>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x4x!fir.complex<4>>>, !fir.ref<!fir.array<3x4x!fir.complex<4>>>)
 !CHECK:           %[[L1:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFtest_arrayEl1"} : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.ref<!fir.array<10x!fir.logical<4>>>)
 !CHECK:           %[[S1:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_arrayEs1"} : (!fir.ref<!fir.array<3x!fir.char<1,8>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,8>>>, !fir.ref<!fir.array<3x!fir.char<1,8>>>)
 !CHECK:           %[[S2:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_arrayEs2"} : (!fir.ref<!fir.array<3x!fir.char<2,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<2,5>>>, !fir.ref<!fir.array<3x!fir.char<2,5>>>)
-!CHECK:           omp.single copyprivate(%[[I1]]#0 -> @_copy_10xi32 : !fir.ref<!fir.array<10xi32>>, %[[I2]]#0 -> @_copy_3x4xi32 : !fir.ref<!fir.array<3x4xi32>>,  %[[R1]]#0 -> @_copy_10xf32 : !fir.ref<!fir.array<10xf32>>, %[[C1]]#0 -> @_copy_3x4xz32 : !fir.ref<!fir.array<3x4x!fir.complex<4>>>, %[[L1]]#0 -> @_copy_10xl32 : !fir.ref<!fir.array<10x!fir.logical<4>>>, %[[S1]]#0 -> @_copy_3xc8x8 : !fir.ref<!fir.array<3x!fir.char<1,8>>>, %[[S2]]#0 -> @_copy_3xc16x5 : !fir.ref<!fir.array<3x!fir.char<2,5>>>)
-subroutine test_array()
-  integer :: i1(10), i2(3, 4)
+!CHECK:           %[[A_REF:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
+!CHECK:           fir.store %[[A]]#0 to %[[A_REF]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+!CHECK:           %[[I3_REF:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
+!CHECK:           fir.store %[[I3]]#0 to %[[I3_REF]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
+!CHECK:           omp.single copyprivate(%[[A_REF]] -> @_copy_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>>, %[[I1]]#0 -> @_copy_10xi32 : !fir.ref<!fir.array<10xi32>>, %[[I2]]#0 -> @_copy_3x4xi32 : !fir.ref<!fir.array<3x4xi32>>, %[[I3_REF]] -> @_copy_box_Uxi32 : !fir.ref<!fir.box<!fir.array<?xi32>>>, %[[R1]]#0 -> @_copy_10xf32 : !fir.ref<!fir.array<10xf32>>, %[[C1]]#0 -> @_copy_3x4xz32 : !fir.ref<!fir.array<3x4x!fir.complex<4>>>, %[[L1]]#0 -> @_copy_10xl32 : !fir.ref<!fir.array<10x!fir.logical<4>>>, %[[S1]]#0 -> @_copy_3xc8x8 : !fir.ref<!fir.array<3x!fir.char<1,8>>>, %[[S2]]#0 -> @_copy_3xc16x5 : !fir.ref<!fir.array<3x!fir.char<2,5>>>)
+subroutine test_array(a, n)
+  integer :: a(:), n
+  integer :: i1(10), i2(3, 4), i3(n)
   real :: r1(10)
   complex :: c1(3, 4)
   logical :: l1(10)
   character(8) :: s1(3)
   character(kind=2, len=5) :: s2(3)
 
-  !$omp parallel private(i1, i2, r1, c1, l1, s1, s2)
+  !$omp parallel private(a, i1, i2, i3, r1, c1, l1, s1, s2)
   !$omp single
-  !$omp end single copyprivate(i1, i2, r1, c1, l1, s1, s2)
+  !$omp end single copyprivate(a, i1, i2, i3, r1, c1, l1, s1, s2)
   !$omp end parallel
 end subroutine
 

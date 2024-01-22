@@ -1852,12 +1852,28 @@ bool ClauseProcessor::processCopyPrivate(
       fir::emitFatalError(currentLocation,
                           "COPYPRIVATE is supported only in HLFIR mode");
     symVal = declOp.getBase();
-    fir::FortranVariableFlagsEnum attrs = fir::FortranVariableFlagsEnum::None;
-    if (declOp.getFortranAttrs().has_value())
-      attrs = *declOp.getFortranAttrs();
-    copyPrivateVars.push_back(symVal);
+    mlir::Type symType = symVal.getType();
+    fir::FortranVariableFlagsEnum attrs =
+        declOp.getFortranAttrs().has_value()
+            ? *declOp.getFortranAttrs()
+            : fir::FortranVariableFlagsEnum::None;
+    mlir::Value cpVar = symVal;
+
+    // CopyPrivate variables must be passed by reference. However, in the case
+    // of assumed shapes/vla the type is not a !fir.ref, but a !fir.box.
+    // In these cases to retrieve the appropriate !fir.ref<!fir.box<...>> to
+    // access the data we need we must perform an alloca and then store to it
+    // and retrieve the data from the new alloca.
+    if (mlir::isa<fir::BaseBoxType>(symType)) {
+      fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+      auto alloca = builder.create<fir::AllocaOp>(currentLocation, symType);
+      builder.create<fir::StoreOp>(currentLocation, symVal, alloca);
+      cpVar = alloca;
+    }
+
+    copyPrivateVars.push_back(cpVar);
     mlir::func::FuncOp funcOp =
-        createCopyFunc(currentLocation, converter, symVal.getType(), attrs);
+        createCopyFunc(currentLocation, converter, cpVar.getType(), attrs);
     copyPrivateFuncs.push_back(mlir::SymbolRefAttr::get(funcOp));
   };
 

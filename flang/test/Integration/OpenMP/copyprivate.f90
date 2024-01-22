@@ -8,8 +8,10 @@
 
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
 
+!CHECK-DAG: define void @_copy_box_Uxi32(ptr %{{.*}}, ptr %{{.*}})
 !CHECK-DAG: define void @_copy_10xi32(ptr %{{.*}}, ptr %{{.*}})
 !CHECK-DAG: define void @_copy_i64(ptr %{{.*}}, ptr %{{.*}})
+!CHECK-DAG: define void @_copy_box_Uxi64(ptr %{{.*}}, ptr %{{.*}})
 !CHECK-DAG: define void @_copy_f32(ptr %{{.*}}, ptr %{{.*}})
 !CHECK-DAG: define void @_copy_2x3xf32(ptr %{{.*}}, ptr %{{.*}})
 !CHECK-DAG: define void @_copy_z32(ptr %{{.*}}, ptr %{{.*}})
@@ -69,9 +71,10 @@ subroutine test_scalar()
   !$omp end parallel
 end subroutine
 
-subroutine test_types()
+subroutine test_types(a, n)
+  integer :: a(:), n
   integer(4) :: i4, i4a(10)
-  integer(8) :: i8
+  integer(8) :: i8, i8a(n)
   real :: r, ra(2, 3)
   complex :: z, za(10)
   logical :: l, la(5)
@@ -87,8 +90,8 @@ subroutine test_types()
   integer, allocatable :: aloc(:)
   character(kind=1, len=9), pointer :: ptr(:)
 
-  !$omp parallel private(i4, i4a, i8, r, ra, z, za, l, la, c1, c1a, c2, t, aloc, ptr)
+  !$omp parallel private(a, i4, i4a, i8, i8a, r, ra, z, za, l, la, c1, c1a, c2, t, aloc, ptr)
   !$omp single
-  !$omp end single copyprivate(i4, i4a, i8, r, ra, z, za, l, la, c1, c1a, c2, t, aloc, ptr)
+  !$omp end single copyprivate(a, i4, i4a, i8, i8a, r, ra, z, za, l, la, c1, c1a, c2, t, aloc, ptr)
   !$omp end parallel
 end subroutine
