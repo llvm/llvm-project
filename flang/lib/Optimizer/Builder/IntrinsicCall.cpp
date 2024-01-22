@@ -140,8 +140,8 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"atan2d", &I::genAtan2d},
     {"atand", &I::genAtand},
-    {"atand2", &I::genAtand},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2173,41 +2173,58 @@ mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
 }
 
 // ATAND
+// ATAN2D
+mlir::Value IntrinsicLibrary::genAtan2d(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value y = fir::getBase(args[0]);
+  mlir::Value x = fir::getBase(args[1]);
+
+  // When Y == 0 X must not be 0
+  mlir::Value zero = builder.createRealZeroConstant(loc, y.getType());
+  mlir::Value cmpYEq0 = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::UEQ, y, zero);
+  mlir::Value cmpXEq0 = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::UEQ, x, zero);
+  mlir::Value terminationCheck =
+      builder.create<mlir::arith::AndIOp>(loc, cmpYEq0, cmpXEq0);
+  builder.genIfThenElse(loc, terminationCheck)
+      .genThen([&]() {
+        fir::runtime::genReportFatalUserError(builder, loc,
+                                              "When Y == 0 X must not be 0");
+      })
+      .end();
+
+  // atand(y,x) atan2d(y,x) == atan2(y,x) * 180/pi
+  mlir::Value atan = builder.create<mlir::math::Atan2Op>(loc, y, x);
+  mlir::MLIRContext *context = builder.getContext();
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
+  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
+}
+
+// ATAND
 mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
-  // llvm::outs() << "args.size()=" << args.size() << "\n";
+  assert(args.size() == 2);
 
-  if (args.size() == 2) {
-    // used for atand(y,x), atand(y,x)
-    // llvm::outs() << "is present.\n";
-    mlir::MLIRContext *context = builder.getContext();
-    // if Y is present, X shall be REAL.
-    assert(fir::isa_real(args[0].getType()) &&
-           "Y shall be of the same type and kind as X.");
-    assert(fir::isa_real(args[1].getType()) &&
-           "if Y is present, X shall be REAL.");
-    llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-    return builder.createRealConstant(loc, mlir::FloatType::getF64(context),
-                                      llvm::APFloat(180.0) / pi);
-  } else if (args.size() == 1) {
-    // used for atand(x)
-    // llvm::outs() << "not resent.\n";
-    mlir::MLIRContext *context = builder.getContext();
-    mlir::FunctionType ftype =
-        mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value atan;
 
-    mlir::Value atan =
-        getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
-    llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-    mlir::Value dfactor = builder.createRealConstant(
-        loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
-    mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
-    return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
+  // atand(y,x) atan2d(y,x) == atan2(y,x) * 180/pi
+  if (isStaticallyPresent(args[1])) {
+    atan = builder.create<mlir::math::Atan2Op>(loc, args[0], args[1]);
   } else {
-    assert((args.size() >= 1 && args.size() <= 2) &&
-           "args size not correct must between 1 and 2");
-    return;
+    atan = builder.create<mlir::math::AtanOp>(loc, args[0]);
   }
+  mlir::MLIRContext *context = builder.getContext();
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor = builder.createRealConstant(
+      loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
+  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
 
 // ASSOCIATED
