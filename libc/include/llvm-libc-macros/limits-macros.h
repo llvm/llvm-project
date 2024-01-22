@@ -124,7 +124,7 @@
 #endif // UCHAR_MAX
 
 // Check if char is unsigned.
-#ifndef __CHAR_UNSIGNED__ && ('\xff' > 0)
+#if !defined(__CHAR_UNSIGNED__) && ('\xff' > 0)
 #define __CHAR_UNSIGNED__
 #endif
 
