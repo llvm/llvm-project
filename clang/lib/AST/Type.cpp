@@ -2479,6 +2479,10 @@ bool Type::isRVVVLSBuiltinType() const {
                         IsFP, IsBF)                                            \
   case BuiltinType::Id:                                                        \
     return NF == 1;
+
+#define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    return true;
 #include "clang/Basic/RISCVVTypes.def"
     default:
       return false;

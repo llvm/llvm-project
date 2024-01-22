@@ -4005,6 +4005,9 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   llvm::raw_svector_ostream TypeNameOS(TypeNameStr);
   TypeNameOS << "__rvv_";
   switch (cast<BuiltinType>(EltType)->getKind()) {
+  case BuiltinType::Bool:
+    TypeNameOS << "int1";
+    break;
   case BuiltinType::SChar:
     TypeNameOS << "int8";
     break;
