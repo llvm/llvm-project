@@ -91,6 +91,8 @@ GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
 /// If there is no solution, return std::null.
 std::optional<ParamPoint> findVertex(IntMatrix equations);
 
+/// Compute the generating function corresponding to a polytope.
+/// All tangent cones of the polytope must be unimodular.
 std::vector<std::pair<PresburgerRelation, GeneratingFunction>>
 polytopeGeneratingFunction(PolyhedronH poly);
 

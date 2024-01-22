@@ -162,14 +162,14 @@ mlir::presburger::detail::findVertex(IntMatrix equations) {
   // equations is a d x (d + p + 1) matrix.
   // Each row represents an equation.
 
-  unsigned d = equations.getNumRows();
-  unsigned c = equations.getNumColumns();
+  unsigned numEqs = equations.getNumRows();
+  unsigned numCols = equations.getNumColumns();
 
   // First, we check that the system has a solution, and return
   // null if not.
-  IntMatrix coeffs(d, d);
-  for (unsigned i = 0; i < d; i++)
-    for (unsigned j = 0; j < d; j++)
+  IntMatrix coeffs(numEqs, numEqs);
+  for (unsigned i = 0; i < numEqs; i++)
+    for (unsigned j = 0; j < numEqs; j++)
       coeffs(i, j) = equations(i, j);
 
   if (coeffs.determinant() == 0)
@@ -178,11 +178,11 @@ mlir::presburger::detail::findVertex(IntMatrix equations) {
   // We work with rational numbers.
   FracMatrix equationsF(equations);
 
-  for (unsigned i = 0; i < d; ++i) {
+  for (unsigned i = 0; i < numEqs; ++i) {
     // First ensure that the diagonal element is nonzero, by swapping
     // it with a nonzero row.
     if (equationsF(i, i) == 0) {
-      for (unsigned j = i + 1; j < d; ++j) {
+      for (unsigned j = i + 1; j < numEqs; ++j) {
         if (equationsF(j, i) != 0) {
           equationsF.swapRows(j, i);
           break;
@@ -193,7 +193,7 @@ mlir::presburger::detail::findVertex(IntMatrix equations) {
     Fraction b = equationsF(i, i);
 
     // Set all elements except the diagonal to zero.
-    for (unsigned j = 0; j < d; ++j) {
+    for (unsigned j = 0; j < numEqs; ++j) {
       if (equationsF(j, i) == 0 || j == i)
         continue;
       // Set element (j, i) to zero
@@ -205,102 +205,140 @@ mlir::presburger::detail::findVertex(IntMatrix equations) {
   }
 
   // Rescale diagonal elements to 1.
-  for (unsigned i = 0; i < d; ++i) {
+  for (unsigned i = 0; i < numEqs; ++i) {
     Fraction a = equationsF(i, i);
-    for (unsigned j = 0; j < c; ++j)
+    for (unsigned j = 0; j < numCols; ++j)
       equationsF(i, j) = equationsF(i, j) / a;
   }
 
   // We copy the last p+1 columns of the matrix as the values of x_i.
   // We shift the parameter terms to the RHS, and so flip their sign.
-  ParamPoint vertex(d, c - d);
-  for (unsigned i = 0; i < d; ++i)
-    for (unsigned j = 0; j < c - d; ++j)
-      vertex(i, j) = -equationsF(i, d + j);
+  ParamPoint vertex(numEqs, numCols - numEqs);
+  for (unsigned i = 0; i < numEqs; ++i)
+    for (unsigned j = 0; j < numCols - numEqs; ++j)
+      vertex(i, j) = -equationsF(i, numEqs + j);
 
   return vertex;
 }
 
+/// For a polytope expressed as a set of inequalities, compute the generating
+/// function corresponding to the number of lattice points present. This
+/// algorithm has three main steps:
+/// 1. Enumerate the vertices, by iterating over subsets of inequalities and
+///    checking for solubility.
+/// 2. For each vertex, identify the tangent cone and compute the generating
+///    function corresponding to it. The sum of these GFs is the GF of the
+///    polytope.
+/// 3. [Clauss-Loechner decomposition] Identify the regions in parameter space
+///    (chambers) where each vertex is active, and accordingly compute the
+///    GF of the polytope in each chamber.
+///
+/// Verdoolaege, Sven, et al. "Counting integer points in parametric
+/// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
+/// 37-66.
 std::vector<std::pair<PresburgerRelation, GeneratingFunction>>
 mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
-  unsigned d = poly.getNumRangeVars();
-  unsigned p = poly.getNumSymbolVars();
-  unsigned n = poly.getNumInequalities();
+  unsigned numVars = poly.getNumRangeVars();
+  unsigned numParams = poly.getNumSymbolVars();
+  unsigned numIneqs = poly.getNumInequalities();
 
-  SmallVector<std::pair<int, ConeH>, 4> unimodCones;
-  GeneratingFunction chamberGf(p, {}, {}, {});
+  // The generating function of the polytope is computed as a set of generating
+  // functions, each one associated with a region in parameter space (chamber).
   std::vector<std::pair<PresburgerRelation, GeneratingFunction>> gf({});
-  ConeH tgtCone = defineHRep(d);
 
-  IntMatrix subset(d, d + p + 1);
-  std::vector<IntMatrix>
-      subsets; // Stores the inequality subsets corresponding to each vertex.
-  FracMatrix remaining(n - d, d + p + 1);
-
-  std::optional<ParamPoint> vertex;
-  std::vector<ParamPoint> vertices;
-
-  FracMatrix a2(n - d, d);
-  FracMatrix b2c2(n - d, p + 1);
-
-  FracMatrix activeRegion(n - d, p + 1);
-  IntMatrix activeRegionNorm(n - d, p + 1);
-  MPInt lcmDenoms;
-  IntegerRelation activeRegionRel(
-      PresburgerSpace::getRelationSpace(0, p, 0, 0));
   // The active region will be defined as activeRegionCoeffs @ p +
   // activeRegionConstant ≥ 0. The active region is a polyhedron in parameter
   // space.
+  FracMatrix activeRegion(numIneqs - numVars, numParams + 1);
+
+  // These vectors store lists of
+  // subsets of inequalities,
+  // the vertices corresponding to them, and
+  // the active regions of the vertices, in order.
+  std::vector<IntMatrix> subsets;
+  std::vector<ParamPoint> vertices;
   std::vector<PresburgerRelation> activeRegions;
 
-  for (std::bitset<16> indicator(((1ul << d) - 1ul) << (n - d));
-       indicator.to_ulong() <= ((1ul << d) - 1ul)
-                                   << (n - d); // d 1's followed by n-d 0's
+  FracMatrix a2(numIneqs - numVars, numVars);
+  FracMatrix b2c2(numIneqs - numVars, numParams + 1);
+
+  // We iterate over all subsets of inequalities with cardinality numVars,
+  // using bitsets up to 2^numIneqs to enumerate.
+  for (std::bitset<16> indicator(((1ul << numVars) - 1ul)
+                                 << (numIneqs - numVars));
+       indicator.to_ulong() <=
+       ((1ul << numVars) - 1ul)
+           << (numIneqs - numVars); // d 1's followed by n-numVars 0's
        indicator = std::bitset<16>(indicator.to_ulong() - 1)) {
-    if (indicator.count() != d)
+
+    if (indicator.count() != numVars)
       continue;
 
-    subset = IntMatrix(d, d + p + 1);
-    remaining = FracMatrix(n - d, d + p + 1);
+    // Collect the inequalities corresponding to the bits which are set.
+    IntMatrix subset(numVars, numVars + numParams + 1);
     unsigned j1 = 0, j2 = 0;
-    for (unsigned i = 0; i < n; i++)
+    for (unsigned i = 0; i < numIneqs; i++)
       if (indicator.test(i))
         subset.setRow(j1++, poly.getInequality(i));
-      // [A1 | B1 | c1]
+
       else {
-        for (unsigned k = 0; k < d; k++)
-          a2(j2, k) = Fraction(poly.atIneq(i, k), 1);
-        for (unsigned k = d; k < d + p + 1; k++)
-          b2c2(j2, k - d) = Fraction(poly.atIneq(i, k), 1);
+        // All other inequalities are stored in a2 and b2c2.
+        // These are column-wise splits of the inequalities;
+        // a2 stores the coefficients of the variables, and
+        // b2c2 stores the coefficients of the parameters and the constant term.
+        for (unsigned k = 0; k < numVars; k++)
+          a2(j2, k) = poly.atIneq(i, k);
+        for (unsigned k = numVars; k < numVars + numParams + 1; k++)
+          b2c2(j2, k - numVars) = poly.atIneq(i, k);
         j2++;
-        // [A2 | B2 | c2]
       }
 
-    vertex = findVertex(subset); // d x (p+1)
+    // Find the vertex, if any, corresponding to the current subset of
+    // inequalities.
+    std::optional<ParamPoint> vertex = findVertex(subset); // d x (p+1)
 
     if (vertex == std::nullopt)
       continue;
+    // If this subset corresponds to a vertex, store it.
     vertices.push_back(*vertex);
     subsets.push_back(subset);
 
-    // Region is given by (A2 @ X + B2) p + (A2 @ y + c2) ≥ 0
-    // This is equivt to A2 @ [X | y] + [B2 | c2]
-    // We premultiply [X | y] with each row of A2 and add each row of [B2 | c2].
-    for (unsigned i = 0; i < n - d; i++) {
+    // Let the current vertex be [X | y], where
+    // X represents the coefficients of the parameters and
+    // y represents the constant term.
+
+    // The region (in parameter space) where this vertex is active is given
+    // by substituting the vertex into the *remaining* inequalities of the
+    // polytope (those which were not collected into `subset`), i.e.,
+    // [A2 | B2 | c2].
+    // Thus, the coefficients of the parameters after substitution become
+    // (A2 • X + B2)
+    // and the constant terms become
+    // (A2 • y + c2).
+    // The region is therefore given by
+    // (A2 • X + B2) p + (A2 • y + c2) ≥ 0
+    // This is equivalent to A2 • [X | y] + [B2 | c2]
+    // Thus we premultiply [X | y] with each row of A2
+    // and add each row of [B2 | c2].
+    for (unsigned i = 0; i < numIneqs - numVars; i++) {
       activeRegion.setRow(i, (*vertex).preMultiplyWithRow(a2.getRow(i)));
-      activeRegion.addToRow(i, b2c2.getRow(i), Fraction(1, 1));
+      activeRegion.addToRow(i, b2c2.getRow(i), 1);
     }
 
-    activeRegionNorm = IntMatrix(n - d, p + 1);
-    activeRegionRel =
-        IntegerRelation(PresburgerSpace::getRelationSpace(0, p, 0, 0));
-    lcmDenoms = 1;
-    for (unsigned i = 0; i < n - d; i++) {
-      for (unsigned j = 0; j < p + 1; j++)
+    // We convert the representation of the active region to an integers-only
+    // form so as to store it as an PresburgerRelation.
+    // We do this by taking the LCM of the denominators of all the coefficients
+    // and multiplying by it throughout.
+    IntMatrix activeRegionNorm = IntMatrix(numIneqs - numVars, numParams + 1);
+    IntegerRelation activeRegionRel =
+        IntegerRelation(PresburgerSpace::getRelationSpace(0, numParams, 0, 0));
+    MPInt lcmDenoms = MPInt(1);
+    for (unsigned i = 0; i < numIneqs - numVars; i++) {
+      for (unsigned j = 0; j < numParams + 1; j++)
         lcmDenoms = lcm(lcmDenoms, activeRegion(i, j).den);
-      for (unsigned j = 0; j < p + 1; j++)
+      for (unsigned j = 0; j < numParams + 1; j++)
         activeRegionNorm(i, j) =
-            (activeRegion(i, j) * Fraction(lcmDenoms, 1)).getAsInteger();
+            (activeRegion(i, j) * lcmDenoms).getAsInteger();
 
       activeRegionRel.addInequality(activeRegionNorm.getRow(i));
     }
@@ -308,17 +346,45 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
     activeRegions.push_back(PresburgerRelation(activeRegionRel));
   }
 
-  // Clauss-Loechner chamber decomposition
+  // Now, we use Clauss-Loechner decomposition to identify regions in parameter
+  // space where each vertex is active. These regions (chambers) have the
+  // property that no two of them have a full-dimensional intersection, i.e.,
+  // they may share "faces" or "edges", but their intersection can only have
+  // up to numVars-1 dimensions.
+
+  // We maintain a list of regions and their associated vertex sets,
+  // initialized with the first vertex and its corresponding activity region.
   std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> chambers = {
       std::make_pair(activeRegions[0], std::vector({0u}))};
+  // Note that instead of storing lists of actual vertices, we store lists
+  // of indices. Thus the set {2, 3, 4} represents the vertex set
+  // {vertices[2], vertices[3], vertices[4]}.
+
   std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> newChambers;
+
+  // We iterate over the vertex set.
+  // For each vertex v_j and its activity region R_j,
+  // we examine all the current chambers R_i.
+  // If R_j has a full-dimensional intersection with an existing chamber R_i,
+  // then that chamber is replaced by two new ones:
+  // 1. the intersection R_i \cap R_j, where v_j is active;
+  // 2. the difference R_i - R_j, where v_j is inactive.
+  // Once we have examined all R_i, we add a final chamber
+  // R_j - (union of all existing chambers),
+  // in which only v_j is active.
   for (unsigned j = 1; j < vertices.size(); j++) {
     newChambers.clear();
+
     PresburgerRelation r_j = activeRegions[j];
     ParamPoint v_j = vertices[j];
+
     for (unsigned i = 0; i < chambers.size(); i++) {
       auto [r_i, v_i] = chambers[i];
 
+      // First, we check if the intersection of R_j and R_i.
+      // It is a disjoint union of convex regions in the parameter space,
+      // and so we know that it is full-dimensional if any of the disjuncts
+      // is full-dimensional.
       PresburgerRelation intersection = r_i.intersect(r_j);
       bool isFullDim = false;
       for (auto disjunct : intersection.getAllDisjuncts())
@@ -326,10 +392,14 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
           isFullDim = true;
           break;
         }
-      isFullDim = (p == 0) || isFullDim;
+      isFullDim = (numParams == 0) || isFullDim;
+
+      // If the intersection is not full-dimensional, we do not modify
+      // the chamber list.
       if (!isFullDim)
         newChambers.push_back(chambers[i]);
       else {
+        // If it is, we add the intersection and the difference as new chambers.
         PresburgerRelation subtraction = r_i.subtract(r_j);
         newChambers.push_back(std::make_pair(subtraction, v_i));
 
@@ -337,11 +407,14 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
         newChambers.push_back(std::make_pair(intersection, v_i));
       }
     }
+
+    // Finally we compute the chamber where only v_j is active by subtracting
+    // all existing chambers from R_j.
     for (auto chamber : newChambers)
       r_j = r_j.subtract(chamber.first);
-
     newChambers.push_back(std::make_pair(r_j, std::vector({j})));
 
+    // We filter `chambers` to remove empty regions.
     chambers.clear();
     for (auto chamber : newChambers) {
       bool empty = true;
@@ -355,18 +428,27 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
     }
   }
 
-  SmallVector<MPInt> ineq(d + 1);
+  // Now, we compute the generating function. For each chamber, we iterate over
+  // the vertices active in it, and compute the generating function for each
+  // of them. The sum of these generating functions is the GF corresponding to
+  // the entire polytope.
+  SmallVector<MPInt> ineq(numVars + 1);
   for (auto chamber : chambers) {
-    chamberGf = GeneratingFunction(p, {}, {}, {});
+    GeneratingFunction chamberGf(numParams, {}, {}, {});
     for (unsigned i : chamber.second) {
-      tgtCone = defineHRep(d);
-      for (unsigned j = 0; j < d; j++) {
-        for (unsigned k = 0; k < d; k++)
+      // We collect the inequalities corresponding to each vertex.
+      // We only need the coefficients of the variables (NOT the parameters)
+      // as the generating function only depends on these.
+      ConeH tgtCone = defineHRep(numVars);
+      for (unsigned j = 0; j < numVars; j++) {
+        for (unsigned k = 0; k < numVars; k++)
           ineq[k] = subsets[i](j, k);
-        ineq[d] = subsets[i](j, d + p);
+        ineq[numVars] = subsets[i](j, numVars + numParams);
         tgtCone.addInequality(ineq);
       }
-      unimodCones = {std::make_pair(1, tgtCone)};
+      // We assume that the tangent cone is unimodular.
+      SmallVector<std::pair<int, ConeH>, 4> unimodCones = {
+          std::make_pair(1, tgtCone)};
       for (auto signedCone : unimodCones)
         chamberGf =
             chamberGf + unimodularConeGeneratingFunction(
