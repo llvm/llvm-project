@@ -56,4 +56,4 @@
 ! MSVC-SAME: "[[object_file]]"
 
 ! Check that we warn when using -lFortran_main
-! DEPRECATED: warning: argument '-lFortran_main' is deprecated, see the flang driver documentation for correct usage [-Wdeprecated]
+! DEPRECATED: warning: argument '-lFortran_main' is deprecated, see the Flang driver documentation for correct usage [-Wdeprecated]
