@@ -22,6 +22,10 @@ module iso_c_binding
     c_sizeof => sizeof, &
     operator(==), operator(/=)
 
+  ! Do not leak these intrinsics into the USEing code.
+  private :: kind
+  private :: achar
+
   ! Table 18.2 (in clause 18.3.1)
   ! TODO: Specialize (via macros?) for alternative targets
   integer, parameter :: &

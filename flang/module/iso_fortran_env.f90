@@ -24,7 +24,16 @@ module iso_fortran_env
     compiler_version => __builtin_compiler_version
 
   implicit none
-  private count
+
+  ! Do not leak these intrinsics into the USEing code.
+  private :: count
+  private :: selected_char_kind
+  private :: selected_int_kind
+  private :: merge
+  private :: digits
+  private :: int
+  private :: selected_real_kind
+  private :: real
 
   ! TODO: Use PACK([x],test) in place of the array constructor idiom
   ! [(x, integer::j=1,COUNT([test]))] below once PACK() can be folded.
