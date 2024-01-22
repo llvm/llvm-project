@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -std=c++20 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
 // CHECK-NOT: [-Wunsafe-buffer-usage]
 
+#include <stdint.h>
 #ifndef INCLUDED
 #define INCLUDED
 #pragma clang system_header
@@ -21,8 +22,6 @@ namespace std {
 }
 using size_t = __typeof(sizeof(int));
 void *malloc(size_t);
-
-typedef long int  intptr_t;
 
 void foo(int v) {
 }

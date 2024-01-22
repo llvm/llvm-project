@@ -2267,14 +2267,7 @@ public:
           return;
 
         const Expr *subExpr = ECE->getSubExpr();
-        // Check if related to DataInvocation warning gadget.
-        if (!isa<CXXMemberCallExpr>(subExpr)) {
-          if (const auto *SE = dyn_cast<ParenExpr>(subExpr)) {
-            if (!isa<CXXMemberCallExpr>(SE->getSubExpr()))
-              return;
-          } else
-            return;
-        }
+
         const uint64_t dSize =
             Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
 
