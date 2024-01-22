@@ -2887,7 +2887,7 @@ static bool functionsHaveCompatibleAttributes(
   // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
   // object, and always returns the same object (which is overwritten on each
   // GetTLI call). Therefore we copy the first result.
-  auto CalleeTLI = GetTLI(*Callee);
+  const auto &CalleeTLI = GetTLI(*Callee);
   return (IgnoreTTIInlineCompatible ||
           TTI.areInlineCompatible(Caller, Callee)) &&
          GetTLI(*Caller).areInlineCompatible(CalleeTLI,
