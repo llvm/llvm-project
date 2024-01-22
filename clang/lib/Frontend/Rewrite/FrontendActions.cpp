@@ -88,7 +88,7 @@ public:
     llvm::sys::fs::createTemporaryFile(llvm::sys::path::filename(Filename),
                                        llvm::sys::path::extension(Filename).drop_front(), fd,
                                        Path);
-    return std::string(Path.str());
+    return std::string(Path);
   }
 };
 } // end anonymous namespace
