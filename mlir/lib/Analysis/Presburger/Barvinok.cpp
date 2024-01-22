@@ -385,17 +385,17 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   for (unsigned j = 1, e = vertices.size(); j < e; j++) {
     newChambers.clear();
 
-    PresburgerRelation r_j = activeRegions[j];
-    ParamPoint v_j = vertices[j];
+    PresburgerRelation newRegion = activeRegions[j];
+    ParamPoint newVertex = vertices[j];
 
     for (unsigned i = 0, f = chambers.size(); i < f; i++) {
-      auto [r_i, v_i] = chambers[i];
+      auto [currentRegion, currentVertices] = chambers[i];
 
       // First, we check if the intersection of R_j and R_i.
       // It is a disjoint union of convex regions in the parameter space,
       // and so we know that it is full-dimensional if any of the disjuncts
       // is full-dimensional.
-      PresburgerRelation intersection = r_i.intersect(r_j);
+      PresburgerRelation intersection = currentRegion.intersect(newRegion);
       bool isFullDim = numSymbols == 0 ||
                        llvm::any_of(intersection.getAllDisjuncts(),
                                     [&](IntegerRelation disjunct) -> bool {
@@ -408,11 +408,11 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
         newChambers.push_back(chambers[i]);
       else {
         // If it is, we add the intersection and the difference as new chambers.
-        PresburgerRelation subtraction = r_i.subtract(r_j);
-        newChambers.push_back(std::make_pair(subtraction, v_i));
+        PresburgerRelation subtraction = currentRegion.subtract(newRegion);
+        newChambers.push_back(std::make_pair(subtraction, currentVertices));
 
-        v_i.push_back(j);
-        newChambers.push_back(std::make_pair(intersection, v_i));
+        currentVertices.push_back(j);
+        newChambers.push_back(std::make_pair(intersection, currentVertices));
       }
     }
 
@@ -420,8 +420,8 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
     // all existing chambers from R_j.
     for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
          newChambers)
-      r_j = r_j.subtract(chamber.first);
-    newChambers.push_back(std::make_pair(r_j, std::vector({j})));
+      newRegion = newRegion.subtract(chamber.first);
+    newChambers.push_back(std::make_pair(newRegion, std::vector({j})));
 
     // We filter `chambers` to remove empty regions.
     chambers.clear();
@@ -443,9 +443,9 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   SmallVector<MPInt> ineq(numVars + 1);
   for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
        chambers) {
-    auto [region_j, vertices_j] = chamber;
+    auto [currentRegion, currentVertices] = chamber;
     GeneratingFunction chamberGf(numSymbols, {}, {}, {});
-    for (unsigned i : vertices_j) {
+    for (unsigned i : currentVertices) {
       // We collect the inequalities corresponding to each vertex.
       // We only need the coefficients of the variables (NOT the parameters)
       // as the generating function only depends on these.
@@ -465,7 +465,7 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
                     unimodularConeGeneratingFunction(vertices[i], sign, cone);
       }
     }
-    gf.push_back(std::make_pair(region_j, chamberGf));
+    gf.push_back(std::make_pair(currentRegion, chamberGf));
   }
   return gf;
 }
