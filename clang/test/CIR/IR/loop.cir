@@ -58,25 +58,6 @@ cir.func @l0() {
     }
   }
 
-  cir.scope {
-    %2 = cir.alloca !u32i, cir.ptr <!u32i>, ["i", init] {alignment = 4 : i64}
-    %3 = cir.const(#cir.int<0> : !u32i) : !u32i
-    cir.store %3, %2 : !u32i, cir.ptr <!u32i>
-    cir.loop dowhile(cond :  {
-      %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
-      %5 = cir.const(#cir.int<10> : !u32i) : !u32i
-      %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-      cir.condition(%6)
-    }, step :  {
-      cir.yield
-    })  {
-      %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
-      %5 = cir.const(#cir.int<1> : !u32i) : !u32i
-      %6 = cir.binop(add, %4, %5) : !u32i
-      cir.store %6, %0 : !u32i, cir.ptr <!u32i>
-      cir.yield
-    }
-  }
   cir.return
 }
 
@@ -120,21 +101,6 @@ cir.func @l0() {
 // CHECK-NEXT:     cir.if %7 {
 // CHECK-NEXT:       cir.continue
 // CHECK-NEXT:     }
-// CHECK-NEXT:     cir.yield
-// CHECK-NEXT:   }
-
-// CHECK:        cir.loop dowhile(cond :  {
-// CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
-// CHECK-NEXT:     %5 = cir.const(#cir.int<10> : !u32i) : !u32i
-// CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-// CHECK-NEXT:     cir.condition(%6)
-// CHECK-NEXT:   }, step :  {
-// CHECK-NEXT:     cir.yield
-// CHECK-NEXT:   })  {
-// CHECK-NEXT:     %4 = cir.load %0 : cir.ptr <!u32i>, !u32i
-// CHECK-NEXT:     %5 = cir.const(#cir.int<1> : !u32i) : !u32i
-// CHECK-NEXT:     %6 = cir.binop(add, %4, %5) : !u32i
-// CHECK-NEXT:     cir.store %6, %0 : !u32i, cir.ptr <!u32i>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }
 

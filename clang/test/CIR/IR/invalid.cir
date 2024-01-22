@@ -808,3 +808,14 @@ cir.func @const_type_mismatch() -> () {
     %2 = cir.const(#cir.int<0> : !s8i) : !u8i
     cir.return
 }
+
+// -----
+
+cir.func @invalid_cond_region_terminator(%arg0 : !cir.bool) -> !cir.void {
+  cir.do { // expected-error {{op expected condition region to terminate with 'cir.condition'}}
+    cir.yield
+  } while {
+    cir.yield
+  }
+  cir.return
+}
