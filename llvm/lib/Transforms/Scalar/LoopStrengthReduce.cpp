@@ -6680,8 +6680,8 @@ static void DbgGatherSalvagableDVI(
         // Check that the location op SCEVs are suitable for translation to
         // DIExpression.
         const auto &HasTranslatableLocationOps =
-            [&](const auto *DbgVal) -> bool {
-          for (const auto LocOp : DbgVal->location_ops()) {
+            [&](const auto *DbgValToTranslate) -> bool {
+          for (const auto LocOp : DbgValToTranslate->location_ops()) {
             if (!LocOp)
               return false;
 
