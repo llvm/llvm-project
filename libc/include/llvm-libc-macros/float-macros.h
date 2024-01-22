@@ -9,9 +9,12 @@
 #ifndef __LLVM_LIBC_MACROS_FLOAT_MACROS_H
 #define __LLVM_LIBC_MACROS_FLOAT_MACROS_H
 
+// Suppress `#include_next is a language extension` warnings.
 #ifdef __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wgnu-include-next"
+#else // gcc
+#pragma GCC system_header
 #endif //__clang__
 
 #include_next <float.h>

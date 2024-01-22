@@ -9,9 +9,12 @@
 #ifndef __LLVM_LIBC_MACROS_LIMITS_MACROS_H
 #define __LLVM_LIBC_MACROS_LIMITS_MACROS_H
 
+// Suppress `#include_next is a language extension` warnings.
 #ifdef __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wgnu-include-next"
+#else // gcc
+#pragma GCC system_header
 #endif // __clang__
 
 #include_next <limits.h>
@@ -32,7 +35,7 @@
 //   clang: MB_LEN_MAX = 1 -
 //   https://github.com/llvm/llvm-project/blob/main/clang/lib/Headers/limits.h#L64
 //   glibc: MB_LEN_MAX = 16 -
-//   https://github.com/lattera/glibc/blob/master/include/limits.h#L32
+//   https://github.com/bminor/glibc/blob/master/include/limits.h#L32
 
 // *_WIDTH macros
 
