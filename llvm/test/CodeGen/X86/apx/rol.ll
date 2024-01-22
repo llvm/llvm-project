@@ -418,16 +418,12 @@ entry:
 define void @rol16m1_legacy(ptr %ptr) {
 ; CHECK-LABEL: rol16m1_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    addl %eax, %eax, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x01,0xc0]
-; CHECK-NEXT:    shrl $7, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x07]
-; CHECK-NEXT:    orl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xc8]
-; CHECK-NEXT:    movw %ax, (%rdi) # encoding: [0x66,0x89,0x07]
+; CHECK-NEXT:    rolw (%rdi) # encoding: [0x66,0xd1,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
   %0 = shl i16 %a, 1
-  %1 = lshr i16 %a, 7
+  %1 = lshr i16 %a, 15
   %rol = or i16 %0, %1
   store i16 %rol, ptr %ptr
   ret void
@@ -436,16 +432,12 @@ entry:
 define void @rol32m1_legacy(ptr %ptr) {
 ; CHECK-LABEL: rol32m1_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
-; CHECK-NEXT:    addl %eax, %eax, %ecx # encoding: [0x62,0xf4,0x74,0x18,0x01,0xc0]
-; CHECK-NEXT:    shrl $7, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x07]
-; CHECK-NEXT:    orl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xc8]
-; CHECK-NEXT:    movl %eax, (%rdi) # encoding: [0x89,0x07]
+; CHECK-NEXT:    roll (%rdi) # encoding: [0xd1,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i32, ptr %ptr
   %0 = shl i32 %a, 1
-  %1 = lshr i32 %a, 7
+  %1 = lshr i32 %a, 31
   %rol = or i32 %0, %1
   store i32 %rol, ptr %ptr
   ret void
@@ -454,16 +446,12 @@ entry:
 define void @rol64m1_legacy(ptr %ptr) {
 ; CHECK-LABEL: rol64m1_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
-; CHECK-NEXT:    addq %rax, %rax, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x01,0xc0]
-; CHECK-NEXT:    shrq $7, %rax # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe8,0x07]
-; CHECK-NEXT:    orq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xc8]
-; CHECK-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
+; CHECK-NEXT:    rolq (%rdi) # encoding: [0x48,0xd1,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i64, ptr %ptr
   %0 = shl i64 %a, 1
-  %1 = lshr i64 %a, 7
+  %1 = lshr i64 %a, 63
   %rol = or i64 %0, %1
   store i64 %rol, ptr %ptr
   ret void
@@ -554,16 +542,12 @@ entry:
 define void @rol16mi_legacy(ptr %ptr) {
 ; CHECK-LABEL: rol16mi_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    shll $3, %eax, %ecx # encoding: [0x62,0xf4,0x74,0x18,0xc1,0xe0,0x03]
-; CHECK-NEXT:    shrl $5, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x05]
-; CHECK-NEXT:    orl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xc8]
-; CHECK-NEXT:    movw %ax, (%rdi) # encoding: [0x66,0x89,0x07]
+; CHECK-NEXT:    rolw $3, (%rdi) # encoding: [0x66,0xc1,0x07,0x03]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
   %0 = shl i16 %a, 3
-  %1 = lshr i16 %a, 5
+  %1 = lshr i16 %a, 13
   %rol = or i16 %0, %1
   store i16 %rol, ptr %ptr
   ret void
@@ -572,16 +556,12 @@ entry:
 define void @rol32mi_legacy(ptr %ptr) {
 ; CHECK-LABEL: rol32mi_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
-; CHECK-NEXT:    shll $3, %eax, %ecx # encoding: [0x62,0xf4,0x74,0x18,0xc1,0xe0,0x03]
-; CHECK-NEXT:    shrl $5, %eax # EVEX TO LEGACY Compression encoding: [0xc1,0xe8,0x05]
-; CHECK-NEXT:    orl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x09,0xc8]
-; CHECK-NEXT:    movl %eax, (%rdi) # encoding: [0x89,0x07]
+; CHECK-NEXT:    roll $3, (%rdi) # encoding: [0xc1,0x07,0x03]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i32, ptr %ptr
   %0 = shl i32 %a, 3
-  %1 = lshr i32 %a, 5
+  %1 = lshr i32 %a, 29
   %rol = or i32 %0, %1
   store i32 %rol, ptr %ptr
   ret void
@@ -590,16 +570,12 @@ entry:
 define void @rol64mi_legacy(ptr %ptr) {
 ; CHECK-LABEL: rol64mi_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
-; CHECK-NEXT:    shlq $3, %rax, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0xc1,0xe0,0x03]
-; CHECK-NEXT:    shrq $5, %rax # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe8,0x05]
-; CHECK-NEXT:    orq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x09,0xc8]
-; CHECK-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
+; CHECK-NEXT:    rolq $3, (%rdi) # encoding: [0x48,0xc1,0x07,0x03]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i64, ptr %ptr
   %0 = shl i64 %a, 3
-  %1 = lshr i64 %a, 5
+  %1 = lshr i64 %a, 61
   %rol = or i64 %0, %1
   store i64 %rol, ptr %ptr
   ret void
