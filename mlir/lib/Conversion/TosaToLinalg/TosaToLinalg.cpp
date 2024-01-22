@@ -480,23 +480,53 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     }
 
     if (arith::FPToSIOp::areCastCompatible(srcTy, dstTy)) {
-      auto intMin = rewriter.create<arith::ConstantOp>(
+      auto intMinFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
                    APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 
-      auto intMax = rewriter.create<arith::ConstantOp>(
+      auto rounded = rewriter.create<math::RoundEvenOp>(loc, args[0]);
+
+      // The input floating-point type has enough mantissa bits to represent
+      // the max int value so just clamp the input in the floating-point
+      // domain and convert to int. Note: the min value can be represented
+      // because it consists of a mantissa with only the lsb set.
+      if (cast<FloatType>(srcTy).getFPMantissaWidth() >=
+          dstTy.getIntOrFloatBitWidth() - 1) {
+        auto intMaxFP = rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getFloatAttr(
+                     getElementTypeOrSelf(srcTy),
+                     APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                         .getSExtValue()));
+
+        auto clamped =
+            clampFloatHelper(loc, rounded, intMinFP, intMaxFP, rewriter);
+        return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
+      }
+
+      // Otherwise, we can rely on int max + 1 being representable because it
+      // also consists of a single lsb set in the mantissa. So clamp the min
+      // value and compare against that to select the max int value if needed.
+      auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
                    APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                       .getSExtValue()));
+                           .getSExtValue() +
+                       1));
 
-      auto rounded = rewriter.create<math::RoundEvenOp>(loc, args[0]);
-
-      auto clamped = clampFloatHelper(loc, rounded, intMin, intMax, rewriter);
-
-      return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
+      auto intMax = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getIntegerAttr(
+                   getElementTypeOrSelf(dstTy),
+                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())));
+      auto minClampedFP =
+          rewriter.create<arith::MaximumFOp>(loc, rounded, intMinFP);
+      auto minClamped =
+          rewriter.create<arith::FPToSIOp>(loc, dstTy, minClampedFP);
+      auto overflow = rewriter.create<arith::CmpFOp>(
+          loc, arith::CmpFPredicate::UGE, rounded, intMaxPlusOneFP);
+      return rewriter.create<arith::SelectOp>(loc, overflow, intMax,
+                                              minClamped);
     }
 
     // Casting to boolean, integers need to only be checked as not-equal to
