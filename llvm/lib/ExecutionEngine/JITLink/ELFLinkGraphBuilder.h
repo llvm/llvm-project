@@ -399,7 +399,8 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
 
     if (Sec.sh_type == ELF::SHT_ARM_EXIDX) {
       // Add live symbol to avoid dead-stripping for .ARM.exidx sections
-      G->addAnonymousSymbol(*B, orc::ExecutorAddrDiff(), orc::ExecutorAddrDiff(), false, true);
+      G->addAnonymousSymbol(*B, orc::ExecutorAddrDiff(),
+                            orc::ExecutorAddrDiff(), false, true);
     }
 
     setGraphBlock(SecIndex, B);
