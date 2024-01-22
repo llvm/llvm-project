@@ -1212,7 +1212,7 @@ Error Session::FileInfo::registerStubEntry(
   if (!TS)
     return TS.takeError();
 
-  SmallVector<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
   Entry.insert(Entry.begin(),
                {Sym.getSymbolContent(), Sym.getAddress().getValue(),
                 Sym.getTargetFlags()});
@@ -1230,7 +1230,7 @@ Error Session::FileInfo::registerMultiStubEntry(
   if (!Target)
     return Target.takeError();
 
-  SmallVector<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
   Entry.emplace_back(Sym.getSymbolContent(), Sym.getAddress().getValue(),
                      Sym.getTargetFlags());
 
