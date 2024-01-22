@@ -15,12 +15,15 @@
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-include-next"
-#elif defined(__GNUC__) // gcc
-#if !defined _GCC_LIMITS_H_
-#define _GCC_LIMITS_H_
-#endif
+#else // gcc
 #pragma GCC system_header
 #endif // __clang__, __GNUC__
+
+#if defined(__GNUC__) && !defined(_GCC_LIMITS_H_)
+// The system's limits.h may, in turn, try to #include_next GCC's limits.h.
+// Define the macro _GCC_LIMITS_H_ to stop its chains of #include_next.
+#define _GCC_LIMITS_H_
+#endif
 
 // Include compiler's header
 #include_next <limits.h>
