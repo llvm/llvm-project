@@ -22,3 +22,8 @@ clang_target_link_libraries(clang-repl PRIVATE
 if(CLANG_PLUGIN_SUPPORT)
   export_executable_symbols_for_plugins(clang-repl)
 endif()
+
+string(TOUPPER ${CMAKE_SYSTEM_PROCESSOR} system_processor)
+if(${system_processor} MATCHES "ARM")
+  target_link_options(clang-repl PRIVATE LINKER:--long-plt)
+endif()
