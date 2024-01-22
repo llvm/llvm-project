@@ -35,9 +35,26 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 18.0.0?
 ==============================
 
-- A new debug mode has been added, replacing the legacy debug mode that was
-  removed in the LLVM 17 release. See ``libcxx/docs/Hardening.rst`` for more
-  details.
+The main focus of the libc++ team has been to implement new C++20, C++23,
+and C++26 features.
+
+New hardened modes for the library have been added, replacing the legacy debug mode that was
+removed in the LLVM 17 release. Unlike the legacy debug mode, some of these hardening modes are
+also intended to be used in production. See :ref:`hardening-modes` for more details.
+
+Work on the ranges support has progressed. See
+:ref:`ranges-status` for the current status.
+
+Work on the experimental C++23 module support has progressed. The ``std.compat``
+module is available and the feature is retroactively available in C++20. See
+:ref:`ModulesInLibcxx` for more information.
+
+Work on the experimental C++17 Parallel STL has progressed. See
+:ref:`pstl-status` for the current status.
+
+Work on the experimental C++17 SIMD support has progressed. See
+:ref:`parallelism-status` for the current status.
+
 
 Implemented Papers
 ------------------
@@ -58,17 +75,20 @@ Implemented Papers
 - P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
 - P2821R5 - ``span.at()``
 - P0521R0 - Proposed Resolution for CA 14 (``shared_ptr`` ``use_count/unique``)
+- P0543R3 - Saturation arithmetic
 - P1759R6 - Native handles and file streams
 - P2868R3 - Remove Deprecated ``std::allocator`` Typedef From C++26
 - P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
+- P2637R3 - Member ``visit``
 - P2447R6 - ``span`` over initializer list
 
 
 Improvements and New Features
 -----------------------------
 
-- ``std::ranges::count`` is now optimized for ``vector<bool>::iterator``, which
-  can lead up to 350x performance improvements.
+- ``std::ranges::count`` and ``std::ranges::find`` are  now optimized for
+  ``std::vector<bool>::iterator``, which can lead up to 350x performance
+  improvements.
 
 - ``std::for_each`` has been optimized for segmented iterators like ``std::deque::iterator`` in C++23 and
   later, which can lead up to 40x performance improvements.
@@ -94,6 +114,22 @@ Improvements and New Features
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE`` macro has been added to make
   the function ``std::shared_ptr<...>::unique()`` available.
 
+- The cmake option ``LIBCXX_ENABLE_STD_MODULES`` has been removed. The test
+  infrastructure no longer depends on a modern CMake, it works with the minimal
+  required LLVM version (3.20.0).
+
+- The ``.cppm`` files of experimental standard library modules can now be
+  installed. By default, they are not installed. This can be enabled by
+  configuring CMake with ``-DLIBCXX_INSTALL_MODULES=ON``. The installation
+  directory can be configured with the CMake option
+  ``-DLIBCXX_INSTALL_MODULE_DIR=<path>``. The default location is
+  ``${PREFIX}/share/libc++/v1``.
+
+- AddressSanitizer annotations have been added to ``std::basic_string``.
+
+- The libc++ source code has been formatted with ``clang-format``. This 
+  `discourse thread <https://discourse.llvm.org/t/rfc-clang-formatting-all-of-libc-once-and-for-all>`_
+  contains information how to rebase downstream patches.
 
 Deprecations and Removals
 -------------------------
@@ -106,7 +142,7 @@ Deprecations and Removals
 - The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
   ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
 
-- `P1957 <https://wg21.link/P1957>` has been implemented in Clang and libc++ removed a code path that led to
+- `P1957 <https://wg21.link/P1957>`_ has been implemented in Clang and libc++ removed a code path that led to
   narrowing conversions in ``std::variant`` behaving in a non-standard way. This may change how some uses of
   ``std::variant``'s constructor behave in user code. The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT``
   macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
@@ -143,6 +179,14 @@ Deprecations and Removals
   that were removed in the C++17 and C++20 standards. Instead of using these
   macros, please use the macros to re-enable individual features.
 
+- The macro ``_LIBCPP_INLINE_VISIBILITY`` has been deprecated in LLVM 18 and
+  will be removed entirely in LLVM 19. The macro ``_LIBCPP_HIDE_FROM_ABI`` is
+  the drop-in replacement.
+
+- The macro ``_VSTD`` has been deprecated in LLVM 18 and will be removed
+  entirely in LLVM 19. The code ``std`` is the drop-in replacement.
+
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -150,6 +194,9 @@ Upcoming Deprecations and Removals
 
 LLVM 19
 ~~~~~~~
+
+- The ``LIBCXX_EXECUTOR`` CMake variable has been deprecated.  LLVM 19 will
+  completely remove support for the ``*_EXECUTOR`` variables.
 
 - The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode will be deprecated and setting
   it will trigger an error; use the ``LIBCXX_HARDENING_MODE`` variable with the value ``extensive`` instead. Similarly,
@@ -175,6 +222,12 @@ LLVM 19
   ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have been deprecated
   in LLVM 18 and will be removed entirely in LLVM 19.
 
+- The macro ``_LIBCPP_INLINE_VISIBILITY`` has been deprecated in LLVM 18 and
+  will be removed entirely in LLVM 19.
+
+- The macro ``_VSTD`` has been deprecated in LLVM 18 and will be removed
+  entirely in LLVM 19.
+
 LLVM 20
 ~~~~~~~
 
@@ -191,12 +244,12 @@ ABI Affecting Changes
 - This release of libc++ added missing visibility annotations on some types in the library. Users compiling with
   ``-fvisbility=hidden`` may notice that additional type infos from libc++ are being exported from their ABI. This is
   the correct behavior in almost all cases since exporting the RTTI is required for these types to work properly with
-  dynamic_cast, exceptions and other mechanisms across binaries. However, if you intend to use libc++ purely as an
+  ``dynamic_cast``, exceptions and other mechanisms across binaries. However, if you intend to use libc++ purely as an
   internal implementation detail (i.e. you use libc++ as a static archive and never export libc++ symbols from your ABI)
   and you notice changes to your exported symbols list, then this means that you were not properly preventing libc++
   symbols from being part of your ABI.
 
-- The name mangling for intantiations of ``std::projected`` has changed in order to implement P2538R1. This technically
+- The name mangling for instantiations of ``std::projected`` has changed in order to implement P2538R1. This technically
   results in an ABI break, however in practice we expect uses of ``std::projected`` in ABI-sensitive places to be
   extremely rare. Any error resulting from this change should result in a link-time error.
 
@@ -207,17 +260,29 @@ ABI Affecting Changes
   to throw a different exception when attempting allocations that are too large
   (``std::bad_alloc`` vs ``std::length_error``).
 
-- The layout of some views inside ``std::ranges`` that use the ``movable-box`` exposition-only type as an implementation 
-  detail has changed in order to fix a bug which could result in overwriting user data following the ``movable-box``
-  <https://github.com/llvm/llvm-project/issues/70506>. 
-  This was caused by incorrect usage of the ``[[no_unique_address]]`` attribute inside the implementation of ``movable-box``. 
-  This only affects the layout of the following views: ``take_while_view``, ``filter_view``, ``single_view``, ``drop_while_view``, 
-  ``repeat_view``, ``transform_view``, ``chunk_by_view``. In order to avoid silent breakage, an ABI tag has been added to 
-  these views such that their mangled name will be different starting in this version of libc++. 
-  As a result, attempting to call a function that expects one of these views will fail to link until the code has been rebuilt 
-  against a matching version of libc++. In practice, we believe it is unusual for these views to appear at ABI boundaries so this 
-  should not be a major problem for most users. However it is probably worth auditing ranges-heavy code for ABI boundaries that 
+- The layout of some range adaptors that use the ``movable-box`` exposition-only type as an implementation
+  detail has changed in order to fix a `bug <https://github.com/llvm/llvm-project/issues/70506>`_ which could result in
+  overwriting user data following the ``movable-box``.
+  This bug was caused by incorrect usage of the ``[[no_unique_address]]`` attribute inside the implementation of ``movable-box``.
+  This fix affects the layout of the following views: ``take_while_view``, ``filter_view``, ``single_view``, ``drop_while_view``,
+  ``repeat_view``, ``transform_view``, ``chunk_by_view``. In order to avoid silent breakage as a result of this fix, an ABI tag has been added to
+  these views such that their mangled name will be different starting in this version of libc++.
+  As a result, attempting to call a function that expects one of these views will fail to link until the code has been rebuilt
+  against a matching version of libc++. In practice, we believe it is unusual for these views to appear at ABI boundaries so this
+  should not be a major problem for most users. However it is probably worth auditing ranges-heavy code for ABI boundaries that
   would contain these views, or for types that contain these views as members and which are passed across ABI boundaries.
+
+- Some properties of libc++ may cause ODR-violations when mixing multiple libc++
+  instances. To avoid these, often benign, ODR-violations the ODR-affecting
+  properties are now part of the ABI tag. The ODR-affecting properties are:
+
+    - library version (This was part of the ABI tag prior to LLVM 18.)
+    - exceptions vs no-exceptions
+    - hardening mode
+
+  This should not be ABI-affecting except that libc++ will be more robust
+  against different configurations of it being used in different translation
+  units.
 
 Build System Changes
 --------------------

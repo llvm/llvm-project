@@ -222,7 +222,7 @@ static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
         if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
           continue;
         if (!(local.name && internal_strlen(local.name)) &&
-            !(local.function_name && internal_strlen(local.name)) &&
+            !(local.function_name && internal_strlen(local.function_name)) &&
             !(local.decl_file && internal_strlen(local.decl_file)))
           continue;
         tag_t obj_tag = base_tag ^ local.tag_offset;
