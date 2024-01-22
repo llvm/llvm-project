@@ -1781,10 +1781,8 @@ if.else:
 ; Tests from PR76554
 define i32 @test_or_and_xor_constant(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_or_and_xor_constant(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], -2147483648
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[A]], -2147483648
-; CHECK-NEXT:    [[C:%.*]] = and i32 [[B]], [[Y:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = or i32 [[C]], [[A]]
+; CHECK-NEXT:    [[A1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[A1]], -2147483648
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = and i32 %x, -2147483648
@@ -1796,9 +1794,8 @@ define i32 @test_or_and_xor_constant(i32 %x, i32 %y) {
 
 define i32 @test_or_and_xor(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @test_or_and_xor(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[C:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %xor = xor i32 %a, %b
@@ -1809,9 +1806,8 @@ define i32 @test_or_and_xor(i32 %a, i32 %b, i32 %c) {
 
 define i32 @test_or_and_xor_commuted1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @test_or_and_xor_commuted1(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[C:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %xor = xor i32 %b, %a
@@ -1823,9 +1819,8 @@ define i32 @test_or_and_xor_commuted1(i32 %a, i32 %b, i32 %c) {
 define i32 @test_or_and_xor_commuted2(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @test_or_and_xor_commuted2(
 ; CHECK-NEXT:    [[CC:%.*]] = mul i32 [[C:%.*]], [[C]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CC]], [[XOR]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[CC]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %cc = mul i32 %c, %c
@@ -1838,9 +1833,8 @@ define i32 @test_or_and_xor_commuted2(i32 %a, i32 %b, i32 %c) {
 define i32 @test_or_and_xor_commuted3(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @test_or_and_xor_commuted3(
 ; CHECK-NEXT:    [[AA:%.*]] = mul i32 [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AA]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[C:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AA]], [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AA]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %aa = mul i32 %a, %a
@@ -1854,8 +1848,8 @@ define i32 @test_or_and_xor_multiuse1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @test_or_and_xor_multiuse1(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR]])
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[C:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[B]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %xor = xor i32 %a, %b
