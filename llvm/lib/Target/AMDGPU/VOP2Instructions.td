@@ -1089,7 +1089,7 @@ let AddedComplexity = 30 in {
     (f32 (AMDGPUfdot2 v2f16:$src0, v2f16:$src1, f32:$src2, (i1 DSTCLAMP.NONE))),
     (f32 (V_DOT2C_F32_F16_e32 $src0, $src1, $src2))
   > {
-    let Predicates = [HasDot5Insts, isNotGFX12Plus]; // V_DOT2C_F32_F16_e32 is illegal on GFX12.
+    let SubtargetPredicate = HasDot5Insts;
   }
   def : GCNPat<
     (i32 (int_amdgcn_sdot4 i32:$src0, i32:$src1, i32:$src2, (i1 DSTCLAMP.NONE))),
