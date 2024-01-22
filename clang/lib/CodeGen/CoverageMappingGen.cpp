@@ -1776,14 +1776,15 @@ struct CounterCoverageMappingBuilder
     Visit(S->getSubStmt());
   }
 
-  void CoverIfConsteval(const IfStmt *S) {
+  void coverIfConsteval(const IfStmt *S) {
     assert(S->isConsteval());
 
     const auto *Then = S->getThen();
     const auto *Else = S->getElse();
 
-    // I'm using 'propagateCounts' later as new region is better and allows me
-    // to properly calculate line coverage in llvm-cov utility
+    // It's better for llvm-cov to create a new region with same counter
+    // so line-coverage can be properly calculated for lines containing
+    // a skipped region (without it the line is marked uncovered)
     const Counter ParentCount = getRegion().getCounter();
 
     extendRegion(S);
@@ -1807,19 +1808,14 @@ struct CounterCoverageMappingBuilder
     }
   }
 
-  void CoverIfConstexpr(const IfStmt *S) {
+  void coverIfConstexpr(const IfStmt *S) {
     assert(S->isConstexpr());
 
     // evaluate constant condition...
-    const auto *E = dyn_cast<ConstantExpr>(S->getCond());
-    assert(E != nullptr);
+    const auto *E = cast<ConstantExpr>(S->getCond());
     const bool isTrue = E->getResultAsAPSInt().getExtValue();
 
     extendRegion(S);
-
-    const auto *Init = S->getInit();
-    const auto *Then = S->getThen();
-    const auto *Else = S->getElse();
 
     // I'm using 'propagateCounts' later as new region is better and allows me
     // to properly calculate line coverage in llvm-cov utility
@@ -1828,13 +1824,16 @@ struct CounterCoverageMappingBuilder
     // ignore 'if constexpr ('
     SourceLocation startOfSkipped = S->getIfLoc();
 
-    if (Init) {
+    if (const auto *Init = S->getInit()) {
       // don't mark initialisation as ignored
       markSkipped(startOfSkipped, getStart(Init));
       propagateCounts(ParentCount, Init);
       // ignore after initialisation: '; <condition>)'...
       startOfSkipped = getEnd(Init);
     }
+
+    const auto *Then = S->getThen();
+    const auto *Else = S->getElse();
 
     if (isTrue) {
       // ignore '<condition>)'
@@ -1848,19 +1847,18 @@ struct CounterCoverageMappingBuilder
       // ignore '<condition>) <then> [else]'
       markSkipped(startOfSkipped, Else ? getStart(Else) : getEnd(Then));
 
-      if (Else) {
+      if (Else)
         propagateCounts(ParentCount, Else);
-      }
     }
   }
 
   void VisitIfStmt(const IfStmt *S) {
     // "if constexpr" and "if consteval" are not normal conditional statements,
-    // they should behave more like a preprocessor conditions
+    // their discarded statement should be skipped
     if (S->isConsteval())
-      return CoverIfConsteval(S);
+      return coverIfConsteval(S);
     else if (S->isConstexpr())
-      return CoverIfConstexpr(S);
+      return coverIfConstexpr(S);
 
     extendRegion(S);
     if (S->getInit())
