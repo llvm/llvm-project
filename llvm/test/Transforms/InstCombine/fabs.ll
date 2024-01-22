@@ -1038,10 +1038,7 @@ define <2 x float> @select_fneg_vec(<2 x i1> %c, <2 x float> %x) {
 
 define float @test_select_neg_negx_x(float %value) {
 ; CHECK-LABEL: @test_select_neg_negx_x(
-; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1053,10 +1050,8 @@ define float @test_select_neg_negx_x(float %value) {
 
 define float @test_select_nneg_negx_x(float %value) {
 ; CHECK-LABEL: @test_select_nneg_negx_x(
-; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
-; CHECK-NEXT:    [[A11:%.*]] = icmp slt i32 [[A0]], 0
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A11]], float [[VALUE]], float [[FNEG_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1068,10 +1063,8 @@ define float @test_select_nneg_negx_x(float %value) {
 
 define float @test_select_neg_x_negx(float %value) {
 ; CHECK-LABEL: @test_select_neg_x_negx(
-; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[VALUE]], float [[FNEG_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1083,10 +1076,7 @@ define float @test_select_neg_x_negx(float %value) {
 
 define float @test_select_nneg_x_negx(float %value) {
 ; CHECK-LABEL: @test_select_nneg_x_negx(
-; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
-; CHECK-NEXT:    [[A11:%.*]] = icmp slt i32 [[A0]], 0
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A11]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE:%.*]])
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1101,8 +1091,7 @@ define float @test_select_neg_negx_x_multiuse1(float %value) {
 ; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
 ; CHECK-NEXT:    call void @usebool(i1 [[A1]])
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1115,11 +1104,9 @@ define float @test_select_neg_negx_x_multiuse1(float %value) {
 
 define float @test_select_neg_negx_x_multiuse2(float %value) {
 ; CHECK-LABEL: @test_select_neg_negx_x_multiuse2(
-; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
+; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE:%.*]]
 ; CHECK-NEXT:    call void @use(float [[FNEG_I]])
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1137,7 +1124,7 @@ define float @test_select_neg_negx_x_multiuse3(float %value) {
 ; CHECK-NEXT:    call void @usebool(i1 [[A1]])
 ; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
 ; CHECK-NEXT:    call void @use(float [[FNEG_I]])
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1151,10 +1138,7 @@ define float @test_select_neg_negx_x_multiuse3(float %value) {
 
 define float @test_select_neg_negx_x_fmf(float %value) {
 ; CHECK-LABEL: @test_select_neg_negx_x_fmf(
-; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = icmp slt i32 [[A0]], 0
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select nnan ninf nsz i1 [[A1]], float [[FNEG_I]], float [[VALUE]]
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[VALUE:%.*]])
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
@@ -1166,10 +1150,8 @@ define float @test_select_neg_negx_x_fmf(float %value) {
 
 define float @test_select_nneg_negx_x_fmf(float %value) {
 ; CHECK-LABEL: @test_select_nneg_negx_x_fmf(
-; CHECK-NEXT:    [[A0:%.*]] = bitcast float [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[FNEG_I:%.*]] = fneg float [[VALUE]]
-; CHECK-NEXT:    [[A11:%.*]] = icmp slt i32 [[A0]], 0
-; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = select nnan ninf nsz i1 [[A11]], float [[VALUE]], float [[FNEG_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[VALUE:%.*]])
+; CHECK-NEXT:    [[VALUE_ADDR_0_I:%.*]] = fneg nnan ninf nsz float [[TMP1]]
 ; CHECK-NEXT:    ret float [[VALUE_ADDR_0_I]]
 ;
   %a0 = bitcast float %value to i32
