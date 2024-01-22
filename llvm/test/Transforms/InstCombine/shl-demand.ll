@@ -7,8 +7,7 @@
 define i32 @src_srem_shl_demand_max_signbit(i32 %a0) {
 ; CHECK-LABEL: @src_srem_shl_demand_max_signbit(
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A0:%.*]], 2
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[SREM]], 30
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SHL]], -2147483648
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SREM]], -2147483648
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
   %srem = srem i32 %a0, 2           ; srem  = SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSD
@@ -20,8 +19,7 @@ define i32 @src_srem_shl_demand_max_signbit(i32 %a0) {
 define i32 @src_srem_shl_demand_min_signbit(i32 %a0) {
 ; CHECK-LABEL: @src_srem_shl_demand_min_signbit(
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A0:%.*]], 1073741823
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[SREM]], 1
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SHL]], -2147483648
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SREM]], -2147483648
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
   %srem = srem i32 %a0, 1073741823  ; srem  = SSDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
@@ -33,8 +31,7 @@ define i32 @src_srem_shl_demand_min_signbit(i32 %a0) {
 define i32 @src_srem_shl_demand_max_mask(i32 %a0) {
 ; CHECK-LABEL: @src_srem_shl_demand_max_mask(
 ; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A0:%.*]], 2
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[SREM]], 1
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SHL]], -4
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SREM]], -4
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
   %srem = srem i32 %a0, 2           ; srem = SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSD
