@@ -104,6 +104,20 @@ entry:
   ret i8 %shl
 }
 
+define i8 @shl8mcl_mask(ptr %ptr, i8 %cl) {
+; CHECK-LABEL: shl8mcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shlb %cl, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd2,0x27]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %a = load i8, ptr %ptr
+  %shamt = and i8 %cl, 31
+  %shl = shl i8 %a, %shamt
+  ret i8 %shl
+}
+
 define i16 @shl16mcl(ptr %ptr, i16 %cl) {
 ; CHECK-LABEL: shl16mcl:
 ; CHECK:       # %bb.0: # %entry
@@ -116,6 +130,22 @@ define i16 @shl16mcl(ptr %ptr, i16 %cl) {
 entry:
   %a = load i16, ptr %ptr
   %shl = shl i16 %a, %cl
+  ret i16 %shl
+}
+
+define i16 @shl16mcl_mask(ptr %ptr, i16 %cl) {
+; CHECK-LABEL: shl16mcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
+; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax # EVEX TO LEGACY Compression encoding: [0xd3,0xe0]
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %a = load i16, ptr %ptr
+  %shamt = and i16 %cl, 31
+  %shl = shl i16 %a, %shamt
   ret i16 %shl
 }
 
@@ -132,6 +162,20 @@ entry:
   ret i32 %shl
 }
 
+define i32 @shl32mcl_mask(ptr %ptr, i32 %cl) {
+; CHECK-LABEL: shl32mcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd3,0x27]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %a = load i32, ptr %ptr
+  %shamt = and i32 %cl, 31
+  %shl = shl i32 %a, %shamt
+  ret i32 %shl
+}
+
 define i64 @shl64mcl(ptr %ptr, i64 %cl) {
 ; CHECK-LABEL: shl64mcl:
 ; CHECK:       # %bb.0: # %entry
@@ -142,6 +186,20 @@ define i64 @shl64mcl(ptr %ptr, i64 %cl) {
 entry:
   %a = load i64, ptr %ptr
   %shl = shl i64 %a, %cl
+  ret i64 %shl
+}
+
+define i64 @shl64mcl_mask(ptr %ptr, i64 %cl) {
+; CHECK-LABEL: shl64mcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rsi, %rcx # encoding: [0x48,0x89,0xf1]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-NEXT:    shlq %cl, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd3,0x27]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %a = load i64, ptr %ptr
+  %shamt = and i64 %cl, 63
+  %shl = shl i64 %a, %shamt
   ret i64 %shl
 }
 
@@ -244,6 +302,19 @@ entry:
   ret i8 %shl
 }
 
+define i8 @shl8rcl_mask(i8 noundef %a, i8 %cl) {
+; CHECK-LABEL: shl8rcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shlb %cl, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd2,0xe7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %shamt = and i8 %cl, 31
+  %shl = shl i8 %a, %shamt
+  ret i8 %shl
+}
+
 define i16 @shl16rcl(i16 noundef %a, i16 %cl) {
 ; CHECK-LABEL: shl16rcl:
 ; CHECK:       # %bb.0: # %entry
@@ -254,6 +325,20 @@ define i16 @shl16rcl(i16 noundef %a, i16 %cl) {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %shl = shl i16 %a, %cl
+  ret i16 %shl
+}
+
+define i16 @shl16rcl_mask(i16 noundef %a, i16 %cl) {
+; CHECK-LABEL: shl16rcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd3,0xe7]
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %shamt = and i16 %cl, 31
+  %shl = shl i16 %a, %shamt
   ret i16 %shl
 }
 
@@ -269,6 +354,19 @@ entry:
   ret i32 %shl
 }
 
+define i32 @shl32rcl_mask(i32 noundef %a, i32 %cl) {
+; CHECK-LABEL: shl32rcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %esi, %ecx # encoding: [0x89,0xf1]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd3,0xe7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %shamt = and i32 %cl, 31
+  %shl = shl i32 %a, %shamt
+  ret i32 %shl
+}
+
 define i64 @shl64rcl(i64 noundef %a, i64 %cl) {
 ; CHECK-LABEL: shl64rcl:
 ; CHECK:       # %bb.0: # %entry
@@ -278,6 +376,19 @@ define i64 @shl64rcl(i64 noundef %a, i64 %cl) {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %shl = shl i64 %a, %cl
+  ret i64 %shl
+}
+
+define i64 @shl64rcl_mask(i64 noundef %a, i64 %cl) {
+; CHECK-LABEL: shl64rcl_mask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rsi, %rcx # encoding: [0x48,0x89,0xf1]
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-NEXT:    shlq %cl, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd3,0xe7]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+entry:
+  %shamt = and i64 %cl, 63
+  %shl = shl i64 %a, %shamt
   ret i64 %shl
 }
 
