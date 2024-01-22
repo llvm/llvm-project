@@ -1,3 +1,4 @@
+# Itanium C++ ABI requirements related to exceptions
 ___cxa_allocate_dependent_exception
 ___cxa_allocate_exception
 ___cxa_begin_catch
