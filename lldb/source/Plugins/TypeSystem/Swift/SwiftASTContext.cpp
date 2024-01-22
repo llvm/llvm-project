@@ -1159,6 +1159,14 @@ static std::string GetPluginServerForSDK(llvm::StringRef sdk_path) {
   return server_or_err->str();
 }
 
+namespace {
+  static constexpr std::array<std::string_view, 4> knownExplicitModulePrefixes =
+       {"-fmodule-map-file=",
+        "-fmodule-file=",
+        "-fno-implicit-modules",
+        "-fno-implicit-module-maps"};
+}
+
 /// Retrieve the serialized AST data blobs and initialize the compiler
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
@@ -1300,6 +1308,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                 << getImportFailureString(result) << "\n";
           return false;
         }
+
         if (discover_implicit_search_paths) {
           for (auto &searchPath : searchPaths) {
             std::string path = remap(searchPath.Path);
@@ -1518,6 +1527,14 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
 
   llvm::SmallString<128> cur_working_dir;
   llvm::SmallString<128> clang_argument;
+
+  auto matchExplicitBuildOption = [](StringRef arg) {
+    for (const auto &option : knownExplicitModulePrefixes)
+      if (arg.starts_with(option))
+        return true;
+    return false;
+  };
+
   for (const std::string &arg : source) {
     // Join multi-arg options for uniquing.
     clang_argument += arg;
@@ -1546,6 +1563,13 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
       continue;
 
     if (clang_argument.empty())
+      continue;
+
+    // In case of explicit modules, for now fallback to implicit
+    // module loading.
+    // TODO: Incorporate loading explicit module dependencies to
+    // speedup dependency resolution.
+    if (matchExplicitBuildOption(clang_argument))
       continue;
 
     // Otherwise add the argument to the list.
