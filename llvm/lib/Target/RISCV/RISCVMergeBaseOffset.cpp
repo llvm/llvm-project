@@ -193,29 +193,36 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     if (AddiImmOp.getTargetFlags() != RISCVII::MO_None)
       return false;
     Register AddiReg = OffsetTail.getOperand(1).getReg();
-    if (!AddiReg.isVirtual())
-      return false;
     int64_t OffLo = AddiImmOp.getImm();
-    MachineInstr &OffsetLui = *MRI->getVRegDef(AddiReg);
-    MachineOperand &LuiImmOp = OffsetLui.getOperand(1);
-    if (OffsetLui.getOpcode() != RISCV::LUI ||
-        LuiImmOp.getTargetFlags() != RISCVII::MO_None ||
-        !MRI->hasOneUse(OffsetLui.getOperand(0).getReg()))
-      return false;
-    int64_t Offset = SignExtend64<32>(LuiImmOp.getImm() << 12);
-    Offset += OffLo;
-    // RV32 ignores the upper 32 bits. ADDIW sign extends the result.
-    if (!ST->is64Bit() || OffsetTail.getOpcode() == RISCV::ADDIW)
-       Offset = SignExtend64<32>(Offset);
-    // We can only fold simm32 offsets.
-    if (!isInt<32>(Offset))
-      return false;
-    LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail
-                      << "                 " << OffsetLui);
-    foldOffset(Hi, Lo, TailAdd, Offset);
-    OffsetTail.eraseFromParent();
-    OffsetLui.eraseFromParent();
-    return true;
+    // Handle rs1 of ADDI is X0.
+    if (AddiReg == RISCV::X0) {
+      LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
+      int64_t Offset = OffLo;
+      foldOffset(Hi, Lo, TailAdd, Offset);
+      OffsetTail.eraseFromParent();
+      return true;
+    } else {
+      MachineInstr &OffsetLui = *MRI->getVRegDef(AddiReg);
+      MachineOperand &LuiImmOp = OffsetLui.getOperand(1);
+      if (OffsetLui.getOpcode() != RISCV::LUI ||
+          LuiImmOp.getTargetFlags() != RISCVII::MO_None ||
+          !MRI->hasOneUse(OffsetLui.getOperand(0).getReg()))
+        return false;
+      int64_t Offset = SignExtend64<32>(LuiImmOp.getImm() << 12);
+      Offset += OffLo;
+      // RV32 ignores the upper 32 bits. ADDIW sign extends the result.
+      if (!ST->is64Bit() || OffsetTail.getOpcode() == RISCV::ADDIW)
+        Offset = SignExtend64<32>(Offset);
+      // We can only fold simm32 offsets.
+      if (!isInt<32>(Offset))
+        return false;
+      LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail
+                        << "                 " << OffsetLui);
+      foldOffset(Hi, Lo, TailAdd, Offset);
+      OffsetTail.eraseFromParent();
+      OffsetLui.eraseFromParent();
+      return true;
+    }
   } else if (OffsetTail.getOpcode() == RISCV::LUI) {
     // The offset value has all zero bits in the lower 12 bits. Only LUI
     // exists.
