@@ -281,6 +281,11 @@ SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
 /// The vectors must have the same sizes.
 Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
 
+/// Find the product of two polynomials, each given by an array of
+/// coefficients.
+std::vector<Fraction> multiplyPolynomials(ArrayRef<Fraction> a,
+                                          ArrayRef<Fraction> b);
+
 } // namespace presburger
 } // namespace mlir
 
