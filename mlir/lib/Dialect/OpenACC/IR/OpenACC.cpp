@@ -818,6 +818,7 @@ static ParseResult parseNumGangs(
     if (failed(parser.parseLBrace()))
       return failure();
 
+    int32_t crtOperandsSize = operands.size();
     if (failed(parser.parseCommaSeparatedList(
             mlir::AsmParser::Delimiter::None, [&]() {
               if (parser.parseOperand(operands.emplace_back()) ||
@@ -826,8 +827,7 @@ static ParseResult parseNumGangs(
               return success();
             })))
       return failure();
-
-    seg.push_back(operands.size());
+    seg.push_back(operands.size() - crtOperandsSize);
 
     if (failed(parser.parseRBrace()))
       return failure();
