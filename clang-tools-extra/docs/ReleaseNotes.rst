@@ -244,8 +244,8 @@ New checks
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
-  Replaces certain conditional statements with equivalent ``std::min`` or
-  ``std::max`` expressions.
+  Replaces certain conditional statements with equivalent calls to
+  ``std::min`` or ``std::max``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

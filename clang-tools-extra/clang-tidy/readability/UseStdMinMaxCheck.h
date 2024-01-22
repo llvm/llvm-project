@@ -13,8 +13,8 @@
 #include "../utils/IncludeInserter.h"
 namespace clang::tidy::readability {
 
-/// Replaces certain conditional statements with equivalent ``std::min`` or
-/// ``std::max`` expressions.
+/// Replaces certain conditional statements with equivalent calls to
+/// ``std::min`` or ``std::max``.
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/readability/UseStdMinMax.html
 class UseStdMinMaxCheck : public ClangTidyCheck {
