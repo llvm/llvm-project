@@ -15,6 +15,7 @@
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "CIRGenOpenMPRuntime.h"
 #include "CIRGenValue.h"
 #include "UnimplementedFeatureGuarding.h"
 
@@ -759,8 +760,11 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
       if (auto *FD = LambdaCaptureFields.lookup(VD))
         return buildCapturedFieldLValue(*this, FD, CXXABIThisValue);
       assert(!UnimplementedFeature::CGCapturedStmtInfo() && "NYI");
-      llvm_unreachable("NYI");
+      // TODO[OpenMP]: Find the appropiate captured variable value and return
+      // it.
+      // TODO[OpenMP]: Set non-temporal information in the captured LVal.
       // LLVM codegen:
+      assert(!UnimplementedFeature::openMP());
       // Address addr = GetAddrOfBlockDecl(VD);
       // return MakeAddrLValue(addr, T, AlignmentSource::Decl);
     }
@@ -910,9 +914,9 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
     } else {
       buildStoreThroughLValue(RV, LV);
     }
-
-    assert(!getContext().getLangOpts().OpenMP &&
-           "last priv cond not implemented");
+    if (getLangOpts().OpenMP)
+      CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(*this,
+                                                                E->getLHS());
     return LV;
   }
 

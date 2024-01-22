@@ -33,6 +33,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -679,6 +680,7 @@ lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
 
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
+  mlir::registerOpenMPDialectTranslation(*mlirCtx);
 
   auto llvmModule = mlir::translateModuleToLLVMIR(theModule, llvmCtx);
 
