@@ -4,6 +4,9 @@ add_clang_tool(thebesttv
     utils.cpp
 )
 
+# add debug
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O0")
+
 target_link_libraries(thebesttv
     PRIVATE
     clangAST
