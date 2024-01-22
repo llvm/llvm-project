@@ -140,6 +140,8 @@ static void initialize_auxv_once(void) {
     if (bytes_read <= 0) {
       if (libc_errno == EINTR)
         continue;
+      // Now, we either have an non-recoverable error or we have reached the end
+      // of the file. Mark `error_detected` accordingly.
       if (bytes_read == -1)
         error_detected = true;
       break;
