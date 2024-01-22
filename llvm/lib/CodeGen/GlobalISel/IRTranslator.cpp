@@ -2089,34 +2089,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
     assert(DI.getVariable() && "Missing variable");
-
-    const Value *Address = DI.getAddress();
-    if (!Address || isa<UndefValue>(Address)) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
-      return true;
-    }
-
-    assert(DI.getVariable()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
-    auto AI = dyn_cast<AllocaInst>(Address);
-    if (AI && AI->isStaticAlloca()) {
-      // Static allocas are tracked at the MF level, no need for DBG_VALUE
-      // instructions (in fact, they get ignored if they *do* exist).
-      MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
-                             getOrCreateFrameIndex(*AI), DI.getDebugLoc());
-      return true;
-    }
-
-    if (translateIfEntryValueArgument(true, DI.getAddress(), DI.getVariable(),
-                                      DI.getExpression(), DI.getDebugLoc(),
-                                      MIRBuilder))
-      return true;
-
-    // A dbg.declare describes the address of a source variable, so lower it
-    // into an indirect DBG_VALUE.
-    MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
-                                     DI.getVariable(), DI.getExpression());
+    translateDbgDeclareRecord(DI.getAddress(), DI.hasArgList(), DI.getVariable(),
+                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::dbg_label: {
@@ -2149,7 +2123,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst &DI = cast<DbgValueInst>(CI);
-    translateDbgRecord(false, DI.getValue(), DI.hasArgList(), DI.getVariable(),
+    translateDbgValueRecord(DI.getValue(), DI.hasArgList(), DI.getVariable(),
                        DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
@@ -3208,7 +3182,7 @@ void IRTranslator::finishPendingPhis() {
   }
 }
 
-void IRTranslator::translateDbgRecord(bool IsDeclare, Value *V, bool HasArgList,
+void IRTranslator::translateDbgValueRecord(Value *V, bool HasArgList,
                                      const DILocalVariable *Variable,
                                      const DIExpression *Expression,
                                      const DebugLoc &DL,
@@ -3242,7 +3216,7 @@ void IRTranslator::translateDbgRecord(bool IsDeclare, Value *V, bool HasArgList,
                                ExprDerefRemoved);
     return;
   }
-  if (translateIfEntryValueArgument(IsDeclare, V, Variable, Expression, DL,
+  if (translateIfEntryValueArgument(false, V, Variable, Expression, DL,
                                     MIRBuilder))
     return;
   for (Register Reg : getOrCreateVRegs(*V)) {
@@ -3255,15 +3229,52 @@ void IRTranslator::translateDbgRecord(bool IsDeclare, Value *V, bool HasArgList,
   return;
 }
 
+void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
+                                     const DILocalVariable *Variable,
+                                     const DIExpression *Expression,
+                                     const DebugLoc &DL,
+                                     MachineIRBuilder &MIRBuilder) {
+  if (!Address || isa<UndefValue>(Address)) {
+    LLVM_DEBUG(dbgs() << "Dropping debug info for " << *Variable << "\n");
+    return;
+  }
+
+  assert(Variable->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  auto AI = dyn_cast<AllocaInst>(Address);
+  if (AI && AI->isStaticAlloca()) {
+    // Static allocas are tracked at the MF level, no need for DBG_VALUE
+    // instructions (in fact, they get ignored if they *do* exist).
+    MF->setVariableDbgInfo(Variable, Expression,
+                           getOrCreateFrameIndex(*AI), DL);
+    return;
+  }
+
+  if (translateIfEntryValueArgument(true, Address, Variable,
+                                    Expression, DL,
+                                    MIRBuilder))
+    return;
+
+  // A dbg.declare describes the address of a source variable, so lower it
+  // into an indirect DBG_VALUE.
+  MIRBuilder.setDebugLoc(DL);
+  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
+                                   Variable, Expression);
+  return;
+}
+
 void IRTranslator::translateDbgInfo(const Instruction &Inst,
                                       MachineIRBuilder &MIRBuilder) {
   for (DPValue &DPV : Inst.getDbgValueRange()) {
     const DILocalVariable *Variable = DPV.getVariable();
     const DIExpression *Expression = DPV.getExpression();
     Value *V = DPV.getVariableLocationOp(0);
-    // NB: support dbg.declares.
-    translateDbgRecord(false, V, DPV.hasArgList(), Variable, Expression,
-                       DPV.getDebugLoc(), MIRBuilder);
+    if (DPV.isDbgDeclare())
+      translateDbgDeclareRecord(V, DPV.hasArgList(), Variable,
+                         Expression, DPV.getDebugLoc(), MIRBuilder);
+    else
+      translateDbgValueRecord(V, DPV.hasArgList(), Variable,
+                         Expression, DPV.getDebugLoc(), MIRBuilder);
   }
 }
 

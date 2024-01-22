@@ -209,10 +209,18 @@ private:
   void translateDbgInfo(const Instruction &Inst,
                           MachineIRBuilder &MIRBuilder);
 
-  /// Translate a debug-info record: either a dbg.declare or dbg.value
-  /// equivalent. Pass in all the contents of the record, rather than relying
+  /// Translate a debug-info record of a dbg.value into a DBG_* instruction.
+  /// Pass in all the contents of the record, rather than relying on how it's
+  /// stored.
+  void translateDbgValueRecord(Value *V, bool HasArgList,
+                         const DILocalVariable *Variable,
+                         const DIExpression *Expression, const DebugLoc &DL,
+                         MachineIRBuilder &MIRBuilder);
+
+  /// Translate a debug-info record of a dbg.declare into an indirect DBG_*
+  /// instruction. Pass in all the contents of the record, rather than relying
   /// on how it's stored.
-  void translateDbgRecord(bool IsDeclare, Value *V, bool HasArgList,
+  void translateDbgDeclareRecord(Value *Address, bool HasArgList,
                          const DILocalVariable *Variable,
                          const DIExpression *Expression, const DebugLoc &DL,
                          MachineIRBuilder &MIRBuilder);
