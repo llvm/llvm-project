@@ -771,6 +771,10 @@ public:
   std::pair<MaybeOptimum<MPInt>, MaybeOptimum<MPInt>>
   computeIntegerBounds(ArrayRef<MPInt> coeffs);
 
+  /// Returns false if the given equality has distinct upper and lower bounds
+  /// in the simplex.
+  bool isValidEquality(const ArrayRef<MPInt> coeffs);
+
   /// Returns true if the polytope is unbounded, i.e., extends to infinity in
   /// some direction. Otherwise, returns false.
   bool isUnbounded();

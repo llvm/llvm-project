@@ -88,8 +88,8 @@ GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
 /// Find the solution of a set of equations that express affine constraints
 /// between a set of variables and a set of parameters. The solution expresses
 /// each variable as an affine function of the parameters.
-/// If there is no solution, return std::null.
-std::optional<ParamPoint> findVertex(IntMatrix equations);
+/// If there is no solution, return null.
+std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.

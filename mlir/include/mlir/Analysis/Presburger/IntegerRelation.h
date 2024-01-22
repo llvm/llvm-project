@@ -715,7 +715,7 @@ public:
   void removeTrivialEqualities();
 
   // Verify whether the relation is full-dimensional, i.e.,
-  // has the same number of dimensions as the number of variables.
+  // no equality holds for the relation.
   bool isFullDim();
 
   void print(raw_ostream &os) const;

@@ -2104,6 +2104,14 @@ Simplex::computeIntegerBounds(ArrayRef<MPInt> coeffs) {
   return {minRoundedUp, maxRoundedDown};
 }
 
+bool Simplex::isValidEquality(ArrayRef<MPInt> coeffs) {
+  auto [downOpt, upOpt] = Simplex::computeIntegerBounds(coeffs);
+  if (upOpt.getKind() == OptimumKind::Bounded &&
+      downOpt.getKind() == OptimumKind::Bounded && *upOpt == *downOpt)
+    return false;
+  return true;
+}
+
 void SimplexBase::print(raw_ostream &os) const {
   os << "rows = " << getNumRows() << ", columns = " << getNumColumns() << "\n";
   if (empty)
