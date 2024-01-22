@@ -171,9 +171,7 @@ define void @zt0_new_caller() "aarch64_new_zt0" nounwind {
 ; CHECK-NEXT:  // %bb.1: // %save.za
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str zt0, [x8]
-; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    bl __arm_tpidr2_save
-; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    ldr zt0, [x8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:  .LBB6_2:
