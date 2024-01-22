@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___OVERRIDABLE_FUNCTION
-#define _LIBCPP___OVERRIDABLE_FUNCTION
+#ifndef _LIBCPP_SRC_INCLUDE_OVERRIDABLE_FUNCTION_H
+#define _LIBCPP_SRC_INCLUDE_OVERRIDABLE_FUNCTION_H
 
 #include <__config>
 #include <cstdint>
@@ -116,4 +116,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif
 
-#endif // _LIBCPP___OVERRIDABLE_FUNCTION
+#endif // _LIBCPP_SRC_INCLUDE_OVERRIDABLE_FUNCTION_H

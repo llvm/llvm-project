@@ -8,8 +8,8 @@
 
 #include "__cxxabi_config.h"
 #include "abort_message.h"
+#include "include/overridable_function.h" // from libc++
 #include <__memory/aligned_alloc.h>
-#include <__overridable_function>
 #include <cstddef>
 #include <cstdlib>
 #include <new>
