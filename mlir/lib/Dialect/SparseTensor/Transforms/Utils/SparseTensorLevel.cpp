@@ -164,17 +164,6 @@ static scf::ValueVector genWhenInBound(
     OpBuilder &b, Location l, SparseIterator &it, ValueRange elseRet,
     llvm::function_ref<scf::ValueVector(OpBuilder &, Location, Value)>
         builder) {
-  // Value isNotEnd = it.genNotEnd(b, l);
-  // Value crd = it.deref(b, l);
-  // scf::ValueVector ret = builder(b, l, crd);
-
-  // scf::ValueVector res;
-  // for (auto [notEnd, end] : llvm::zip_equal(ret, elseRet)) {
-  //   res.push_back(SELECT(isNotEnd, notEnd, end));
-  // };
-  // return res;
-
-  // !it.end() ? callback(*crd) : resOOB;
   TypeRange ifRetTypes = elseRet.getTypes();
   auto ifOp = b.create<scf::IfOp>(l, ifRetTypes, it.genNotEnd(b, l), true);
 
@@ -204,7 +193,7 @@ static scf::ValueVector genWhenInBound(
 static Value offsetFromMinCrd(OpBuilder &b, Location l, Value minCrd,
                               Value size) {
   Value geSize = CMPI(uge, minCrd, size);
-  // Computes minCrd - size + 1
+  // Compute minCrd - size + 1.
   Value mms = SUBI(ADDI(minCrd, C_IDX(1)), size);
   // This is the absolute offset related to the actual tensor.
   return SELECT(geSize, mms, C_IDX(0));
@@ -627,7 +616,7 @@ public:
 
 class SubSectIterator;
 
-// A simple helper that helps generating code to traverse a subsection, used
+// A wrapper that helps generating code to traverse a subsection, used
 // by both `NonEmptySubSectIterator`and `SubSectIterator`.
 struct SubSectIterHelper {
   explicit SubSectIterHelper(const SubSectIterator &iter);
@@ -778,7 +767,7 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Complex SparseIterator derived classes impl.
+// SparseIterator derived classes implementation.
 //===----------------------------------------------------------------------===//
 
 ValueRange SparseIterator::forwardIf(OpBuilder &b, Location l, Value cond) {
@@ -819,7 +808,6 @@ Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
       },
       /*afterBuilder=*/
       [](OpBuilder &b, Location l, ValueRange ivs) {
-        // pos ++
         Value nxPos = ADDI(ivs[0], C_IDX(1));
         YIELD(nxPos);
       });
@@ -830,11 +818,11 @@ Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
 Value FilterIterator::genCrdNotLegitPredicate(OpBuilder &b, Location l,
                                               Value wrapCrd) {
   Value crd = fromWrapCrd(b, l, wrapCrd);
-  // not on stride
+  // Test whether the coordinate is on stride.
   Value notlegit = CMPI(ne, toWrapCrd(b, l, crd), wrapCrd);
-  // wrapCrd < offset
+  // Test wrapCrd < offset
   notlegit = ORI(CMPI(ult, wrapCrd, offset), notlegit);
-  //  crd >= length
+  // Test crd >= length
   notlegit = ORI(CMPI(uge, crd, size), notlegit);
   return notlegit;
 }

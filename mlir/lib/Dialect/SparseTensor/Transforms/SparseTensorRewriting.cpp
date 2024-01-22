@@ -1150,9 +1150,9 @@ public:
 
     Operation &last = rewriter.getBlock()->back();
     if (llvm::isa<scf::YieldOp>(last)) {
-      // scf.for inserts a implicit yield op when there is no reduction
-      // variable upon creation, in this case we need to merge the block
-      // *before* the yield op.
+      // Because `scf.for` inserts an implicit yield op when there is no
+      // reduction variable upon creation, we reset the insertion point such
+      // that the block is inlined before *before* the yield op.
       rewriter.setInsertionPoint(&last);
     }
 

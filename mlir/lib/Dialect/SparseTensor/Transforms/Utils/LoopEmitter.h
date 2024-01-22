@@ -408,7 +408,7 @@ private:
   /// alive.
   std::vector<LoopInfo> loopStack;
 
-  // Loop Sequence Stack, stores the unversial index for the current loop
+  // Loop Sequence Stack, stores the universal index for the current loop
   // sequence. and a list of tid level that the loop sequence traverse.
   std::vector<std::pair<Value, std::vector<TensorLevel>>> loopSeqStack;
 };
