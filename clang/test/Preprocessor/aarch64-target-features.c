@@ -497,9 +497,10 @@
 // CHECK-MEMTAG: __ARM_FEATURE_MEMORY_TAGGING 1
 
 // ================== Check Pointer Authentication Extension (PAuth).
-// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
-// RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
-// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ON %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-OFF,CHECK-CPU-NOPAUTH %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a+nopauth -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-OFF,CHECK-CPU-NOPAUTH %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.5-a -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-OFF,CHECK-CPU-PAUTH %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+pauth -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefixes=CHECK-PAUTH-OFF,CHECK-CPU-PAUTH %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=none -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-OFF %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH %s
@@ -507,12 +508,18 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ALL %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY-ALL %s
-// CHECK-PAUTH-OFF-NOT:  __ARM_FEATURE_PAC_DEFAULT
-// CHECK-PAUTH:          #define __ARM_FEATURE_PAC_DEFAULT 1
-// CHECK-PAUTH-BKEY:     #define __ARM_FEATURE_PAC_DEFAULT 2
-// CHECK-PAUTH-ALL:      #define __ARM_FEATURE_PAC_DEFAULT 5
-// CHECK-PAUTH-BKEY-ALL: #define __ARM_FEATURE_PAC_DEFAULT 6
-// CHECK-PAUTH-ON:       #define __ARM_FEATURE_PAUTH 1
+//
+// Note: PAUTH-OFF - pac-ret is disabled
+//       CPU-NOPAUTH - FEAT_PAUTH support is disabled (but pac-ret can still use HINT-encoded instructions)
+//
+// CHECK-CPU-NOPAUTH-NOT: __ARM_FEATURE_PAUTH
+// CHECK-PAUTH-OFF-NOT:   __ARM_FEATURE_PAC_DEFAULT
+// CHECK-PAUTH:           #define __ARM_FEATURE_PAC_DEFAULT 1
+// CHECK-PAUTH-BKEY:      #define __ARM_FEATURE_PAC_DEFAULT 2
+// CHECK-PAUTH-ALL:       #define __ARM_FEATURE_PAC_DEFAULT 5
+// CHECK-PAUTH-BKEY-ALL:  #define __ARM_FEATURE_PAC_DEFAULT 6
+// CHECK-CPU-PAUTH:       #define __ARM_FEATURE_PAUTH 1
+// CHECK-CPU-NOPAUTH-NOT: __ARM_FEATURE_PAUTH
 
 // ================== Check Branch Target Identification (BTI).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
