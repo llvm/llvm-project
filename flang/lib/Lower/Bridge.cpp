@@ -2391,13 +2391,43 @@ private:
     localSymbols.pushScope();
     mlir::Value exitCond = genOpenACCConstruct(
         *this, bridge.getSemanticsContext(), getEval(), acc);
-    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
+
+    const Fortran::parser::OpenACCLoopConstruct *accLoop =
+        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
+    const Fortran::parser::OpenACCCombinedConstruct *accCombined =
+        std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
+
+    Fortran::lower::pft::Evaluation *curEval = &getEval();
+
+    if (accLoop || accCombined) {
+      int64_t collapseValue;
+      if (accLoop) {
+        const Fortran::parser::AccBeginLoopDirective &beginLoopDir =
+            std::get<Fortran::parser::AccBeginLoopDirective>(accLoop->t);
+        const Fortran::parser::AccClauseList &clauseList =
+            std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
+        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+      } else if (accCombined) {
+        const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
+            std::get<Fortran::parser::AccBeginCombinedDirective>(
+                accCombined->t);
+        const Fortran::parser::AccClauseList &clauseList =
+            std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
+        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+      }
+
+      if (curEval->lowerAsStructured()) {
+        curEval = &curEval->getFirstNestedEvaluation();
+        for (int64_t i = 1; i < collapseValue; i++)
+          curEval = &*std::next(curEval->getNestedEvaluations().begin());
+      }
+    }
+
+    for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
-    const Fortran::parser::OpenACCLoopConstruct *accLoop =
-        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
     if (accLoop && exitCond) {
       Fortran::lower::pft::FunctionLikeUnit *funit =
           getEval().getOwningProcedure();
