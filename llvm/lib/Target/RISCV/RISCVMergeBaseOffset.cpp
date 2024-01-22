@@ -198,8 +198,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     // Handle rs1 of ADDI is X0.
     if (AddiReg == RISCV::X0) {
       LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
-      int64_t Offset = OffLo;
-      foldOffset(Hi, Lo, TailAdd, Offset);
+      foldOffset(Hi, Lo, TailAdd, OffLo);
       OffsetTail.eraseFromParent();
       return true;
     }
