@@ -123,6 +123,11 @@
 #define UCHAR_MAX (SCHAR_MAX * 2 + 1)
 #endif // UCHAR_MAX
 
+// Check if char is unsigned.
+#ifndef __CHAR_UNSIGNED__ && ('\xff' > 0)
+#define __CHAR_UNSIGNED__
+#endif
+
 #ifndef CHAR_MAX
 #ifdef __CHAR_UNSIGNED__
 #define CHAR_MAX UCHAR_MAX
