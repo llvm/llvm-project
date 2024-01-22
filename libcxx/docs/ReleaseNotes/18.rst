@@ -79,7 +79,6 @@ Implemented Papers
 - P1759R6 - Native handles and file streams
 - P2868R3 - Remove Deprecated ``std::allocator`` Typedef From C++26
 - P2517R1 - Add a conditional ``noexcept`` specification to ``std::apply``
-- P2637R3 - Member ``visit``
 - P2447R6 - ``span`` over initializer list
 
 
@@ -127,7 +126,7 @@ Improvements and New Features
 
 - AddressSanitizer annotations have been added to ``std::basic_string``.
 
-- The libc++ source code has been formatted with ``clang-format``. This 
+- The libc++ source code has been formatted with ``clang-format``. This
   `discourse thread <https://discourse.llvm.org/t/rfc-clang-formatting-all-of-libc-once-and-for-all>`_
   contains information how to rebase downstream patches.
 
@@ -148,11 +147,11 @@ Deprecations and Removals
   macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
   In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
 
-- Overriding `__libcpp_verbose_abort` no longer has any effect on library assertions. The only supported way
+- Overriding ``__libcpp_verbose_abort`` no longer has any effect on library assertions. The only supported way
   to customize the assertion handler that gets invoked when a hardening assertion fails is now by setting the
   ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable and providing a custom header. See the documentation on
-  overriding the default assertion handler for details. The ability to override `__libcpp_verbose_abort` will
-  be removed in an upcoming release in favor of the new overriding mechanism.
+  overriding the default assertion handler for details. The ability to override ``__libcpp_verbose_abort``
+  will be removed in an upcoming release in favor of the new overriding mechanism.
 
 - In safe mode (which is now equivalent to the ``extensive`` hardening mode), a failed assertion will now
   generate a trap rather than a call to verbose abort.
@@ -283,6 +282,28 @@ ABI Affecting Changes
   This should not be ABI-affecting except that libc++ will be more robust
   against different configurations of it being used in different translation
   units.
+
+- The amount of padding bytes available for use at the end of certain ``std::expected`` instantiations has changed in this
+  release. This is an ABI break for any code that held a ``std::expected`` member with ``[[no_unique_address]]`` in an
+  ABI-facing type. In those cases, the layout of the enclosing type will change, breaking the ABI. However, the
+  ``std::expected<T, E>`` member requires a few characteristics in order to be affected by this change:
+
+  - A type equivalent to ``union {T ; E}`` needs to have more than one byte of padding available.
+  - The ``std::expected<T, E>`` member must have been in a situation where its padding bytes were previously reused by
+    another object, which can happen in a few cases (this is probably not exhaustive):
+
+    - It is a member with ``[[no_unique_address]]`` applied to it, and it is followed by another data member, or
+    - It is a member with ``[[no_unique_address]]`` applied to it, and it is the last member of the user-defined type,
+      and that user-defined type is used in ways that its padding bytes can be reused, or
+    - It is inherited from
+
+  We expect that this will not be a very frequent occurrence. However, there is unfortunately no technique we can use
+  in the library to catch such misuse. Indeed, even applying an ABI tag to ``std::expected`` would not help since ABI
+  tags are not propagated to containing types. As a result, if you notice very difficult to explain bugs around the
+  usage of a ``std::expected``, you should consider checking whether you are hitting this ABI break. This change was
+  done to fix `#70494 <https://github.com/llvm/llvm-project/issues/70494>`_ and the vendor communication is handled
+  in `#70820 <https://github.com/llvm/llvm-project/issues/70820>`_.
+
 
 Build System Changes
 --------------------
