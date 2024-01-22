@@ -7736,6 +7736,11 @@ def stdlib_hardening_EQ : Joined<["-"], "fstdlib-hardening=">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"standard library hardening mode">,
   NormalizedValuesScope<"LangOptions">,
+  DocBrief<"Enable libc++ harderning:"
+  " none (the default mode that doesn’t compromise any runtime performance to check for undefined behavior) | "
+  " fast (contains a minimal set of low-overhead checks deemed security-critical) | "
+  " extensive (extends the hardened mode with additional low-overhead checks that are not security-critical) | "
+  " debug (extends the extensive mode with checks that might impose significant overhead, for example, might change the complexity of algorithms)">,
   MarshallingInfoEnum<LangOpts<"StdlibHardeningMode">, "STDLIB_HARDENING_MODE_NOT_SPECIFIED">;
 
 //===----------------------------------------------------------------------===//
