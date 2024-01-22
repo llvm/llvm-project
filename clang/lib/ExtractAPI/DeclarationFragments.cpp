@@ -760,13 +760,16 @@ DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
       .append(";", DeclarationFragments::FragmentKind::Text);
 }
 
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForRecordDecl(
+    const RecordDecl *Record) {
   if (const auto *TypedefNameDecl = Record->getTypedefNameForAnonDecl())
     return getFragmentsForTypedef(TypedefNameDecl);
 
   DeclarationFragments Fragments;
-  Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
+  if (Record->isUnion())
+    Fragments.append("union", DeclarationFragments::FragmentKind::Keyword);
+  else
+    Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
 
   if (!Record->getName().empty())
     Fragments.appendSpace().append(
