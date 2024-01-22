@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s google-readability-casting %t -- -- -fexceptions
 
 bool g() { return false; }
 
