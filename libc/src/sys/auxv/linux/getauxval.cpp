@@ -120,7 +120,7 @@ static void initialize_auxv_once(void) {
   // defined, we direcly fall back to reading /proc/self/auxv. In case the libc
   // is compiled and run on separate kernels, we also check the return value of
   // prctl.
-#ifdef(PR_GET_AUXV)
+#ifdef PR_GET_AUXV
   int ret = prctl(PR_GET_AUXV, reinterpret_cast<unsigned long>(ptr),
                   available_size, 0, 0);
   if (ret >= 0) {
