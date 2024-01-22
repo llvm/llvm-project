@@ -1097,9 +1097,6 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
   getCanonicalIV()->printAsOperand(O, SlotTracker);
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
-
-  if (TruncResultTy)
-    O << " (truncated to " << *TruncResultTy << ")";
 }
 #endif
 
@@ -1464,6 +1461,12 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+static bool isUniformAcrossVFsAndUFs(VPScalarCastRecipe *C) {
+  return C->isDefinedOutsideVectorRegions() ||
+         isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
+         isa<VPCanonicalIVPHIRecipe>(C->getOperand(0));
+}
+
 Value *VPScalarCastRecipe ::generate(VPTransformState &State, unsigned Part) {
   assert(vputils::onlyFirstLaneUsed(this) &&
          "Codegen only implemented for first lane.");
@@ -1480,13 +1483,12 @@ Value *VPScalarCastRecipe ::generate(VPTransformState &State, unsigned Part) {
 }
 
 void VPScalarCastRecipe ::execute(VPTransformState &State) {
-  bool UniformAcrossUFs = all_of(operands(), [](VPValue *Op) {
-    return Op->isDefinedOutsideVectorRegions();
-  });
+  bool IsUniformAcrossVFsAndUFs = isUniformAcrossVFsAndUFs(this);
   for (unsigned Part = 0; Part != State.UF; ++Part) {
     Value *Res;
-    // Only generate a single instance, if the recipe is uniform across all UFs.
-    if (Part > 0 && UniformAcrossUFs)
+    // Only generate a single instance, if the recipe is uniform across UFs and
+    // VFs.
+    if (Part > 0 && IsUniformAcrossVFsAndUFs)
       Res = State.get(this, VPIteration(0, 0));
     else
       Res = generate(State, Part);

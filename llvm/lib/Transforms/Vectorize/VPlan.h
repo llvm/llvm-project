@@ -1343,7 +1343,6 @@ public:
 class VPScalarCastRecipe : public VPSingleDefRecipe {
   Instruction::CastOps Opcode;
 
-  /// Result type for the cast.
   Type *ResultTy;
 
   Value *generate(VPTransformState &State, unsigned Part);
@@ -1363,6 +1362,9 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns the result type of the cast.
+  Type *getResultType() const { return ResultTy; }
 };
 
 /// A recipe for widening Call instructions.
@@ -2347,10 +2349,6 @@ public:
 /// an IV with different start and step values, using Start + CanonicalIV *
 /// Step.
 class VPDerivedIVRecipe : public VPSingleDefRecipe {
-  /// If not nullptr, the result of the induction will get truncated to
-  /// TruncResultTy.
-  Type *TruncResultTy;
-
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
@@ -2359,10 +2357,9 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
-                    Type *TruncResultTy)
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
       : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        TruncResultTy(TruncResultTy), Kind(IndDesc.getKind()),
+        Kind(IndDesc.getKind()),
         FPBinOp(dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())) {
   }
 
@@ -2381,8 +2378,7 @@ public:
 #endif
 
   Type *getScalarType() const {
-    return TruncResultTy ? TruncResultTy
-                         : getStartValue()->getLiveInIRValue()->getType();
+    return getStartValue()->getLiveInIRValue()->getType();
   }
 
   VPValue *getStartValue() const { return getOperand(0); }

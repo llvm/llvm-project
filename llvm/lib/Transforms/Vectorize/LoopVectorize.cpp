@@ -2297,7 +2297,6 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
                            ? B.CreateSExtOrTrunc(Index, StepTy)
                            : B.CreateCast(Instruction::SIToFP, Index, StepTy);
   if (CastedIndex != Index) {
-    assert(!isa<SExtInst>(CastedIndex));
     CastedIndex->setName(CastedIndex->getName() + ".cast");
     Index = CastedIndex;
   }
@@ -9285,12 +9284,6 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
       State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
       Kind, cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName("offset.idx");
-  if (TruncResultTy) {
-    assert(TruncResultTy != DerivedIV->getType() &&
-           Step->getType()->isIntegerTy() &&
-           "Truncation requires an integer step");
-    DerivedIV = State.Builder.CreateTrunc(DerivedIV, TruncResultTy);
-  }
   assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
 
   State.set(this, DerivedIV, VPIteration(0, 0));
