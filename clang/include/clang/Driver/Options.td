@@ -6053,11 +6053,11 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
-// Features egpr, push2pop2 and ppx are validated with llvm-test-suite && cpu2017 on Intel SDE.
+// Features egpr, push2pop2, ppx and ndd are validated with llvm-test-suite && cpu2017 on Intel SDE.
 // For stability, we turn on these features only for -mapxf. After a feature pass the validation,
 // we will add it to -mapxf.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx", "ndd"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd"]>;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags
