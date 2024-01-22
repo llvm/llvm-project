@@ -2500,9 +2500,9 @@ void IntegerRelation::printSpace(raw_ostream &os) const {
 
 void IntegerRelation::removeTrivialEqualities() {
   bool flag;
-  for (unsigned i = 0; i < getNumEqualities(); i++) {
+  for (unsigned i = 0, e = getNumInequalities(); i < e; i++) {
     flag = true;
-    for (unsigned j = 0; j < getNumVars() + 1; j++)
+    for (unsigned j = 0, f = getNumVars(); j < f + 1; j++)
       if (atEq(i, j) != 0)
         flag = false;
     if (flag)
@@ -2513,14 +2513,16 @@ void IntegerRelation::removeTrivialEqualities() {
 bool IntegerRelation::isFullDim() {
   removeTrivialEqualities();
 
+  unsigned e = getNumInequalities();
+
   // If there is a non-trivial equality, the space cannot be full-dimensional.
-  if (getNumEqualities() > 0)
+  if (e > 0)
     return false;
 
   // If along the direction of any of the inequalities, the upper and lower
   // optima are the same, then the region is not full-dimensional.
   Simplex simplex(*this);
-  for (unsigned i = 0; i < getNumInequalities(); i++) {
+  for (unsigned i = 0; i < e; i++) {
     auto ineq = inequalities.getRow(i);
     auto upOpt = simplex.computeOptimum(Simplex::Direction::Up, ineq);
     auto downOpt = simplex.computeOptimum(Simplex::Direction::Down, ineq);
