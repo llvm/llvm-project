@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple riscv32-unknown-linux-gnu -o - %s | FileCheck %s
 ; RUN: llc -mtriple riscv32-unknown-elf       -o - %s | FileCheck %s
+; RUN: llc -mtriple riscv32 -mattr=+no-ras    -o - %s | FileCheck --check-prefix=CHECK-NO-RAS %s 
 
 ; Perform tail call optimization for global address.
 declare i32 @callee_tail(i32 %i)
@@ -51,6 +52,14 @@ define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK: lui a0, %hi(callee_indirect1)
 ; CHECK-NEXT: addi t1, a0, %lo(callee_indirect1)
 ; CHECK-NEXT: jr t1
+
+; CHECK-NO-RAS: lui a0, %hi(callee_indirect2)
+; CHECK-NO-RAS-NEXT: addi t0, a0, %lo(callee_indirect2)
+; CHECK-NO-RAS-NEXT: jr t0
+
+; CHECK-NO-RAS: lui a0, %hi(callee_indirect1)
+; CHECK-NO-RAS-NEXT: addi t0, a0, %lo(callee_indirect1)
+; CHECK-NO-RAS-NEXT: jr t0
 entry:
   %tobool = icmp eq i32 %a, 0
   %callee = select i1 %tobool, ptr @callee_indirect1, ptr @callee_indirect2
@@ -72,6 +81,18 @@ define i32 @caller_indirect_no_t0(ptr %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5
 ; CHECK-NEXT:    mv a5, a6
 ; CHECK-NEXT:    mv a6, a7
 ; CHECK-NEXT:    jr t1
+
+; CHECK-NO-RAS-LABEL: caller_indirect_no_t0:
+; CHECK-NO-RAS:       # %bb.0:
+; CHECK-NO-RAS-NEXT:    mv t0, a0
+; CHECK-NO-RAS-NEXT:    mv a0, a1
+; CHECK-NO-RAS-NEXT:    mv a1, a2
+; CHECK-NO-RAS-NEXT:    mv a2, a3
+; CHECK-NO-RAS-NEXT:    mv a3, a4
+; CHECK-NO-RAS-NEXT:    mv a4, a5
+; CHECK-NO-RAS-NEXT:    mv a5, a6
+; CHECK-NO-RAS-NEXT:    mv a6, a7
+; CHECK-NO-RAS-NEXT:    jr t0
   %9 = tail call i32 %0(i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7)
   ret i32 %9
 }
