@@ -5,5 +5,3 @@ revert: breaks MIOpen composableKernel build
 Reverts: breaks HIP tests in wPSDB and nPSDB
 [AMDGPU] Add dynamic LDS size implicit kernel argument t
 
-Reverts: break smoke-limbo
-[LinkerWrapper] Handle AMDGPU Target-IDs correctly when linking (#78359)
