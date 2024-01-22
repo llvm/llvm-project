@@ -417,10 +417,19 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
   bool ShouldReportNonNegative = AssumedNonNegative;
   if (!providesInformationAboutInteresting(ByteOffsetVal, BR)) {
     if (AssumedUpperBound &&
-        providesInformationAboutInteresting(*AssumedUpperBound, BR))
+        providesInformationAboutInteresting(*AssumedUpperBound, BR)) {
+      // Even if the byte offset isn't interesting (e.g. it's a constant value),
+      // the assumption can still be interesting if it provides information about
+      // an interesting symbolic upper bound.
+      // FIXME: This code path is currently non-functional and untested because
+      // `getSimplifiedOffsets()` only works when the RHS (extent) is constant.
+
+      // In this case don't display the "offset is non-negative" assumption
+      // (because the offset isn't interesting).
       ShouldReportNonNegative = false;
-    else
+    } else {
       return "";
+    }
   }
 
   std::optional<int64_t> OffsetN = getConcreteValue(ByteOffsetVal);
