@@ -650,6 +650,9 @@ def VOPProfile_Base_CVT_F32_F8_OpSel : VOPProfile<[f32, i32, untyped, untyped]> 
   let HasExtDPP = 1;
   let HasExtVOP3DPP = 1;
   let IsFP8 = 1;
+  let HasClamp = 0;
+  let HasOMod = 0;
+  let HasModifiers = 1;
   let Src1VOP3DPP = Src1RC64;
 }
 
@@ -666,9 +669,10 @@ class Cvt_F32_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
     (f32 (node i32:$src, index)),
     !if (index,
          (inst_e64 !if(index{0},
-                         !if(index{1}, 12 /*SRCMODS.OP_SEL_0 | SRCMODS.OP_SEL_1*/, SRCMODS.OP_SEL_0),
+                         !if(index{1}, !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1),
+                                       SRCMODS.OP_SEL_0),
                          !if(index{1}, SRCMODS.OP_SEL_1, 0)),
-                    $src, 0, 0, 0),
+                    $src, 0),
          (inst_e32 $src))
 >;
 
