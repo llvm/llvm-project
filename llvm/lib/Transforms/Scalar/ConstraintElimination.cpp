@@ -1314,9 +1314,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
 
 static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
                                           Value *B, Instruction *CheckInst,
-                                          ConstraintInfo &Info, unsigned NumIn,
-                                          unsigned NumOut,
-                                          Instruction *ContextInst) {
+                                          ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
@@ -1385,9 +1383,9 @@ static bool checkAndReplaceCondition(
     return true;
   };
 
-  if (auto ImpliedCondition = checkCondition(
-          Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1), Cmp,
-          Info, NumIn, NumOut, ContextInst))
+  if (auto ImpliedCondition =
+          checkCondition(Cmp->getPredicate(), Cmp->getOperand(0),
+                         Cmp->getOperand(1), Cmp, Info))
     return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
   return false;
 }
@@ -1446,8 +1444,7 @@ static bool checkOrAndOpImpliedByOther(
   // Check if the second condition can be simplified now.
   if (auto ImpliedCondition =
           checkCondition(CmpToCheck->getPredicate(), CmpToCheck->getOperand(0),
-                         CmpToCheck->getOperand(1), CmpToCheck, Info, CB.NumIn,
-                         CB.NumOut, CB.getContextInst())) {
+                         CmpToCheck->getOperand(1), CmpToCheck, Info)) {
     if (IsOr && isa<SelectInst>(JoinOp)) {
       JoinOp->setOperand(
           OtherOpIdx == 0 ? 2 : 0,
