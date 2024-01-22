@@ -1558,7 +1558,7 @@ void SVEEmitter::createTypeFlags(raw_ostream &OS) {
 }
 
 void SVEEmitter::createSMEHeader(raw_ostream &OS) {
-  OS << "/*===---- arm_sme_draft_spec_subject_to_change.h - ARM SME intrinsics "
+  OS << "/*===---- arm_sme.h - ARM SME intrinsics "
         "------===\n"
         " *\n"
         " *\n"
@@ -1575,7 +1575,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#define __ARM_SME_H\n\n";
 
   OS << "#if !defined(__LITTLE_ENDIAN__)\n";
-  OS << "#error \"Big endian is currently not supported for arm_sme_draft_spec_subject_to_change.h\"\n";
+  OS << "#error \"Big endian is currently not supported for arm_sme.h\"\n";
   OS << "#endif\n";
 
   OS << "#include <arm_sve.h>\n\n";
