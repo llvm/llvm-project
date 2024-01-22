@@ -1591,19 +1591,26 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 // NVVM TMA Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_CpAsyncBulkCommitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.commit.group">,
+def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("cp.async.bulk.commit_group;"); }
+  let description = [{
+    This Op commits all prior initiated but uncommitted cp.async.bulk
+    instructions into a cp.async.bulk-group.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-commit-group)
+  }];
+
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_cp_async_bulk_commit_group);
   }];
 }
 
-def NVVM_CpAsyncBulkWaitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.wait_group">,
+def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group">,
   Arguments<(ins 
     ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
-    OptionalAttr<UnitAttr>:$read)> 
-{
+    OptionalAttr<UnitAttr>:$read)> {
   let assemblyFormat = "$group attr-dict";
   let description = [{
     Op waits for completion of the most recent bulk async-groups.
@@ -1620,14 +1627,13 @@ def NVVM_CpAsyncBulkWaitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.wait_group">
     (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-wait-group)
   }];
   
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { 
-      auto ptx = std::string("cp.async.bulk.wait_group");
-      if(getRead()) ptx += ".read";
-      ptx += " %0;"; return ptx; }
+  string llvmBuilder = [{
+    auto intId = op.getRead() ?
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group_read :
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group;
+    createIntrinsicCall(builder, intId, builder.getInt32($group));
   }];
 }
-
 
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : 
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
