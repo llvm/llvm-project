@@ -1239,42 +1239,6 @@ void CatchOp::build(
 }
 
 //===----------------------------------------------------------------------===//
-// LoopOp
-//===----------------------------------------------------------------------===//
-
-void LoopOp::build(OpBuilder &builder, OperationState &result,
-                   cir::LoopOpKind kind,
-                   function_ref<void(OpBuilder &, Location)> condBuilder,
-                   function_ref<void(OpBuilder &, Location)> bodyBuilder,
-                   function_ref<void(OpBuilder &, Location)> stepBuilder) {
-  OpBuilder::InsertionGuard guard(builder);
-  ::mlir::cir::LoopOpKindAttr kindAttr =
-      cir::LoopOpKindAttr::get(builder.getContext(), kind);
-  result.addAttribute(getKindAttrName(result.name), kindAttr);
-
-  Region *condRegion = result.addRegion();
-  builder.createBlock(condRegion);
-  condBuilder(builder, result.location);
-
-  Region *bodyRegion = result.addRegion();
-  builder.createBlock(bodyRegion);
-  bodyBuilder(builder, result.location);
-
-  Region *stepRegion = result.addRegion();
-  builder.createBlock(stepRegion);
-  stepBuilder(builder, result.location);
-}
-
-void LoopOp::getSuccessorRegions(mlir::RegionBranchPoint point,
-                                 SmallVectorImpl<RegionSuccessor> &regions) {
-  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
-}
-
-llvm::SmallVector<Region *> LoopOp::getLoopRegions() { return {&getBody()}; }
-
-LogicalResult LoopOp::verify() { return success(); }
-
-//===----------------------------------------------------------------------===//
 // LoopOpInterface Methods
 //===----------------------------------------------------------------------===//
 
@@ -1295,6 +1259,14 @@ void WhileOp::getSuccessorRegions(
 }
 
 ::llvm::SmallVector<Region *> WhileOp::getLoopRegions() { return {&getBody()}; }
+
+void ForOp::getSuccessorRegions(
+    ::mlir::RegionBranchPoint point,
+    ::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
+  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+}
+
+::llvm::SmallVector<Region *> ForOp::getLoopRegions() { return {&getBody()}; }
 
 //===----------------------------------------------------------------------===//
 // GlobalOp

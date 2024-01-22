@@ -7,7 +7,7 @@ void l0() {
 }
 
 // CHECK: cir.func @_Z2l0v
-// CHECK: cir.loop for(cond :  {
+// CHECK: cir.for : cond {
 // CHECK:   %[[#TRUE:]] = cir.const(#true) : !cir.bool
 // CHECK:   cir.condition(%[[#TRUE]])
 
@@ -19,22 +19,22 @@ void l1() {
 }
 
 // CHECK: cir.func @_Z2l1v
-// CHECK: cir.loop for(cond :  {
+// CHECK: cir.for : cond {
 // CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT:   %5 = cir.const(#cir.int<10> : !s32i) : !s32i
 // CHECK-NEXT:   %6 = cir.cmp(lt, %4, %5) : !s32i, !cir.bool
 // CHECK-NEXT:   cir.condition(%6)
-// CHECK-NEXT: }, step :  {
-// CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
-// CHECK-NEXT:   %5 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
-// CHECK-NEXT:   cir.store %6, %2 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:   cir.yield
-// CHECK-NEXT: })  {
+// CHECK-NEXT: } body {
 // CHECK-NEXT:   %4 = cir.load %0 : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT:   %5 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
 // CHECK-NEXT:   cir.store %6, %0 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT:   %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:   %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
+// CHECK-NEXT:   cir.store %6, %2 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: }
 
