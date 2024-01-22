@@ -11,8 +11,8 @@
 
 // Suppress `#include_next is a language extension` warnings.
 #ifdef __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wgnu-include-next"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-include-next"
 #else // gcc
 #pragma GCC system_header
 #endif //__clang__
@@ -20,7 +20,7 @@
 #include_next <float.h>
 
 #ifdef __clang__
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 #endif //__clang__
 
 #ifndef FLT_RADIX
