@@ -78,12 +78,21 @@ void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
 }
 
 /// This function generates code at the beginning and end of a function marked
-/// with either `aarch64_pstate_za_new` or `arm_new_zt0`.
+/// with either `aarch64_pstate_za_new` or `aarch64_new_zt0`.
 /// At the beginning of the function, the following code is generated:
-///  - Commit lazy-save if active   [Private-ZA Interface]
+///  - Commit lazy-save if active   [Private-ZA Interface*]
 ///  - Enable PSTATE.ZA             [Private-ZA Interface]
 ///  - Zero ZA                      [Has New ZA State]
 ///  - Zero ZT0                     [Has New ZT0 State]
+///
+/// * A function with new ZT0 state will not change ZA, so committing the
+/// lazy-save is not strictly necessary. However, the lazy-save mechanism
+/// may be active on entry to the function, with PSTATE.ZA set to 1. If
+/// the new ZT0 function calls a function that does not share ZT0, we will
+/// need to conditionally SMSTOP ZA before the call, setting PSTATE.ZA to 0.
+/// For this reason, it's easier to always commit the lazy-save at the
+/// beginning of the function regardless of whether it has ZA state.
+///
 /// At the end of the function, PSTATE.ZA is disabled if the function has a
 /// Private-ZA Interface. A function is considered to have a Private-ZA
 /// interface if it does not share ZA or ZT0.
@@ -125,7 +134,6 @@ bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
   }
 
   if (FnAttrs.hasNewZABody()) {
-    // ZA state must be zeroed upon entry to a function with NewZA
     Function *ZeroIntr =
         Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero);
     Builder.CreateCall(ZeroIntr->getFunctionType(), ZeroIntr,
