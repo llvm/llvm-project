@@ -28,15 +28,8 @@ module iso_c_binding
   ! to be exported by this MODULE.
   private
 
-  public :: c_associated, &
-    c_funloc, &
-    c_funptr, &
-    c_f_pointer, &
-    c_loc, &
-    c_null_funptr, &
-    c_null_ptr, &
-    c_ptr, &
-    c_sizeof, &
+  public :: c_associated, c_funloc, c_funptr, c_f_pointer, c_loc, &
+    c_null_funptr, c_null_ptr, c_ptr, c_sizeof, &
     operator(==), operator(/=)
 
   ! Table 18.2 (in clause 18.3.1)

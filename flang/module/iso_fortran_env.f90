@@ -29,13 +29,8 @@ module iso_fortran_env
   ! to be exported by this MODULE.
   private
 
-  public :: event_type, &
-    notify_type, &
-    lock_type, &
-    team_type, &
-    atomic_int_kind, &
-    atomic_logical_kind, &
-    compiler_options, &
+  public :: event_type, notify_type, lock_type, team_type, &
+    atomic_int_kind, atomic_logical_kind, compiler_options, &
     compiler_version
 
 
