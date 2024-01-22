@@ -23,26 +23,25 @@ generates combinedcorpus/corpus_description.json file. In this way corpus1
 and corpus2 are combined into combinedcorpus.
 """
 
-from absl import app
-from absl import flags
+import argparse
 
 from mlgo.corpus import combine_training_corpus_lib
 
-flags.DEFINE_string("root_dir", "", "root dir of module paths to combine.")
 
-FLAGS = flags.FLAGS
+def parse_args_and_run():
+    parser = argparse.ArgumentParser(
+        description="A tool for combining multiple training corpora"
+    )
+    parser.add_argument(
+        "--root_dir", type=str, help="The root dir of module paths to combine."
+    )
+    args = parser.parse_args()
+    main(args)
 
 
-def main(argv):
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
-
-    combine_training_corpus_lib.combine_corpus(FLAGS.root_dir)
-
-
-def entrypoint():
-    app.run(main)
+def main(args):
+    combine_training_corpus_lib.combine_corpus(args.root_dir)
 
 
 if __name__ == "__main__":
-    entrypoint()
+    parse_args_and_run()

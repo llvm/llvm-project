@@ -7,9 +7,6 @@ name = "mlgo"
 description = "Tooling for ML in LLVM"
 readme = "README.md"
 requires-python = ">=3.8,<3.11"
-dependencies = [
-  "absl-py>=1.0.0"
-]
 dynamic = ["version"]
 license = {text = "Apache-2.0 WITH LLVM-exception"}
 classifiers = [
