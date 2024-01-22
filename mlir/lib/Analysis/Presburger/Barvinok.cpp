@@ -148,54 +148,75 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
                             std::vector({denominator}));
 }
 
+/// We use Gaussian elimination to find the solution to a set of d equations
+/// of the form
+/// a_1 x_1 + ... + a_d x_d + b_1 m_1 + ... + b_p m_p + c = 0
+/// where x_i are variables,
+/// m_i are parameters and
+/// a_i, b_i, c are rational coefficients.
+/// The solution expresses each x_i as an affine function of the m_i, and is
+/// therefore represented as a matrix of size d x (p+1).
+/// If there is no solution, we return null.
 std::optional<ParamPoint>
 mlir::presburger::detail::findVertex(IntMatrix equations) {
-  // `equalities` is a d x (d + p + 1) matrix.
+  // equations is a d x (d + p + 1) matrix.
+  // Each row represents an equation.
 
-  unsigned r = equations.getNumRows();
+  unsigned d = equations.getNumRows();
   unsigned c = equations.getNumColumns();
 
-  IntMatrix coeffs(r, r);
-  for (unsigned i = 0; i < r; i++)
-    for (unsigned j = 0; j < r; j++)
+  // First, we check that the system has a solution, and return
+  // null if not.
+  IntMatrix coeffs(d, d);
+  for (unsigned i = 0; i < d; i++)
+    for (unsigned j = 0; j < d; j++)
       coeffs(i, j) = equations(i, j);
 
-  if (coeffs.determinant() == MPInt(0))
+  if (coeffs.determinant() == 0)
     return std::nullopt;
 
-  FracMatrix equationsF(r, c);
-  for (unsigned i = 0; i < r; i++)
-    for (unsigned j = 0; j < c; j++)
-      equationsF(i, j) = Fraction(equations(i, j), 1);
+  // We work with rational numbers.
+  FracMatrix equationsF(equations);
 
-  Fraction a, b;
-  for (unsigned i = 0; i < r; i++) {
-    if (equationsF(i, i) == Fraction(0, 1))
-      for (unsigned j = i + 1; j < r; j++)
+  for (unsigned i = 0; i < d; ++i) {
+    // First ensure that the diagonal element is nonzero, by swapping
+    // it with a nonzero row.
+    if (equationsF(i, i) == 0) {
+      for (unsigned j = i + 1; j < d; ++j) {
         if (equationsF(j, i) != 0) {
-          equationsF.addToRow(i, equationsF.getRow(j), Fraction(1, 1));
+          equationsF.swapRows(j, i);
           break;
         }
-    b = equationsF(i, i);
+      }
+    }
 
-    for (unsigned j = 0; j < r; j++) {
+    Fraction b = equationsF(i, i);
+
+    // Set all elements except the diagonal to zero.
+    for (unsigned j = 0; j < d; ++j) {
       if (equationsF(j, i) == 0 || j == i)
         continue;
-      a = equationsF(j, i);
+      // Set element (j, i) to zero
+      // by subtracting the ith row,
+      // appropriately scaled.
+      Fraction a = equationsF(j, i);
       equationsF.addToRow(j, equationsF.getRow(i), -a / b);
     }
   }
 
-  for (unsigned i = 0; i < r; i++) {
-    a = equationsF(i, i);
-    for (unsigned j = 0; j < c; j++)
+  // Rescale diagonal elements to 1.
+  for (unsigned i = 0; i < d; ++i) {
+    Fraction a = equationsF(i, i);
+    for (unsigned j = 0; j < c; ++j)
       equationsF(i, j) = equationsF(i, j) / a;
   }
 
-  ParamPoint vertex(r, c - r); // d x p+1
-  for (unsigned i = 0; i < r; i++)
-    for (unsigned j = 0; j < c - r; j++)
-      vertex(i, j) = -equationsF(i, r + j);
+  // We copy the last p+1 columns of the matrix as the values of x_i.
+  // We shift the parameter terms to the RHS, and so flip their sign.
+  ParamPoint vertex(d, c - d);
+  for (unsigned i = 0; i < d; ++i)
+    for (unsigned j = 0; j < c - d; ++j)
+      vertex(i, j) = -equationsF(i, d + j);
 
   return vertex;
 }
