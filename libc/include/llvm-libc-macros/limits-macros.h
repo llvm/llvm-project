@@ -34,7 +34,7 @@
 
 #endif // __has_include_next(<limits.h>)
 
-// Supplement missing macros.
+// Supplement missing macros if there are any.
 
 #ifndef CHAR_BIT
 #ifdef __CHAR_BIT__
