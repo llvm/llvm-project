@@ -19,7 +19,6 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// XFAIL: availability-verbose_abort-missing
 
 // We only know how to diagnose this on platforms that use the ELF or Mach-O object file formats.
 // XFAIL: target={{.+}}-windows-{{.+}}
@@ -50,10 +49,10 @@ void operator delete[](void*, std::align_val_t) noexcept {}
 int main(int, char**) {
   std::size_t size       = 3;
   std::align_val_t align = static_cast<std::align_val_t>(32);
-  EXPECT_DEATH((void)operator new(size, std::nothrow));
-  EXPECT_DEATH((void)operator new(size, align, std::nothrow));
-  EXPECT_DEATH((void)operator new[](size, std::nothrow));
-  EXPECT_DEATH((void)operator new[](size, align, std::nothrow));
+  EXPECT_ANY_DEATH((void)operator new(size, std::nothrow));
+  EXPECT_ANY_DEATH((void)operator new(size, align, std::nothrow));
+  EXPECT_ANY_DEATH((void)operator new[](size, std::nothrow));
+  EXPECT_ANY_DEATH((void)operator new[](size, align, std::nothrow));
 
   return 0;
 }

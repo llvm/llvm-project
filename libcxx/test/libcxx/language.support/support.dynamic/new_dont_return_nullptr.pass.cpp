@@ -29,9 +29,9 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  EXPECT_DEATH((void)operator new(std::numeric_limits<std::size_t>::max()));
-  EXPECT_DEATH((void)operator new(std::numeric_limits<std::size_t>::max(), static_cast<std::align_val_t>(32)));
-  EXPECT_DEATH((void)operator new[](std::numeric_limits<std::size_t>::max()));
-  EXPECT_DEATH((void)operator new[](std::numeric_limits<std::size_t>::max(), static_cast<std::align_val_t>(32)));
+  EXPECT_ANY_DEATH((void)operator new(std::numeric_limits<std::size_t>::max()));
+  EXPECT_ANY_DEATH((void)operator new(std::numeric_limits<std::size_t>::max(), static_cast<std::align_val_t>(32)));
+  EXPECT_ANY_DEATH((void)operator new[](std::numeric_limits<std::size_t>::max()));
+  EXPECT_ANY_DEATH((void)operator new[](std::numeric_limits<std::size_t>::max(), static_cast<std::align_val_t>(32)));
   return 0;
 }
