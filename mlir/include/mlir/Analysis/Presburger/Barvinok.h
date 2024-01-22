@@ -27,6 +27,7 @@
 #include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
 #include <optional>
 
@@ -83,6 +84,10 @@ ConeH getDual(ConeV cone);
 /// The input cone must be unimodular; it assert-fails otherwise.
 GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
                                                     ConeH cone);
+
+std::optional<ParamPoint> findVertex(Matrix<MPInt> equations);
+
+std::vector<std::pair<PresburgerRelation, GeneratingFunction>> polytopeGeneratingFunction(PolyhedronH poly);
 
 /// Find a vector that is not orthogonal to any of the given vectors,
 /// i.e., has nonzero dot product with those of the given vectors

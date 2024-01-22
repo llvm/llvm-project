@@ -711,6 +711,10 @@ public:
   /// return `this \ set`.
   PresburgerRelation subtract(const PresburgerRelation &set) const;
 
+  void removeTrivialEqualities();
+
+  bool isFullDim();
+
   void print(raw_ostream &os) const;
   void dump() const;
 
