@@ -1942,7 +1942,7 @@ bool IRTranslator::translateIfEntryValueArgument(bool isDeclare, Value *Val,
 
   std::optional<MCRegister> PhysReg = getArgPhysReg(*Arg);
   if (!PhysReg) {
-    LLVM_DEBUG(dbgs() << "Dropping dbg." << ((isDeclare) ? "declare" : "value")
+    LLVM_DEBUG(dbgs() << "Dropping dbg." << (isDeclare ? "declare" : "value")
                       << ": expression is entry_value but "
                       << "couldn't find a physical register\n");
     LLVM_DEBUG(dbgs() << *Var << "\n");
