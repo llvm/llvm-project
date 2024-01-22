@@ -2440,7 +2440,8 @@ private:
     ompDeviceCodeFound =
         ompDeviceCodeFound ||
         Fortran::lower::isOpenMPDeviceDeclareTarget(*this, getEval(), ompDecl);
-    genOpenMPDeclarativeConstruct(*this, getEval(), ompDecl);
+    genOpenMPDeclarativeConstruct(
+        *this, localSymbols, bridge.getSemanticsContext(), getEval(), ompDecl);
     builder->restoreInsertionPoint(insertPt);
   }
 
@@ -3091,6 +3092,10 @@ private:
   }
 
   //===--------------------------------------------------------------------===//
+
+  void genFIR(const Fortran::parser::NotifyWaitStmt &stmt) {
+    genNotifyWaitStatement(*this, stmt);
+  }
 
   void genFIR(const Fortran::parser::EventPostStmt &stmt) {
     genEventPostStatement(*this, stmt);

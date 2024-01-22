@@ -274,9 +274,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
         continue;
 
       if (BaseType == BasicType::Float16) {
-        if ((Record.RequiredExtensions & RVV_REQ_ZvfhminOrZvfh) ==
-            RVV_REQ_ZvfhminOrZvfh) {
-          if (!TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
+        if ((Record.RequiredExtensions & RVV_REQ_Zvfhmin) == RVV_REQ_Zvfhmin) {
+          if (!TI.hasFeature("zvfhmin"))
             continue;
         } else if (!TI.hasFeature("zvfh")) {
           continue;

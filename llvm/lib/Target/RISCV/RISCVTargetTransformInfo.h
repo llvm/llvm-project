@@ -48,6 +48,9 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// actual target hardware.
   unsigned getEstimatedVLFor(VectorType *Ty);
 
+  InstructionCost getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
+                                          TTI::TargetCostKind CostKind);
+
   /// Return the cost of accessing a constant pool entry of the specified
   /// type.
   InstructionCost getConstantPoolLoadCost(Type *Ty,
@@ -359,8 +362,7 @@ public:
                      const TargetTransformInfo::LSRCost &C2);
 
   bool shouldFoldTerminatingConditionAfterLSR() const {
-    // FIXME: Enabling this causes miscompiles.
-    return false;
+    return true;
   }
 };
 

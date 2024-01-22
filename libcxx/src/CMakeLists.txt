@@ -84,6 +84,7 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION)
   list(APPEND LIBCXX_SOURCES
+    fstream.cpp
     include/sso_allocator.h
     ios.cpp
     ios.instantiations.cpp
@@ -229,7 +230,7 @@ if (LIBCXX_ENABLE_SHARED)
   # Maybe re-export symbols from libc++abi
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
-  if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
+  if (APPLE AND LIBCXX_CXX_ABI MATCHES "libcxxabi$"
             AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
     set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
@@ -398,10 +399,14 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-cxx-headers)
     endif()
+    if(LIBCXX_INSTALL_MODULES)
+      set(module_install_target install-cxx-modules)
+    endif()
     add_custom_target(install-cxx
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
@@ -409,6 +414,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES)
                       DEPENDS ${lib_install_target}
                               cxx_experimental
                               ${header_install_target}
+                              ${module_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=cxx
                       -DCMAKE_INSTALL_DO_STRIP=1

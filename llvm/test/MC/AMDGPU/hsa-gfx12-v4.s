@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 --amdhsa-code-object-version=4 -filetype=obj < %s > %t
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj < %s > %t
 // RUN: llvm-readelf -S -r -s %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
@@ -51,6 +51,9 @@
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
 // ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx1200"
+
+.amdhsa_code_object_version 4
+// ASM: .amdhsa_code_object_version 4
 
 .p2align 8
 .type minimal,@function
@@ -118,7 +121,6 @@ disabled_user_sgpr:
   .amdhsa_workgroup_processor_mode 1
   .amdhsa_memory_ordered 1
   .amdhsa_forward_progress 1
-  .amdhsa_shared_vgpr_count 0
   .amdhsa_round_robin_scheduling 1
   .amdhsa_exception_fp_ieee_invalid_op 1
   .amdhsa_exception_fp_denorm_src 1
@@ -157,7 +159,6 @@ disabled_user_sgpr:
 // ASM-NEXT: .amdhsa_workgroup_processor_mode 1
 // ASM-NEXT: .amdhsa_memory_ordered 1
 // ASM-NEXT: .amdhsa_forward_progress 1
-// ASM-NEXT: .amdhsa_shared_vgpr_count 0
 // ASM-NEXT: .amdhsa_round_robin_scheduling 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op 1
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src 1

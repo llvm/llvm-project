@@ -123,15 +123,15 @@ const char *getEdgeKindName(Edge::Kind K);
 ///
 /// Stubs are often called "veneers" in the official docs and online.
 ///
-enum StubsFlavor {
+enum class StubsFlavor {
   Unsupported = 0,
-  Thumbv7,
+  v7,
 };
 
 /// JITLink sub-arch configuration for Arm CPU models
 struct ArmConfig {
   bool J1J2BranchEncoding = false;
-  StubsFlavor Stubs = Unsupported;
+  StubsFlavor Stubs = StubsFlavor::Unsupported;
 };
 
 /// Obtain the sub-arch configuration for a given Arm CPU model.
@@ -141,12 +141,12 @@ inline ArmConfig getArmConfigForCPUArch(ARMBuildAttrs::CPUArch CPUArch) {
   case ARMBuildAttrs::v7:
   case ARMBuildAttrs::v8_A:
     ArmCfg.J1J2BranchEncoding = true;
-    ArmCfg.Stubs = Thumbv7;
+    ArmCfg.Stubs = StubsFlavor::v7;
     break;
   default:
     DEBUG_WITH_TYPE("jitlink", {
       dbgs() << "  Warning: ARM config not defined for CPU architecture "
-             << getCPUArchName(CPUArch);
+             << getCPUArchName(CPUArch) << " (" << CPUArch << ")\n";
     });
     break;
   }
@@ -318,7 +318,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
 }
 
-/// Stubs builder for a specific StubsFlavor
+/// Stubs builder for v7 emits non-position-independent Thumb stubs.
 ///
 /// Right now we only have one default stub kind, but we want to extend this
 /// and allow creation of specific kinds in the future (e.g. branch range
@@ -326,13 +326,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 ///
 /// Let's keep it simple for the moment and not wire this through a GOT.
 ///
-template <StubsFlavor Flavor>
-class StubsManager : public TableManager<StubsManager<Flavor>> {
+class StubsManager_v7 : public TableManager<StubsManager_v7> {
 public:
-  StubsManager() = default;
+  StubsManager_v7() = default;
 
   /// Name of the object file section that will contain all our stubs.
-  static StringRef getSectionName();
+  static StringRef getSectionName() {
+    return "__llvm_jitlink_aarch32_STUBS_Thumbv7";
+  }
 
   /// Implements link-graph traversal via visitExistingEdges().
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
@@ -354,7 +355,7 @@ public:
     return false;
   }
 
-  /// Create a branch range extension stub for the class's flavor.
+  /// Create a branch range extension stub with Thumb encoding for v7 CPUs.
   Symbol &createEntry(LinkGraph &G, Symbol &Target);
 
 private:
@@ -377,14 +378,6 @@ private:
 
   Section *StubsSection = nullptr;
 };
-
-/// Create a branch range extension stub with Thumb encoding for v7 CPUs.
-template <>
-Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target);
-
-template <> inline StringRef StubsManager<Thumbv7>::getSectionName() {
-  return "__llvm_jitlink_aarch32_STUBS_Thumbv7";
-}
 
 } // namespace aarch32
 } // namespace jitlink

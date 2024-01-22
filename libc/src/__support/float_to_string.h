@@ -105,7 +105,7 @@ namespace LIBC_NAMESPACE {
 using BlockInt = uint32_t;
 constexpr uint32_t BLOCK_SIZE = 9;
 
-using FloatProp = fputil::FloatProperties<long double>;
+using FPBits = fputil::FPBits<long double>;
 
 // Larger numbers prefer a slightly larger constant than is used for the smaller
 // numbers.
@@ -382,10 +382,10 @@ LIBC_INLINE uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
                                (1000000000 * shifted));
 }
 
-LIBC_INLINE uint32_t mul_shift_mod_1e9(const FloatProp::StorageType mantissa,
+LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
                                        const cpp::UInt<MID_INT_SIZE> &large,
                                        const int32_t shift_amount) {
-  cpp::UInt<MID_INT_SIZE + FloatProp::STORAGE_LEN> val(large);
+  cpp::UInt<MID_INT_SIZE + FPBits::STORAGE_LEN> val(large);
   val = (val * mantissa) >> shift_amount;
   return static_cast<uint32_t>(
       val.div_uint32_times_pow_2(1000000000, 0).value());
@@ -412,23 +412,19 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const FloatProp::StorageType mantissa,
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 class FloatToString {
   fputil::FPBits<T> float_bits;
-  bool is_negative;
   int exponent;
-  FloatProp::StorageType mantissa;
+  FPBits::StorageType mantissa;
 
   static constexpr int FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   static constexpr int EXP_BIAS = fputil::FPBits<T>::EXP_BIAS;
 
 public:
   LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
-    is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
 
     // Adjust for the width of the mantissa.
     exponent -= FRACTION_LEN;
-
-    // init_convert();
   }
 
   LIBC_INLINE constexpr bool is_nan() { return float_bits.is_nan(); }

@@ -268,6 +268,16 @@ static cl::opt<unsigned> BenchmarkRepeatCount(
              "before aggregating the results"),
     cl::cat(BenchmarkOptions), cl::init(30));
 
+static cl::list<ValidationEvent> ValidationCounters(
+    "validation-counter",
+    cl::desc(
+        "The name of a validation counter to run concurrently with the main "
+        "counter to validate benchmarking assumptions"),
+    cl::CommaSeparated, cl::cat(BenchmarkOptions),
+    cl::values(clEnumValN(ValidationEvent::InstructionRetired,
+                          "instructions-retired",
+                          "Count retired instructions")));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -437,7 +447,7 @@ static void runBenchmarkConfigurations(
            ArrayRef<Benchmark>(AllResults).drop_front()) {
         llvm::append_range(Result.AssembledSnippet,
                            OtherResult.AssembledSnippet);
-        // Aggregate measurements, but only iff all measurements succeeded.
+        // Aggregate measurements, but only if all measurements succeeded.
         if (Result.Measurements.empty())
           continue;
         assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
@@ -501,7 +511,7 @@ void benchmarkMain() {
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
           BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
-          BenchmarkRepeatCount, ResultAggMode));
+          BenchmarkRepeatCount, ValidationCounters, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }

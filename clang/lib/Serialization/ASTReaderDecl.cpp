@@ -910,7 +910,7 @@ void ASTDeclReader::VisitEnumConstantDecl(EnumConstantDecl *ECD) {
   VisitValueDecl(ECD);
   if (Record.readInt())
     ECD->setInitExpr(Record.readExpr());
-  ECD->setInitVal(Record.readAPSInt());
+  ECD->setInitVal(Reader.getContext(), Record.readAPSInt());
   mergeMergeable(ECD);
 }
 
@@ -1135,7 +1135,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
   // Defer calling `setPure` until merging above has guaranteed we've set
   // `DefinitionData` (as this will need to access it).
-  FD->setPure(Pure);
+  FD->setIsPureVirtual(Pure);
 
   // Read in the parameters.
   unsigned NumParams = Record.readInt();
@@ -3094,6 +3094,8 @@ public:
   }
 
   Expr *readExpr() { return Reader.readExpr(); }
+
+  Attr *readAttr() { return Reader.readAttr(); }
 
   std::string readString() {
     return Reader.readString();

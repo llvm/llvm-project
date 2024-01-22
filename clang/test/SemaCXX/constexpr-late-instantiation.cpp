@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify
+// RUN: %clang_cc1 %s -fexperimental-new-constant-interpreter -fsyntax-only -verify
 
 template <typename T>
 constexpr T foo(T a);   // expected-note {{declared here}}

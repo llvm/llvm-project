@@ -310,3 +310,48 @@ loop:
 exit:
   ret void
 }
+
+define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @pr76986_trunc_sext_interleaving_only(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP6]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], %arg
+; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], %arg
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP1]]
+; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP12]], align 2
+; CHECK-NEXT:    store i16 [[TMP11]], ptr [[TMP13]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 14934
+; CHECK-NEXT:    br i1 [[TMP14]], label %middle.block, label %vector.body
+;
+bb:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %bb ], [ %iv.next, %loop ]
+  %gep.src = getelementptr inbounds i8, ptr %src, i64 %iv
+  %l = load i8, ptr %gep.src
+  %sext = sext i8 %l to i32
+  %trunc = trunc i32 %sext to i16
+  %sdiv = sdiv i16 %trunc, %arg
+  %gep.dst = getelementptr inbounds i16, ptr %dst, i64 %iv
+  store i16 %sdiv, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %icmp = icmp ult i64 %iv, 14933
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+

@@ -177,9 +177,9 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
 
     This operation ignores non-scf::For ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation pipeline
-    properly, the transform succeeds. Otherwise the transform silently fails.
-    The return handle points to only the subset of successfully produced
-    pipelined loops, which can be empty.
+    properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.  The return handle points to only the subset of
+    successfully produced pipelined loops, which can be empty.
   }];
 
   let arguments = (ins Transform_ScfForOp:$target,
@@ -240,10 +240,10 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
 
     #### Return modes
 
-    This operation ignores non-scf::For, non-affine::For ops and drops them in
-    the return.  If all the operations referred to by the `target` PDLOperation
-    unroll properly, the transform succeeds. Otherwise the transform silently
-    fails.
+    This operation ignores non-`scf.for`, non-`affine.for` ops and drops them
+    in the return. If all the operations referred to by the `target` operand
+    unroll properly, the transform succeeds. Otherwise the transform produces a
+    silencebale failure.
 
     Does not return handles as the operation may result in the loop being
     removed after a full unrolling.

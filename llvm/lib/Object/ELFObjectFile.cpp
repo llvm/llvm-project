@@ -315,7 +315,7 @@ Expected<SubtargetFeatures> ELFObjectFileBase::getRISCVFeatures() const {
     else
       llvm_unreachable("XLEN should be 32 or 64.");
 
-    Features.addFeaturesVector(ISAInfo->toFeatureVector());
+    Features.addFeaturesVector(ISAInfo->toFeatures());
   }
 
   return Features;
@@ -830,6 +830,10 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
     std::move(BBAddrMapOrErr->begin(), BBAddrMapOrErr->end(),
               std::back_inserter(BBAddrMaps));
   }
+  if (PGOAnalyses)
+    assert(PGOAnalyses->size() == BBAddrMaps.size() &&
+           "The same number of BBAddrMaps and PGOAnalysisMaps should be "
+           "returned when PGO information is requested");
   return BBAddrMaps;
 }
 

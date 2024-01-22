@@ -539,7 +539,7 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
-    Symtab.mapAddress(FPtr, I->NameRef);
+    Symtab.mapAddress(FPtr, swap(I->NameRef));
   }
   return success();
 }

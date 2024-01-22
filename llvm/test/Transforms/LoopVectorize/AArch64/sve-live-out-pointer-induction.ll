@@ -57,10 +57,10 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 8
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP29]], align 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP31:%.*]] = mul i64 [[TMP30]], 2
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 [[TMP31]]
+; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP29]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP32]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP34]]
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP13]]

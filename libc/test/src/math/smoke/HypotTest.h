@@ -21,11 +21,13 @@ private:
   using Func = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
   const T nan = FPBits::build_quiet_nan(1);
-  const T inf = FPBits::inf();
-  const T neg_inf = FPBits::neg_inf();
-  const T zero = FPBits::zero();
-  const T neg_zero = FPBits::neg_zero();
+  const T inf = FPBits::inf(Sign::POS);
+  const T neg_inf = FPBits::inf(Sign::NEG);
+  const T zero = FPBits::zero(Sign::POS);
+  const T neg_zero = FPBits::zero(Sign::NEG);
+
   const T max_normal = FPBits::max_normal();
   const T min_normal = FPBits::min_normal();
   const T max_subnormal = FPBits::max_denormal();

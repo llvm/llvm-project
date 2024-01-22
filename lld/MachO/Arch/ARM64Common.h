@@ -170,9 +170,10 @@ writeObjCMsgSendStub(uint8_t *buf, const uint32_t objcStubsFastCode[8],
                pageBits(selrefsVA + selectorOffset) - pcPageBits(0));
   encodePageOff12(&buf32[1], d, objcStubsFastCode[1],
                   selrefsVA + selectorOffset);
+  uint64_t gotOffset = msgSendIndex * LP::wordSize;
   encodePage21(&buf32[2], d, objcStubsFastCode[2],
-               pageBits(gotAddr) - pcPageBits(2));
-  encodePage21(&buf32[3], d, objcStubsFastCode[3], msgSendIndex * LP::wordSize);
+               pageBits(gotAddr + gotOffset) - pcPageBits(2));
+  encodePageOff12(&buf32[3], d, objcStubsFastCode[3], gotAddr + gotOffset);
   buf32[4] = objcStubsFastCode[4];
   buf32[5] = objcStubsFastCode[5];
   buf32[6] = objcStubsFastCode[6];

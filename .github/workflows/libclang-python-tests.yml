@@ -1,0 +1,44 @@
+name: Libclang Python Binding Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'clang/bindings/python/**'
+      - 'clang/tools/libclang/**'
+      - 'clang/CMakeList.txt'
+      - '.github/workflows/libclang-python-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+  pull_request:
+    paths:
+      - 'clang/bindings/python/**'
+      - 'clang/tools/libclang/**'
+      - 'clang/CMakeList.txt'
+      - '.github/workflows/libclang-python-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check-clang-python:
+    # Build libclang and then run the libclang Python binding's unit tests.
+    name: Build and run Python unit tests
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.11"]
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-clang-python
+      projects: clang
+      # There is an issue running on "windows-2019".
+      # See https://github.com/llvm/llvm-project/issues/76601#issuecomment-1873049082.
+      os_list: '["ubuntu-latest"]'
+      python_version: ${{ matrix.python-version }}

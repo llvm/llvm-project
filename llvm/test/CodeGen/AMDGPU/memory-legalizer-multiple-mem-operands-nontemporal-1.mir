@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
 
 --- |
   define amdgpu_kernel void @multiple_mem_operands(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) #0 {

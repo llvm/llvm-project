@@ -376,7 +376,7 @@ bool FindUninitializedFields::isUnionUninit(const TypedValueRegion *R) {
   return false;
 }
 
-bool FindUninitializedFields::isPrimitiveUninit(const SVal &V) {
+bool FindUninitializedFields::isPrimitiveUninit(SVal V) {
   if (V.isUndef())
     return true;
 

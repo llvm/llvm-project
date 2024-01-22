@@ -166,11 +166,11 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
         assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
         assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
       };
-      return 1;
+      return 2;
     }
     assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
     assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
-    return 1;
+    return 2;
   }
 
   MachineInstrBuilder MIB;
@@ -341,7 +341,7 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
 
     MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
 
-    return 1;
+    return 2;
   }
 
   /// Marking a physical register as used is different between formal

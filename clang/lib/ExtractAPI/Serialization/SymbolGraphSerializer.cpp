@@ -147,46 +147,40 @@ Object serializeSourceRange(const PresumedLoc &BeginLoc,
 /// Serialize the availability attributes of a symbol.
 ///
 /// Availability information contains the introduced, deprecated, and obsoleted
-/// versions of the symbol for a given domain (roughly corresponds to a
-/// platform) as semantic versions, if not default.  Availability information
-/// also contains flags to indicate if the symbol is unconditionally unavailable
-/// or deprecated, i.e. \c __attribute__((unavailable)) and \c
-/// __attribute__((deprecated)).
+/// versions of the symbol as semantic versions, if not default.
+/// Availability information also contains flags to indicate if the symbol is
+/// unconditionally unavailable or deprecated,
+/// i.e. \c __attribute__((unavailable)) and \c __attribute__((deprecated)).
 ///
 /// \returns \c std::nullopt if the symbol has default availability attributes,
-/// or an \c Array containing the formatted availability information.
-std::optional<Array>
-serializeAvailability(const AvailabilitySet &Availabilities) {
-  if (Availabilities.isDefault())
+/// or an \c Array containing an object with the formatted availability
+/// information.
+std::optional<Array> serializeAvailability(const AvailabilityInfo &Avail) {
+  if (Avail.isDefault())
     return std::nullopt;
 
+  Object Availability;
   Array AvailabilityArray;
-
-  if (Availabilities.isUnconditionallyDeprecated()) {
+  Availability["domain"] = Avail.Domain;
+  serializeObject(Availability, "introduced",
+                  serializeSemanticVersion(Avail.Introduced));
+  serializeObject(Availability, "deprecated",
+                  serializeSemanticVersion(Avail.Deprecated));
+  serializeObject(Availability, "obsoleted",
+                  serializeSemanticVersion(Avail.Obsoleted));
+  if (Avail.isUnconditionallyDeprecated()) {
     Object UnconditionallyDeprecated;
     UnconditionallyDeprecated["domain"] = "*";
     UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
     AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
   }
-
-  // Note unconditionally unavailable records are skipped.
-
-  for (const auto &AvailInfo : Availabilities) {
-    Object Availability;
-    Availability["domain"] = AvailInfo.Domain;
-    if (AvailInfo.Unavailable)
-      Availability["isUnconditionallyUnavailable"] = true;
-    else {
-      serializeObject(Availability, "introduced",
-                      serializeSemanticVersion(AvailInfo.Introduced));
-      serializeObject(Availability, "deprecated",
-                      serializeSemanticVersion(AvailInfo.Deprecated));
-      serializeObject(Availability, "obsoleted",
-                      serializeSemanticVersion(AvailInfo.Obsoleted));
-    }
-    AvailabilityArray.emplace_back(std::move(Availability));
+  if (Avail.isUnconditionallyUnavailable()) {
+    Object UnconditionallyUnavailable;
+    UnconditionallyUnavailable["domain"] = "*";
+    UnconditionallyUnavailable["isUnconditionallyUnavailable"] = true;
+    AvailabilityArray.emplace_back(std::move(UnconditionallyUnavailable));
   }
-
+  AvailabilityArray.emplace_back(std::move(Availability));
   return AvailabilityArray;
 }
 
@@ -738,7 +732,7 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord &Record) const {
     return true;
 
   // Skip unconditionally unavailable symbols
-  if (Record.Availabilities.isUnconditionallyUnavailable())
+  if (Record.Availability.isUnconditionallyUnavailable())
     return true;
 
   // Filter out symbols prefixed with an underscored as they are understood to
@@ -764,7 +758,7 @@ SymbolGraphSerializer::serializeAPIRecord(const RecordTy &Record) const {
       Obj, "location",
       serializeSourceLocation(Record.Location, /*IncludeFileURI=*/true));
   serializeArray(Obj, "availability",
-                 serializeAvailability(Record.Availabilities));
+                 serializeAvailability(Record.Availability));
   serializeObject(Obj, "docComment", serializeDocComment(Record.Comment));
   serializeArray(Obj, "declarationFragments",
                  serializeDeclarationFragments(Record.Declaration));

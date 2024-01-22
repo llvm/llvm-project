@@ -47,6 +47,8 @@ public:
   explicit UniformityInfoPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes a \ref CycleInfo.

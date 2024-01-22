@@ -41,7 +41,7 @@ void operator delete(void* p) TEST_NOEXCEPT {
 
 int main(int, char**) {
     new_called = delete_called = 0;
-    int* x = new (std::nothrow) int(3);
+    int* x = DoNotOptimize(new (std::nothrow) int(3));
     assert(x != nullptr);
     ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 

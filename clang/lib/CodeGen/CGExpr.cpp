@@ -26,10 +26,12 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -925,15 +927,20 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&
         !CE->getSubExpr()->isFlexibleArrayMemberLike(CGF.getContext(),
                                                      StrictFlexArraysLevel)) {
+      CodeGenFunction::SanitizerScope SanScope(&CGF);
+
       IndexedType = CE->getSubExpr()->getType();
       const ArrayType *AT = IndexedType->castAsArrayTypeUnsafe();
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
         return CGF.Builder.getInt(CAT->getSize());
-      else if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
+
+      if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
         return CGF.getVLASize(VAT).NumElts;
       // Ignore pass_object_size here. It's not applicable on decayed pointers.
     }
   }
+
+  CodeGenFunction::SanitizerScope SanScope(&CGF);
 
   QualType EltTy{Base->getType()->getPointeeOrArrayElementType(), 0};
   if (llvm::Value *POS = CGF.LoadPassedObjectSize(Base, EltTy)) {
@@ -944,21 +951,247 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
+namespace {
+
+/// \p StructAccessBase returns the base \p Expr of a field access. It returns
+/// either a \p DeclRefExpr, representing the base pointer to the struct, i.e.:
+///
+///     p in p-> a.b.c
+///
+/// or a \p MemberExpr, if the \p MemberExpr has the \p RecordDecl we're
+/// looking for:
+///
+///     struct s {
+///       struct s *ptr;
+///       int count;
+///       char array[] __attribute__((counted_by(count)));
+///     };
+///
+/// If we have an expression like \p p->ptr->array[index], we want the
+/// \p MemberExpr for \p p->ptr instead of \p p.
+class StructAccessBase
+    : public ConstStmtVisitor<StructAccessBase, const Expr *> {
+  const RecordDecl *ExpectedRD;
+
+  bool IsExpectedRecordDecl(const Expr *E) const {
+    QualType Ty = E->getType();
+    if (Ty->isPointerType())
+      Ty = Ty->getPointeeType();
+    return ExpectedRD == Ty->getAsRecordDecl();
+  }
+
+public:
+  StructAccessBase(const RecordDecl *ExpectedRD) : ExpectedRD(ExpectedRD) {}
+
+  //===--------------------------------------------------------------------===//
+  //                            Visitor Methods
+  //===--------------------------------------------------------------------===//
+
+  // NOTE: If we build C++ support for counted_by, then we'll have to handle
+  // horrors like this:
+  //
+  //     struct S {
+  //       int x, y;
+  //       int blah[] __attribute__((counted_by(x)));
+  //     } s;
+  //
+  //     int foo(int index, int val) {
+  //       int (S::*IHatePMDs)[] = &S::blah;
+  //       (s.*IHatePMDs)[index] = val;
+  //     }
+
+  const Expr *Visit(const Expr *E) {
+    return ConstStmtVisitor<StructAccessBase, const Expr *>::Visit(E);
+  }
+
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  // These are the types we expect to return (in order of most to least
+  // likely):
+  //
+  //   1. DeclRefExpr - This is the expression for the base of the structure.
+  //      It's exactly what we want to build an access to the \p counted_by
+  //      field.
+  //   2. MemberExpr - This is the expression that has the same \p RecordDecl
+  //      as the flexble array member's lexical enclosing \p RecordDecl. This
+  //      allows us to catch things like: "p->p->array"
+  //   3. CompoundLiteralExpr - This is for people who create something
+  //      heretical like (struct foo has a flexible array member):
+  //
+  //        (struct foo){ 1, 2 }.blah[idx];
+  const Expr *VisitDeclRefExpr(const DeclRefExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : nullptr;
+  }
+  const Expr *VisitMemberExpr(const MemberExpr *E) {
+    if (IsExpectedRecordDecl(E) && E->isArrow())
+      return E;
+    const Expr *Res = Visit(E->getBase());
+    return !Res && IsExpectedRecordDecl(E) ? E : Res;
+  }
+  const Expr *VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : nullptr;
+  }
+  const Expr *VisitCallExpr(const CallExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : nullptr;
+  }
+
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    if (IsExpectedRecordDecl(E))
+      return E;
+    return Visit(E->getBase());
+  }
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
+using RecIndicesTy =
+    SmallVector<std::pair<const RecordDecl *, llvm::Value *>, 8>;
+
+static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
+                                 const FieldDecl *FD, RecIndicesTy &Indices) {
+  const CGRecordLayout &Layout = CGF.CGM.getTypes().getCGRecordLayout(RD);
+  int64_t FieldNo = -1;
+  for (const Decl *D : RD->decls()) {
+    if (const auto *Field = dyn_cast<FieldDecl>(D)) {
+      FieldNo = Layout.getLLVMFieldNo(Field);
+      if (FD == Field) {
+        Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
+        return true;
+      }
+    }
+
+    if (const auto *Record = dyn_cast<RecordDecl>(D)) {
+      ++FieldNo;
+      if (getGEPIndicesToField(CGF, Record, FD, Indices)) {
+        if (RD->isUnion())
+          FieldNo = 0;
+        Indices.emplace_back(std::make_pair(RD, CGF.Builder.getInt32(FieldNo)));
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/// This method is typically called in contexts where we can't generate
+/// side-effects, like in __builtin_dynamic_object_size. When finding
+/// expressions, only choose those that have either already been emitted or can
+/// be loaded without side-effects.
+///
+/// - \p FAMDecl: the \p Decl for the flexible array member. It may not be
+///   within the top-level struct.
+/// - \p CountDecl: must be within the same non-anonymous struct as \p FAMDecl.
+llvm::Value *CodeGenFunction::EmitCountedByFieldExpr(
+    const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
+  const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
+
+  // Find the base struct expr (i.e. p in p->a.b.c.d).
+  const Expr *StructBase = StructAccessBase(RD).Visit(Base);
+  if (!StructBase || StructBase->HasSideEffects(getContext()))
+    return nullptr;
+
+  llvm::Value *Res = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
+    Res = EmitDeclRefLValue(DRE).getPointer(*this);
+    Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
+                                    getPointerAlign(), "dre.load");
+  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(StructBase)) {
+    LValue LV = EmitMemberExpr(ME);
+    Address Addr = LV.getAddress(*this);
+    Res = Addr.getPointer();
+  } else if (StructBase->getType()->isPointerType()) {
+    LValueBaseInfo BaseInfo;
+    TBAAAccessInfo TBAAInfo;
+    Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
+    Res = Addr.getPointer();
+  } else {
+    return nullptr;
+  }
+
+  llvm::Value *Zero = Builder.getInt32(0);
+  RecIndicesTy Indices;
+
+  getGEPIndicesToField(*this, RD, CountDecl, Indices);
+
+  for (auto I = Indices.rbegin(), E = Indices.rend(); I != E; ++I)
+    Res = Builder.CreateInBoundsGEP(
+        ConvertType(QualType(I->first->getTypeForDecl(), 0)), Res,
+        {Zero, I->second}, "..counted_by.gep");
+
+  return Builder.CreateAlignedLoad(ConvertType(CountDecl->getType()), Res,
+                                   getIntAlign(), "..counted_by.load");
+}
+
+const FieldDecl *CodeGenFunction::FindCountedByField(const FieldDecl *FD) {
+  if (!FD || !FD->hasAttr<CountedByAttr>())
+    return nullptr;
+
+  const auto *CBA = FD->getAttr<CountedByAttr>();
+  if (!CBA)
+    return nullptr;
+
+  auto GetNonAnonStructOrUnion =
+      [](const RecordDecl *RD) -> const RecordDecl * {
+    while (RD && RD->isAnonymousStructOrUnion()) {
+      const auto *R = dyn_cast<RecordDecl>(RD->getDeclContext());
+      if (!R)
+        return nullptr;
+      RD = R;
+    }
+    return RD;
+  };
+  const RecordDecl *EnclosingRD = GetNonAnonStructOrUnion(FD->getParent());
+  if (!EnclosingRD)
+    return nullptr;
+
+  DeclarationName DName(CBA->getCountedByField());
+  DeclContext::lookup_result Lookup = EnclosingRD->lookup(DName);
+
+  if (Lookup.empty())
+    return nullptr;
+
+  const NamedDecl *ND = Lookup.front();
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(ND))
+    ND = IFD->getAnonField();
+
+  return dyn_cast<FieldDecl>(ND);
+}
+
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
                                       llvm::Value *Index, QualType IndexType,
                                       bool Accessed) {
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
-  SanitizerScope SanScope(this);
-
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-    getLangOpts().getStrictFlexArraysLevel();
-
+      getLangOpts().getStrictFlexArraysLevel();
   QualType IndexedType;
   llvm::Value *Bound =
       getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
+
+  EmitBoundsCheckImpl(E, Bound, Index, IndexType, IndexedType, Accessed);
+}
+
+void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
+                                          llvm::Value *Index,
+                                          QualType IndexType,
+                                          QualType IndexedType, bool Accessed) {
   if (!Bound)
     return;
+
+  SanitizerScope SanScope(this);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
@@ -974,7 +1207,6 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
   EmitCheck(std::make_pair(Check, SanitizerKind::ArrayBounds),
             SanitizerHandler::OutOfBounds, StaticData, Index);
 }
-
 
 CodeGenFunction::ComplexPairTy CodeGenFunction::
 EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -3823,6 +4055,61 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   return Address(eltPtr, CGF.ConvertTypeForMem(eltType), eltAlign);
 }
 
+/// The offset of a field from the beginning of the record.
+static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
+                                 const FieldDecl *FD, int64_t &Offset) {
+  ASTContext &Ctx = CGF.getContext();
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+  unsigned FieldNo = 0;
+
+  for (const Decl *D : RD->decls()) {
+    if (const auto *Record = dyn_cast<RecordDecl>(D))
+      if (getFieldOffsetInBits(CGF, Record, FD, Offset)) {
+        Offset += Layout.getFieldOffset(FieldNo);
+        return true;
+      }
+
+    if (const auto *Field = dyn_cast<FieldDecl>(D))
+      if (FD == Field) {
+        Offset += Layout.getFieldOffset(FieldNo);
+        return true;
+      }
+
+    if (isa<FieldDecl>(D))
+      ++FieldNo;
+  }
+
+  return false;
+}
+
+/// Returns the relative offset difference between \p FD1 and \p FD2.
+/// \code
+///   offsetof(struct foo, FD1) - offsetof(struct foo, FD2)
+/// \endcode
+/// Both fields must be within the same struct.
+static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
+                                                        const FieldDecl *FD1,
+                                                        const FieldDecl *FD2) {
+  const RecordDecl *FD1OuterRec =
+      FD1->getParent()->getOuterLexicalRecordContext();
+  const RecordDecl *FD2OuterRec =
+      FD2->getParent()->getOuterLexicalRecordContext();
+
+  if (FD1OuterRec != FD2OuterRec)
+    // Fields must be within the same RecordDecl.
+    return std::optional<int64_t>();
+
+  int64_t FD1Offset = 0;
+  if (!getFieldOffsetInBits(CGF, FD1OuterRec, FD1, FD1Offset))
+    return std::optional<int64_t>();
+
+  int64_t FD2Offset = 0;
+  if (!getFieldOffsetInBits(CGF, FD2OuterRec, FD2, FD2Offset))
+    return std::optional<int64_t>();
+
+  return std::make_optional<int64_t>(FD1Offset - FD2Offset);
+}
+
 LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -3949,6 +4236,47 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     else
       ArrayLV = EmitLValue(Array);
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
+
+    if (SanOpts.has(SanitizerKind::ArrayBounds)) {
+      // If the array being accessed has a "counted_by" attribute, generate
+      // bounds checking code. The "count" field is at the top level of the
+      // struct or in an anonymous struct, that's also at the top level. Future
+      // expansions may allow the "count" to reside at any place in the struct,
+      // but the value of "counted_by" will be a "simple" path to the count,
+      // i.e. "a.b.count", so we shouldn't need the full force of EmitLValue or
+      // similar to emit the correct GEP.
+      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+          getLangOpts().getStrictFlexArraysLevel();
+
+      if (const auto *ME = dyn_cast<MemberExpr>(Array);
+          ME &&
+          ME->isFlexibleArrayMemberLike(getContext(), StrictFlexArraysLevel) &&
+          ME->getMemberDecl()->hasAttr<CountedByAttr>()) {
+        const FieldDecl *FAMDecl = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        if (const FieldDecl *CountFD = FindCountedByField(FAMDecl)) {
+          if (std::optional<int64_t> Diff =
+                  getOffsetDifferenceInBits(*this, CountFD, FAMDecl)) {
+            CharUnits OffsetDiff = CGM.getContext().toCharUnitsFromBits(*Diff);
+
+            // Create a GEP with a byte offset between the FAM and count and
+            // use that to load the count value.
+            Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                ArrayLV.getAddress(*this), Int8PtrTy, Int8Ty);
+
+            llvm::Type *CountTy = ConvertType(CountFD->getType());
+            llvm::Value *Res = Builder.CreateInBoundsGEP(
+                Int8Ty, Addr.getPointer(),
+                Builder.getInt32(OffsetDiff.getQuantity()), ".counted_by.gep");
+            Res = Builder.CreateAlignedLoad(CountTy, Res, getIntAlign(),
+                                            ".counted_by.load");
+
+            // Now emit the bounds checking.
+            EmitBoundsCheckImpl(E, Res, Idx, E->getIdx()->getType(),
+                                Array->getType(), Accessed);
+          }
+        }
+      }
+    }
 
     // Propagate the alignment from the array itself to the result.
     QualType arrayType = Array->getType();

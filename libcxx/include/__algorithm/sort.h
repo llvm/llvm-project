@@ -533,7 +533,7 @@ __bitset_partition(_RandomAccessIterator __first, _RandomAccessIterator __last, 
   using _Ops = _IterOps<_AlgPolicy>;
   typedef typename std::iterator_traits<_RandomAccessIterator>::value_type value_type;
   typedef typename std::iterator_traits<_RandomAccessIterator>::difference_type difference_type;
-  _LIBCPP_ASSERT_UNCATEGORIZED(__last - __first >= difference_type(3), "");
+  _LIBCPP_ASSERT_INTERNAL(__last - __first >= difference_type(3), "");
   const _RandomAccessIterator __begin = __first; // used for bounds checking, those are not moved around
   const _RandomAccessIterator __end   = __last;
   (void)__end; //
@@ -625,7 +625,7 @@ __partition_with_equals_on_right(_RandomAccessIterator __first, _RandomAccessIte
   using _Ops = _IterOps<_AlgPolicy>;
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   typedef typename std::iterator_traits<_RandomAccessIterator>::value_type value_type;
-  _LIBCPP_ASSERT_UNCATEGORIZED(__last - __first >= difference_type(3), "");
+  _LIBCPP_ASSERT_INTERNAL(__last - __first >= difference_type(3), "");
   const _RandomAccessIterator __begin = __first; // used for bounds checking, those are not moved around
   const _RandomAccessIterator __end   = __last;
   (void)__end; //

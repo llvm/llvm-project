@@ -94,9 +94,11 @@
 ! HELP-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -gline-directives-only  Emit debug line info directives only
 ! HELP-NEXT: -gline-tables-only      Emit debug line number tables only
+! HELP-NEXT: -gpulibc                Link the LLVM C Library for GPUs
 ! HELP-NEXT: -g                      Generate source-level debug information
 ! HELP-NEXT: --help-hidden           Display help for hidden options
 ! HELP-NEXT: -help                   Display available options
+! HELP-NEXT: -isysroot <dir>         Set the system root directory (usually /)
 ! HELP-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
@@ -107,11 +109,14 @@
 ! HELP-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>       Put MODULE files in <dir>
+! HELP-NEXT: -mrvv-vector-bits=<value>
+! HELP-NEXT:                         Specify the size in bits of an RVV vector register
 ! HELP-NEXT: -msve-vector-bits=<value>
 ! HELP-NEXT:                          Specify the size in bits of an SVE vector register. Defaults to the vector length agnostic value of "scalable". (AArch64 only)
 ! HELP-NEXT: --no-offload-arch=<value>
 ! HELP-NEXT:                         Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
 ! HELP-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
+! HELP-NEXT: -nogpulib               Do not link device library for CUDA/HIP device compilation
 ! HELP-NEXT: --offload-arch=<value>  Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). If 'native' is used the compiler will detect locally installed architectures. For HIP offloading, the device architecture can be followed by target ID features delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.
 ! HELP-NEXT: --offload-device-only   Only compile for the offloading device.
 ! HELP-NEXT: --offload-host-device   Compile for both the offloading host and device (default).
@@ -120,6 +125,7 @@
 ! HELP-NEXT: -pedantic               Warn on language extensions
 ! HELP-NEXT: -print-effective-triple Print the effective target triple
 ! HELP-NEXT: -print-target-triple    Print the normalized target triple
+! HELP-NEXT: -pthread                Support POSIX threads in generated code
 ! HELP-NEXT: -P                      Disable linemarker output in -E mode
 ! HELP-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
@@ -228,6 +234,7 @@
 ! HELP-FC1-NEXT: -fversion-loops-for-stride
 ! HELP-FC1-NEXT:                         Create unit-strided versions of loops
 ! HELP-FC1-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
+! HELP-FC1-NEXT: -gpulibc                Link the LLVM C Library for GPUs
 ! HELP-FC1-NEXT: -help                   Display available options
 ! HELP-FC1-NEXT: -init-only              Only execute frontend initialization
 ! HELP-FC1-NEXT: -I <dir>                Add directory to the end of the list of include search paths
@@ -247,6 +254,7 @@
 ! HELP-FC1-NEXT: -mvscale-max=<value>    Specify the vscale maximum. Defaults to the vector length agnostic value of "0". (AArch64/RISC-V only)
 ! HELP-FC1-NEXT: -mvscale-min=<value>    Specify the vscale minimum. Defaults to "1". (AArch64/RISC-V only)
 ! HELP-FC1-NEXT: -nocpp                  Disable predefined and command line preprocessor macros
+! HELP-FC1-NEXT: -nogpulib               Do not link device library for CUDA/HIP device compilation
 ! HELP-FC1-NEXT: -opt-record-file <value>
 ! HELP-FC1-NEXT:                         File name to use for YAML optimization record output
 ! HELP-FC1-NEXT: -opt-record-format <value>
@@ -258,6 +266,7 @@
 ! HELP-FC1-NEXT: -pic-is-pie             File is for a position independent executable
 ! HELP-FC1-NEXT: -pic-level <value>      Value for __PIC__
 ! HELP-FC1-NEXT: -plugin <name>          Use the named plugin action instead of the default action (use "help" to list available options)
+! HELP-FC1-NEXT: -pthread                Support POSIX threads in generated code
 ! HELP-FC1-NEXT: -P                      Disable linemarker output in -E mode
 ! HELP-FC1-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! HELP-FC1-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression

@@ -330,6 +330,19 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(X, X);
   }
 
+  {
+    Value *X, *Y;
+    // abs(X) * abs(Y) -> abs(X * Y)
+    if (I.hasNoSignedWrap() &&
+        match(Op0,
+              m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One()))) &&
+        match(Op1, m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(Y), m_One()))))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(Intrinsic::abs,
+                                           Builder.CreateNSWMul(X, Y),
+                                           Builder.getTrue()));
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *Op1C;
@@ -486,13 +499,6 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
-
-  // min(X, Y) * max(X, Y) => X * Y.
-  if (match(&I, m_CombineOr(m_c_Mul(m_SMax(m_Value(X), m_Value(Y)),
-                                    m_c_SMin(m_Deferred(X), m_Deferred(Y))),
-                            m_c_Mul(m_UMax(m_Value(X), m_Value(Y)),
-                                    m_c_UMin(m_Deferred(X), m_Deferred(Y))))))
-    return BinaryOperator::CreateWithCopiedFlags(Instruction::Mul, X, Y, &I);
 
   // (mul Op0 Op1):
   //    if Log2(Op0) folds away ->

@@ -22,10 +22,13 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     EMIT ir<%ptr.iv.1> = WIDEN-POINTER-INDUCTION ir<%start.1>, 8
 ; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, 1
 ; CHECK-NEXT:     WIDEN-GEP Var[Inv] ir<%ptr.iv.2.next> = getelementptr inbounds ir<%ptr.iv.2>, ir<1>
-; CHECK-NEXT:     WIDEN store ir<%ptr.iv.1>, ir<%ptr.iv.2.next>
-; CHECK-NEXT:     WIDEN ir<%lv> = load ir<%ptr.iv.2>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%ptr.iv.1>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%ptr.iv.2.next>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%ptr.iv.2>
+; CHECK-NEXT:     WIDEN ir<%lv> = load vp<[[VEC_PTR2]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%lv>, ir<1>
-; CHECK-NEXT:     WIDEN store ir<%ptr.iv.2>, ir<%add>
+; CHECK-NEXT:     vp<[[VEC_PTR3:%.+]]> = vector-pointer ir<%ptr.iv.2>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR3]]>, ir<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   No successors

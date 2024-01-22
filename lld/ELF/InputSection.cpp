@@ -671,6 +671,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
   case R_RISCV_ADD:
+  case R_RISCV_LEB128:
     return sym.getVA(a);
   case R_ADDEND:
     return a;
@@ -715,8 +716,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return sym.getGotVA() + a - p;
   case R_LOONGARCH_GOT_PAGE_PC:
     if (sym.hasFlag(NEEDS_TLSGD))
-      return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p);
-    return getLoongArchPageDelta(sym.getGotVA() + a, p);
+      return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p, type);
+    return getLoongArchPageDelta(sym.getGotVA() + a, p, type);
   case R_MIPS_GOTREL:
     return sym.getVA(a) - in.mipsGot->getGp(file);
   case R_MIPS_GOT_GP:
@@ -766,7 +767,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return 0;
   }
   case R_LOONGARCH_PAGE_PC:
-    return getLoongArchPageDelta(sym.getVA(a), p);
+    return getLoongArchPageDelta(sym.getVA(a), p, type);
   case R_PC:
   case R_ARM_PCA: {
     uint64_t dest;
@@ -801,7 +802,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_PPC64_CALL_PLT:
     return sym.getPltVA() + a - p;
   case R_LOONGARCH_PLT_PAGE_PC:
-    return getLoongArchPageDelta(sym.getPltVA() + a, p);
+    return getLoongArchPageDelta(sym.getPltVA() + a, p, type);
   case R_PLT_GOTPLT:
     return sym.getPltVA() + a - in.gotPlt->getVA();
   case R_PPC32_PLTREL:
@@ -863,7 +864,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_TLSGD_PC:
     return in.got->getGlobalDynAddr(sym) + a - p;
   case R_LOONGARCH_TLSGD_PAGE_PC:
-    return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p);
+    return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p, type);
   case R_TLSLD_GOTPLT:
     return in.got->getVA() + in.got->getTlsIndexOff() + a - in.gotPlt->getVA();
   case R_TLSLD_GOT:
@@ -873,16 +874,6 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   default:
     llvm_unreachable("invalid expression");
   }
-}
-
-// Overwrite a ULEB128 value and keep the original length.
-static uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
-  while (*bufLoc & 0x80) {
-    *bufLoc++ = 0x80 | (val & 0x7f);
-    val >>= 7;
-  }
-  *bufLoc = val;
-  return val;
 }
 
 // This function applies relocations to sections without SHF_ALLOC bit.

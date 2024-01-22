@@ -30,7 +30,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -998,13 +997,14 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   auto buildStaticFuncMap = [&StaticFuncMap,
                              SampleProfileHasFUnique](const StringRef Name) {
-    std::string Prefixes[] = {".cpp:", "cc:", ".c:", ".hpp:", ".h:"};
+    std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
-    for (auto &Prefix : Prefixes) {
-      PrefixPos = Name.find_insensitive(Prefix);
+    for (auto &FilePrefix : FilePrefixes) {
+      std::string NamePrefix = FilePrefix + kGlobalIdentifierDelimiter;
+      PrefixPos = Name.find_insensitive(NamePrefix);
       if (PrefixPos == StringRef::npos)
         continue;
-      PrefixPos += Prefix.size();
+      PrefixPos += NamePrefix.size();
       break;
     }
 
@@ -1088,17 +1088,17 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   //
   // InstrProfile has two entries:
   //  foo
-  //  bar.cc:bar
+  //  bar.cc;bar
   //
   // After BuildMaxSampleMap, we should have the following in FlattenSampleMap:
   // {"foo", {1000, 5000}}
-  // {"bar.cc:bar", {11000, 30000}}
+  // {"bar.cc;bar", {11000, 30000}}
   //
   // foo's has an entry count of 1000, and max body count of 5000.
-  // bar.cc:bar has an entry count of 11000 (sum two callsites of 1000 and
+  // bar.cc;bar has an entry count of 11000 (sum two callsites of 1000 and
   // 10000), and max count of 30000 (from the callsite in line 8).
   //
-  // Note that goo's count will remain in bar.cc:bar() as it does not have an
+  // Note that goo's count will remain in bar.cc;bar() as it does not have an
   // entry in InstrProfile.
   llvm::StringMap<std::pair<uint64_t, uint64_t>> FlattenSampleMap;
   auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap,
@@ -3157,7 +3157,11 @@ static int order_main(int argc, const char *argv[]) {
   BalancedPartitioning BP(Config);
   BP.run(Nodes);
 
-  WithColor::note() << "# Ordered " << Nodes.size() << " functions\n";
+  OS << "# Ordered " << Nodes.size() << " functions\n";
+  OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
+        "linkage and this output does not take that into account. Some "
+        "post-processing may be required before passing to the linker via "
+        "-order_file.\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
         getParsedIRPGOFuncName(Reader->getSymtab().getFuncOrVarName(N.Id));
@@ -3171,7 +3175,6 @@ static int order_main(int argc, const char *argv[]) {
 int llvm_profdata_main(int argc, char **argvNonConst,
                        const llvm::ToolContext &) {
   const char **argv = const_cast<const char **>(argvNonConst);
-  InitLLVM X(argc, argv);
 
   StringRef ProgName(sys::path::filename(argv[0]));
 

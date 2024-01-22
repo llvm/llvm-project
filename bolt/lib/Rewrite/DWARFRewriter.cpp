@@ -21,7 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
+#include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
@@ -178,6 +178,9 @@ translateInputToOutputLocationList(const BinaryFunction &BF,
   return MergedLL;
 }
 
+using namespace dwarf_linker;
+using namespace dwarf_linker::classic;
+
 namespace llvm {
 namespace bolt {
 /// Emits debug information into .debug_info or .debug_types section.
@@ -278,10 +281,10 @@ private:
 
 public:
   DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
-              DWARFLinker::OutputFileType OutFileType,
+              DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
               std::function<StringRef(StringRef Input)> Translator,
-              DWARFLinker::messageHandler Warning)
+              DWARFLinkerBase::MessageHandlerTy Warning)
       : DwarfStreamer(OutFileType, OutFile, Translator, Warning),
         DIEBldr(DIEBldr), Rewriter(Rewriter){};
 
@@ -457,7 +460,7 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
                   DWARFRewriter &Rewriter) {
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
-      &DIEBldr, Rewriter, llvm::DWARFLinker::OutputFileType::Object, OutFile,
+      &DIEBldr, Rewriter, DWARFLinkerBase::OutputFileType::Object, OutFile,
       [](StringRef Input) -> StringRef { return Input; },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);

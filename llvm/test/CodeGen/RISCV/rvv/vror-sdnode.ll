@@ -1976,4 +1976,3 @@ define <vscale x 8 x i64> @vror_vi_rotl_nxv8i64(<vscale x 8 x i64> %a) {
   %x = call <vscale x 8 x i64> @llvm.fshl.nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %a, <vscale x 8 x i64> shufflevector(<vscale x 8 x i64> insertelement(<vscale x 8 x i64> poison, i64 1, i32 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer))
   ret <vscale x 8 x i64> %x
 }
-

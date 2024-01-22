@@ -73,8 +73,8 @@ struct GenELF64KernelTy : public GenericKernelTy {
     Func = (void (*)())Global.getPtr();
 
     KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /* Unknown */ 2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /* Unknown */ 2;
+    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
+    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
 
     // Set the maximum number of threads to a single.
     MaxNumThreads = 1;
@@ -215,6 +215,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_DEVICE:
     case TARGET_ALLOC_HOST:
     case TARGET_ALLOC_SHARED:
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING:
       MemAlloc = std::malloc(Size);
       break;
     }
@@ -380,6 +381,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<int32_t> initImpl() override {
 #ifdef OMPT_SUPPORT
     ompt::connectLibrary();
+#endif
+
+#ifdef USES_DYNAMIC_FFI
+    if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
+      return std::move(Err);
 #endif
 
     return NUM_DEVICES;

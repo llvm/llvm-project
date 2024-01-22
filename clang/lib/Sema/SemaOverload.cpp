@@ -1273,8 +1273,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       isa<FunctionNoProtoType>(NewQType.getTypePtr()))
     return false;
 
-  const FunctionProtoType *OldType = cast<FunctionProtoType>(OldQType);
-  const FunctionProtoType *NewType = cast<FunctionProtoType>(NewQType);
+  const auto *OldType = cast<FunctionProtoType>(OldQType);
+  const auto *NewType = cast<FunctionProtoType>(NewQType);
 
   // The signature of a function includes the types of its
   // parameters (C++ 1.3.10), which includes the presence or absence
@@ -1287,6 +1287,49 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
        Old->isMemberLikeConstrainedFriend()) &&
       !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
     return true;
+
+  // Compare the parameter lists.
+  // This can only be done once we have establish that friend functions
+  // inhabit the same context, otherwise we might tried to instantiate
+  // references to non-instantiated entities during constraint substitution.
+  // GH78101.
+  if (NewTemplate) {
+    // C++ [temp.over.link]p4:
+    //   The signature of a function template consists of its function
+    //   signature, its return type and its template parameter list. The names
+    //   of the template parameters are significant only for establishing the
+    //   relationship between the template parameters and the rest of the
+    //   signature.
+    //
+    // We check the return type and template parameter lists for function
+    // templates first; the remaining checks follow.
+    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
+        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
+        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
+    bool SameReturnType = SemaRef.Context.hasSameType(
+        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
+    // FIXME(GH58571): Match template parameter list even for non-constrained
+    // template heads. This currently ensures that the code prior to C++20 is
+    // not newly broken.
+    bool ConstraintsInTemplateHead =
+        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
+        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
+    // C++ [namespace.udecl]p11:
+    //   The set of declarations named by a using-declarator that inhabits a
+    //   class C does not include member functions and member function
+    //   templates of a base class that "correspond" to (and thus would
+    //   conflict with) a declaration of a function or function template in
+    //   C.
+    // Comparing return types is not required for the "correspond" check to
+    // decide whether a member introduced by a shadow declaration is hidden.
+    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
+        !SameTemplateParameterList)
+      return true;
+    if (!UseMemberUsingDeclRules &&
+        (!SameTemplateParameterList || !SameReturnType))
+      return true;
+  }
+
   const auto *OldMethod = dyn_cast<CXXMethodDecl>(Old);
   const auto *NewMethod = dyn_cast<CXXMethodDecl>(New);
 
@@ -1410,43 +1453,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     }
   }
 
-  if (NewTemplate) {
-    // C++ [temp.over.link]p4:
-    //   The signature of a function template consists of its function
-    //   signature, its return type and its template parameter list. The names
-    //   of the template parameters are significant only for establishing the
-    //   relationship between the template parameters and the rest of the
-    //   signature.
-    //
-    // We check the return type and template parameter lists for function
-    // templates first; the remaining checks follow.
-    bool SameTemplateParameterList = SemaRef.TemplateParameterListsAreEqual(
-        NewTemplate, NewTemplate->getTemplateParameters(), OldTemplate,
-        OldTemplate->getTemplateParameters(), false, Sema::TPL_TemplateMatch);
-    bool SameReturnType = SemaRef.Context.hasSameType(
-        Old->getDeclaredReturnType(), New->getDeclaredReturnType());
-    // FIXME(GH58571): Match template parameter list even for non-constrained
-    // template heads. This currently ensures that the code prior to C++20 is
-    // not newly broken.
-    bool ConstraintsInTemplateHead =
-        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
-        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
-    // C++ [namespace.udecl]p11:
-    //   The set of declarations named by a using-declarator that inhabits a
-    //   class C does not include member functions and member function
-    //   templates of a base class that "correspond" to (and thus would
-    //   conflict with) a declaration of a function or function template in
-    //   C.
-    // Comparing return types is not required for the "correspond" check to
-    // decide whether a member introduced by a shadow declaration is hidden.
-    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
-        !SameTemplateParameterList)
-      return true;
-    if (!UseMemberUsingDeclRules &&
-        (!SameTemplateParameterList || !SameReturnType))
-      return true;
-  }
-
   if (!UseOverrideRules) {
     Expr *NewRC = New->getTrailingRequiresClause(),
          *OldRC = Old->getTrailingRequiresClause();
@@ -1562,19 +1568,37 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     //   called for those cases.
     if (CXXConstructorDecl *Constructor
           = dyn_cast<CXXConstructorDecl>(ICS.UserDefined.ConversionFunction)) {
-      QualType FromCanon
-        = S.Context.getCanonicalType(From->getType().getUnqualifiedType());
+      QualType FromType;
+      SourceLocation FromLoc;
+      // C++11 [over.ics.list]p6, per DR2137:
+      // C++17 [over.ics.list]p6:
+      //   If C is not an initializer-list constructor and the initializer list
+      //   has a single element of type cv U, where U is X or a class derived
+      //   from X, the implicit conversion sequence has Exact Match rank if U is
+      //   X, or Conversion rank if U is derived from X.
+      if (const auto *InitList = dyn_cast<InitListExpr>(From);
+          InitList && InitList->getNumInits() == 1 &&
+          !S.isInitListConstructor(Constructor)) {
+        const Expr *SingleInit = InitList->getInit(0);
+        FromType = SingleInit->getType();
+        FromLoc = SingleInit->getBeginLoc();
+      } else {
+        FromType = From->getType();
+        FromLoc = From->getBeginLoc();
+      }
+      QualType FromCanon =
+          S.Context.getCanonicalType(FromType.getUnqualifiedType());
       QualType ToCanon
         = S.Context.getCanonicalType(ToType).getUnqualifiedType();
       if (Constructor->isCopyConstructor() &&
           (FromCanon == ToCanon ||
-           S.IsDerivedFrom(From->getBeginLoc(), FromCanon, ToCanon))) {
+           S.IsDerivedFrom(FromLoc, FromCanon, ToCanon))) {
         // Turn this into a "standard" conversion sequence, so that it
         // gets ranked with standard conversion sequences.
         DeclAccessPair Found = ICS.UserDefined.FoundConversionFunction;
         ICS.setStandard();
         ICS.Standard.setAsIdentityConversion();
-        ICS.Standard.setFromType(From->getType());
+        ICS.Standard.setFromType(FromType);
         ICS.Standard.setAllToTypes(ToType);
         ICS.Standard.CopyConstructor = Constructor;
         ICS.Standard.FoundCopyConstructor = Found;
@@ -1782,26 +1806,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
   if (FromEInfo.getNoReturn() && !ToEInfo.getNoReturn()) {
     FromFn = Context.adjustFunctionType(FromFn, FromEInfo.withNoReturn(false));
     Changed = true;
-  }
-
-  // Drop the 'arm_preserves_za' if not present in the target type (we can do
-  // that because it is merely a hint).
-  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-    if (ExtInfo.AArch64SMEAttributes &
-        FunctionType::SME_PStateZAPreservedMask) {
-      unsigned ToFlags = 0;
-      if (const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn))
-        ToFlags = ToFPT->getExtProtoInfo().AArch64SMEAttributes;
-      if (!(ToFlags & FunctionType::SME_PStateZAPreservedMask)) {
-        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask,
-                                   false);
-        QualType QT = Context.getFunctionType(
-            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
-        FromFn = QT->getAs<FunctionType>();
-        Changed = true;
-      }
-    }
   }
 
   // Drop 'noexcept' if not present in target type.
@@ -5320,18 +5324,18 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       IsDesignatedInit)
     return Result;
 
-  // Per DR1467:
-  //   If the parameter type is a class X and the initializer list has a single
-  //   element of type cv U, where U is X or a class derived from X, the
-  //   implicit conversion sequence is the one required to convert the element
-  //   to the parameter type.
+  // Per DR1467 and DR2137:
+  //   If the parameter type is an aggregate class X and the initializer list
+  //   has a single element of type cv U, where U is X or a class derived from
+  //   X, the implicit conversion sequence is the one required to convert the
+  //   element to the parameter type.
   //
   //   Otherwise, if the parameter type is a character array [... ]
   //   and the initializer list has a single element that is an
   //   appropriately-typed string literal (8.5.2 [dcl.init.string]), the
   //   implicit conversion sequence is the identity conversion.
   if (From->getNumInits() == 1 && !IsDesignatedInit) {
-    if (ToType->isRecordType()) {
+    if (ToType->isRecordType() && ToType->isAggregateType()) {
       QualType InitType = From->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, ToType) ||
           S.IsDerivedFrom(From->getBeginLoc(), InitType, ToType))
@@ -6055,6 +6059,16 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     return S.Diag(From->getBeginLoc(),
                   diag::err_typecheck_converted_constant_expression_indirect)
            << From->getType() << From->getSourceRange() << T;
+  }
+  // 'TryCopyInitialization' returns incorrect info for attempts to bind
+  // a reference to a bit-field due to C++ [over.ics.ref]p4. Namely,
+  // 'SCS->DirectBinding' occurs to be set to 'true' despite it is not
+  // the direct binding according to C++ [dcl.init.ref]p5. Hence, check this
+  // case explicitly.
+  if (From->refersToBitField() && T.getTypePtr()->isReferenceType()) {
+    return S.Diag(From->getBeginLoc(),
+                  diag::err_reference_bind_to_bitfield_in_cce)
+           << From->getSourceRange();
   }
 
   // Usually we can simply apply the ImplicitConversionSequence we formed
@@ -7713,9 +7727,19 @@ bool Sema::CheckNonDependentConversions(
        ++I) {
     QualType ParamType = ParamTypes[I + Offset];
     if (!ParamType->isDependentType()) {
-      unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed
-                             ? 0
-                             : (ThisConversions + I);
+      unsigned ConvIdx;
+      if (PO == OverloadCandidateParamOrder::Reversed) {
+        ConvIdx = Args.size() - 1 - I;
+        assert(Args.size() + ThisConversions == 2 &&
+               "number of args (including 'this') must be exactly 2 for "
+               "reversed order");
+        // For members, there would be only one arg 'Args[0]' whose ConvIdx
+        // would also be 0. 'this' got ConvIdx = 1 previously.
+        assert(!HasThisConversion || (ConvIdx == 0 && I == 0));
+      } else {
+        // For members, 'this' got ConvIdx = 0 previously.
+        ConvIdx = ThisConversions + I;
+      }
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
                                 SuppressUserConversions,
@@ -10111,11 +10135,23 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
   return M->getFunctionObjectParameterReferenceType();
 }
 
-static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
-                                   const FunctionDecl *F2) {
+// As a Clang extension, allow ambiguity among F1 and F2 if they represent
+// represent the same entity.
+static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
+                           const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
-
+  auto PT1 = F1->getPrimaryTemplate();
+  auto PT2 = F2->getPrimaryTemplate();
+  if (PT1 && PT2) {
+    if (declaresSameEntity(PT1, PT2) ||
+        declaresSameEntity(PT1->getInstantiatedFromMemberTemplate(),
+                           PT2->getInstantiatedFromMemberTemplate()))
+      return true;
+  }
+  // TODO: It is not clear whether comparing parameters is necessary (i.e.
+  // different functions with same params). Consider removing this (as no test
+  // fail w/o it).
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
       if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
@@ -10319,14 +10355,14 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function)) {
+          allowAmbiguity(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
-        // When comparing a function against a reversed function with the same
-        // parameter types, if we have a better conversion for one argument and
-        // a worse conversion for the other, the implicit conversion sequences
-        // are treated as being equally good.
+        // When comparing a function against a reversed function, if we have a
+        // better conversion for one argument and a worse conversion for the
+        // other, the implicit conversion sequences are treated as being equally
+        // good.
         //
         // This prevents a comparison function from being considered ambiguous
         // with a reversed form that is written in the same way.
@@ -13995,6 +14031,22 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   OverloadingResult OverloadResult =
       CandidateSet.BestViableFunction(*this, Fn->getBeginLoc(), Best);
 
+  // Model the case with a call to a templated function whose definition
+  // encloses the call and whose return type contains a placeholder type as if
+  // the UnresolvedLookupExpr was type-dependent.
+  if (OverloadResult == OR_Success) {
+    const FunctionDecl *FDecl = Best->Function;
+    if (FDecl && FDecl->isTemplateInstantiation() &&
+        FDecl->getReturnType()->isUndeducedType()) {
+      if (const auto *TP =
+              FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+          TP && TP->willHaveBody()) {
+        return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
+                                VK_PRValue, RParenLoc, CurFPFeatureOverrides());
+      }
+    }
+  }
+
   return FinishOverloadedCallExpr(*this, S, Fn, ULE, LParenLoc, Args, RParenLoc,
                                   ExecConfig, &CandidateSet, &Best,
                                   OverloadResult, AllowTypoCorrection);
@@ -14500,7 +14552,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                haveSameParameterTypes(Context, Cand.Function, FnDecl)) {
+                allowAmbiguity(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],
@@ -15438,7 +15490,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   }
 
   if (isa<CXXConstructorDecl, CXXDestructorDecl>(CurContext) &&
-      TheCall->getDirectCallee()->isPure()) {
+      TheCall->getDirectCallee()->isPureVirtual()) {
     const FunctionDecl *MD = TheCall->getDirectCallee();
 
     if (isa<CXXThisExpr>(MemExpr->getBase()->IgnoreParenCasts()) &&

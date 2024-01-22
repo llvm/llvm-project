@@ -936,9 +936,8 @@ int64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
       // Add in the offset, as calculated by the structure layout info...
       Result += Layout->getElementOffset(FieldNo);
     } else {
-      // Get the array index and the size of each array element.
-      if (int64_t arrayIdx = cast<ConstantInt>(Idx)->getSExtValue())
-        Result += arrayIdx * getTypeAllocSize(GTI.getIndexedType());
+      if (int64_t ArrayIdx = cast<ConstantInt>(Idx)->getSExtValue())
+        Result += ArrayIdx * GTI.getSequentialElementStride(*this);
     }
   }
 

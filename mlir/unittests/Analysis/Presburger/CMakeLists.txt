@@ -1,5 +1,7 @@
 add_mlir_unittest(MLIRPresburgerTests
+  BarvinokTest.cpp
   FractionTest.cpp
+  GeneratingFunctionTest.cpp
   IntegerPolyhedronTest.cpp
   IntegerRelationTest.cpp
   LinearTransformTest.cpp

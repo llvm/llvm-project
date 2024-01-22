@@ -2172,6 +2172,9 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
     }
 
     AddMIFlags();
+
+    // Mark the mutated instruction as erased.
+    Rule.tryEraseInsnID(RecycleInsnID);
     return;
   }
 
@@ -2223,12 +2226,6 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
   }
 
   AddMIFlags();
-
-  // FIXME: This is a hack but it's sufficient for ISel. We'll need to do
-  //        better for combines. Particularly when there are multiple match
-  //        roots.
-  if (InsnID == 0)
-    EraseInstAction::emitActionOpcodes(Table, Rule, /*InsnID*/ 0);
 }
 
 //===- BuildConstantAction ------------------------------------------------===//

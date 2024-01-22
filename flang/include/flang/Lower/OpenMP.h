@@ -56,7 +56,10 @@ void genOpenMPTerminator(fir::FirOpBuilder &, mlir::Operation *,
 void genOpenMPConstruct(AbstractConverter &, Fortran::lower::SymMap &,
                         semantics::SemanticsContext &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
-void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
+void genOpenMPDeclarativeConstruct(AbstractConverter &,
+                                   Fortran::lower::SymMap &,
+                                   semantics::SemanticsContext &,
+                                   pft::Evaluation &,
                                    const parser::OpenMPDeclarativeConstruct &);
 /// Symbols in OpenMP code can have flags (e.g. threadprivate directive)
 /// that require additional handling when lowering the corresponding

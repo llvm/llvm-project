@@ -235,7 +235,7 @@ public:
   std::string toString() const {
     SmallString<40> S;
     toString(S);
-    return std::string(S.str());
+    return std::string(S);
   }
 
   void print(raw_ostream &) const;

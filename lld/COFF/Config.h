@@ -186,9 +186,9 @@ struct Configuration {
   // Used for /opt:lldltopartitions=N
   unsigned ltoPartitions = 1;
 
-  // Used for /opt:lldltocache=path
+  // Used for /lldltocache=path
   StringRef ltoCache;
-  // Used for /opt:lldltocachepolicy=policy
+  // Used for /lldltocachepolicy=policy
   llvm::CachePruningPolicy ltoCachePolicy;
 
   // Used for /opt:[no]ltodebugpassmanager

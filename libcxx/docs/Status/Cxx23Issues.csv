@@ -15,7 +15,7 @@
 "`2743 <https://wg21.link/LWG2743>`__","P0083R3 ``node_handle`` private members missing ""exposition only"" comment","November 2020","|Nothing To Do|",""
 "`2820 <https://wg21.link/LWG2820>`__","Clarify ``<cstdint>`` macros","November 2020","|Nothing To Do|",""
 "`3120 <https://wg21.link/LWG3120>`__","Unclear behavior of ``monotonic_buffer_resource::release()``","November 2020","",""
-"`3170 <https://wg21.link/LWG3170>`__","``is_always_equal`` added to ``std::allocator`` makes the standard library treat derived types as always equal","November 2020","",""
+"`3170 <https://wg21.link/LWG3170>`__","``is_always_equal`` added to ``std::allocator`` makes the standard library treat derived types as always equal","November 2020","|Complete|","18.0"
 "`3036 <https://wg21.link/LWG3036>`__","``polymorphic_allocator::destroy`` is extraneous","November 2020","",""
 "`3171 <https://wg21.link/LWG3171>`__","LWG2989 breaks ``directory_entry`` stream insertion","November 2020","|Complete|","14.0"
 "`3306 <https://wg21.link/LWG3306>`__","``ranges::advance`` violates its preconditions","November 2020","|Complete|","14.0","|ranges|"

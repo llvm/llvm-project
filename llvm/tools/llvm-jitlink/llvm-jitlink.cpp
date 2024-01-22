@@ -331,8 +331,12 @@ operator<<(raw_ostream &OS, const Session::FileInfo &FI) {
     OS << "  Section \"" << SIKV.first() << "\": " << SIKV.second << "\n";
   for (auto &GOTKV : FI.GOTEntryInfos)
     OS << "  GOT \"" << GOTKV.first() << "\": " << GOTKV.second << "\n";
-  for (auto &StubKV : FI.StubInfos)
-    OS << "  Stub \"" << StubKV.first() << "\": " << StubKV.second << "\n";
+  for (auto &StubKVs : FI.StubInfos) {
+    OS << "  Stubs \"" << StubKVs.first() << "\":";
+    for (auto MemRegion : StubKVs.second)
+      OS << " " << MemRegion;
+    OS << "\n";
+  }
   return OS;
 }
 
@@ -1183,6 +1187,62 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   return Error::success();
 }
 
+Error Session::FileInfo::registerGOTEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+  GOTEntryInfos[TS->getName()] = {Sym.getSymbolContent(),
+                                  Sym.getAddress().getValue(),
+                                  Sym.getTargetFlags()};
+  return Error::success();
+}
+
+Error Session::FileInfo::registerStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+
+  SmallVector<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
+  Entry.insert(Entry.begin(),
+               {Sym.getSymbolContent(), Sym.getAddress().getValue(),
+                Sym.getTargetFlags()});
+  return Error::success();
+}
+
+Error Session::FileInfo::registerMultiStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+
+  auto Target = GetSymbolTarget(G, Sym.getBlock());
+  if (!Target)
+    return Target.takeError();
+
+  SmallVector<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
+  Entry.emplace_back(Sym.getSymbolContent(), Sym.getAddress().getValue(),
+                     Sym.getTargetFlags());
+
+  // Let's keep stubs ordered by ascending address.
+  std::sort(Entry.begin(), Entry.end(),
+            [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
+              return L.getTargetAddress() < R.getTargetAddress();
+            });
+
+  return Error::success();
+}
+
 Expected<Session::FileInfo &> Session::findFileInfo(StringRef FileName) {
   auto FileInfoItr = FileInfos.find(FileName);
   if (FileInfoItr == FileInfos.end())
@@ -1205,8 +1265,14 @@ Session::findSectionInfo(StringRef FileName, StringRef SectionName) {
   return SecInfoItr->second;
 }
 
+static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
+  // Implement acutal stub kind detection
+  return "";
+}
+
 Expected<Session::MemoryRegionInfo &>
-Session::findStubInfo(StringRef FileName, StringRef TargetName) {
+Session::findStubInfo(StringRef FileName, StringRef TargetName,
+                      StringRef KindNameFilter) {
   auto FI = findFileInfo(FileName);
   if (!FI)
     return FI.takeError();
@@ -1216,7 +1282,38 @@ Session::findStubInfo(StringRef FileName, StringRef TargetName) {
                                        "\" registered for file \"" + FileName +
                                        "\"",
                                    inconvertibleErrorCode());
-  return StubInfoItr->second;
+  auto &StubsForTarget = StubInfoItr->second;
+  assert(!StubsForTarget.empty() && "At least 1 stub in each entry");
+  if (KindNameFilter.empty() && StubsForTarget.size() == 1)
+    return StubsForTarget[0]; // Regular single-stub match
+
+  std::string KindsStr;
+  SmallVector<MemoryRegionInfo *, 1> Matches;
+  Regex KindNameMatcher(KindNameFilter.empty() ? ".*" : KindNameFilter);
+  for (MemoryRegionInfo &Stub : StubsForTarget) {
+    StringRef Kind = detectStubKind(Stub);
+    if (KindNameMatcher.match(Kind))
+      Matches.push_back(&Stub);
+    KindsStr += "\"" + (Kind.empty() ? "<unknown>" : Kind.str()) + "\", ";
+  }
+  if (Matches.empty())
+    return make_error<StringError>(
+        "\"" + TargetName + "\" has " + Twine(StubsForTarget.size()) +
+            " stubs in file \"" + FileName +
+            "\", but none of them matches the stub-kind filter \"" +
+            KindNameFilter + "\" (all encountered kinds are " +
+            StringRef(KindsStr.data(), KindsStr.size() - 2) + ").",
+        inconvertibleErrorCode());
+  if (Matches.size() > 1)
+    return make_error<StringError>(
+        "\"" + TargetName + "\" has " + Twine(Matches.size()) +
+            " candidate stubs in file \"" + FileName +
+            "\". Please refine stub-kind filter \"" + KindNameFilter +
+            "\" for disambiguation (encountered kinds are " +
+            StringRef(KindsStr.data(), KindsStr.size() - 2) + ").",
+        inconvertibleErrorCode());
+
+  return *Matches[0];
 }
 
 Expected<Session::MemoryRegionInfo &>
@@ -1985,8 +2082,9 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
     return S.findSectionInfo(FileName, SectionName);
   };
 
-  auto GetStubInfo = [&S](StringRef FileName, StringRef SectionName) {
-    return S.findStubInfo(FileName, SectionName);
+  auto GetStubInfo = [&S](StringRef FileName, StringRef SectionName,
+                          StringRef KindNameFilter) {
+    return S.findStubInfo(FileName, SectionName, KindNameFilter);
   };
 
   auto GetGOTInfo = [&S](StringRef FileName, StringRef SectionName) {

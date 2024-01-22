@@ -355,7 +355,7 @@ define amdgpu_kernel void @k123() {
 
 ; Table size length number-kernels * number-variables * sizeof(uint16_t)
 ; GCN:      .type	llvm.amdgcn.lds.offset.table,@object
-; GCN-NEXT: .section	.data.rel.ro,#alloc,#write
+; GCN-NEXT: .section	.data.rel.ro,"aw"
 ; GCN-NEXT: .p2align	4, 0x0
 ; GCN-NEXT: llvm.amdgcn.lds.offset.table:
 ; GCN-NEXT: .long	0+4

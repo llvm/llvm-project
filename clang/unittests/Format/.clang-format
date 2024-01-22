@@ -1,1 +1,6 @@
-BasedOnStyle: clang-format
+BasedOnStyle: LLVM
+InsertBraces: true
+InsertNewlineAtEOF: true
+LineEnding: LF
+RemoveBracesLLVM: true
+RemoveParentheses: ReturnStatement

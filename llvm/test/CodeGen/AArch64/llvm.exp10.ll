@@ -298,18 +298,9 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 }
 
 define float @exp10_f32(float %x) {
-; SDAG-LABEL: exp10_f32:
-; SDAG:       // %bb.0:
-; SDAG-NEXT:    b exp10f
-;
-; GISEL-LABEL: exp10_f32:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; GISEL-NEXT:    .cfi_def_cfa_offset 16
-; GISEL-NEXT:    .cfi_offset w30, -16
-; GISEL-NEXT:    bl exp10f
-; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; GISEL-NEXT:    ret
+; CHECK-LABEL: exp10_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b exp10f
   %r = call float @llvm.exp10.f32(float %x)
   ret float %r
 }
@@ -541,18 +532,9 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 }
 
 define double @exp10_f64(double %x) {
-; SDAG-LABEL: exp10_f64:
-; SDAG:       // %bb.0:
-; SDAG-NEXT:    b exp10
-;
-; GISEL-LABEL: exp10_f64:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; GISEL-NEXT:    .cfi_def_cfa_offset 16
-; GISEL-NEXT:    .cfi_offset w30, -16
-; GISEL-NEXT:    bl exp10
-; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; GISEL-NEXT:    ret
+; CHECK-LABEL: exp10_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b exp10
   %r = call double @llvm.exp10.f64(double %x)
   ret double %r
 }

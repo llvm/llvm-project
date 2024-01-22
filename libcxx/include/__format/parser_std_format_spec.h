@@ -733,10 +733,9 @@ private:
 
     __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
     __width_                            = __r.__value;
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __width_ != 0,
-        "A zero value isn't allowed and should be impossible, "
-        "due to validations in this function");
+    _LIBCPP_ASSERT_INTERNAL(__width_ != 0,
+                            "A zero value isn't allowed and should be impossible, "
+                            "due to validations in this function");
     __begin = __r.__last;
     return true;
   }

@@ -580,6 +580,12 @@ std::optional<char32_t> IoStatementState::NextInField(
         case '*':
         case '\n': // for stream access
           return std::nullopt;
+        case '&':
+        case '$':
+          if (edit.IsNamelist()) {
+            return std::nullopt;
+          }
+          break;
         case ',':
           if (!(edit.modes.editingFlags & decimalComma)) {
             return std::nullopt;
@@ -692,9 +698,6 @@ void FormattedIoStatementState<Direction::Input>::GotChar(int n) {
 
 bool ListDirectedStatementState<Direction::Output>::EmitLeadingSpaceOrAdvance(
     IoStatementState &io, std::size_t length, bool isCharacter) {
-  if (length == 0) {
-    return true;
-  }
   const ConnectionState &connection{io.GetConnectionState()};
   int space{connection.positionInRecord == 0 ||
       !(isCharacter && lastWasUndelimitedCharacter())};

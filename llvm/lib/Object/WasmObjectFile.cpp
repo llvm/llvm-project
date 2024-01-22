@@ -258,7 +258,7 @@ static wasm::WasmLimits readLimits(WasmObjectFile::ReadContext &Ctx) {
 
 static wasm::WasmTableType readTableType(WasmObjectFile::ReadContext &Ctx) {
   wasm::WasmTableType TableType;
-  TableType.ElemType = readUint8(Ctx);
+  TableType.ElemType = wasm::ValType(readVaruint32(Ctx));
   TableType.Limits = readLimits(Ctx);
   return TableType;
 }
@@ -1163,8 +1163,8 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
       Im.Table = readTableType(Ctx);
       NumImportedTables++;
       auto ElemType = Im.Table.ElemType;
-      if (ElemType != wasm::WASM_TYPE_FUNCREF &&
-          ElemType != wasm::WASM_TYPE_EXTERNREF)
+      if (ElemType != wasm::ValType::FUNCREF &&
+          ElemType != wasm::ValType::EXTERNREF)
         return make_error<GenericBinaryError>("invalid table element type",
                                               object_error::parse_failed);
       break;
@@ -1220,8 +1220,8 @@ Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
     T.Index = NumImportedTables + Tables.size();
     Tables.push_back(T);
     auto ElemType = Tables.back().Type.ElemType;
-    if (ElemType != wasm::WASM_TYPE_FUNCREF &&
-        ElemType != wasm::WASM_TYPE_EXTERNREF) {
+    if (ElemType != wasm::ValType::FUNCREF &&
+        ElemType != wasm::ValType::EXTERNREF) {
       return make_error<GenericBinaryError>("invalid table element type",
                                             object_error::parse_failed);
     }
@@ -1351,6 +1351,7 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       Info.Kind = wasm::WASM_SYMBOL_TYPE_TABLE;
+      Info.ElementIndex = Ex.Index;
       break;
     default:
       return make_error<GenericBinaryError>("unexpected export kind",
@@ -1533,21 +1534,22 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     }
 
     if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
-      Segment.ElemKind = readUint8(Ctx);
+      auto ElemKind = readVaruint32(Ctx);
       if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS) {
-        if (Segment.ElemKind != uint8_t(wasm::ValType::FUNCREF) &&
-            Segment.ElemKind != uint8_t(wasm::ValType::EXTERNREF)) {
+        Segment.ElemKind = wasm::ValType(ElemKind);
+        if (Segment.ElemKind != wasm::ValType::FUNCREF &&
+            Segment.ElemKind != wasm::ValType::EXTERNREF) {
           return make_error<GenericBinaryError>("invalid reference type",
                                                 object_error::parse_failed);
         }
       } else {
-        if (Segment.ElemKind != 0)
+        if (ElemKind != 0)
           return make_error<GenericBinaryError>("invalid elemtype",
                                                 object_error::parse_failed);
-        Segment.ElemKind = uint8_t(wasm::ValType::FUNCREF);
+        Segment.ElemKind = wasm::ValType::FUNCREF;
       }
     } else {
-      Segment.ElemKind = uint8_t(wasm::ValType::FUNCREF);
+      Segment.ElemKind = wasm::ValType::FUNCREF;
     }
 
     if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS)
@@ -1667,10 +1669,18 @@ Expected<StringRef> WasmObjectFile::getSymbolName(DataRefImpl Symb) const {
 Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   auto &Sym = getWasmSymbol(Symb);
   if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION &&
-      isDefinedFunctionIndex(Sym.Info.ElementIndex))
-    return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset;
-  else
-    return getSymbolValue(Symb);
+      isDefinedFunctionIndex(Sym.Info.ElementIndex)) {
+    // For object files, use the section offset. The linker relies on this.
+    // For linked files, use the file offset. This behavior matches the way
+    // browsers print stack traces and is useful for binary size analysis.
+    // (see https://webassembly.github.io/spec/web-api/index.html#conventions)
+    uint32_t Adjustment = isRelocatableObject() || isSharedObject()
+                              ? 0
+                              : Sections[CodeSection].Offset;
+    return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset +
+           Adjustment;
+  }
+  return getSymbolValue(Symb);
 }
 
 uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol &Sym) const {

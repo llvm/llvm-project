@@ -30,16 +30,15 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
   io.mutableModes().inNamelist = true;
-  char comma{static_cast<char>(GetComma(io))};
   ConnectionState &connection{io.GetConnectionState()};
-  // Internal functions to advance records and convert case
-  const auto EmitWithAdvance{[&](char ch) -> bool {
-    return (!connection.NeedAdvance(1) || io.AdvanceRecord()) &&
-        EmitAscii(io, &ch, 1);
-  }};
-  const auto EmitUpperCase{[&](const char *str) -> bool {
-    if (connection.NeedAdvance(std::strlen(str)) &&
-        !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) {
+  // Internal function to advance records and convert case
+  const auto EmitUpperCase{[&](const char *prefix, std::size_t prefixLen,
+                               const char *str, char suffix) -> bool {
+    if ((connection.NeedAdvance(prefixLen) &&
+            !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) ||
+        !EmitAscii(io, prefix, prefixLen) ||
+        (connection.NeedAdvance(std::strlen(str) + (suffix != ' ')) &&
+            !(io.AdvanceRecord() && EmitAscii(io, " ", 1)))) {
       return false;
     }
     for (; *str; ++str) {
@@ -49,23 +48,25 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
         return false;
       }
     }
-    return true;
+    return suffix == ' ' || EmitAscii(io, &suffix, 1);
   }};
   // &GROUP
-  if (!(EmitWithAdvance('&') && EmitUpperCase(group.groupName))) {
+  if (!EmitUpperCase(" &", 2, group.groupName, ' ')) {
     return false;
   }
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
+  char comma{static_cast<char>(GetComma(io))};
+  char prefix{' '};
   for (std::size_t j{0}; j < group.items; ++j) {
     // [,]ITEM=...
     const NamelistGroup::Item &item{group.item[j]};
     if (listOutput) {
       listOutput->set_lastWasUndelimitedCharacter(false);
     }
-    if (!EmitWithAdvance(j == 0 ? ' ' : comma) || !EmitUpperCase(item.name) ||
-        !EmitWithAdvance('=')) {
+    if (!EmitUpperCase(&prefix, 1, item.name, '=')) {
       return false;
     }
+    prefix = comma;
     if (const auto *addendum{item.descriptor.Addendum()};
         addendum && addendum->derivedType()) {
       const NonTbpDefinedIoTable *table{group.nonTbpDefinedIo};
@@ -77,12 +78,12 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
   }
   // terminal /
-  return EmitWithAdvance('/');
+  return EmitUpperCase("/", 1, "", ' ');
 }
 
 static constexpr bool IsLegalIdStart(char32_t ch) {
   return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_' ||
-      ch == '@' || ch == '$';
+      ch == '@';
 }
 
 static constexpr bool IsLegalIdChar(char32_t ch) {
@@ -247,6 +248,28 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
+static void StorageSequenceExtension(
+    Descriptor &desc, const Descriptor &source) {
+  // Support the near-universal extension of NAMELIST input into a
+  // designatable storage sequence identified by its initial scalar array
+  // element.  For example, treat "A(1) = 1. 2. 3." as if it had been
+  // "A(1:) = 1. 2. 3.".
+  if (desc.rank() == 0 && (source.rank() == 1 || source.IsContiguous())) {
+    if (auto stride{source.rank() == 1
+                ? source.GetDimension(0).ByteStride()
+                : static_cast<SubscriptValue>(source.ElementBytes())};
+        stride != 0) {
+      desc.raw().attribute = CFI_attribute_pointer;
+      desc.raw().rank = 1;
+      desc.GetDimension(0)
+          .SetBounds(1,
+              source.Elements() -
+                  ((source.OffsetElement() - desc.OffsetElement()) / stride))
+          .SetByteStride(stride);
+    }
+  }
+}
+
 static bool HandleSubstring(
     IoStatementState &io, Descriptor &desc, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
@@ -378,12 +401,13 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
-// Advance to the terminal '/' of a namelist group.
+// Advance to the terminal '/' of a namelist group or leading '&'/'$'
+// of the next.
 static void SkipNamelistGroup(IoStatementState &io) {
   std::size_t byteCount{0};
   while (auto ch{io.GetNextNonBlank(byteCount)}) {
     io.HandleRelativePosition(byteCount);
-    if (*ch == '/') {
+    if (*ch == '/' || *ch == '&' || *ch == '$') {
       break;
     } else if (*ch == '\'' || *ch == '"') {
       // Skip quoted character literal
@@ -418,7 +442,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   std::size_t byteCount{0};
   while (true) {
     next = io.GetNextNonBlank(byteCount);
-    while (next && *next != '&') {
+    while (next && *next != '&' && *next != '$') {
       // Extension: comment lines without ! before namelist groups
       if (!io.AdvanceRecord()) {
         next.reset();
@@ -430,9 +454,10 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       handler.SignalEnd();
       return false;
     }
-    if (*next != '&') {
+    if (*next != '&' && *next != '$') {
       handler.SignalError(
-          "NAMELIST input group does not begin with '&' (at '%lc')", *next);
+          "NAMELIST input group does not begin with '&' or '$' (at '%lc')",
+          *next);
       return false;
     }
     io.HandleRelativePosition(byteCount);
@@ -448,7 +473,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   // Read the group's items
   while (true) {
     next = io.GetNextNonBlank(byteCount);
-    if (!next || *next == '/') {
+    if (!next || *next == '/' || *next == '&' || *next == '$') {
       break;
     }
     if (!GetLowerCaseName(io, name, sizeof name)) {
@@ -478,10 +503,14 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     bool hadSubscripts{false};
     bool hadSubstring{false};
     if (next && (*next == '(' || *next == '%')) {
+      const Descriptor *lastSubscriptBase{nullptr};
+      Descriptor *lastSubscriptDescriptor{nullptr};
       do {
         Descriptor &mutableDescriptor{staticDesc[whichStaticDesc].descriptor()};
         whichStaticDesc ^= 1;
         io.HandleRelativePosition(byteCount); // skip over '(' or '%'
+        lastSubscriptDescriptor = nullptr;
+        lastSubscriptBase = nullptr;
         if (*next == '(') {
           if (!hadSubstring && (hadSubscripts || useDescriptor->rank() == 0)) {
             mutableDescriptor = *useDescriptor;
@@ -495,11 +524,12 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
                                 "NAMELIST group '%s'",
                 name, group.groupName);
             return false;
+          } else if (HandleSubscripts(
+                         io, mutableDescriptor, *useDescriptor, name)) {
+            lastSubscriptBase = useDescriptor;
+            lastSubscriptDescriptor = &mutableDescriptor;
           } else {
-            if (!HandleSubscripts(
-                    io, mutableDescriptor, *useDescriptor, name)) {
-              return false;
-            }
+            return false;
           }
           hadSubscripts = true;
         } else {
@@ -512,6 +542,9 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         useDescriptor = &mutableDescriptor;
         next = io.GetCurrentChar(byteCount);
       } while (next && (*next == '(' || *next == '%'));
+      if (lastSubscriptDescriptor) {
+        StorageSequenceExtension(*lastSubscriptDescriptor, *lastSubscriptBase);
+      }
     }
     // Skip the '='
     next = io.GetNextNonBlank(byteCount);
@@ -540,12 +573,15 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       io.HandleRelativePosition(byteCount);
     }
   }
-  if (!next || *next != '/') {
+  if (next && *next == '/') {
+    io.HandleRelativePosition(byteCount);
+  } else if (*next && (*next == '&' || *next == '$')) {
+    // stop at beginning of next group
+  } else {
     handler.SignalError(
         "No '/' found after NAMELIST group '%s'", group.groupName);
     return false;
   }
-  io.HandleRelativePosition(byteCount);
   return true;
 }
 
@@ -565,7 +601,7 @@ bool IsNamelistNameOrSlash(IoStatementState &io) {
           // TODO: how to deal with NaN(...) ambiguity?
           return ch && (*ch == '=' || *ch == '(' || *ch == '%');
         } else {
-          return *ch == '/';
+          return *ch == '/' || *ch == '&' || *ch == '$';
         }
       }
     }

@@ -4737,6 +4737,7 @@ namespace {
     QualType Replacement;
     bool ReplacementIsPack;
     bool UseTypeSugar;
+    using inherited = TreeTransform<SubstituteDeducedTypeTransform>;
 
   public:
     SubstituteDeducedTypeTransform(Sema &SemaRef, DependentAuto DA)
@@ -4796,6 +4797,16 @@ namespace {
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       // Lambdas never need to be transformed.
       return E;
+    }
+    bool TransformExceptionSpec(SourceLocation Loc,
+                                FunctionProtoType::ExceptionSpecInfo &ESI,
+                                SmallVectorImpl<QualType> &Exceptions,
+                                bool &Changed) {
+      if (ESI.Type == EST_Uninstantiated) {
+        ESI.instantiate();
+        Changed = true;
+      }
+      return inherited::TransformExceptionSpec(Loc, ESI, Exceptions, Changed);
     }
 
     QualType Apply(TypeLoc TL) {

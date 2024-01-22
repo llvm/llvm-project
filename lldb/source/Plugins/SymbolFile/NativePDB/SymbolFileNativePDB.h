@@ -94,7 +94,7 @@ public:
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
 
   bool ParseSupportFiles(lldb_private::CompileUnit &comp_unit,
-                         FileSpecList &support_files) override;
+                         SupportFileList &support_files) override;
   size_t ParseTypes(lldb_private::CompileUnit &comp_unit) override;
 
   bool ParseImportedModules(

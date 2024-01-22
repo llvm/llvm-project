@@ -305,7 +305,7 @@ attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memo
 
 ; Table size length number-kernels * number-variables * sizeof(uint16_t)
 ; GCN:      .type	llvm.amdgcn.lds.offset.table,@object
-; GCN-NEXT: .section	.data.rel.ro,#alloc,#write
+; GCN-NEXT: .section	.data.rel.ro,"aw"
 ; GCN-NEXT: .p2align	2, 0x0
 ; GCN-NEXT: llvm.amdgcn.lds.offset.table:
 ; GCN-NEXT: .long	8

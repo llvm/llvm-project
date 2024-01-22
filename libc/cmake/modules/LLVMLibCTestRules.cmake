@@ -499,6 +499,13 @@ function(add_integration_test test_name)
       libc.src.string.memmove
       libc.src.string.memset
   )
+
+  if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+    # __stack_chk_fail should always be included if supported to allow building
+    # libc with the stack protector enabled.
+    list(APPEND fq_deps_list libc.src.compiler.__stack_chk_fail)
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -667,7 +674,13 @@ function(add_libc_hermetic_test test_name)
       libc.src.__support.StringUtil.error_to_string
   )
 
-  if(TARGET libc.src.time.clock)
+  if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+    # __stack_chk_fail should always be included if supported to allow building
+    # libc with the stack protector enabled.
+    list(APPEND fq_deps_list libc.src.compiler.__stack_chk_fail)
+  endif()
+
+  if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # We will link in the 'clock' implementation if it exists for test timing.
     list(APPEND fq_deps_list libc.src.time.clock)
   endif()

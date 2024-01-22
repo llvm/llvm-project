@@ -1792,7 +1792,8 @@ define <8 x i1> @not_cmle8xi8(<8 x i8> %0) {
 define <4 x i1> @not_cmle16xi8(<4 x i32> %0) {
 ; CHECK-SD-LABEL: not_cmle16xi8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmle v0.4s, v0.4s, #0
+; CHECK-SD-NEXT:    movi v1.8h, #1
+; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;

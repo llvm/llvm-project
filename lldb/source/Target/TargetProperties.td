@@ -95,7 +95,7 @@ let Definition = "target" in {
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
     DefaultUnsignedValue<0xFFFFFFFF>,
     Desc<"Maximum depth to expand children.">;
-  def MaxSummaryLength: Property<"max-string-summary-length", "SInt64">,
+  def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,
     Desc<"Maximum number of characters to show when using %s in summary strings.">;
   def MaxMemReadSize: Property<"max-memory-read-size", "SInt64">,
