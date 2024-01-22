@@ -468,8 +468,11 @@ static llvm::Constant *convertDenseResourceElementsAttr(
   if (type.getNumElements() == 0)
     return nullptr;
 
-  ArrayRef<char> rawData =
-      denseResourceAttr.getRawHandle().getBlob()->getData();
+  AsmResourceBlob *blob = denseResourceAttr.getRawHandle().getBlob();
+  if (!blob)
+    return nullptr;
+
+  ArrayRef<char> rawData = blob->getData();
 
   // Check that the raw data size matches what is expected for the scalar size.
   // TODO: in theory, we could repack the data here to keep constructing from
