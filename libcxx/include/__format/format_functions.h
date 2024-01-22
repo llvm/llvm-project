@@ -63,7 +63,7 @@ using wformat_args = basic_format_args<wformat_context>;
 #  endif
 
 template <class _Context = format_context, class... _Args>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI __format_arg_store<_Context, _Args...> make_format_args(_Args&... __args) {
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI __format_arg_store<_Context, _Args...> make_format_args(_Args&... __args [[clang::lifetimebound]]) {
   return _VSTD::__format_arg_store<_Context, _Args...>(__args...);
 }
 
