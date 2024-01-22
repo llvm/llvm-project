@@ -47,7 +47,7 @@ write_cmake_config("BuildVariables.inc") {
   if (host_os == "win") {
     # uuid.lib for FOLDERID_Profile in lib/Support/Windows/Path.inc.
     # advapi32.lib for CryptAcquireContextW in lib/Support/Windows/Path.inc.
-    system_libs = "psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib"
+    system_libs = "psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib ws2_32.lib"
   } else {
     system_libs += "-lm"
     if (host_os == "linux") {

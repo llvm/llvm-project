@@ -487,17 +487,6 @@ TEST_F(StringMapTest, NotEqualWithDifferentValues) {
   ASSERT_TRUE(B != A);
 }
 
-TEST_F(StringMapTest, PrecomputedHash) {
-  StringMap<int> A;
-  StringRef Key = "foo";
-  int Value = 42;
-  uint64_t Hash = StringMap<int>::hash(Key);
-  A.insert({"foo", Value}, Hash);
-  auto I = A.find(Key, Hash);
-  ASSERT_NE(I, A.end());
-  ASSERT_EQ(I->second, Value);
-}
-
 struct Countable {
   int &InstanceCount;
   int Number;

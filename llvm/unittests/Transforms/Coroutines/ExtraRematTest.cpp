@@ -126,7 +126,7 @@ bool ExtraMaterializable(Instruction &I) {
 
   if (auto *CI = dyn_cast<CallInst>(&I)) {
     auto *CalledFunc = CI->getCalledFunction();
-    if (CalledFunc && CalledFunc->getName().startswith("should.remat"))
+    if (CalledFunc && CalledFunc->getName().starts_with("should.remat"))
       return true;
   }
 

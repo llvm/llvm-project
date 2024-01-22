@@ -12,7 +12,7 @@ define <2 x i16> @uadd_sat_v2i16(<2 x i16> %arg0, <2 x i16> %arg1) {
 ; GFX7-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i16> [[ARG1]], i64 1
 ; GFX7-NEXT:    [[ADD_0:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_0]], i16 [[ARG1_0]])
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_1]], i16 [[ARG1_1]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> undef, i16 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> poison, i16 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <2 x i16> [[INS_0]], i16 [[ADD_1]], i64 1
 ; GFX7-NEXT:    ret <2 x i16> [[INS_1]]
 ;
@@ -42,7 +42,7 @@ define <2 x i16> @usub_sat_v2i16(<2 x i16> %arg0, <2 x i16> %arg1) {
 ; GFX7-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i16> [[ARG1]], i64 1
 ; GFX7-NEXT:    [[ADD_0:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[ARG0_0]], i16 [[ARG1_0]])
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[ARG0_1]], i16 [[ARG1_1]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> undef, i16 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> poison, i16 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <2 x i16> [[INS_0]], i16 [[ADD_1]], i64 1
 ; GFX7-NEXT:    ret <2 x i16> [[INS_1]]
 ;
@@ -72,7 +72,7 @@ define <2 x i16> @sadd_sat_v2i16(<2 x i16> %arg0, <2 x i16> %arg1) {
 ; GFX7-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i16> [[ARG1]], i64 1
 ; GFX7-NEXT:    [[ADD_0:%.*]] = call i16 @llvm.sadd.sat.i16(i16 [[ARG0_0]], i16 [[ARG1_0]])
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i16 @llvm.sadd.sat.i16(i16 [[ARG0_1]], i16 [[ARG1_1]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> undef, i16 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> poison, i16 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <2 x i16> [[INS_0]], i16 [[ADD_1]], i64 1
 ; GFX7-NEXT:    ret <2 x i16> [[INS_1]]
 ;
@@ -102,7 +102,7 @@ define <2 x i16> @ssub_sat_v2i16(<2 x i16> %arg0, <2 x i16> %arg1) {
 ; GFX7-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i16> [[ARG1]], i64 1
 ; GFX7-NEXT:    [[ADD_0:%.*]] = call i16 @llvm.ssub.sat.i16(i16 [[ARG0_0]], i16 [[ARG1_0]])
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i16 @llvm.ssub.sat.i16(i16 [[ARG0_1]], i16 [[ARG1_1]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> undef, i16 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <2 x i16> poison, i16 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <2 x i16> [[INS_0]], i16 [[ADD_1]], i64 1
 ; GFX7-NEXT:    ret <2 x i16> [[INS_1]]
 ;
@@ -132,7 +132,7 @@ define <2 x i32> @uadd_sat_v2i32(<2 x i32> %arg0, <2 x i32> %arg1) {
 ; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i32> [[ARG1]], i64 1
 ; GCN-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[ARG0_0]], i32 [[ARG1_0]])
 ; GCN-NEXT:    [[ADD_1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[ARG0_1]], i32 [[ARG1_1]])
-; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> undef, i32 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> poison, i32 [[ADD_0]], i64 0
 ; GCN-NEXT:    [[INS_1:%.*]] = insertelement <2 x i32> [[INS_0]], i32 [[ADD_1]], i64 1
 ; GCN-NEXT:    ret <2 x i32> [[INS_1]]
 ;
@@ -157,7 +157,7 @@ define <2 x i32> @usub_sat_v2i32(<2 x i32> %arg0, <2 x i32> %arg1) {
 ; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i32> [[ARG1]], i64 1
 ; GCN-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[ARG0_0]], i32 [[ARG1_0]])
 ; GCN-NEXT:    [[ADD_1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[ARG0_1]], i32 [[ARG1_1]])
-; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> undef, i32 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> poison, i32 [[ADD_0]], i64 0
 ; GCN-NEXT:    [[INS_1:%.*]] = insertelement <2 x i32> [[INS_0]], i32 [[ADD_1]], i64 1
 ; GCN-NEXT:    ret <2 x i32> [[INS_1]]
 ;
@@ -182,7 +182,7 @@ define <2 x i32> @sadd_sat_v2i32(<2 x i32> %arg0, <2 x i32> %arg1) {
 ; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i32> [[ARG1]], i64 1
 ; GCN-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[ARG0_0]], i32 [[ARG1_0]])
 ; GCN-NEXT:    [[ADD_1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[ARG0_1]], i32 [[ARG1_1]])
-; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> undef, i32 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> poison, i32 [[ADD_0]], i64 0
 ; GCN-NEXT:    [[INS_1:%.*]] = insertelement <2 x i32> [[INS_0]], i32 [[ADD_1]], i64 1
 ; GCN-NEXT:    ret <2 x i32> [[INS_1]]
 ;
@@ -207,7 +207,7 @@ define <2 x i32> @ssub_sat_v2i32(<2 x i32> %arg0, <2 x i32> %arg1) {
 ; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <2 x i32> [[ARG1]], i64 1
 ; GCN-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[ARG0_0]], i32 [[ARG1_0]])
 ; GCN-NEXT:    [[ADD_1:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[ARG0_1]], i32 [[ARG1_1]])
-; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> undef, i32 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <2 x i32> poison, i32 [[ADD_0]], i64 0
 ; GCN-NEXT:    [[INS_1:%.*]] = insertelement <2 x i32> [[INS_0]], i32 [[ADD_1]], i64 1
 ; GCN-NEXT:    ret <2 x i32> [[INS_1]]
 ;
@@ -235,7 +235,7 @@ define <3 x i16> @uadd_sat_v3i16(<3 x i16> %arg0, <3 x i16> %arg1) {
 ; GFX7-NEXT:    [[ADD_0:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_0]], i16 [[ARG1_0]])
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_1]], i16 [[ARG1_1]])
 ; GFX7-NEXT:    [[ADD_2:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_2]], i16 [[ARG1_2]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <3 x i16> undef, i16 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <3 x i16> poison, i16 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <3 x i16> [[INS_0]], i16 [[ADD_1]], i64 1
 ; GFX7-NEXT:    [[INS_2:%.*]] = insertelement <3 x i16> [[INS_1]], i16 [[ADD_2]], i64 2
 ; GFX7-NEXT:    ret <3 x i16> [[INS_2]]
@@ -283,7 +283,7 @@ define <4 x i16> @uadd_sat_v4i16(<4 x i16> %arg0, <4 x i16> %arg1) {
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_1]], i16 [[ARG1_1]])
 ; GFX7-NEXT:    [[ADD_2:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_2]], i16 [[ARG1_2]])
 ; GFX7-NEXT:    [[ADD_3:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_3]], i16 [[ARG1_3]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i16> undef, i16 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i16> poison, i16 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <4 x i16> [[INS_0]], i16 [[ADD_1]], i64 1
 ; GFX7-NEXT:    [[INS_2:%.*]] = insertelement <4 x i16> [[INS_1]], i16 [[ADD_2]], i64 2
 ; GFX7-NEXT:    [[INS_3:%.*]] = insertelement <4 x i16> [[INS_2]], i16 [[ADD_3]], i64 3

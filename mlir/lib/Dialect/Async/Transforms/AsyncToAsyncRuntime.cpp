@@ -242,7 +242,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // continuations, and will conditionally branch to cleanup or suspend blocks.
 
   // The switch-resumed API based coroutine should be marked with
-  // coroutine.presplit attribute to mark the function as a coroutine.
+  // presplitcoroutine attribute to mark the function as a coroutine.
   func->setAttr("passthrough", builder.getArrayAttr(
                                    StringAttr::get(ctx, "presplitcoroutine")));
 

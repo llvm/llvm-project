@@ -29,8 +29,8 @@ namespace ranges {
 
 struct equal_to {
   template <class _Tp, class _Up>
-  requires equality_comparable_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+    requires equality_comparable_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(bool(std::forward<_Tp>(__t) == std::forward<_Up>(__u)))) {
     return std::forward<_Tp>(__t) == std::forward<_Up>(__u);
   }
@@ -40,8 +40,8 @@ struct equal_to {
 
 struct not_equal_to {
   template <class _Tp, class _Up>
-  requires equality_comparable_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+    requires equality_comparable_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(bool(!(std::forward<_Tp>(__t) == std::forward<_Up>(__u))))) {
     return !(std::forward<_Tp>(__t) == std::forward<_Up>(__u));
   }
@@ -51,8 +51,8 @@ struct not_equal_to {
 
 struct less {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(bool(std::forward<_Tp>(__t) < std::forward<_Up>(__u)))) {
     return std::forward<_Tp>(__t) < std::forward<_Up>(__u);
   }
@@ -62,8 +62,8 @@ struct less {
 
 struct less_equal {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(bool(!(std::forward<_Up>(__u) < std::forward<_Tp>(__t))))) {
     return !(std::forward<_Up>(__u) < std::forward<_Tp>(__t));
   }
@@ -73,8 +73,8 @@ struct less_equal {
 
 struct greater {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(bool(std::forward<_Up>(__u) < std::forward<_Tp>(__t)))) {
     return std::forward<_Up>(__u) < std::forward<_Tp>(__t);
   }
@@ -84,8 +84,8 @@ struct greater {
 
 struct greater_equal {
   template <class _Tp, class _Up>
-  requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+    requires totally_ordered_with<_Tp, _Up>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(bool(!(std::forward<_Tp>(__t) < std::forward<_Up>(__u))))) {
     return !(std::forward<_Tp>(__t) < std::forward<_Up>(__u));
   }

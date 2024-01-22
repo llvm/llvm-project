@@ -257,7 +257,7 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
     llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
     implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
     // Check if the user provided a PTX version
-    if (userKeyString.startswith("ptx"))
+    if (userKeyString.starts_with("ptx"))
       ptxVer = true;
   }
 

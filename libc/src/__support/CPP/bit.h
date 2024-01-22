@@ -29,10 +29,10 @@ namespace LIBC_NAMESPACE::cpp {
 // UB in the implementation.
 template <
     typename To, typename From,
-    typename = cpp::enable_if_t<sizeof(To) == sizeof(From)>,
-    typename = cpp::enable_if_t<cpp::is_trivially_constructible<To>::value>,
-    typename = cpp::enable_if_t<cpp::is_trivially_copyable<To>::value>,
-    typename = cpp::enable_if_t<cpp::is_trivially_copyable<From>::value>>
+    typename = cpp::enable_if_t<sizeof(To) == sizeof(From) &&
+                                cpp::is_trivially_constructible<To>::value &&
+                                cpp::is_trivially_copyable<To>::value &&
+                                cpp::is_trivially_copyable<From>::value>>
 LIBC_INLINE constexpr To bit_cast(const From &from) {
   MSAN_UNPOISON(&from, sizeof(From));
 #if LIBC_HAS_BUILTIN(__builtin_bit_cast)

@@ -377,8 +377,7 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 
   Register FirstReg;
-  for (unsigned Value = 0, e = ValueVTs.size(); Value != e; ++Value) {
-    EVT ValueVT = ValueVTs[Value];
+  for (EVT ValueVT : ValueVTs) {
     MVT RegisterVT = TLI->getRegisterType(Ty->getContext(), ValueVT);
 
     unsigned NumRegs = TLI->getNumRegisters(Ty->getContext(), ValueVT);

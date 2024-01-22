@@ -29,15 +29,25 @@ constexpr bool test() {
   for (unsigned i = 0; i <= 10; ++i) {
     year y{1234};
     month_day_last mdl{month{i}};
-    year_month_day_last ym(y, mdl);
-    assert(static_cast<unsigned>((ym += months{2}).month()) == i + 2);
-    assert(ym.year() == y);
-    assert(static_cast<unsigned>((ym).month()) == i + 2);
-    assert(ym.year() == y);
-    assert(static_cast<unsigned>((ym -= months{1}).month()) == i + 1);
-    assert(ym.year() == y);
-    assert(static_cast<unsigned>((ym).month()) == i + 1);
-    assert(ym.year() == y);
+    year_month_day_last ymdl(y, mdl);
+    assert(static_cast<unsigned>((ymdl += months{2}).month()) == i + 2);
+    assert(ymdl.year() == y);
+    assert(static_cast<unsigned>((ymdl).month()) == i + 2);
+    assert(ymdl.year() == y);
+    assert(static_cast<unsigned>((ymdl -= months{1}).month()) == i + 1);
+    assert(ymdl.year() == y);
+    assert(static_cast<unsigned>((ymdl).month()) == i + 1);
+    assert(ymdl.year() == y);
+  }
+
+  { // Test year wrapping
+    year_month_day_last ymdl{year{2020}, month_day_last{month{4}}};
+
+    ymdl += months{12};
+    assert((ymdl == year_month_day_last{year{2021}, month_day_last{month{4}}}));
+
+    ymdl -= months{12};
+    assert((ymdl == year_month_day_last{year{2020}, month_day_last{month{4}}}));
   }
 
   return true;

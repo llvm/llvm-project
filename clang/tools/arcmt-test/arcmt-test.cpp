@@ -230,7 +230,7 @@ static bool verifyTransformedFiles(ArrayRef<std::string> resultFiles) {
   for (ArrayRef<std::string>::iterator
          I = resultFiles.begin(), E = resultFiles.end(); I != E; ++I) {
     StringRef fname(*I);
-    if (!fname.endswith(".result")) {
+    if (!fname.ends_with(".result")) {
       errs() << "error: filename '" << fname
                    << "' does not have '.result' extension\n";
       return true;

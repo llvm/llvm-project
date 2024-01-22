@@ -1,4 +1,4 @@
-; REQUIRES: native && target-x86_64
+; REQUIRES: native && x86_64-linux
 
 ; RUN: lli --jit-linker=rtdyld \
 ; RUN:     --generate=__dump_jit_debug_descriptor %s | FileCheck %s

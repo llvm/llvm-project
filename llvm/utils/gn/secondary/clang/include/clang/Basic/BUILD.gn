@@ -82,8 +82,8 @@ clang_tablegen("AttrSubMatchRulesList") {
   td_file = "Attr.td"
 }
 
-clang_tablegen("AttrTokenKinds") {
-  args = [ "-gen-clang-attr-token-kinds" ]
+clang_tablegen("RegularKeywordAttrInfo") {
+  args = [ "-gen-clang-regular-keyword-attr-info" ]
   td_file = "Attr.td"
 }
 
@@ -142,6 +142,11 @@ clang_tablegen("arm_sve_sema_rangechecks") {
   td_file = "arm_sve.td"
 }
 
+clang_tablegen("arm_sve_streaming_attrs") {
+  args = [ "-gen-arm-sve-streaming-attrs" ]
+  td_file = "arm_sve.td"
+}
+
 clang_tablegen("arm_sme_builtins") {
   args = [ "-gen-arm-sme-builtins" ]
   td_file = "arm_sme.td"
@@ -154,6 +159,16 @@ clang_tablegen("arm_sme_builtin_cg") {
 
 clang_tablegen("arm_sme_sema_rangechecks") {
   args = [ "-gen-arm-sme-sema-rangechecks" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_streaming_attrs") {
+  args = [ "-gen-arm-sme-streaming-attrs" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_builtins_za_state") {
+  args = [ "-gen-arm-sme-builtin-za-state" ]
   td_file = "arm_sme.td"
 }
 

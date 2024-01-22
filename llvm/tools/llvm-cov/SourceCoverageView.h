@@ -84,6 +84,23 @@ struct BranchView {
   }
 };
 
+/// A view that represents one or more MCDC regions on a given source line.
+struct MCDCView {
+  std::vector<MCDCRecord> Records;
+  std::unique_ptr<SourceCoverageView> View;
+  unsigned Line;
+
+  MCDCView(unsigned Line, ArrayRef<MCDCRecord> Records,
+           std::unique_ptr<SourceCoverageView> View)
+      : Records(Records), View(std::move(View)), Line(Line) {}
+
+  unsigned getLine() const { return Line; }
+
+  friend bool operator<(const MCDCView &LHS, const MCDCView &RHS) {
+    return LHS.Line < RHS.Line;
+  }
+};
+
 /// A file manager that handles format-aware file creation.
 class CoveragePrinter {
 public:
@@ -160,6 +177,9 @@ class SourceCoverageView {
   /// A container for all branches in the source on display.
   std::vector<BranchView> BranchSubViews;
 
+  /// A container for all MCDC records in the source on display.
+  std::vector<MCDCView> MCDCSubViews;
+
   /// A container for all instantiations (e.g template functions) in the source
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
@@ -233,6 +253,10 @@ protected:
   virtual void renderBranchView(raw_ostream &OS, BranchView &BRV,
                                 unsigned ViewDepth) = 0;
 
+  /// Render an MCDC view.
+  virtual void renderMCDCView(raw_ostream &OS, MCDCView &BRV,
+                              unsigned ViewDepth) = 0;
+
   /// Render \p Title, a project title if one is available, and the
   /// created time.
   virtual void renderTitle(raw_ostream &OS, StringRef CellText) = 0;
@@ -282,6 +306,10 @@ public:
   /// Add a branch subview to this view.
   void addBranch(unsigned Line, ArrayRef<CountedRegion> Regions,
                  std::unique_ptr<SourceCoverageView> View);
+
+  /// Add an MCDC subview to this view.
+  void addMCDCRecord(unsigned Line, ArrayRef<MCDCRecord> Records,
+                     std::unique_ptr<SourceCoverageView> View);
 
   /// Print the code coverage information for a specific portion of a
   /// source file to the output stream.

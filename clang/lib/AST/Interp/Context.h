@@ -51,6 +51,9 @@ public:
   /// Evaluates a toplevel expression as an rvalue.
   bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
 
+  /// Like evaluateAsRvalue(), but does no implicit lvalue-to-rvalue conversion.
+  bool evaluate(State &Parent, const Expr *E, APValue &Result);
+
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
 

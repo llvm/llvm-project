@@ -73,4 +73,3 @@ define float @float_negative_zero(ptr %pf) nounwind {
 ; CHECKZFINX-NEXT:    ret
   ret float -0.0
 }
-

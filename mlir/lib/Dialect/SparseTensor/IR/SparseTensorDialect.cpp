@@ -856,12 +856,13 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
   if (!dimToLvl)
     return false;
   std::map<unsigned, int64_t> coeffientMap;
+  bool hasBlock = false;
   for (auto result : dimToLvl.getResults()) {
     if (auto binOp = dyn_cast<AffineBinaryOpExpr>(result)) {
       // Check for "dim op const".
       auto dimOp = dyn_cast<AffineDimExpr>(binOp.getLHS());
       auto conOp = dyn_cast<AffineConstantExpr>(binOp.getRHS());
-      if (!dimOp || !conOp)
+      if (!dimOp || !conOp || conOp.getValue() <= 0)
         return false;
       // Inspect "dim / const" or "dim % const".
       auto pos = dimOp.getPosition();
@@ -878,12 +879,21 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
         // Expect mod to have the same coefficient as floordiv.
         if (conOp.getValue() != coeffientMap[pos])
           return false;
+        hasBlock = true;
       } else {
         return false;
       }
+    } else if (auto dimOp = dyn_cast<AffineDimExpr>(result)) {
+      auto pos = dimOp.getPosition();
+      // Expect dim to be unset.
+      if (coeffientMap.find(pos) != coeffientMap.end())
+        return false;
+      coeffientMap[pos] = 0;
+    } else {
+      return false;
     }
   }
-  return !coeffientMap.empty();
+  return hasBlock;
 }
 
 bool mlir::sparse_tensor::hasAnyNonIdentityOperandsOrResults(Operation *op) {

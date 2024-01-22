@@ -23,14 +23,17 @@ class Terminator;
 
 [[nodiscard]] RT_API_ATTRS void *AllocateMemoryOrCrash(
     const Terminator &, std::size_t bytes);
-template <typename A> [[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
+template <typename A>
+[[nodiscard]] RT_API_ATTRS A &AllocateOrCrash(const Terminator &t) {
   return *reinterpret_cast<A *>(AllocateMemoryOrCrash(t, sizeof(A)));
 }
+RT_API_ATTRS void *ReallocateMemoryOrCrash(
+    const Terminator &, void *ptr, std::size_t newByteSize);
 RT_API_ATTRS void FreeMemory(void *);
 template <typename A> RT_API_ATTRS void FreeMemory(A *p) {
   FreeMemory(reinterpret_cast<void *>(p));
 }
-template <typename A> void FreeMemoryAndNullify(A *&p) {
+template <typename A> RT_API_ATTRS void FreeMemoryAndNullify(A *&p) {
   FreeMemory(p);
   p = nullptr;
 }

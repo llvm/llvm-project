@@ -771,6 +771,10 @@ def XVFRECIP_S : LASX2R_XX<0x769cf400>;
 def XVFRECIP_D : LASX2R_XX<0x769cf800>;
 def XVFRSQRT_S : LASX2R_XX<0x769d0400>;
 def XVFRSQRT_D : LASX2R_XX<0x769d0800>;
+def XVFRECIPE_S : LASX2R_XX<0x769d1400>;
+def XVFRECIPE_D : LASX2R_XX<0x769d1800>;
+def XVFRSQRTE_S : LASX2R_XX<0x769d2400>;
+def XVFRSQRTE_D : LASX2R_XX<0x769d2800>;
 
 def XVFCVTL_S_H : LASX2R_XX<0x769de800>;
 def XVFCVTH_S_H : LASX2R_XX<0x769dec00>;
@@ -1571,11 +1575,11 @@ def : Pat<(loongarch_vreplve v8i32:$xj, GRLenVT:$rk),
 def : Pat<(loongarch_vreplve v4i64:$xj, GRLenVT:$rk),
           (XVREPLVE_D v4i64:$xj, GRLenVT:$rk)>;
 
-// XVREPL128VEI_{W/D}
+// XVREPLVE0_{W/D}
 def : Pat<(lasxsplatf32 FPR32:$fj),
-          (XVREPL128VEI_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)>;
+          (XVREPLVE0_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32))>;
 def : Pat<(lasxsplatf64 FPR64:$fj),
-          (XVREPL128VEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
+          (XVREPLVE0_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64))>;
 
 // Loads/Stores
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {
@@ -1590,42 +1594,18 @@ def : Pat<(i64 (vector_extract v32i8:$xj, uimm4:$imm)),
           (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
 def : Pat<(i64 (vector_extract v16i16:$xj, uimm3:$imm)),
           (VPICKVE2GR_H (EXTRACT_SUBREG v16i16:$xj, sub_128), uimm3:$imm)>;
-def : Pat<(i64 (vector_extract v8i32:$xj, uimm2:$imm)),
-          (VPICKVE2GR_W (EXTRACT_SUBREG v8i32:$xj, sub_128), uimm2:$imm)>;
-def : Pat<(i64 (vector_extract v4i64:$xj, uimm1:$imm)),
-          (VPICKVE2GR_D (EXTRACT_SUBREG v4i64:$xj, sub_128), uimm1:$imm)>;
-def : Pat<(f32 (vector_extract v8f32:$xj, uimm2:$imm)),
-          (f32 (EXTRACT_SUBREG (XVREPL128VEI_W v8f32:$xj, uimm2:$imm), sub_32))>;
-def : Pat<(f64 (vector_extract v4f64:$xj, uimm1:$imm)),
-          (f64 (EXTRACT_SUBREG (XVREPL128VEI_D v4f64:$xj, uimm1:$imm), sub_64))>;
-
-// Vector extraction with variable index.
-def : Pat<(i64 (vector_extract v32i8:$xj, i64:$rk)),
-          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (XVREPLVE_B v32i8:$xj,
-                                                                    i64:$rk),
-                                                         sub_32)),
-                                    GPR), (i64 24))>;
-def : Pat<(i64 (vector_extract v16i16:$xj, i64:$rk)),
-          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (XVREPLVE_H v16i16:$xj,
-                                                                    i64:$rk),
-                                                         sub_32)),
-                                    GPR), (i64 16))>;
-def : Pat<(i64 (vector_extract v8i32:$xj, i64:$rk)),
-          (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (XVREPLVE_W v8i32:$xj, i64:$rk),
-                                                 sub_32)),
-                            GPR)>;
-def : Pat<(i64 (vector_extract v4i64:$xj, i64:$rk)),
-          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (XVREPLVE_D v4i64:$xj, i64:$rk),
-                                                 sub_64)),
-                            GPR)>;
-def : Pat<(f32 (vector_extract v8f32:$xj, i64:$rk)),
-          (f32 (EXTRACT_SUBREG (XVREPLVE_W v8f32:$xj, i64:$rk), sub_32))>;
-def : Pat<(f64 (vector_extract v4f64:$xj, i64:$rk)),
-          (f64 (EXTRACT_SUBREG (XVREPLVE_D v4f64:$xj, i64:$rk), sub_64))>;
+def : Pat<(i64 (vector_extract v8i32:$xj, uimm3:$imm)),
+          (XVPICKVE2GR_W v8i32:$xj, uimm3:$imm)>;
+def : Pat<(i64 (vector_extract v4i64:$xj, uimm2:$imm)),
+          (XVPICKVE2GR_D v4i64:$xj, uimm2:$imm)>;
+def : Pat<(f32 (vector_extract v8f32:$xj, uimm3:$imm)),
+          (MOVGR2FR_W (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm))>;
+def : Pat<(f64 (vector_extract v4f64:$xj, uimm2:$imm)),
+          (MOVGR2FR_D (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm))>;
 
 // vselect
-def : Pat<(v32i8 (vselect LASX256:$xj, LASX256:$xd,
-                          (v32i8 (SplatPat_uimm8 uimm8:$imm)))),
+def : Pat<(v32i8 (vselect LASX256:$xd, (v32i8 (SplatPat_uimm8 uimm8:$imm)),
+                          LASX256:$xj)),
           (XVBITSELI_B LASX256:$xd, LASX256:$xj, uimm8:$imm)>;
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
   def  : Pat<(vt (vselect LASX256:$xa, LASX256:$xk, LASX256:$xj)),

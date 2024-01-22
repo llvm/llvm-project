@@ -5821,7 +5821,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   Function *KernelLaunchFunc = Call->getCalledFunction();
   EXPECT_NE(KernelLaunchFunc, nullptr);
   StringRef FunctionName = KernelLaunchFunc->getName();
-  EXPECT_TRUE(FunctionName.startswith("__tgt_target_kernel"));
+  EXPECT_TRUE(FunctionName.starts_with("__tgt_target_kernel"));
 
   // Check the fallback call
   BasicBlock *FallbackBlock = Branch->getSuccessor(0);
@@ -5838,7 +5838,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   Function *OutlinedFunc = FCall->getCalledFunction();
   EXPECT_NE(OutlinedFunc, nullptr);
   StringRef FunctionName2 = OutlinedFunc->getName();
-  EXPECT_TRUE(FunctionName2.startswith("__omp_offloading"));
+  EXPECT_TRUE(FunctionName2.starts_with("__omp_offloading"));
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }

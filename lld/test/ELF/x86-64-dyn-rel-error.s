@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/shared.s -o %t2.o
 # RUN: ld.lld %t2.o -shared -o %t2.so --threads=1
 # RUN: not ld.lld -pie %t.o %t2.so -o /dev/null --threads=1 2>&1 | FileCheck %s
-# RUN: not ld.lld -shared %t.o %t2.so -o /dev/null --threads=1 2>&1 | FileCheck %s --check-prefixes=CHECK,SHARED
+# RUN: not ld.lld -shared %t.o %t2.so -o /dev/null --threads=1 2>&1 | FileCheck %s
 
 # CHECK:      error: relocation R_X86_64_32 cannot be used against symbol 'zed'; recompile with -fPIC
 # CHECK-NEXT: >>> defined in {{.*}}.so
@@ -14,8 +14,8 @@
 # CHECK-NEXT: >>> referenced by {{.*}}.o:(.data+0x4)
 # CHECK-EMPTY:
 # CHECK-NEXT: error: relocation R_X86_64_64 cannot be used against symbol '_start'; recompile with -fPIC
-# SHARED:     error: relocation R_X86_64_64 cannot be used against symbol 'main'; recompile with -fPIC
-# SHARED:     error: relocation R_X86_64_64 cannot be used against symbol 'data'; recompile with -fPIC
+# CHECK:      error: relocation R_X86_64_64 cannot be used against symbol 'main'; recompile with -fPIC
+# CHECK:      error: relocation R_X86_64_64 cannot be used against symbol 'data'; recompile with -fPIC
 # CHECK-NOT:  error:
 
 # RUN: ld.lld --noinhibit-exec %t.o %t2.so -o /dev/null 2>&1 | FileCheck --check-prefix=WARN %s

@@ -443,6 +443,14 @@ func.func @invalid_splat(%v : vector<8xf32>) {
 
 // -----
 
+func.func @invalid_splat(%v: f32, %m: index) {
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
+  %w = tensor.splat %v[%m] : tensor<?x8x?xf32>
+  return
+}
+
+// -----
+
 func.func @gather_empty_dims(
     %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
   // expected-error@+1 {{gather_dims must be non-empty}}

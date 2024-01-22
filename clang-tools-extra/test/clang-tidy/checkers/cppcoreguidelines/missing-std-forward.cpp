@@ -90,9 +90,9 @@ void lambda_value_capture(T&& t) {
 }
 
 template <class T>
-void lambda_value_reference(T&& t) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: forwarding reference parameter 't' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
-  [&]() { T other = std::forward<T>(t); };
+void lambda_value_capture_copy(T&& t) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: forwarding reference parameter 't' is never forwarded inside the function body [cppcoreguidelines-missing-std-forward]
+  [&,t]() { T other = std::forward<T>(t); };
 }
 
 } // namespace positive_cases
@@ -146,5 +146,30 @@ class AClass {
 
   T data;
 };
+
+template <class T>
+void lambda_value_reference(T&& t) {
+  [&]() { T other = std::forward<T>(t); };
+}
+
+template<typename T>
+void lambda_value_reference_capture_list_ref_1(T&& t) {
+    [=, &t] { T other = std::forward<T>(t); };
+}
+
+template<typename T>
+void lambda_value_reference_capture_list_ref_2(T&& t) {
+    [&t] { T other = std::forward<T>(t); };
+}
+
+template<typename T>
+void lambda_value_reference_capture_list(T&& t) {
+    [t = std::forward<T>(t)] { t(); };
+}
+
+template <class T>
+void lambda_value_reference_auxiliary_var(T&& t) {
+  [&x = t]() { T other = std::forward<T>(x); };
+}
 
 } // namespace negative_cases

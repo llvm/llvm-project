@@ -57,6 +57,7 @@
 // CHECK-NEXT: ConsumableAutoCast (SubjectMatchRule_record)
 // CHECK-NEXT: ConsumableSetOnRead (SubjectMatchRule_record)
 // CHECK-NEXT: Convergent (SubjectMatchRule_function)
+// CHECK-NEXT: CoroDisableLifetimeBound (SubjectMatchRule_function)
 // CHECK-NEXT: CoroLifetimeBound (SubjectMatchRule_record)
 // CHECK-NEXT: CoroOnlyDestroyWhenComplete (SubjectMatchRule_record)
 // CHECK-NEXT: CoroReturnType (SubjectMatchRule_record)

@@ -34,7 +34,10 @@ class ParallelOp;
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
 /// analysis.
-void naivelyFuseParallelOps(Region &region);
+/// User can additionally customize alias checking with `mayAlias` hook.
+/// `mayAlias` must return false if 2 values are guaranteed to not alias.
+void naivelyFuseParallelOps(Region &region,
+                            llvm::function_ref<bool(Value, Value)> mayAlias);
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
@@ -80,6 +83,11 @@ void naivelyFuseParallelOps(Region &region);
 /// unpeeled loop with the results of the newly generated scf.for.
 LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
                                            scf::ForOp &partialIteration);
+
+/// Peel the first iteration out of the scf.for loop. If there is only one
+/// iteration, return the original loop.
+LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
+                                        scf::ForOp &partialIteration);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)

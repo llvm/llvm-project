@@ -15,9 +15,9 @@ using ::testing::ElementsAre;
 
 using namespace llvm;
 
-bool operator==(const llvm::RISCVExtensionInfo &A,
-                const llvm::RISCVExtensionInfo &B) {
-  return A.MajorVersion == B.MajorVersion && A.MinorVersion == B.MinorVersion;
+bool operator==(const RISCVISAInfo::ExtensionVersion &A,
+                const RISCVISAInfo::ExtensionVersion &B) {
+  return A.Major == B.Major && A.Minor == B.Minor;
 }
 
 TEST(ParseNormalizedArchString, RejectsUpperCase) {
@@ -50,28 +50,32 @@ TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   ASSERT_THAT_EXPECTED(MaybeRV32I, Succeeded());
   RISCVISAInfo &InfoRV32I = **MaybeRV32I;
   EXPECT_EQ(InfoRV32I.getExtensions().size(), 1UL);
-  EXPECT_TRUE(InfoRV32I.getExtensions().at("i") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(InfoRV32I.getExtensions().at("i") ==
+              (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32I.getXLen(), 32U);
 
   auto MaybeRV32E = RISCVISAInfo::parseNormalizedArchString("rv32e2p0");
   ASSERT_THAT_EXPECTED(MaybeRV32E, Succeeded());
   RISCVISAInfo &InfoRV32E = **MaybeRV32E;
   EXPECT_EQ(InfoRV32E.getExtensions().size(), 1UL);
-  EXPECT_TRUE(InfoRV32E.getExtensions().at("e") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(InfoRV32E.getExtensions().at("e") ==
+              (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32E.getXLen(), 32U);
 
   auto MaybeRV64I = RISCVISAInfo::parseNormalizedArchString("rv64i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV64I, Succeeded());
   RISCVISAInfo &InfoRV64I = **MaybeRV64I;
   EXPECT_EQ(InfoRV64I.getExtensions().size(), 1UL);
-  EXPECT_TRUE(InfoRV64I.getExtensions().at("i") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(InfoRV64I.getExtensions().at("i") ==
+              (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64I.getXLen(), 64U);
 
   auto MaybeRV64E = RISCVISAInfo::parseNormalizedArchString("rv64e2p0");
   ASSERT_THAT_EXPECTED(MaybeRV64E, Succeeded());
   RISCVISAInfo &InfoRV64E = **MaybeRV64E;
   EXPECT_EQ(InfoRV64E.getExtensions().size(), 1UL);
-  EXPECT_TRUE(InfoRV64E.getExtensions().at("e") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(InfoRV64E.getExtensions().at("e") ==
+              (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64E.getXLen(), 64U);
 }
 
@@ -81,12 +85,16 @@ TEST(ParseNormalizedArchString, AcceptsArbitraryExtensionsAndVersions) {
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   RISCVISAInfo &Info = **MaybeISAInfo;
   EXPECT_EQ(Info.getExtensions().size(), 5UL);
-  EXPECT_TRUE(Info.getExtensions().at("i") == (RISCVExtensionInfo{5, 1}));
-  EXPECT_TRUE(Info.getExtensions().at("m") == (RISCVExtensionInfo{3, 2}));
+  EXPECT_TRUE(Info.getExtensions().at("i") ==
+              (RISCVISAInfo::ExtensionVersion{5, 1}));
+  EXPECT_TRUE(Info.getExtensions().at("m") ==
+              (RISCVISAInfo::ExtensionVersion{3, 2}));
   EXPECT_TRUE(Info.getExtensions().at("zmadeup") ==
-              (RISCVExtensionInfo{11, 12}));
-  EXPECT_TRUE(Info.getExtensions().at("sfoo") == (RISCVExtensionInfo{2, 0}));
-  EXPECT_TRUE(Info.getExtensions().at("xbar") == (RISCVExtensionInfo{3, 0}));
+              (RISCVISAInfo::ExtensionVersion{11, 12}));
+  EXPECT_TRUE(Info.getExtensions().at("sfoo") ==
+              (RISCVISAInfo::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(Info.getExtensions().at("xbar") ==
+              (RISCVISAInfo::ExtensionVersion{3, 0}));
 }
 
 TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
@@ -131,7 +139,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV32I = **MaybeRV32I;
   RISCVISAInfo::OrderedExtensionMap ExtsRV32I = InfoRV32I.getExtensions();
   EXPECT_EQ(ExtsRV32I.size(), 1UL);
-  EXPECT_TRUE(ExtsRV32I.at("i") == (RISCVExtensionInfo{2, 1}));
+  EXPECT_TRUE(ExtsRV32I.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
   EXPECT_EQ(InfoRV32I.getXLen(), 32U);
   EXPECT_EQ(InfoRV32I.getFLen(), 0U);
 
@@ -140,7 +148,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV32E = **MaybeRV32E;
   RISCVISAInfo::OrderedExtensionMap ExtsRV32E = InfoRV32E.getExtensions();
   EXPECT_EQ(ExtsRV32E.size(), 1UL);
-  EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32E.getXLen(), 32U);
   EXPECT_EQ(InfoRV32E.getFLen(), 0U);
 
@@ -149,13 +157,14 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV32G = **MaybeRV32G;
   RISCVISAInfo::OrderedExtensionMap ExtsRV32G = InfoRV32G.getExtensions();
   EXPECT_EQ(ExtsRV32G.size(), 7UL);
-  EXPECT_TRUE(ExtsRV32G.at("i") == (RISCVExtensionInfo{2, 1}));
-  EXPECT_TRUE(ExtsRV32G.at("m") == (RISCVExtensionInfo{2, 0}));
-  EXPECT_TRUE(ExtsRV32G.at("a") == (RISCVExtensionInfo{2, 1}));
-  EXPECT_TRUE(ExtsRV32G.at("f") == (RISCVExtensionInfo{2, 2}));
-  EXPECT_TRUE(ExtsRV32G.at("d") == (RISCVExtensionInfo{2, 2}));
-  EXPECT_TRUE(ExtsRV32G.at("zicsr") == (RISCVExtensionInfo{2, 0}));
-  EXPECT_TRUE(ExtsRV32G.at("zifencei") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV32G.at("m") == (RISCVISAInfo::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("a") == (RISCVISAInfo::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV32G.at("f") == (RISCVISAInfo::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV32G.at("d") == (RISCVISAInfo::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV32G.at("zicsr") == (RISCVISAInfo::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("zifencei") ==
+              (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32G.getXLen(), 32U);
   EXPECT_EQ(InfoRV32G.getFLen(), 64U);
 
@@ -164,7 +173,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV64I = **MaybeRV64I;
   RISCVISAInfo::OrderedExtensionMap ExtsRV64I = InfoRV64I.getExtensions();
   EXPECT_EQ(ExtsRV64I.size(), 1UL);
-  EXPECT_TRUE(ExtsRV64I.at("i") == (RISCVExtensionInfo{2, 1}));
+  EXPECT_TRUE(ExtsRV64I.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
   EXPECT_EQ(InfoRV64I.getXLen(), 64U);
   EXPECT_EQ(InfoRV64I.getFLen(), 0U);
 
@@ -173,7 +182,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV64E = **MaybeRV64E;
   RISCVISAInfo::OrderedExtensionMap ExtsRV64E = InfoRV64E.getExtensions();
   EXPECT_EQ(ExtsRV64E.size(), 1UL);
-  EXPECT_TRUE(ExtsRV64E.at("e") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(ExtsRV64E.at("e") == (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64E.getXLen(), 64U);
   EXPECT_EQ(InfoRV64E.getFLen(), 0U);
 
@@ -182,13 +191,14 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   RISCVISAInfo &InfoRV64G = **MaybeRV64G;
   RISCVISAInfo::OrderedExtensionMap ExtsRV64G = InfoRV64G.getExtensions();
   EXPECT_EQ(ExtsRV64G.size(), 7UL);
-  EXPECT_TRUE(ExtsRV64G.at("i") == (RISCVExtensionInfo{2, 1}));
-  EXPECT_TRUE(ExtsRV64G.at("m") == (RISCVExtensionInfo{2, 0}));
-  EXPECT_TRUE(ExtsRV64G.at("a") == (RISCVExtensionInfo{2, 1}));
-  EXPECT_TRUE(ExtsRV64G.at("f") == (RISCVExtensionInfo{2, 2}));
-  EXPECT_TRUE(ExtsRV64G.at("d") == (RISCVExtensionInfo{2, 2}));
-  EXPECT_TRUE(ExtsRV64G.at("zicsr") == (RISCVExtensionInfo{2, 0}));
-  EXPECT_TRUE(ExtsRV64G.at("zifencei") == (RISCVExtensionInfo{2, 0}));
+  EXPECT_TRUE(ExtsRV64G.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV64G.at("m") == (RISCVISAInfo::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64G.at("a") == (RISCVISAInfo::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV64G.at("f") == (RISCVISAInfo::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV64G.at("d") == (RISCVISAInfo::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV64G.at("zicsr") == (RISCVISAInfo::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64G.at("zifencei") ==
+              (RISCVISAInfo::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64G.getXLen(), 64U);
   EXPECT_EQ(InfoRV64G.getFLen(), 64U);
 }
@@ -236,7 +246,7 @@ TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
     RISCVISAInfo &Info = **MaybeISAInfo;
     RISCVISAInfo::OrderedExtensionMap Exts = Info.getExtensions();
     EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{2, 1}));
+    EXPECT_TRUE(Exts.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
   }
 
   // Checks that supported extensions aren't incorrectly ignored when a
@@ -245,7 +255,7 @@ TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
       RISCVISAInfo::parseArchString("rv32i_zbc1p0_xmadeup", true, false, true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
-  EXPECT_TRUE(Exts.at("zbc") == (RISCVExtensionInfo{1, 0}));
+  EXPECT_TRUE(Exts.at("zbc") == (RISCVISAInfo::ExtensionVersion{1, 0}));
 }
 
 TEST(ParseArchString, AcceptsVersionInLongOrShortForm) {
@@ -253,13 +263,13 @@ TEST(ParseArchString, AcceptsVersionInLongOrShortForm) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{2, 1}));
+    EXPECT_TRUE(Exts.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
   }
   for (StringRef Input : {"rv32i_zfinx1", "rv32i_zfinx1p0"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_TRUE(Exts.at("zfinx") == (RISCVExtensionInfo{1, 0}));
+    EXPECT_TRUE(Exts.at("zfinx") == (RISCVISAInfo::ExtensionVersion{1, 0}));
   }
 }
 
@@ -288,14 +298,14 @@ TEST(ParseArchString,
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
     EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{2, 1}));
+    EXPECT_TRUE(Exts.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
   }
   for (StringRef Input : {"rv32e0p1", "rv32e99p99", "rv64e0p1", "rv64e99p99"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
     EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("e") == (RISCVExtensionInfo{2, 0}));
+    EXPECT_TRUE(Exts.at("e") == (RISCVISAInfo::ExtensionVersion{2, 0}));
   }
 }
 
@@ -306,7 +316,7 @@ TEST(ParseArchString,
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
     EXPECT_EQ(Exts.size(), 1UL);
-    EXPECT_TRUE(Exts.at("i") == (RISCVExtensionInfo{2, 1}));
+    EXPECT_TRUE(Exts.at("i") == (RISCVISAInfo::ExtensionVersion{2, 1}));
   }
 }
 
@@ -396,7 +406,7 @@ TEST(ParseArchString,
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_TRUE(Exts.at("zicond") == (RISCVExtensionInfo{9, 9}));
+  EXPECT_TRUE(Exts.at("zicond") == (RISCVISAInfo::ExtensionVersion{9, 9}));
 }
 
 TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
@@ -477,25 +487,45 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 }
 
-TEST(ToFeatureVector, IIsDroppedAndExperimentalExtensionsArePrefixed) {
+TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   auto MaybeISAInfo1 =
       RISCVISAInfo::parseArchString("rv64im_zicond", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo1)->toFeatureVector(),
+  EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+m", "+experimental-zicond"));
 
   auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
       "rv32e_zicond_xventanacondops", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo2)->toFeatureVector(),
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
               ElementsAre("+e", "+experimental-zicond", "+xventanacondops"));
 }
 
-TEST(ToFeatureVector, UnsupportedExtensionsAreDropped) {
+TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
   auto MaybeISAInfo =
       RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo)->toFeatureVector(), ElementsAre("+m"));
+  EXPECT_THAT((*MaybeISAInfo)->toFeatures(), ElementsAre("+m"));
+}
+
+TEST(ToFeatures, UnsupportedExtensionsAreKeptIfIgnoreUnknownIsFalse) {
+  auto MaybeISAInfo =
+      RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0_xmadeup1p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  EXPECT_THAT((*MaybeISAInfo)->toFeatures(false, false),
+              ElementsAre("+m", "+xmadeup"));
+}
+
+TEST(ToFeatures, AddAllExtensionsAddsNegativeExtensions) {
+  auto MaybeISAInfo = RISCVISAInfo::parseNormalizedArchString("rv64i2p0_m2p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+
+  auto Features = (*MaybeISAInfo)->toFeatures(true);
+  EXPECT_GT(Features.size(), 1UL);
+  EXPECT_EQ(Features.front(), "+m");
+  // Every feature after should be a negative feature
+  for (auto &NegativeExt : llvm::drop_begin(Features))
+    EXPECT_TRUE(NegativeExt.substr(0, 1) == "-");
 }
 
 TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
@@ -519,8 +549,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV32IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV32IZce =
       (*MaybeRV32IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV32IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV32IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV32IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV32IZce.count("zce"), 1U);
@@ -562,8 +593,9 @@ TEST(ParseArchString, ZceImplication) {
   ASSERT_THAT_EXPECTED(MaybeRV64IZce, Succeeded());
   RISCVISAInfo::OrderedExtensionMap ExtsRV64IZce =
       (*MaybeRV64IZce)->getExtensions();
-  EXPECT_EQ(ExtsRV64IZce.size(), 6UL);
+  EXPECT_EQ(ExtsRV64IZce.size(), 7UL);
   EXPECT_EQ(ExtsRV64IZce.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IZce.count("zicsr"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zca"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zcb"), 1U);
   EXPECT_EQ(ExtsRV64IZce.count("zce"), 1U);
@@ -643,9 +675,14 @@ R"(All available -march extensions for RISC-V
     c                   2.0
     v                   1.0
     h                   1.0
+    zic64b              1.0
     zicbom              1.0
     zicbop              1.0
     zicboz              1.0
+    ziccamoa            1.0
+    ziccif              1.0
+    zicclsm             1.0
+    ziccrse             1.0
     zicntr              2.0
     zicsr               2.0
     zifencei            2.0
@@ -653,6 +690,8 @@ R"(All available -march extensions for RISC-V
     zihintpause         2.0
     zihpm               2.0
     zmmul               1.0
+    za128rs             1.0
+    za64rs              1.0
     zawrs               1.0
     zfa                 1.0
     zfh                 1.0
@@ -683,6 +722,8 @@ R"(All available -march extensions for RISC-V
     zksed               1.0
     zksh                1.0
     zkt                 1.0
+    zvbb                1.0
+    zvbc                1.0
     zve32f              1.0
     zve32x              1.0
     zve64d              1.0
@@ -690,6 +731,20 @@ R"(All available -march extensions for RISC-V
     zve64x              1.0
     zvfh                1.0
     zvfhmin             1.0
+    zvkb                1.0
+    zvkg                1.0
+    zvkn                1.0
+    zvknc               1.0
+    zvkned              1.0
+    zvkng               1.0
+    zvknha              1.0
+    zvknhb              1.0
+    zvks                1.0
+    zvksc               1.0
+    zvksed              1.0
+    zvksg               1.0
+    zvksh               1.0
+    zvkt                1.0
     zvl1024b            1.0
     zvl128b             1.0
     zvl16384b           1.0
@@ -705,6 +760,7 @@ R"(All available -march extensions for RISC-V
     zhinx               1.0
     zhinxmin            1.0
     smaia               1.0
+    smepmp              1.0
     ssaia               1.0
     svinval             1.0
     svnapot             1.0
@@ -716,7 +772,6 @@ R"(All available -march extensions for RISC-V
     xcvmac              1.0
     xcvmem              1.0
     xcvsimd             1.0
-    xsfcie              1.0
     xsfvcp              1.0
     xsfvfnrclipxfqf     1.0
     xsfvfwmaccqqq       1.0
@@ -736,29 +791,16 @@ R"(All available -march extensions for RISC-V
     xventanacondops     1.0
 
 Experimental extensions
-    zicfilp             0.2       This is a long dummy description
+    zicfilp             0.4       This is a long dummy description
+    zicfiss             0.4
     zicond              1.0
+    zimop               0.1
     zacas               1.0
-    zfbfmin             0.8
+    zfbfmin             1.0
+    zcmop               0.2
     ztso                0.1
-    zvbb                1.0
-    zvbc                1.0
-    zvfbfmin            0.8
-    zvfbfwma            0.8
-    zvkb                1.0
-    zvkg                1.0
-    zvkn                1.0
-    zvknc               1.0
-    zvkned              1.0
-    zvkng               1.0
-    zvknha              1.0
-    zvknhb              1.0
-    zvks                1.0
-    zvksc               1.0
-    zvksed              1.0
-    zvksg               1.0
-    zvksh               1.0
-    zvkt                1.0
+    zvfbfmin            1.0
+    zvfbfwma            1.0
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";

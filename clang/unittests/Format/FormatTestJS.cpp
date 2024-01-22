@@ -2836,5 +2836,11 @@ TEST_F(FormatTestJS, AlignConsecutiveAssignmentsAndDeclarations) {
                Style);
 }
 
+TEST_F(FormatTestJS, DontBreakFieldsAsGoToLabels) {
+  verifyFormat("export type Params = Config&{\n"
+               "  columns: Column[];\n"
+               "};");
+}
+
 } // namespace format
 } // end namespace clang

@@ -661,7 +661,7 @@ The argument values can be specified in two forms:
   argument with name ``a`` and ``a1`` will be assigned to the argument with
   name ``b``.
 
-Required arguments can alse be specified as named argument.
+Required arguments can also be specified as named argument.
 
 Note that the argument can only be specified once regardless of the way (named
 or positional) to specify and positional arguments should be put before named

@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -192,6 +193,42 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
   static const bool flow = false;
 };
 
+const char *validationEventToString(exegesis::ValidationEvent VE) {
+  switch (VE) {
+  case exegesis::ValidationEvent::InstructionRetired:
+    return "instructions-retired";
+  }
+  llvm_unreachable("Unhandled exegesis::ValidationEvent enum");
+}
+
+Expected<exegesis::ValidationEvent> stringToValidationEvent(StringRef Input) {
+  if (Input == "instructions-retired")
+    return exegesis::ValidationEvent::InstructionRetired;
+  else
+    return make_error<StringError>("Invalid validation event string",
+                                   errc::invalid_argument);
+}
+
+template <>
+struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
+  static void inputOne(IO &Io, StringRef KeyStr,
+                       std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    Expected<exegesis::ValidationEvent> Key = stringToValidationEvent(KeyStr);
+    if (!Key) {
+      Io.setError("Key is not a valid validation event");
+      return;
+    }
+    Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
+  }
+
+  static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
+    for (auto &IndividualVI : VI) {
+      Io.mapRequired(validationEventToString(IndividualVI.first),
+                     IndividualVI.second);
+    }
+  }
+};
+
 // exegesis::Measure is rendererd as a flow instead of a list.
 // e.g. { "key": "the key", "value": 0123 }
 template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
@@ -203,6 +240,7 @@ template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
     }
     Io.mapRequired("value", Obj.PerInstructionValue);
     Io.mapOptional("per_snippet_value", Obj.PerSnippetValue);
+    Io.mapOptional("validation_counters", Obj.ValidationCounters);
   }
   static const bool flow = true;
 };

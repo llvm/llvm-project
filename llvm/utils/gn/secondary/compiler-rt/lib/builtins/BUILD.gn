@@ -274,7 +274,7 @@ static_library("builtins") {
   if (current_cpu == "x86" || current_cpu == "x64") {
     sources -= [ "fp_mode.c" ]
     sources += [
-      "cpu_model.c",
+      "cpu_model/x86.c",
       "i386/fp_mode.c",
       "truncdfbf2.c",
       "truncsfbf2.c",
@@ -496,7 +496,7 @@ static_library("builtins") {
     sources -= [ "fp_mode.c" ]
     sources += [
       "aarch64/fp_mode.c",
-      "cpu_model.c",
+      "cpu_model/aarch64.c",
     ]
     if (current_os == "mingw") {
       sources += [ "aarch64/chkstk.S" ]

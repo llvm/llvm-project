@@ -1724,6 +1724,30 @@ public:
   }
 };
 
+/// Check if \p ID corresponds to a convergence control intrinsic.
+static inline bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
+  switch (IntrinsicID) {
+  default:
+    return false;
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    return true;
+  }
+}
+
+/// Represents calls to the llvm.experimintal.convergence.* intrinsics.
+class ConvergenceControlInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return isConvergenceControlIntrinsic(I->getIntrinsicID());
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H

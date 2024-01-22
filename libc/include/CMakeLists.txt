@@ -76,6 +76,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  float
+  DEF_FILE float.h.def
+  GEN_HDR float.h
+  DEPENDS
+    .llvm-libc-macros.float_macros
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h
@@ -184,24 +192,28 @@ add_gen_header(
     .llvm-libc-macros.generic_error_number_macros
 )
 
-add_gen_header(
-  signal
-  DEF_FILE signal.h.def
-  PARAMS
-    platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
-  GEN_HDR signal.h
-  DATA_FILES
-    ../config/${LIBC_TARGET_OS}/signal.h.in
-  DEPENDS
-    .llvm-libc-macros.signal_macros
-    .llvm-libc-types.sig_atomic_t
-    .llvm-libc-types.sigset_t
-    .llvm-libc-types.struct_sigaction
-    .llvm-libc-types.union_sigval
-    .llvm-libc-types.siginfo_t
-    .llvm-libc-types.stack_t
-    .llvm-libc-types.pid_t
-)
+if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in")
+  add_gen_header(
+    signal
+    DEF_FILE signal.h.def
+    PARAMS
+      platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
+    GEN_HDR signal.h
+    DATA_FILES
+      ../config/${LIBC_TARGET_OS}/signal.h.in
+    DEPENDS
+      .llvm-libc-macros.signal_macros
+      .llvm-libc-types.sig_atomic_t
+      .llvm-libc-types.sigset_t
+      .llvm-libc-types.struct_sigaction
+      .llvm-libc-types.union_sigval
+      .llvm-libc-types.siginfo_t
+      .llvm-libc-types.stack_t
+      .llvm-libc-types.pid_t
+  )
+else()
+  message(STATUS "Skipping header signal.h as the target config is missing")
+endif()
 
 add_gen_header(
   stdio
@@ -341,6 +353,14 @@ add_gen_header(
     .llvm_libc_common_h
 )
 
+add_header(
+  sys_queue
+  HDR
+    sys/queue.h
+  DEPENDS
+    .llvm-libc-macros.sys_queue_macros
+)
+
 add_gen_header(
   sys_random
   DEF_FILE sys/random.h.def
@@ -417,8 +437,10 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_socket_macros
-    .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.sa_family_t
+    .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_gen_header(
@@ -584,3 +606,13 @@ foreach(target IN LISTS all_install_header_targets)
             COMPONENT libc-headers)
   endif()
 endforeach()
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_custom_target(install-libc-headers
+                    DEPENDS libc-headers
+                    COMMAND "${CMAKE_COMMAND}"
+                            -DCMAKE_INSTALL_COMPONENT=libc-headers
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  # Stripping is a no-op for headers
+  add_custom_target(install-libc-headers-stripped DEPENDS install-libc-headers)
+endif()

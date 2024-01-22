@@ -238,6 +238,10 @@ mlir::Value Fortran::lower::genInitialDataTarget(
         /*nonDeferredParams=*/std::nullopt);
   // Pointer initial data target, and NULL(mold).
   for (const auto &sym : Fortran::evaluate::CollectSymbols(initialTarget)) {
+    // Derived type component symbols should not be instantiated as objects
+    // on their own.
+    if (sym->owner().IsDerivedType())
+      continue;
     // Length parameters processing will need care in global initializer
     // context.
     if (hasDerivedTypeWithLengthParameters(sym))
@@ -591,14 +595,17 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   // Creates zero initializer for globals without initializers, this is a common
   // and expected behavior (although not required by the standard)
   if (!globalIsInitialized(global)) {
-    // TODO: For BIND(C) variables, an initial value may be given in another
-    // compilation unit (on the C side), and setting an zero init here creates
-    // linkage conflicts. See if there is a way to get it zero initialized if
-    // not initialized elsewhere. MLIR also used to drop globals without
-    // initializers that are not used in the file, but this may not be true
-    // anymore.
+    // Fortran does not provide means to specify that a BIND(C) module
+    // uninitialized variables will be defined in C.
+    // Add the common linkage to those to allow some level of support
+    // for this use case. Note that this use case will not work if the Fortran
+    // module code is placed in a shared library since, at least for the ELF
+    // format, common symbols are assigned a section in shared libraries.
+    // The best is still to declare C defined variables in a Fortran module file
+    // with no other definitions, and to never link the resulting module object
+    // file.
     if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
-      TODO(loc, "BIND(C) module variable linkage");
+      global.setLinkName(builder.createCommonLinkage());
     Fortran::lower::createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
           mlir::Value initValue = builder.create<fir::ZeroOp>(loc, symTy);
@@ -2138,8 +2145,6 @@ void Fortran::lower::mapSymbolAttributes(
       if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
-        if (argType.isa<fir::RecordType>())
-          TODO(loc, "derived type argument passed by value");
         mlir::Type symType = converter.genType(sym);
         addr = builder.create<fir::AllocaOp>(loc, symType);
         if (isCptrByVal) {

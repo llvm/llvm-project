@@ -316,8 +316,10 @@ TEST(IncludeCleaner, IWYUPragmas) {
     #include "public.h"
 
     void bar() { foo(); }
+    #include "keep_main_file.h" // IWYU pragma: keep
     )cpp";
   TU.AdditionalFiles["behind_keep.h"] = guard("");
+  TU.AdditionalFiles["keep_main_file.h"] = guard("");
   TU.AdditionalFiles["exported.h"] = guard("");
   TU.AdditionalFiles["public.h"] = guard("#include \"private.h\"");
   TU.AdditionalFiles["private.h"] = guard(R"cpp(

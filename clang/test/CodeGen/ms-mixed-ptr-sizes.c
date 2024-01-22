@@ -49,7 +49,7 @@ void test_other(struct Foo *f, __attribute__((address_space(10))) int *i) {
 }
 
 int test_compare1(int *__ptr32 __uptr i, int *__ptr64 j) {
-  // ALL-LABEL: define dso_local i32 @test_compare1
+  // ALL-LABEL: define dso_local noundef i32 @test_compare1
   // X64: %{{.+}} = addrspacecast ptr %j to ptr addrspace(271)
   // X64: %cmp = icmp eq ptr addrspace(271) %{{.+}}, %i
   // X86: %{{.+}} = addrspacecast ptr addrspace(272) %j to ptr addrspace(271)
@@ -58,7 +58,7 @@ int test_compare1(int *__ptr32 __uptr i, int *__ptr64 j) {
 }
 
 int test_compare2(int *__ptr32 __sptr i, int *__ptr64 j) {
-  // ALL-LABEL: define dso_local i32 @test_compare2
+  // ALL-LABEL: define dso_local noundef i32 @test_compare2
   // X64: %{{.+}} = addrspacecast ptr %j to ptr addrspace(270)
   // X64: %cmp = icmp eq ptr addrspace(270) %{{.+}}, %i
   // X86: %{{.+}} = addrspacecast ptr addrspace(272) %j to ptr
@@ -67,7 +67,7 @@ int test_compare2(int *__ptr32 __sptr i, int *__ptr64 j) {
 }
 
 int test_compare3(int *__ptr32 __uptr i, int *__ptr64 j) {
-  // ALL-LABEL: define dso_local i32 @test_compare3
+  // ALL-LABEL: define dso_local noundef i32 @test_compare3
   // X64: %{{.+}} = addrspacecast ptr addrspace(271) %i to ptr
   // X64: %cmp = icmp eq ptr %{{.+}}, %j
   // X86: %{{.+}} = addrspacecast ptr addrspace(271) %i to ptr addrspace(272)
@@ -76,7 +76,7 @@ int test_compare3(int *__ptr32 __uptr i, int *__ptr64 j) {
 }
 
 int test_compare4(int *__ptr32 __sptr i, int *__ptr64 j) {
-  // ALL-LABEL: define dso_local i32 @test_compare4
+  // ALL-LABEL: define dso_local noundef i32 @test_compare4
   // X64: %{{.+}} = addrspacecast ptr addrspace(270) %i to ptr
   // X64: %cmp = icmp eq ptr %{{.+}}, %j
   // X86: %{{.+}} = addrspacecast ptr %i to ptr addrspace(272)

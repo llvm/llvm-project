@@ -13,9 +13,13 @@ import shutil
 import subprocess
 import sys
 
-_isClang = lambda cfg: "__clang__" in compilerMacros(cfg) and "__apple_build_version__" not in compilerMacros(cfg)
+_isAnyClang = lambda cfg: "__clang__" in compilerMacros(cfg)
 _isAppleClang = lambda cfg: "__apple_build_version__" in compilerMacros(cfg)
-_isGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg) and "__clang__" not in compilerMacros(cfg)
+_isAnyGCC = lambda cfg: "__GNUC__" in compilerMacros(cfg)
+_isClang = lambda cfg: _isAnyClang(cfg) and not _isAppleClang(cfg)
+_isGCC = lambda cfg: _isAnyGCC(cfg) and not _isAnyClang(cfg)
+_isAnyClangOrGCC = lambda cfg: _isAnyClang(cfg) or _isAnyGCC(cfg)
+_isClExe = lambda cfg: not _isAnyClangOrGCC(cfg)
 _isMSVC = lambda cfg: "_MSC_VER" in compilerMacros(cfg)
 _msvcVersion = lambda cfg: (int(compilerMacros(cfg)["_MSC_VER"]) // 100, int(compilerMacros(cfg)["_MSC_VER"]) % 100)
 
@@ -27,8 +31,8 @@ def _getSuitableClangTidy(cfg):
             return None
 
         # TODO MODULES require ToT due module specific fixes.
-        if runScriptExitCode(cfg, ['clang-tidy-17 --version']) == 0:
-          return 'clang-tidy-17'
+        if runScriptExitCode(cfg, ['clang-tidy-18 --version']) == 0:
+          return 'clang-tidy-18'
 
         # TODO This should be the last stable release.
         # LLVM RELEASE bump to latest stable version
@@ -61,6 +65,9 @@ def _getAndroidDeviceApi(cfg):
 # Lit features are evaluated in order. Some checks may require the compiler detection to have
 # run first in order to work properly.
 DEFAULT_FEATURES = [
+    # gcc-style-warnings detects compilers that understand -Wno-meow flags, unlike MSVC's compiler driver cl.exe.
+    Feature(name="gcc-style-warnings", when=_isAnyClangOrGCC),
+    Feature(name="cl-style-warnings", when=_isClExe),
     Feature(name="apple-clang", when=_isAppleClang),
     Feature(
         name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
@@ -310,6 +317,18 @@ DEFAULT_FEATURES = [
             AddSubstitution("%{clang-tidy}", lambda cfg: _getSuitableClangTidy(cfg))
         ],
     ),
+    # Whether module support for the platform is available.
+    Feature(
+        name="has-no-cxx-module-support",
+        # The libc of these platforms have functions with internal linkage.
+        # This is not allowed per C11 7.1.2 Standard headers/6
+        #  Any declaration of a library function shall have external linkage.
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
+        or "_WIN32" in compilerMacros(cfg)
+        or platform.system().lower().startswith("aix")
+        # Avoid building on platforms that don't support modules properly.
+        or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier"),
+    ),
 ]
 
 # Deduce and add the test features that that are implied by the #defines in
@@ -336,7 +355,6 @@ macros = {
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_NO_STD_MODULES":  "libcpp-has-no-std-modules",
     "_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH": "libcpp-pstl-cpu-backend-libdispatch",
 }
 for macro, feature in macros.items():

@@ -348,11 +348,7 @@ StringRef ARM::getArchExtName(uint64_t ArchExtKind) {
 }
 
 static bool stripNegationPrefix(StringRef &Name) {
-  if (Name.starts_with("no")) {
-    Name = Name.substr(2);
-    return true;
-  }
-  return false;
+  return Name.consume_front("no");
 }
 
 StringRef ARM::getArchExtFeature(StringRef ArchExt) {
@@ -600,6 +596,7 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   case llvm::Triple::TvOS:
   case llvm::Triple::WatchOS:
   case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     if (MArch == "v7k")
       return "cortex-a7";
     break;

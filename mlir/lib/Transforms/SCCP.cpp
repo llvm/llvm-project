@@ -53,7 +53,7 @@ static LogicalResult replaceWithConstant(DataFlowSolver &solver,
   Dialect *dialect = latticeValue.getConstantDialect();
   Value constant = folder.getOrCreateConstant(
       builder.getInsertionBlock(), dialect, latticeValue.getConstantValue(),
-      value.getType(), value.getLoc());
+      value.getType());
   if (!constant)
     return failure();
 

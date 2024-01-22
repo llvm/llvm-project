@@ -1270,7 +1270,7 @@ inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
   return DisjointOr_match<LHS, RHS, true>(L, R);
 }
 
-/// Match either "and" or "or disjoint".
+/// Match either "add" or "or disjoint".
 template <typename LHS, typename RHS>
 inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
                         DisjointOr_match<LHS, RHS>>
@@ -1495,6 +1495,36 @@ struct ThreeOps_match {
   }
 };
 
+/// Matches instructions with Opcode and any number of operands
+template <unsigned Opcode, typename... OperandTypes> struct AnyOps_match {
+  std::tuple<OperandTypes...> Operands;
+
+  AnyOps_match(const OperandTypes &...Ops) : Operands(Ops...) {}
+
+  // Operand matching works by recursively calling match_operands, matching the
+  // operands left to right. The first version is called for each operand but
+  // the last, for which the second version is called. The second version of
+  // match_operands is also used to match each individual operand.
+  template <int Idx, int Last>
+  std::enable_if_t<Idx != Last, bool> match_operands(const Instruction *I) {
+    return match_operands<Idx, Idx>(I) && match_operands<Idx + 1, Last>(I);
+  }
+
+  template <int Idx, int Last>
+  std::enable_if_t<Idx == Last, bool> match_operands(const Instruction *I) {
+    return std::get<Idx>(Operands).match(I->getOperand(Idx));
+  }
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (V->getValueID() == Value::InstructionVal + Opcode) {
+      auto *I = cast<Instruction>(V);
+      return I->getNumOperands() == sizeof...(OperandTypes) &&
+             match_operands<0, sizeof...(OperandTypes) - 1>(I);
+    }
+    return false;
+  }
+};
+
 /// Matches SelectInst.
 template <typename Cond, typename LHS, typename RHS>
 inline ThreeOps_match<Cond, LHS, RHS, Instruction::Select>
@@ -1611,6 +1641,12 @@ m_Store(const ValueOpTy &ValueOp, const PointerOpTy &PointerOp) {
                                                                   PointerOp);
 }
 
+/// Matches GetElementPtrInst.
+template <typename... OperandTypes>
+inline auto m_GEP(const OperandTypes &...Ops) {
+  return AnyOps_match<Instruction::GetElementPtr, OperandTypes...>(Ops...);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for CastInst classes
 //
@@ -1652,6 +1688,19 @@ template <typename Op_t> struct PtrToIntSameSize_match {
              DL.getTypeSizeInBits(O->getType()) ==
                  DL.getTypeSizeInBits(O->getOperand(0)->getType()) &&
              Op.match(O->getOperand(0));
+    return false;
+  }
+};
+
+template <typename Op_t> struct NNegZExt_match {
+  Op_t Op;
+
+  NNegZExt_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<Instruction>(V))
+      return I->getOpcode() == Instruction::ZExt && I->hasNonNeg() &&
+             Op.match(I->getOperand(0));
     return false;
   }
 };
@@ -1708,6 +1757,11 @@ inline CastInst_match<OpTy, Instruction::ZExt> m_ZExt(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline NNegZExt_match<OpTy> m_NNegZExt(const OpTy &Op) {
+  return NNegZExt_match<OpTy>(Op);
+}
+
+template <typename OpTy>
 inline match_combine_or<CastInst_match<OpTy, Instruction::ZExt>, OpTy>
 m_ZExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), Op);
@@ -1717,6 +1771,14 @@ template <typename OpTy>
 inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>, OpTy>
 m_SExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_SExt(Op), Op);
+}
+
+/// Match either "sext" or "zext nneg".
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, Instruction::SExt>,
+                        NNegZExt_match<OpTy>>
+m_SExtLike(const OpTy &Op) {
+  return m_CombineOr(m_SExt(Op), m_NNegZExt(Op));
 }
 
 template <typename OpTy>

@@ -113,18 +113,20 @@ class module_test_generator:
     clang_tidy_plugin: str
     compiler: str
     compiler_flags: str
+    module: str
 
     def write_lit_configuration(self):
         print(
             f"""\
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-std-modules
 // UNSUPPORTED: clang-modules-build
 
 // REQUIRES: has-clang-tidy
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
+
+// MODULE_DEPENDENCIES: {self.module}
 
 // RUN: echo -n > {self.tmp_prefix}.all_partitions
 """
@@ -141,14 +143,6 @@ class module_test_generator:
                 f"#  include <{header}>{nl}"
                 f"#endif{nl}"
             )
-        elif header == "chrono":
-            # When localization is disabled the header string is not included.
-            # When string is included chrono's operator""s is a named declaration
-            #   using std::chrono_literals::operator""s;
-            # else it is a named declaration
-            #   using std::operator""s;
-            # TODO MODULES investigate why
-            include = f"#include <string>{nl}#include <chrono>{nl}"
         else:
             include = f"#include <{header}>{nl}"
 

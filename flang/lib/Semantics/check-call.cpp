@@ -1431,6 +1431,43 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
 }
 
+// MOVE_ALLOC (F'2023 16.9.147)
+static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (arguments.size() >= 1) {
+    evaluate::CheckForCoindexedObject(
+        messages, arguments[0], "move_alloc", "from");
+  }
+  if (arguments.size() >= 2) {
+    evaluate::CheckForCoindexedObject(
+        messages, arguments[1], "move_alloc", "to");
+  }
+  if (arguments.size() >= 3) {
+    evaluate::CheckForCoindexedObject(
+        messages, arguments[2], "move_alloc", "stat");
+  }
+  if (arguments.size() >= 4) {
+    evaluate::CheckForCoindexedObject(
+        messages, arguments[3], "move_alloc", "errmsg");
+  }
+  if (arguments.size() >= 2 && arguments[0] && arguments[1]) {
+    for (int j{0}; j < 2; ++j) {
+      if (const Symbol *
+              whole{UnwrapWholeSymbolOrComponentDataRef(arguments[j])};
+          !whole || !IsAllocatable(whole->GetUltimate())) {
+        messages.Say(*arguments[j]->sourceLocation(),
+            "Argument #%d to MOVE_ALLOC must be allocatable"_err_en_US, j + 1);
+      }
+    }
+    auto type0{arguments[0]->GetType()};
+    auto type1{arguments[1]->GetType()};
+    if (type0 && type1 && type0->IsPolymorphic() && !type1->IsPolymorphic()) {
+      messages.Say(arguments[1]->sourceLocation(),
+          "When MOVE_ALLOC(FROM=) is polymorphic, TO= must also be polymorphic"_err_en_US);
+    }
+  }
+}
+
 // REDUCE (F'2023 16.9.173)
 static void CheckReduce(
     evaluate::ActualArguments &arguments, evaluate::FoldingContext &context) {
@@ -1639,6 +1676,8 @@ static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
     const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "move_alloc") {
+    CheckMove_Alloc(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "reduce") {
     CheckReduce(arguments, context.foldingContext());
   } else if (intrinsic.name == "transfer") {

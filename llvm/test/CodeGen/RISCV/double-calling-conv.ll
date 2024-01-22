@@ -62,7 +62,7 @@ define double @caller_double_inreg() nounwind {
 ; RV32IFD-NEXT:    lui a2, 262364
 ; RV32IFD-NEXT:    addi a3, a2, 655
 ; RV32IFD-NEXT:    mv a2, a0
-; RV32IFD-NEXT:    call callee_double_inreg@plt
+; RV32IFD-NEXT:    call callee_double_inreg
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
@@ -78,7 +78,7 @@ define double @caller_double_inreg() nounwind {
 ; RV32IZFINXZDINX-NEXT:    lui a2, 262364
 ; RV32IZFINXZDINX-NEXT:    addi a3, a2, 655
 ; RV32IZFINXZDINX-NEXT:    mv a2, a0
-; RV32IZFINXZDINX-NEXT:    call callee_double_inreg@plt
+; RV32IZFINXZDINX-NEXT:    call callee_double_inreg
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
@@ -145,7 +145,7 @@ define double @caller_double_split_reg_stack() nounwind {
 ; RV32IFD-NEXT:    li a2, 0
 ; RV32IFD-NEXT:    li a4, 0
 ; RV32IFD-NEXT:    mv a7, a5
-; RV32IFD-NEXT:    call callee_double_split_reg_stack@plt
+; RV32IFD-NEXT:    call callee_double_split_reg_stack
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
@@ -167,7 +167,7 @@ define double @caller_double_split_reg_stack() nounwind {
 ; RV32IZFINXZDINX-NEXT:    li a2, 0
 ; RV32IZFINXZDINX-NEXT:    li a4, 0
 ; RV32IZFINXZDINX-NEXT:    mv a7, a5
-; RV32IZFINXZDINX-NEXT:    call callee_double_split_reg_stack@plt
+; RV32IZFINXZDINX-NEXT:    call callee_double_split_reg_stack
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
@@ -229,7 +229,7 @@ define double @caller_double_stack() nounwind {
 ; RV32IFD-NEXT:    li a3, 0
 ; RV32IFD-NEXT:    li a5, 0
 ; RV32IFD-NEXT:    li a7, 0
-; RV32IFD-NEXT:    call callee_double_stack@plt
+; RV32IFD-NEXT:    call callee_double_stack
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
@@ -256,7 +256,7 @@ define double @caller_double_stack() nounwind {
 ; RV32IZFINXZDINX-NEXT:    li a3, 0
 ; RV32IZFINXZDINX-NEXT:    li a5, 0
 ; RV32IZFINXZDINX-NEXT:    li a7, 0
-; RV32IZFINXZDINX-NEXT:    call callee_double_stack@plt
+; RV32IZFINXZDINX-NEXT:    call callee_double_stack
 ; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 32
 ; RV32IZFINXZDINX-NEXT:    ret

@@ -70,3 +70,6 @@ f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
 
 # [libc++] Replace uses of _VSTD:: by std:: (#74331)
 77a00c0d546cd4aa8311b5b9031ae9ea8cdb050c
+
+# [libc++] Format the code base (#74334)
+9783f28cbb155e4a8d49c12e1c60ce14dcfaf0c7

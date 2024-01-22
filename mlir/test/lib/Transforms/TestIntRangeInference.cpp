@@ -40,9 +40,8 @@ static LogicalResult replaceWithConstant(DataFlowSolver &solver, OpBuilder &b,
       maybeDefiningOp ? maybeDefiningOp->getDialect()
                       : value.getParentRegion()->getParentOp()->getDialect();
   Attribute constAttr = b.getIntegerAttr(value.getType(), *maybeConstValue);
-  Value constant =
-      folder.getOrCreateConstant(b.getInsertionBlock(), valueDialect, constAttr,
-                                 value.getType(), value.getLoc());
+  Value constant = folder.getOrCreateConstant(
+      b.getInsertionBlock(), valueDialect, constAttr, value.getType());
   if (!constant)
     return failure();
 

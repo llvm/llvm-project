@@ -128,7 +128,7 @@ namespace llvm {
 
     /// data - Get a pointer to the start of the string (which may not be null
     /// terminated).
-    [[nodiscard]] const char *data() const { return Data; }
+    [[nodiscard]] constexpr const char *data() const { return Data; }
 
     /// empty - Check if the string is empty.
     [[nodiscard]] constexpr bool empty() const { return Length == 0; }
@@ -245,7 +245,7 @@ namespace llvm {
     /// @name Type Conversions
     /// @{
 
-    operator std::string_view() const {
+    constexpr operator std::string_view() const {
       return std::string_view(data(), size());
     }
 
@@ -258,7 +258,9 @@ namespace llvm {
       return Length >= Prefix.Length &&
              compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
     }
-    [[nodiscard]] bool startswith(StringRef Prefix) const {
+    [[nodiscard]] LLVM_DEPRECATED(
+        "Use starts_with instead",
+        "starts_with") bool startswith(StringRef Prefix) const {
       return starts_with(Prefix);
     }
 
@@ -271,7 +273,9 @@ namespace llvm {
              compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) ==
                  0;
     }
-    [[nodiscard]] bool endswith(StringRef Suffix) const {
+    [[nodiscard]] LLVM_DEPRECATED(
+        "Use ends_with instead",
+        "ends_with") bool endswith(StringRef Suffix) const {
       return ends_with(Suffix);
     }
 

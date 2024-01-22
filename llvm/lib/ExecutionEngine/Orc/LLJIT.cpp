@@ -768,11 +768,11 @@ Error LLJITBuilderState::prepareForConstruction() {
   // create a default one.
   if (!SetupProcessSymbolsJITDylib && LinkProcessSymbolsByDefault) {
     LLVM_DEBUG(dbgs() << "Creating default Process JD setup function\n");
-    SetupProcessSymbolsJITDylib = [this](LLJIT &J) -> Expected<JITDylibSP> {
+    SetupProcessSymbolsJITDylib = [](LLJIT &J) -> Expected<JITDylibSP> {
       auto &JD =
           J.getExecutionSession().createBareJITDylib("<Process Symbols>");
-      auto G = orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          DL->getGlobalPrefix());
+      auto G = EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
+          J.getExecutionSession());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));

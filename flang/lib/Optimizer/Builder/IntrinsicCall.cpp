@@ -26,6 +26,7 @@
 #include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Exceptions.h"
+#include "flang/Optimizer/Builder/Runtime/Execute.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/Intrinsics.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
@@ -165,6 +166,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"fptr", asInquired},
        {"shape", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"c_f_procpointer",
+     &I::genCFProcPointer,
+     {{{"cptr", asValue}, {"fptr", asInquired}}},
+     /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"ceiling", &I::genCeiling},
@@ -208,6 +213,14 @@ static constexpr IntrinsicHandler handlers[]{
        {"shift", asAddr},
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
+     /*isElemental=*/false},
+    {"execute_command_line",
+     &I::genExecuteCommandLine,
+     {{{"command", asBox},
+       {"wait", asValue, handleDynamicOptional},
+       {"exitstat", asBox, handleDynamicOptional},
+       {"cmdstat", asBox, handleDynamicOptional},
+       {"cmdmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"exit",
      &I::genExit,
@@ -1418,13 +1431,13 @@ mlir::Value toValue(const fir::ExtendedValue &val, fir::FirOpBuilder &builder,
 //===----------------------------------------------------------------------===//
 
 static bool isIntrinsicModuleProcedure(llvm::StringRef name) {
-  return name.startswith("c_") || name.startswith("compiler_") ||
-         name.startswith("ieee_") || name.startswith("__ppc_");
+  return name.starts_with("c_") || name.starts_with("compiler_") ||
+         name.starts_with("ieee_") || name.starts_with("__ppc_");
 }
 
 static bool isCoarrayIntrinsic(llvm::StringRef name) {
-  return name.startswith("atomic_") || name.startswith("co_") ||
-         name.contains("image") || name.endswith("cobound") ||
+  return name.starts_with("atomic_") || name.starts_with("co_") ||
+         name.contains("image") || name.ends_with("cobound") ||
          name.equals("team_number");
 }
 
@@ -1433,7 +1446,7 @@ static bool isCoarrayIntrinsic(llvm::StringRef name) {
 /// {_[ail]?[0-9]+}*, such as _1 or _a4.
 llvm::StringRef genericName(llvm::StringRef specificName) {
   const std::string builtin = "__builtin_";
-  llvm::StringRef name = specificName.startswith(builtin)
+  llvm::StringRef name = specificName.starts_with(builtin)
                              ? specificName.drop_front(builtin.size())
                              : specificName;
   size_t size = name.size();
@@ -2134,6 +2147,33 @@ fir::ExtendedValue
 IntrinsicLibrary::genAssociated(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
+  if (fir::isBoxProcAddressType(fir::getBase(args[0]).getType())) {
+    mlir::Value pointerBoxProc =
+        builder.create<fir::LoadOp>(loc, fir::getBase(args[0]));
+    mlir::Value pointerTarget =
+        builder.create<fir::BoxAddrOp>(loc, pointerBoxProc);
+    if (isStaticallyAbsent(args[1]))
+      return builder.genIsNotNullAddr(loc, pointerTarget);
+    mlir::Value target = fir::getBase(args[1]);
+    if (fir::isBoxProcAddressType(target.getType()))
+      target = builder.create<fir::LoadOp>(loc, target);
+    if (target.getType().isa<fir::BoxProcType>())
+      target = builder.create<fir::BoxAddrOp>(loc, target);
+    mlir::Type intPtrTy = builder.getIntPtrType();
+    mlir::Value pointerInt =
+        builder.createConvert(loc, intPtrTy, pointerTarget);
+    mlir::Value targetInt = builder.createConvert(loc, intPtrTy, target);
+    mlir::Value sameTarget = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, pointerInt, targetInt);
+    mlir::Value zero = builder.createIntegerConstant(loc, intPtrTy, 0);
+    mlir::Value notNull = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::ne, zero, pointerInt);
+    // The not notNull test covers the following two cases:
+    // - TARGET is a procedure that is OPTIONAL and absent at runtime.
+    // - TARGET is a procedure pointer that is NULL.
+    // In both cases, ASSOCIATED should be false if POINTER is NULL.
+    return builder.create<mlir::arith::AndIOp>(loc, sameTarget, notNull);
+  }
   auto *pointer =
       args[0].match([&](const fir::MutableBoxValue &x) { return &x; },
                     [&](const auto &) -> const fir::MutableBoxValue * {
@@ -2498,6 +2538,22 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
                                     /*lbounds=*/mlir::ValueRange{});
 }
 
+// C_F_PROCPOINTER
+void IntrinsicLibrary::genCFProcPointer(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value cptr =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, fir::getBase(args[0]));
+  mlir::Value fptr = fir::getBase(args[1]);
+  auto boxProcType =
+      mlir::cast<fir::BoxProcType>(fir::unwrapRefType(fptr.getType()));
+  mlir::Value cptrCast =
+      builder.createConvert(loc, boxProcType.getEleTy(), cptr);
+  mlir::Value cptrBox =
+      builder.create<fir::EmboxProcOp>(loc, boxProcType, cptrCast);
+  builder.create<fir::StoreOp>(loc, cptrBox, fptr);
+}
+
 // C_FUNLOC
 fir::ExtendedValue
 IntrinsicLibrary::genCFunLoc(mlir::Type resultType,
@@ -2852,6 +2908,40 @@ IntrinsicLibrary::genEoshift(mlir::Type resultType,
                              dim);
   }
   return readAndAddCleanUp(resultMutableBox, resultType, "EOSHIFT");
+}
+
+// EXECUTE_COMMAND_LINE
+void IntrinsicLibrary::genExecuteCommandLine(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 5);
+  mlir::Value command = fir::getBase(args[0]);
+  const fir::ExtendedValue &wait = args[1];
+  const fir::ExtendedValue &exitstat = args[2];
+  const fir::ExtendedValue &cmdstat = args[3];
+  const fir::ExtendedValue &cmdmsg = args[4];
+
+  if (!command)
+    fir::emitFatalError(loc, "expected COMMAND parameter");
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+
+  mlir::Value waitBool = isStaticallyPresent(wait)
+                             ? fir::getBase(wait)
+                             : builder.createBool(loc, true);
+  mlir::Value exitstatBox =
+      isStaticallyPresent(exitstat)
+          ? fir::getBase(exitstat)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value cmdstatBox =
+      isStaticallyPresent(cmdstat)
+          ? fir::getBase(cmdstat)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  mlir::Value cmdmsgBox =
+      isStaticallyPresent(cmdmsg)
+          ? fir::getBase(cmdmsg)
+          : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
+                                      exitstatBox, cmdstatBox, cmdmsgBox);
 }
 
 // EXIT

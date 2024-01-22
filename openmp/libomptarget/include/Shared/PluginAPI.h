@@ -35,12 +35,6 @@ int32_t __tgt_rtl_number_of_devices(void);
 // having to load the library, which can be expensive.
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image);
 
-// This provides the same functionality as __tgt_rtl_is_valid_binary except we
-// also use additional information to determine if the image is valid. This
-// allows us to determine if an image has a compatible architecture.
-int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *Image,
-                                       __tgt_image_info *Info);
-
 // Return an integer other than zero if the data can be exchaned from SrcDevId
 // to DstDevId. If it is data exchangable, the device plugin should provide
 // function to move data from source device to destination device directly.
@@ -225,6 +219,9 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                            void *VAddr, bool isRecord,
                                            bool SaveOutput,
                                            uint64_t &ReqPtrArgOffset);
+
+// Returns true if the device \p DeviceId suggests to use auto zero-copy.
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId);
 }
 
 #endif // OMPTARGET_SHARED_PLUGIN_API_H

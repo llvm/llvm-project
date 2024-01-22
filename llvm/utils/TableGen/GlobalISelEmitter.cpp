@@ -408,7 +408,7 @@ private:
       const TreePatternNode *DstChild, const TreePatternNode *Src);
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
-                                      DagInit *DefaultOps) const;
+                                      const DAGDefaultOperand &DefaultOp) const;
   Error
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
@@ -1681,11 +1681,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       // overridden, or which we aren't letting it override; emit the 'default
       // ops' operands.
 
-      const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[InstOpNo];
-      DagInit *DefaultOps = DstIOperand.Rec->getValueAsDag("DefaultOps");
-      if (auto Error = importDefaultOperandRenderers(InsertPt, M, DstMIBuilder,
-                                                     DefaultOps))
+      Record *OperandNode = DstI->Operands[InstOpNo].Rec;
+      if (auto Error = importDefaultOperandRenderers(
+              InsertPt, M, DstMIBuilder, CGP.getDefaultOperand(OperandNode)))
         return std::move(Error);
+
       ++NumDefaultOps;
       continue;
     }
@@ -1710,22 +1710,16 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
 Error GlobalISelEmitter::importDefaultOperandRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    DagInit *DefaultOps) const {
-  for (const auto *DefaultOp : DefaultOps->getArgs()) {
-    std::optional<LLTCodeGen> OpTyOrNone;
+    const DAGDefaultOperand &DefaultOp) const {
+  for (const auto &Op : DefaultOp.DefaultOps) {
+    const auto *N = Op.get();
+    if (!N->isLeaf())
+      return failedImport("Could not add default op");
 
-    // Look through ValueType operators.
-    if (const DagInit *DefaultDagOp = dyn_cast<DagInit>(DefaultOp)) {
-      if (const DefInit *DefaultDagOperator =
-              dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
-        if (DefaultDagOperator->getDef()->isSubClassOf("ValueType")) {
-          OpTyOrNone = MVTToLLT(getValueType(DefaultDagOperator->getDef()));
-          DefaultOp = DefaultDagOp->getArg(0);
-        }
-      }
-    }
+    const auto *DefaultOp = N->getLeafValue();
 
     if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
+      std::optional<LLTCodeGen> OpTyOrNone = MVTToLLT(N->getSimpleType(0));
       auto Def = DefaultDefOp->getDef();
       if (Def->getName() == "undef_tied_input") {
         unsigned TempRegID = M.allocateTempRegID();
@@ -1978,6 +1972,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       DstMIBuilder.addRenderer<CopyRenderer>(Dst->getName());
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
 
+      // Erase the root.
+      unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+      M.addAction<EraseInstAction>(RootInsnID);
+
       // We're done with this pattern!  It's eligible for GISel emission; return
       // it.
       ++NumPatternImported;
@@ -2105,14 +2103,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
     M.addAction<ConstrainOperandToRegClassAction>(
         0, 0, Target.getRegisterClass(DstIOpRec));
-
-    // We're done with this pattern!  It's eligible for GISel emission; return
-    // it.
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "EXTRACT_SUBREG") {
+  } else if (DstIName == "EXTRACT_SUBREG") {
     auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
     if (!SuperClass)
       return failedImport(
@@ -2142,14 +2133,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     M.addAction<ConstrainOperandToRegClassAction>(0, 0,
                                                   *SrcRCDstRCPair->second);
     M.addAction<ConstrainOperandToRegClassAction>(0, 1, *SrcRCDstRCPair->first);
-
-    // We're done with this pattern!  It's eligible for GISel emission; return
-    // it.
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "INSERT_SUBREG") {
+  } else if (DstIName == "INSERT_SUBREG") {
     assert(Src->getExtTypes().size() == 1 &&
            "Expected Src of INSERT_SUBREG to have one result type");
     // We need to constrain the destination, a super regsister source, and a
@@ -2166,11 +2150,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
     M.addAction<ConstrainOperandToRegClassAction>(0, 1, **SuperClass);
     M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "SUBREG_TO_REG") {
+  } else if (DstIName == "SUBREG_TO_REG") {
     // We need to constrain the destination and subregister source.
     assert(Src->getExtTypes().size() == 1 &&
            "Expected Src of SUBREG_TO_REG to have one result type");
@@ -2190,11 +2170,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
           "Cannot infer register class for SUBREG_TO_REG operand #0");
     M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
     M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "REG_SEQUENCE") {
+  } else if (DstIName == "REG_SEQUENCE") {
     auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
 
     M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
@@ -2213,12 +2189,13 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       M.addAction<ConstrainOperandToRegClassAction>(0, I,
                                                     *SrcRCDstRCPair->second);
     }
-
-    ++NumPatternImported;
-    return std::move(M);
+  } else {
+    M.addAction<ConstrainOperandsToDefinitionAction>(0);
   }
 
-  M.addAction<ConstrainOperandsToDefinitionAction>(0);
+  // Erase the root.
+  unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+  M.addAction<EraseInstAction>(RootInsnID);
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
   ++NumPatternImported;

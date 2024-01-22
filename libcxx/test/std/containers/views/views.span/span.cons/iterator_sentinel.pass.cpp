@@ -114,7 +114,10 @@ public:
   friend difference_type operator-(throw_operator_minus, throw_operator_minus) { throw 42; };
 
   friend bool operator==(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ == y.it_; }
-  friend auto operator<=>(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ <=> y.it_; }
+  friend bool operator<(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ < y.it_; }
+  friend bool operator>(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ > y.it_; }
+  friend bool operator<=(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ <= y.it_; }
+  friend bool operator>=(const throw_operator_minus& x, const throw_operator_minus& y) { return x.it_ >= y.it_; }
 };
 
 template <class It>

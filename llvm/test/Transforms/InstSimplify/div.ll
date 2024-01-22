@@ -567,3 +567,100 @@ define <2 x i8> @sdiv_vec_multi_one_bit_divisor(<2 x i8> %x, <2 x i8> %y) {
   %res = sdiv <2 x i8> %y, %and
   ret <2 x i8> %res
 }
+
+define i8 @udiv_exact_mul_nsw(i8 %x) {
+; CHECK-LABEL: @udiv_exact_mul_nsw(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %a = mul nsw i8 %x, 24
+  %b = udiv exact i8 %a, 24
+  ret i8 %b
+}
+
+define i8 @sdiv_exact_mul_nuw(i8 %x) {
+; CHECK-LABEL: @sdiv_exact_mul_nuw(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %a = mul nuw i8 %x, 24
+  %b = sdiv exact i8 %a, 24
+  ret i8 %b
+}
+
+; Negative tests
+
+define i8 @udiv_exact_mul_nsw_mismatch(i8 %x) {
+; CHECK-LABEL: @udiv_exact_mul_nsw_mismatch(
+; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[B:%.*]] = udiv exact i8 [[A]], 12
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = mul nsw i8 %x, 24
+  %b = udiv exact i8 %a, 12
+  ret i8 %b
+}
+
+define i8 @udiv_exact_mul_nsw_power_of_2(i8 %x) {
+; CHECK-LABEL: @udiv_exact_mul_nsw_power_of_2(
+; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 8
+; CHECK-NEXT:    [[B:%.*]] = udiv exact i8 [[A]], 8
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = mul nsw i8 %x, 8
+  %b = udiv exact i8 %a, 8
+  ret i8 %b
+}
+
+define i8 @sdiv_exact_mul_nuw_power_of_2(i8 %x) {
+; CHECK-LABEL: @sdiv_exact_mul_nuw_power_of_2(
+; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 8
+; CHECK-NEXT:    [[B:%.*]] = sdiv exact i8 [[A]], 8
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = mul nuw i8 %x, 8
+  %b = sdiv exact i8 %a, 8
+  ret i8 %b
+}
+
+define i8 @udiv_exact_mul(i8 %x) {
+; CHECK-LABEL: @udiv_exact_mul(
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[B:%.*]] = udiv exact i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = mul i8 %x, 24
+  %b = udiv exact i8 %a, 24
+  ret i8 %b
+}
+
+define i8 @sdiv_exact_mul(i8 %x) {
+; CHECK-LABEL: @sdiv_exact_mul(
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[B:%.*]] = sdiv exact i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = mul i8 %x, 24
+  %b = sdiv exact i8 %a, 24
+  ret i8 %b
+}
+
+define i8 @udiv_mul_nsw(i8 %x) {
+; CHECK-LABEL: @udiv_mul_nsw(
+; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[B:%.*]] = udiv i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = mul nsw i8 %x, 24
+  %b = udiv i8 %a, 24
+  ret i8 %b
+}
+
+define i8 @sdiv_mul_nuw(i8 %x) {
+; CHECK-LABEL: @sdiv_mul_nuw(
+; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[B:%.*]] = sdiv i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %a = mul nuw i8 %x, 24
+  %b = sdiv i8 %a, 24
+  ret i8 %b
+}

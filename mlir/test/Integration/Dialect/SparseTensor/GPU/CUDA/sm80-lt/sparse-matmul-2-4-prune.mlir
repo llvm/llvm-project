@@ -16,34 +16,27 @@
 //
 // RUN: %{compile} enable-runtime-library=false" | %{run}
 
-#map0 = affine_map<(d0, d1, d2) -> (d0, d2)>
-#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
-#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#NV_24 = #sparse_tensor.encoding<{
+  map = ( i, j ) ->
+  ( i            : dense,
+    j floordiv 4 : dense,
+    j mod 4      : block2_4
+  )
+}>
 
 module {
 
   llvm.func @mgpuCreateSparseLtEnv()
   llvm.func @mgpuDestroySparseLtEnv()
 
-  //
-  // TODO: This uses our temporary ATTRIBUTE, replace with 2:4 type!
-  //
-  func.func @matmul(%arg0: tensor<16x16xf16>,
-                    %arg1: tensor<16x16xf16>,
-		    %arg2: tensor<16x16xf16>) -> tensor<16x16xf16> {
-    %0 = linalg.generic {
-       DENSE24,
-       indexing_maps = [#map0, #map1, #map2],
-       iterator_types = ["parallel", "parallel", "reduction"]
-    }
-     ins(%arg0, %arg1 : tensor<16x16xf16>, tensor<16x16xf16>)
-     outs(%arg2 : tensor<16x16xf16>) {
-         ^bb0(%in: f16, %in_0: f16, %out: f16):
-           %1 = arith.mulf %in, %in_0 : f16
-           %2 = arith.addf %out, %1 : f16
-           linalg.yield %2 : f16
-       } -> tensor<16x16xf16>
-    return %0 : tensor<16x16xf16>
+  func.func @matmul24(%Ad: tensor<16x16xf16>,
+                      %B: tensor<16x16xf16>,
+                      %Cin: tensor<16x16xf16>) -> tensor<16x16xf16> {
+    %A = sparse_tensor.convert %Ad : tensor<16x16xf16> to tensor<16x16xf16, #NV_24>
+    %C = linalg.matmul
+      ins(%A, %B: tensor<16x16xf16, #NV_24>, tensor<16x16xf16>)
+      outs(%Cin: tensor<16x16xf16>) -> tensor<16x16xf16>
+    return %C : tensor<16x16xf16>
   }
 
   func.func @main() {
@@ -81,7 +74,9 @@ module {
     // By effectively computing D = A B + C with id(B) and zero(C)
     // the resulting matrix returns the pruned A back to the caller.
     //
-    %D = call @matmul(%A, %B, %C): (tensor<16x16xf16>, tensor<16x16xf16>, tensor<16x16xf16>) -> (tensor<16x16xf16>)
+    %D = call @matmul24(%A, %B, %C): (tensor<16x16xf16>,
+                                      tensor<16x16xf16>,
+                                      tensor<16x16xf16>) -> (tensor<16x16xf16>)
 
     //
     // This was the original matrix.
