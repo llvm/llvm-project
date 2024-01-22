@@ -1350,8 +1350,8 @@ class VPScalarCastRecipe : public VPSingleDefRecipe {
 
 public:
   VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}),
-        Opcode(Opcode), ResultTy(ResultTy) {}
+      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}), Opcode(Opcode),
+        ResultTy(ResultTy) {}
 
   ~VPScalarCastRecipe() override = default;
 
