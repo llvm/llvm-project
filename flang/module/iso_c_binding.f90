@@ -22,6 +22,8 @@ module iso_c_binding
     c_sizeof => sizeof, &
     operator(==), operator(/=)
 
+  implicit none
+
   ! Do not leak these intrinsics into the USEing code.
   private :: kind
   private :: achar
