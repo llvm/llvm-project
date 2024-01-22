@@ -827,7 +827,7 @@ mlir::LogicalResult CIRGenFunction::buildForStmt(const ForStmt &S) {
 }
 
 mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
-  mlir::cir::LoopOp loopOp;
+  mlir::cir::DoWhileOp doWhileOp;
 
   // TODO: pass in array of attributes.
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
@@ -839,8 +839,8 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
     // sure we handle all cases.
     assert(!UnimplementedFeature::requiresCleanups());
 
-    loopOp = builder.create<LoopOp>(
-        getLoc(S.getSourceRange()), mlir::cir::LoopOpKind::DoWhile,
+    doWhileOp = builder.createDoWhile(
+        getLoc(S.getSourceRange()),
         /*condBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           assert(!UnimplementedFeature::createProfileWeightsForLoop());
@@ -856,10 +856,6 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
           if (buildStmt(S.getBody(), /*useCurrentScope=*/true).failed())
             loopRes = mlir::failure();
           buildStopPoint(&S);
-        },
-        /*stepBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          builder.createYield(loc);
         });
     return loopRes;
   };
@@ -876,7 +872,7 @@ mlir::LogicalResult CIRGenFunction::buildDoStmt(const DoStmt &S) {
   if (res.failed())
     return res;
 
-  terminateBody(builder, loopOp.getBody(), getLoc(S.getEndLoc()));
+  terminateBody(builder, doWhileOp.getBody(), getLoc(S.getEndLoc()));
   return mlir::success();
 }
 

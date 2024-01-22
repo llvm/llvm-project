@@ -111,46 +111,40 @@ void l3(bool cond) {
 
 // CHECK: cir.func @_Z2l3b
 // CHECK: cir.scope {
-// CHECK-NEXT:   cir.loop dowhile(cond :  {
-// CHECK-NEXT:   %[[#TRUE:]] = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
-// CHECK-NEXT:   cir.condition(%[[#TRUE]])
-// CHECK-NEXT:   }, step :  {
-// CHECK-NEXT:   cir.yield
-// CHECK-NEXT:   })  {
-// CHECK-NEXT:   %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
-// CHECK-NEXT:   %4 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK-NEXT:   %5 = cir.binop(add, %3, %4) : !s32i
-// CHECK-NEXT:   cir.store %5, %1 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   cir.do {
+// CHECK-NEXT:     %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:     %4 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:     cir.store %5, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   } while {
+// CHECK-NEXT:     %[[#TRUE:]] = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
+// CHECK-NEXT:     cir.condition(%[[#TRUE]])
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.scope {
-// CHECK-NEXT:   cir.loop dowhile(cond :  {
+// CHECK-NEXT:   cir.do {
+// CHECK-NEXT:     %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:     %4 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:     cir.store %5, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   } while {
 // CHECK-NEXT:     %[[#TRUE:]] = cir.const(#true) : !cir.bool
 // CHECK-NEXT:     cir.condition(%[[#TRUE]])
-// CHECK-NEXT:   }, step :  {
-// CHECK-NEXT:   cir.yield
-// CHECK-NEXT:   })  {
-// CHECK-NEXT:   %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
-// CHECK-NEXT:   %4 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK-NEXT:   %5 = cir.binop(add, %3, %4) : !s32i
-// CHECK-NEXT:   cir.store %5, %1 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:   cir.yield
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: cir.scope {
-// CHECK-NEXT:   cir.loop dowhile(cond :  {
-// CHECK-NEXT:   %3 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK-NEXT:   %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
-// CHECK-NEXT:   cir.condition(%4)
-// CHECK-NEXT:   }, step :  {
-// CHECK-NEXT:   cir.yield
-// CHECK-NEXT:   })  {
-// CHECK-NEXT:   %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
-// CHECK-NEXT:   %4 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK-NEXT:   %5 = cir.binop(add, %3, %4) : !s32i
-// CHECK-NEXT:   cir.store %5, %1 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:   cir.yield
+// CHECK-NEXT:   cir.do {
+// CHECK-NEXT:     %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:     %4 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:     cir.store %5, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:     cir.yield
+// CHECK-NEXT:   } while {
+// CHECK-NEXT:     %3 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:     %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
+// CHECK-NEXT:     cir.condition(%4)
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
@@ -191,14 +185,12 @@ void l5() {
 
 // CHECK: cir.func @_Z2l5v()
 // CHECK-NEXT:   cir.scope {
-// CHECK-NEXT:     cir.loop dowhile(cond :  {
+// CHECK-NEXT:     cir.do {
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     } while {
 // CHECK-NEXT:       %0 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CHECK-NEXT:       %1 = cir.cast(int_to_bool, %0 : !s32i), !cir.bool
 // CHECK-NEXT:       cir.condition(%1)
-// CHECK-NEXT:     }, step :  {
-// CHECK-NEXT:       cir.yield
-// CHECK-NEXT:     })  {
-// CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT:   cir.return

@@ -53,12 +53,10 @@ module {
 
   // Test do-while cir.loop operation lowering.
   cir.func @testDoWhile(%arg0 : !cir.bool) {
-    cir.loop dowhile(cond : {
+    cir.do {
+      cir.yield
+    } while {
       cir.condition(%arg0)
-    }, step : { // Droped when lowering while statements.
-      cir.yield
-    }) {
-      cir.yield
     }
     cir.return
   }

@@ -440,7 +440,9 @@ def StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : CIR_Op<"return", [HasParent<"FuncOp, ScopeOp, IfOp, SwitchOp, LoopOp">,
+def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
+                                              "SwitchOp", "DoWhileOp",
+                                              "LoopOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -634,7 +636,7 @@ def ConditionOp : CIR_Op<"condition", [
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "LoopOp", "AwaitOp",
-                 "TernaryOp", "GlobalOp"]>]> {
+                 "TernaryOp", "GlobalOp", "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -1163,12 +1165,11 @@ def BrCondOp : CIR_Op<"brcond",
 
 def LoopOpKind_For : I32EnumAttrCase<"For", 1, "for">;
 def LoopOpKind_While : I32EnumAttrCase<"While", 2, "while">;
-def LoopOpKind_DoWhile : I32EnumAttrCase<"DoWhile", 3, "dowhile">;
 
 def LoopOpKind : I32EnumAttr<
     "LoopOpKind",
     "Loop kind",
-    [LoopOpKind_For, LoopOpKind_While, LoopOpKind_DoWhile]> {
+    [LoopOpKind_For, LoopOpKind_While]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -1252,10 +1253,63 @@ def LoopOp : CIR_Op<"loop",
         return llvm::SmallVector<Region *, 3>{&getCond(), &getBody(), &getStep()};
       case LoopOpKind::While:
         return llvm::SmallVector<Region *, 2>{&getCond(), &getBody()};
-      case LoopOpKind::DoWhile:
-        return llvm::SmallVector<Region *, 2>{&getBody(), &getCond()};
+      // case LoopOpKind::DoWhile:
+      //   return llvm::SmallVector<Region *, 2>{&getBody(), &getCond()};
       }
     }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// DoWhileOp
+//===----------------------------------------------------------------------===//
+
+class WhileOpBase<string mnemonic> : CIR_Op<mnemonic, [
+  LoopOpInterface,
+  NoRegionArguments,
+]> {
+  defvar isWhile = !eq(mnemonic, "while");
+  let summary = "C/C++ " # !if(isWhile, "while", "do-while") # " loop";
+  let builders = [
+    OpBuilder<(ins "function_ref<void(OpBuilder &, Location)>":$condBuilder,
+                   "function_ref<void(OpBuilder &, Location)>":$bodyBuilder), [{
+        OpBuilder::InsertionGuard guard($_builder);
+        $_builder.createBlock($_state.addRegion());
+      }] # !if(isWhile, [{
+        condBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+      }], [{
+        bodyBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+      }])>
+  ];
+}
+
+def DoWhileOp : WhileOpBase<"do"> {
+  let regions = (region MinSizedRegion<1>:$body, SizedRegion<1>:$cond);
+  let assemblyFormat = " $body `while` $cond attr-dict";
+
+  let extraClassDeclaration = [{
+    Region &getEntry() { return getBody(); }
+  }];
+
+  let description = [{
+    Represents a C/C++ do-while loop. Identical to `cir.while` but the
+    condition is evaluated after the body.
+
+    Example:
+
+    ```mlir
+    cir.do {
+      cir.break
+    ^bb2:
+      cir.yield
+    } while {
+      cir.condition %cond : cir.bool
+    }
+    ```
   }];
 }
 
@@ -2604,8 +2658,9 @@ def AllocException : CIR_Op<"alloc_exception", [
 // ThrowOp
 //===----------------------------------------------------------------------===//
 
-def ThrowOp : CIR_Op<"throw",
-                     [HasParent<"FuncOp, ScopeOp, IfOp, SwitchOp, LoopOp">,
+def ThrowOp : CIR_Op<"throw", [
+                     ParentOneOf<["FuncOp", "ScopeOp", "IfOp", "SwitchOp",
+                                  "DoWhileOp", "LoopOp"]>,
                      Terminator]> {
   let summary = "(Re)Throws an exception";
   let description = [{
