@@ -8,10 +8,8 @@ static void *__arm_sc_memcpy_fwd(void *dest, const void *src,
                                  size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   const unsigned char *srcp = (const unsigned char *)src;
-
-  for (size_t i = 0; i < n; i++) {
+  for (size_t i = 0; i < n; ++i)
     destp[i] = srcp[i];
-  }
 
   return dest;
 }
@@ -27,10 +25,8 @@ void *__arm_sc_memcpy(void *__restrict__ dest, const void *__restrict__ src,
 void *__arm_sc_memset(void *dest, int c, size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   unsigned char c8 = (unsigned char)c;
-
-  for (size_t i = 0; i < n; i++) {
+  for (size_t i = 0; i < n; ++i)
     destp[i] = c8;
-  }
 
   return dest;
 }
@@ -39,11 +35,10 @@ static void *__arm_sc_memcpy_rev(void *dest, const void *src,
                                  size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   const unsigned char *srcp = (const unsigned char *)src;
-
   // TODO: Improve performance by copying larger chunks in reverse, or by
   // using SVE.
   while (n > 0) {
-    n--;
+    --n;
     destp[n] = srcp[n];
   }
   return dest;
@@ -57,7 +52,6 @@ void *__arm_sc_memmove(void *dest, const void *src,
                        size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   const unsigned char *srcp = (const unsigned char *)src;
-
   // If src and dest are identical there is nothing to do!
   if ((destp == srcp) || (n == 0))
     return destp;
@@ -88,11 +82,9 @@ const void *__arm_sc_memchr(const void *src, int c,
                             size_t n) __arm_streaming_compatible {
   const unsigned char *srcp = (const unsigned char *)src;
   unsigned char c8 = (unsigned char)c;
-
-  for (size_t i = 0; i < n; i++) {
+  for (size_t i = 0; i < n; ++i)
     if (srcp[i] == c8)
       return &srcp[i];
-  }
 
   return NULL;
 }
