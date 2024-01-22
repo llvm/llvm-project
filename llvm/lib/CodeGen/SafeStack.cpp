@@ -400,6 +400,10 @@ void SafeStack::findInsts(Function &F,
         Returns.push_back(CI);
       else
         Returns.push_back(RI);
+    } else if (auto II = dyn_cast<IntrinsicInst>(&I)) {
+      if (II->getIntrinsicID() == Intrinsic::gcroot)
+        report_fatal_error(
+            "gcroot intrinsic not compatible with safestack attribute");
     } else if (auto CI = dyn_cast<CallInst>(&I)) {
       // setjmps require stack restore.
       if (CI->getCalledFunction() && CI->canReturnTwice())
@@ -407,10 +411,6 @@ void SafeStack::findInsts(Function &F,
     } else if (auto LP = dyn_cast<LandingPadInst>(&I)) {
       // Exception landing pads require stack restore.
       StackRestorePoints.push_back(LP);
-    } else if (auto II = dyn_cast<IntrinsicInst>(&I)) {
-      if (II->getIntrinsicID() == Intrinsic::gcroot)
-        report_fatal_error(
-            "gcroot intrinsic not compatible with safestack attribute");
     }
   }
   for (Argument &Arg : F.args()) {
