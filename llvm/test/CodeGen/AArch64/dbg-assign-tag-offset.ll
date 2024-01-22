@@ -5,13 +5,13 @@ target triple = "aarch64-unknown-linux-android24"
 
 ; CHECK:      DW_TAG_variable
 ; CHECK-NOT:  DW_TAG
-; CHECK:        DW_AT_LLVM_tag_offset (0x80)
-; CHECK-NEXT:   DW_AT_name    ("y")
+; CHECK:        DW_AT_LLVM_tag_offset (0x00)
+; CHECK-NEXT:   DW_AT_name    ("x")
 
 ; CHECK:      DW_TAG_variable
 ; CHECK-NOT:  DW_TAG
-; CHECK:        DW_AT_LLVM_tag_offset (0x00)
-; CHECK-NEXT:   DW_AT_name    ("x")
+; CHECK:        DW_AT_LLVM_tag_offset (0x80)
+; CHECK-NEXT:   DW_AT_name    ("y")
 
 define dso_local void @f() !dbg !14 {
   %1 = alloca i32, align 4, !DIAssignID !31
