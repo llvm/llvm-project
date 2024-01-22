@@ -130,13 +130,13 @@ public:
   bool computeValueKnownInPredecessorsImpl(
       Value *V, BasicBlock *BB, jumpthreading::PredValueInfo &Result,
       jumpthreading::ConstantPreference Preference,
-      DenseSet<Value *> &RecursionSet, Instruction *CxtI = nullptr);
+      SmallDenseSet<Value *> &RecursionSet, Instruction *CxtI = nullptr);
   bool
   computeValueKnownInPredecessors(Value *V, BasicBlock *BB,
                                   jumpthreading::PredValueInfo &Result,
                                   jumpthreading::ConstantPreference Preference,
                                   Instruction *CxtI = nullptr) {
-    DenseSet<Value *> RecursionSet;
+    SmallDenseSet<Value *> RecursionSet;
     return computeValueKnownInPredecessorsImpl(V, BB, Result, Preference,
                                                RecursionSet, CxtI);
   }
