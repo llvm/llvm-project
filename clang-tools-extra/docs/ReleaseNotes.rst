@@ -410,7 +410,8 @@ Changes in existing checks
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
-  and avoid crash for array of dependent array.
+  and avoid crash for array of dependent array and non-dereferenceable builtin
+  types used as iterators.
 
 - Improved :doc:`modernize-make-shared
   <clang-tidy/checks/modernize/make-shared>` check to support
@@ -502,7 +503,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options. It also now provides more consistent
-  suggestions when parentheses are added to the return value or expressions. 
+  suggestions when parentheses are added to the return value or expressions.
   It also ignores false-positives for comparison containing bool bitfield.
 
 - Improved :doc:`readability-misleading-indentation
