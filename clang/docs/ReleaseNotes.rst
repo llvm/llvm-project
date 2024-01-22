@@ -185,7 +185,8 @@ C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Implemented `P1907R1 <https://wg21.link/P1907R1>` which extends allowed non-type template argument
   kinds with e.g. floating point values and pointers and references to subobjects.
-  This feature is still experimental. Accordingly, `__cpp_nontype_template_args` was not updated.
+  This feature is still experimental. Accordingly, ``__cpp_nontype_template_args`` was not updated.
+  However, its support can be tested with ``__has_extension(cxx_generalized_nttp)``.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -194,6 +195,7 @@ C++23 Feature Support
   `CWG2653 <https://wg21.link/CWG2653>`_, `CWG2687 <https://wg21.link/CWG2687>`_). Because the
   support for this feature is still experimental, the feature test macro ``__cpp_explicit_this_parameter``
   was not set in this version.
+  However, its support can be tested with ``__has_extension(cxx_explicit_this_parameter)``.
 
 - Added a separate warning to warn the use of attributes on lambdas as a C++23 extension
   in previous language versions: ``-Wc++23-lambda-attributes``.
@@ -1044,6 +1046,8 @@ Bug Fixes to C++ Support
 
 - Remove recorded `#pragma once` state for headers included in named modules.
   Fixes (`#77995 <https://github.com/llvm/llvm-project/issues/77995>`_)
+
+- Set the ``__cpp_auto_cast`` feature test macro in C++23 mode.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
