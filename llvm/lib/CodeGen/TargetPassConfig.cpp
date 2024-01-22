@@ -504,81 +504,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   return Opt;
 }
 
-static void registerPartialPipelineCallback(PassInstrumentationCallbacks &PIC,
-                                            LLVMTargetMachine &LLVMTM) {
-  StringRef StartBefore;
-  StringRef StartAfter;
-  StringRef StopBefore;
-  StringRef StopAfter;
-
-  unsigned StartBeforeInstanceNum = 0;
-  unsigned StartAfterInstanceNum = 0;
-  unsigned StopBeforeInstanceNum = 0;
-  unsigned StopAfterInstanceNum = 0;
-
-  std::tie(StartBefore, StartBeforeInstanceNum) =
-      getPassNameAndInstanceNum(StartBeforeOpt);
-  std::tie(StartAfter, StartAfterInstanceNum) =
-      getPassNameAndInstanceNum(StartAfterOpt);
-  std::tie(StopBefore, StopBeforeInstanceNum) =
-      getPassNameAndInstanceNum(StopBeforeOpt);
-  std::tie(StopAfter, StopAfterInstanceNum) =
-      getPassNameAndInstanceNum(StopAfterOpt);
-
-  if (StartBefore.empty() && StartAfter.empty() && StopBefore.empty() &&
-      StopAfter.empty())
-    return;
-
-  std::tie(StartBefore, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StartBefore);
-  std::tie(StartAfter, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StartAfter);
-  std::tie(StopBefore, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StopBefore);
-  std::tie(StopAfter, std::ignore) =
-      LLVMTM.getPassNameFromLegacyName(StopAfter);
-  if (!StartBefore.empty() && !StartAfter.empty())
-    report_fatal_error(Twine(StartBeforeOptName) + Twine(" and ") +
-                       Twine(StartAfterOptName) + Twine(" specified!"));
-  if (!StopBefore.empty() && !StopAfter.empty())
-    report_fatal_error(Twine(StopBeforeOptName) + Twine(" and ") +
-                       Twine(StopAfterOptName) + Twine(" specified!"));
-
-  PIC.registerShouldRunOptionalPassCallback(
-      [=, EnableCurrent = StartBefore.empty() && StartAfter.empty(),
-       EnableNext = std::optional<bool>(), StartBeforeCount = 0u,
-       StartAfterCount = 0u, StopBeforeCount = 0u,
-       StopAfterCount = 0u](StringRef P, Any) mutable {
-        bool StartBeforePass = !StartBefore.empty() && P.contains(StartBefore);
-        bool StartAfterPass = !StartAfter.empty() && P.contains(StartAfter);
-        bool StopBeforePass = !StopBefore.empty() && P.contains(StopBefore);
-        bool StopAfterPass = !StopAfter.empty() && P.contains(StopAfter);
-
-        // Implement -start-after/-stop-after
-        if (EnableNext) {
-          EnableCurrent = *EnableNext;
-          EnableNext.reset();
-        }
-
-        // Using PIC.registerAfterPassCallback won't work because if this
-        // callback returns false, AfterPassCallback is also skipped.
-        if (StartAfterPass && StartAfterCount++ == StartAfterInstanceNum) {
-          assert(!EnableNext && "Error: assign to EnableNext more than once");
-          EnableNext = true;
-        }
-        if (StopAfterPass && StopAfterCount++ == StopAfterInstanceNum) {
-          assert(!EnableNext && "Error: assign to EnableNext more than once");
-          EnableNext = false;
-        }
-
-        if (StartBeforePass && StartBeforeCount++ == StartBeforeInstanceNum)
-          EnableCurrent = true;
-        if (StopBeforePass && StopBeforeCount++ == StopBeforeInstanceNum)
-          EnableCurrent = false;
-        return EnableCurrent;
-      });
-}
-
 void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    LLVMTargetMachine &LLVMTM) {
 
@@ -605,8 +530,40 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
 
     return true;
   });
+}
 
-  registerPartialPipelineCallback(PIC, LLVMTM);
+Expected<TargetPassConfig::StartStopInfo>
+TargetPassConfig::getStartStopInfo(PassInstrumentationCallbacks &PIC) {
+  auto [StartBefore, StartBeforeInstanceNum] =
+      getPassNameAndInstanceNum(StartBeforeOpt);
+  auto [StartAfter, StartAfterInstanceNum] =
+      getPassNameAndInstanceNum(StartAfterOpt);
+  auto [StopBefore, StopBeforeInstanceNum] =
+      getPassNameAndInstanceNum(StopBeforeOpt);
+  auto [StopAfter, StopAfterInstanceNum] =
+      getPassNameAndInstanceNum(StopAfterOpt);
+
+  if (!StartBefore.empty() && !StartAfter.empty())
+    return make_error<StringError>(
+        Twine(StartBeforeOptName) + " and " + StartAfterOptName + " specified!",
+        std::make_error_code(std::errc::invalid_argument));
+  if (!StopBefore.empty() && !StopAfter.empty())
+    return make_error<StringError>(
+        Twine(StopBeforeOptName) + " and " + StopAfterOptName + " specified!",
+        std::make_error_code(std::errc::invalid_argument));
+
+  StartStopInfo Result;
+  Result.StartPass = StartBefore.empty() ? StartAfter : StartBefore;
+  Result.StopPass = StopBefore.empty() ? StopAfter : StopBefore;
+  Result.StartInstanceNum =
+      StartBefore.empty() ? StartAfterInstanceNum : StartBeforeInstanceNum;
+  Result.StopInstanceNum =
+      StopBefore.empty() ? StopAfterInstanceNum : StopBeforeInstanceNum;
+  Result.StartAfter = !StartAfter.empty();
+  Result.StopAfter = !StopAfter.empty();
+  Result.StartInstanceNum += Result.StartInstanceNum == 0;
+  Result.StopInstanceNum += Result.StopInstanceNum == 0;
+  return Result;
 }
 
 // Out of line constructor provides default values for pass options and

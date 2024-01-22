@@ -467,6 +467,7 @@ feature_test_macros = [
                 # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
                 "c++20": 202106,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
+                # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
@@ -1010,10 +1011,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_saturation_arithmetic",
             "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
-            "headers": [
-                "numeric"  # TODO verify this entry since the paper was underspecified.
-            ],
-            "unimplemented": True,
+            "headers": ["numeric"],
         },
         {
             "name": "__cpp_lib_scoped_lock",
@@ -1093,7 +1091,6 @@ feature_test_macros = [
             "name": "__cpp_lib_span_initializer_list",
             "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_spanstream",
@@ -1268,7 +1265,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_variant",
-            "values": {"c++17": 202102},
+            "values": {
+                "c++17": 202102,  # std::visit for classes derived from std::variant
+                # "c++20": 202106,  # Fully constexpr std::variant
+                # "c++26": 202306,  # Member visit (implemented)
+            },
             "headers": ["variant"],
         },
         {

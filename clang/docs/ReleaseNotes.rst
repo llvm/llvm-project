@@ -183,6 +183,9 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Implemented `P1907R1 <https://wg21.link/P1907R1>` which extends allowed non-type template argument
+  kinds with e.g. floating point values and pointers and references to subobjects.
+  This feature is still experimental. Accordingly, `__cpp_nontype_template_args` was not updated.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -229,6 +232,11 @@ C++2c Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Implemented `CWG2137 <https://wg21.link/CWG2137>`_ which allows
+  list-initialization from objects of the same type.
+- Implemented `CWG2311 <https://wg21.link/CWG2311>`_: given a prvalue ``e`` of object type
+  ``T``, ``T{e}`` will try to resolve an initializer list constructor and will use it if successful (CWG2137).
+  Otherwise, if there is no initializer list constructor, the copy will be elided as if it was ``T(e)``.
 
 - Implemented `CWG2598 <https://wg21.link/CWG2598>`_ and `CWG2096 <https://wg21.link/CWG2096>`_,
   making unions (that have either no members or at least one literal member) literal types.
@@ -266,6 +274,13 @@ C23 Feature Support
   previously implemented allowing a label at the end of a compound statement,
   and now we've implemented allowing a label to be followed by a declaration
   instead of a statement.
+- Implemented
+  `N2940 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2940.pdf>`_ which
+  removes support for trigraphs in C23 and later. In earlier language modes,
+  trigraphs remain enabled by default in conforming modes (e.g. ``-std=c17``)
+  and disabled by default in GNU and Microsoft modes (e.g., ``-std=gnu17`` or
+  ``-fms-compatibility``). If needed, you can enable trigraphs by passing
+  ``-ftrigraphs``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -305,7 +320,7 @@ New Compiler Flags
   handlers will be smaller. A throw expression of a type with a
   potentially-throwing destructor will lead to an error.
 
-* ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
+* ``-fopenacc`` was added as a part of the effort to support OpenACC in Clang.
 
 * ``-fcx-limited-range`` enables the naive mathematical formulas for complex
   division and multiplication with no NaN checking of results. The default is
@@ -316,6 +331,16 @@ New Compiler Flags
   division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
   (1962). The default is ``-fno-cx-fortran-rules``.
 
+* ``-fvisibility-global-new-delete=<value>`` gives more freedom to users to
+  control how and if Clang forces a visibility for the replaceable new and
+  delete declarations. The option takes 4 values: ``force-hidden``,
+  ``force-protected``, ``force-default`` and ``source``; ``force-default`` is
+  the default. Option values with prefix ``force-`` assign such declarations
+  an implicit visibility attribute with the corresponding visibility. An option
+  value of ``source`` implies that no implicit attribute is added. Without the
+  attribute the replaceable global new and delete operators behave normally
+  (like other functions) with respect to visibility attributes, pragmas and
+  options (e.g ``--fvisibility=``).
 
 Deprecated Compiler Flags
 -------------------------
@@ -332,6 +357,9 @@ Modified Compiler Flags
   ``rtdcall``. This new default CC only works for M68k and will use the new
   ``m68k_rtdcc`` CC on every functions that are not variadic. The ``-mrtd``
   driver/frontend flag has the same effect when targeting M68k.
+* ``-fvisibility-global-new-delete-hidden`` is now a deprecated spelling of
+  ``-fvisibility-global-new-delete=force-hidden`` (``-fvisibility-global-new-delete=``
+  is new in this release).
 
 Removed Compiler Flags
 -------------------------
@@ -570,11 +598,12 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
+- Clang now diagnoses ``auto`` and ``decltype(auto)`` in declarations of conversion function template
+  (`CWG1878: <https://cplusplus.github.io/CWG/issues/1878.html>`_)
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
-- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
-
+- Clang now diagnoses incorrect usage of ``const`` and ``pure`` attributes, so ``-Wignored-attributes`` diagnoses more cases.
 - Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
   expressions on matrix types or builtin functions without an argument list) as placement-args
   to new-expressions.
@@ -795,7 +824,7 @@ Bug Fixes in This Version
   invalidation by invalid initializer Expr.
   Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
-  and `if consteval` branches.
+  and `if consteval` branches. Untaken branches are now skipped.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
 - Fix assertion failure when declaring a template friend function with
   a constrained parameter in a template class that declares a class method
@@ -821,6 +850,8 @@ Bug Fixes in This Version
 - Fix an issue with missing symbol definitions when the first coroutine
   statement appears in a discarded ``if constexpr`` branch.
   Fixes (`#78290 <https://github.com/llvm/llvm-project/issues/78290>`_)
+- Fixed assertion failure with deleted overloaded unary operators.
+  Fixes (`#78314 <https://github.com/llvm/llvm-project/issues/78314>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -996,6 +1027,9 @@ Bug Fixes to C++ Support
 - Clang now allows parenthesized initialization of arrays in `operator new[]`.
   Fixes: (`#68198 <https://github.com/llvm/llvm-project/issues/68198>`_)
 
+- Fixes CTAD for aggregates on nested template classes. Fixes:
+  (`#77599 <https://github.com/llvm/llvm-project/issues/77599>`_)
+
 - Fix crash when importing the same module with an dynamic initializer twice
   in different visibility.
   Fixes (`#67893 <https://github.com/llvm/llvm-project/issues/67893>`_)
@@ -1146,6 +1180,15 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+- The ``model`` attribute is now supported for overriding the default code
+  model used to access global variables. The following values are supported:
+  ``normal``, ``medium`` and ``extreme``.
+
+  *Example Code*:
+
+  .. code-block:: c
+
+     int var __attribute((model("extreme")));
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -1229,6 +1272,7 @@ clang-format
 - Add ``PenaltyBreakScopeResolution`` option.
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
+- Add ``SkipMacroDefinitionBody`` option.
 
 libclang
 --------

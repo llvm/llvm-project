@@ -70,6 +70,8 @@ Changes to the LLVM IR
 
 * Added `llvm.exp10` intrinsic.
 
+* Added a ``code_model`` attribute for the `global variable <LangRef.html#global-variables>`_.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -130,6 +132,8 @@ Changes to the Hexagon Backend
 
 Changes to the LoongArch Backend
 --------------------------------
+* The code model of global variables can now be overridden by means of
+  the newly added LLVM IR attribute, ``code_model``.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -160,6 +164,7 @@ Changes to the RISC-V Backend
 * Support was added for the Ziccif, Ziccrse, Ziccamoa, Zicclsm, Za64rs, Za128rs
   and Zic64b extensions which were introduced as a part of the RISC-V Profiles
   specification.
+* The Smepmp 1.0 extension is now supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------

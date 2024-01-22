@@ -208,6 +208,31 @@ void error_fprintf(void) {
   fprintf(F, "ccc"); // expected-warning {{Stream might be already closed}}
 }
 
+void error_fscanf(int *A) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = fscanf(F, "a%ib", A);
+  if (Ret >= 0) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+    fscanf(F, "bbb");                          // no-warning
+  } else {
+    if (ferror(F)) {
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      fscanf(F, "bbb");               // expected-warning {{might be 'indeterminate'}}
+    } else if (feof(F)) {
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      fscanf(F, "bbb");               // expected-warning {{is in EOF state}}
+      clang_analyzer_eval(feof(F));   // expected-warning {{TRUE}}
+    } else {
+      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      fscanf(F, "bbb");               // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+  fscanf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+}
+
 void error_ungetc() {
   FILE *F = tmpfile();
   if (!F)

@@ -451,3 +451,37 @@ TEST(IntegerRelationTest, mergeAndAlignCommonSuffixSymbols) {
   EXPECT_EQ(otherSpace.getId(VarKind::Range, 1),
             Identifier(&otherIdentifiers[3]));
 }
+
+TEST(IntegerRelationTest, setId) {
+  IntegerRelation rel = parseRelationFromSet(
+      "(x, y, z)[A, B, C, D] : (x + A - C - y + D - z >= 0)", 2);
+  PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 4, 0);
+  space.resetIds();
+
+  // Attach identifiers.
+  int identifiers[7] = {'x', 'y', 'z', 'A', 'B', 'C', 'D'};
+  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
+  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
+  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[3]);
+  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[4]);
+  space.getId(VarKind::Symbol, 2) = Identifier(&identifiers[5]);
+  space.getId(VarKind::Symbol, 3) = Identifier(&identifiers[6]);
+  rel.setSpace(space);
+
+  int newIdentifiers[3] = {1, 2, 3};
+  rel.setId(VarKind::Domain, 1, Identifier(&newIdentifiers[0]));
+  rel.setId(VarKind::Range, 0, Identifier(&newIdentifiers[1]));
+  rel.setId(VarKind::Symbol, 2, Identifier(&newIdentifiers[2]));
+
+  space = rel.getSpace();
+  // Check that new identifiers are set correctly.
+  EXPECT_EQ(space.getId(VarKind::Domain, 1), Identifier(&newIdentifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Range, 0), Identifier(&newIdentifiers[1]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 2), Identifier(&newIdentifiers[2]));
+  // Check that old identifier are not changed.
+  EXPECT_EQ(space.getId(VarKind::Domain, 0), Identifier(&identifiers[0]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
+  EXPECT_EQ(space.getId(VarKind::Symbol, 3), Identifier(&identifiers[6]));
+}

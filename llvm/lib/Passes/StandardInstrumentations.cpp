@@ -2119,8 +2119,8 @@ DCData::DCData(const BasicBlock &B) {
       addSuccessorLabel(C.getCaseSuccessor()->getName().str(), Value);
     }
   } else
-    for (const_succ_iterator I = succ_begin(&B), E = succ_end(&B); I != E; ++I)
-      addSuccessorLabel((*I)->getName().str(), "");
+    for (const BasicBlock *Succ : successors(&B))
+      addSuccessorLabel(Succ->getName().str(), "");
 }
 
 DotCfgChangeReporter::DotCfgChangeReporter(bool Verbose)

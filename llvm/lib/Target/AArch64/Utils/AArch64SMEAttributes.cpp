@@ -27,10 +27,8 @@ void SMEAttrs::set(unsigned M, bool Enable) {
          "ZA_New and ZA_Shared are mutually exclusive");
   assert(!(hasNewZABody() && preservesZA()) &&
          "ZA_New and ZA_Preserved are mutually exclusive");
-  assert(!(hasNewZABody() && (Bitmask & ZA_NoLazySave)) &&
-         "ZA_New and ZA_NoLazySave are mutually exclusive");
-  assert(!(sharesZA() && (Bitmask & ZA_NoLazySave)) &&
-         "ZA_Shared and ZA_NoLazySave are mutually exclusive");
+  assert(!(hasNewZABody() && (Bitmask & SME_ABI_Routine)) &&
+         "ZA_New and SME_ABI_Routine are mutually exclusive");
 
   // ZT0 Attrs
   assert(
@@ -49,11 +47,10 @@ SMEAttrs::SMEAttrs(const CallBase &CB) {
 
 SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
   if (FuncName == "__arm_tpidr2_save" || FuncName == "__arm_sme_state")
-    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Preserved |
-                SMEAttrs::ZA_NoLazySave);
+    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine);
   if (FuncName == "__arm_tpidr2_restore")
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
-                SMEAttrs::ZA_NoLazySave);
+                SMEAttrs::SME_ABI_Routine);
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {

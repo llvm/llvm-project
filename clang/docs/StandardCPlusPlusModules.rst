@@ -345,6 +345,9 @@ In case all ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<pat
 takes highest precedence and ``-fmodule-file=<module-name>=<path/to/BMI>`` will take the second
 highest precedence.
 
+We need to specify all the dependent (directly and indirectly) BMIs.
+See https://github.com/llvm/llvm-project/issues/62707 for detail.
+
 When we compile a ``module implementation unit``, we must specify the BMI of the corresponding
 ``primary module interface unit``.
 Since the language specification says a module implementation unit implicitly imports
@@ -689,14 +692,68 @@ the BMI within ``clang-cl.exe``.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/64118
 
-delayed template parsing is not supported/broken with C++ modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+false positive ODR violation diagnostic due to using inconsistent qualified but the same type
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The feature `-fdelayed-template-parsing` can't work well with C++ modules now.
-Note that this is significant on Windows since the option will be enabled by default
-on Windows.
+ODR violation is a pretty common issue when using modules.
+Sometimes the program violated the One Definition Rule actually.
+But sometimes it shows the compiler gives false positive diagnostics.
 
-This is tracked in: https://github.com/llvm/llvm-project/issues/61068
+One often reported example is:
+
+.. code-block:: c++
+
+  // part.cc
+  module;
+  typedef long T;
+  namespace ns {
+  inline void fun() {
+      (void)(T)0;
+  }
+  }
+  export module repro:part;
+
+  // repro.cc
+  module;
+  typedef long T;
+  namespace ns {
+      using ::T;
+  }
+  namespace ns {
+  inline void fun() {
+      (void)(T)0;
+  }
+  }
+  export module repro;
+  export import :part;
+
+Currently the compiler complains about the inconsistent definition of `fun()` in
+2 module units. This is incorrect. Since both definitions of `fun()` has the same
+spelling and `T` refers to the same type entity finally. So the program should be
+fine.
+
+This is tracked in https://github.com/llvm/llvm-project/issues/78850.
+
+Using TU-local entity in other units
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Module units are translation units. So the entities which should only be local to the
+module unit itself shouldn't be used by other units in any means.
+
+In the language side, to address the idea formally, the language specification defines
+the concept of ``TU-local`` and ``exposure`` in
+`basic.link/p14 <https://eel.is/c++draft/basic.link#14>`_,
+`basic.link/p15 <https://eel.is/c++draft/basic.link#15>`_,
+`basic.link/p16 <https://eel.is/c++draft/basic.link#16>`_,
+`basic.link/p17 <https://eel.is/c++draft/basic.link#17>`_ and
+`basic.link/p18 <https://eel.is/c++draft/basic.link#18>`_.
+
+However, the compiler doesn't support these 2 ideas formally.
+This results in unclear and confusing diagnostic messages.
+And it is worse that the compiler may import TU-local entities to other units without any
+diagnostics.
+
+This is tracked in https://github.com/llvm/llvm-project/issues/78173.
 
 Header Units
 ============

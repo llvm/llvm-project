@@ -34,7 +34,8 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
     return true;
   const char *file = frame->info.file;
   const char *module = frame->info.module;
-  if (file && (internal_strstr(file, "/compiler-rt/lib/")))
+  if (file && (internal_strstr(file, "/compiler-rt/lib/") ||
+               internal_strstr(file, "/include/c++/")))
     return true;
   if (module && (internal_strstr(module, "libclang_rt.")))
     return true;
