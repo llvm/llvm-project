@@ -26,9 +26,12 @@
 #include "src/unistd/close.h"
 #include "src/unistd/read.h"
 
-// getauxval will work either with or without atexit support.
-// In order to detect if atexit is supported, we define a weak symbol.
-extern "C" [[gnu::weak]] int atexit(void (*)(void));
+// getauxval will work either with or without __cxa_atexit support.
+// In order to detect if __cxa_atexit is supported, we define a weak symbol.
+// We prefer __cxa_atexit as it is always defined as a C symbol whileas atexit
+// may not be created via objcopy yet.
+extern "C" [[gnu::weak]] int __cxa_atexit(void (*callback)(void *),
+                                          void *payload, void *);
 
 namespace LIBC_NAMESPACE {
 
@@ -49,8 +52,9 @@ static AuxEntry *auxv = nullptr;
 struct AuxvMMapGuard {
   constexpr static size_t AUXV_MMAP_SIZE = sizeof(AuxEntry) * MAX_AUXV_ENTRIES;
   void *ptr;
-  AuxvMMapGuard(size_t size)
-      : ptr(mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, -1, 0)) {}
+  AuxvMMapGuard()
+      : ptr(mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
+                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
   ~AuxvMMapGuard() {
     if (ptr != MAP_FAILED) {
       munmap(ptr, AUXV_MMAP_SIZE);
@@ -58,10 +62,12 @@ struct AuxvMMapGuard {
   }
   void submit_to_global() {
     // atexit may fail, we do not set it to global in that case.
-    int ret = atexit([]() {
-      munmap(auxv, AUXV_MMAP_SIZE);
-      auxv = nullptr;
-    });
+    int ret = __cxa_atexit(
+        [](void *) {
+          munmap(auxv, AUXV_MMAP_SIZE);
+          auxv = nullptr;
+        },
+        nullptr, nullptr);
 
     if (ret != 0)
       return;
@@ -85,10 +91,10 @@ struct AuxvFdGuard {
 
 static void initialize_auxv_once(void) {
   // if we cannot get atexit, we cannot register the cleanup function.
-  if (&atexit == nullptr)
+  if (&__cxa_atexit == nullptr)
     return;
 
-  AuxvMMapGuard mmap_guard(AuxvMMapGuard::AUXV_MMAP_SIZE);
+  AuxvMMapGuard mmap_guard;
   if (!mmap_guard.allocated())
     return;
   auto *ptr = reinterpret_cast<AuxEntry *>(mmap_guard.ptr);
