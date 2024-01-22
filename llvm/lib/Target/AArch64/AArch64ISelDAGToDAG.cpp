@@ -5627,25 +5627,25 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::FMINNM_VG4_4Z4Z_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
-    case Intrinsic::aarch64_sve_fcvts_x2:
+    case Intrinsic::aarch64_sve_fcvtzs_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::FCVTZS_2Z2Z_StoS);
       return;
     case Intrinsic::aarch64_sve_scvtf_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::SCVTF_2Z2Z_StoS);
       return;
-    case Intrinsic::aarch64_sve_fcvtu_x2:
+    case Intrinsic::aarch64_sve_fcvtzu_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::FCVTZU_2Z2Z_StoS);
       return;
     case Intrinsic::aarch64_sve_ucvtf_x2:
       SelectCVTIntrinsic(Node, 2, AArch64::UCVTF_2Z2Z_StoS);
       return;
-    case Intrinsic::aarch64_sve_fcvts_x4:
+    case Intrinsic::aarch64_sve_fcvtzs_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::FCVTZS_4Z4Z_StoS);
       return;
     case Intrinsic::aarch64_sve_scvtf_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::SCVTF_4Z4Z_StoS);
       return;
-    case Intrinsic::aarch64_sve_fcvtu_x4:
+    case Intrinsic::aarch64_sve_fcvtzu_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::FCVTZU_4Z4Z_StoS);
       return;
     case Intrinsic::aarch64_sve_ucvtf_x4:
