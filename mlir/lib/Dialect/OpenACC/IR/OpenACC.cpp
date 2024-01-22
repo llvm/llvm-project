@@ -2539,6 +2539,16 @@ LogicalResult acc::UpdateOp::verify() {
   if (getDataClauseOperands().empty())
     return emitError("at least one value must be present in dataOperands");
 
+  if (failed(verifyDeviceTypeCountMatch(*this, getAsyncOperands(),
+                                        getAsyncOperandsDeviceTypeAttr(),
+                                        "async")))
+    return failure();
+
+  if (failed(verifyDeviceTypeAndSegmentCountMatch(
+          *this, getWaitOperands(), getWaitOperandsSegmentsAttr(),
+          getWaitOperandsDeviceTypeAttr(), "wait")))
+    return failure();
+
   for (uint32_t dtypeInt = 0; dtypeInt != acc::getMaxEnumValForDeviceType();
        ++dtypeInt) {
     auto dtype = static_cast<acc::DeviceType>(dtypeInt);
