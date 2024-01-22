@@ -817,6 +817,96 @@ void IntExprParsing() {
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc set default_async(returns_int())
+
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector()
+  // expected-error@+3{{invalid tag 'invalid' on 'vector' clause}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(invalid:)
+  // expected-error@+2{{invalid tag 'invalid' on 'vector' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(invalid:5)
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(length:)
+  // expected-error@+3{{invalid tag 'num' on 'vector' clause}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(num:)
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(5, 4)
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(length:6,4)
+  // expected-error@+4{{invalid tag 'num' on 'vector' clause}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(num:6,4)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(5)
+  // expected-error@+2{{invalid tag 'num' on 'vector' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(num:5)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(length:5)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(returns_int())
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop vector(length:returns_int())
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker()
+  // expected-error@+3{{invalid tag 'invalid' on 'worker' clause}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(invalid:)
+  // expected-error@+2{{invalid tag 'invalid' on 'worker' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(invalid:5)
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(num:)
+  // expected-error@+3{{invalid tag 'length' on 'worker' clause}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(length:)
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(5, 4)
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(num:6,4)
+  // expected-error@+4{{invalid tag 'length' on 'worker' clause}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(length:6,4)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(5)
+  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(length:5)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(num:5)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(returns_int())
+  // expected-error@+2{{invalid tag 'length' on 'worker' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop worker(length:returns_int())
 }
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}

@@ -159,6 +159,8 @@ enum class OpenACCSpecialTokenKind {
   Queues,
   Zero,
   Force,
+  Num,
+  Length,
 };
 
 bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
@@ -176,6 +178,10 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("zero");
   case OpenACCSpecialTokenKind::Force:
     return Tok.getIdentifierInfo()->isStr("force");
+  case OpenACCSpecialTokenKind::Num:
+    return Tok.getIdentifierInfo()->isStr("num");
+  case OpenACCSpecialTokenKind::Length:
+    return Tok.getIdentifierInfo()->isStr("length");
   }
   llvm_unreachable("Unknown 'Kind' Passed");
 }
@@ -451,6 +457,9 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Self:
     return DirKind == OpenACCDirectiveKind::Update ? ClauseParensKind::Required
                                                    : ClauseParensKind::Optional;
+  case OpenACCClauseKind::Worker:
+  case OpenACCClauseKind::Vector:
+    return ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
   case OpenACCClauseKind::If:
@@ -488,8 +497,6 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Invalid:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::Seq:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
     return ClauseParensKind::None;
   }
   llvm_unreachable("Unhandled clause kind");
@@ -716,6 +723,18 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         // An invalid expression can be just about anything, so just give up on
         // this clause list.
         if (CondExpr.isInvalid())
+          return true;
+        break;
+      }
+      case OpenACCClauseKind::Vector:
+      case OpenACCClauseKind::Worker: {
+        tryParseAndConsumeSpecialTokenKind(*this,
+                                           Kind == OpenACCClauseKind::Vector
+                                               ? OpenACCSpecialTokenKind::Length
+                                               : OpenACCSpecialTokenKind::Num,
+                                           Kind);
+        ExprResult IntExpr = ParseOpenACCIntExpr();
+        if (IntExpr.isInvalid())
           return true;
         break;
       }
