@@ -64,38 +64,46 @@ LIBC_INLINE_VAR constexpr Sign Sign::POS = Sign(false);
 //             └─────────▲─────────┘
 //                       │
 //             ┌─────────┴─────────┐
-//             │ FPRepBase<FPType> │
+//             │ FPStorage<FPType> │
 //             └─────────▲─────────┘
 //                       │
 //          ┌────────────┴─────────────┐
 //          │                          │
-// ┌────────┴──────┐     ┌─────────────┴──────────────┐
-// │ FPRep<FPType> │     │ FPRep<FPType::X86_Binary80 │
-// └────────▲──────┘     └─────────────▲──────────────┘
+// ┌────────┴─────────┐ ┌──────────────┴──────────────────┐
+// │ FPRepSem<FPType> │ │  FPRepSem<FPType::X86_Binary80  │
+// └────────▲─────────┘ └──────────────▲──────────────────┘
 //          │                          │
 //          └────────────┬─────────────┘
+//                       │
+//                 ┌─────┴─────┐
+//                 │  FPRep<T> │
+//                 └───────────┘
 //                       │
 //                 ┌─────┴─────┐
 //                 │ FPBits<T> │
 //                 └───────────┘
 //
-// - 'FPLayout' defines only a few constants, namely the 'StorageType' and the
-// length of the sign, the exponent and significand parts.
-// - 'FPRepBase' builds more constants on top of those from 'FPLayout' like
-// exponent bias, shifts and masks. It also defines tools to assemble or test
+// - 'FPLayout' defines only a few constants, namely the 'StorageType' and
+// length of the sign, the exponent, fraction and significand parts.
+// - 'FPStorage' builds more constants on top of those from 'FPLayout' like
+// exponent bias and masks. It also holds the bit representation of the
+// floating point as a 'StorageType' type and defines tools to assemble or test
 // these parts.
-// - 'FPRep' defines functions to interact with the floating point
-// representation. The default implementation is the one for 'IEEE754', a
-// specialization is provided for X86 Extended Precision that has a different
-// encoding.
-// - 'FPBits' is templated on the platform floating point types. Contrary to
-// 'FPRep' that is platform agnostic 'FPBits' is architecture dependent.
+// - 'FPRepSem' defines functions to interact semantically with the floating
+// point representation. The default implementation is the one for 'IEEE754', a
+// specialization is provided for X86 Extended Precision.
+// - 'FPRep' derives from 'FPRepSem' and adds functions that are common to all
+// implementations.
+// - 'FPBits' exposes all functions from 'FPRep' but operates on the native C++
+// floating point type instead of 'FPType'.
 
 namespace internal {
 
 // Defines the layout (sign, exponent, significand) of a floating point type in
 // memory. It also defines its associated StorageType, i.e., the unsigned
 // integer type used to manipulate its representation.
+// Additionally we provide the fractional part length, i.e., the number of bits
+// after the decimal dot when the number is in normal form.
 template <FPType> struct FPLayout {};
 
 template <> struct FPLayout<FPType::IEEE754_Binary16> {
@@ -103,6 +111,7 @@ template <> struct FPLayout<FPType::IEEE754_Binary16> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 5;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 10;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
 };
 
 template <> struct FPLayout<FPType::IEEE754_Binary32> {
@@ -110,6 +119,7 @@ template <> struct FPLayout<FPType::IEEE754_Binary32> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 8;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 23;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
 };
 
 template <> struct FPLayout<FPType::IEEE754_Binary64> {
@@ -117,6 +127,7 @@ template <> struct FPLayout<FPType::IEEE754_Binary64> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 11;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 52;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
 };
 
 template <> struct FPLayout<FPType::IEEE754_Binary128> {
@@ -124,6 +135,7 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 112;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
@@ -131,22 +143,21 @@ template <> struct FPLayout<FPType::X86_Binary80> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN - 1;
 };
 
-} // namespace internal
+// FPStorage derives useful constants from the FPLayout above.
+template <FPType fp_type> struct FPStorage : public FPLayout<fp_type> {
+  using UP = FPLayout<fp_type>;
 
-// FPRepBase derives useful constants from the FPLayout.
-template <FPType fp_type>
-struct FPRepBase : public internal::FPLayout<fp_type> {
-private:
-  using UP = internal::FPLayout<fp_type>;
-
-public:
   using UP::EXP_LEN;  // The number of bits for the *exponent* part
   using UP::SIG_LEN;  // The number of bits for the *significand* part
   using UP::SIGN_LEN; // The number of bits for the *sign* part
   // For convenience, the sum of `SIG_LEN`, `EXP_LEN`, and `SIGN_LEN`.
   LIBC_INLINE_VAR static constexpr int TOTAL_LEN = SIGN_LEN + EXP_LEN + SIG_LEN;
+
+  // The number of bits after the decimal dot when the number is in normal form.
+  using UP::FRACTION_LEN;
 
   // An unsigned integer that is wide enough to contain all of the floating
   // point bits.
@@ -162,41 +173,30 @@ public:
       (1U << (EXP_LEN - 1U)) - 1U;
   static_assert(EXP_BIAS > 0);
 
-protected:
-  // The shift amount to get the *significand* part to the least significant
-  // bit. Always `0` but kept for consistency.
-  LIBC_INLINE_VAR static constexpr int SIG_MASK_SHIFT = 0;
-  // The shift amount to get the *exponent* part to the least significant bit.
-  LIBC_INLINE_VAR static constexpr int EXP_MASK_SHIFT = SIG_LEN;
-  // The shift amount to get the *sign* part to the least significant bit.
-  LIBC_INLINE_VAR static constexpr int SIGN_MASK_SHIFT = SIG_LEN + EXP_LEN;
-
   // The bit pattern that keeps only the *significand* part.
   LIBC_INLINE_VAR static constexpr StorageType SIG_MASK =
-      mask_trailing_ones<StorageType, SIG_LEN>() << SIG_MASK_SHIFT;
-
-public:
+      mask_trailing_ones<StorageType, SIG_LEN>();
   // The bit pattern that keeps only the *exponent* part.
   LIBC_INLINE_VAR static constexpr StorageType EXP_MASK =
-      mask_trailing_ones<StorageType, EXP_LEN>() << EXP_MASK_SHIFT;
+      mask_trailing_ones<StorageType, EXP_LEN>() << SIG_LEN;
   // The bit pattern that keeps only the *sign* part.
   LIBC_INLINE_VAR static constexpr StorageType SIGN_MASK =
-      mask_trailing_ones<StorageType, SIGN_LEN>() << SIGN_MASK_SHIFT;
+      mask_trailing_ones<StorageType, SIGN_LEN>() << (EXP_LEN + SIG_LEN);
   // The bit pattern that keeps only the *exponent + significand* part.
   LIBC_INLINE_VAR static constexpr StorageType EXP_SIG_MASK =
       mask_trailing_ones<StorageType, EXP_LEN + SIG_LEN>();
   // The bit pattern that keeps only the *sign + exponent + significand* part.
   LIBC_INLINE_VAR static constexpr StorageType FP_MASK =
       mask_trailing_ones<StorageType, TOTAL_LEN>();
+  // The bit pattern that keeps only the *fraction* part.
+  // i.e., the *significand* without the leading one.
+  LIBC_INLINE_VAR static constexpr StorageType FRACTION_MASK =
+      mask_trailing_ones<StorageType, FRACTION_LEN>();
 
   static_assert((SIG_MASK & EXP_MASK & SIGN_MASK) == 0, "masks disjoint");
   static_assert((SIG_MASK | EXP_MASK | SIGN_MASK) == FP_MASK, "masks cover");
 
 protected:
-  LIBC_INLINE static constexpr StorageType bit_at(int position) {
-    return StorageType(1) << position;
-  }
-
   // A stongly typed integer that prevents mixing and matching integers with
   // different semantics.
   template <typename T> struct TypedInt {
@@ -248,7 +248,7 @@ protected:
 
   // An opaque type to store a floating point significand.
   // We define special values but it is valid to create arbitrary values as long
-  // as they are in the range [BITS_ALL_ZEROES, BITS_ALL_ONES].
+  // as they are in the range [ZERO, BITS_ALL_ONES].
   // Note that the semantics of the Significand are implementation dependent.
   // Values greater than BITS_ALL_ONES are truncated.
   struct Significand : public TypedInt<StorageType> {
@@ -277,10 +277,8 @@ protected:
       return Significand(StorageType(1));
     }
     LIBC_INLINE static constexpr auto MSB() {
-      return Significand(StorageType(bit_at(SIG_LEN - 1)));
+      return Significand(StorageType(1) << (SIG_LEN - 1));
     }
-    // Aliases
-    LIBC_INLINE static constexpr auto BITS_ALL_ZEROES() { return ZERO(); }
     LIBC_INLINE static constexpr auto BITS_ALL_ONES() {
       return Significand(SIG_MASK);
     }
@@ -306,35 +304,297 @@ protected:
     return encode(exp, sig);
   }
 
+  // The floating point number representation as an unsigned integer.
+  StorageType bits{};
+
+  LIBC_INLINE constexpr FPStorage() : bits(0) {}
+  LIBC_INLINE constexpr FPStorage(StorageType value) : bits(value) {}
+
+  // Observers
   LIBC_INLINE constexpr StorageType exp_bits() const { return bits & EXP_MASK; }
   LIBC_INLINE constexpr StorageType sig_bits() const { return bits & SIG_MASK; }
   LIBC_INLINE constexpr StorageType exp_sig_bits() const {
     return bits & EXP_SIG_MASK;
   }
+};
 
-private:
-  // Merge bits from 'a' and 'b' values according to 'mask'.
-  // Use 'a' bits when corresponding 'mask' bits are zeroes and 'b' bits when
-  // corresponding bits are ones.
-  LIBC_INLINE static constexpr StorageType merge(StorageType a, StorageType b,
-                                                 StorageType mask) {
-    // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
-    return a ^ ((a ^ b) & mask);
-  }
+// This layer defines all functions that are specific to how the the floating
+// point type is encoded. It enables constructions, modification and observation
+// of values manipulated as 'StorageType'.
+template <FPType fp_type, typename RetT>
+struct FPRepSem : public FPStorage<fp_type> {
+  using UP = FPStorage<fp_type>;
+  using typename UP::StorageType;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
 
 protected:
-  // The number of bits after the decimal dot when the number is in normal form.
-  LIBC_INLINE_VAR static constexpr int FRACTION_LEN =
-      fp_type == FPType::X86_Binary80 ? SIG_LEN - 1 : SIG_LEN;
-  LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
-      FRACTION_LEN + 1;
-  LIBC_INLINE_VAR static constexpr StorageType FRACTION_MASK =
-      mask_trailing_ones<StorageType, FRACTION_LEN>();
-
-  // The floating point number representation as an unsigned integer.
-  StorageType bits = 0;
+  using BiasedExp = typename UP::BiasedExponent;
+  using Exp = typename UP::Exponent;
+  using Sig = typename UP::Significand;
+  using UP::encode;
+  using UP::exp_bits;
+  using UP::exp_sig_bits;
+  using UP::sig_bits;
+  using UP::UP;
 
 public:
+  // Builders
+  LIBC_INLINE static constexpr RetT one(Sign sign = Sign::POS) {
+    return RetT(encode(sign, Exp::ZERO(), Sig::ZERO()));
+  }
+  LIBC_INLINE static constexpr RetT min_subnormal(Sign sign = Sign::POS) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ZEROES(), Sig::LSB()));
+  }
+  LIBC_INLINE static constexpr RetT max_subnormal(Sign sign = Sign::POS) {
+    return RetT(
+        encode(sign, BiasedExp::BITS_ALL_ZEROES(), Sig::BITS_ALL_ONES()));
+  }
+  LIBC_INLINE static constexpr RetT min_normal(Sign sign = Sign::POS) {
+    return RetT(encode(sign, Exp::MIN(), Sig::ZERO()));
+  }
+  LIBC_INLINE static constexpr RetT max_normal(Sign sign = Sign::POS) {
+    return RetT(encode(sign, Exp::MAX(), Sig::BITS_ALL_ONES()));
+  }
+  LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::ZERO()));
+  }
+  LIBC_INLINE static constexpr RetT build_nan(Sign sign = Sign::POS,
+                                              StorageType v = 0) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
+                       (v ? Sig(v) : (Sig::MSB() >> 1))));
+  }
+  LIBC_INLINE static constexpr RetT build_quiet_nan(Sign sign = Sign::POS,
+                                                    StorageType v = 0) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::MSB() | Sig(v)));
+  }
+
+  // Observers
+  LIBC_INLINE constexpr bool is_nan() const {
+    return exp_sig_bits() > encode(BiasedExp::BITS_ALL_ONES(), Sig::ZERO());
+  }
+  LIBC_INLINE constexpr bool is_quiet_nan() const {
+    return exp_sig_bits() >= encode(BiasedExp::BITS_ALL_ONES(), Sig::MSB());
+  }
+  LIBC_INLINE constexpr bool is_signaling_nan() const {
+    return is_nan() && !is_quiet_nan();
+  }
+  LIBC_INLINE constexpr bool is_inf() const {
+    return exp_sig_bits() == encode(BiasedExp::BITS_ALL_ONES(), Sig::ZERO());
+  }
+  LIBC_INLINE constexpr bool is_finite() const {
+    return exp_bits() != encode(BiasedExp::BITS_ALL_ONES());
+  }
+  LIBC_INLINE
+  constexpr bool is_subnormal() const {
+    return exp_bits() == encode(BiasedExp::BITS_ALL_ZEROES());
+  }
+  LIBC_INLINE constexpr bool is_normal() const {
+    return is_finite() && !UP::is_subnormal();
+  }
+  // Returns the mantissa with the implicit bit set iff the current
+  // value is a valid normal number.
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
+    if (is_subnormal())
+      return sig_bits();
+    return (StorageType(1) << UP::SIG_LEN) | sig_bits();
+  }
+};
+
+// Specialization for the X86 Extended Precision type.
+template <typename RetT>
+struct FPRepSem<FPType::X86_Binary80, RetT>
+    : public FPStorage<FPType::X86_Binary80> {
+  using UP = FPStorage<FPType::X86_Binary80>;
+  using typename UP::StorageType;
+  using UP::FRACTION_LEN;
+  using UP::FRACTION_MASK;
+
+  // The x86 80 bit float represents the leading digit of the mantissa
+  // explicitly. This is the mask for that bit.
+  static constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1)
+                                                   << FRACTION_LEN;
+  // The X80 significand is made of an explicit bit and the fractional part.
+  static_assert((EXPLICIT_BIT_MASK & FRACTION_MASK) == 0,
+                "the explicit bit and the fractional part should not overlap");
+  static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK,
+                "the explicit bit and the fractional part should cover the "
+                "whole significand");
+
+protected:
+  using BiasedExp = typename UP::BiasedExponent;
+  using Sig = typename UP::Significand;
+  using UP::encode;
+  using UP::UP;
+
+public:
+  // Builders
+  LIBC_INLINE static constexpr RetT one(Sign sign = Sign::POS) {
+    return RetT(encode(sign, Exponent::ZERO(), Sig::MSB()));
+  }
+  LIBC_INLINE static constexpr RetT min_subnormal(Sign sign = Sign::POS) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ZEROES(), Sig::LSB()));
+  }
+  LIBC_INLINE static constexpr RetT max_subnormal(Sign sign = Sign::POS) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ZEROES(),
+                       Sig::BITS_ALL_ONES() ^ Sig::MSB()));
+  }
+  LIBC_INLINE static constexpr RetT min_normal(Sign sign = Sign::POS) {
+    return RetT(encode(sign, Exponent::MIN(), Sig::MSB()));
+  }
+  LIBC_INLINE static constexpr RetT max_normal(Sign sign = Sign::POS) {
+    return RetT(encode(sign, Exponent::MAX(), Sig::BITS_ALL_ONES()));
+  }
+  LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::MSB()));
+  }
+  LIBC_INLINE static constexpr RetT build_nan(Sign sign = Sign::POS,
+                                              StorageType v = 0) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
+                       Sig::MSB() | (v ? Sig(v) : (Sig::MSB() >> 2))));
+  }
+  LIBC_INLINE static constexpr RetT build_quiet_nan(Sign sign = Sign::POS,
+                                                    StorageType v = 0) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
+                       Sig::MSB() | (Sig::MSB() >> 1) | Sig(v)));
+  }
+
+  // Observers
+  LIBC_INLINE constexpr bool is_nan() const {
+    // Most encoding forms from the table found in
+    // https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
+    // are interpreted as NaN.
+    // More precisely :
+    // - Pseudo-Infinity
+    // - Pseudo Not a Number
+    // - Signalling Not a Number
+    // - Floating-point Indefinite
+    // - Quiet Not a Number
+    // - Unnormal
+    // This can be reduced to the following logic:
+    if (exp_bits() == encode(BiasedExp::BITS_ALL_ONES()))
+      return !is_inf();
+    if (exp_bits() != encode(BiasedExp::BITS_ALL_ZEROES()))
+      return (sig_bits() & encode(Sig::MSB())) == 0;
+    return false;
+  }
+  LIBC_INLINE constexpr bool is_quiet_nan() const {
+    return exp_sig_bits() >=
+           encode(BiasedExp::BITS_ALL_ONES(), Sig::MSB() | (Sig::MSB() >> 1));
+  }
+  LIBC_INLINE constexpr bool is_signaling_nan() const {
+    return is_nan() && !is_quiet_nan();
+  }
+  LIBC_INLINE constexpr bool is_inf() const {
+    return exp_sig_bits() == encode(BiasedExp::BITS_ALL_ONES(), Sig::MSB());
+  }
+  LIBC_INLINE constexpr bool is_finite() const {
+    return !is_inf() && !is_nan();
+  }
+  LIBC_INLINE
+  constexpr bool is_subnormal() const {
+    return exp_bits() == encode(BiasedExp::BITS_ALL_ZEROES());
+  }
+  LIBC_INLINE constexpr bool is_normal() const {
+    const auto exp = exp_bits();
+    if (exp == encode(BiasedExp::BITS_ALL_ZEROES()) ||
+        exp == encode(BiasedExp::BITS_ALL_ONES()))
+      return false;
+    return get_implicit_bit();
+  }
+  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
+    return sig_bits();
+  }
+
+  // This functions is specific to FPRepSem<FPType::X86_Binary80>.
+  // TODO: Remove if possible.
+  LIBC_INLINE constexpr bool get_implicit_bit() const {
+    return static_cast<bool>(bits & EXPLICIT_BIT_MASK);
+  }
+
+  // This functions is specific to FPRepSem<FPType::X86_Binary80>.
+  // TODO: Remove if possible.
+  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
+    if (get_implicit_bit() != implicitVal)
+      bits ^= EXPLICIT_BIT_MASK;
+  }
+};
+
+// 'FPRep' is the bottom of the class hierarchy that only deals with 'FPType'.
+// The operations dealing with specific float semantics are implemented by
+// 'FPRepSem' above and specialized when needed.
+//
+// The 'RetT' type is being propagated up to 'FPRepSem' so that the functions
+// creating new values (Builders) can return the appropriate type. That is, when
+// creating a value through 'FPBits' below the builder will return an 'FPBits'
+// value:
+// i.e., FPBits<float>::zero() // returns an FPBits<float>
+// When we don't care about specific C++ floating point type we can use 'FPRep'
+// directly and 'RetT' defaults to 'StorageType':
+// i.e., FPRep<FPType:IEEE754_Binary32:>::zero() // returns an 'uint32_t'
+template <FPType fp_type,
+          typename RetT = typename FPLayout<fp_type>::StorageType>
+struct FPRep : public FPRepSem<fp_type, RetT> {
+  using UP = FPRepSem<fp_type, RetT>;
+  using StorageType = typename UP::StorageType;
+
+protected:
+  using UP::bits;
+  using UP::encode;
+  using UP::exp_bits;
+  using UP::exp_sig_bits;
+
+  using BiasedExp = typename UP::BiasedExponent;
+  using Sig = typename UP::Significand;
+
+  using UP::FP_MASK;
+  using UP::SIG_LEN;
+
+public:
+  using UP::EXP_BIAS;
+  using UP::EXP_MASK;
+  using UP::FRACTION_MASK;
+  using UP::SIGN_MASK;
+
+  // Representation
+  LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
+  LIBC_INLINE constexpr void set_uintval(StorageType value) {
+    bits = (value & FP_MASK);
+  }
+
+  // Builders
+  LIBC_INLINE static constexpr RetT zero(Sign sign = Sign::POS) {
+    return RetT(encode(sign, BiasedExp::BITS_ALL_ZEROES(), Sig::ZERO()));
+  }
+  using UP::build_nan;
+  using UP::build_quiet_nan;
+  using UP::inf;
+  using UP::max_normal;
+  using UP::max_subnormal;
+  using UP::min_normal;
+  using UP::min_subnormal;
+  using UP::one;
+
+  // Modifiers
+  LIBC_INLINE constexpr RetT abs() const {
+    return RetT(bits & UP::EXP_SIG_MASK);
+  }
+
+  // Observers
+  using UP::get_explicit_mantissa;
+  LIBC_INLINE constexpr bool is_zero() const { return exp_sig_bits() == 0; }
+  LIBC_INLINE constexpr bool is_inf_or_nan() const { return !is_finite(); }
+  using UP::is_finite;
+  using UP::is_inf;
+  using UP::is_nan;
+  using UP::is_normal;
+  using UP::is_quiet_nan;
+  using UP::is_signaling_nan;
+  using UP::is_subnormal;
+  LIBC_INLINE constexpr bool is_neg() const { return sign().is_neg(); }
+  LIBC_INLINE constexpr bool is_pos() const { return sign().is_pos(); }
+
+  // Parts
   LIBC_INLINE constexpr Sign sign() const {
     return (bits & SIGN_MASK) ? Sign::NEG : Sign::POS;
   }
@@ -344,20 +604,12 @@ public:
       bits ^= SIGN_MASK;
   }
 
-  LIBC_INLINE constexpr StorageType get_mantissa() const {
-    return bits & FRACTION_MASK;
-  }
-
-  LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
-    bits = merge(bits, mantVal, FRACTION_MASK);
-  }
-
   LIBC_INLINE constexpr uint16_t get_biased_exponent() const {
-    return uint16_t((bits & EXP_MASK) >> EXP_MASK_SHIFT);
+    return uint16_t((bits & UP::EXP_MASK) >> UP::SIG_LEN);
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
-    bits = merge(bits, biased << EXP_MASK_SHIFT, EXP_MASK);
+    bits = merge(bits, biased << SIG_LEN, EXP_MASK);
   }
 
   LIBC_INLINE constexpr int get_exponent() const {
@@ -381,231 +633,22 @@ public:
     }
   }
 
-  LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
-  LIBC_INLINE constexpr void set_uintval(StorageType value) {
-    bits = (value & FP_MASK);
+  LIBC_INLINE constexpr StorageType get_mantissa() const {
+    return bits & FRACTION_MASK;
   }
 
-  LIBC_INLINE constexpr bool is_zero() const { return exp_sig_bits() == 0; }
-
-  LIBC_INLINE
-  constexpr bool is_subnormal() const {
-    return exp_bits() == encode(BiasedExponent::BITS_ALL_ZEROES());
+  LIBC_INLINE constexpr void set_mantissa(StorageType mantVal) {
+    bits = merge(bits, mantVal, FRACTION_MASK);
   }
 
-  LIBC_INLINE constexpr bool is_neg() const { return sign().is_neg(); }
-  LIBC_INLINE constexpr bool is_pos() const { return sign().is_pos(); }
-};
-
-namespace internal {
-
-// Manipulates the representation of a floating point number defined by its
-// FPType. This layer is architecture agnostic and does not handle C++ floating
-// point types directly ('float', 'double' and 'long double'). Use the FPBits
-// below if needed.
-//
-// TODO: Specialize this class for FPType::X86_Binary80 and remove ad-hoc logic
-// from FPRepBase.
-template <FPType fp_type> struct FPRep : public FPRepBase<fp_type> {
-  using UP = FPRepBase<fp_type>;
-  using typename UP::StorageType;
-  using UP::FRACTION_LEN;
-  using UP::FRACTION_MASK;
-  using UP::MANTISSA_PRECISION;
-
-protected:
-  using typename UP::BiasedExponent;
-  using typename UP::Exponent;
-  using typename UP::Significand;
-  using UP::encode;
-  using UP::exp_bits;
-  using UP::exp_sig_bits;
-  using UP::sig_bits;
-
-public:
-  LIBC_INLINE constexpr bool is_nan() const {
-    return exp_sig_bits() >
-           encode(BiasedExponent::BITS_ALL_ONES(), Significand::ZERO());
-  }
-  LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return exp_sig_bits() >=
-           encode(BiasedExponent::BITS_ALL_ONES(), Significand::MSB());
-  }
-  LIBC_INLINE constexpr bool is_signaling_nan() const {
-    return is_nan() && !is_quiet_nan();
-  }
-  LIBC_INLINE constexpr bool is_inf() const {
-    return exp_sig_bits() ==
-           encode(BiasedExponent::BITS_ALL_ONES(), Significand::ZERO());
-  }
-  LIBC_INLINE constexpr bool is_finite() const {
-    return exp_bits() != encode(BiasedExponent::BITS_ALL_ONES());
-  }
-  LIBC_INLINE constexpr bool is_normal() const {
-    return is_finite() && !UP::is_subnormal();
-  }
-
-  LIBC_INLINE static constexpr StorageType zero(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
-  }
-  LIBC_INLINE static constexpr StorageType one(Sign sign = Sign::POS) {
-    return encode(sign, Exponent::ZERO(), Significand::ZERO());
-  }
-  LIBC_INLINE static constexpr StorageType
-  min_subnormal(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::LSB());
-  }
-  LIBC_INLINE static constexpr StorageType
-  max_subnormal(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ZEROES(),
-                  Significand::BITS_ALL_ONES());
-  }
-  LIBC_INLINE static constexpr StorageType min_normal(Sign sign = Sign::POS) {
-    return encode(sign, Exponent::MIN(), Significand::ZERO());
-  }
-  LIBC_INLINE static constexpr StorageType max_normal(Sign sign = Sign::POS) {
-    return encode(sign, Exponent::MAX(), Significand::BITS_ALL_ONES());
-  }
-  LIBC_INLINE static constexpr StorageType inf(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ONES(), Significand::ZERO());
-  }
-  LIBC_INLINE static constexpr StorageType build_nan(Sign sign = Sign::POS,
-                                                     StorageType v = 0) {
-    return encode(sign, BiasedExponent::BITS_ALL_ONES(),
-                  (v ? Significand(v) : (Significand::MSB() >> 1)));
-  }
-  LIBC_INLINE static constexpr StorageType
-  build_quiet_nan(Sign sign = Sign::POS, StorageType v = 0) {
-    return encode(sign, BiasedExponent::BITS_ALL_ONES(),
-                  Significand::MSB() | Significand(v));
-  }
-
-  // The function return mantissa with the implicit bit set iff the current
-  // value is a valid normal number.
-  LIBC_INLINE constexpr StorageType get_explicit_mantissa() {
-    if (UP::is_subnormal())
-      return sig_bits();
-    return (StorageType(1) << UP::SIG_LEN) | sig_bits();
-  }
-};
-
-// Specialization for the X86 Extended Precision type.
-template <>
-struct FPRep<FPType::X86_Binary80> : public FPRepBase<FPType::X86_Binary80> {
-  using UP = FPRepBase<FPType::X86_Binary80>;
-  using typename UP::StorageType;
-  using UP::FRACTION_LEN;
-  using UP::FRACTION_MASK;
-  using UP::MANTISSA_PRECISION;
-
-protected:
-  using typename UP::BiasedExponent;
-  using typename UP::Significand;
-  using UP::encode;
-
-public:
-  // The x86 80 bit float represents the leading digit of the mantissa
-  // explicitly. This is the mask for that bit.
-  static constexpr StorageType EXPLICIT_BIT_MASK = StorageType(1)
-                                                   << FRACTION_LEN;
-  // The X80 significand is made of an explicit bit and the fractional part.
-  static_assert((EXPLICIT_BIT_MASK & FRACTION_MASK) == 0,
-                "the explicit bit and the fractional part should not overlap");
-  static_assert((EXPLICIT_BIT_MASK | FRACTION_MASK) == SIG_MASK,
-                "the explicit bit and the fractional part should cover the "
-                "whole significand");
-
-  LIBC_INLINE constexpr bool is_nan() const {
-    // Most encoding forms from the table found in
-    // https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
-    // are interpreted as NaN.
-    // More precisely :
-    // - Pseudo-Infinity
-    // - Pseudo Not a Number
-    // - Signalling Not a Number
-    // - Floating-point Indefinite
-    // - Quiet Not a Number
-    // - Unnormal
-    // This can be reduced to the following logic:
-    if (exp_bits() == encode(BiasedExponent::BITS_ALL_ONES()))
-      return !is_inf();
-    if (exp_bits() != encode(BiasedExponent::BITS_ALL_ZEROES()))
-      return (sig_bits() & encode(Significand::MSB())) == 0;
-    return false;
-  }
-  LIBC_INLINE constexpr bool is_quiet_nan() const {
-    return exp_sig_bits() >=
-           encode(BiasedExponent::BITS_ALL_ONES(),
-                  Significand::MSB() | (Significand::MSB() >> 1));
-  }
-  LIBC_INLINE constexpr bool is_signaling_nan() const {
-    return is_nan() && !is_quiet_nan();
-  }
-  LIBC_INLINE constexpr bool is_inf() const {
-    return exp_sig_bits() ==
-           encode(BiasedExponent::BITS_ALL_ONES(), Significand::MSB());
-  }
-  LIBC_INLINE constexpr bool is_finite() const {
-    return !is_inf() && !is_nan();
-  }
-  LIBC_INLINE constexpr bool is_normal() const {
-    const auto exp = exp_bits();
-    if (exp == encode(BiasedExponent::BITS_ALL_ZEROES()) ||
-        exp == encode(BiasedExponent::BITS_ALL_ONES()))
-      return false;
-    return get_implicit_bit();
-  }
-
-  LIBC_INLINE static constexpr StorageType zero(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::ZERO());
-  }
-  LIBC_INLINE static constexpr StorageType one(Sign sign = Sign::POS) {
-    return encode(sign, Exponent::ZERO(), Significand::MSB());
-  }
-  LIBC_INLINE static constexpr StorageType
-  min_subnormal(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ZEROES(), Significand::LSB());
-  }
-  LIBC_INLINE static constexpr StorageType
-  max_subnormal(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ZEROES(),
-                  Significand::BITS_ALL_ONES() ^ Significand::MSB());
-  }
-  LIBC_INLINE static constexpr StorageType min_normal(Sign sign = Sign::POS) {
-    return encode(sign, Exponent::MIN(), Significand::MSB());
-  }
-  LIBC_INLINE static constexpr StorageType max_normal(Sign sign = Sign::POS) {
-    return encode(sign, Exponent::MAX(), Significand::BITS_ALL_ONES());
-  }
-  LIBC_INLINE static constexpr StorageType inf(Sign sign = Sign::POS) {
-    return encode(sign, BiasedExponent::BITS_ALL_ONES(), Significand::MSB());
-  }
-  LIBC_INLINE static constexpr StorageType build_nan(Sign sign = Sign::POS,
-                                                     StorageType v = 0) {
-    return encode(sign, BiasedExponent::BITS_ALL_ONES(),
-                  Significand::MSB() |
-                      (v ? Significand(v) : (Significand::MSB() >> 2)));
-  }
-  LIBC_INLINE static constexpr StorageType
-  build_quiet_nan(Sign sign = Sign::POS, StorageType v = 0) {
-    return encode(sign, BiasedExponent::BITS_ALL_ONES(),
-                  Significand::MSB() | (Significand::MSB() >> 1) |
-                      Significand(v));
-  }
-
-  LIBC_INLINE constexpr StorageType get_explicit_mantissa() const {
-    return sig_bits();
-  }
-
-  // The following functions are specific to FPRep<FPType::X86_Binary80>.
-  // TODO: Remove if possible.
-  LIBC_INLINE constexpr bool get_implicit_bit() const {
-    return static_cast<bool>(bits & EXPLICIT_BIT_MASK);
-  }
-
-  LIBC_INLINE constexpr void set_implicit_bit(bool implicitVal) {
-    if (get_implicit_bit() != implicitVal)
-      bits ^= EXPLICIT_BIT_MASK;
+private:
+  // Merge bits from 'a' and 'b' values according to 'mask'.
+  // Use 'a' bits when corresponding 'mask' bits are zeroes and 'b' bits when
+  // corresponding bits are ones.
+  LIBC_INLINE static constexpr StorageType merge(StorageType a, StorageType b,
+                                                 StorageType mask) {
+    // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
+    return a ^ ((a ^ b) & mask);
   }
 };
 
@@ -642,29 +685,31 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
 
-// A generic class to represent floating point formats.
-// On most platforms, the 'float' type corresponds to single precision
-// floating point numbers, the 'double' type corresponds to double precision
-// floating point numers, and the 'long double' type corresponds to the quad
-// precision floating numbers. On x86 platforms however, the 'long double'
-// type maps to an x87 floating point format.
-template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
+// A generic class to manipulate floating point formats.
+// It derives most of its functionality to FPRep above.
+template <typename T>
+struct FPBits final : public internal::FPRep<get_fp_type<T>(), FPBits<T>> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
-  using UP = internal::FPRep<get_fp_type<T>()>;
+  using UP = internal::FPRep<get_fp_type<T>(), FPBits<T>>;
   using Rep = UP;
   using StorageType = typename UP::StorageType;
 
   using UP::bits;
-  using UP::EXP_LEN;
-  using UP::UP;
 
   // Constants.
-  static constexpr int MAX_BIASED_EXPONENT = (1 << EXP_LEN) - 1;
-  static constexpr StorageType MIN_NORMAL = UP::min_normal(Sign::POS);
-  static constexpr StorageType MAX_NORMAL = UP::max_normal(Sign::POS);
-  static constexpr StorageType MIN_SUBNORMAL = UP::min_subnormal(Sign::POS);
-  static constexpr StorageType MAX_SUBNORMAL = UP::max_subnormal(Sign::POS);
+  LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
+      UP::FRACTION_LEN + 1;
+  LIBC_INLINE_VAR static constexpr StorageType MIN_NORMAL =
+      UP::min_normal(Sign::POS).uintval();
+  LIBC_INLINE_VAR static constexpr StorageType MAX_NORMAL =
+      UP::max_normal(Sign::POS).uintval();
+  LIBC_INLINE_VAR static constexpr StorageType MIN_SUBNORMAL =
+      UP::min_subnormal(Sign::POS).uintval();
+  LIBC_INLINE_VAR static constexpr StorageType MAX_SUBNORMAL =
+      UP::max_subnormal(Sign::POS).uintval();
+  LIBC_INLINE_VAR static constexpr int MAX_BIASED_EXPONENT =
+      (1 << UP::EXP_LEN) - 1;
 
   // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
@@ -686,49 +731,35 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
 
   LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
 
-  LIBC_INLINE constexpr bool is_inf_or_nan() const { return !UP::is_finite(); }
-
-  LIBC_INLINE constexpr FPBits abs() const {
-    return FPBits(bits & UP::EXP_SIG_MASK);
-  }
-
   // Methods below this are used by tests.
-
+  // TODO: inline and remove.
   LIBC_INLINE static constexpr T one(Sign sign = Sign::POS) {
-    return FPBits(UP::one(sign)).get_val();
+    return T(UP::one(sign));
   }
-
   LIBC_INLINE static constexpr T zero(Sign sign = Sign::POS) {
-    return FPBits(UP::zero(sign)).get_val();
+    return T(UP::zero(sign));
   }
-
   LIBC_INLINE static constexpr T inf(Sign sign = Sign::POS) {
-    return FPBits(UP::inf(sign)).get_val();
+    return T(UP::inf(sign));
   }
-
   LIBC_INLINE static constexpr T min_normal() {
-    return FPBits(UP::min_normal(Sign::POS)).get_val();
+    return T(UP::min_normal(Sign::POS));
   }
-
   LIBC_INLINE static constexpr T max_normal() {
-    return FPBits(UP::max_normal(Sign::POS)).get_val();
+    return T(UP::max_normal(Sign::POS));
   }
-
   LIBC_INLINE static constexpr T min_denormal() {
-    return FPBits(UP::min_subnormal(Sign::POS)).get_val();
+    return T(UP::min_subnormal(Sign::POS));
   }
-
   LIBC_INLINE static constexpr T max_denormal() {
-    return FPBits(UP::max_subnormal(Sign::POS)).get_val();
+    return T(UP::max_subnormal(Sign::POS));
   }
-
   LIBC_INLINE static constexpr T build_nan(StorageType v) {
-    return FPBits(UP::build_nan(Sign::POS, v)).get_val();
+    return T(UP::build_nan(Sign::POS, v));
   }
-
   LIBC_INLINE static constexpr T build_quiet_nan(StorageType v,
                                                  Sign sign = Sign::POS) {
-    return FPBits(UP::build_quiet_nan(sign, v)).get_val();
+    return T(UP::build_quiet_nan(sign, v));
   }
 
   // TODO: Use an uint32_t for 'biased_exp'.
@@ -757,7 +788,7 @@ template <typename T> struct FPBits : public internal::FPRep<get_fp_type<T>()> {
                   "This function is not tested for X86 Extended Precision");
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
-    int lz = cpp::countl_zero(number) - EXP_LEN;
+    int lz = cpp::countl_zero(number) - UP::EXP_LEN;
     number <<= lz;
     ep -= lz;
 
