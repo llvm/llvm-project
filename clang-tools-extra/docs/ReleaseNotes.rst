@@ -143,6 +143,12 @@ New checks
 
   Detects unsafe or redundant two-step casting operations involving ``void*``.
 
+- New :doc:`bugprone-chained-comparison
+  <clang-tidy/checks/bugprone/chained-comparison>` check.
+
+  Check detects chained comparison operators that can lead to unintended
+  behavior or logical errors.
+
 - New :doc:`bugprone-compare-pointer-to-member-virtual-function
   <clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function>` check.
 
@@ -337,7 +343,8 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   ignore delegate constructors and ignore re-assignment for reference or when
-  initialization depend on field that is initialized before.
+  initialization depend on field that is initialized before. Additionally, it
+  now provides valid fixes for member variables initialized with macros.
 
 - Improved :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check
