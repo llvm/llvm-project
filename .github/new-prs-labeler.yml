@@ -308,6 +308,9 @@ clang-tidy:
   - clang-tools-extra/docs/clang-tidy/**
   - clang-tools-extra/test/clang-tidy/**
 
+clang-tools-extra:
+  - clang-tools-extra/**
+
 tools:llvm-mca:
   - llvm/tools/llvm-mca/**
   - llvm/include/llvm/MCA/**
