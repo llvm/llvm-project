@@ -193,6 +193,12 @@ inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
   return getAssignmentInsts(DAI->getAssignID());
 }
 
+inline AssignmentInstRange getAssignmentInsts(const DPValue *DPV) {
+  assert(DPV->isDbgAssign() &&
+         "Can't get assignment instructions for non-assign DPV!");
+  return getAssignmentInsts(DPV->getAssignID());
+}
+
 //
 // Utilities for enumerating llvm.dbg.assign intrinsic from an assignment ID.
 //
