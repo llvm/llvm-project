@@ -9,12 +9,16 @@
 #ifndef LLVM_CLANG_CODEGEN_CODEGENACTION_H
 #define LLVM_CLANG_CODEGEN_CODEGENACTION_H
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Frontend/FrontendAction.h"
 #include <memory>
 
 namespace llvm {
   class LLVMContext;
   class Module;
+  namespace object {
+  class Archive;
+  }
 }
 
 namespace clang {
@@ -54,7 +58,14 @@ private:
   std::unique_ptr<llvm::Module> loadModule(llvm::MemoryBufferRef MBRef);
 
   /// Load bitcode modules to link into our module from the options.
+  /// \returns true if error happens.
   bool loadLinkModules(CompilerInstance &CI);
+
+  /// Add bitcode modules in an archive to LinkModules.
+  /// \returns true if error happens.
+  bool addArchiveToLinkModules(llvm::object::Archive *Archive,
+                               const CodeGenOptions::BitcodeFileToLink &F,
+                               CompilerInstance &CI);
 
 protected:
   /// Create a new code generation action.  If the optional \p _VMContext
