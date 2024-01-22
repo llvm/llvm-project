@@ -1166,6 +1166,15 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+- The ``model`` attribute is now supported for overriding the default code
+  model used to access global variables. The following values are supported:
+  ``normal``, ``medium`` and ``extreme``.
+
+  *Example Code*:
+
+  .. code-block:: c
+
+     int var __attribute((model("extreme")));
 
 RISC-V Support
 ^^^^^^^^^^^^^^
