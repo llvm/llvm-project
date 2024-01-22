@@ -1439,8 +1439,8 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                                            NewOps, LocNo));
     };
 
-    llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord(DDI));
-    llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord(DDI));
+    llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
+    llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
