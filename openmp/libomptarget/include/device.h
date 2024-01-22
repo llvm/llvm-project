@@ -164,6 +164,9 @@ struct DeviceTy {
   /// Print all offload entries to stderr.
   void dumpOffloadEntries();
 
+  /// Ask the device whether the runtime should use auto zero-copy.
+  bool useAutoZeroCopy();
+
 private:
   /// Deinitialize the device (and plugin).
   void deinit();
