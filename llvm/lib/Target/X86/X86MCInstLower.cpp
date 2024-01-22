@@ -952,21 +952,17 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
 
   NoAutoPaddingScope NoPadScope(*OutStreamer);
 
-  // Find the next MachineInstr in this MBB.
-  const MachineInstr *NextMI = MI.getNextNode();
-  while (NextMI) {
-    if (!NextMI->isMetaInstruction())
-      break;
-    NextMI = NextMI->getNextNode();
-  }
+  auto NextMI = std::find_if(std::next(MI.getIterator()),
+                             MI.getParent()->end().getInstrIterator(),
+                             [](auto &II) { return !II.isMetaInstruction(); });
 
   SmallString<256> Code;
   unsigned MinSize = MI.getOperand(0).getImm();
 
-  if (NextMI) {
+  if (NextMI != MI.getParent()->end()) {
     // Lower the next MachineInstr to find its byte size.
     MCInst MCI;
-    MCIL.Lower(NextMI, MCI);
+    MCIL.Lower(&*NextMI, MCI);
 
     SmallVector<MCFixup, 4> Fixups;
     CodeEmitter->encodeInstruction(MCI, Code, Fixups, getSubtargetInfo());
