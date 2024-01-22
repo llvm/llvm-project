@@ -60,6 +60,7 @@ private:
   bool selectGlobal(MachineInstrBuilder &MIB, MachineRegisterInfo &MRI) const;
   bool selectSelect(MachineInstrBuilder &MIB, MachineRegisterInfo &MRI) const;
   bool selectShift(unsigned ShiftOpc, MachineInstrBuilder &MIB) const;
+  bool selectConstant(MachineInstrBuilder &MIB) const;
 
   // Check if the types match and both operands have the expected size and
   // register bank.
@@ -810,6 +811,31 @@ bool ARMInstructionSelector::selectShift(unsigned ShiftOpc,
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+bool ARMInstructionSelector::selectConstant(MachineInstrBuilder &MIB) const {
+  MachineInstr &MI = *MIB;
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+
+  auto &Val = MI.getOperand(1);
+  uint32_t ImmValue;
+  if (Val.isImm())
+    ImmValue = Val.getImm();
+  else if (Val.isCImm())
+    ImmValue = Val.getCImm()->getZExtValue();
+  else
+    return false;
+
+  // Process nodes didn't handled by TableGen-based selector.
+  if (!STI.isThumb()) {
+    if (int Imm12 = ARM_AM::getSOImmVal(~ImmValue); Imm12 != -1) {
+      MI.setDesc(TII.get(ARM::MVNi));
+      Val.ChangeToImmediate(Imm12);
+      MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    }
+  }
+  return false;
+}
+
 void ARMInstructionSelector::renderVFPF32Imm(
   MachineInstrBuilder &NewInstBuilder, const MachineInstr &OldInst,
   int OpIdx) const {
@@ -958,33 +984,34 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     I.setDesc(TII.get(COPY));
     return selectCopy(I, TII, MRI, TRI, RBI);
   }
-  case G_CONSTANT: {
-    if (!MRI.getType(I.getOperand(0).getReg()).isPointer()) {
-      // Non-pointer constants should be handled by TableGen.
-      LLVM_DEBUG(dbgs() << "Unsupported constant type\n");
-      return false;
-    }
-
-    auto &Val = I.getOperand(1);
-    if (Val.isCImm()) {
-      if (!Val.getCImm()->isZero()) {
-        LLVM_DEBUG(dbgs() << "Unsupported pointer constant value\n");
+  case G_CONSTANT:
+    if (!selectConstant(MIB)) {
+      auto &Val = MIB->getOperand(1);
+      if (!MRI.getType(I.getOperand(0).getReg()).isPointer()) {
+        // Non-pointer constants should be handled by TableGen.
+        LLVM_DEBUG(dbgs() << "Unsupported constant type\n");
         return false;
       }
-      Val.ChangeToImmediate(0);
-    } else {
-      assert(Val.isImm() && "Unexpected operand for G_CONSTANT");
-      if (Val.getImm() != 0) {
-        LLVM_DEBUG(dbgs() << "Unsupported pointer constant value\n");
-        return false;
-      }
-    }
 
-    assert(!STI.isThumb() && "Unsupported subtarget");
-    I.setDesc(TII.get(ARM::MOVi));
-    MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+      if (Val.isCImm()) {
+        if (!Val.getCImm()->isZero()) {
+          LLVM_DEBUG(dbgs() << "Unsupported pointer constant value\n");
+          return false;
+        }
+        Val.ChangeToImmediate(0);
+      } else {
+        assert(Val.isImm() && "Unexpected operand for G_CONSTANT");
+        if (Val.getImm() != 0) {
+          LLVM_DEBUG(dbgs() << "Unsupported pointer constant value\n");
+          return false;
+        }
+      }
+
+      assert(!STI.isThumb() && "Unsupported subtarget");
+      I.setDesc(TII.get(ARM::MOVi));
+      MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+    }
     break;
-  }
   case G_FCONSTANT: {
     // Load from constant pool
     unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits() / 8;
