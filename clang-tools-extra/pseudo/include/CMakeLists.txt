@@ -6,7 +6,7 @@ setup_host_tool(clang-pseudo-gen CLANG_PSEUDO_GEN pseudo_gen pseudo_gen_target)
 # Generate inc files.
 set(cxx_symbols_inc ${CMAKE_CURRENT_BINARY_DIR}/CXXSymbols.inc)
 add_custom_command(OUTPUT ${cxx_symbols_inc}
-   COMMAND "${CLANG_PSEUDO_GEN}"
+   COMMAND "${pseudo_gen}"
      --grammar ${cxx_bnf}
      --emit-symbol-list
      -o ${cxx_symbols_inc}
@@ -16,7 +16,7 @@ add_custom_command(OUTPUT ${cxx_symbols_inc}
 
 set(cxx_bnf_inc ${CMAKE_CURRENT_BINARY_DIR}/CXXBNF.inc)
 add_custom_command(OUTPUT ${cxx_bnf_inc}
-   COMMAND "${CLANG_PSEUDO_GEN}"
+   COMMAND "${pseudo_gen}"
      --grammar ${cxx_bnf}
      --emit-grammar-content
      -o ${cxx_bnf_inc}
