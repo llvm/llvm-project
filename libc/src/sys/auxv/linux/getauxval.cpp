@@ -62,9 +62,8 @@ public:
       : ptr(mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
   ~AuxvMMapGuard() {
-    if (ptr != MAP_FAILED) {
+    if (ptr != MAP_FAILED)
       munmap(ptr, AUXV_MMAP_SIZE);
-    }
   }
   void submit_to_global() {
     // atexit may fail, we do not set it to global in that case.
@@ -92,9 +91,8 @@ class AuxvFdGuard {
 public:
   AuxvFdGuard() : fd(open("/proc/self/auxv", O_RDONLY | O_CLOEXEC)) {}
   ~AuxvFdGuard() {
-    if (fd != -1) {
+    if (fd != -1)
       close(fd);
-    }
   }
   bool valid() const { return fd != -1; }
   int get() const { return fd; }
