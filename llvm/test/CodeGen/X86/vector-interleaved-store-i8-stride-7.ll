@@ -475,8 +475,7 @@ define void @store_i8_stride7_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = zero,xmm0[u,u,u,u,7,15],zero,xmm0[u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = xmm3[6,u,u,u,u],zero,zero,xmm3[7,u,u,u,u,u,u,u,u]
 ; AVX1-ONLY-NEXT:    vpor %xmm6, %xmm7, %xmm6
-; AVX1-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [0,255,255,255,255,0,0,0,0,255,255,255,255,0,0,0]
-; AVX1-ONLY-NEXT:    # xmm7 = mem[0,0]
+; AVX1-ONLY-NEXT:    vmovq {{.*#+}} xmm7 = [0,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-ONLY-NEXT:    vpblendvb %xmm7, %xmm5, %xmm6, %xmm5
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm6 = zero,zero,xmm2[0,8,u,u,u],zero,zero,xmm2[1,9,u,u,u],zero,zero
 ; AVX1-ONLY-NEXT:    vpshufb {{.*#+}} xmm7 = xmm1[0,8],zero,zero,xmm1[u,u,u,1,9],zero,zero,xmm1[u,u,u,2,10]
