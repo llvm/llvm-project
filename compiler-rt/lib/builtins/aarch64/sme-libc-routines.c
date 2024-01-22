@@ -52,9 +52,6 @@ void *__arm_sc_memmove(void *dest, const void *src,
                        size_t n) __arm_streaming_compatible {
   unsigned char *destp = (unsigned char *)dest;
   const unsigned char *srcp = (const unsigned char *)src;
-  // If src and dest are identical there is nothing to do!
-  if ((destp == srcp) || (n == 0))
-    return destp;
 
   // If src and dest don't overlap then just invoke memcpy
   if ((srcp > (destp + n)) || (destp > (srcp + n)))
