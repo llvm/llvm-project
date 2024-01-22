@@ -148,9 +148,8 @@ static void initialize_auxv_once(void) {
     available_size -= bytes_read;
   }
   // If we get out of the loop without an error, the auxv is ready.
-  if (!error_detected) {
+  if (!error_detected)
     mmap_guard.submit_to_global();
-  }
 }
 
 static AuxEntry read_entry(int fd) {
