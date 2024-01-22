@@ -1415,7 +1415,7 @@ ThinLTOCodeGenerator::writeGeneratedObject(StringRef OutputPath,
     Error Err = CacheEntry->writeObject(OutputBuffer, OutputPath);
     if (Err)
       report_fatal_error(std::move(Err));
-    return OutputPath.str();
+    return std::string(OutputPath);
   }
   // No cache entry, just write out the buffer.
   std::error_code Err;
@@ -1423,7 +1423,7 @@ ThinLTOCodeGenerator::writeGeneratedObject(StringRef OutputPath,
   if (Err)
     report_fatal_error(Twine("Can't open output '") + OutputPath + "'\n");
   OS << OutputBuffer.getBuffer();
-  return std::string(OutputPath.str());
+  return std::string(OutputPath);
 }
 
 // Main entry point for the ThinLTO processing
