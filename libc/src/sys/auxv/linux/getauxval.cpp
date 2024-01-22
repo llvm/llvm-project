@@ -29,7 +29,9 @@
 // getauxval will work either with or without __cxa_atexit support.
 // In order to detect if __cxa_atexit is supported, we define a weak symbol.
 // We prefer __cxa_atexit as it is always defined as a C symbol whileas atexit
-// may not be created via objcopy yet.
+// may not be created via objcopy yet. Also, for glibc, atexit is provided via
+// libc_nonshared.a rather than libc.so. So, it is may not be made ready for
+// overlay builds.
 extern "C" [[gnu::weak]] int __cxa_atexit(void (*callback)(void *),
                                           void *payload, void *);
 
