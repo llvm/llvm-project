@@ -1426,13 +1426,21 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
   // --> fabs(x) ogt/oge/ugt/uge C
   // TODO: Generalize to handle a negated variable operand?
   const APFloat *LHSC, *RHSC;
-  if (LHS->hasOneUse() && RHS->hasOneUse() && LHS0 == RHS0 &&
+  if (LHS0 == RHS0 && LHS->hasOneUse() && RHS->hasOneUse() &&
       FCmpInst::getSwappedPredicate(PredL) == PredR &&
       match(LHS1, m_APFloatAllowUndef(LHSC)) &&
       match(RHS1, m_APFloatAllowUndef(RHSC)) &&
       LHSC->bitwiseIsEqual(neg(*RHSC))) {
     auto IsLessThanOrLessEqual = [](FCmpInst::Predicate Pred) {
-      return (getFCmpCode(Pred) & 0b0110) == 0b0100;
+      switch (Pred) {
+      case FCmpInst::FCMP_OLT:
+      case FCmpInst::FCMP_OLE:
+      case FCmpInst::FCMP_ULT:
+      case FCmpInst::FCMP_ULE:
+        return true;
+      default:
+        return false;
+      }
     };
     if (IsLessThanOrLessEqual(IsAnd ? PredR : PredL)) {
       std::swap(LHSC, RHSC);
@@ -1441,7 +1449,7 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     if (IsLessThanOrLessEqual(IsAnd ? PredL : PredR)) {
       BuilderTy::FastMathFlagGuard Guard(Builder);
       FastMathFlags FMF = LHS->getFastMathFlags();
-      FMF &= RHS->getFastMathFlags();
+      FMF |= RHS->getFastMathFlags();
       Builder.setFastMathFlags(FMF);
 
       Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0);

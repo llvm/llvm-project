@@ -15,6 +15,7 @@ define i1 @test_and_olt(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_ole(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ole(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -27,6 +28,7 @@ define i1 @test_and_ole(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_or_ogt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_ogt(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -39,6 +41,7 @@ define i1 @test_or_ogt(float %x) {
   %cond = or i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_or_oge(float %x) {
 ; CHECK-LABEL: define i1 @test_or_oge(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -51,6 +54,7 @@ define i1 @test_or_oge(float %x) {
   %cond = or i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_ult(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ult(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -63,6 +67,7 @@ define i1 @test_and_ult(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_ule(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ule(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -75,6 +80,7 @@ define i1 @test_and_ule(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_or_ugt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_ugt(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -87,6 +93,7 @@ define i1 @test_or_ugt(float %x) {
   %cond = or i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_or_uge(float %x) {
 ; CHECK-LABEL: define i1 @test_or_uge(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -99,6 +106,7 @@ define i1 @test_or_uge(float %x) {
   %cond = or i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_commuted(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_commuted(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -111,6 +119,7 @@ define i1 @test_and_olt_commuted(float %x) {
   %cond = and i1 %cmp2, %cmp1
   ret i1 %cond
 }
+
 define i1 @test_and_olt_subnormal(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_subnormal(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -123,6 +132,7 @@ define i1 @test_and_olt_subnormal(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_infinity(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_infinity(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -135,6 +145,7 @@ define i1 @test_and_olt_infinity(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_zero(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_zero(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -145,6 +156,7 @@ define i1 @test_and_olt_zero(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_ole_zero(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ole_zero(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -156,6 +168,7 @@ define i1 @test_and_ole_zero(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_logical(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_logical(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -168,6 +181,7 @@ define i1 @test_and_olt_logical(float %x) {
   %cond = select i1 %cmp1, i1 %cmp2, i1 false
   ret i1 %cond
 }
+
 define <2 x i1> @test_and_olt_undef(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x i1> @test_and_olt_undef(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
@@ -180,6 +194,7 @@ define <2 x i1> @test_and_olt_undef(<2 x float> %x) {
   %cond = and <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %cond
 }
+
 define i1 @test_and_olt_nan(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_nan(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -190,6 +205,7 @@ define i1 @test_and_olt_nan(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_ogt(float %x) {
 ; CHECK-LABEL: define i1 @test_and_ogt(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -200,6 +216,7 @@ define i1 @test_and_ogt(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_or_olt(float %x) {
 ; CHECK-LABEL: define i1 @test_or_olt(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -212,7 +229,9 @@ define i1 @test_or_olt(float %x) {
   %cond = or i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 ; Negative tests
+
 define i1 @test_and_olt_multiuse(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_multiuse(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -228,6 +247,7 @@ define i1 @test_and_olt_multiuse(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_mismatched_lhs(float %x, float %y) {
 ; CHECK-LABEL: define i1 @test_and_olt_mismatched_lhs(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
@@ -241,6 +261,7 @@ define i1 @test_and_olt_mismatched_lhs(float %x, float %y) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_same_sign(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_same_sign(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -251,6 +272,7 @@ define i1 @test_and_olt_same_sign(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_mismatched_mag(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_mismatched_mag(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -264,6 +286,7 @@ define i1 @test_and_olt_mismatched_mag(float %x) {
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
+
 define i1 @test_and_olt_wrong_pred2(float %x) {
 ; CHECK-LABEL: define i1 @test_and_olt_wrong_pred2(
 ; CHECK-SAME: float [[X:%.*]]) {
@@ -287,6 +310,19 @@ define i1 @test_and_olt_fmf_propagation(float %x) {
 ;
   %cmp1 = fcmp nsz nnan ninf olt float %x, 0x3C00000000000000
   %cmp2 = fcmp nsz nnan ninf ogt float %x, 0xBC00000000000000
+  %cond = and i1 %cmp1, %cmp2
+  ret i1 %cond
+}
+
+define i1 @test_and_olt_fmf_propagation_union(float %x) {
+; CHECK-LABEL: define i1 @test_and_olt_fmf_propagation_union(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ninf nsz olt float [[TMP1]], 0x3C00000000000000
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %cmp1 = fcmp nnan ninf olt float %x, 0x3C00000000000000
+  %cmp2 = fcmp nsz nnan ogt float %x, 0xBC00000000000000
   %cond = and i1 %cmp1, %cmp2
   ret i1 %cond
 }
