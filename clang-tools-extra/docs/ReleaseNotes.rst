@@ -370,6 +370,10 @@ Changes in existing checks
   to ignore unused parameters when they are marked as unused and parameters of
   deleted functions and constructors.
 
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check to ignore constructor
+  calls disguised as functional casts.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
