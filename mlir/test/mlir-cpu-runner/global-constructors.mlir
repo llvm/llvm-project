@@ -1,4 +1,4 @@
-// UNSUPPORTED: target=aarch64{{.*}}
+// UNSUPPORTED: target=aarch64{{.*}}, target=arm64{{.*}}
 // RUN: mlir-cpu-runner %s -e entry -entry-point-result=void  \
 // RUN: -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s

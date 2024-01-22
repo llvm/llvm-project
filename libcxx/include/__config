@@ -995,12 +995,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_IN_CXX23
 #  endif
 
-#  if _LIBCPP_STD_VER >= 26
-#    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
-#  else
-#    define _LIBCPP_DEPRECATED_IN_CXX26
-#  endif
-
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #  else
@@ -1217,6 +1211,23 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif
 
 #  if __has_attribute(__noinline__)
+#    define _LIBCPP_NOINLINE __attribute__((__noinline__))
+#  else
+#    define _LIBCPP_NOINLINE
+#  endif
+
+#  if defined(__CUDACC__) || defined(__CUDA_ARCH__) || defined(__CUDA_LIBDEVICE__)
+// The CUDA SDK contains an unfortunate definition for the __noinline__ macro,
+// which breaks the regular __attribute__((__noinline__)) syntax. Therefore,
+// when compiling for CUDA we use the non-underscored version of the noinline
+// attribute.
+//
+// This is a temporary workaround and we still expect the CUDA SDK team to solve
+// this issue properly in the SDK headers.
+//
+// See https://github.com/llvm/llvm-project/pull/73838 for more details.
+#    define _LIBCPP_NOINLINE __attribute__((noinline))
+#  elif __has_attribute(__noinline__)
 #    define _LIBCPP_NOINLINE __attribute__((__noinline__))
 #  else
 #    define _LIBCPP_NOINLINE

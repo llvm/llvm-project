@@ -3459,6 +3459,10 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
+def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Force behvaior as if the user specified pragma omp requires unified_shared_memory.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPForceUSM">>;
 def fopenmp_target_jit : Flag<["-"], "fopenmp-target-jit">, Group<f_Group>,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Emit code that can be JIT compiled for OpenMP offloading. Implies -foffload-lto=full">;
@@ -3910,9 +3914,16 @@ def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>
   HelpText<"Give global types 'default' visibility and global functions and "
            "variables 'hidden' visibility by default">;
 def fvisibility_global_new_delete_hidden : Flag<["-"], "fvisibility-global-new-delete-hidden">, Group<f_Group>,
-  HelpText<"Give global C++ operator new and delete declarations hidden visibility">,
+  HelpText<"Give global C++ operator new and delete declarations hidden visibility">;
+class MarshallingInfoVisibilityGlobalNewDelete<KeyPathAndMacro kpm, code default>
+  : MarshallingInfoEnum<kpm, default>,
+    Values<"force-default,force-protected,force-hidden,source">,
+    NormalizedValuesScope<"LangOptions::VisibilityForcedKinds">,
+    NormalizedValues<["ForceDefault", "ForceProtected", "ForceHidden", "Source"]> {}
+def fvisibility_global_new_delete_EQ : Joined<["-"], "fvisibility-global-new-delete=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"GlobalAllocationFunctionVisibilityHidden">>;
+  HelpText<"The visibility for global C++ operator new and delete declarations. If 'source' is specified the visibility is not adjusted">,
+  MarshallingInfoVisibilityGlobalNewDelete<LangOpts<"GlobalAllocationFunctionVisibility">, "ForceDefault">;
 def mdefault_visibility_export_mapping_EQ : Joined<["-"], "mdefault-visibility-export-mapping=">,
   Values<"none,explicit,all">,
   NormalizedValuesScope<"LangOptions::DefaultVisiblityExportMapping">,
@@ -5298,6 +5309,9 @@ def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
+  Visibility<[ClangOption, CLOption]>;
+def print_std_module_manifest_path : Flag<["-", "--"], "print-library-module-manifest-path">,
+  HelpText<"Print the path for the C++ Standard library module manifest">,
   Visibility<[ClangOption, CLOption]>;
 def print_targets : Flag<["-", "--"], "print-targets">,
   HelpText<"Print the registered targets">,
@@ -8472,3 +8486,6 @@ def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   HelpText<"Embed PDB in shader container (ignored)">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
+def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
+  HelpText<"Specify the target environment">,
+  Values<"vulkan1.2, vulkan1.3">;
