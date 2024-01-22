@@ -188,9 +188,9 @@ static cl::opt<bool> EnableFreestanding(
     cl::Hidden);
 
 static cl::opt<bool> TryUseNewDbgInfoFormat(
-      "try-experimental-debuginfo-iterators",
-      cl::desc("Enable debuginfo iterator positions, if they're built in"),
-      cl::init(false), cl::Hidden);
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false), cl::Hidden);
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
 

@@ -130,9 +130,9 @@ static cl::opt<bool> IgnoreNonBitcode(
     cl::Hidden);
 
 static cl::opt<bool> TryUseNewDbgInfoFormat(
-      "try-experimental-debuginfo-iterators",
-      cl::desc("Enable debuginfo iterator positions, if they're built in"),
-      cl::init(false));
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
 
