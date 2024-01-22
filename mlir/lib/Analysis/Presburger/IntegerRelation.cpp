@@ -2511,24 +2511,32 @@ void IntegerRelation::removeTrivialEqualities() {
 }
 
 bool IntegerRelation::isFullDim() {
-  removeTrivialEqualities(); // to implement: remove equalities that are `0 = 0`
+  removeTrivialEqualities();
 
+  // If there is a non-trivial equality, the space cannot be full-dimensional.
   if (getNumEqualities() > 0)
-    return true;
+    return false;
 
+  // If along the direction of any of the inequalities, the upper and lower
+  // optima are the same, then the region is not full-dimensional.
   Simplex simplex(*this);
   for (unsigned i = 0; i < getNumInequalities(); i++) {
     auto ineq = inequalities.getRow(i);
     auto upOpt = simplex.computeOptimum(Simplex::Direction::Up, ineq);
     auto downOpt = simplex.computeOptimum(Simplex::Direction::Down, ineq);
+
     if (upOpt.getKind() == OptimumKind::Unbounded ||
         downOpt.getKind() == OptimumKind::Unbounded)
       continue;
+
+    // Check if the upper and lower optima are equal.
     if (upOpt.getKind() == OptimumKind::Bounded &&
-        downOpt.getKind() == OptimumKind::Bounded &&
-        *upOpt == *downOpt) // ineq == 0 holds for this
+        downOpt.getKind() == OptimumKind::Bounded && *upOpt == *downOpt)
       return false;
   }
+  // If none of the inequalities were such that the upper and lower optima
+  // along their direction were equal, then we conclude that the region is full
+  // dimensional.
   return true;
 }
 
