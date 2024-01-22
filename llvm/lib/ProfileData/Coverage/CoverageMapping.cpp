@@ -229,6 +229,7 @@ Expected<BitVector> CounterMappingContext::evaluateBitmap(
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NC, CHAR_BIT);
   unsigned SizeInBytes = SizeInBits / CHAR_BIT;
 
+  assert(ID + SizeInBytes <= BitmapBytes.size() && "BitmapBytes overrun");
   ArrayRef<uint8_t> Bytes(&BitmapBytes[ID], SizeInBytes);
 
   // Mask each bitmap byte into the BitVector. Go in reverse so that the

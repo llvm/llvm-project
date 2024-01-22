@@ -1,0 +1,21 @@
+# Test the assertion failure in llvm-cov with empty bitmap (#78922)
+# REQUIRES: asserts
+
+# RUN: llvm-profdata merge %S/Inputs/mcdc-maxbs.proftext -o %t.profdata
+# RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-maxbs.o -instr-profile %t.profdata
+
+# Instructions for regenerating the test object:
+
+clang -O3 -fcoverage-mcdc -fprofile-instr-generate \
+    -fcoverage-mapping -fcoverage-compilation-dir=. \
+    mcdc-maxbs.c -c -o mcdc-maxbs.o
+
+# Instructions for regenerating the test vector:
+
+clang -fprofile-instr-generate mcdc-maxbs.o
+
+# Doesn't crash if argc > 1
+./a.out
+
+llvm-profdata merge --sparse -o default.profdata default.profraw
+llvm-profdata merge --text -o mcdc-maxbs.proftext default.profdata
