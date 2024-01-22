@@ -61,37 +61,6 @@ struct BlockGraph {
     }
 };
 
-struct CFGInfo {
-    const ASTContext &Context;
-    std::set<const Stmt *> stmts;
-    // map stmt to its residing block
-    std::map<const Stmt *, const CFGBlock *> blockOfStmt;
-
-    CFGInfo(ASTContext &Context, const CFG *cfg) : Context(Context) {
-        for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
-            const CFGBlock &B = **BI;
-
-            // map stmts to block ids
-            for (auto EI = B.begin(); EI != B.end(); ++EI) {
-                const CFGElement &E = *EI;
-                if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
-                    const Stmt *S = CS->getStmt();
-                    int id = S->getID(Context);
-                    stmts.insert(S);
-                    blockOfStmt[S] = &B;
-                }
-            }
-        }
-    }
-
-    const CFGBlock *getBlock(const Stmt *s) {
-        auto it = blockOfStmt.find(s);
-        if (it == blockOfStmt.end())
-            return nullptr;
-        return it->second;
-    }
-};
-
 struct FunctionInfo {
     const FunctionDecl *D;
     std::string name;
@@ -100,7 +69,7 @@ struct FunctionInfo {
     int column;
 
     const CFG *cfg;
-    CFGInfo *cfgInfo;
+    std::vector<std::pair<const Stmt *, const CFGBlock *>> stmtBlockPairs;
     BlockGraph *bg;
 
     static FunctionInfo *fromDecl(FunctionDecl *D) {
@@ -128,8 +97,6 @@ struct FunctionInfo {
         // build graph for each CFGBlock
         BlockGraph *bg = new BlockGraph(cfg);
 
-        CFGInfo *cfgInfo = new CFGInfo(D->getASTContext(), cfg);
-
         FunctionInfo *fi = new FunctionInfo();
         fi->D = D;
         fi->name = name;
@@ -137,9 +104,23 @@ struct FunctionInfo {
         fi->line = line;
         fi->column = column;
         fi->cfg = cfg;
-        fi->cfgInfo = cfgInfo;
+        fi->buildStmtBlockPairs();
         fi->bg = bg;
         return fi;
+    }
+
+  private:
+    void buildStmtBlockPairs() {
+        for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
+            const CFGBlock &B = **BI;
+            for (auto EI = B.begin(); EI != B.end(); ++EI) {
+                const CFGElement &E = *EI;
+                if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
+                    const Stmt *S = CS->getStmt();
+                    stmtBlockPairs.push_back({S, &B});
+                }
+            }
+        }
     }
 };
 

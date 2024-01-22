@@ -38,9 +38,20 @@ getCompilationDatabase(fs::path buildPath) {
     return cb;
 }
 
-std::pair<const FunctionInfo *, int> locateVariable(const fif &functionsInFile,
-                                                    const std::string &file,
-                                                    int line, int column) {
+struct VarLocResult {
+    const FunctionInfo *fi;
+    const CFGBlock *block;
+    const int id;
+
+    VarLocResult() : fi(nullptr), block(nullptr), id(-1) {}
+    VarLocResult(const FunctionInfo *fi, const CFGBlock *block)
+        : fi(fi), block(block), id(block->getBlockID()) {}
+
+    bool isValid() const { return fi != nullptr; }
+};
+
+VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
+                            int line, int column) {
     FindVarVisitor visitor;
 
     for (const FunctionInfo *fi : functionsInFile.at(file)) {
@@ -49,18 +60,17 @@ std::pair<const FunctionInfo *, int> locateVariable(const fif &functionsInFile,
             continue;
 
         ASTContext *Context = &fi->D->getASTContext();
-        for (const Stmt *S : fi->cfgInfo->stmts) {
-            if (visitor.findVarInStmt(Context, S, file, line, column)) {
-                const CFGBlock *block = fi->cfgInfo->getBlock(S);
+        for (const auto &[stmt, block] : fi->stmtBlockPairs) {
+            if (visitor.findVarInStmt(Context, stmt, file, line, column)) {
                 int id = block->getBlockID();
                 llvm::errs()
                     << "Found variable in " << fi->name << "() at " << fi->line
                     << ":" << fi->column << " in block " << id << "\n";
-                return std::make_pair(fi, id);
+                return VarLocResult(fi, block);
             }
         }
     }
-    requireTrue(false);
+    return VarLocResult();
 }
 
 int main(int argc, const char **argv) {
@@ -103,6 +113,7 @@ int main(int argc, const char **argv) {
         "/home/thebesttv/vul/llvm-project/graph-generation/test4.cpp";
     locateVariable(functionsInFile, file, 2, 7);
     locateVariable(functionsInFile, file, 2, 14);
+    locateVariable(functionsInFile, file, 15, 10);
 
     locateVariable(functionsInFile, file, 23, 7);
     locateVariable(functionsInFile, file, 23, 11);
