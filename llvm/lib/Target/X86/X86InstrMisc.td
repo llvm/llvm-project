@@ -1115,13 +1115,13 @@ let Predicates = [HasMOVBE, HasEGPR, In64BitMode] in {
 }
 
 multiclass Movberr<X86TypeInfo t> {
-  def rr_EVEX : ITy<0x61, MRMDestReg, t, (outs t.RegClass:$dst),
-                    (ins t.RegClass:$src1), "movbe", unaryop_ndd_args,
-                    [(set t.RegClass:$dst, (bswap t.RegClass:$src1))]>,
-                EVEX, T_MAP4;
-  def rr_EVEX_REV : ITy<0x60, MRMSrcReg, t, (outs t.RegClass:$dst),
-                        (ins t.RegClass:$src1), "movbe", unaryop_ndd_args, []>,
-                    EVEX, T_MAP4, DisassembleOnly;
+  def rr : ITy<0x61, MRMDestReg, t, (outs t.RegClass:$dst),
+               (ins t.RegClass:$src1), "movbe", unaryop_ndd_args,
+               [(set t.RegClass:$dst, (bswap t.RegClass:$src1))]>,
+           EVEX, T_MAP4;
+  def rr_REV : ITy<0x60, MRMSrcReg, t, (outs t.RegClass:$dst),
+                   (ins t.RegClass:$src1), "movbe", unaryop_ndd_args, []>,
+               EVEX, T_MAP4, DisassembleOnly;
 }
 let SchedRW = [WriteALU], Predicates = [HasMOVBE, HasNDD, In64BitMode] in {
   defm MOVBE16 : Movberr<Xi16>, PD;
