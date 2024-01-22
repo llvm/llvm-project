@@ -21173,6 +21173,7 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   SDLoc DL(LD);
   SDValue Chain = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
+  assert(LD->getOffset().isUndef() && "undef offset expected");
 
   // Load 2 x i8, then 1 x i8.
   SDValue L16 = DAG.getLoad(MVT::i16, DL, Chain, BasePtr, LD->getPointerInfo(),
