@@ -5,7 +5,7 @@
 // REQUIRES: aarch64-registered-target
 
 #include "arm_neon.h"
-#include "arm_sme_draft_spec_subject_to_change.h"
+#include "arm_sme.h"
 #include "arm_sve.h"
 
 int16x8_t incompat_neon_sm(int16x8_t splat) __arm_streaming {
