@@ -11254,6 +11254,8 @@ def err_omp_reduction_not_inclusive_exclusive : Error<
 def err_omp_wrong_inscan_reduction : Error<
   "'inscan' modifier can be used only in 'omp for', 'omp simd', 'omp for simd',"
   " 'omp parallel for', or 'omp parallel for simd' directive">;
+def err_omp_inscan_reduction_on_template_type: Error <
+  "'inscan' modifier currently does not support generic data types">;
 def err_omp_inscan_reduction_expected : Error<
   "expected 'reduction' clause with the 'inscan' modifier">;
 def note_omp_previous_inscan_reduction : Note<

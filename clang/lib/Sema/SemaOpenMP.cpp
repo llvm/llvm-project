@@ -19520,6 +19520,13 @@ static bool actOnOMPReductionKindClause(
   bool FirstIter = true;
   for (Expr *RefExpr : VarList) {
     assert(RefExpr && "nullptr expr in OpenMP reduction clause.");
+    if (ClauseKind == OMPC_reduction &&
+        RD.RedModifier == OMPC_REDUCTION_inscan && RefExpr->isTypeDependent()) {
+      S.Diag(RefExpr->getExprLoc(),
+             diag::err_omp_inscan_reduction_on_template_type);
+      continue;
+    }
+
     // OpenMP [2.1, C/C++]
     //  A list item is a variable or array section, subject to the restrictions
     //  specified in Section 2.4 on page 42 and in each of the sections
