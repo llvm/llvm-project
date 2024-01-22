@@ -21,4 +21,6 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.threads
     libc.include.time
     libc.include.unistd
+
+    libc.include.sys_ioctl
 )
