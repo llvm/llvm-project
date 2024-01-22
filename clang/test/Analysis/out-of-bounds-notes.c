@@ -91,7 +91,7 @@ int assumingNothing(unsigned arg) {
   return a + b;
 }
 
-short assumingConverted(int arg) {
+short assumingConvertedToCharP(int arg) {
   // When indices are reported, the note will use the element type that's the
   // result type of the subscript operator.
   char *cp = (char*)array;
@@ -110,7 +110,7 @@ struct foo {
   char b[5];
 };
 
-int assumingConverted2(struct foo f, int arg) {
+int assumingConvertedToIntP(struct foo f, int arg) {
   // When indices are reported, the note will use the element type that's the
   // result type of the subscript operator.
   int a = ((int*)(f.a))[arg];
@@ -123,4 +123,26 @@ int assumingConverted2(struct foo f, int arg) {
   // expected-warning@-1 {{Out of bound access to memory preceding 'array'}}
   // expected-note@-2 {{Access of 'array' at negative byte offset}}
   return a + b + c;
+}
+
+int assumingPlainOffset(struct foo f, int arg) {
+  // This TC is intended to check the corner case that the checker prints the
+  // shorter "offset" instead of "byte offset" when it's irrelevant that the
+  // offset is measured in bytes.
+
+  // expected-note@+2 {{Assuming 'arg' is < 2}}
+  // expected-note@+1 {{Taking false branch}}
+  if (arg >= 2)
+    return 0;
+
+  int b = ((int*)(f.b))[arg];
+  // expected-note@-1 {{Assuming byte offset is non-negative and less than 5, the extent of 'f.b'}}
+  // FIXME: this should be {{Assuming offset is non-negative}}
+  // but the current simplification algorithm doesn't realize that arg <= 1
+  // implies that the byte offset arg*4 will be less than 5.
+
+  int c = array[arg+10];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
+  // expected-note@-2 {{Access of 'array' at an overflowing index, while it holds only 10 'int' elements}}
+  return b + c;
 }
