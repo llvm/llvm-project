@@ -1237,6 +1237,7 @@ clang-format
 - Add ``PenaltyBreakScopeResolution`` option.
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
+- Add ``SkipMacroDefinitionBody`` option.
 
 libclang
 --------
