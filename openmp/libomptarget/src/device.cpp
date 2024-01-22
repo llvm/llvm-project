@@ -107,8 +107,14 @@ llvm::Error DeviceTy::init() {
 }
 
 // Load binary to device.
-__tgt_target_table *DeviceTy::loadBinary(__tgt_device_image *Img) {
-  return RTL->load_binary(RTLDeviceID, Img);
+llvm::Expected<__tgt_device_binary>
+DeviceTy::loadBinary(__tgt_device_image *Img) {
+  __tgt_device_binary Binary;
+
+  if (RTL->load_binary(RTLDeviceID, Img, &Binary) != OFFLOAD_SUCCESS)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to load binary %p", Img);
+  return Binary;
 }
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
