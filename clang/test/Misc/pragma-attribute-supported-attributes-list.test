@@ -6,6 +6,7 @@
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
+// CHECK-NEXT: AMDGPUNumWorkGroups (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUWavesPerEU (SubjectMatchRule_function)
 // CHECK-NEXT: AVRSignal (SubjectMatchRule_function)
 // CHECK-NEXT: AbiTag (SubjectMatchRule_record_not_is_union, SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_namespace)

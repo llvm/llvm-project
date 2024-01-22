@@ -1108,3 +1108,8 @@ void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {
 unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
   return AMDGPU::getMaxNumUserSGPRs(ST) - NumUsedUserSGPRs;
 }
+
+SmallVector<unsigned>
+AMDGPUSubtarget::getNumWorkGroups(const Function &F) const {
+  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-num-work-groups", 3);
+}
