@@ -337,7 +337,8 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
       // Split edge to make Def dominate Use
       FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    IRBuilder<>(FirstInsertionPt->getParent(), FirstInsertionPt).CreateCall(EndCf, {Exec});
+    IRBuilder<>(FirstInsertionPt->getParent(), FirstInsertionPt)
+        .CreateCall(EndCf, {Exec});
   }
 
   return true;
