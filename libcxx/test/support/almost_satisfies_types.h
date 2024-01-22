@@ -85,8 +85,8 @@ static_assert(!std::ranges::input_range<InputRangeNotInputOrOutputIterator>);
 
 // Example predicate that satisfies HasFindLastIfPred
 class IndirectUnaryPredicate {
-  public:
-    bool operator()(int) const;
+public:
+  bool operator()(int) const;
 };
 
 static_assert(std::predicate<IndirectUnaryPredicate, int&>);

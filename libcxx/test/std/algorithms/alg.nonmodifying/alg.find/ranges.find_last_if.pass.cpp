@@ -71,128 +71,123 @@ template <class It, class Sent = It>
 constexpr void test_iterators() {
   {// Test with an empty range
 
-    {
-      int a[] = {};
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(It(a), Sent(It(a)), [](int x) { return x == 4; });
-      assert(ret.empty());
-    }
-
-    {
-      int a[] = {};
-      auto range = std::ranges::subrange(It(a), Sent(It(a)));
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(range, [](int x) { return x == 4; });
-      assert(ret.empty());
-    }
-
-  }
-
-  {// Test with a single element range
-
-    {
-      int a[] = {4};
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(It(a), Sent(It(a + 1)), [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a);
-      assert(*ret.begin() == 4);
-    }
-
-    {
-      int a[] = {4};
-      std::same_as<std::ranges::borrowed_subrange_t<int (&)[1]>> auto ret = std::ranges::find_last_if(a, [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a);
-      assert(*ret.begin() == 4);
-    }
-
-  }
-
-  {// Test when no element satisfies the predicate
-
-    {
-      int a[] = {1, 2, 3, 4};
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 5; });
-      assert(ret.empty());
-    }
-
-    {
-      int a[] = {1, 2, 3, 4};
-      std::same_as<std::ranges::borrowed_subrange_t<int (&)[4]>> auto ret = std::ranges::find_last_if(a, [](int x) { return x == 5; });
-      assert(ret.empty());
-    }
-
-  }
-
-  {// Test when all elements satisfy the predicate
-
-    {
-      int a[] = {4, 4, 4, 4};
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a + 3);
-      assert(*ret.begin() == 4);
-    }
-
-    {
-      int a[] = {4, 4, 4, 4};
-      std::same_as<std::ranges::borrowed_subrange_t<int (&)[4]>> auto ret = std::ranges::find_last_if(a, [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a + 3);
-      assert(*ret.begin() == 4);
-    }
-
-  }
-
-  {// Test when the element being searched is the first one
-
-    {
-      int a[] = {4, 1, 2, 3};
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a);
-      assert(*ret.begin() == 4);
-    }
-
-    {
-      int a[] = {4, 1, 2, 3};
-      std::same_as<std::ranges::borrowed_subrange_t<int (&)[4]>> auto ret = std::ranges::find_last_if(a, [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a);
-      assert(*ret.begin() == 4);
-    }
-
-  }
-
-  {// Test when the element being searched is the last one
-
-    {
-      int a[] = {1, 2, 3, 4};
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a + 3);
-      assert(*ret.begin() == 4);
-    }
-
-    {
-      int a[] = {1, 2, 3, 4};
-      std::same_as<std::ranges::borrowed_subrange_t<int (&)[4]>> auto ret = std::ranges::find_last_if(a, [](int x) { return x == 4; });
-      assert(base(ret.begin()) == a + 3);
-      assert(*ret.begin() == 4);
-    }
-
-  }
-
-
-  {// check that past-the-end iterator is returned with no match
-
-    {
-      int a[] = {1, 1, 1};
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, a + 3, [](int) { return false; });
-      assert(ret.data() == a + 3);
-    }
-
-    {
-      int a[]  = {1, 1, 1};
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, [](int) { return false; });
-      assert(ret.data() == a + 3);
-    }
-
-  }
-
+   {int a[] = {};
+  std::same_as<std::ranges::subrange<It>> auto ret =
+      std::ranges::find_last_if(It(a), Sent(It(a)), [](int x) { return x == 4; });
+  assert(ret.empty());
 }
 
+{
+  int a[]                                          = {};
+  auto range                                       = std::ranges::subrange(It(a), Sent(It(a)));
+  std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(range, [](int x) { return x == 4; });
+  assert(ret.empty());
+}
+}
+
+{// Test with a single element range
+
+ {int a[] = {4};
+std::same_as<std::ranges::subrange<It>> auto ret =
+    std::ranges::find_last_if(It(a), Sent(It(a + 1)), [](int x) { return x == 4; });
+assert(base(ret.begin()) == a);
+assert(*ret.begin() == 4);
+}
+
+{
+  int a[] = {4};
+  std::same_as<std::ranges::borrowed_subrange_t<int(&)[1]>> auto ret =
+      std::ranges::find_last_if(a, [](int x) { return x == 4; });
+  assert(base(ret.begin()) == a);
+  assert(*ret.begin() == 4);
+}
+}
+
+{// Test when no element satisfies the predicate
+
+ {int a[] = {1, 2, 3, 4};
+std::same_as<std::ranges::subrange<It>> auto ret =
+    std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 5; });
+assert(ret.empty());
+}
+
+{
+  int a[] = {1, 2, 3, 4};
+  std::same_as<std::ranges::borrowed_subrange_t<int(&)[4]>> auto ret =
+      std::ranges::find_last_if(a, [](int x) { return x == 5; });
+  assert(ret.empty());
+}
+}
+
+{// Test when all elements satisfy the predicate
+
+ {int a[] = {4, 4, 4, 4};
+std::same_as<std::ranges::subrange<It>> auto ret =
+    std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 4; });
+assert(base(ret.begin()) == a + 3);
+assert(*ret.begin() == 4);
+}
+
+{
+  int a[] = {4, 4, 4, 4};
+  std::same_as<std::ranges::borrowed_subrange_t<int(&)[4]>> auto ret =
+      std::ranges::find_last_if(a, [](int x) { return x == 4; });
+  assert(base(ret.begin()) == a + 3);
+  assert(*ret.begin() == 4);
+}
+}
+
+{// Test when the element being searched is the first one
+
+ {int a[] = {4, 1, 2, 3};
+std::same_as<std::ranges::subrange<It>> auto ret =
+    std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 4; });
+assert(base(ret.begin()) == a);
+assert(*ret.begin() == 4);
+}
+
+{
+  int a[] = {4, 1, 2, 3};
+  std::same_as<std::ranges::borrowed_subrange_t<int(&)[4]>> auto ret =
+      std::ranges::find_last_if(a, [](int x) { return x == 4; });
+  assert(base(ret.begin()) == a);
+  assert(*ret.begin() == 4);
+}
+}
+
+{// Test when the element being searched is the last one
+
+ {int a[] = {1, 2, 3, 4};
+std::same_as<std::ranges::subrange<It>> auto ret =
+    std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 4; });
+assert(base(ret.begin()) == a + 3);
+assert(*ret.begin() == 4);
+}
+
+{
+  int a[] = {1, 2, 3, 4};
+  std::same_as<std::ranges::borrowed_subrange_t<int(&)[4]>> auto ret =
+      std::ranges::find_last_if(a, [](int x) { return x == 4; });
+  assert(base(ret.begin()) == a + 3);
+  assert(*ret.begin() == 4);
+}
+}
+
+{ // check that past-the-end iterator is returned with no match
+
+  {
+    int a[]                                            = {1, 1, 1};
+    std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, a + 3, [](int) { return false; });
+    assert(ret.data() == a + 3);
+  }
+
+  {
+    int a[]                                            = {1, 1, 1};
+    std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, [](int) { return false; });
+    assert(ret.data() == a + 3);
+  }
+}
+}
 
 struct NonConstComparableValue {
   friend constexpr bool operator==(const NonConstComparableValue&, const NonConstComparableValue&) { return false; }
@@ -212,149 +207,163 @@ constexpr bool test() {
 
   {// check that projections are used properly and called with the reference to the element the iterator is pointing to
 
-    {
-      int a[] = {1, 2, 3, 4};
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, a + 4, [&](int* i) { return i == a + 3; }, [](int& i) { return &i; });
-      assert(ret.data() == a + 3);
-    }
+   {int a[] = {1, 2, 3, 4};
+  std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(
+      a, a + 4, [&](int* i) { return i == a + 3; }, [](int& i) { return &i; });
+  assert(ret.data() == a + 3);
+}
 
-    {
-      int a[] = {1, 2, 3, 4};
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, [&](int* i) { return i == a + 3; }, [](int& i) { return &i; });
-      assert(ret.data() == a + 3);
-    }
+{
+  int a[]                                            = {1, 2, 3, 4};
+  std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(
+      a, [&](int* i) { return i == a + 3; }, [](int& i) { return &i; });
+  assert(ret.data() == a + 3);
+}
+}
 
-  }
+{// check that the last element is returned
 
-  {// check that the last element is returned
+ {struct S{int comp;
+int other;
+}
+;
 
-    {
-      struct S {
-        int comp;
-        int other;
-      };
+S a[]                                                             = {{0, 0}, {0, 2}, {0, 1}};
+std::same_as<std::ranges::borrowed_subrange_t<S (&)[3]>> auto ret = std::ranges::find_last_if(
+    a, [](int i) { return i == 0; }, &S::comp);
+assert(ret.data() == a + 2);
+assert(ret.data()->comp == 0);
+assert(ret.data()->other == 1);
+}
 
-      S a[] = {{0, 0}, {0, 2}, {0, 1}};
-      std::same_as<std::ranges::borrowed_subrange_t<S (&)[3]>> auto ret = std::ranges::find_last_if(a, [](int i) { return i == 0; }, &S::comp);
-      assert(ret.data() == a + 2);
-      assert(ret.data()->comp == 0);
-      assert(ret.data()->other == 1);
-    }
+{
+  struct S {
+    int comp;
+    int other;
+  };
 
-    {
-      struct S {
-        int comp;
-        int other;
-       };
+  S a[]                                            = {{0, 0}, {0, 2}, {0, 1}};
+  std::same_as<std::ranges::subrange<S*>> auto ret = std::ranges::find_last_if(
+      a, a + 3, [](int i) { return i == 0; }, &S::comp);
+  assert(ret.data() == a + 2);
+  assert(ret.data()->comp == 0);
+  assert(ret.data()->other == 1);
+}
+}
 
-       S a[] = {{0, 0}, {0, 2}, {0, 1}};
-       std::same_as<std::ranges::subrange<S *>> auto ret = std::ranges::find_last_if(a, a + 3, [](int i) { return i == 0; }, &S::comp);
-       assert(ret.data() == a + 2);
-       assert(ret.data()->comp == 0);
-       assert(ret.data()->other == 1);
-    }
+{ // check that ranges::dangling is returned
+  [[maybe_unused]] std::same_as<std::ranges::dangling> auto ret =
+      std::ranges::find_last_if(std::array{1, 2}, [](int) { return false; });
+}
 
-  }
+{ // check that an iterator is returned with a borrowing range
+  int a[] = {1, 1, 2, 3, 4};
+  std::same_as<std::ranges::subrange<int*>> auto ret =
+      std::ranges::find_last_if(std::views::all(a), [](int) { return true; });
+  assert(ret.data() == a + 4);
+}
 
-  {// check that ranges::dangling is returned
-    [[maybe_unused]] std::same_as<std::ranges::dangling> auto ret = std::ranges::find_last_if(std::array{1, 2}, [](int) { return false; });
-  }
+{// check that std::invoke is used
 
-  {// check that an iterator is returned with a borrowing range
-    int a[] = {1, 1, 2, 3, 4};
-    std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(std::views::all(a), [](int) { return true; });
-    assert(ret.data() == a + 4);
-  }
+ {struct S{int i;
+}
+;
 
-  {// check that std::invoke is used
+S a[]                                                             = {S{1}, S{3}, S{2}};
+std::same_as<std::ranges::borrowed_subrange_t<S (&)[3]>> auto ret = std::ranges::find_last_if(
+    a, [](int) { return false; }, &S::i);
+assert(ret.data() == a + 3);
+}
 
-    {
-      struct S {
-        int i;
-      };
+{
+  struct S {
+    int i;
+  };
 
-      S a[] = {S{1}, S{3}, S{2}};
-      std::same_as<std::ranges::borrowed_subrange_t<S (&)[3]>>  auto ret = std::ranges::find_last_if(a, [](int) { return false; }, &S::i);
-      assert(ret.data() == a + 3);
-    }
+  S a[]                                            = {S{1}, S{3}, S{2}};
+  std::same_as<std::ranges::subrange<S*>> auto ret = std::ranges::find_last_if(
+      a, a + 3, [](int) { return false; }, &S::i);
+  assert(ret.data() == a + 3);
+}
+}
 
-    {
-      struct S {
-        int i;
-      };
+{// count projection and predicate invocation count
 
-      S a[] = {S{1}, S{3}, S{2}};
-      std::same_as<std::ranges::subrange<S*>> auto ret = std::ranges::find_last_if(a, a + 3, [](int) { return false; }, &S::i);
-      assert(ret.data() == a + 3);
-    }
+ {int a[] = {1, 2, 2, 3, 4};
+int predicate_count                                = 0;
+int projection_count                               = 0;
+std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(
+    a,
+    a + 5,
+    [&](int i) {
+      ++predicate_count;
+      return i == 2;
+    },
+    [&](int i) {
+      ++projection_count;
+      return i;
+    });
+assert(ret.data() == a + 2);
+assert(*(ret.data()) == 2);
+assert(predicate_count == 3);
+assert(projection_count == 3);
+}
 
-  }
-
-  {// count projection and predicate invocation count
-
-    {
-      int a[] = {1, 2, 2, 3, 4};
-      int predicate_count  = 0;
-      int projection_count = 0;
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, a + 5, [&](int i) { ++predicate_count; return i == 2; }, [&](int i) {
+{
+  int a[]                                            = {1, 2, 2, 3, 4};
+  int predicate_count                                = 0;
+  int projection_count                               = 0;
+  std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(
+      a,
+      [&](int i) {
+        ++predicate_count;
+        return i == 2;
+      },
+      [&](int i) {
         ++projection_count;
         return i;
       });
-      assert(ret.data() == a + 2);
-      assert(*(ret.data()) == 2);
-      assert(predicate_count == 3);
-      assert(projection_count == 3);
-    }
+  assert(ret.data() == a + 2);
+  assert(*(ret.data()) == 2);
+  assert(predicate_count == 3);
+  assert(projection_count == 3);
+}
+}
 
-    {
-      int a[] = {1, 2, 2, 3, 4};
-      int predicate_count  = 0;
-      int projection_count = 0;
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, [&](int i) { ++predicate_count; return i == 2; }, [&](int i) {
-        ++projection_count;
-        return i;
-      });
-      assert(ret.data() == a + 2);
-      assert(*(ret.data()) == 2);
-      assert(predicate_count == 3);
-      assert(projection_count == 3);
-    }
+{// check that the return type of `iter::operator*` doesn't change
 
+ {NonConstComparableValue a[] = {NonConstComparableValue{}};
+std::same_as<std::ranges::subrange<NonConstComparableValue*>> auto ret =
+    std::ranges::find_last_if(a, a + 1, [](auto&& e) { return e == NonConstComparableValue{}; });
+assert(ret.data() == a);
+}
+
+{
+  NonConstComparableValue a[] = {NonConstComparableValue{}};
+  std::same_as<std::ranges::borrowed_subrange_t<NonConstComparableValue(&)[1]>> auto ret =
+      std::ranges::find_last_if(a, [](auto&& e) { return e == NonConstComparableValue{}; });
+  assert(ret.data() == a);
+}
+}
+
+{ // check that the implicit conversion to bool works
+
+  {
+    int a[] = {1, 2, 3, 3, 4};
+    std::same_as<std::ranges::subrange<int*>> auto ret =
+        std::ranges::find_last_if(a, a + 4, [](const int& i) { return BooleanTestable{i == 3}; });
+    assert(ret.data() == a + 3);
   }
 
-  {// check that the return type of `iter::operator*` doesn't change
-
-    {
-      NonConstComparableValue a[] = {NonConstComparableValue{}};
-      std::same_as<std::ranges::subrange<NonConstComparableValue *>> auto ret = std::ranges::find_last_if(a, a + 1, [](auto&& e) { return e == NonConstComparableValue{}; });
-      assert(ret.data() == a);
-    }
-
-    {
-      NonConstComparableValue a[] = {NonConstComparableValue{}};
-      std::same_as<std::ranges::borrowed_subrange_t<NonConstComparableValue (&)[1]>> auto ret = std::ranges::find_last_if(a, [](auto&& e) { return e == NonConstComparableValue{}; });
-      assert(ret.data() == a);
-    }
-
+  {
+    int a[] = {1, 2, 3, 3, 4};
+    std::same_as<std::ranges::subrange<int*>> auto ret =
+        std::ranges::find_last_if(a, [](const int& b) { return BooleanTestable{b == 3}; });
+    assert(ret.data() == a + 3);
   }
+}
 
-  {// check that the implicit conversion to bool works
-
-    {
-      int a[] = {1, 2, 3, 3, 4};
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, a + 4, [](const int& i) { return BooleanTestable{i == 3}; });
-      assert(ret.data() == a + 3);
-    }
-
-    {
-      int a[] = {1, 2, 3, 3, 4};
-      std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last_if(a, [](const int& b) { return BooleanTestable{b == 3}; });
-      assert(ret.data() == a + 3);
-    }
-
-  }
-
-  return true;
+return true;
 }
 
 int main(int, char**) {
