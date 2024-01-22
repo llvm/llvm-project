@@ -34,12 +34,13 @@ define amdgpu_cs void @test_simple_indirect_call() {
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_mov_b32 s32, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_add_u32 s8, s8, s0
+; GFX9-NEXT:    s_add_u32 s8, s8, s3
 ; GFX9-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], s[8:9]
 ; GFX9-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
 ; GFX10-LABEL: test_simple_indirect_call:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_getpc_b64 s[8:9]
@@ -49,7 +50,7 @@ define amdgpu_cs void @test_simple_indirect_call() {
 ; GFX10-NEXT:    s_mov_b32 s32, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_bitset0_b32 s11, 21
-; GFX10-NEXT:    s_add_u32 s8, s8, s0
+; GFX10-NEXT:    s_add_u32 s8, s8, s3
 ; GFX10-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX10-NEXT:    s_mov_b64 s[0:1], s[8:9]
 ; GFX10-NEXT:    s_mov_b64 s[2:3], s[10:11]

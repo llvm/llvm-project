@@ -142,36 +142,36 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 }
 
 ; GCN-LABEL: {{^}}cs_main:
-; GFX9-FLATSCR: s_add_u32 flat_scratch_lo, s0, s2
+; GFX9-FLATSCR: s_add_u32 flat_scratch_lo, s0, s5
 ; GFX9-FLATSCR: s_addc_u32 flat_scratch_hi, s1, 0
 
-; GFX10-FLATSCR: s_add_u32 s0, s0, s2
+; GFX10-FLATSCR: s_add_u32 s0, s0, s5
 ; GFX10-FLATSCR: s_addc_u32 s1, s1, 0
 ; GFX10-FLATSCR: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-FLATSCR: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 
-; GFX9-FLATSCR-PAL-DAG: s_getpc_b64 s[2:3]
-; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s2, s0
-; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[2:3], s[2:3], 0x10
+; GFX9-FLATSCR-PAL-DAG: s_getpc_b64 s[4:5]
+; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s4, s0
+; GFX9-FLATSCR-PAL-DAG: s_load_dwordx2 s[4:5], s[4:5], 0x10
 ; GFX9-FLATSCR-PAL-DAG: v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-FLATSCR-PAL-DAG: v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-DAG: s_mov_b32 s0, 0
 ; GFX9-FLATSCR-PAL-DAG: s_waitcnt lgkmcnt(0)
-; GFX9-FLATSCR-PAL-DAG: s_and_b32 s3, s3, 0xffff
-; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s2, s0
-; GFX9-FLATSCR-PAL-DAG: s_addc_u32 flat_scratch_hi, s3, 0
+; GFX9-FLATSCR-PAL-DAG: s_and_b32 s5, s5, 0xffff
+; GFX9-FLATSCR-PAL-DAG: s_add_u32 flat_scratch_lo, s4, s3
+; GFX9-FLATSCR-PAL-DAG: s_addc_u32 flat_scratch_hi, s5, 0
 
-; GFX10-FLATSCR-PAL: s_getpc_b64 s[2:3]
-; GFX10-FLATSCR-PAL: s_mov_b32 s2, s0
-; GFX10-FLATSCR-PAL: s_load_dwordx2 s[2:3], s[2:3], 0x10
+; GFX10-FLATSCR-PAL: s_getpc_b64 s[4:5]
+; GFX10-FLATSCR-PAL: s_mov_b32 s4, s0
+; GFX10-FLATSCR-PAL: s_load_dwordx2 s[4:5], s[4:5], 0x10
 ; GFX10-FLATSCR-PAL: s_waitcnt lgkmcnt(0)
-; GFX10-FLATSCR-PAL: s_and_b32 s3, s3, 0xffff
-; GFX10-FLATSCR-PAL: s_add_u32 s2, s2, s0
-; GFX10-FLATSCR-PAL: s_addc_u32 s3, s3, 0
-; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
-; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
+; GFX10-FLATSCR-PAL: s_and_b32 s5, s5, 0xffff
+; GFX10-FLATSCR-PAL: s_add_u32 s4, s4, s3
+; GFX10-FLATSCR-PAL: s_addc_u32 s5, s5, 0
+; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s4
+; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s5
 
-; MUBUF-DAG: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; MUBUF-DAG: s_mov_b32 s4, SCRATCH_RSRC_DWORD0
 
 ; FLATSCR-NOT: SCRATCH_RSRC_DWORD
 

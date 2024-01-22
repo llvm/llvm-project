@@ -75,6 +75,47 @@ define amdgpu_cs void @caller() {
 
 declare amdgpu_gfx void @callee(i32)
 
+define amdgpu_gfx void @workgroup_ids_gfx(ptr addrspace(1) %outx, ptr addrspace(1) %outy, ptr addrspace(1) %outz) {
+; GFX9-SDAG-LABEL: workgroup_ids_gfx:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, ttmp9
+; GFX9-SDAG-NEXT:    s_and_b32 s34, ttmp7, 0xffff
+; GFX9-SDAG-NEXT:    global_store_dword v[0:1], v6, off
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s34
+; GFX9-SDAG-NEXT:    s_lshr_b32 s34, ttmp7, 16
+; GFX9-SDAG-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, s34
+; GFX9-SDAG-NEXT:    global_store_dword v[4:5], v0, off
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: workgroup_ids_gfx:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_and_b32 s36, ttmp7, 0xffff
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v6, ttmp9
+; GFX9-GISEL-NEXT:    s_lshr_b32 s35, ttmp7, 16
+; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v6, off
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s36
+; GFX9-GISEL-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s35
+; GFX9-GISEL-NEXT:    global_store_dword v[4:5], v0, off
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %id.x = call i32 @llvm.amdgcn.workgroup.id.x()
+  %id.y = call i32 @llvm.amdgcn.workgroup.id.y()
+  %id.z = call i32 @llvm.amdgcn.workgroup.id.z()
+  store volatile i32 %id.x, ptr addrspace(1) %outx
+  store volatile i32 %id.y, ptr addrspace(1) %outy
+  store volatile i32 %id.z, ptr addrspace(1) %outz
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workgroup.id.x()
 declare i32 @llvm.amdgcn.workgroup.id.y()
 declare i32 @llvm.amdgcn.workgroup.id.z()

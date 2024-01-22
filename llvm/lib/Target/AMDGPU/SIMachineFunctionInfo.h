@@ -744,34 +744,26 @@ public:
   }
 
   // Add system SGPRs.
-  Register addWorkGroupIDX(bool HasArchitectedSGPRs) {
-    Register Reg =
-        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP9 : getNextSystemSGPR();
+  Register addWorkGroupIDX() {
+    Register Reg = getNextSystemSGPR();
     ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(Reg);
-    if (!HasArchitectedSGPRs)
-      NumSystemSGPRs += 1;
+    NumSystemSGPRs += 1;
 
     return ArgInfo.WorkGroupIDX.getRegister();
   }
 
-  Register addWorkGroupIDY(bool HasArchitectedSGPRs) {
-    Register Reg =
-        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
-    unsigned Mask = HasArchitectedSGPRs && hasWorkGroupIDZ() ? 0xffff : ~0u;
-    ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(Reg, Mask);
-    if (!HasArchitectedSGPRs)
-      NumSystemSGPRs += 1;
+  Register addWorkGroupIDY() {
+    Register Reg = getNextSystemSGPR();
+    ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(Reg);
+    NumSystemSGPRs += 1;
 
     return ArgInfo.WorkGroupIDY.getRegister();
   }
 
-  Register addWorkGroupIDZ(bool HasArchitectedSGPRs) {
-    Register Reg =
-        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
-    unsigned Mask = HasArchitectedSGPRs ? 0xffff << 16 : ~0u;
-    ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(Reg, Mask);
-    if (!HasArchitectedSGPRs)
-      NumSystemSGPRs += 1;
+  Register addWorkGroupIDZ() {
+    Register Reg = getNextSystemSGPR();
+    ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(Reg);
+    NumSystemSGPRs += 1;
 
     return ArgInfo.WorkGroupIDZ.getRegister();
   }

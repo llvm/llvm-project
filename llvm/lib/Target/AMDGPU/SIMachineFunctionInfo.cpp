@@ -107,8 +107,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
 
-  if (!AMDGPU::isGraphics(CC) ||
-      (CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs())) {
+  if (!AMDGPU::isGraphics(CC) || CC == CallingConv::AMDGPU_CS ||
+      ST.hasArchitectedSGPRs()) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 
@@ -168,6 +168,15 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
+  }
+
+  if (STI->hasArchitectedSGPRs()) {
+    ArgInfo.ArchitectedWorkGroupIDX =
+        ArgDescriptor::createRegister(AMDGPU::TTMP9);
+    ArgInfo.ArchitectedWorkGroupIDY = ArgDescriptor::createRegister(
+        AMDGPU::TTMP7, WorkGroupIDZ ? 0xFFFFu : ~0u);
+    ArgInfo.ArchitectedWorkGroupIDZ =
+        ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
   }
 }
 

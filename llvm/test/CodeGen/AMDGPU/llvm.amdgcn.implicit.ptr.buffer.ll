@@ -16,8 +16,8 @@ define amdgpu_ps i32 @test_ps() #1 {
 }
 
 ; GCN-LABEL: {{^}}test_cs:
-; GCN: s_mov_b64 s[4:5], s[0:1]
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[4:7], 0 offset:4
+; GCN: s_mov_b64 s[8:9], s[0:1]
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[8:11], 0 offset:4
 ; GCN: s_load_dword s0, s[0:1], 0x0
 define amdgpu_cs i32 @test_cs() #1 {
   %alloca = alloca i32, addrspace(5)

@@ -143,6 +143,11 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor WorkGroupInfo;
   ArgDescriptor PrivateSegmentWaveByteOffset;
 
+  // System TTMPs.
+  ArgDescriptor ArchitectedWorkGroupIDX;
+  ArgDescriptor ArchitectedWorkGroupIDY;
+  ArgDescriptor ArchitectedWorkGroupIDZ;
+
   // Pointer with offset from kernargsegmentptr to where special ABI arguments
   // are passed to callable functions.
   ArgDescriptor ImplicitArgPtr;
