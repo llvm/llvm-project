@@ -1044,7 +1044,7 @@ add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.
 target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
-                                                 ${LIBCXX_GENERATED_INCLUDE_DIR})
+                                                 ${CMAKE_CURRENT_LIST_DIR})
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})
