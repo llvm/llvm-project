@@ -121,13 +121,14 @@ struct FunctionInfo {
         requireTrue(!file.empty());
 
         // build CFG
-        const std::unique_ptr<CFG> cfg = CFG::buildCFG(
-            D, D->getBody(), &D->getASTContext(), CFG::BuildOptions());
+        CFG *cfg = CFG::buildCFG(D, D->getBody(), &D->getASTContext(),
+                                 CFG::BuildOptions())
+                       .release();
 
         // build graph for each CFGBlock
-        BlockGraph *bg = new BlockGraph(cfg.get());
+        BlockGraph *bg = new BlockGraph(cfg);
 
-        CFGInfo *cfgInfo = new CFGInfo(D->getASTContext(), cfg.get());
+        CFGInfo *cfgInfo = new CFGInfo(D->getASTContext(), cfg);
 
         FunctionInfo *fi = new FunctionInfo();
         fi->D = D;
@@ -135,7 +136,7 @@ struct FunctionInfo {
         fi->file = file;
         fi->line = line;
         fi->column = column;
-        fi->cfg = cfg.get();
+        fi->cfg = cfg;
         fi->cfgInfo = cfgInfo;
         fi->bg = bg;
         return fi;
