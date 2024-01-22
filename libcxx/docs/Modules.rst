@@ -69,7 +69,6 @@ Some of the current limitations
  * The path to the compiler may not be a symlink, ``clang-scan-deps`` does
    not handle that case properly
  * Libc++ is not tested with modules instead of headers
- * The module ``.cppm`` files are not installed
  * Clang supports modules using GNU extensions, but libc++ does not work using
    GNU extensions.
  * Clang:
