@@ -14,6 +14,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
@@ -232,7 +233,7 @@ void AllocaOp::build(::mlir::OpBuilder &odsBuilder,
 //===----------------------------------------------------------------------===//
 
 LogicalResult BreakOp::verify() {
-  if (!getOperation()->getParentOfType<LoopOp>() &&
+  if (!getOperation()->getParentOfType<LoopOpInterface>() &&
       !getOperation()->getParentOfType<SwitchOp>())
     return emitOpError("must be within a loop or switch");
   return success();
@@ -251,7 +252,7 @@ void ConditionOp::getSuccessorRegions(
   // down its list of possible successors.
 
   // Parent is a loop: condition may branch to the body or to the parent op.
-  if (auto loopOp = dyn_cast<LoopOp>(getOperation()->getParentOp())) {
+  if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
     regions.emplace_back(loopOp->getResults());
   }
@@ -269,7 +270,7 @@ ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
 }
 
 LogicalResult ConditionOp::verify() {
-  if (!isa<LoopOp, AwaitOp>(getOperation()->getParentOp()))
+  if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
   return success();
 }
@@ -365,7 +366,7 @@ OpFoldResult ConstantOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
 //===----------------------------------------------------------------------===//
 
 LogicalResult ContinueOp::verify() {
-  if (!this->getOperation()->getParentOfType<LoopOp>())
+  if (!this->getOperation()->getParentOfType<LoopOpInterface>())
     return emitOpError("must be within a loop");
   return success();
 }
@@ -1264,38 +1265,14 @@ void LoopOp::build(OpBuilder &builder, OperationState &result,
   stepBuilder(builder, result.location);
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes
-/// that correspond to a constant value for each operand, or null if that
-/// operand is not a constant.
 void LoopOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
-  // If any index all the underlying regions branch back to the parent
-  // operation.
-  if (!point.isParent()) {
-    regions.push_back(RegionSuccessor());
-    return;
-  }
-
-  // FIXME: we want to look at cond region for getting more accurate results
-  // if the other regions will get a chance to execute.
-  regions.push_back(RegionSuccessor(&this->getCond()));
-  regions.push_back(RegionSuccessor(&this->getBody()));
-  regions.push_back(RegionSuccessor(&this->getStep()));
+  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
 }
 
 llvm::SmallVector<Region *> LoopOp::getLoopRegions() { return {&getBody()}; }
 
-LogicalResult LoopOp::verify() {
-  if (getCond().empty())
-    return emitOpError() << "cond region must not be empty";
-
-  if (!llvm::isa<ConditionOp>(getCond().back().getTerminator()))
-    return emitOpError() << "cond region terminate with 'cir.condition'";
-
-  return success();
-}
+LogicalResult LoopOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // GlobalOp

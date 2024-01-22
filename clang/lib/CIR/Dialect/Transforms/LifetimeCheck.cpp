@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 
+#include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
 
@@ -674,27 +675,10 @@ void LifetimeCheckPass::checkLoop(LoopOp loopOp) {
   SmallVector<Region *, 4> regionsToCheck;
 
   auto setupLoopRegionsToCheck = [&](bool isSubsequentTaken = false) {
-    regionsToCheck.clear();
-    switch (loopOp.getKind()) {
-    case LoopOpKind::For: {
-      regionsToCheck.push_back(&loopOp.getCond());
-      regionsToCheck.push_back(&loopOp.getBody());
-      if (!isSubsequentTaken)
-        regionsToCheck.push_back(&loopOp.getStep());
-      break;
-    }
-    case LoopOpKind::While: {
-      regionsToCheck.push_back(&loopOp.getCond());
-      regionsToCheck.push_back(&loopOp.getBody());
-      break;
-    }
-    case LoopOpKind::DoWhile: {
-      // Note this is the reverse order from While above.
-      regionsToCheck.push_back(&loopOp.getBody());
-      regionsToCheck.push_back(&loopOp.getCond());
-      break;
-    }
-    }
+    regionsToCheck = loopOp.getRegionsInExecutionOrder();
+    // Drop step if it exists and we are not checking the subsequent taken.
+    if (loopOp.maybeGetStep() && !isSubsequentTaken)
+      regionsToCheck.pop_back();
   };
 
   // From 2.4.9 "Note":

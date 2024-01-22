@@ -14,6 +14,7 @@ add_clang_library(clangCIRLoweringThroughMLIR
   MLIRCIREnumsGen
   MLIRCIRASTAttrInterfacesIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRCIRLoopOpInterfaceIncGen
   MLIRBuiltinLocationAttributesIncGen
   MLIRBuiltinTypeInterfacesIncGen
   MLIRFunctionInterfacesIncGen
