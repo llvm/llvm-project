@@ -75,9 +75,6 @@ static void test_c() {
   assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::minutes>{20'576'131min}) ==
          SV("2009-02-13 23:31:00"));
   assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::hours>{342'935h}) == SV("2009-02-13 23:00:00"));
-  assert(stream_c_locale<CharT>(std::chrono::sys_days{std::chrono::days{14'288}}) == SV("2009-02-13 00:00:00"));
-  assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::weeks>{std::chrono::weeks{2041}}) ==
-         SV("2009-02-12 00:00:00"));
 
   assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::duration<signed char, std::ratio<2, 1>>>{
              std::chrono::duration<signed char, std::ratio<2, 1>>{60}}) == SV("1970-01-01 00:02:00"));
@@ -89,13 +86,6 @@ static void test_c() {
              std::chrono::duration<long, std::ratio<1, 10>>{36611}}) == SV("1970-01-01 01:01:01.1"));
   assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::duration<long long, std::ratio<1, 100>>>{
              std::chrono::duration<long long, std::ratio<1, 100>>{12'345'678'9010}}) == SV("2009-02-13 23:31:30.10"));
-
-  assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::duration<float, std::ratio<1, 1>>>{
-             std::chrono::duration<float, std::ratio<1, 1>>{123.456}}) == SV("1970-01-01 00:02:03"));
-  assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::duration<double, std::ratio<1, 10>>>{
-             std::chrono::duration<double, std::ratio<1, 10>>{123.456}}) == SV("1970-01-01 00:00:12.3"));
-  assert(stream_c_locale<CharT>(std::chrono::sys_time<std::chrono::duration<long double, std::ratio<1, 100>>>{
-             std::chrono::duration<long double, std::ratio<1, 100>>{123.456}}) == SV("1970-01-01 00:00:01.23"));
 }
 
 template <class CharT>
@@ -113,9 +103,6 @@ static void test_fr_FR() {
   assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::minutes>{20'576'131min}) ==
          SV("2009-02-13 23:31:00"));
   assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::hours>{342'935h}) == SV("2009-02-13 23:00:00"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::sys_days{std::chrono::days{14'288}}) == SV("2009-02-13 00:00:00"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::weeks>{std::chrono::weeks{2041}}) ==
-         SV("2009-02-12 00:00:00"));
 
   assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::duration<signed char, std::ratio<2, 1>>>{
              std::chrono::duration<signed char, std::ratio<2, 1>>{60}}) == SV("1970-01-01 00:02:00"));
@@ -127,13 +114,6 @@ static void test_fr_FR() {
              std::chrono::duration<long, std::ratio<1, 10>>{36611}}) == SV("1970-01-01 01:01:01,1"));
   assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::duration<long long, std::ratio<1, 100>>>{
              std::chrono::duration<long long, std::ratio<1, 100>>{12'345'678'9010}}) == SV("2009-02-13 23:31:30,10"));
-
-  assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::duration<float, std::ratio<1, 1>>>{
-             std::chrono::duration<float, std::ratio<1, 1>>{123.456}}) == SV("1970-01-01 00:02:03"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::duration<double, std::ratio<1, 10>>>{
-             std::chrono::duration<double, std::ratio<1, 10>>{123.456}}) == SV("1970-01-01 00:00:12,3"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::sys_time<std::chrono::duration<long double, std::ratio<1, 100>>>{
-             std::chrono::duration<long double, std::ratio<1, 100>>{123.456}}) == SV("1970-01-01 00:00:01,23"));
 }
 
 template <class CharT>
@@ -151,9 +131,6 @@ static void test_ja_JP() {
   assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::minutes>{20'576'131min}) ==
          SV("2009-02-13 23:31:00"));
   assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::hours>{342'935h}) == SV("2009-02-13 23:00:00"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::sys_days{std::chrono::days{14'288}}) == SV("2009-02-13 00:00:00"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::weeks>{std::chrono::weeks{2041}}) ==
-         SV("2009-02-12 00:00:00"));
 
   assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::duration<signed char, std::ratio<2, 1>>>{
              std::chrono::duration<signed char, std::ratio<2, 1>>{60}}) == SV("1970-01-01 00:02:00"));
@@ -165,17 +142,36 @@ static void test_ja_JP() {
              std::chrono::duration<long, std::ratio<1, 10>>{36611}}) == SV("1970-01-01 01:01:01.1"));
   assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::duration<long long, std::ratio<1, 100>>>{
              std::chrono::duration<long long, std::ratio<1, 100>>{12'345'678'9010}}) == SV("2009-02-13 23:31:30.10"));
-
-  assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::duration<float, std::ratio<1, 1>>>{
-             std::chrono::duration<float, std::ratio<1, 1>>{123.456}}) == SV("1970-01-01 00:02:03"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::duration<double, std::ratio<1, 10>>>{
-             std::chrono::duration<double, std::ratio<1, 10>>{123.456}}) == SV("1970-01-01 00:00:12.3"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::sys_time<std::chrono::duration<long double, std::ratio<1, 100>>>{
-             std::chrono::duration<long double, std::ratio<1, 100>>{123.456}}) == SV("1970-01-01 00:00:01.23"));
 }
+
+template <class CharT, class T>
+concept is_ostreamable = requires(std::basic_ostream<CharT>& os, T const& val) {
+  { os << val };
+};
 
 template <class CharT>
 static void test() {
+  // Test sys_time's constrains:
+  //   treat_as_floating_point_v<typename Duration::rep> is false, and Duration{1} < days{1} is true.
+  static_assert(is_ostreamable<CharT, std::chrono::sys_seconds>);
+  static_assert(is_ostreamable<CharT, std::chrono::sys_time<std::chrono::duration<long long>>>);
+  // floating-point types
+  static_assert(!is_ostreamable<CharT, std::chrono::sys_time<std::chrono::duration<float>>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::sys_time<std::chrono::duration<double>>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::sys_time<std::chrono::duration<long double>>>);
+
+  static_assert(is_ostreamable<CharT, std::chrono::sys_days>);
+  static_assert(is_ostreamable<CharT, std::chrono::sys_time<std::chrono::duration<int, std::ratio<86400>>>>);
+
+  // duration > days{1}
+  static_assert(!is_ostreamable<CharT, std::chrono::sys_time<std::chrono::duration<int, std::ratio<86401>>>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::sys_time<std::chrono::months>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::sys_time<std::chrono::years>>);
+
+  // multiple of days are considered days.
+  static_assert(is_ostreamable<CharT, std::chrono::sys_time<std::chrono::duration<int, std::ratio<3 * 86400>>>>);
+  static_assert(is_ostreamable<CharT, std::chrono::sys_time<std::chrono::weeks>>);
+
   test_c<CharT>();
   test_fr_FR<CharT>();
   test_ja_JP<CharT>();
