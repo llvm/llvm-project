@@ -116,7 +116,11 @@ static void initialize_auxv_once(void) {
   // We get one less than the max size to make sure the search always
   // terminates. MMAP private pages are zeroed out already.
   size_t available_size = AuxvMMapGuard::AUXV_MMAP_SIZE - sizeof(AuxEntryType);
-#if defined(PR_GET_AUXV)
+  // PR_GET_AUXV is only available on Linux kernel 6.1 and above. If this is not
+  // defined, we direcly fall back to reading /proc/self/auxv. In case the libc
+  // is compiled and run on separate kernels, we also check the return value of
+  // prctl.
+#ifdef(PR_GET_AUXV)
   int ret = prctl(PR_GET_AUXV, reinterpret_cast<unsigned long>(ptr),
                   available_size, 0, 0);
   if (ret >= 0) {
