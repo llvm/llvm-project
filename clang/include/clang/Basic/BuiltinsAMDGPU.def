@@ -547,7 +547,7 @@ TARGET_BUILTIN(__builtin_amdgcn_sin_bf16, "yy", "nc", "bf16-trans-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cos_bf16, "yy", "nc", "bf16-trans-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_bf16_f32, "V2yff", "nc", "bf16-cvt-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_pk_bf16_f32, "V2yffV2s", "nc", "bf16-cvt-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_pk_bf16_f32, "V2yffi", "nc", "bf16-cvt-insts")
 
 // GFX1210 WMMA builtins
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f64_16x16x4_f64, "V8dIbV2dIbV2dIsV8d", "nc", "gfx12-10-insts,wavefrontsize32")
