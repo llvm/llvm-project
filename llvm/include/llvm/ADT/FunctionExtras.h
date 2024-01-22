@@ -317,10 +317,11 @@ protected:
     // Clear the old callback and inline flag to get back to as-if-null.
     RHS.CallbackAndInlineFlag = {};
 
-#if !defined(NDEBUG) && !(defined(ADDRESS_SANITIZER) || defined(__SANITIZE_ADDRESS__))
-    // In debug builds without ASan, we also scribble across the rest of the storage.
-    // AddressSanitizer (ASAN) disables scribbling to prevent overwriting poisoned objects
-    // (e.g., annotated short strings).
+#if !defined(NDEBUG) &&                                                        \
+    !(defined(ADDRESS_SANITIZER) || defined(__SANITIZE_ADDRESS__))
+    // In debug builds without ASan, we also scribble across the rest of the
+    // storage. AddressSanitizer (ASAN) disables scribbling to prevent
+    // overwriting poisoned objects (e.g., annotated short strings).
     memset(RHS.getInlineStorage(), 0xAD, InlineStorageSize);
 #endif
   }
