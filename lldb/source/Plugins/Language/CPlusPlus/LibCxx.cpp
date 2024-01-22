@@ -1108,7 +1108,11 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
     stream.Printf("timestamp=%ld s", seconds);
   else {
     std::array<char, 128> str;
-    std::strftime(str.data(), str.size(), "%FT%H:%M:%SZ", gmtime(&seconds));
+    std::size_t size =
+        std::strftime(str.data(), str.size(), "%FT%H:%M:%SZ", gmtime(&seconds));
+    if (size == 0)
+      return false;
+
     stream.Printf("date/time=%s timestamp=%ld s", str.data(), seconds);
   }
 
@@ -1139,7 +1143,11 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
     const std::time_t seconds = std::time_t(86400) * days;
 
     std::array<char, 128> str;
-    std::strftime(str.data(), str.size(), "%FZ", gmtime(&seconds));
+    std::size_t size =
+        std::strftime(str.data(), str.size(), "%FZ", gmtime(&seconds));
+    if (size == 0)
+      return false;
+
     stream.Printf("date=%s timestamp=%d days", str.data(), days);
   }
 

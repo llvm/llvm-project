@@ -128,10 +128,6 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
             substrs=["sd_max = timestamp=2147483647 days"],
         )
 
-        # self.expect("frame variable sd_min", substrs=["sd_min = date=1970-01-01Z timestamp=0 days"])
-        # self.expect("frame variable sd_0", substrs=["sd_0 = date=1970-01-01Z timestamp=0 days"])
-        # self.expect("frame variable XXXtp_d_0", substrs=["XXXtp_d_0 = date=1970-01-01Z timestamp=0 days"])
-
         self.expect("frame variable d_0", substrs=["d_0 = day=0"])
         self.expect("frame variable d_1", substrs=["d_1 = day=1"])
         self.expect("frame variable d_31", substrs=["d_31 = day=31"])
