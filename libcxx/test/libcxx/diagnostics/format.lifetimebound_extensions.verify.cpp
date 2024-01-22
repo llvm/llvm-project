@@ -21,5 +21,5 @@ auto test_format() {
 
 auto test_wformat() {
     int i = 0;
-    return std::make_format_args(i, j); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
+    return std::make_wformat_args(i, j); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
 }
