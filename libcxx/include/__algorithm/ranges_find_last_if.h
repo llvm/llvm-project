@@ -36,31 +36,39 @@ namespace ranges {
 template <class _Ip, class _Sp, class _Pred, class _Proj>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr subrange<_Ip>
 __find_last_if_impl(_Ip __first, _Sp __last, _Pred&& __pred, _Proj&& __proj) {
-  if constexpr ((bidirectional_range<_Ip> && common_range<_Ip>) ||
-                (bidirectional_iterator<_Ip> && assignable_from<_Ip&, _Sp&>)) {
-    // Implement optimized bidirectional range and common range version.
-    // Perform a reverse search from the end.
-    _Ip __original_last = __last;                        // Save the original value of __last
-    _Ip __result        = ranges::next(__first, __last); // Set __result to the end of the range
-    while (__first != __last) {
-      --__last;
-      if (std::invoke(__pred, std::invoke(__proj, *__last))) {
-        __result = __last;
-        break;
-      }
+  if constexpr (common_range<_Ip> && bidirectional_range<_Ip>) {
+        // Optimized for common_range and bidirectional_range
+        _Ip __original_last = __last; // Save the original value of __last
+        while (__first != __last) {
+            --__last;
+            if (std::invoke(__pred, std::invoke(__proj, *__last))) {
+                return {__last, __original_last}; // Directly return the result
+            }
+        }
+        return {__last, __original_last};
+    } else if constexpr (bidirectional_iterator<_Ip> && assignable_from<_Ip&, _Sp&>) {
+        // For non-common but bidirectional ranges
+        _Ip __result = ranges::next(__first, __last);
+        _Ip __original_last = __result;
+        while (__first != __result) {
+            --__result;
+            if (std::invoke(__pred, std::invoke(__proj, *__result))) {
+                return {__result, __original_last};
+            }
+        }
+        return {__result, __original_last};
+    } else {
+        // Code for the non-bidirectional case
+        _Ip __original_first = __first;
+        _Ip __result         = __first;
+        while (__first != __last) {
+            if (std::invoke(__pred, std::invoke(__proj, *__first))) {
+                __result = __first;
+            }
+            ++__first;
+        }
+        return {__result, __original_first};
     }
-    return {__result, __original_last};
-  } else {
-    _Ip __original_first = __first;
-    _Ip __result         = __first;
-    while (__first != __last) {
-      if (std::invoke(__pred, std::invoke(__proj, *__first))) {
-        __result = __first;
-      }
-      ++__first;
-    }
-    return {__result, __original_first};
-  }
 }
 
 namespace __find_last_if {
