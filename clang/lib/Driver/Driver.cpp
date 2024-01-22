@@ -6161,11 +6161,10 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
     //      return "modules-asan.json";
     //    return "modules.json";
     //  }();
-    StringRef modules = "modules.json";
 
     SmallString<128> path(lib.begin(), lib.end());
     llvm::sys::path::remove_filename(path);
-    llvm::sys::path::append(path, modules);
+    llvm::sys::path::append(path, "modules.json");
     if (TC.getVFS().exists(path))
       return static_cast<std::string>(path);
 
