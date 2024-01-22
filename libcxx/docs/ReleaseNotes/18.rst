@@ -99,6 +99,13 @@ Improvements and New Features
   infrastructure no longer depends on a modern CMake, it works with the minimal
   required LLVM version (3.20.0).
 
+- The ``.cppm`` files of experimental standard library modules can now be
+  installed. By default, they are not installed. This can be enabled by
+  configuring CMake with ``-DLIBCXX_INSTALL_MODULES=ON``. The installation
+  directory can be configured with the CMake option
+  ``-DLIBCXX_INSTALL_MODULE_DIR=<path>``. The default location is
+  ``${PREFIX}/share/libc++/v1``.
+
 
 Deprecations and Removals
 -------------------------
