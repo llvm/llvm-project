@@ -87,7 +87,8 @@ GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
 
 std::optional<ParamPoint> findVertex(Matrix<MPInt> equations);
 
-std::vector<std::pair<PresburgerRelation, GeneratingFunction>> polytopeGeneratingFunction(PolyhedronH poly);
+std::vector<std::pair<PresburgerRelation, GeneratingFunction>>
+polytopeGeneratingFunction(PolyhedronH poly);
 
 /// Find a vector that is not orthogonal to any of the given vectors,
 /// i.e., has nonzero dot product with those of the given vectors
