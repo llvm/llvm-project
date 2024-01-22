@@ -1082,6 +1082,13 @@ def TuneShortForwardBranchOpt
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
 
+// P670 requires a S2V transfer buffer to move scalars into vectors.
+// FIXME: Forming .vx/.vf can reduce register pressure.
+def TuneDontSinkSplatOperands
+    : SubtargetFeature<"dont-sink-splat-operands", "DontSinkSplatOperands",
+                       "true", "Don't sink splat operands to enable .vx or .vf "
+                       "instructions">;
+
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
                        "true", "Enable branch+c.mv fusion">;
