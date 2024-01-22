@@ -15,15 +15,15 @@ void l0(void) {
 // CPPSCOPE-NEXT:     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["j", init] {alignment = 4 : i64}
 // CPPSCOPE-NEXT:     %2 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CPPSCOPE-NEXT:     cir.store %2, %0 : !s32i, cir.ptr <!s32i>
-// CPPSCOPE-NEXT:     cir.loop for(cond :  {
+// CPPSCOPE-NEXT:     cir.for : cond {
 
 // CSCOPE: cir.func @l0()
 // CSCOPE-NEXT: cir.scope {
 // CSCOPE-NEXT:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CSCOPE-NEXT:   %1 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CSCOPE-NEXT:   cir.store %1, %0 : !s32i, cir.ptr <!s32i>
-// CSCOPE-NEXT:   cir.loop for(cond :  {
+// CSCOPE-NEXT:   cir.for : cond {
 
-// CSCOPE:        })  {
+// CSCOPE:        } body {
 // CSCOPE-NEXT:     cir.scope {
 // CSCOPE-NEXT:       %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["j", init] {alignment = 4 : i64}

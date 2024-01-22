@@ -18,18 +18,13 @@ module {
       %8 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
       %9 = cir.const(#cir.int<0> : !s32i) : !s32i
       cir.store %9, %8 : !s32i, cir.ptr <!s32i>
-      cir.loop for(cond : {
+      cir.for : cond {
         %10 = cir.load %8 : cir.ptr <!s32i>, !s32i
         %11 = cir.load %2 : cir.ptr <!s32i>, !s32i
         %12 = cir.cmp(lt, %10, %11) : !s32i, !s32i
         %13 = cir.cast(int_to_bool, %12 : !s32i), !cir.bool
         cir.condition(%13)
-      }, step : {
-        %10 = cir.load %8 : cir.ptr <!s32i>, !s32i
-        %11 = cir.unary(inc, %10) : !s32i, !s32i
-        cir.store %11, %8 : !s32i, cir.ptr <!s32i>
-        cir.yield
-      }) {
+      } body {
         %10 = cir.load %0 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
         %11 = cir.load %8 : cir.ptr <!s32i>, !s32i
         %12 = cir.ptr_stride(%10 : !cir.ptr<f64>, %11 : !s32i), !cir.ptr<f64>
@@ -42,6 +37,11 @@ module {
         %19 = cir.load %4 : cir.ptr <f64>, f64
         %20 = cir.binop(add, %19, %18) : f64
         cir.store %20, %4 : f64, cir.ptr <f64>
+        cir.yield
+      } step {
+        %10 = cir.load %8 : cir.ptr <!s32i>, !s32i
+        %11 = cir.unary(inc, %10) : !s32i, !s32i
+        cir.store %11, %8 : !s32i, cir.ptr <!s32i>
         cir.yield
       }
     }

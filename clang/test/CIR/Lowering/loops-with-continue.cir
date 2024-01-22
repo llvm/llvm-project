@@ -8,18 +8,13 @@ module {
       %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
       %1 = cir.const(#cir.int<1> : !s32i) : !s32i
       cir.store %1, %0 : !s32i, cir.ptr <!s32i>
-      cir.loop for(cond : {
+      cir.for : cond {
         %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
         %3 = cir.const(#cir.int<10> : !s32i) : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
-      }, step : {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
-        %3 = cir.unary(inc, %2) : !s32i, !s32i
-        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
-        cir.yield
-      }) {
+      } body {
         cir.scope {
           cir.scope {
             %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
@@ -31,6 +26,11 @@ module {
             }
           }
         }
+        cir.yield
+      } step {
+        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %3 = cir.unary(inc, %2) : !s32i, !s32i
+        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
         cir.yield
       }
     }
@@ -71,35 +71,25 @@ module {
       %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
       %1 = cir.const(#cir.int<1> : !s32i) : !s32i
       cir.store %1, %0 : !s32i, cir.ptr <!s32i>
-      cir.loop for(cond : {
+      cir.for : cond {
         %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
         %3 = cir.const(#cir.int<10> : !s32i) : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
-      }, step : {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
-        %3 = cir.unary(inc, %2) : !s32i, !s32i
-        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
-        cir.yield
-      }) {
+      } body {
         cir.scope {
           cir.scope {
             %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["j", init] {alignment = 4 : i64}
             %3 = cir.const(#cir.int<1> : !s32i) : !s32i
             cir.store %3, %2 : !s32i, cir.ptr <!s32i>
-            cir.loop for(cond : {
+            cir.for : cond {
               %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
               %5 = cir.const(#cir.int<10> : !s32i) : !s32i
               %6 = cir.cmp(lt, %4, %5) : !s32i, !s32i
               %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
               cir.condition(%7)
-            }, step : {
-              %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
-              %5 = cir.unary(inc, %4) : !s32i, !s32i
-              cir.store %5, %2 : !s32i, cir.ptr <!s32i>
-              cir.yield
-            }) {
+            } body {
               cir.scope {
                 cir.scope {
                   %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
@@ -112,9 +102,19 @@ module {
                 }
               }
               cir.yield
+            } step {
+              %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+              %5 = cir.unary(inc, %4) : !s32i, !s32i
+              cir.store %5, %2 : !s32i, cir.ptr <!s32i>
+              cir.yield
             }
           }
         }
+        cir.yield
+      } step {
+        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %3 = cir.unary(inc, %2) : !s32i, !s32i
+        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
         cir.yield
       }
     }

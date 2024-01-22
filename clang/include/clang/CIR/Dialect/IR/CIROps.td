@@ -442,7 +442,7 @@ def StoreOp : CIR_Op<"store", [
 
 def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
                                               "SwitchOp", "DoWhileOp",
-                                              "WhileOp", "LoopOp"]>,
+                                              "WhileOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -635,7 +635,7 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-    ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "LoopOp", "AwaitOp",
+    ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "ForOp", "AwaitOp",
                  "TernaryOp", "GlobalOp", "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
@@ -1160,106 +1160,6 @@ def BrCondOp : CIR_Op<"brcond",
 }
 
 //===----------------------------------------------------------------------===//
-// LoopOp
-//===----------------------------------------------------------------------===//
-
-def LoopOpKind_For : I32EnumAttrCase<"For", 1, "for">;
-
-def LoopOpKind : I32EnumAttr<
-    "LoopOpKind",
-    "Loop kind",
-    [LoopOpKind_For]> {
-  let cppNamespace = "::mlir::cir";
-}
-
-def LoopOp : CIR_Op<"loop",
-      [LoopOpInterface,
-       DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       RecursivelySpeculatable, NoRegionArguments]> {
-  let summary = "Loop";
-  let description = [{
-    `cir.loop` represents C/C++ loop forms. It defines 3 blocks:
-    - `cond`: region can contain multiple blocks, terminated by regular
-    `cir.yield` when control should yield back to the parent, and
-    `cir.continue` when execution continues to the next region.
-    The region destination depends on the loop form specified.
-    - `step`: region with one block, containing code to compute the
-    loop step, must be terminated with `cir.yield`.
-    - `body`: region for the loop's body, can contain an arbitrary
-    number of blocks.
-
-    The loop form: `for`, `while` and `dowhile` must also be specified and
-    each implies the loop regions execution order.
-
-    ```mlir
-      // while (true) {
-      //  i = i + 1;
-      // }
-      cir.loop while(cond :  {
-        cir.continue
-      }, step :  {
-        cir.yield
-      })  {
-        %3 = cir.load %1 : cir.ptr <i32>, i32
-        %4 = cir.const(1 : i32) : i32
-        %5 = cir.binop(add, %3, %4) : i32
-        cir.store %5, %1 : i32, cir.ptr <i32>
-        cir.yield
-      }
-    ```
-  }];
-
-  let arguments = (ins Arg<LoopOpKind, "loop kind">:$kind);
-  let regions = (region AnyRegion:$cond, AnyRegion:$body,
-                        SizedRegion<1>:$step);
-
-  let assemblyFormat = [{
-    $kind
-    `(`
-    `cond` `:` $cond `,`
-    `step` `:` $step
-    `)`
-    $body
-    attr-dict
-  }];
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins
-      "cir::LoopOpKind":$kind,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$condBuilder,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$bodyBuilder,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$stepBuilder
-      )>
-  ];
-
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    Region *maybeGetStep() {
-      if (getKind() == LoopOpKind::For)
-        return &getStep();
-      return nullptr;
-    }
-
-    llvm::SmallVector<Region *> getRegionsInExecutionOrder() {
-      switch(getKind()) {
-      case LoopOpKind::For:
-        return llvm::SmallVector<Region *, 3>{&getCond(), &getBody(), &getStep()};
-      // case LoopOpKind::While:
-      //   return llvm::SmallVector<Region *, 2>{&getCond(), &getBody()};
-      // case LoopOpKind::DoWhile:
-      //   return llvm::SmallVector<Region *, 2>{&getBody(), &getCond()};
-      }
-    }
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // While & DoWhileOp
 //===----------------------------------------------------------------------===//
 
@@ -1334,6 +1234,73 @@ def DoWhileOp : WhileOpBase<"do"> {
       cir.condition %cond : cir.bool
     }
     ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
+def ForOp : CIR_Op<"for", [LoopOpInterface, NoRegionArguments]> {
+  let summary = "C/C++ for loop counterpart";
+  let description = [{
+    Represents a C/C++ for loop. It consists of three regions:
+
+     - `cond`: single block region with the loop's condition. Should be
+     terminated with a `cir.condition` operation.
+     - `body`: contains the loop body and an arbitrary number of blocks.
+     - `step`: single block region with the loop's step.
+
+    Example:
+
+    ```mlir
+    cir.for cond {
+      cir.condition(%val)
+    } body {
+      cir.break
+    ^bb2:
+      cir.yield
+    } step {
+      cir.yield
+    }
+    ```
+  }];
+
+  let regions = (region SizedRegion<1>:$cond,
+                        MinSizedRegion<1>:$body,
+                        SizedRegion<1>:$step);
+  let assemblyFormat = [{
+    `:` `cond` $cond
+    `body` $body
+    `step` $step
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "function_ref<void(OpBuilder &, Location)>":$condBuilder,
+                   "function_ref<void(OpBuilder &, Location)>":$bodyBuilder,
+                   "function_ref<void(OpBuilder &, Location)>":$stepBuilder), [{
+        OpBuilder::InsertionGuard guard($_builder);
+
+        // Build condition region.
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+
+        // Build body region.
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+
+        // Build step region.
+        $_builder.createBlock($_state.addRegion());
+        stepBuilder($_builder, $_state.location);
+      }]>
+  ];
+
+  let extraClassDeclaration = [{
+    Region *maybeGetStep() { return &getStep(); }
+    llvm::SmallVector<Region *> getRegionsInExecutionOrder() {
+      return llvm::SmallVector<Region *, 3>{&getCond(), &getBody(), &getStep()};
+    }
   }];
 }
 
@@ -2684,7 +2651,7 @@ def AllocException : CIR_Op<"alloc_exception", [
 
 def ThrowOp : CIR_Op<"throw", [
                      ParentOneOf<["FuncOp", "ScopeOp", "IfOp", "SwitchOp",
-                                  "DoWhileOp", "WhileOp", "LoopOp"]>,
+                                  "DoWhileOp", "WhileOp", "ForOp"]>,
                      Terminator]> {
   let summary = "(Re)Throws an exception";
   let description = [{

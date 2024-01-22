@@ -7,11 +7,11 @@
 module {
 
   cir.func @testFor(%arg0 : !cir.bool) {
-    cir.loop for(cond : {
+    cir.for : cond {
       cir.condition(%arg0)
-    }, step : {
+    } body {
       cir.yield
-    }) {
+    } step {
       cir.yield
     }
     cir.return
@@ -97,14 +97,14 @@ module {
   //     break;
   // }
   cir.func @forWithBreakTerminatedScopeInBody(%arg0 : !cir.bool) {
-      cir.loop for(cond : {
+      cir.for : cond {
         cir.condition(%arg0)
-      }, step : {
-        cir.yield
-      }) {
+      } body {
         cir.scope { // FIXME(cir): Redundant scope emitted during C codegen.
           cir.break
         }
+        cir.yield
+      } step {
         cir.yield
       }
     cir.return

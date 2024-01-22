@@ -817,3 +817,16 @@ cir.func @invalid_cond_region_terminator(%arg0 : !cir.bool) -> !cir.void {
   }
   cir.return
 }
+
+// -----
+
+cir.func @invalidConditionTerminator (%arg0 : !cir.bool) -> !cir.void {
+  cir.for : cond { // expected-error {{op expected condition region to terminate with 'cir.condition'}}
+    cir.yield
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  }
+  cir.return
+}

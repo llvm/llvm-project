@@ -44,13 +44,10 @@ void init(unsigned numImages) {
 // CHECK:     %10 = cir.load %4 : cir.ptr <!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
 // CHECK:     %11 = cir.call @_ZNSt6vectorI6tripleE3endEv(%10) : (!cir.ptr<![[VEC]]>) -> ![[VEC_IT]]
 // CHECK:     cir.store %11, %6 : ![[VEC_IT]], cir.ptr <![[VEC_IT]]>
-// CHECK:     cir.loop for(cond : {
+// CHECK:     cir.for : cond {
 // CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EneERKS3_(%5, %6) : (!cir.ptr<![[VEC_IT]]>, !cir.ptr<![[VEC_IT]]>) -> !cir.bool
 // CHECK:       cir.condition(%12)
-// CHECK:     }, step : {
-// CHECK:       %12 = cir.call @_ZN17__vector_iteratorI6triplePS0_RS0_EppEv(%5) : (!cir.ptr<![[VEC_IT]]>) -> !cir.ptr<![[VEC_IT]]>
-// CHECK:       cir.yield
-// CHECK:     }) {
+// CHECK:     } body {
 // CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EdeEv(%5) : (!cir.ptr<![[VEC_IT]]>) -> !cir.ptr<!ty_22triple22>
 // CHECK:       cir.store %12, %7 : !cir.ptr<!ty_22triple22>, cir.ptr <!cir.ptr<!ty_22triple22>>
 // CHECK:       cir.scope {
@@ -65,6 +62,9 @@ void init(unsigned numImages) {
 // CHECK:         %19 = cir.load %7 : cir.ptr <!cir.ptr<!ty_22triple22>>, !cir.ptr<!ty_22triple22>
 // CHECK:         %20 = cir.call @_ZN6tripleaSEOS_(%19, %13) : (!cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>) -> !cir.ptr<!ty_22triple22>
 // CHECK:       }
+// CHECK:       cir.yield
+// CHECK:     } step {
+// CHECK:       %12 = cir.call @_ZN17__vector_iteratorI6triplePS0_RS0_EppEv(%5) : (!cir.ptr<![[VEC_IT]]>) -> !cir.ptr<![[VEC_IT]]>
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }

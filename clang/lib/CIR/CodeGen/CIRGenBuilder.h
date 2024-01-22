@@ -615,6 +615,15 @@ public:
     return create<mlir::cir::WhileOp>(loc, condBuilder, bodyBuilder);
   }
 
+  /// Create a for operation.
+  mlir::cir::ForOp createFor(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
+    return create<mlir::cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
   mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                                    mlir::Value src, mlir::Value len) {
     return create<mlir::cir::MemCpyOp>(loc, dst, src, len);

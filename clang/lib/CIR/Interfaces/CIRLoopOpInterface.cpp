@@ -38,6 +38,8 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
   // Branching from step: go to condition.
   else if (op.maybeGetStep() == point.getRegionOrNull()) {
     regions.emplace_back(&op.getCond(), op.getCond().getArguments());
+  } else {
+    llvm_unreachable("unexpected branch origin");
   }
 }
 
