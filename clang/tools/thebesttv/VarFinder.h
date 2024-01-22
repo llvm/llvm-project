@@ -42,8 +42,8 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
   public:
     FindVarVisitor() {}
 
-    bool findVarInStmt(ASTContext *Context, const Stmt *S, std::string file,
-                       int line, int column) {
+    bool findVarInStmt(ASTContext *Context, const Stmt *S, //
+                       std::string file, int line, int column) {
         this->Context = Context;
         this->targetLoc = Location{file, line, column};
         this->found = false;

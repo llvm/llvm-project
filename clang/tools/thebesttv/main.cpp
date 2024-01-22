@@ -87,14 +87,12 @@ int main(int argc, const char **argv) {
     std::vector<std::unique_ptr<ASTUnit>> ASTs;
     Tool.buildASTs(ASTs);
 
+    llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
     fif functionsInFile;
     for (auto &AST : ASTs) {
         ASTContext &Context = AST->getASTContext();
-
         auto *TUD = Context.getTranslationUnitDecl();
-        llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
         TUD->dump();
-
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
     }
 
@@ -103,7 +101,7 @@ int main(int argc, const char **argv) {
     for (const auto &[file, functions] : functionsInFile) {
         llvm::errs() << "File: " << file << "\n";
         for (const auto *fi : functions) {
-            llvm::errs() << "  Fun: " << fi->name << " at " << fi->line << ":"
+            llvm::errs() << "  Fun: " << fi->name << "() at " << fi->line << ":"
                          << fi->column << "\n";
         }
     }
