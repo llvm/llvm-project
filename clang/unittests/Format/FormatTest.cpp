@@ -5008,6 +5008,18 @@ TEST_F(FormatTest, DesignatedInitializers) {
                "    [3] = cccccccccccccccccccccccccccccccccccccc,\n"
                "    [4] = dddddddddddddddddddddddddddddddddddddd,\n"
                "    [5] = eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee};");
+
+  verifyFormat("for (const TestCase &test_case : {\n"
+               "         TestCase{\n"
+               "             .a = 1,\n"
+               "             .b = 1,\n"
+               "         },\n"
+               "         TestCase{\n"
+               "             .a = 2,\n"
+               "             .b = 2,\n"
+               "         },\n"
+               "     }) {\n"
+               "}\n");
 }
 
 TEST_F(FormatTest, BracedInitializerIndentWidth) {
@@ -14659,9 +14671,13 @@ TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
   verifyFormat("template <> struct X < 15, i<3 && 42 < 50 && 33 < 28> {};");
   verifyFormat("int i = SomeFunction(a<b, a> b);");
 
-  // FIXME:
-  // This now gets parsed incorrectly as class definition.
-  // verifyFormat("class A<int> f() {\n}\nint n;");
+  verifyFormat("class A<int> f() {}\n"
+               "int n;");
+  verifyFormat("template <typename T> class A<T> f() {}\n"
+               "int n;");
+
+  verifyFormat("template <> class Foo<int> F() {\n"
+               "} n;");
 
   // Elaborate types where incorrectly parsing the structural element would
   // break the indent.
@@ -21331,6 +21347,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "00000000000000000000000000000000000000000000000000000000\" },\n"
       "};",
       Style);
+
+  Style.SpacesInParens = FormatStyle::SIPO_Custom;
+  Style.SpacesInParensOptions.Other = true;
+  verifyFormat("Foo foo[] = {\n"
+               "    {1, 1},\n"
+               "    {1, 1},\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsPragmas) {

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-arm-sme -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -convert-arith-to-arm-sme -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // =============================================================================
 // arith.constant dense<0> to arm_sme.zero

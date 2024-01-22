@@ -261,7 +261,7 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
   if (auto EC = FS.makeAbsolute(AbsolutePath))
     return llvm::errorCodeToError(EC);
   llvm::sys::path::native(AbsolutePath);
-  return std::string(AbsolutePath.str());
+  return std::string(AbsolutePath);
 }
 
 std::string getAbsolutePath(StringRef File) {

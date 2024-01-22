@@ -43,13 +43,12 @@ jobs:
       - name: Setup Automation Script
         working-directory: ./llvm/utils/git/
         run: |
-          chmod a+x github-automation.py
           pip install -r requirements.txt
 
       - name: Greet Author
         working-directory: ./llvm/utils/git/
         run: |
-          ./github-automation.py \
+          python3 ./github-automation.py \
             --token '${{ secrets.GITHUB_TOKEN }}' \
             pr-greeter \
             --issue-number "${{ github.event.pull_request.number }}"

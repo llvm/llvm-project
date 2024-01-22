@@ -782,8 +782,13 @@ Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
     return Val->getLoc();
   }
 
-  // Expression nodes that propagate a record prvalue should have exactly one
-  // child.
+  if (auto *Op = dyn_cast<BinaryOperator>(&RecordPRValue);
+      Op && Op->isCommaOp()) {
+    return getResultObjectLocation(*Op->getRHS());
+  }
+
+  // All other expression nodes that propagate a record prvalue should have
+  // exactly one child.
   llvm::SmallVector<const Stmt *> children(RecordPRValue.child_begin(),
                                            RecordPRValue.child_end());
   assert(children.size() == 1);

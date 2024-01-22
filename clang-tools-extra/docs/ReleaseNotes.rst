@@ -370,6 +370,10 @@ Changes in existing checks
   to ignore unused parameters when they are marked as unused and parameters of
   deleted functions and constructors.
 
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check to ignore constructor
+  calls disguised as functional casts.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
@@ -433,6 +437,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
   false-positives when constructing the container with ``count`` copies of
   elements with value ``value``.
+
+- Improved :doc:`modernize-use-auto
+  <clang-tidy/checks/modernize/use-auto>` to avoid create incorrect fix hints
+  for pointer to array type and pointer to function type.
 
 - Improved :doc:`modernize-use-emplace
   <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
