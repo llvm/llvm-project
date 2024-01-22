@@ -436,7 +436,7 @@ function(add_libc_fuzzer target_name)
 endfunction(add_libc_fuzzer)
 
 # Get libgcc_s to be used in hermetic and integration tests.
-if(NOT LIBC_COMPILER_SUPPORT_NOSTDLIBPP)
+if(NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
                   OUTPUT_VARIABLE LIBGCC_S_LOCATION)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
@@ -571,7 +571,7 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  elseif(LIBC_COMPILER_SUPPORT_NOSTDLIBPP)
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
@@ -753,7 +753,7 @@ function(add_libc_hermetic_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  elseif(LIBC_COMPILER_SUPPORT_NOSTDLIBPP)
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use

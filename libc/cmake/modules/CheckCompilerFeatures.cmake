@@ -64,4 +64,4 @@ message(STATUS "Compiler features available: ${AVAILABLE_COMPILER_FEATURES}")
 check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTERN_INIT)
 
 # clang-6+, gcc-13+
-check_cxx_compiler_flag("-nostdlib++" LIBC_COMPILER_SUPPORT_NOSTDLIBPP)
+check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
