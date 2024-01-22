@@ -496,14 +496,16 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     auto TransferDPValues = [&](Instruction &I) {
       for (auto &DPValue : llvm::make_early_inc_range(I.getDbgValueRange())) {
         DPValue.removeFromParent();
-        EndBlock->insertDPValueBefore(&DPValue, EndBlock->getFirstInsertionPt());
+        EndBlock->insertDPValueBefore(&DPValue,
+                                      EndBlock->getFirstInsertionPt());
       }
     };
 
     // Iterate over all instructions in between SI and LastSI, not including
     // SI itself. These are all the variable assignments that happen "in the
     // middle" of the select group.
-    auto R = make_range(std::next(SI->getIterator()), std::next(LastSI->getIterator()));
+    auto R = make_range(std::next(SI->getIterator()),
+                        std::next(LastSI->getIterator()));
     llvm::for_each(R, TransferDPValues);
 
     // These are the new basic blocks for the conditional branch.
