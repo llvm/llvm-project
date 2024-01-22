@@ -68,6 +68,8 @@ Sections:
     Flags:           [ ]
   - Name:            .gnu.warning.foo
     Type:            SHT_PROGBITS
+  - Name:            .gnu_debuglink
+    Type:            SHT_PROGBITS
 ProgramHeaders:
   # Use an arbitrary segment type to show that the segment type is unimportant.
   - Type:     0x61234567
