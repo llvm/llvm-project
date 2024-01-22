@@ -1539,16 +1539,12 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
 static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
                                int SclWidth, int VecWidth,
                                const char *ShuffleComment) {
-  assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
-         "Unexpected number of operands!");
-
   std::string Comment;
   raw_string_ostream CS(Comment);
   const MachineOperand &DstOp = MI->getOperand(0);
   CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
 
-  if (auto *C =
-          X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
     int CstEltSize = C->getType()->getScalarSizeInBits();
     if (SclWidth == CstEltSize) {
       if (auto *CI = dyn_cast<ConstantInt>(C)) {
@@ -1584,10 +1580,7 @@ static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 static void printLaneBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
                                int NumLanes, int BitWidth) {
-  assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
-         "Unexpected number of operands!");
-  if (auto *C =
-          X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
     int CstEltSize = C->getType()->getScalarSizeInBits();
 
     std::string Comment;
@@ -1637,10 +1630,7 @@ static void printLaneBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
 static void printElementBroadcast(const MachineInstr *MI,
                                   MCStreamer &OutStreamer, int NumElts,
                                   int EltBits) {
-  assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
-         "Unexpected number of operands!");
-  if (auto *C =
-          X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
     std::string Comment;
     raw_string_ostream CS(Comment);
     const MachineOperand &DstOp = MI->getOperand(0);
@@ -1771,13 +1761,8 @@ static void addConstantComments(const MachineInstr *MI,
         ++SrcIdx;
       }
     }
-    unsigned MaskIdx = SrcIdx + 1 + X86::AddrDisp;
 
-    assert(MI->getNumOperands() >= (SrcIdx + 1 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-
-    const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 64> Mask;
       DecodePSHUFBMask(C, Width, Mask);
@@ -1849,13 +1834,8 @@ static void addConstantComments(const MachineInstr *MI,
         ++SrcIdx;
       }
     }
-    unsigned MaskIdx = SrcIdx + 1 + X86::AddrDisp;
 
-    assert(MI->getNumOperands() >= (SrcIdx + 1 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-
-    const MachineOperand &MaskOp = MI->getOperand(MaskIdx);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, ElSize, Width, Mask);
@@ -1883,8 +1863,7 @@ static void addConstantComments(const MachineInstr *MI,
     case X86::VPERMIL2PDrm: case X86::VPERMIL2PDYrm: ElSize = 64; break;
     }
 
-    const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, 3)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Width, Mask);
@@ -1895,11 +1874,7 @@ static void addConstantComments(const MachineInstr *MI,
   }
 
   case X86::VPPERMrrm: {
-    assert(MI->getNumOperands() >= (3 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-
-    const MachineOperand &MaskOp = MI->getOperand(3 + X86::AddrDisp);
-    if (auto *C = X86::getConstantFromPool(*MI, MaskOp)) {
+    if (auto *C = X86::getConstantFromPool(*MI, 3)) {
       unsigned Width = getRegisterWidth(MI->getDesc().operands()[0]);
       SmallVector<int, 16> Mask;
       DecodeVPPERMMask(C, Width, Mask);
@@ -1910,10 +1885,7 @@ static void addConstantComments(const MachineInstr *MI,
   }
 
   case X86::MMX_MOVQ64rm: {
-    assert(MI->getNumOperands() == (1 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-    if (auto *C =
-            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+    if (auto *C = X86::getConstantFromPool(*MI, 1)) {
       std::string Comment;
       raw_string_ostream CS(Comment);
       const MachineOperand &DstOp = MI->getOperand(0);

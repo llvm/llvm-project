@@ -3515,13 +3515,21 @@ int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {
 }
 
 const Constant *X86::getConstantFromPool(const MachineInstr &MI,
-                                         const MachineOperand &Op) {
-  if (!Op.isCPI() || Op.getOffset() != 0)
+                                         unsigned OpNo) {
+  assert(MI.getNumOperands() >= (OpNo + X86::AddrNumOperands) &&
+         "Unexpected number of operands!");
+
+  const MachineOperand &Index = MI.getOperand(OpNo + X86::AddrIndexReg);
+  if (!Index.isReg() || Index.getReg() != X86::NoRegister)
+    return nullptr;
+
+  const MachineOperand &Disp = MI.getOperand(OpNo + X86::AddrDisp);
+  if (!Disp.isCPI() || Disp.getOffset() != 0)
     return nullptr;
 
   ArrayRef<MachineConstantPoolEntry> Constants =
       MI.getParent()->getParent()->getConstantPool()->getConstants();
-  const MachineConstantPoolEntry &ConstantEntry = Constants[Op.getIndex()];
+  const MachineConstantPoolEntry &ConstantEntry = Constants[Disp.getIndex()];
 
   // Bail if this is a machine constant pool entry, we won't be able to dig out
   // anything useful.
