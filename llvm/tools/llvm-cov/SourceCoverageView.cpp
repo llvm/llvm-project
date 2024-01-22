@@ -130,6 +130,8 @@ bool SourceCoverageView::shouldRenderRegionMarkers(
     const auto *CurSeg = Segments[I];
     if (!CurSeg->IsRegionEntry || CurSeg->Count == LCS.getExecutionCount())
       continue;
+    if (!CurSeg->HasCount) // don't show tooltips for SkippedRegions
+      continue;
     return true;
   }
   return false;
