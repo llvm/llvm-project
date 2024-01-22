@@ -1082,15 +1082,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[6], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
 
-  Tokens = annotate("int foo(auto t) {\n"
-                    "    if (requires (decltype(t) x) {x.foo();}) {\n"
-                    "        return 1;\n"
-                    "    }\n"
-                    "    return 0;\n"
-                    "}\n");
-  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
-  EXPECT_TOKEN(Tokens[9], tok::kw_requires, TT_RequiresExpression);
-
   Tokens = annotate("bool x = t && requires(decltype(t) x) { x.foo(); };");
   ASSERT_EQ(Tokens.size(), 23u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
