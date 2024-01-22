@@ -1,4 +1,4 @@
-//===- ReduceInstructions.cpp - Specialized Delta Pass ---------------------===//
+//===- ReduceDPValues.cpp - Specialized Delta Pass ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,4 +37,3 @@ static void extractDPValuesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 void llvm::reduceDPValuesDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractDPValuesFromModule, "Reducing DPValues");
 }
-
