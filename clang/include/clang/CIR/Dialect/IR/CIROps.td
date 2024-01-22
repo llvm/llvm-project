@@ -442,7 +442,7 @@ def StoreOp : CIR_Op<"store", [
 
 def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
                                               "SwitchOp", "DoWhileOp",
-                                              "LoopOp"]>,
+                                              "WhileOp", "LoopOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -635,7 +635,7 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-    ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "LoopOp", "AwaitOp",
+    ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "LoopOp", "AwaitOp",
                  "TernaryOp", "GlobalOp", "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
@@ -1164,12 +1164,11 @@ def BrCondOp : CIR_Op<"brcond",
 //===----------------------------------------------------------------------===//
 
 def LoopOpKind_For : I32EnumAttrCase<"For", 1, "for">;
-def LoopOpKind_While : I32EnumAttrCase<"While", 2, "while">;
 
 def LoopOpKind : I32EnumAttr<
     "LoopOpKind",
     "Loop kind",
-    [LoopOpKind_For, LoopOpKind_While]> {
+    [LoopOpKind_For]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -1251,8 +1250,8 @@ def LoopOp : CIR_Op<"loop",
       switch(getKind()) {
       case LoopOpKind::For:
         return llvm::SmallVector<Region *, 3>{&getCond(), &getBody(), &getStep()};
-      case LoopOpKind::While:
-        return llvm::SmallVector<Region *, 2>{&getCond(), &getBody()};
+      // case LoopOpKind::While:
+      //   return llvm::SmallVector<Region *, 2>{&getCond(), &getBody()};
       // case LoopOpKind::DoWhile:
       //   return llvm::SmallVector<Region *, 2>{&getBody(), &getCond()};
       }
@@ -1261,7 +1260,7 @@ def LoopOp : CIR_Op<"loop",
 }
 
 //===----------------------------------------------------------------------===//
-// DoWhileOp
+// While & DoWhileOp
 //===----------------------------------------------------------------------===//
 
 class WhileOpBase<string mnemonic> : CIR_Op<mnemonic, [
@@ -1285,6 +1284,31 @@ class WhileOpBase<string mnemonic> : CIR_Op<mnemonic, [
         condBuilder($_builder, $_state.location);
       }])>
   ];
+}
+
+def WhileOp : WhileOpBase<"while"> {
+  let regions = (region SizedRegion<1>:$cond, MinSizedRegion<1>:$body);
+  let assemblyFormat = "$cond `do` $body attr-dict";
+
+  let description = [{
+    Represents a C/C++ while loop. It consists of two regions:
+
+     - `cond`: single block region with the loop's condition. Should be
+     terminated with a `cir.condition` operation.
+     - `body`: contains the loop body and an arbitrary number of blocks.
+
+    Example:
+
+    ```mlir
+    cir.while {
+      cir.break
+    ^bb2:
+      cir.yield
+    } do {
+      cir.condition %cond : cir.bool
+    }
+    ```
+  }];
 }
 
 def DoWhileOp : WhileOpBase<"do"> {
@@ -2660,7 +2684,7 @@ def AllocException : CIR_Op<"alloc_exception", [
 
 def ThrowOp : CIR_Op<"throw", [
                      ParentOneOf<["FuncOp", "ScopeOp", "IfOp", "SwitchOp",
-                                  "DoWhileOp", "LoopOp"]>,
+                                  "DoWhileOp", "WhileOp", "LoopOp"]>,
                      Terminator]> {
   let summary = "(Re)Throws an exception";
   let description = [{

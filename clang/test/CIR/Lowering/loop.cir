@@ -31,11 +31,9 @@ module {
 
   // Test while cir.loop operation lowering.
   cir.func @testWhile(%arg0 : !cir.bool) {
-    cir.loop while(cond : {
+    cir.while {
       cir.condition(%arg0)
-    }, step : { // Droped when lowering while statements.
-      cir.yield
-    }) {
+    } do {
       cir.yield
     }
     cir.return
@@ -76,11 +74,9 @@ module {
   //     break;
   // }
   cir.func @testWhileWithBreakTerminatedBody(%arg0 : !cir.bool) {
-    cir.loop while(cond : {
+    cir.while {
       cir.condition(%arg0)
-    }, step : { // Droped when lowering while statements.
-      cir.yield
-    }) {
+    } do {
       cir.break
     }
     cir.return

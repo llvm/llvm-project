@@ -1288,6 +1288,14 @@ void DoWhileOp::getSuccessorRegions(
   return {&getBody()};
 }
 
+void WhileOp::getSuccessorRegions(
+    ::mlir::RegionBranchPoint point,
+    ::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &regions) {
+  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+}
+
+::llvm::SmallVector<Region *> WhileOp::getLoopRegions() { return {&getBody()}; }
+
 //===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
