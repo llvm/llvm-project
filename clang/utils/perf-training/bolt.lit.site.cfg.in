@@ -9,8 +9,6 @@ config.test_source_root = "@CLANG_PGO_TRAINING_DATA@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_exe = "@Python3_EXECUTABLE@"
 config.clang_obj_root = path(r"@CLANG_BINARY_DIR@")
-config.clang_bolt_mode = "@CLANG_BOLT@"
-config.clang_bolt_name = "@CLANG_BOLT_INSTRUMENTED@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CLANG_SOURCE_DIR@/utils/perf-training/bolt.lit.cfg")
