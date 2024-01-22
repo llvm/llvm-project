@@ -138,16 +138,20 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     return;
   }
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    for (Value *V : DVI->location_ops()) {
+    auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
-          continue;
+          return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
         if (DVIVec.empty() || DVIVec.back() != DVI)
           DVIVec.push_back(DVI);
       }
-    }
+    };
+    for (Value *V : DVI->location_ops())
+      AddIfInteresting(V);
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      AddIfInteresting(DAI->getAddress());
   }
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
   if (ExitUntag)

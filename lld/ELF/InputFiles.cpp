@@ -1785,6 +1785,10 @@ void BinaryFile::parse() {
                                       nullptr});
 }
 
+InputFile *elf::createInternalFile(StringRef name) {
+  return make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
+}
+
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
                                 bool lazy) {
   ELFFileBase *f;
