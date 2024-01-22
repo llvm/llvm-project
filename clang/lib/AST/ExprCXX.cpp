@@ -194,14 +194,14 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
       DirectInitRange(DirectInitRange) {
 
   assert((Initializer != nullptr ||
-          InitializationStyle == CXXNewInitializationStyle::None ||
-          InitializationStyle == CXXNewInitializationStyle::Implicit) &&
-         "Only NoInit can have no initializer!");
+          InitializationStyle == CXXNewInitializationStyle::None) &&
+         "Only CXXNewInitializationStyle::None can have no initializer!");
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
   CXXNewExprBits.IsArray = ArraySize.has_value();
   CXXNewExprBits.ShouldPassAlignment = ShouldPassAlignment;
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
+  CXXNewExprBits.HasInitializer = Initializer != nullptr;
   CXXNewExprBits.StoredInitializationStyle =
       llvm::to_underlying(InitializationStyle);
   bool IsParenTypeId = TypeIdParens.isValid();
@@ -219,10 +219,10 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
     getTrailingObjects<SourceRange>()[0] = TypeIdParens;
 
   switch (getInitializationStyle()) {
-  case CXXNewInitializationStyle::Call:
+  case CXXNewInitializationStyle::Parens:
     this->Range.setEnd(DirectInitRange.getEnd());
     break;
-  case CXXNewInitializationStyle::List:
+  case CXXNewInitializationStyle::Braces:
     this->Range.setEnd(getInitializer()->getSourceRange().getEnd());
     break;
   default:

@@ -41,7 +41,10 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Absolute 32-bit value relocation
   Data_Pointer32,
 
-  LastDataRelocation = Data_Pointer32,
+  /// Create GOT entry and store offset
+  Data_RequestGOTAndTransformToDelta32,
+
+  LastDataRelocation = Data_RequestGOTAndTransformToDelta32,
 
   ///
   /// Relocations of class Arm (covers fixed-width 4-byte instruction subset)
@@ -317,6 +320,18 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
 }
+
+/// Populate a Global Offset Table from edges that request it.
+class GOTBuilder : public TableManager<GOTBuilder> {
+public:
+  static StringRef getSectionName() { return "$__GOT"; }
+
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
+  Symbol &createEntry(LinkGraph &G, Symbol &Target);
+
+private:
+  Section *GOTSection = nullptr;
+};
 
 /// Stubs builder for v7 emits non-position-independent Thumb stubs.
 ///
