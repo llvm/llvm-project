@@ -1303,10 +1303,8 @@ private:
                           unsigned NextFreeSGPR, SMRange SGPRRange,
                           unsigned &VGPRBlocks, unsigned &SGPRBlocks);
   bool ParseDirectiveAMDGCNTarget();
+  bool ParseDirectiveAMDHSACodeObjectVersion();
   bool ParseDirectiveAMDHSAKernel();
-  bool ParseDirectiveMajorMinor(uint32_t &Major, uint32_t &Minor);
-  bool ParseDirectiveHSACodeObjectVersion();
-  bool ParseDirectiveHSACodeObjectISA();
   bool ParseAMDKernelCodeTValue(StringRef ID, amd_kernel_code_t &Header);
   bool ParseDirectiveAMDKernelCodeT();
   // TODO: Possibly make subtargetHasRegister const.
@@ -5133,20 +5131,6 @@ bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
   return false;
 }
 
-bool AMDGPUAsmParser::ParseDirectiveMajorMinor(uint32_t &Major,
-                                               uint32_t &Minor) {
-  if (ParseAsAbsoluteExpression(Major))
-    return TokError("invalid major version");
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("minor version number required, comma expected");
-
-  if (ParseAsAbsoluteExpression(Minor))
-    return TokError("invalid minor version");
-
-  return false;
-}
-
 bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
     return TokError("directive only supported for amdgcn architecture");
@@ -5612,63 +5596,18 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     }
   }
 
-  getTargetStreamer().EmitAmdhsaKernelDescriptor(
-      getSTI(), KernelName, KD, NextFreeVGPR, NextFreeSGPR, ReserveVCC,
-      ReserveFlatScr, AMDGPU::getAmdhsaCodeObjectVersion());
+  getTargetStreamer().EmitAmdhsaKernelDescriptor(getSTI(), KernelName, KD,
+                                                 NextFreeVGPR, NextFreeSGPR,
+                                                 ReserveVCC, ReserveFlatScr);
   return false;
 }
 
-bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectVersion() {
-  uint32_t Major;
-  uint32_t Minor;
-
-  if (ParseDirectiveMajorMinor(Major, Minor))
+bool AMDGPUAsmParser::ParseDirectiveAMDHSACodeObjectVersion() {
+  uint32_t Version;
+  if (ParseAsAbsoluteExpression(Version))
     return true;
 
-  getTargetStreamer().EmitDirectiveHSACodeObjectVersion(Major, Minor);
-  return false;
-}
-
-bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
-  uint32_t Major;
-  uint32_t Minor;
-  uint32_t Stepping;
-  StringRef VendorName;
-  StringRef ArchName;
-
-  // If this directive has no arguments, then use the ISA version for the
-  // targeted GPU.
-  if (isToken(AsmToken::EndOfStatement)) {
-    AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
-    getTargetStreamer().EmitDirectiveHSACodeObjectISAV2(ISA.Major, ISA.Minor,
-                                                        ISA.Stepping,
-                                                        "AMD", "AMDGPU");
-    return false;
-  }
-
-  if (ParseDirectiveMajorMinor(Major, Minor))
-    return true;
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("stepping version number required, comma expected");
-
-  if (ParseAsAbsoluteExpression(Stepping))
-    return TokError("invalid stepping version");
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("vendor name required, comma expected");
-
-  if (!parseString(VendorName, "invalid vendor name"))
-    return true;
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("arch name required, comma expected");
-
-  if (!parseString(ArchName, "invalid arch name"))
-    return true;
-
-  getTargetStreamer().EmitDirectiveHSACodeObjectISAV2(Major, Minor, Stepping,
-                                                      VendorName, ArchName);
+  getTargetStreamer().EmitDirectiveAMDHSACodeObjectVersion(Version);
   return false;
 }
 
@@ -5955,16 +5894,13 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
     if (IDVal == ".amdhsa_kernel")
      return ParseDirectiveAMDHSAKernel();
 
+    if (IDVal == ".amdhsa_code_object_version")
+      return ParseDirectiveAMDHSACodeObjectVersion();
+
     // TODO: Restructure/combine with PAL metadata directive.
     if (IDVal == AMDGPU::HSAMD::V3::AssemblerDirectiveBegin)
       return ParseDirectiveHSAMetadata();
   } else {
-    if (IDVal == ".hsa_code_object_version")
-      return ParseDirectiveHSACodeObjectVersion();
-
-    if (IDVal == ".hsa_code_object_isa")
-      return ParseDirectiveHSACodeObjectISA();
-
     if (IDVal == ".amd_kernel_code_t")
       return ParseDirectiveAMDKernelCodeT();
 
@@ -8137,9 +8073,8 @@ void AMDGPUAsmParser::onBeginOfFile() {
     return;
 
   if (!getTargetStreamer().getTargetID())
-    getTargetStreamer().initializeTargetID(getSTI(), getSTI().getFeatureString(),
-        // TODO: Should try to check code object version from directive???
-        AMDGPU::getAmdhsaCodeObjectVersion());
+    getTargetStreamer().initializeTargetID(getSTI(),
+                                           getSTI().getFeatureString());
 
   if (isHsaAbi(getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();

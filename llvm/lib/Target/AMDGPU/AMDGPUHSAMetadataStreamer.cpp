@@ -532,7 +532,8 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
       Func.getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
-  auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
+  auto CodeObjectVersion =
+      AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
   auto Kernels =
