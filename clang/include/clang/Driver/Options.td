@@ -1007,7 +1007,8 @@ def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
-  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA">,
+  LangOpts<"OffloadUniformBlock">,
+  Default<"LangOpts->CUDA || (LangOpts->OpenCL && LangOpts->OpenCLVersion <= 120)">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
