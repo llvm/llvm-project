@@ -2169,6 +2169,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     ICEArguments &= ~(1 << ArgNo);
   }
 
+  FPOptions FPO;
   switch (BuiltinID) {
   case Builtin::BI__builtin___CFStringMakeConstantString:
     // CFStringMakeConstantString is currently not implemented for GOFF (i.e.,
@@ -2245,15 +2246,15 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
-    if (SemaBuiltinUnorderedCompare(TheCall))
+    if (SemaBuiltinUnorderedCompare(TheCall, BuiltinID))
       return ExprError();
     break;
   case Builtin::BI__builtin_fpclassify:
-    if (SemaBuiltinFPClassification(TheCall, 6))
+    if (SemaBuiltinFPClassification(TheCall, 6, BuiltinID))
       return ExprError();
     break;
   case Builtin::BI__builtin_isfpclass:
-    if (SemaBuiltinFPClassification(TheCall, 2))
+    if (SemaBuiltinFPClassification(TheCall, 2, BuiltinID))
       return ExprError();
     break;
   case Builtin::BI__builtin_isfinite:
@@ -2267,7 +2268,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
   case Builtin::BI__builtin_signbitl:
-    if (SemaBuiltinFPClassification(TheCall, 1))
+    if (SemaBuiltinFPClassification(TheCall, 1, BuiltinID))
       return ExprError();
     break;
   case Builtin::BI__builtin_shufflevector:
@@ -7648,6 +7649,7 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
 
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
+  CheckInfNaNFunction(TheCall, FDecl);
 
   if (getLangOpts().ObjC)
     DiagnoseCStringFormatDirectiveInCFAPI(*this, FDecl, Args, NumArgs);
@@ -9117,9 +9119,14 @@ bool Sema::SemaBuiltinVAStartARMMicrosoft(CallExpr *Call) {
 
 /// SemaBuiltinUnorderedCompare - Handle functions like __builtin_isgreater and
 /// friends.  This is declared to take (...), so we have to check everything.
-bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall) {
+bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID) {
   if (checkArgCount(*this, TheCall, 2))
     return true;
+
+  if (BuiltinID == Builtin::BI__builtin_isunordered &&
+      TheCall->getFPFeaturesInEffect(getLangOpts()).getNoHonorNaNs())
+    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 1 << 0 << TheCall->getSourceRange();
 
   ExprResult OrigArg0 = TheCall->getArg(0);
   ExprResult OrigArg1 = TheCall->getArg(1);
@@ -9155,9 +9162,22 @@ bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall) {
 /// SemaBuiltinSemaBuiltinFPClassification - Handle functions like
 /// __builtin_isnan and friends.  This is declared to take (...), so we have
 /// to check everything.
-bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
+bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
+                                       unsigned BuiltinID) {
   if (checkArgCount(*this, TheCall, NumArgs))
     return true;
+
+  FPOptions FPO = TheCall->getFPFeaturesInEffect(getLangOpts());
+  if (FPO.getNoHonorInfs() && (BuiltinID == Builtin::BI__builtin_isfinite ||
+                               BuiltinID == Builtin::BI__builtin_isinf ||
+                               BuiltinID == Builtin::BI__builtin_isinf_sign))
+    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 0 << 0 << TheCall->getSourceRange();
+
+  if (FPO.getNoHonorNaNs() && (BuiltinID == Builtin::BI__builtin_isnan ||
+                               BuiltinID == Builtin::BI__builtin_isunordered))
+    Diag(TheCall->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 1 << 0 << TheCall->getSourceRange();
 
   bool IsFPClass = NumArgs == 2;
 
@@ -12903,6 +12923,22 @@ static bool IsStdFunction(const FunctionDecl *FDecl,
     return false;
 
   return true;
+}
+
+void Sema::CheckInfNaNFunction(const CallExpr *Call,
+                               const FunctionDecl *FDecl) {
+  FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());
+  if ((IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered") ||
+       (Call->getBuiltinCallee() == Builtin::BI__builtin_nanf)) &&
+      FPO.getNoHonorNaNs())
+    Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 1 << 0 << Call->getSourceRange();
+  else if ((IsStdFunction(FDecl, "isinf") ||
+            (IsStdFunction(FDecl, "isfinite") ||
+             (FDecl->getIdentifier() && FDecl->getName() == "infinity"))) &&
+           FPO.getNoHonorInfs())
+    Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 0 << 0 << Call->getSourceRange();
 }
 
 // Warn when using the wrong abs() function.
