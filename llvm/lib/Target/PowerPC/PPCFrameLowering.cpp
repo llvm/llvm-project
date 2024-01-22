@@ -2727,11 +2727,6 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   return !MF.getSubtarget<PPCSubtarget>().is32BitELFABI();
 }
 
-static bool isGPR(MCPhysReg Reg) { return Reg >= PPC::R0 && Reg <= PPC::R31; }
-static bool isG8R(MCPhysReg Reg) { return Reg >= PPC::X0 && Reg <= PPC::X31; }
-static bool isFPR(MCPhysReg Reg) { return Reg >= PPC::F0 && Reg <= PPC::F31; }
-static bool isVR(MCPhysReg Reg) { return Reg >= PPC::V0 && Reg <= PPC::V31; }
-
 void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
                                          BitVector &SavedRegs) const {
   // The AIX ABI uses traceback tables for EH which require that if callee-saved
@@ -2747,7 +2742,7 @@ void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
   if (SavedRegs.none())
     return;
 
-  const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const TargetRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
   MCPhysReg LowestGPR = PPC::R31;
   MCPhysReg LowestG8R = PPC::X31;
@@ -2764,25 +2759,29 @@ void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
     MCPhysReg Cand = CSRegs[i];
     if (!SavedRegs.test(Cand))
       continue;
-    if (isGPR(Cand) && Cand < LowestGPR)
+    if (PPC::GPRCRegClass.contains(Cand) && Cand < LowestGPR)
       LowestGPR = Cand;
-    else if (isG8R(Cand) && Cand < LowestG8R)
+    else if (PPC::G8RCRegClass.contains(Cand) && Cand < LowestG8R)
       LowestG8R = Cand;
-    else if (isFPR(Cand) && Cand < LowestFPR)
+    else if ((PPC::F4RCRegClass.contains(Cand) ||
+              PPC::F8RCRegClass.contains(Cand)) &&
+             Cand < LowestFPR)
       LowestFPR = Cand;
-    else if (isVR(Cand) && Cand < LowestVR)
+    else if (PPC::VRRCRegClass.contains(Cand) && Cand < LowestVR)
       LowestVR = Cand;
   }
 
   for (int i = 0; CSRegs[i]; i++) {
     MCPhysReg Cand = CSRegs[i];
-    if (isGPR(Cand) && Cand > LowestGPR)
+    if (PPC::GPRCRegClass.contains(Cand) && Cand > LowestGPR)
       SavedRegs.set(Cand);
-    else if (isG8R(Cand) && Cand > LowestG8R)
+    else if (PPC::G8RCRegClass.contains(Cand) && Cand > LowestG8R)
       SavedRegs.set(Cand);
-    else if (isFPR(Cand) && Cand > LowestFPR)
+    else if ((PPC::F4RCRegClass.contains(Cand) ||
+              PPC::F8RCRegClass.contains(Cand)) &&
+             Cand > LowestFPR)
       SavedRegs.set(Cand);
-    else if (isVR(Cand) && Cand > LowestVR)
+    else if (PPC::VRRCRegClass.contains(Cand) && Cand > LowestVR)
       SavedRegs.set(Cand);
   }
 }
