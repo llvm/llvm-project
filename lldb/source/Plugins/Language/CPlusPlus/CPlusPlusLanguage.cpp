@@ -1032,6 +1032,31 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(new StringSummaryFormat(
           eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
 
+  // Chrono time point types
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider,
+                "libc++ std::chrono::sys_seconds summary provider",
+                "^std::__[[:alnum:]]+::chrono::time_point<"
+                "std::__[[:alnum:]]+::chrono::system_clock, "
+                "std::__[[:alnum:]]+::chrono::duration<long long, "
+                "std::__[[:alnum:]]+::ratio<1, 1> "
+                "> >$",
+                eTypeOptionHideChildren | eTypeOptionHideValue |
+                    eTypeOptionCascade,
+                true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider,
+                "libc++ std::chrono::sys_seconds summary provider",
+                "^std::__[[:alnum:]]+::chrono::time_point<"
+                "std::__[[:alnum:]]+::chrono::system_clock, "
+                "std::__[[:alnum:]]+::chrono::duration<int, "
+                "std::__[[:alnum:]]+::ratio<86400, 1> "
+                "> >$",
+                eTypeOptionHideChildren | eTypeOptionHideValue |
+                    eTypeOptionCascade,
+                true);
+
   // Chrono calendar types
 
   cpp_category_sp->AddTypeSummary(
