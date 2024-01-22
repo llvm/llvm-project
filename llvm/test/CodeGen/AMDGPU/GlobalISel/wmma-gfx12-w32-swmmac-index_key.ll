@@ -9,7 +9,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_index_key(<8 x half> %A, <16
 ; GFX12-NEXT:    v_dual_mov_b32 v31, v17 :: v_dual_mov_b32 v30, v16
 ; GFX12-NEXT:    v_dual_mov_b32 v29, v15 :: v_dual_mov_b32 v28, v14
 ; GFX12-NEXT:    v_dual_mov_b32 v27, v13 :: v_dual_mov_b32 v26, v12
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_f16 v[26:33], v[0:3], v[4:11], v20
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_f16 v[12:19], v[0:3], v[4:11], v20 index_key:1
@@ -89,7 +89,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16_index_key(<8 x bfloat> %A, 
 ; GFX12-NEXT:    v_or_b32_e32 v31, v35, v46
 ; GFX12-NEXT:    v_or_b32_e32 v32, v36, v47
 ; GFX12-NEXT:    v_or_b32_e32 v33, v37, v48
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[0:7], v[8:11], v[26:33], v20
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf16 v[12:19], v[8:11], v[26:33], v20 index_key:1
@@ -119,7 +119,7 @@ define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_index_key(<8 x half> %A, <16
 ; GFX12-NEXT:    global_load_b32 v16, v[16:17], off
 ; GFX12-NEXT:    v_dual_mov_b32 v25, v15 :: v_dual_mov_b32 v24, v14
 ; GFX12-NEXT:    v_dual_mov_b32 v23, v13 :: v_dual_mov_b32 v22, v12
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_f16_16x16x32_f16 v[22:25], v[0:3], v[4:11], v16
 ; GFX12-NEXT:    v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 index_key:1
@@ -209,7 +209,7 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x32_bf16_index_key(<8 x bfloat> %A,
 ; GFX12-NEXT:    v_or_b32_e32 v6, v31, v35
 ; GFX12-NEXT:    v_or_b32_e32 v7, v32, v36
 ; GFX12-NEXT:    v_dual_mov_b32 v24, v14 :: v_dual_mov_b32 v23, v13
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[22:25], v[8:11], v[0:7], v16
 ; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[12:15], v[8:11], v[0:7], v16 index_key:1
@@ -237,7 +237,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_index_key(<2 x i32> %A, <4 x
 ; GFX12-NEXT:    v_dual_mov_b32 v25, v11 :: v_dual_mov_b32 v24, v10
 ; GFX12-NEXT:    v_dual_mov_b32 v23, v9 :: v_dual_mov_b32 v22, v8
 ; GFX12-NEXT:    v_dual_mov_b32 v21, v7 :: v_dual_mov_b32 v20, v6
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu8 v[20:27], v[0:1], v[2:5], v14
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu8 v[6:13], v[0:1], v[2:5], v14 index_key:1
@@ -269,7 +269,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_index_key(i32 %A, <2 x i32> 
 ; GFX12-NEXT:    v_dual_mov_b32 v22, v8 :: v_dual_mov_b32 v21, v7
 ; GFX12-NEXT:    v_dual_mov_b32 v20, v6 :: v_dual_mov_b32 v19, v5
 ; GFX12-NEXT:    v_dual_mov_b32 v18, v4 :: v_dual_mov_b32 v17, v3
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu4 v[17:24], v0, v[1:2], v11
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu4 v[3:10], v0, v[1:2], v11 index_key:1
@@ -301,7 +301,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_fp8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    v_dual_mov_b32 v25, v11 :: v_dual_mov_b32 v24, v10
 ; GFX12-NEXT:    v_dual_mov_b32 v23, v9 :: v_dual_mov_b32 v22, v8
 ; GFX12-NEXT:    v_dual_mov_b32 v21, v7 :: v_dual_mov_b32 v20, v6
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_fp8_fp8 v[20:27], v[0:1], v[2:5], v14
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_fp8_fp8 v[6:13], v[0:1], v[2:5], v14 index_key:1
@@ -333,7 +333,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_bf8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    v_dual_mov_b32 v25, v11 :: v_dual_mov_b32 v24, v10
 ; GFX12-NEXT:    v_dual_mov_b32 v23, v9 :: v_dual_mov_b32 v22, v8
 ; GFX12-NEXT:    v_dual_mov_b32 v21, v7 :: v_dual_mov_b32 v20, v6
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_fp8_bf8 v[20:27], v[0:1], v[2:5], v14
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_fp8_bf8 v[6:13], v[0:1], v[2:5], v14 index_key:1
@@ -365,7 +365,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_fp8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    v_dual_mov_b32 v25, v11 :: v_dual_mov_b32 v24, v10
 ; GFX12-NEXT:    v_dual_mov_b32 v23, v9 :: v_dual_mov_b32 v22, v8
 ; GFX12-NEXT:    v_dual_mov_b32 v21, v7 :: v_dual_mov_b32 v20, v6
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf8_fp8 v[20:27], v[0:1], v[2:5], v14
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf8_fp8 v[6:13], v[0:1], v[2:5], v14 index_key:1
@@ -397,7 +397,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_bf8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    v_dual_mov_b32 v25, v11 :: v_dual_mov_b32 v24, v10
 ; GFX12-NEXT:    v_dual_mov_b32 v23, v9 :: v_dual_mov_b32 v22, v8
 ; GFX12-NEXT:    v_dual_mov_b32 v21, v7 :: v_dual_mov_b32 v20, v6
-; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf8_bf8 v[20:27], v[0:1], v[2:5], v14
 ; GFX12-NEXT:    v_swmmac_f32_16x16x32_bf8_bf8 v[6:13], v[0:1], v[2:5], v14 index_key:1

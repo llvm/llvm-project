@@ -463,10 +463,10 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_negC_pack(<8 x half> %A, <8 x 
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    flat_load_b128 v[12:15], v[8:9] offset:16
 ; GFX12-NEXT:    flat_load_b128 v[16:19], v[8:9]
-; GFX12-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x101
 ; GFX12-NEXT:    v_perm_b32 v15, v15, v14, 0x5040100
 ; GFX12-NEXT:    v_perm_b32 v14, v13, v12, 0x5040100
-; GFX12-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    v_perm_b32 v13, v19, v18, 0x5040100
 ; GFX12-NEXT:    v_perm_b32 v12, v17, v16, 0x5040100
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
