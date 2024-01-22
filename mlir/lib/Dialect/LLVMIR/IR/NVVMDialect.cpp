@@ -851,7 +851,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   }
   if (typeD == WGMMATypes::s32 &&
       (getScaleA() == WGMMAScaleIn::neg || getScaleB() == WGMMAScaleIn::neg)) {
-    return emitOpError() << "has s32 output, scaleA and scaleB cannot be neg ";
+    return emitOpError() << "has s32 output, scaleA and scaleB cannot be neg";
   }
 
   if (failed(isAllowedWGMMADataType(typeD, typeA, typeB))) {
