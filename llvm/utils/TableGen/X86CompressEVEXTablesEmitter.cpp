@@ -93,7 +93,7 @@ void X86CompressEVEXTablesEmitter::printCheckPredicate(
   }
 
   OS << "  }\n";
-  OS << "};\n\n";
+  OS << "}\n\n";
 }
 
 static uint8_t byteFromBitsInit(const BitsInit *B) {
