@@ -1,0 +1,35 @@
+// RUN: cir-translate %s -cir-to-llvmir | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+module {
+    cir.func @omp_parallel() {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init] {alignment = 4 : i64}
+    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+    omp.parallel {
+      cir.scope {
+        %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+        %3 = cir.const(#cir.int<1> : !s32i) : !s32i
+        cir.store %3, %2 : !s32i, cir.ptr <!s32i>
+        %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+        %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+        %6 = cir.binop(add, %4, %5) : !s32i
+        cir.store %6, %0 : !s32i, cir.ptr <!s32i>
+      }
+      omp.terminator
+    }
+    cir.return
+  }
+}
+// CHECK-LABEL: omp_parallel
+// CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.*}}, ptr @omp_parallel..omp_par,
+// CHECK: ret void
+// CHECK-NEXT: }
+// CHECK: define{{.*}} void @omp_parallel..omp_par(ptr
+// CHECK: %[[YVar:.*]] = load ptr, ptr %{{.*}}, align 8
+// CHECK: %[[XVar:.*]] = alloca i32, i64 1, align 4
+// CHECK: store i32 1, ptr %[[XVar]], align 4
+// CHECK: %[[XVal:.*]] = load i32, ptr %[[XVar]], align 4
+// CHECK: %[[BinOp:.*]] = add i32 %[[XVal]], 1
+// CHECK: store i32 %[[BinOp]], ptr %[[YVar]], align 4
+// CHECK: ret

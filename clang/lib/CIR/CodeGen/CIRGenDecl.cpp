@@ -14,6 +14,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
+#include "CIRGenOpenMPRuntime.h"
 #include "EHScopeStack.h"
 #include "UnimplementedFeatureGuarding.h"
 #include "mlir/IR/Attributes.h"
@@ -37,13 +38,8 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
   // TODO: (|| Ty.getAddressSpace() == LangAS::opencl_private &&
   //        getLangOpts().OpenCL))
   assert(!UnimplementedFeature::openCL());
-  assert(!UnimplementedFeature::openMP());
   assert(Ty.getAddressSpace() == LangAS::Default);
   assert(!Ty->isVariablyModifiedType() && "not implemented");
-  assert(!getContext()
-              .getLangOpts()
-              .OpenMP && // !CGF.getLangOpts().OpenMPIRBuilder
-         "not implemented");
   assert(!D.hasAttr<AnnotateAttr>() && "not implemented");
 
   auto loc = getLoc(D.getSourceRange());
@@ -59,7 +55,9 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
 
   Address address = Address::invalid();
   Address allocaAddr = Address::invalid();
-  Address openMPLocalAddr = Address::invalid();
+  Address openMPLocalAddr =
+      getCIRGenModule().getOpenMPRuntime().getAddressOfLocalVariable(*this, &D);
+  assert(!getLangOpts().OpenMPIsTargetDevice && "NYI");
   if (getLangOpts().OpenMP && openMPLocalAddr.isValid()) {
     llvm_unreachable("NYI");
   } else if (Ty->isConstantSizeType()) {

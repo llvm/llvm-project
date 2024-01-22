@@ -14,6 +14,7 @@
 #include "CIRDataLayout.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "CIRGenOpenMPRuntime.h"
 #include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -1805,7 +1806,9 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
   else
     CGF.buildStoreThroughLValue(RValue::get(Result), LHSLV);
 
-  assert(!CGF.getLangOpts().OpenMP && "Not implemented");
+  if (CGF.getLangOpts().OpenMP)
+    CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF,
+                                                                  E->getLHS());
   return LHSLV;
 }
 

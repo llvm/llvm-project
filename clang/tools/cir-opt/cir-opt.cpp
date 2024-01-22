@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/InitAllPasses.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
@@ -30,7 +31,8 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::BuiltinDialect, mlir::arith::ArithDialect,
                   mlir::cir::CIRDialect, mlir::memref::MemRefDialect,
-                  mlir::LLVM::LLVMDialect, mlir::DLTIDialect>();
+                  mlir::LLVM::LLVMDialect, mlir::DLTIDialect,
+                  mlir::omp::OpenMPDialect>();
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return cir::createConvertMLIRToLLVMPass();

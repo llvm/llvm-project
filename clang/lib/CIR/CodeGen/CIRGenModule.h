@@ -46,6 +46,7 @@ namespace cir {
 class CIRGenFunction;
 class CIRGenCXXABI;
 class TargetCIRGenInfo;
+class CIRGenOpenMPRuntime;
 
 enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 
@@ -99,6 +100,9 @@ private:
 
   /// Holds information about C++ vtables.
   CIRGenVTables VTables;
+
+  /// Holds the OpenMP runtime
+  std::unique_ptr<CIRGenOpenMPRuntime> openMPRuntime;
 
   /// Per-function codegen information. Updated everytime buildCIR is called
   /// for FunctionDecls's.
@@ -625,6 +629,12 @@ public:
 
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
+
+  /// Return a reference to the configured OpenMP runtime.
+  CIRGenOpenMPRuntime &getOpenMPRuntime() {
+    assert(openMPRuntime != nullptr);
+    return *openMPRuntime;
+  }
 
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
