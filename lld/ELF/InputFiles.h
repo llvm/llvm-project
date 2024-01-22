@@ -129,8 +129,8 @@ public:
   uint8_t osabi = 0;
   uint8_t abiVersion = 0;
 
-  // True if this is a relocatable object file/bitcode file between --start-lib
-  // and --end-lib.
+  // True if this is a relocatable object file/bitcode file in an ar archive
+  // or between --start-lib and --end-lib.
   bool lazy = false;
 
   // True if this is an argument for --just-symbols. Usually false.
