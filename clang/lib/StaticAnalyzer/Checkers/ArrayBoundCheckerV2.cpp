@@ -334,8 +334,8 @@ static Messages getPrecedesMsgs(const SubRegion *Region, NonLoc Offset) {
 /// it can be performed (`Divisor` is nonzero and there is no remainder). The
 /// values `Val1` and `Val2` may be nullopt and in that case the corresponding
 /// division is considered to be successful.
-bool tryDividePair(std::optional<int64_t> &Val1, std::optional<int64_t> &Val2,
-                   int64_t Divisor) {
+static bool tryDividePair(std::optional<int64_t> &Val1,
+                          std::optional<int64_t> &Val2, int64_t Divisor) {
   if (!Divisor)
     return false;
   const bool Val1HasRemainder = Val1 && *Val1 % Divisor;
