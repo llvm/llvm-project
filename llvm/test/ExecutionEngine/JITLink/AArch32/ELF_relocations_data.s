@@ -29,6 +29,13 @@ rel32:
 	.word target - .
 	.size rel32, .-rel32
 
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_TARGET1 target
+# jitlink-check: *{4}(target1_abs32) = target
+	.global target1_abs32
+target1_abs32:
+	.word target(target1)
+	.size	target1_abs32, .-target1_abs32
+
 # CHECK-TYPE: {{[0-9a-f]+}} R_ARM_GOT_PREL target
 #
 # The GOT entry contains the absolute address of the external:

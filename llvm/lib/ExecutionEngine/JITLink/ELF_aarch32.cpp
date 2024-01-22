@@ -31,7 +31,8 @@ namespace llvm {
 namespace jitlink {
 
 /// Translate from ELF relocation type to JITLink-internal edge kind.
-Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
+Expected<aarch32::EdgeKind_aarch32>
+getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &ArmCfg) {
   switch (ELFType) {
   case ELF::R_ARM_ABS32:
     return aarch32::Data_Pointer32;
@@ -47,6 +48,9 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
     return aarch32::Arm_MovwAbsNC;
   case ELF::R_ARM_MOVT_ABS:
     return aarch32::Arm_MovtAbs;
+  case ELF::R_ARM_TARGET1:
+    return (ArmCfg.Target1Rel) ? aarch32::Data_Delta32
+                               : aarch32::Data_Pointer32;
   case ELF::R_ARM_THM_CALL:
     return aarch32::Thumb_Call;
   case ELF::R_ARM_THM_JUMP24:
@@ -171,7 +175,7 @@ private:
           inconvertibleErrorCode());
 
     uint32_t Type = Rel.getType(false);
-    Expected<aarch32::EdgeKind_aarch32> Kind = getJITLinkEdgeKind(Type);
+    Expected<aarch32::EdgeKind_aarch32> Kind = getJITLinkEdgeKind(Type, ArmCfg);
     if (!Kind)
       return Kind.takeError();
 
