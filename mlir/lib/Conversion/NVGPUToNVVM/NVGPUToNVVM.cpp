@@ -1548,12 +1548,6 @@ struct NVGPUWarpgroupMmaStoreOpLowering
       return b.create<LLVM::AddOp>(lhs.getType(), lhs, rhs);
     };
 
-    Value tidx = b.create<NVVM::ThreadIdXOp>(i32);
-    Value laneId = b.create<LLVM::URemOp>(i32, tidx, warpSize);
-    Value warpId = b.create<LLVM::UDivOp>(i32, tidx, warpSize);
-    Value lane4Id = b.create<LLVM::UDivOp>(i32, laneId, c4);
-    Value lane4modId = b.create<LLVM::URemOp>(i32, laneId, c4);
-
     auto makeExtractAndStore = [&](int i, Value wgmmaResult, Value x, Value y,
                                    TypedValue<::mlir::MemRefType> memref) {
       Type it = b.getIndexType();
@@ -1566,16 +1560,34 @@ struct NVGPUWarpgroupMmaStoreOpLowering
       b.create<memref::StoreOp>(d1, memref, ValueRange{idx, idy1});
     };
 
+    Value tidx = b.create<NVVM::ThreadIdXOp>(i32);
+    Value laneId = b.create<LLVM::URemOp>(i32, tidx, warpSize);
+    Value warpId = b.create<LLVM::UDivOp>(i32, tidx, warpSize);
+    Value lane4Id = b.create<LLVM::UDivOp>(i32, laneId, c4);
+    Value lane4modId = b.create<LLVM::URemOp>(i32, laneId, c4);
+
     Value tj = makeMul(lane4modId, c2);
     Value ti = makeAdd(lane4Id, makeMul(warpId, c16));
     if (offset)
       ti = makeAdd(ti, makeConst(offset));
-    for (int i = 0; i < 2; ++i) {
+
+    auto structType = matrixD.getType().cast<LLVM::LLVMStructType>();
+
+    // Number of 32-bit registers owns per thread
+    constexpr unsigned numAdjacentRegisters = 2;
+    // Number of 8x8 matrices one below another per warp
+    constexpr unsigned numStackedMatrices = 2;
+
+    size_t storeCount = (structType.getBody().size() /
+                         (numStackedMatrices * numAdjacentRegisters));
+
+    for (size_t i = 0; i < numStackedMatrices; ++i) {
       Value idx = makeAdd(ti, makeMul(makeConst(i), c8));
-      for (int j = 0; j < 16; ++j) {
+      for (size_t j = 0; j < storeCount; ++j) {
         Value idy = makeAdd(tj, makeMul(makeConst(j), c8));
-        int sIndex = i * 2 + j * 4;
-        makeExtractAndStore(sIndex, matrixD, idx, idy, dstMemref);
+        size_t structIndex = (i * numAdjacentRegisters) +
+                             (j * (numStackedMatrices * numAdjacentRegisters));
+        makeExtractAndStore(structIndex, matrixD, idx, idy, dstMemref);
       }
     }
   }
