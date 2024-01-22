@@ -1582,6 +1582,58 @@ static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
   OutStreamer.AddComment(CS.str());
 }
 
+static void printLaneBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
+                               int NumLanes, int BitWidth) {
+  assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
+         "Unexpected number of operands!");
+  if (auto *C =
+          X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+    int CstEltSize = C->getType()->getScalarSizeInBits();
+
+    std::string Comment;
+    raw_string_ostream CS(Comment);
+    const MachineOperand &DstOp = MI->getOperand(0);
+    CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+    if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+      int NumElements = CDS->getNumElements();
+      if ((BitWidth % CstEltSize) == 0)
+        NumElements = std::min<int>(NumElements, BitWidth / CstEltSize);
+      CS << "[";
+      for (int l = 0; l != NumLanes; ++l) {
+        for (int i = 0; i < NumElements; ++i) {
+          if (i != 0 || l != 0)
+            CS << ",";
+          if (CDS->getElementType()->isIntegerTy())
+            printConstant(CDS->getElementAsAPInt(i), CS);
+          else if (CDS->getElementType()->isHalfTy() ||
+                   CDS->getElementType()->isFloatTy() ||
+                   CDS->getElementType()->isDoubleTy())
+            printConstant(CDS->getElementAsAPFloat(i), CS);
+          else
+            CS << "?";
+        }
+      }
+      CS << "]";
+      OutStreamer.AddComment(CS.str());
+    } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
+      int NumOperands = CV->getNumOperands();
+      if ((BitWidth % CstEltSize) == 0)
+        NumOperands = std::min<int>(NumOperands, BitWidth / CstEltSize);
+      CS << "<";
+      for (int l = 0; l != NumLanes; ++l) {
+        for (int i = 0; i < NumOperands; ++i) {
+          if (i != 0 || l != 0)
+            CS << ",";
+          printConstant(CV->getOperand(i),
+                        CV->getType()->getPrimitiveSizeInBits(), CS);
+        }
+      }
+      CS << ">";
+      OutStreamer.AddComment(CS.str());
+    }
+  }
+}
+
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
   assert((getSubtarget().isOSWindows() || TM.getTargetTriple().isUEFI()) &&
@@ -1908,102 +1960,36 @@ static void addConstantComments(const MachineInstr *MI,
 #define CASE_512_MOV_RM()                                                      \
   MOV_AVX512_CASE(Z)
 
-#define CASE_ALL_MOV_RM()                                                      \
-  MOV_CASE(, )   /* SSE */                                                     \
-  MOV_CASE(V, )  /* AVX-128 */                                                 \
-  MOV_CASE(V, Y) /* AVX-256 */                                                 \
-  MOV_AVX512_CASE(Z)                                                           \
-  MOV_AVX512_CASE(Z256)                                                        \
-  MOV_AVX512_CASE(Z128)
-
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
-    CASE_ALL_MOV_RM()
+    CASE_128_MOV_RM()
+    printLaneBroadcast(MI, OutStreamer, 1, 128);
+    break;
+    CASE_256_MOV_RM()
+    printLaneBroadcast(MI, OutStreamer, 1, 256);
+    break;
+    CASE_512_MOV_RM()
+    printLaneBroadcast(MI, OutStreamer, 1, 512);
+    break;
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
   case X86::VBROADCASTF32X4Z256rm:
-  case X86::VBROADCASTF32X4rm:
-  case X86::VBROADCASTF32X8rm:
   case X86::VBROADCASTF64X2Z128rm:
-  case X86::VBROADCASTF64X2rm:
-  case X86::VBROADCASTF64X4rm:
   case X86::VBROADCASTI32X4Z256rm:
-  case X86::VBROADCASTI32X4rm:
-  case X86::VBROADCASTI32X8rm:
   case X86::VBROADCASTI64X2Z128rm:
+    printLaneBroadcast(MI, OutStreamer, 2, 128);
+    break;
+  case X86::VBROADCASTF32X4rm:
+  case X86::VBROADCASTF64X2rm:
+  case X86::VBROADCASTI32X4rm:
   case X86::VBROADCASTI64X2rm:
+    printLaneBroadcast(MI, OutStreamer, 4, 128);
+    break;
+  case X86::VBROADCASTF32X8rm:
+  case X86::VBROADCASTF64X4rm:
+  case X86::VBROADCASTI32X8rm:
   case X86::VBROADCASTI64X4rm:
-    assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
-    if (auto *C =
-            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
-      int NumLanes = 1;
-      int BitWidth = 128;
-      int CstEltSize = C->getType()->getScalarSizeInBits();
-
-      // Get destination BitWidth + override NumLanes for the broadcasts.
-      switch (MI->getOpcode()) {
-      CASE_128_MOV_RM()                NumLanes = 1; BitWidth = 128; break;
-      CASE_256_MOV_RM()                NumLanes = 1; BitWidth = 256; break;
-      CASE_512_MOV_RM()                NumLanes = 1; BitWidth = 512; break;
-      case X86::VBROADCASTF128rm:      NumLanes = 2; BitWidth = 128; break;
-      case X86::VBROADCASTI128rm:      NumLanes = 2; BitWidth = 128; break;
-      case X86::VBROADCASTF32X4Z256rm: NumLanes = 2; BitWidth = 128; break;
-      case X86::VBROADCASTF32X4rm:     NumLanes = 4; BitWidth = 128; break;
-      case X86::VBROADCASTF32X8rm:     NumLanes = 2; BitWidth = 256; break;
-      case X86::VBROADCASTF64X2Z128rm: NumLanes = 2; BitWidth = 128; break;
-      case X86::VBROADCASTF64X2rm:     NumLanes = 4; BitWidth = 128; break;
-      case X86::VBROADCASTF64X4rm:     NumLanes = 2; BitWidth = 256; break;
-      case X86::VBROADCASTI32X4Z256rm: NumLanes = 2; BitWidth = 128; break;
-      case X86::VBROADCASTI32X4rm:     NumLanes = 4; BitWidth = 128; break;
-      case X86::VBROADCASTI32X8rm:     NumLanes = 2; BitWidth = 256; break;
-      case X86::VBROADCASTI64X2Z128rm: NumLanes = 2; BitWidth = 128; break;
-      case X86::VBROADCASTI64X2rm:     NumLanes = 4; BitWidth = 128; break;
-      case X86::VBROADCASTI64X4rm:     NumLanes = 2; BitWidth = 256; break;
-      }
-
-      std::string Comment;
-      raw_string_ostream CS(Comment);
-      const MachineOperand &DstOp = MI->getOperand(0);
-      CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-      if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
-        int NumElements = CDS->getNumElements();
-        if ((BitWidth % CstEltSize) == 0)
-          NumElements = std::min<int>(NumElements, BitWidth / CstEltSize);
-        CS << "[";
-        for (int l = 0; l != NumLanes; ++l) {
-          for (int i = 0; i < NumElements; ++i) {
-            if (i != 0 || l != 0)
-              CS << ",";
-            if (CDS->getElementType()->isIntegerTy())
-              printConstant(CDS->getElementAsAPInt(i), CS);
-            else if (CDS->getElementType()->isHalfTy() ||
-                     CDS->getElementType()->isFloatTy() ||
-                     CDS->getElementType()->isDoubleTy())
-              printConstant(CDS->getElementAsAPFloat(i), CS);
-            else
-              CS << "?";
-          }
-        }
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-      } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
-        int NumOperands = CV->getNumOperands();
-        if ((BitWidth % CstEltSize) == 0)
-          NumOperands = std::min<int>(NumOperands, BitWidth / CstEltSize);
-        CS << "<";
-        for (int l = 0; l != NumLanes; ++l) {
-          for (int i = 0; i < NumOperands; ++i) {
-            if (i != 0 || l != 0)
-              CS << ",";
-            printConstant(CV->getOperand(i),
-                          CV->getType()->getPrimitiveSizeInBits(), CS);
-          }
-        }
-        CS << ">";
-        OutStreamer.AddComment(CS.str());
-      }
-    }
+    printLaneBroadcast(MI, OutStreamer, 2, 256);
     break;
 
   case X86::MOVDDUPrm:
