@@ -16603,8 +16603,7 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
   auto DetectAddExtract = [&](SDValue A) {
     // Look for add(zext(extract_lo(x)), zext(extract_hi(x))), returning
     // UADDLP(x) if found.
-    if (A.getOpcode() != ISD::ADD)
-      return SDValue();
+    assert(A.getOpcode() == ISD::ADD);
     EVT VT = A.getValueType();
     SDValue Op0 = A.getOperand(0);
     SDValue Op1 = A.getOperand(1);
@@ -16647,11 +16646,54 @@ static SDValue performUADDVAddCombine(SDValue A, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// We can convert a UADDV(add(zext(64-bit source), zext(64-bit source))) into
+// UADDLV(concat), where the concat represents the 64-bit zext sources.
+static SDValue performUADDVZextCombine(SDValue A, SelectionDAG &DAG) {
+  // Look for add(zext(64-bit source), zext(64-bit source)), returning
+  // UADDLV(concat(zext, zext)) if found.
+  assert(A.getOpcode() == ISD::ADD);
+  EVT VT = A.getValueType();
+  if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
+    return SDValue();
+  SDValue Op0 = A.getOperand(0);
+  SDValue Op1 = A.getOperand(1);
+  if (Op0.getOpcode() != ISD::ZERO_EXTEND || Op0.getOpcode() != Op1.getOpcode())
+    return SDValue();
+  SDValue Ext0 = Op0.getOperand(0);
+  SDValue Ext1 = Op1.getOperand(0);
+  EVT ExtVT0 = Ext0.getValueType();
+  EVT ExtVT1 = Ext1.getValueType();
+  // Check zext VTs are the same and 64-bit length.
+  if (ExtVT0 != ExtVT1 ||
+      VT.getScalarSizeInBits() != (2 * ExtVT0.getScalarSizeInBits()))
+    return SDValue();
+  // Get VT for concat of zext sources.
+  EVT PairVT = ExtVT0.getDoubleNumVectorElementsVT(*DAG.getContext());
+  SDValue Concat =
+      DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(A), PairVT, Ext0, Ext1);
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::v2i64:
+  case MVT::v4i32:
+    return DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), VT, Concat);
+  case MVT::v8i16: {
+    SDValue Uaddlv =
+        DAG.getNode(AArch64ISD::UADDLV, SDLoc(A), MVT::v4i32, Concat);
+    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(A), MVT::v8i16, Uaddlv);
+  }
+  default:
+    llvm_unreachable("Unhandled vector type");
+  }
+}
+
 static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue A = N->getOperand(0);
-  if (A.getOpcode() == ISD::ADD)
+  if (A.getOpcode() == ISD::ADD) {
     if (SDValue R = performUADDVAddCombine(A, DAG))
       return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), R);
+    else if (SDValue R = performUADDVZextCombine(A, DAG))
+      return R;
+  }
   return SDValue();
 }
 
