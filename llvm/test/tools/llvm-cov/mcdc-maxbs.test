@@ -1,7 +1,6 @@
 # Test not to trigger the assertion failure in llvm-cov with empty bitmap.
 # REQUIRES: asserts
 
-
 # mcdc-maxbs.o contains the record:
 #
 # sub:
