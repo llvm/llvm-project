@@ -65,7 +65,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 }
 
 DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
-    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
+    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID), IsInit(false),
       PendingCtorsDtors(), PendingGlobalsMtx(), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
@@ -77,6 +77,10 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
+  // If device is already initialized then return success:
+  if (IsInit)
+    return llvm::Error::success();
+
   // Make call to init_requires if it exists for this plugin.
   int32_t Ret = 0;
   if (RTL->init_requires)
@@ -103,6 +107,7 @@ llvm::Error DeviceTy::init() {
                                   OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
+  IsInit = true;
   return llvm::Error::success();
 }
 

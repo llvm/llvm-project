@@ -52,7 +52,8 @@ PluginAdaptorTy::create(const std::string &Name) {
 
 PluginAdaptorTy::PluginAdaptorTy(const std::string &Name,
                                  std::unique_ptr<llvm::sys::DynamicLibrary> DL)
-    : Name(Name), LibraryHandler(std::move(DL)) {}
+    : Name(Name), LibraryHandler(std::move(DL)),
+      LazyDeviceInitialization(false) {}
 
 Error PluginAdaptorTy::init() {
 
@@ -84,14 +85,19 @@ Error PluginAdaptorTy::init() {
                              "No devices supported in this RTL\n");
   }
 
+  if (char *EnvStr = getenv("LIBOMPTARGET_LAZY_DEVICE_INIT")) {
+    LazyDeviceInitialization = std::stoi(EnvStr);
+    DP("Using lazy device initialization!\n");
+  }
+
   DP("Registered '%s' with %d plugin visible devices!\n", Name.c_str(),
      NumberOfPluginDevices);
   return Error::success();
 }
 
 void PluginAdaptorTy::addOffloadEntries(DeviceImageTy &DI) {
-  for (int32_t I = 0, E = getNumberOfUserDevices(); I < E; ++I) {
-    auto DeviceOrErr = PM->getDevice(DeviceOffset + I);
+  for (int32_t I = 0, E = getNumberOfPluginDevices(); I < E; ++I) {
+    auto DeviceOrErr = PM->getDevice(DeviceOffset + I, /*WithoutInit*/ true);
     if (!DeviceOrErr)
       FATAL_MESSAGE(DeviceOffset + I, "%s",
                     toString(DeviceOrErr.takeError()).c_str());
@@ -142,21 +148,28 @@ void PluginAdaptorTy::initDevices(PluginManager &PM) {
   if (set_device_offset)
     set_device_offset(DeviceOffset);
 
+  // Perform all the actions we normally perform even under lazy initialization.
+  // The only exception is that we postpone initializing the device itself until
+  // it is being used.
   int32_t NumPD = getNumberOfPluginDevices();
   ExclusiveDevicesAccessor->reserve(DeviceOffset + NumPD);
   for (int32_t PDevI = 0, UserDevId = DeviceOffset; PDevI < NumPD; PDevI++) {
     auto Device = std::make_unique<DeviceTy>(this, UserDevId, PDevI);
-    if (auto Err = Device->init()) {
-      DP("Skip plugin known device %d: %s\n", PDevI,
-         toString(std::move(Err)).c_str());
-      continue;
+    if (!LazyDeviceInitialization) {
+      if (auto Err = Device->init()) {
+        DP("Skip plugin known device %d: %s\n", PDevI,
+           toString(std::move(Err)).c_str());
+        continue;
+      }
+      ++NumberOfUserDevices;
     }
 
     ExclusiveDevicesAccessor->push_back(std::move(Device));
-    ++NumberOfUserDevices;
     ++UserDevId;
   }
 
+  // Note: when the devices are lazily initialized, the number of exposed
+  // devices below is zero.
   DP("Plugin adaptor " DPxMOD " has index %d, exposes %d out of %d devices!\n",
      DPxPTR(LibraryHandler.get()), DeviceOffset, NumberOfUserDevices,
      NumberOfPluginDevices);
@@ -178,15 +191,15 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
   // Resize the Targets Table and Images to accommodate the new targets if
   // required
   unsigned TargetsTableMinimumSize =
-      RTL.DeviceOffset + RTL.getNumberOfUserDevices();
+      RTL.DeviceOffset + RTL.getNumberOfPluginDevices();
 
   if (TT.TargetsTable.size() < TargetsTableMinimumSize) {
     TT.TargetsImages.resize(TargetsTableMinimumSize, 0);
     TT.TargetsTable.resize(TargetsTableMinimumSize, 0);
   }
 
-  // Register the image in all devices for this target type.
-  for (int32_t I = 0; I < RTL.getNumberOfUserDevices(); ++I) {
+  // Register the image in all possible devices for this target type.
+  for (int32_t I = 0; I < RTL.getNumberOfPluginDevices(); ++I) {
     // If we are changing the image we are also invalidating the target table.
     if (TT.TargetsImages[RTL.DeviceOffset + I] != Image) {
       TT.TargetsImages[RTL.DeviceOffset + I] = Image;
@@ -291,8 +304,9 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
       // Execute dtors for static objects if the device has been used, i.e.
       // if its PendingCtors list has been emptied.
-      for (int32_t I = 0; I < FoundRTL->getNumberOfUserDevices(); ++I) {
-        auto DeviceOrErr = PM->getDevice(FoundRTL->DeviceOffset + I);
+      for (int32_t I = 0; I < FoundRTL->getNumberOfPluginDevices(); ++I) {
+        auto DeviceOrErr =
+            PM->getDevice(FoundRTL->DeviceOffset + I, /*WithoutInit*/ true);
         if (!DeviceOrErr)
           FATAL_MESSAGE(FoundRTL->DeviceOffset + I, "%s",
                         toString(DeviceOrErr.takeError()).c_str());
@@ -357,7 +371,8 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Done unregistering library!\n");
 }
 
-Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
+Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo,
+                                              bool WithoutInit) {
   auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
   if (DeviceNo >= ExclusiveDevicesAccessor->size())
     return createStringError(
@@ -365,5 +380,22 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
         "Device number '%i' out of range, only %i devices available", DeviceNo,
         ExclusiveDevicesAccessor->size());
 
-  return *(*ExclusiveDevicesAccessor)[DeviceNo];
+  DeviceTy &Device = *(*ExclusiveDevicesAccessor)[DeviceNo];
+
+  // If the device is initialized eagerly then IsInit will be true already and
+  // the whole initialization of the device will be skipped. In some cases, such
+  // as when we register the offload entries, we also want to make sure that the
+  // device is fetched without the initialization being even considered. For
+  // this we set WithoutInit to true.
+  if (!WithoutInit && !Device.IsInit) {
+    if (auto Err = Device.init()) {
+      DP("Failed to init device %d: %s\n", DeviceNo,
+         toString(std::move(Err)).c_str());
+      return createStringError(inconvertibleErrorCode(),
+                               "Failed to init device %d\n", DeviceNo);
+    }
+    DP("Device %d (local ID %d) has been lazily initialized! (IsInit = %d)\n",
+       DeviceNo, Device.RTLDeviceID, Device.IsInit);
+  }
+  return Device;
 }

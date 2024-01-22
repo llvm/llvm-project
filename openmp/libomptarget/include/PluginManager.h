@@ -54,10 +54,6 @@ struct PluginAdaptorTy {
   /// Return the number of devices visible to the underlying plugin.
   int32_t getNumberOfPluginDevices() const { return NumberOfPluginDevices; }
 
-  /// Return the number of devices successfully initialized and visible to the
-  /// user.
-  int32_t getNumberOfUserDevices() const { return NumberOfUserDevices; }
-
   /// Add all offload entries described by \p DI to the devices managed by this
   /// plugin.
   void addOffloadEntries(DeviceImageTy &DI);
@@ -81,6 +77,8 @@ struct PluginAdaptorTy {
 #undef PLUGIN_API_HANDLE
 
   llvm::DenseSet<const __tgt_device_image *> UsedImages;
+
+  bool LazyDeviceInitialization;
 
 private:
   /// Number of devices the underling plugins sees.
@@ -108,6 +106,9 @@ struct PluginManager {
   /// Exclusive accessor type for the device container.
   using ExclusiveDevicesAccessorTy = Accessor<DeviceContainerTy>;
 
+  /// Keep track of the number of initialized devices:
+  int32_t NumberOfInitializedDevices = 0;
+
   PluginManager() {}
 
   void init();
@@ -124,7 +125,8 @@ struct PluginManager {
 
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
-  llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo);
+  llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo,
+                                       bool WithoutInit = false);
 
   /// Iterate over all initialized and ready devices registered with this
   /// plugin.
