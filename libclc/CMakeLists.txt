@@ -142,57 +142,15 @@ set( cypress_aliases hemlock )
 set( barts_aliases turks caicos )
 set( cayman_aliases aruba )
 set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
-	mullins tonga iceland carrizo fiji stoney polaris10 polaris11 )
-
-# Support for gfx9 was added in LLVM 5.0 (r295554)
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "4.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx900 gfx902 )
-endif()
-
-# Support for Vega12 and Vega20 was added in LLVM 7 (r331215)
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "6.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx904 gfx906 )
-endif()
-
-# Support for gfx909, gfx1010, gfx1011 and gfx1012 was added in LLVM 10 (r345120)
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "9.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx909 gfx1010 gfx1011 gfx1012 )
-endif()
-
-# Support for gfx908 was added in LLVM 11 (r373411)
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "10.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx908 )
-endif()
-
-# Support for gfx90c, gfx1030, gfx1031, gfx1032, gfx1033 was added in LLVM 12
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "11.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx90c gfx1030 gfx1031 gfx1032 gfx1033 )
-endif()
-
-# Support for tongapro, gfx602, gfx705, gfx805 was added in LLVM 13
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "12.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} tongapro gfx602 gfx705 gfx805 )
-endif()
-
-# Support for gfx90a, gfx1013, gfx1034, gfx1035 was added in LLVM 14
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "13.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx90a gfx1013 gfx1034 gfx1035 )
-endif()
-
-# Support for gfx940, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103 was added in LLVM 16
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "15.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx940 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103 )
-endif()
-
-# Support for gfx941, gfx942, gfx1150, gfx1151 was added in LLVM 18
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "17.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx941 gfx942 gfx1150 gfx1151 )
-endif()
-
-# Support for gfx1200, gfx1201 was added in LLVM 19
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "18.99.99" )
-	set( tahiti_aliases ${tahiti_aliases} gfx1200 gfx1201 )
-endif()
+	mullins tonga tongapro iceland carrizo fiji stoney polaris10 polaris11
+	gfx602 gfx705 gfx805
+	gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx940 gfx941 gfx942
+	gfx1010 gfx1011 gfx1012 gfx1013
+	gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
+	gfx1100 gfx1101 gfx1102 gfx1103
+	gfx1150 gfx1151
+	gfx1200 gfx1201
+)
 
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
