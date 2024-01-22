@@ -255,7 +255,8 @@ public:
   /// separately to avoid any inconsistencies with an ad-hoc pipeline that tries
   /// to approximate the PerModuleDefaultPipeline from the pre-link LTO
   /// pipelines.
-  ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level);
+  ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level,
+                                               bool ThinLTO, bool EmitSummary);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
