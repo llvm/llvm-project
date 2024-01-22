@@ -509,8 +509,6 @@ void SymbolFileDWARF::InitializeObject() {
 
     if (apple_names.GetByteSize() > 0 || apple_namespaces.GetByteSize() > 0 ||
         apple_types.GetByteSize() > 0 || apple_objc.GetByteSize() > 0) {
-      Progress progress(llvm::formatv("Loading Apple DWARF index for {0}",
-                                      module_desc.GetData()));
       m_index = AppleDWARFIndex::Create(
           *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
           apple_types, apple_objc, m_context.getOrLoadStrData());
@@ -522,8 +520,7 @@ void SymbolFileDWARF::InitializeObject() {
     DWARFDataExtractor debug_names;
     LoadSectionData(eSectionTypeDWARFDebugNames, debug_names);
     if (debug_names.GetByteSize() > 0) {
-      Progress progress(
-          llvm::formatv("Loading DWARF5 index for {0}", module_desc.GetData()));
+      Progress progress("Loading DWARF5 index", module_desc.GetData());
       llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>> index_or =
           DebugNamesDWARFIndex::Create(*GetObjectFile()->GetModule(),
                                        debug_names,

@@ -38,7 +38,7 @@ class TestSwiftProgressReporting(TestBase):
             "Loading Swift module",
             "Importing modules used in expression",
             "Setting up Swift reflection",
-            "Getting Swift compile unit imports for",
+            "Getting Swift compile unit imports",
             "Importing Swift modules",
             "Importing Swift standard library",
         ]
