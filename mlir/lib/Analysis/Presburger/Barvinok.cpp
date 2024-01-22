@@ -149,7 +149,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
 }
 
 std::optional<ParamPoint>
-mlir::presburger::detail::findVertex(Matrix<MPInt> equations) {
+mlir::presburger::detail::findVertex(IntMatrix equations) {
   // `equalities` is a d x (d + p + 1) matrix.
 
   unsigned r = equations.getNumRows();
@@ -163,7 +163,7 @@ mlir::presburger::detail::findVertex(Matrix<MPInt> equations) {
   if (coeffs.determinant() == MPInt(0))
     return std::nullopt;
 
-  Matrix<Fraction> equationsF(r, c);
+  FracMatrix equationsF(r, c);
   for (unsigned i = 0; i < r; i++)
     for (unsigned j = 0; j < c; j++)
       equationsF(i, j) = Fraction(equations(i, j), 1);
@@ -211,19 +211,19 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   std::vector<std::pair<PresburgerRelation, GeneratingFunction>> gf({});
   ConeH tgtCone = defineHRep(d);
 
-  Matrix<MPInt> subset(d, d + p + 1);
-  std::vector<Matrix<MPInt>>
+  IntMatrix subset(d, d + p + 1);
+  std::vector<IntMatrix>
       subsets; // Stores the inequality subsets corresponding to each vertex.
-  Matrix<Fraction> remaining(n - d, d + p + 1);
+  FracMatrix remaining(n - d, d + p + 1);
 
   std::optional<ParamPoint> vertex;
   std::vector<ParamPoint> vertices;
 
-  Matrix<Fraction> a2(n - d, d);
-  Matrix<Fraction> b2c2(n - d, p + 1);
+  FracMatrix a2(n - d, d);
+  FracMatrix b2c2(n - d, p + 1);
 
-  Matrix<Fraction> activeRegion(n - d, p + 1);
-  Matrix<MPInt> activeRegionNorm(n - d, p + 1);
+  FracMatrix activeRegion(n - d, p + 1);
+  IntMatrix activeRegionNorm(n - d, p + 1);
   MPInt lcmDenoms;
   IntegerRelation activeRegionRel(
       PresburgerSpace::getRelationSpace(0, p, 0, 0));
@@ -239,8 +239,8 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
     if (indicator.count() != d)
       continue;
 
-    subset = Matrix<MPInt>(d, d + p + 1);
-    remaining = Matrix<Fraction>(n - d, d + p + 1);
+    subset = IntMatrix(d, d + p + 1);
+    remaining = FracMatrix(n - d, d + p + 1);
     unsigned j1 = 0, j2 = 0;
     for (unsigned i = 0; i < n; i++)
       if (indicator.test(i))
@@ -270,7 +270,7 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
       activeRegion.addToRow(i, b2c2.getRow(i), Fraction(1, 1));
     }
 
-    activeRegionNorm = Matrix<MPInt>(n - d, p + 1);
+    activeRegionNorm = IntMatrix(n - d, p + 1);
     activeRegionRel =
         IntegerRelation(PresburgerSpace::getRelationSpace(0, p, 0, 0));
     lcmDenoms = 1;

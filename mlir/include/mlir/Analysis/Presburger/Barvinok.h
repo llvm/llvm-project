@@ -85,7 +85,7 @@ ConeH getDual(ConeV cone);
 GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
                                                     ConeH cone);
 
-std::optional<ParamPoint> findVertex(Matrix<MPInt> equations);
+std::optional<ParamPoint> findVertex(IntMatrix equations);
 
 std::vector<std::pair<PresburgerRelation, GeneratingFunction>>
 polytopeGeneratingFunction(PolyhedronH poly);
