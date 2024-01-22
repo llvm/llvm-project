@@ -266,8 +266,7 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   // using bitsets to enumerate.
   // The largest possible bitset that corresponds to such a subset can be
   // written as numVar 1's followed by (numIneqs - numVars) 0's.
-  unsigned upperBound = ((1ul << numVars) - 1ul)
-           << (numIneqs - numVars);
+  unsigned upperBound = ((1ul << numVars) - 1ul) << (numIneqs - numVars);
   for (std::bitset<16> indicator(((1ul << numVars) - 1ul)
                                  << (numIneqs - numVars));
        indicator.to_ulong() <= upperBound;
@@ -388,7 +387,11 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
       // and so we know that it is full-dimensional if any of the disjuncts
       // is full-dimensional.
       PresburgerRelation intersection = r_i.intersect(r_j);
-      bool isFullDim = numParams == 0 || llvm::any_of(intersection.getAllDisjuncts(), [&](IntegerRelation disjunct) -> bool { return disjunct.isFullDim(); });
+      bool isFullDim =
+          numParams == 0 || llvm::any_of(intersection.getAllDisjuncts(),
+                                         [&](IntegerRelation disjunct) -> bool {
+                                           return disjunct.isFullDim();
+                                         });
 
       // If the intersection is not full-dimensional, we do not modify
       // the chamber list.
@@ -406,15 +409,19 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
 
     // Finally we compute the chamber where only v_j is active by subtracting
     // all existing chambers from R_j.
-    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber : newChambers)
+    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
+         newChambers)
       r_j = r_j.subtract(chamber.first);
     newChambers.push_back(std::make_pair(r_j, std::vector({j})));
 
     // We filter `chambers` to remove empty regions.
     chambers.clear();
-    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber : newChambers) {
+    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
+         newChambers) {
       auto [r, v] = chamber;
-      bool isEmpty = llvm::all_of(r.getAllDisjuncts(), [&](IntegerRelation disjunct) -> bool { return disjunct.isEmpty(); });
+      bool isEmpty = llvm::all_of(
+          r.getAllDisjuncts(),
+          [&](IntegerRelation disjunct) -> bool { return disjunct.isEmpty(); });
       if (!isEmpty)
         chambers.push_back(chamber);
     }
@@ -425,7 +432,8 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   // of them. The sum of these generating functions is the GF corresponding to
   // the entire polytope.
   SmallVector<MPInt> ineq(numVars + 1);
-  for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber : chambers) {
+  for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
+       chambers) {
     auto [region_j, vertices_j] = chamber;
     GeneratingFunction chamberGf(numParams, {}, {}, {});
     for (unsigned i : vertices_j) {
@@ -444,9 +452,8 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
           std::make_pair(1, tgtCone)};
       for (std::pair<int, ConeH> signedCone : unimodCones) {
         auto [sign, cone] = signedCone;
-        chamberGf =
-            chamberGf + unimodularConeGeneratingFunction(
-                            vertices[i], sign, cone);
+        chamberGf = chamberGf +
+                    unimodularConeGeneratingFunction(vertices[i], sign, cone);
       }
     }
     gf.push_back(std::make_pair(region_j, chamberGf));
