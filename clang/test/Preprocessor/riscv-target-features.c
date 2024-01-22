@@ -1167,10 +1167,10 @@
 // CHECK-ZVKN-EXT: __riscv_zvkn 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKN %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKN %s
 // CHECK-COMBINE-INTO-ZVKN: __riscv_zvkn 1000000{{$}}
 
@@ -1183,10 +1183,10 @@
 // CHECK-ZVKNC-EXT: __riscv_zvknc 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNC %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNC %s
 // CHECK-COMBINE-INTO-ZVKNC: __riscv_zvkn 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKNC: __riscv_zvknc 1000000{{$}}
@@ -1208,10 +1208,10 @@
 // CHECK-ZVKNG-EXT: __riscv_zvkng 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNG %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNG %s
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkn 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkng 1000000{{$}}
@@ -1241,10 +1241,10 @@
 // CHECK-ZVKS-EXT: __riscv_zvks 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKS %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKS %s
 // CHECK-COMBINE-INTO-ZVKS: __riscv_zvks 1000000{{$}}
 
@@ -1257,10 +1257,10 @@
 // CHECK-ZVKSC-EXT: __riscv_zvksc 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSC %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSC %s
 // CHECK-COMBINE-INTO-ZVKSC: __riscv_zvks 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKSC: __riscv_zvksc 1000000{{$}}
@@ -1282,10 +1282,10 @@
 // CHECK-ZVKSG-EXT: __riscv_zvksg 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSG %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSG %s
 // CHECK-COMBINE-INTO-ZVKSG: __riscv_zvks 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKSG: __riscv_zvksg 1000000{{$}}
