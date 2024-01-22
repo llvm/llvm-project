@@ -235,6 +235,17 @@ New checks
   Finds return statements with ``void`` values used within functions with
   ``void`` result types.
 
+- New :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check.
+
+  Detects explicit type casting operations that involve the same source and
+  destination types, and subsequently recommend their removal.
+  
+- New :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check.
+
+  Detects redundant ``inline`` specifiers on function and variable declarations.
+
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
 
@@ -359,6 +370,10 @@ Changes in existing checks
   to ignore unused parameters when they are marked as unused and parameters of
   deleted functions and constructors.
 
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check to ignore constructor
+  calls disguised as functional casts.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
@@ -410,7 +425,8 @@ Changes in existing checks
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
-  and avoid crash for array of dependent array.
+  and avoid crash for array of dependent array and non-dereferenceable builtin
+  types used as iterators.
 
 - Improved :doc:`modernize-make-shared
   <clang-tidy/checks/modernize/make-shared>` check to support
@@ -421,6 +437,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
   false-positives when constructing the container with ``count`` copies of
   elements with value ``value``.
+
+- Improved :doc:`modernize-use-auto
+  <clang-tidy/checks/modernize/use-auto>` to avoid create incorrect fix hints
+  for pointer to array type and pointer to function type.
 
 - Improved :doc:`modernize-use-emplace
   <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
@@ -502,7 +522,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options. It also now provides more consistent
-  suggestions when parentheses are added to the return value or expressions. 
+  suggestions when parentheses are added to the return value or expressions.
   It also ignores false-positives for comparison containing bool bitfield.
 
 - Improved :doc:`readability-misleading-indentation

@@ -282,7 +282,7 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
   default: {
     if (auto *Exp = dyn_cast<Expr>(S))
       return this->discard(Exp);
-    return this->bail(S);
+    return false;
   }
   }
 }

@@ -54,9 +54,11 @@ namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-                                 ExecutionModeE ExecutionMode)
+                                 ExecutionModeE ExecutionMode,
+                                 ArrayRef<ValidationEvent> ValCounters)
     : State(State), Mode(Mode), BenchmarkPhaseSelector(BenchmarkPhaseSelector),
-      ExecutionMode(ExecutionMode), Scratch(std::make_unique<ScratchSpace>()) {}
+      ExecutionMode(ExecutionMode), ValidationCounters(ValCounters),
+      Scratch(std::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
@@ -71,7 +73,9 @@ void BenchmarkRunner::FunctionExecutor::accumulateCounterValues(
 }
 
 Expected<llvm::SmallVector<int64_t, 4>>
-BenchmarkRunner::FunctionExecutor::runAndSample(const char *Counters) const {
+BenchmarkRunner::FunctionExecutor::runAndSample(
+    const char *Counters, ArrayRef<const char *> ValidationCounters,
+    SmallVectorImpl<int64_t> &ValidationCounterValues) const {
   // We sum counts when there are several counters for a single ProcRes
   // (e.g. P23 on SandyBridge).
   llvm::SmallVector<int64_t, 4> CounterValues;
@@ -79,8 +83,8 @@ BenchmarkRunner::FunctionExecutor::runAndSample(const char *Counters) const {
   StringRef(Counters).split(CounterNames, '+');
   for (auto &CounterName : CounterNames) {
     CounterName = CounterName.trim();
-    Expected<SmallVector<int64_t, 4>> ValueOrError =
-        runWithCounter(CounterName);
+    Expected<SmallVector<int64_t, 4>> ValueOrError = runWithCounter(
+        CounterName, ValidationCounters, ValidationCounterValues);
     if (!ValueOrError)
       return ValueOrError.takeError();
     accumulateCounterValues(ValueOrError.get(), &CounterValues);
@@ -120,11 +124,13 @@ private:
       (*Result)[I] += NewValues[I];
   }
 
-  Expected<llvm::SmallVector<int64_t, 4>>
-  runWithCounter(StringRef CounterName) const override {
+  Expected<llvm::SmallVector<int64_t, 4>> runWithCounter(
+      StringRef CounterName, ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const override {
     const ExegesisTarget &ET = State.getExegesisTarget();
     char *const ScratchPtr = Scratch->ptr();
-    auto CounterOrError = ET.createCounter(CounterName, State);
+    auto CounterOrError =
+        ET.createCounter(CounterName, State, ValidationCounters);
 
     if (!CounterOrError)
       return CounterOrError.takeError();
@@ -155,6 +161,14 @@ private:
 #endif // LLVM_ON_UNIX
       }
     }
+
+    auto ValidationValuesOrErr = Counter->readValidationCountersOrError();
+    if (!ValidationValuesOrErr)
+      return ValidationValuesOrErr.takeError();
+
+    ArrayRef RealValidationValues = *ValidationValuesOrErr;
+    for (size_t I = 0; I < RealValidationValues.size(); ++I)
+      ValidationCounterValues[I] = RealValidationValues[I];
 
     return Counter->readOrError(Function.getFunctionBytes());
   }
@@ -266,7 +280,9 @@ private:
   }
 
   Error createSubProcessAndRunBenchmark(
-      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues) const {
+      StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues,
+      ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const {
     int PipeFiles[2];
     int PipeSuccessOrErr = socketpair(AF_UNIX, SOCK_DGRAM, 0, PipeFiles);
     if (PipeSuccessOrErr != 0) {
@@ -306,8 +322,8 @@ private:
     }
 
     const ExegesisTarget &ET = State.getExegesisTarget();
-    auto CounterOrError =
-        ET.createCounter(CounterName, State, ParentOrChildPID);
+    auto CounterOrError = ET.createCounter(
+        CounterName, State, ValidationCounters, ParentOrChildPID);
 
     if (!CounterOrError)
       return CounterOrError.takeError();
@@ -361,6 +377,14 @@ private:
         if (!CounterValueOrErr)
           return CounterValueOrErr.takeError();
         CounterValues = std::move(*CounterValueOrErr);
+
+        auto ValidationValuesOrErr = Counter->readValidationCountersOrError();
+        if (!ValidationValuesOrErr)
+          return ValidationValuesOrErr.takeError();
+
+        ArrayRef RealValidationValues = *ValidationValuesOrErr;
+        for (size_t I = 0; I < RealValidationValues.size(); ++I)
+          ValidationCounterValues[I] = RealValidationValues[I];
 
         return Error::success();
       }
@@ -460,15 +484,15 @@ private:
     exit(0);
   }
 
-  Expected<llvm::SmallVector<int64_t, 4>>
-  runWithCounter(StringRef CounterName) const override {
+  Expected<llvm::SmallVector<int64_t, 4>> runWithCounter(
+      StringRef CounterName, ArrayRef<const char *> ValidationCounters,
+      SmallVectorImpl<int64_t> &ValidationCounterValues) const override {
     SmallVector<int64_t, 4> Value(1, 0);
-    Error PossibleBenchmarkError =
-        createSubProcessAndRunBenchmark(CounterName, Value);
+    Error PossibleBenchmarkError = createSubProcessAndRunBenchmark(
+        CounterName, Value, ValidationCounters, ValidationCounterValues);
 
-    if (PossibleBenchmarkError) {
+    if (PossibleBenchmarkError)
       return std::move(PossibleBenchmarkError);
-    }
 
     return Value;
   }
@@ -639,7 +663,35 @@ BenchmarkRunner::writeObjectFile(StringRef Buffer, StringRef FileName) const {
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   OFS.write(Buffer.data(), Buffer.size());
   OFS.flush();
-  return std::string(ResultPath.str());
+  return std::string(ResultPath);
+}
+
+static bool EventLessThan(const std::pair<ValidationEvent, const char *> LHS,
+                          const ValidationEvent RHS) {
+  return static_cast<int>(LHS.first) < static_cast<int>(RHS);
+}
+
+Error BenchmarkRunner::getValidationCountersToRun(
+    SmallVector<const char *> &ValCountersToRun) const {
+  const PfmCountersInfo &PCI = State.getPfmCounters();
+  ValCountersToRun.reserve(ValidationCounters.size());
+
+  ValCountersToRun.reserve(ValidationCounters.size());
+  ArrayRef TargetValidationEvents(PCI.ValidationEvents,
+                                  PCI.NumValidationEvents);
+  for (const ValidationEvent RequestedValEvent : ValidationCounters) {
+    auto ValCounterIt =
+        lower_bound(TargetValidationEvents, RequestedValEvent, EventLessThan);
+    if (ValCounterIt == TargetValidationEvents.end() ||
+        ValCounterIt->first != RequestedValEvent)
+      return make_error<Failure>("Cannot create validation counter");
+
+    assert(ValCounterIt->first == RequestedValEvent &&
+           "The array of validation events from the target should be sorted");
+    ValCountersToRun.push_back(ValCounterIt->second);
+  }
+
+  return Error::success();
 }
 
 BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}

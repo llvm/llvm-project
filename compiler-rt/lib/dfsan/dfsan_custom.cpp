@@ -842,7 +842,7 @@ __dfsw_dlopen(const char *filename, int flag, dfsan_label filename_label,
               dfsan_label flag_label, dfsan_label *ret_label) {
   void *handle = dlopen(filename, flag);
   link_map *map = GET_LINK_MAP_BY_DLOPEN_HANDLE(handle);
-  if (map)
+  if (filename && map)
     ForEachMappedRegion(map, dfsan_set_zero_label);
   *ret_label = 0;
   return handle;

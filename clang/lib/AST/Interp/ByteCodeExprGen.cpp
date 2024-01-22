@@ -294,6 +294,29 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_ToVoid:
     return discard(SubExpr);
 
+  case CK_IntegralRealToComplex:
+  case CK_FloatingRealToComplex: {
+    // We're creating a complex value here, so we need to
+    // allocate storage for it.
+    if (!Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(CE, /*IsExtended=*/true);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+
+    // Init the complex value to {SubExpr, 0}.
+    if (!this->visitArrayElemInit(0, SubExpr))
+      return false;
+    // Zero-init the second element.
+    PrimType T = classifyPrim(SubExpr->getType());
+    if (!this->visitZeroInitializer(T, SubExpr->getType(), SubExpr))
+      return false;
+    return this->emitInitElem(T, 1, SubExpr);
+  }
+
   default:
     assert(false && "Cast not implemented");
   }
@@ -375,7 +398,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   }
 
   if (!LT || !RT || !T)
-    return this->bail(BO);
+    return false;
 
   // Pointer arithmetic special case.
   if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
@@ -455,7 +478,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   case BO_LAnd:
     llvm_unreachable("Already handled earlier");
   default:
-    return this->bail(BO);
+    return false;
   }
 
   llvm_unreachable("Unhandled binary op");
@@ -508,7 +531,7 @@ bool ByteCodeExprGen<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
   else if (Op == BO_Sub)
     return this->emitSubOffset(OffsetType, E);
 
-  return this->bail(E);
+  return false;
 }
 
 template <class Emitter>
@@ -846,6 +869,10 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
 
   if (T->isAnyComplexType()) {
     unsigned NumInits = E->getNumInits();
+
+    if (NumInits == 1)
+      return this->delegate(E->inits()[0]);
+
     QualType ElemQT = E->getType()->getAs<ComplexType>()->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
     if (NumInits == 0) {
@@ -2362,7 +2389,9 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   // Return the value
   if (VarT)
     return this->emitRet(*VarT, VD);
-  return this->emitRetValue(VD);
+
+  // Return non-primitive values as pointers here.
+  return this->emitRet(PT_Ptr, VD);
 }
 
 template <class Emitter>
@@ -2382,7 +2411,7 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
-      return this->bail(VD);
+      return false;
 
     assert(Init);
     {

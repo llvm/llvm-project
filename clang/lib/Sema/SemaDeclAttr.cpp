@@ -9008,10 +9008,8 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
     }
 
-    if (std::find(NewState.begin(), NewState.end(), StateName) ==
-        NewState.end()) { // Avoid adding duplicates.
+    if (!llvm::is_contained(NewState, StateName)) // Avoid adding duplicates.
       NewState.push_back(StateName);
-    }
   }
 
   if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {

@@ -460,17 +460,13 @@ void Breakpoint::ResolveBreakpointInModules(ModuleList &module_list,
     // If this is not an internal breakpoint, set up to record the new
     // locations, then dispatch an event with the new locations.
     if (!IsInternal() && send_event) {
-      BreakpointEventData *new_locations_event = new BreakpointEventData(
-          eBreakpointEventTypeLocationsAdded, shared_from_this());
-
+      std::shared_ptr<BreakpointEventData> new_locations_event =
+          std::make_shared<BreakpointEventData>(
+              eBreakpointEventTypeLocationsAdded, shared_from_this());
       ResolveBreakpointInModules(
           module_list, new_locations_event->GetBreakpointLocationCollection());
-
-      if (new_locations_event->GetBreakpointLocationCollection().GetSize() !=
-          0) {
+      if (new_locations_event->GetBreakpointLocationCollection().GetSize() != 0)
         SendBreakpointChangedEvent(new_locations_event);
-      } else
-        delete new_locations_event;
     } else {
       ElapsedTime elapsed(m_resolve_time);
       m_resolver_sp->ResolveBreakpointInModules(*m_filter_sp, module_list);
@@ -565,12 +561,10 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
     // the module list, then remove their breakpoint sites, and their locations
     // if asked to.
 
-    BreakpointEventData *removed_locations_event;
+    std::shared_ptr<BreakpointEventData> removed_locations_event;
     if (!IsInternal())
-      removed_locations_event = new BreakpointEventData(
+      removed_locations_event = std::make_shared<BreakpointEventData>(
           eBreakpointEventTypeLocationsRemoved, shared_from_this());
-    else
-      removed_locations_event = nullptr;
 
     for (ModuleSP module_sp : module_list.Modules()) {
       if (m_filter_sp->ModulePasses(module_sp)) {
@@ -795,31 +789,30 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
     // about telling the world about removing a location we didn't tell them
     // about adding.
 
-    BreakpointEventData *locations_event;
+    std::shared_ptr<BreakpointEventData> removed_locations_event;
     if (!IsInternal())
-      locations_event = new BreakpointEventData(
+      removed_locations_event = std::make_shared<BreakpointEventData>(
           eBreakpointEventTypeLocationsRemoved, shared_from_this());
-    else
-      locations_event = nullptr;
 
     for (BreakpointLocationSP loc_sp :
          locations_to_remove.BreakpointLocations()) {
       m_locations.RemoveLocation(loc_sp);
-      if (locations_event)
-        locations_event->GetBreakpointLocationCollection().Add(loc_sp);
+      if (removed_locations_event)
+        removed_locations_event->GetBreakpointLocationCollection().Add(loc_sp);
     }
-    SendBreakpointChangedEvent(locations_event);
+    SendBreakpointChangedEvent(removed_locations_event);
 
     // And announce the new ones.
 
     if (!IsInternal()) {
-      locations_event = new BreakpointEventData(
-          eBreakpointEventTypeLocationsAdded, shared_from_this());
+      std::shared_ptr<BreakpointEventData> added_locations_event =
+          std::make_shared<BreakpointEventData>(
+              eBreakpointEventTypeLocationsAdded, shared_from_this());
       for (BreakpointLocationSP loc_sp :
            locations_to_announce.BreakpointLocations())
-        locations_event->GetBreakpointLocationCollection().Add(loc_sp);
+        added_locations_event->GetBreakpointLocationCollection().Add(loc_sp);
 
-      SendBreakpointChangedEvent(locations_event);
+      SendBreakpointChangedEvent(added_locations_event);
     }
     m_locations.Compact();
   }
@@ -989,22 +982,22 @@ void Breakpoint::SendBreakpointChangedEvent(
   if (!m_being_created && !IsInternal() &&
       GetTarget().EventTypeHasListeners(
           Target::eBroadcastBitBreakpointChanged)) {
-    BreakpointEventData *data =
-        new Breakpoint::BreakpointEventData(eventKind, shared_from_this());
+    std::shared_ptr<BreakpointEventData> data =
+        std::make_shared<BreakpointEventData>(eventKind, shared_from_this());
 
     GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
   }
 }
 
-void Breakpoint::SendBreakpointChangedEvent(BreakpointEventData *data) {
-  if (data == nullptr)
+void Breakpoint::SendBreakpointChangedEvent(
+    const lldb::EventDataSP &breakpoint_data_sp) {
+  if (!breakpoint_data_sp)
     return;
 
   if (!m_being_created && !IsInternal() &&
       GetTarget().EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
-  else
-    delete data;
+    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
+                               breakpoint_data_sp);
 }
 
 const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {
