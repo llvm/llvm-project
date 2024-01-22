@@ -98,9 +98,11 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("copyin", OpenACCClauseKind::CopyIn)
       .Case("copyout", OpenACCClauseKind::CopyOut)
       .Case("default", OpenACCClauseKind::Default)
+      .Case("default_async", OpenACCClauseKind::DefaultAsync)
       .Case("delete", OpenACCClauseKind::Delete)
       .Case("detach", OpenACCClauseKind::Detach)
       .Case("device", OpenACCClauseKind::Device)
+      .Case("device_num", OpenACCClauseKind::DeviceNum)
       .Case("device_resident", OpenACCClauseKind::DeviceResident)
       .Case("deviceptr", OpenACCClauseKind::DevicePtr)
       .Case("finalize", OpenACCClauseKind::Finalize)
@@ -111,6 +113,8 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("independent", OpenACCClauseKind::Independent)
       .Case("link", OpenACCClauseKind::Link)
       .Case("no_create", OpenACCClauseKind::NoCreate)
+      .Case("num_gangs", OpenACCClauseKind::NumGangs)
+      .Case("num_workers", OpenACCClauseKind::NumWorkers)
       .Case("nohost", OpenACCClauseKind::NoHost)
       .Case("present", OpenACCClauseKind::Present)
       .Case("private", OpenACCClauseKind::Private)
@@ -471,6 +475,10 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::VectorLength:
+  case OpenACCClauseKind::NumGangs:
+  case OpenACCClauseKind::NumWorkers:
+  case OpenACCClauseKind::DeviceNum:
+  case OpenACCClauseKind::DefaultAsync:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -684,6 +692,10 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         return true;
       break;
     }
+    case OpenACCClauseKind::NumGangs:
+    case OpenACCClauseKind::NumWorkers:
+    case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
     case OpenACCClauseKind::VectorLength: {
       ExprResult IntExpr = ParseOpenACCIntExpr();
       if (IntExpr.isInvalid())
