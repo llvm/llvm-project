@@ -89,15 +89,14 @@ define i8 @PR31243_sext(i8 %v0, i8 %v1, i8 %v2, i8 %v3, ptr %ptr) {
 ; AVX-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i64 0
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i64 1
 ; AVX-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], <i8 1, i8 1>
-; AVX-NEXT:    [[TMP3:%.*]] = sext <2 x i8> [[TMP2]] to <2 x i16>
-; AVX-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP3]], i64 0
-; AVX-NEXT:    [[TMP5:%.*]] = sext i16 [[TMP4]] to i64
-; AVX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP5]]
-; AVX-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP3]], i64 1
-; AVX-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i64
-; AVX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP7]]
-; AVX-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
-; AVX-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
+; AVX-NEXT:    [[TMP4:%.*]] = sext i8 [[TMP3]] to i64
+; AVX-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP4]]
+; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i64 1
+; AVX-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP5]] to i64
+; AVX-NEXT:    [[TMP55:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP6]]
+; AVX-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP44]], align 1
+; AVX-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP55]], align 1
 ; AVX-NEXT:    [[TMP8:%.*]] = add i8 [[TMP6]], [[TMP7]]
 ; AVX-NEXT:    ret i8 [[TMP8]]
 ;
