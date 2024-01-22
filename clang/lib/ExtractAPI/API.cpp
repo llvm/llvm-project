@@ -144,31 +144,30 @@ EnumRecord *APISet::addEnum(StringRef Name, StringRef USR, PresumedLoc Loc,
                            SubHeading, IsFromSystemHeader);
 }
 
-StructFieldRecord *APISet::addStructField(StructRecord *Struct, StringRef Name,
-                                          StringRef USR, PresumedLoc Loc,
-                                          AvailabilityInfo Availability,
-                                          const DocComment &Comment,
-                                          DeclarationFragments Declaration,
-                                          DeclarationFragments SubHeading,
-                                          bool IsFromSystemHeader) {
-  auto Record = std::make_unique<StructFieldRecord>(
+RecordFieldRecord *APISet::addRecordField(
+    RecordRecord *Record, StringRef Name, StringRef USR, PresumedLoc Loc,
+    AvailabilityInfo Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading,
+    APIRecord::RecordKind Kind, bool IsFromSystemHeader) {
+  auto RecordField = std::make_unique<RecordFieldRecord>(
       USR, Name, Loc, std::move(Availability), Comment, Declaration, SubHeading,
-      IsFromSystemHeader);
-  Record->ParentInformation = APIRecord::HierarchyInformation(
-      Struct->USR, Struct->Name, Struct->getKind(), Struct);
-  USRBasedLookupTable.insert({USR, Record.get()});
-  return Struct->Fields.emplace_back(std::move(Record)).get();
+      Kind, IsFromSystemHeader);
+  RecordField->ParentInformation = APIRecord::HierarchyInformation(
+      Record->USR, Record->Name, Record->getKind(), Record);
+  USRBasedLookupTable.insert({USR, RecordField.get()});
+  return Record->Fields.emplace_back(std::move(RecordField)).get();
 }
 
-StructRecord *APISet::addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
+RecordRecord *APISet::addRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
                                 AvailabilityInfo Availability,
                                 const DocComment &Comment,
                                 DeclarationFragments Declaration,
                                 DeclarationFragments SubHeading,
+                                APIRecord::RecordKind Kind,
                                 bool IsFromSystemHeader) {
-  return addTopLevelRecord(USRBasedLookupTable, Structs, USR, Name, Loc,
+  return addTopLevelRecord(USRBasedLookupTable, Records, USR, Name, Loc,
                            std::move(Availability), Comment, Declaration,
-                           SubHeading, IsFromSystemHeader);
+                           SubHeading, Kind, IsFromSystemHeader);
 }
 
 StaticFieldRecord *
@@ -547,8 +546,8 @@ void GlobalFunctionRecord::anchor() {}
 void GlobalVariableRecord::anchor() {}
 void EnumConstantRecord::anchor() {}
 void EnumRecord::anchor() {}
-void StructFieldRecord::anchor() {}
-void StructRecord::anchor() {}
+void RecordFieldRecord::anchor() {}
+void RecordRecord::anchor() {}
 void CXXFieldRecord::anchor() {}
 void CXXClassRecord::anchor() {}
 void CXXConstructorRecord::anchor() {}
