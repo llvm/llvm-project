@@ -76,10 +76,11 @@ ProgramHeaders:
     FirstSec: non_alloc_in_segment
     LastSec:  non_alloc_in_segment
 
-# CHECK: SectionHeaderCount: 6
+# CHECK: SectionHeaderCount: 7
 
 # CHECK: Name: non_alloc_in_segment
 # CHECK: Name: .bss
 # CHECK: Name: .text
 # CHECK: Name: .gnu.warning.foo
+# CHECK: Name: .gnu_debuglink
 # CHECK: Name: .shstrtab
