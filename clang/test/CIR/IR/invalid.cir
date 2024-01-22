@@ -306,11 +306,9 @@ cir.func @cast24(%p : !u32i) {
 #true = #cir.bool<true> : !cir.bool
 cir.func @b0() {
   cir.scope {
-    cir.loop while(cond :  {  // expected-error {{expected condition region to terminate with 'cir.condition'}}
+    cir.while {  // expected-error {{expected condition region to terminate with 'cir.condition'}}
       cir.yield
-    }, step :  {
-      cir.yield
-    })  {
+    } do {
       cir.br ^bb1
     ^bb1:
       cir.return

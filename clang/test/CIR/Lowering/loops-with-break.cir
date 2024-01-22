@@ -171,15 +171,13 @@ module {
     %1 = cir.const(#cir.int<0> : !s32i) : !s32i
     cir.store %1, %0 : !s32i, cir.ptr <!s32i>
     cir.scope {
-      cir.loop while(cond : {
+      cir.while {
         %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
         %3 = cir.const(#cir.int<10> : !s32i) : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
-      }, step : {
-        cir.yield
-      }) {
+      } do {
         %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
         %3 = cir.unary(inc, %2) : !s32i, !s32i
         cir.store %3, %0 : !s32i, cir.ptr <!s32i>

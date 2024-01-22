@@ -607,6 +607,14 @@ public:
     return create<mlir::cir::DoWhileOp>(loc, condBuilder, bodyBuilder);
   }
 
+  /// Create a while operation.
+  mlir::cir::WhileOp createWhile(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder) {
+    return create<mlir::cir::WhileOp>(loc, condBuilder, bodyBuilder);
+  }
+
   mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                                    mlir::Value src, mlir::Value len) {
     return create<mlir::cir::MemCpyOp>(loc, dst, src, len);
