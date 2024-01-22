@@ -482,7 +482,7 @@ private:
   friend class Object;
 
   template <typename T, typename... U> void create(U &&... V) {
-#if defined(ADDRESS_SANITIZER) || defined(__SANITIZE_ADDRESS__)
+#if defined(LLVM_ADDRESS_SANITIZER_BUILD)
     // Unpoisoning to prevent overwriting poisoned object (e.g., annotated short
     // string). Objects that have had their memory poisoned may cause an ASan
     // error if their memory is reused without calling their destructor.
