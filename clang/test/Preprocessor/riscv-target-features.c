@@ -112,6 +112,7 @@
 // CHECK-NOT: __riscv_zve64f {{.*$}}
 // CHECK-NOT: __riscv_zve64x {{.*$}}
 // CHECK-NOT: __riscv_zvfh {{.*$}}
+// CHECK-NOT: __riscv_zvkb {{.*$}}
 // CHECK-NOT: __riscv_zvkg {{.*$}}
 // CHECK-NOT: __riscv_zvkn {{.*$}}
 // CHECK-NOT: __riscv_zvknc {{.*$}}
@@ -1140,6 +1141,14 @@
 // RUN: -march=rv64i_zve64x_zvbc1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVBC-EXT %s
 // CHECK-ZVBC-EXT: __riscv_zvbc  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN: -march=rv32i_zve64x_zvkb1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZVKB-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN: -march=rv64i_zve64x_zvkb1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZVKB-EXT %s
+// CHECK-ZVKB-EXT: __riscv_zvkb  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN: -march=rv32i_zve32x_zvkg1p0 -x c -E -dM %s \
