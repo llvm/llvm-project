@@ -184,6 +184,12 @@ public:
   // Transpose the matrix without modifying it.
   Matrix<T> transpose() const;
 
+  // Copy the cells in the intersection of
+  // the rows between `fromRows` and `toRows` and
+  // the columns between `fromColumns` and `toColumns`, both inclusive.
+  Matrix<T> getSubMatrix(unsigned fromRow, unsigned toRow, unsigned fromColumn,
+                         unsigned toColumn) const;
+
   /// Print the matrix.
   void print(raw_ostream &os) const;
   void dump() const;

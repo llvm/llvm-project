@@ -164,16 +164,12 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   unsigned numEqs = equations.getNumRows();
   unsigned numCols = equations.getNumColumns();
 
-  // First, we check that the system has a solution, and return
-  // null if not.
-  FracMatrix coeffs(numEqs, numEqs);
-  for (unsigned i = 0; i < numEqs; i++)
-    for (unsigned j = 0; j < numEqs; j++)
-      coeffs(i, j) = equations(i, j);
-
   // If the determinant is zero, there is no unique solution.
   // Thus we return null.
-  if (coeffs.determinant() == 0)
+  if (FracMatrix(equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/numEqs - 1,
+                                        /*fromColumn=*/0,
+                                        /*toColumn=*/numEqs - 1))
+          .determinant() == 0)
     return std::nullopt;
 
   for (unsigned i = 0; i < numEqs; ++i) {
@@ -218,10 +214,11 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   // x_i = - b_1' m_1 - ... - b_p' m_p - c
   // and so we return the negation of the last p + 1 columns of the matrix.
   // We copy these columns and return them.
-  ParamPoint vertex(numEqs, numCols - numEqs);
+  ParamPoint vertex =
+      equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/numEqs - 1,
+                             /*fromRow=*/numEqs, /*toRow=*/numCols);
   for (unsigned i = 0; i < numEqs; ++i)
-    for (unsigned j = 0; j < numCols - numEqs; ++j)
-      vertex(i, j) = -equations(i, numEqs + j);
+    vertex.negateRow(i);
 
   return vertex;
 }

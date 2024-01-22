@@ -355,6 +355,19 @@ static void modEntryColumnOperation(Matrix<MPInt> &m, unsigned row,
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
+                                  unsigned fromColumn,
+                                  unsigned toColumn) const {
+  assert(toRow >= fromRow && "end of row range must be after beginning!");
+  assert(toColumn >= fromColumn && "end of row range must be after beginning!");
+  Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
+  for (unsigned i = fromRow; i <= toRow; i++)
+    for (unsigned j = fromColumn; j <= toColumn; j++)
+      subMatrix(i, j) = at(i, j);
+  return subMatrix;
+}
+
+template <typename T>
 void Matrix<T>::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row) {
     for (unsigned column = 0; column < nColumns; ++column)
