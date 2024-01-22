@@ -1339,9 +1339,8 @@ public:
   Type *getResultType() const { return ResultTy; }
 };
 
-/// VPScalarCastRecipe is a recipe o create scalar cast instructions.
-class VPScalarCastRecipe : public VPRecipeBase, public VPValue {
-  /// Cast instruction opcode.
+/// VPScalarCastRecipe is a recipe to create scalar cast instructions.
+class VPScalarCastRecipe : public VPSingleDefRecipe {
   Instruction::CastOps Opcode;
 
   /// Result type for the cast.
@@ -1351,17 +1350,16 @@ class VPScalarCastRecipe : public VPRecipeBase, public VPValue {
 
 public:
   VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeBase(VPDef::VPScalarCastSC, {Op}), VPValue(this),
+      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}),
         Opcode(Opcode), ResultTy(ResultTy) {}
 
   ~VPScalarCastRecipe() override = default;
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
+  VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
 
   void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif

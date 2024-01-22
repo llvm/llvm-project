@@ -117,6 +117,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
+  case VPScalarCastSC:
     return false;
   case VPInstructionSC:
     switch (cast<VPInstruction>(this)->getOpcode()) {
@@ -164,8 +165,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     auto *R = cast<VPReplicateRecipe>(this);
     return R->getUnderlyingInstr()->mayHaveSideEffects();
   }
-  case VPScalarCastSC:
-    return false;
   default:
     return true;
   }
@@ -1119,7 +1118,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
 
   // Ensure step has the same type as that of scalar IV.
   Type *BaseIVTy = BaseIV->getType()->getScalarType();
-  assert(BaseIVTy == Step->getType());
+  assert(BaseIVTy == Step->getType() && "Types of BaseIV and Step must match!");
 
   // We build scalar steps for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
@@ -1467,7 +1466,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 
 Value *VPScalarCastRecipe ::generate(VPTransformState &State, unsigned Part) {
   assert(vputils::onlyFirstLaneUsed(this) &&
-         "Codegen only implemented for first lane only.");
+         "Codegen only implemented for first lane.");
   switch (Opcode) {
   case Instruction::SExt:
   case Instruction::ZExt:

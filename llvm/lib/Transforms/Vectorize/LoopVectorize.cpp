@@ -2297,6 +2297,7 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
                            ? B.CreateSExtOrTrunc(Index, StepTy)
                            : B.CreateCast(Instruction::SIToFP, Index, StepTy);
   if (CastedIndex != Index) {
+    assert(!isa<SExtInst>(CastedIndex));
     CastedIndex->setName(CastedIndex->getName() + ".cast");
     Index = CastedIndex;
   }
