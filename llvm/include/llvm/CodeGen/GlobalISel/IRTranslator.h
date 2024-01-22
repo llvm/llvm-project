@@ -212,7 +212,7 @@ private:
   /// Translate a debug-info record: either a dbg.declare or dbg.value
   /// equivalent. Pass in all the contents of the record, rather than relying
   /// on how it's stored.
-  void translateDbgRecord(bool isDeclare, Value *V, bool hasArgList,
+  void translateDbgRecord(bool IsDeclare, Value *V, bool HasArgList,
                          const DILocalVariable *Variable,
                          const DIExpression *Expression, const DebugLoc &DL,
                          MachineIRBuilder &MIRBuilder);

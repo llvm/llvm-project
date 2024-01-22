@@ -3117,7 +3117,7 @@ void IRTranslator::finishPendingPhis() {
   }
 }
 
-void IRTranslator::translateDbgRecord(bool isDeclare, Value *V, bool hasArgList,
+void IRTranslator::translateDbgRecord(bool IsDeclare, Value *V, bool HasArgList,
                                      const DILocalVariable *Variable,
                                      const DIExpression *Expression,
                                      const DebugLoc &DL,
@@ -3127,7 +3127,7 @@ void IRTranslator::translateDbgRecord(bool isDeclare, Value *V, bool hasArgList,
   // Act as if we're handling a debug intrinsic.
   MIRBuilder.setDebugLoc(DL);
 
-  if (!V || hasArgList) {
+  if (!V || HasArgList) {
     // DI cannot produce a valid DBG_VALUE, so produce an undef DBG_VALUE to
     // terminate any prior location.
     MIRBuilder.buildIndirectDbgValue(0, Variable, Expression);
@@ -3151,7 +3151,7 @@ void IRTranslator::translateDbgRecord(bool isDeclare, Value *V, bool hasArgList,
                                ExprDerefRemoved);
     return;
   }
-  if (translateIfEntryValueArgument(isDeclare, V, Variable, Expression, DL,
+  if (translateIfEntryValueArgument(IsDeclare, V, Variable, Expression, DL,
                                     MIRBuilder))
     return;
   for (Register Reg : getOrCreateVRegs(*V)) {
