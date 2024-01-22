@@ -111,8 +111,9 @@ private:
 /// Class implementing the GenELF64 device images properties.
 struct GenELF64DeviceImageTy : public DeviceImageTy {
   /// Create the GenELF64 image with the id and the target image pointer.
-  GenELF64DeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), DynLib() {}
+  GenELF64DeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                        const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage), DynLib() {}
 
   /// Getter and setter for the dynamic library.
   DynamicLibrary &getDynamicLibrary() { return DynLib; }
@@ -141,15 +142,14 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   std::string getComputeUnitKind() const override { return "generic-64bit"; }
 
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel =
         Plugin::get().allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
       return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
-    new (GenELF64Kernel) GenELF64KernelTy(KernelEntry.name);
+    new (GenELF64Kernel) GenELF64KernelTy(Name);
 
     return *GenELF64Kernel;
   }
@@ -163,7 +163,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image =
         Plugin::get().allocate<GenELF64DeviceImageTy>();
-    new (Image) GenELF64DeviceImageTy(ImageId, TgtImage);
+    new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
 
     // Create a temporary file.
     char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
