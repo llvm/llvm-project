@@ -221,6 +221,9 @@ enum class OpenACCClauseKind {
   Collapse,
   /// 'bind' clause, allowed on routine constructs.
   Bind,
+  /// 'vector_length' clause, allowed on 'parallel', 'kernels', 'parallel loop',
+  /// and 'kernels loop' constructs.
+  VectorLength,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
@@ -321,6 +324,9 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCClauseKind::Bind:
     return Out << "bind";
+
+  case OpenACCClauseKind::VectorLength:
+    return Out << "vector_length";
 
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";

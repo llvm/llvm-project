@@ -3586,7 +3586,9 @@ private:
   /// Parses the clause of the 'bind' argument, which can be a string literal or
   /// an ID expression.
   ExprResult ParseOpenACCBindClauseArgument();
-
+  /// Parses the clause kind of 'int-expr', which can be any integral
+  /// expression.
+  ExprResult ParseOpenACCIntExpr();
 private:
   //===--------------------------------------------------------------------===//
   // C++ 14: Templates [temp]
