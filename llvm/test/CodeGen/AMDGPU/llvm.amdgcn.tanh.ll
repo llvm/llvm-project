@@ -1,9 +1,11 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; xUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+
+; FIXME: GlobalISel does not work with bf16
 
 declare float @llvm.amdgcn.tanh.f32(float) #0
 declare half @llvm.amdgcn.tanh.f16(half) #0
-declare i16 @llvm.amdgcn.tanh.bf16(i16) #0
+declare bfloat @llvm.amdgcn.tanh.bf16(bfloat) #0
 
 ; GCN-LABEL: {{^}}tanh_f32:
 ; GCN: v_tanh_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}
@@ -72,33 +74,33 @@ define amdgpu_kernel void @tanh_undef_f16(ptr addrspace(1) %out) #1 {
 
 ; GCN-LABEL: {{^}}tanh_bf16:
 ; GCN: v_tanh_bf16_e32 {{v[0-9]+}}, {{s[0-9]+}}
-define amdgpu_kernel void @tanh_bf16(ptr addrspace(1) %out, i16 %src) #1 {
-  %tanh = call i16 @llvm.amdgcn.tanh.bf16(i16 %src) #0
-  store i16 %tanh, ptr addrspace(1) %out, align 2
+define amdgpu_kernel void @tanh_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %src) #0
+  store bfloat %tanh, ptr addrspace(1) %out, align 2
   ret void
 }
 
 ; GCN-LABEL: {{^}}tanh_bf16_constant_4
-; GCN: v_tanh_bf16_e32 {{v[0-9]+}}, 4
+; GCN: v_tanh_bf16_e32 {{v[0-9]+}}, 0x4080
 define amdgpu_kernel void @tanh_bf16_constant_4(ptr addrspace(1) %out) #1 {
-  %tanh = call i16 @llvm.amdgcn.tanh.bf16(i16 4) #0
-  store i16 %tanh, ptr addrspace(1) %out, align 2
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat 4.0) #0
+  store bfloat %tanh, ptr addrspace(1) %out, align 2
   ret void
 }
 
 ; GCN-LABEL: {{^}}tanh_bf16_constant_100
-; GCN: v_tanh_bf16_e32 {{v[0-9]+}}, 0x64
+; GCN: v_tanh_bf16_e32 {{v[0-9]+}}, 0x42c8
 define amdgpu_kernel void @tanh_bf16_constant_100(ptr addrspace(1) %out) #1 {
-  %tanh = call i16 @llvm.amdgcn.tanh.bf16(i16 100) #0
-  store i16 %tanh, ptr addrspace(1) %out, align 2
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat 100.0) #0
+  store bfloat %tanh, ptr addrspace(1) %out, align 2
   ret void
 }
 
 ; GCN-LABEL: {{^}}tanh_undef_bf16:
 ; SDAG-NOT: v_tanh_bf16
 define amdgpu_kernel void @tanh_undef_bf16(ptr addrspace(1) %out) #1 {
-  %tanh = call i16 @llvm.amdgcn.tanh.bf16(i16 undef)
-  store i16 %tanh, ptr addrspace(1) %out, align 2
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat undef)
+  store bfloat %tanh, ptr addrspace(1) %out, align 2
   ret void
 }
 

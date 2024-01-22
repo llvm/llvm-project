@@ -12836,15 +12836,6 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_trig_preop:
     case Intrinsic::amdgcn_tanh:
-    case Intrinsic::amdgcn_tanh_bf16:
-    case Intrinsic::amdgcn_rcp_bf16:
-    case Intrinsic::amdgcn_sqrt_bf16:
-    case Intrinsic::amdgcn_rsq_bf16:
-    case Intrinsic::amdgcn_log_bf16:
-    case Intrinsic::amdgcn_exp_bf16:
-    case Intrinsic::amdgcn_sin_bf16:
-    case Intrinsic::amdgcn_cos_bf16:
-    case Intrinsic::amdgcn_cvt_f32_bf16:
       return true;
     default:
       break;

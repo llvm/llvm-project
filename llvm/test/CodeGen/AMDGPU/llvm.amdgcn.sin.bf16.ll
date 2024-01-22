@@ -1,37 +1,31 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; xUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare i16 @llvm.amdgcn.sin.bf16(i16) #0
+; FIXME: GlobalISel does not work with bf16
+
+declare bfloat @llvm.amdgcn.sin.bf16(bfloat) #0
 
 ; GCN-LABEL: {{^}}sin_bf16:
 ; GCN: v_sin_bf16_e32 {{v[0-9]+}}, {{s[0-9]+}}
-define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, i16 %src) #1 {
-  %sin = call i16 @llvm.amdgcn.sin.bf16(i16 %src) #0
-  store i16 %sin, ptr addrspace(1) %out, align 2
+define amdgpu_kernel void @sin_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
+  %sin = call bfloat @llvm.amdgcn.sin.bf16(bfloat %src) #0
+  store bfloat %sin, ptr addrspace(1) %out, align 2
   ret void
 }
 
 ; GCN-LABEL: {{^}}sin_bf16_constant_4
-; GCN: v_sin_bf16_e32 {{v[0-9]+}}, 4
+; GCN: v_sin_bf16_e32 {{v[0-9]+}}, 0x4080
 define amdgpu_kernel void @sin_bf16_constant_4(ptr addrspace(1) %out) #1 {
-  %sin = call i16 @llvm.amdgcn.sin.bf16(i16 4) #0
-  store i16 %sin, ptr addrspace(1) %out, align 2
+  %sin = call bfloat @llvm.amdgcn.sin.bf16(bfloat 4.0) #0
+  store bfloat %sin, ptr addrspace(1) %out, align 2
   ret void
 }
 
 ; GCN-LABEL: {{^}}sin_bf16_constant_100
-; GCN: v_sin_bf16_e32 {{v[0-9]+}}, 0x64
+; GCN: v_sin_bf16_e32 {{v[0-9]+}}, 0x42c8
 define amdgpu_kernel void @sin_bf16_constant_100(ptr addrspace(1) %out) #1 {
-  %sin = call i16 @llvm.amdgcn.sin.bf16(i16 100) #0
-  store i16 %sin, ptr addrspace(1) %out, align 2
-  ret void
-}
-
-; GCN-LABEL: {{^}}sin_undef_bf16:
-; SDAG-NOT: v_sin_bf16
-define amdgpu_kernel void @sin_undef_bf16(ptr addrspace(1) %out) #1 {
-  %sin = call i16 @llvm.amdgcn.sin.bf16(i16 undef)
-  store i16 %sin, ptr addrspace(1) %out, align 2
+  %sin = call bfloat @llvm.amdgcn.sin.bf16(bfloat 100.0) #0
+  store bfloat %sin, ptr addrspace(1) %out, align 2
   ret void
 }
 

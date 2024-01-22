@@ -960,19 +960,6 @@ let isCommutable = 1, isReMaterializable = 1 in {
   }
 } // End isCommutable = 1, isReMaterializable = 1
 
-let SubtargetPredicate = HasBF16PackedInsts in {
-  def : GCNPat<(v2i16 (int_amdgcn_pk_add_bf16 v2i16:$src0, v2i16:$src1)),
-               (V_PK_ADD_BF16 SRCMODS.OP_SEL_1, $src0, SRCMODS.OP_SEL_1, $src1)>;
-  def : GCNPat<(v2i16 (int_amdgcn_pk_mul_bf16 v2i16:$src0, v2i16:$src1)),
-               (V_PK_MUL_BF16 SRCMODS.OP_SEL_1, $src0, SRCMODS.OP_SEL_1, $src1)>;
-  def : GCNPat<(v2i16 (int_amdgcn_pk_min_num_bf16 v2i16:$src0, v2i16:$src1)),
-               (V_PK_MIN_NUM_BF16 SRCMODS.OP_SEL_1, $src0, SRCMODS.OP_SEL_1, $src1)>;
-  def : GCNPat<(v2i16 (int_amdgcn_pk_max_num_bf16 v2i16:$src0, v2i16:$src1)),
-               (V_PK_MAX_NUM_BF16 SRCMODS.OP_SEL_1, $src0, SRCMODS.OP_SEL_1, $src1)>;
-  def : GCNPat<(v2i16 (int_amdgcn_pk_fma_bf16 v2i16:$src0, v2i16:$src1, v2i16:$src2)),
-               (V_PK_FMA_BF16 SRCMODS.OP_SEL_1, $src0, SRCMODS.OP_SEL_1, $src1, SRCMODS.OP_SEL_1, $src2)>;
-}
-
 def : MnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 

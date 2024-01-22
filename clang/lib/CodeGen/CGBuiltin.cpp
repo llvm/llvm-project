@@ -17948,29 +17948,36 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_rcp:
   case AMDGPU::BI__builtin_amdgcn_rcpf:
   case AMDGPU::BI__builtin_amdgcn_rcph:
+  case AMDGPU::BI__builtin_amdgcn_rcp_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rcp);
   case AMDGPU::BI__builtin_amdgcn_sqrt:
   case AMDGPU::BI__builtin_amdgcn_sqrtf:
   case AMDGPU::BI__builtin_amdgcn_sqrth:
+  case AMDGPU::BI__builtin_amdgcn_sqrt_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_sqrt);
   case AMDGPU::BI__builtin_amdgcn_rsq:
   case AMDGPU::BI__builtin_amdgcn_rsqf:
   case AMDGPU::BI__builtin_amdgcn_rsqh:
+  case AMDGPU::BI__builtin_amdgcn_rsq_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rsq);
   case AMDGPU::BI__builtin_amdgcn_rsq_clamp:
   case AMDGPU::BI__builtin_amdgcn_rsq_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rsq_clamp);
   case AMDGPU::BI__builtin_amdgcn_sinf:
   case AMDGPU::BI__builtin_amdgcn_sinh:
+  case AMDGPU::BI__builtin_amdgcn_sin_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_sin);
   case AMDGPU::BI__builtin_amdgcn_cosf:
   case AMDGPU::BI__builtin_amdgcn_cosh:
+  case AMDGPU::BI__builtin_amdgcn_cos_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_cos);
   case AMDGPU::BI__builtin_amdgcn_dispatch_ptr:
     return EmitAMDGPUDispatchPtr(*this, E);
   case AMDGPU::BI__builtin_amdgcn_logf:
+  case AMDGPU::BI__builtin_amdgcn_log_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log);
   case AMDGPU::BI__builtin_amdgcn_exp2f:
+  case AMDGPU::BI__builtin_amdgcn_exp2_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_exp2);
   case AMDGPU::BI__builtin_amdgcn_log_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log_clamp);
@@ -18027,6 +18034,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
   case AMDGPU::BI__builtin_amdgcn_tanhf:
   case AMDGPU::BI__builtin_amdgcn_tanhh:
+  case AMDGPU::BI__builtin_amdgcn_tanh_bf16:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_tanh);
   case AMDGPU::BI__builtin_amdgcn_uicmp:
   case AMDGPU::BI__builtin_amdgcn_uicmpl:

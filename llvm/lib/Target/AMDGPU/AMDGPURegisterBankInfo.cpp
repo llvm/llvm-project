@@ -4484,14 +4484,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_tanh:
-    case Intrinsic::amdgcn_tanh_bf16:
-    case Intrinsic::amdgcn_rcp_bf16:
-    case Intrinsic::amdgcn_sqrt_bf16:
-    case Intrinsic::amdgcn_rsq_bf16:
-    case Intrinsic::amdgcn_log_bf16:
-    case Intrinsic::amdgcn_exp_bf16:
-    case Intrinsic::amdgcn_sin_bf16:
-    case Intrinsic::amdgcn_cos_bf16:
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fma_legacy:
     case Intrinsic::amdgcn_frexp_mant:
@@ -4501,14 +4493,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_pknorm_u16:
     case Intrinsic::amdgcn_cvt_pk_i16:
     case Intrinsic::amdgcn_cvt_pk_u16:
-    case Intrinsic::amdgcn_cvt_f32_bf16:
     case Intrinsic::amdgcn_cvt_pk_bf16_f32:
     case Intrinsic::amdgcn_cvt_sr_pk_bf16_f32:
-    case Intrinsic::amdgcn_pk_add_bf16:
-    case Intrinsic::amdgcn_pk_mul_bf16:
-    case Intrinsic::amdgcn_pk_max_num_bf16:
-    case Intrinsic::amdgcn_pk_min_num_bf16:
-    case Intrinsic::amdgcn_pk_fma_bf16:
     case Intrinsic::amdgcn_fmed3:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_cubema:
