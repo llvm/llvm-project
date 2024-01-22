@@ -3553,33 +3553,36 @@ class Rewriter(ClangObject):
     def __del__(self):
         conf.lib.clang_CXRewriter_dispose(self)
 
-    def insertTextBefore(self, loc, insert):
+    def insert_text_before(self, loc, insert):
         """
-        Insert the specified string at the specified location in the original buffer.
+        Insert the specified string at the specified location in
+        the original buffer.
         """
         conf.lib.clang_CXRewriter_insertTextBefore(self, loc, insert)
 
-    def replaceText(self, toBeReplaced, replacement):
+    def replace_text(self, extent, replacement):
         """
-        This method replaces a range of characters in the input buffer with a new string.
+        This method replaces a range of characters in the input buffer with
+        a new string.
         """
-        conf.lib.clang_CXRewriter_replaceText(self, toBeReplaced, replacement)
+        conf.lib.clang_CXRewriter_replaceText(self, extent, replacement)
 
-    def removeText(self, toBeRemoved):
+    def remove_text(self, extent):
         """
         Remove the specified text region.
         """
-        conf.lib.clang_CXRewriter_removeText(self, toBeRemoved)
+        conf.lib.clang_CXRewriter_removeText(self, extent)
 
-    def overwriteChangedFiles(self):
+    def overwrite_changed_files(self):
         """
         Save all changed files to disk.
 
-        Returns 1 if any files were not saved successfully, returns 0 otherwise.
+        Returns 1 if any files were not saved successfully,
+        returns 0 otherwise.
         """
         return conf.lib.clang_CXRewriter_overwriteChangedFiles(self)
 
-    def writeMainFileToStdOut(self):
+    def write_main_file_to_stdout(self):
         """
         Writes the main file to stdout.
         """
