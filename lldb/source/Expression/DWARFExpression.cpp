@@ -2621,7 +2621,7 @@ bool DWARFExpression::Evaluate(
        */
       if (wasm_op == 3) {
         index = opcodes.GetU32(&offset);
-        wasm_op = 1;
+        wasm_op = 2; // Global
       } else {
         index = opcodes.GetULEB128(&offset);
       }

@@ -94,8 +94,19 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
 
   switch (wasm_addr.GetType()) {
   case WasmAddressType::Memory:
-  case WasmAddressType::Object:
-    return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
+    if (wasm_addr.module_id != 0) {
+      if (WasmReadMemory(wasm_addr.module_id, wasm_addr.offset, buf, size)) {
+        return size;
+      }
+      error.SetErrorStringWithFormat("Wasm memory read failed for 0x%" PRIx64,
+                                     vm_addr);
+      return 0;
+    } else {
+      return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
+    }
+  case WasmAddressType::Code:
+    wasm_addr.type = 0;
+    return ProcessGDBRemote::ReadMemory(wasm_addr, buf, size, error);
   case WasmAddressType::Invalid:
   default:
     error.SetErrorStringWithFormat(
@@ -104,36 +115,27 @@ size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   }
 }
 
-size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                               ExecutionContext *exe_ctx, Status &error) {
-  wasm_addr_t wasm_addr(vm_addr);
+lldb::ModuleSP ProcessWasm::ReadModuleFromMemory(const FileSpec &file_spec,
+                                                 lldb::addr_t header_addr,
+                                                 size_t size_to_read) {
+  wasm_addr_t wasm_addr(header_addr);
+  wasm_addr.type = WasmAddressType::Code;
+  return Process::ReadModuleFromMemory(file_spec, wasm_addr, size_to_read);
+}
 
-  switch (wasm_addr.GetType()) {
-  case WasmAddressType::Memory: {
-    // If we don't have a valid module_id, this is actually a read from the
-    // Wasm memory space. We can calculate the module_id from the execution
-    // context.
-    if (wasm_addr.module_id == 0 && exe_ctx != nullptr) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
-      assert(frame->CalculateTarget()->GetArchitecture().GetMachine() ==
-             llvm::Triple::wasm32);
-      wasm_addr.module_id = wasm_addr_t(frame->GetStackID().GetPC()).module_id;
-      wasm_addr.type = WasmAddressType::Memory;
-    }
-    if (WasmReadMemory(wasm_addr.module_id, wasm_addr.offset, buf, size))
-      return size;
-    error.SetErrorStringWithFormat("Wasm memory read failed for 0x%" PRIx64,
-                                   vm_addr);
-    return 0;
+lldb::addr_t ProcessWasm::FixMemoryAddress(lldb::addr_t address,
+                                           StackFrame *stack_frame) const {
+  if (stack_frame) {
+    assert(stack_frame->CalculateTarget()->GetArchitecture().GetMachine() ==
+           llvm::Triple::wasm32);
+    // Extract Wasm module ID from the program counter.
+    wasm_addr_t wasm_addr(address);
+    wasm_addr.module_id =
+        wasm_addr_t(stack_frame->GetStackID().GetPC()).module_id;
+    wasm_addr.type = WasmAddressType::Memory;
+    return wasm_addr;
   }
-  case WasmAddressType::Object:
-    return ProcessGDBRemote::ReadMemory(vm_addr, buf, size, error);
-  case WasmAddressType::Invalid:
-  default:
-    error.SetErrorStringWithFormat(
-        "Wasm read failed for invalid address 0x%" PRIx64, vm_addr);
-    return 0;
-  }
+  return address;
 }
 
 size_t ProcessWasm::WasmReadMemory(uint32_t wasm_module_id, lldb::addr_t addr,

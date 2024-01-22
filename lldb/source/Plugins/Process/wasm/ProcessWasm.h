@@ -23,7 +23,7 @@ namespace wasm {
 ///
 /// Struct wasm_addr_t provides this encoding using bitfields
 ///
-enum WasmAddressType { Memory = 0x00, Object = 0x01, Invalid = 0x03 };
+enum WasmAddressType { Memory = 0x00, Code = 0x01, Invalid = 0x03 };
 
 struct wasm_addr_t {
   uint64_t offset : 32;
@@ -64,14 +64,15 @@ public:
   llvm::StringRef GetPluginName() override;
   /// \}
 
-  /// Process protocol.
-  /// \{
   size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                     Status &error) override;
 
-  size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                    ExecutionContext *exe_ctx, Status &error) override;
-  /// \}
+  lldb::ModuleSP ReadModuleFromMemory(const FileSpec &file_spec,
+                                      lldb::addr_t header_addr,
+                                      size_t size_to_read = 512) override;
+
+  lldb::addr_t FixMemoryAddress(lldb::addr_t address,
+                                StackFrame *stack_frame) const override;
 
   /// Query the value of a WebAssembly local variable from the WebAssembly
   /// remote process.
