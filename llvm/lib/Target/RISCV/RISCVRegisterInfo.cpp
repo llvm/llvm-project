@@ -797,7 +797,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       int64_t Imm = MI.getOperand(2).getImm();
       if (isInt<6>(Imm))
         return true;
-      // c.zext.h
+      // c.zext.b
       return Subtarget.hasStdExtZcb() && Imm == 255;
     }
     case RISCV::SRAI:
@@ -821,7 +821,8 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::ADD_UW:
       // c.zext.w
       NeedGPRC = true;
-      return Subtarget.hasStdExtZcb() && MI.getOperand(2).getReg() == RISCV::X0;
+      return Subtarget.hasStdExtZcb() && MI.getOperand(2).isReg() &&
+             MI.getOperand(2).getReg() == RISCV::X0;
     case RISCV::XORI:
       // c.not
       NeedGPRC = true;
