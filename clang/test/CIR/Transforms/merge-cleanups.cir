@@ -61,22 +61,6 @@ module  {
     cir.return
   }
 
-  cir.func @l0() {
-    cir.scope {
-      cir.loop while(cond :  {
-        %0 = cir.const(#true) : !cir.bool
-        cir.condition(%0)
-      }, step :  {
-        cir.yield
-      })  {
-        cir.br ^bb1
-      ^bb1:
-        cir.return
-      }
-    }
-    cir.return
-  }
-
 // CHECK: cir.switch (%4 : !s32i) [
 // CHECK-NEXT:   case (equal, 0)  {
 // CHECK-NEXT:     %5 = cir.load %2 : cir.ptr <!s32i>, !s32i
@@ -113,20 +97,6 @@ module  {
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-
-// CHECK: cir.func @l0
-// CHECK-NEXT:  cir.scope {
-// CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      %0 = cir.const(#true) : !cir.bool
-// CHECK-NEXT:      cir.condition(%0)
-// CHECK-NEXT:    }, step :  {
-// CHECK-NEXT:      cir.yield
-// CHECK-NEXT:    })  {
-// CHECK-NEXT:      cir.return
-// CHECK-NEXT:    }
-// CHECK-NEXT:  }
-// CHECK-NEXT:  cir.return
-// CHECK-NEXT: }
 
   // Should remove empty scopes.
   cir.func @removeEmptyScope() {

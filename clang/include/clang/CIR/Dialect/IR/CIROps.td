@@ -20,6 +20,7 @@ include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
 include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 include "clang/CIR/Interfaces/CIROpInterfaces.td"
+include "clang/CIR/Interfaces/CIRLoopOpInterface.td"
 
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
@@ -1172,7 +1173,8 @@ def LoopOpKind : I32EnumAttr<
 }
 
 def LoopOp : CIR_Op<"loop",
-      [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+      [LoopOpInterface,
+       DeclareOpInterfaceMethods<LoopLikeOpInterface>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        RecursivelySpeculatable, NoRegionArguments]> {
   let summary = "Loop";
@@ -1236,6 +1238,25 @@ def LoopOp : CIR_Op<"loop",
   ];
 
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    Region *maybeGetStep() {
+      if (getKind() == LoopOpKind::For)
+        return &getStep();
+      return nullptr;
+    }
+
+    llvm::SmallVector<Region *> getRegionsInExecutionOrder() {
+      switch(getKind()) {
+      case LoopOpKind::For:
+        return llvm::SmallVector<Region *, 3>{&getCond(), &getBody(), &getStep()};
+      case LoopOpKind::While:
+        return llvm::SmallVector<Region *, 2>{&getCond(), &getBody()};
+      case LoopOpKind::DoWhile:
+        return llvm::SmallVector<Region *, 2>{&getBody(), &getCond()};
+      }
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

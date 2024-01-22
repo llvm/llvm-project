@@ -22,3 +22,4 @@ endfunction()
 
 add_clang_mlir_attr_interface(ASTAttrInterfaces)
 add_clang_mlir_op_interface(CIROpInterfaces)
+add_clang_mlir_op_interface(CIRLoopOpInterface)

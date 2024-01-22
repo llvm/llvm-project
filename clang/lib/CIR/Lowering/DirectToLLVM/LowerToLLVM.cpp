@@ -448,14 +448,14 @@ public:
     // Lower continue statements.
     mlir::Block &dest =
         (kind != LoopKind::For ? condFrontBlock : stepFrontBlock);
-    walkRegionSkipping<mlir::cir::LoopOp>(
+    walkRegionSkipping<mlir::cir::LoopOpInterface>(
         loopOp.getBody(), [&](mlir::Operation *op) {
           if (isa<mlir::cir::ContinueOp>(op))
             lowerTerminator(op, &dest, rewriter);
         });
 
     // Lower break statements.
-    walkRegionSkipping<mlir::cir::LoopOp, mlir::cir::SwitchOp>(
+    walkRegionSkipping<mlir::cir::LoopOpInterface, mlir::cir::SwitchOp>(
         loopOp.getBody(), [&](mlir::Operation *op) {
           if (isa<mlir::cir::BreakOp>(op))
             lowerTerminator(op, continueBlock, rewriter);
@@ -1387,7 +1387,7 @@ public:
       }
 
       // Handle break statements.
-      walkRegionSkipping<mlir::cir::LoopOp, mlir::cir::SwitchOp>(
+      walkRegionSkipping<mlir::cir::LoopOpInterface, mlir::cir::SwitchOp>(
           region, [&](mlir::Operation *op) {
             if (isa<mlir::cir::BreakOp>(op))
               lowerTerminator(op, exitBlock, rewriter);
