@@ -89,8 +89,8 @@ LIBC_INLINE_VAR constexpr Sign Sign::POS = Sign(false);
 // exponent bias and masks. It also holds the bit representation of the
 // floating point as a 'StorageType' type and defines tools to assemble or test
 // these parts.
-// - 'FPRepSem' defines functions to interact with the floating point
-// representation. The default implementation is the one for 'IEEE754', a
+// - 'FPRepSem' defines functions to interact semantically with the floating
+// point representation. The default implementation is the one for 'IEEE754', a
 // specialization is provided for X86 Extended Precision.
 // - 'FPRep' derives from 'FPRepSem' and adds functions that are common to all
 // implementations.
@@ -102,7 +102,7 @@ namespace internal {
 // Defines the layout (sign, exponent, significand) of a floating point type in
 // memory. It also defines its associated StorageType, i.e., the unsigned
 // integer type used to manipulate its representation.
-// Additionally we provide the fration part length, i.e., the number of bits
+// Additionally we provide the fractional part length, i.e., the number of bits
 // after the decimal dot when the number is in normal form.
 template <FPType> struct FPLayout {};
 
@@ -305,7 +305,7 @@ protected:
   }
 
   // The floating point number representation as an unsigned integer.
-  StorageType bits = 0;
+  StorageType bits{};
 
   LIBC_INLINE constexpr FPStorage() : bits(0) {}
   LIBC_INLINE constexpr FPStorage(StorageType value) : bits(value) {}
@@ -524,9 +524,14 @@ public:
 // The operations dealing with specific float semantics are implemented by
 // 'FPRepSem' above and specialized when needed.
 //
-// 'RetT' is the return type used by the builders. If not specified it defaults
-// to the 'StorageType' but 'FPBits' class below defaults it to itself so
-// builders return 'FPBits' instances.
+// The 'RetT' type is being propagated up to 'FPRepSem' so that the functions
+// creating new values (Builders) can return the appropriate type. That is, when
+// creating a value through 'FPBits' below the builder will return an 'FPBits'
+// value:
+// i.e., FPBits<float>::zero() // returns an FPBits<float>
+// When we don't care about specific C++ floating point type we can use 'FPRep'
+// directly and 'RetT' defaults to 'StorageType':
+// i.e., FPRep<FPType:IEEE754_Binary32:>::zero() // returns an 'uint32_t'
 template <FPType fp_type,
           typename RetT = typename FPLayout<fp_type>::StorageType>
 struct FPRep : public FPRepSem<fp_type, RetT> {
