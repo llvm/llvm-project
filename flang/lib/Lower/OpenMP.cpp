@@ -143,15 +143,17 @@ static void genNestedEvaluations(Fortran::lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 
 class DataSharingProcessor {
+  using SymbolSet = llvm::SetVector<const Fortran::semantics::Symbol *>;
+
   bool hasLastPrivateOp;
   mlir::OpBuilder::InsertPoint lastPrivIP;
   mlir::OpBuilder::InsertPoint insPt;
   mlir::Value loopIV;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
-  llvm::SetVector<const Fortran::semantics::Symbol *> privatizedSymbols;
-  llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
-  llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
-  llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInParentRegions;
+  SymbolSet privatizedSymbols;
+  SymbolSet defaultSymbols;
+  SymbolSet symbolsInNestedRegions;
+  SymbolSet symbolsInParentRegions;
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &firOpBuilder;
   const Fortran::parser::OmpClauseList &opClauseList;
@@ -182,35 +184,54 @@ public:
       : hasLastPrivateOp(false), converter(converter),
         firOpBuilder(converter.getFirOpBuilder()), opClauseList(opClauseList),
         eval(eval) {}
-  // Privatisation is split into two steps.
-  // Step1 performs cloning of all privatisation clauses and copying for
-  // firstprivates. Step1 is performed at the place where process/processStep1
+  // Privatisation is split into 3 steps:
+  //
+  // * Step1: collects all symbols that should be privatized.
+  //
+  // * Step2: performs cloning of all privatisation clauses and copying for
+  // firstprivates. Step2 is performed at the place where process/processStep2
   // is called. This is usually inside the Operation corresponding to the OpenMP
-  // construct, for looping constructs this is just before the Operation. The
-  // split into two steps was performed basically to be able to call
-  // privatisation for looping constructs before the operation is created since
-  // the bounds of the MLIR OpenMP operation can be privatised.
-  // Step2 performs the copying for lastprivates and requires knowledge of the
-  // MLIR operation to insert the last private update. Step2 adds
+  // construct, for looping constructs this is just before the Operation.
+  //
+  // * Step3: performs the copying for lastprivates and requires knowledge of
+  // the MLIR operation to insert the last private update. Step3 adds
   // dealocation code as well.
+  //
+  // The split was performed for the following reasons:
+  //
+  // 1. Step1 was split so that the `target` op knows which symbols should not
+  // be mapped into the target region due to being `private`. The implicit
+  // mapping happens before the op body is generated so we need to to collect
+  // the private symbols first and then later in the body actually privatize
+  // them.
+  //
+  // 2. Step2 was split in order to call privatisation for looping constructs
+  // before the operation is created since the bounds of the MLIR OpenMP
+  // operation can be privatised.
   void processStep1();
-  void processStep2(mlir::Operation *op, bool isLoop);
+  void processStep2();
+  void processStep3(mlir::Operation *op, bool isLoop);
 
   void setLoopIV(mlir::Value iv) {
     assert(!loopIV && "Loop iteration variable already set");
     loopIV = iv;
   }
+
+  const SymbolSet &getPrivatizedSymbols() const { return privatizedSymbols; }
 };
 
 void DataSharingProcessor::processStep1() {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
+}
+
+void DataSharingProcessor::processStep2() {
   privatize();
   defaultPrivatize();
   insertBarrier();
 }
 
-void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
+void DataSharingProcessor::processStep3(mlir::Operation *op, bool isLoop) {
   insPt = firOpBuilder.saveInsertionPoint();
   copyLastPrivatize(op);
   firOpBuilder.restoreInsertionPoint(insPt);
@@ -2306,11 +2327,12 @@ static void createBodyOfOp(
     if (!dsp) {
       DataSharingProcessor proc(converter, *clauses, eval);
       proc.processStep1();
-      proc.processStep2(op, isLoop);
+      proc.processStep2();
+      proc.processStep3(op, isLoop);
     } else {
       if (isLoop && args.size() > 0)
         dsp->setLoopIV(converter.getSymbolAddress(*args[0]));
-      dsp->processStep2(op, isLoop);
+      dsp->processStep3(op, isLoop);
     }
 
     if (storeOp)
@@ -2648,7 +2670,9 @@ static void genBodyOfTargetOp(
     const llvm::SmallVector<mlir::Type> &mapSymTypes,
     const llvm::SmallVector<mlir::Location> &mapSymLocs,
     const llvm::SmallVector<const Fortran::semantics::Symbol *> &mapSymbols,
-    const mlir::Location &currentLocation) {
+    const mlir::Location &currentLocation,
+    const Fortran::parser::OmpClauseList &clauseList,
+    DataSharingProcessor &dsp) {
   assert(mapSymTypes.size() == mapSymLocs.size());
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -2656,6 +2680,8 @@ static void genBodyOfTargetOp(
 
   auto *regionBlock =
       firOpBuilder.createBlock(&region, {}, mapSymTypes, mapSymLocs);
+
+  dsp.processStep2();
 
   // Clones the `bounds` placing them inside the target region and returns them.
   auto cloneBound = [&](mlir::Value bound) {
@@ -2811,8 +2837,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
                 mapOperands, &mapSymTypes, &mapSymLocs, &mapSymbols);
-  cp.processTODO<Fortran::parser::OmpClause::Private,
-                 Fortran::parser::OmpClause::Depend,
+  cp.processTODO<Fortran::parser::OmpClause::Depend,
                  Fortran::parser::OmpClause::Firstprivate,
                  Fortran::parser::OmpClause::IsDevicePtr,
                  Fortran::parser::OmpClause::HasDeviceAddr,
@@ -2823,11 +2848,19 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                  Fortran::parser::OmpClause::Defaultmap>(
       currentLocation, llvm::omp::Directive::OMPD_target);
 
+  DataSharingProcessor dsp(converter, clauseList, eval);
+  dsp.processStep1();
+
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
-  // symbols used inside the region that have not been explicitly mapped using
-  // the map clause.
+  // symbols used inside the region that do not have explicit data-environment
+  // attribute clauses (neither data-sharing; e.g. `private`, nor `map`
+  // clauses).
   auto captureImplicitMap = [&](const Fortran::semantics::Symbol &sym) {
+    if (dsp.getPrivatizedSymbols().contains(&sym)) {
+      return;
+    }
+
     if (llvm::find(mapSymbols, &sym) == mapSymbols.end()) {
       mlir::Value baseOp = converter.getSymbolAddress(sym);
       if (!baseOp)
@@ -2893,7 +2926,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
       nowaitAttr, mapOperands);
 
   genBodyOfTargetOp(converter, eval, genNested, targetOp, mapSymTypes,
-                    mapSymLocs, mapSymbols, currentLocation);
+                    mapSymLocs, mapSymbols, currentLocation, clauseList, dsp);
 
   return targetOp;
 }
@@ -3127,6 +3160,7 @@ createSimdLoop(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   DataSharingProcessor dsp(converter, loopOpClauseList, eval);
   dsp.processStep1();
+  dsp.processStep2();
 
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
@@ -3179,6 +3213,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   DataSharingProcessor dsp(converter, beginClauseList, eval);
   dsp.processStep1();
+  dsp.processStep2();
 
   Fortran::lower::StatementContext stmtCtx;
   mlir::Value scheduleChunkClauseOperand;
