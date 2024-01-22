@@ -105,6 +105,7 @@ void Ctx::reset() {
   whyExtractRecords.clear();
   backwardReferences.clear();
   auxiliaryFiles.clear();
+  internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
   needsTlsLd.store(false, std::memory_order_relaxed);
@@ -2337,7 +2338,8 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
 
 static Symbol *addUnusedUndefined(StringRef name,
                                   uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
+  return symtab.addSymbol(
+      Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2695,6 +2697,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
     symtab.insert(arg->getValue())->traced = true;
+
+  ctx.internalFile = createInternalFile("<internal>");
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
