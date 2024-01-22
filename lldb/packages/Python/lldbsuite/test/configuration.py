@@ -13,7 +13,7 @@ from __future__ import print_function
 # System modules
 import os
 import platform
-
+import sys
 
 # Third-party modules
 import unittest2
@@ -51,6 +51,7 @@ dsymutil = None
 sdkroot = None
 swiftCompiler = None
 swiftLibrary = None
+python = sys.executable
 
 # The overriden dwarf verison.
 dwarf_version = 0
