@@ -21391,6 +21391,7 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
       ValueVT != EVT::getVectorVT(*DAG.getContext(), MVT::i8, 3))
     return SDValue();
 
+  assert(ST->getOffset().isUndef() && "undef offset expected");
   SDLoc DL(ST);
   auto WideVT = EVT::getVectorVT(
       *DAG.getContext(),
