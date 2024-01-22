@@ -1041,7 +1041,7 @@ static void computeScheduledInsts(const SwingSchedulerDAG *SSD,
   for (int Cycle = Schedule.getFirstCycle(); Cycle <= Schedule.getFinalCycle();
        ++Cycle) {
     std::deque<SUnit *> &CycleInstrs = Instrs[Cycle];
-    CycleInstrs = std::move(Schedule.reorderInstructions(SSD, CycleInstrs));
+    CycleInstrs = Schedule.reorderInstructions(SSD, CycleInstrs);
     for (SUnit *SU : CycleInstrs) {
       MachineInstr *MI = SU->getInstr();
       OrderedInsts.push_back(MI);
@@ -1392,7 +1392,7 @@ private:
 
     auto CurSetPressure = InitSetPressure;
     auto MaxSetPressure = InitSetPressure;
-    auto LastUses = std::move(computeLastUses(OrderedInsts, Stages));
+    auto LastUses = computeLastUses(OrderedInsts, Stages);
 
     LLVM_DEBUG({
       dbgs() << "Ordered instructions:\n";
@@ -1499,7 +1499,7 @@ public:
     Instr2StageTy Stages;
     computeScheduledInsts(SSD, Schedule, OrderedInsts, Stages);
     const auto MaxSetPressure =
-        std::move(computeMaxSetPressure(OrderedInsts, Stages, MaxStage + 1));
+        computeMaxSetPressure(OrderedInsts, Stages, MaxStage + 1);
 
     LLVM_DEBUG({
       dbgs() << "Dump MaxSetPressure:\n";
@@ -3378,7 +3378,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
   // generated code.
   for (int Cycle = getFirstCycle(), E = getFinalCycle(); Cycle <= E; ++Cycle) {
     std::deque<SUnit *> &cycleInstrs = ScheduledInstrs[Cycle];
-    cycleInstrs = std::move(reorderInstructions(SSD, cycleInstrs));
+    cycleInstrs = reorderInstructions(SSD, cycleInstrs);
     SSD->fixupRegisterOverlaps(cycleInstrs);
   }
 
