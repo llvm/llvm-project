@@ -2709,11 +2709,11 @@ def int_amdgcn_wmma_i32_16x16x32_iu4     : AMDGPUWmmaIntrinsicIU<llvm_anyint_ty,
 
 class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<
-    [LLVMMatchType<2>], // %D
+    [CD],               // %D
     [
       A,                // %A
       B,                // %B
-      CD,               // %C
+      LLVMMatchType<0>, // %C
       Index             // %Sparsity index for A
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn]
@@ -2721,13 +2721,13 @@ class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Ind
 
 class AMDGPUSWmmacIntrinsicIUIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<
-    [LLVMMatchType<2>], // %D
+    [CD],               // %D
     [
       llvm_i1_ty,       // %A_sign
       A,                // %A
       llvm_i1_ty,       // %B_sign
       B,                // %B
-      CD,               // %C
+      LLVMMatchType<0>, // %C
       Index,            // %Sparsity index for A
       llvm_i1_ty,       // %clamp
     ],
