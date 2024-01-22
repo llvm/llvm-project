@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 // CHECK-LABEL: define dso_local <vscale x 32 x i16> @test_svluti4_lane_zt_u16
 // CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0:[0-9]+]] {

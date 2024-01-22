@@ -169,6 +169,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0)
@@ -495,6 +497,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .clampScalar(0, MinFPScalar, s128);
 
+  // FIXME: fix moreElementsToNextPow2
   getActionDefinitionsBuilder(G_ICMP)
       .legalFor({{s32, s32},
                  {s32, s64},
@@ -524,7 +527,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) { return Query.Types[1] == v2p0; }, 0,
           s64)
-      .clampNumElements(0, v2s32, v4s32);
+      .moreElementsToNextPow2(0)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_FCMP)
       // If we don't have full FP16 support, then scalarize the elements of
@@ -863,6 +870,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           },
           0, s8)
       .minScalarOrElt(0, s8) // Worst case, we need at least s8.
+      .moreElementsToNextPow2(1)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
@@ -1442,6 +1450,56 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MIB.setInsertPt(MIB.getMBB(), ++MIB.getInsertPt());
     MIB.buildExtOrTrunc(IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT,
                         OldDst, NewDst);
+
+    return true;
+  }
+  case Intrinsic::aarch64_neon_uaddlp:
+  case Intrinsic::aarch64_neon_saddlp: {
+    MachineIRBuilder MIB(MI);
+
+    unsigned Opc = IntrinsicID == Intrinsic::aarch64_neon_uaddlp
+                       ? AArch64::G_UADDLP
+                       : AArch64::G_SADDLP;
+    MIB.buildInstr(Opc, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+
+    return true;
+  }
+  case Intrinsic::aarch64_neon_uaddlv:
+  case Intrinsic::aarch64_neon_saddlv: {
+    MachineIRBuilder MIB(MI);
+    MachineRegisterInfo &MRI = *MIB.getMRI();
+
+    unsigned Opc = IntrinsicID == Intrinsic::aarch64_neon_uaddlv
+                       ? AArch64::G_UADDLV
+                       : AArch64::G_SADDLV;
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(2).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+
+    LLT MidTy, ExtTy;
+    if (DstTy.isScalar() && DstTy.getScalarSizeInBits() <= 32) {
+      MidTy = LLT::fixed_vector(4, 32);
+      ExtTy = LLT::scalar(32);
+    } else {
+      MidTy = LLT::fixed_vector(2, 64);
+      ExtTy = LLT::scalar(64);
+    }
+
+    Register MidReg =
+        MIB.buildInstr(Opc, {MidTy}, {SrcReg})->getOperand(0).getReg();
+    Register ZeroReg =
+        MIB.buildConstant(LLT::scalar(64), 0)->getOperand(0).getReg();
+    Register ExtReg = MIB.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT, {ExtTy},
+                                     {MidReg, ZeroReg})
+                          .getReg(0);
+
+    if (DstTy.getScalarSizeInBits() < 32)
+      MIB.buildTrunc(DstReg, ExtReg);
+    else
+      MIB.buildCopy(DstReg, ExtReg);
+
+    MI.eraseFromParent();
 
     return true;
   }

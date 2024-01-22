@@ -357,7 +357,8 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_COMPILER_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
-    libc.src.math.fabsf128
+    # Temporarily disabled since float128 isn't working on the aarch64 buildbot
+    # libc.src.math.fabsf128
   )
 endif()
 

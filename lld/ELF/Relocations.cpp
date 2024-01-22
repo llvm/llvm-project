@@ -105,6 +105,13 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
       hint = "; references '" + lld::toString(*rel.sym) + '\'';
     else if (auto *d = dyn_cast<Defined>(rel.sym))
       hint = ("; references section '" + d->section->name + "'").str();
+
+    if (config->emachine == EM_X86_64 && rel.type == R_X86_64_PC32 &&
+        rel.sym->getOutputSection() &&
+        (rel.sym->getOutputSection()->flags & SHF_X86_64_LARGE)) {
+      hint += "; R_X86_64_PC32 should not reference a section marked "
+              "SHF_X86_64_LARGE";
+    }
   }
   if (!errPlace.srcLoc.empty())
     hint += "\n>>> referenced by " + errPlace.srcLoc;
@@ -1750,7 +1757,7 @@ void elf::postScanRelocations() {
 
   GotSection *got = in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    static Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
+    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (config->shared)
       mainPart->relaDyn->addReloc(
           {target->tlsModuleIndexRel, got, got->getTlsIndexOff()});

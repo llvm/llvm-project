@@ -30,6 +30,10 @@ jobs:
   check-clang-python:
     # Build libclang and then run the libclang Python binding's unit tests.
     name: Build and run Python unit tests
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.7", "3.11"]
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-clang-python
@@ -37,3 +41,4 @@ jobs:
       # There is an issue running on "windows-2019".
       # See https://github.com/llvm/llvm-project/issues/76601#issuecomment-1873049082.
       os_list: '["ubuntu-latest"]'
+      python_version: ${{ matrix.python-version }}

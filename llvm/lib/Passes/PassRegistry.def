@@ -152,6 +152,13 @@ MODULE_PASS_WITH_PARAMS(
     [](AddressSanitizerOptions Opts) { return AddressSanitizerPass(Opts); },
     parseASanPassOptions, "kernel")
 MODULE_PASS_WITH_PARAMS(
+    "global-merge", "GlobalMergePass",
+    [TM = TM](GlobalMergeOptions Opts) { return GlobalMergePass(TM, Opts); },
+    parseGlobalMergeOptions,
+    "group-by-use;ignore-single-use;max-offset=N;merge-const;merge-external;"
+    "no-group-by-use;no-ignore-single-use;no-merge-const;no-merge-external;"
+    "size-only")
+MODULE_PASS_WITH_PARAMS(
     "globaldce", "GlobalDCEPass",
     [](bool InLTOPostLink) { return GlobalDCEPass(InLTOPostLink); },
     parseGlobalDCEPassOptions, "in-lto-post-link")

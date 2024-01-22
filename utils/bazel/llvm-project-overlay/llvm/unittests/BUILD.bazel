@@ -41,6 +41,7 @@ cc_test(
         allow_empty = False,
         exclude = [
             # TODO: Add this file to the build.
+            "Analysis/ConstraintSystemTest.cpp",
             "Analysis/TFUtilsTest.cpp",
             "Analysis/TrainingLoggerTest.cpp",
             "Analysis/MLModelRunnerTest.cpp",

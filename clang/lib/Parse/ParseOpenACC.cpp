@@ -91,7 +91,9 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
              Tok.getIdentifierInfo()->getName())
       .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
+      .Case("bind", OpenACCClauseKind::Bind)
       .Case("create", OpenACCClauseKind::Create)
+      .Case("collapse", OpenACCClauseKind::Collapse)
       .Case("copy", OpenACCClauseKind::Copy)
       .Case("copyin", OpenACCClauseKind::CopyIn)
       .Case("copyout", OpenACCClauseKind::CopyOut)
@@ -117,6 +119,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
+      .Case("vector_length", OpenACCClauseKind::VectorLength)
       .Case("worker", OpenACCClauseKind::Worker)
       .Default(OpenACCClauseKind::Invalid);
 }
@@ -151,6 +154,7 @@ enum class OpenACCSpecialTokenKind {
   DevNum,
   Queues,
   Zero,
+  Force,
 };
 
 bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
@@ -166,6 +170,8 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("queues");
   case OpenACCSpecialTokenKind::Zero:
     return Tok.getIdentifierInfo()->isStr("zero");
+  case OpenACCSpecialTokenKind::Force:
+    return Tok.getIdentifierInfo()->isStr("force");
   }
   llvm_unreachable("Unknown 'Kind' Passed");
 }
@@ -462,6 +468,9 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Reduction:
+  case OpenACCClauseKind::Collapse:
+  case OpenACCClauseKind::Bind:
+  case OpenACCClauseKind::VectorLength:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -527,6 +536,12 @@ void Parser::ParseOpenACCClauseList(OpenACCDirectiveKind DirKind) {
       return;
     }
   }
+}
+
+ExprResult Parser::ParseOpenACCIntExpr() {
+  // FIXME: this is required to be an integer expression (or dependent), so we
+  // should ensure that is the case by passing this to SEMA here.
+  return getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
 }
 
 bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
@@ -654,6 +669,27 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
       if (ParseOpenACCClauseVarList(Kind))
         return true;
       break;
+    case OpenACCClauseKind::Collapse: {
+      tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Force,
+                                         Kind);
+      ExprResult NumLoops =
+          getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
+      if (NumLoops.isInvalid())
+        return true;
+      break;
+    }
+    case OpenACCClauseKind::Bind: {
+      ExprResult BindArg = ParseOpenACCBindClauseArgument();
+      if (BindArg.isInvalid())
+        return true;
+      break;
+    }
+    case OpenACCClauseKind::VectorLength: {
+      ExprResult IntExpr = ParseOpenACCIntExpr();
+      if (IntExpr.isInvalid())
+        return true;
+      break;
+    }
     default:
       llvm_unreachable("Not a required parens type?");
     }
@@ -744,7 +780,7 @@ bool Parser::ParseOpenACCWaitArgument() {
 ExprResult Parser::ParseOpenACCIDExpression() {
   ExprResult Res;
   if (getLangOpts().CPlusPlus) {
-    Res = ParseCXXIdExpression(/*isAddressOfOperand=*/false);
+    Res = ParseCXXIdExpression(/*isAddressOfOperand=*/true);
   } else {
     // There isn't anything quite the same as ParseCXXIdExpression for C, so we
     // need to get the identifier, then call into Sema ourselves.
@@ -769,6 +805,25 @@ ExprResult Parser::ParseOpenACCIDExpression() {
   }
 
   return getActions().CorrectDelayedTyposInExpr(Res);
+}
+
+ExprResult Parser::ParseOpenACCBindClauseArgument() {
+  // OpenACC 3.3 section 2.15:
+  // The bind clause specifies the name to use when calling the procedure on a
+  // device other than the host. If the name is specified as an identifier, it
+  // is called as if that name were specified in the language being compiled. If
+  // the name is specified as a string, the string is used for the procedure
+  // name unmodified.
+  if (getCurToken().is(tok::r_paren)) {
+    Diag(getCurToken(), diag::err_acc_incorrect_bind_arg);
+    return ExprError();
+  }
+
+  if (tok::isStringLiteral(getCurToken().getKind()))
+    return getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
+        /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
+
+  return ParseOpenACCIDExpression();
 }
 
 /// OpenACC 3.3, section 1.6:

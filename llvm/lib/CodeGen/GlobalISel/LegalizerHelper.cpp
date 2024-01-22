@@ -5198,7 +5198,10 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FMAXIMUM:
   case TargetOpcode::G_STRICT_FADD:
   case TargetOpcode::G_STRICT_FSUB:
-  case TargetOpcode::G_STRICT_FMUL: {
+  case TargetOpcode::G_STRICT_FMUL:
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR: {
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, MoreTy, 1);
     moreElementsVectorSrc(MI, MoreTy, 2);
@@ -5310,6 +5313,17 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
         MoreTy.getNumElements(),
         MRI.getType(MI.getOperand(1).getReg()).getElementType());
     moreElementsVectorSrc(MI, SrcTy, 1);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_ICMP: {
+    // TODO: the symmetric MoreTy works for targets like, e.g. NEON.
+    // For targets, like e.g. MVE, the result is a predicated vector (i1).
+    // This will need some refactoring.
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 2);
+    moreElementsVectorSrc(MI, MoreTy, 3);
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;

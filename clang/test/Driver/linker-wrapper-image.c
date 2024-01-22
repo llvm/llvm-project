@@ -121,11 +121,9 @@
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: sw.surface:
-// CUDA-NEXT:   call void @__cudaRegisterSurface(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %extern)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: sw.texture:
-// CUDA-NEXT:   call void @__cudaRegisterTexture(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %normalized, i32 %extern)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: if.end:

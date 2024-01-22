@@ -71,7 +71,7 @@ LIBC_INLINE float exp2f(float x) {
     }
 
     // x >= 128
-    if (!xbits.get_sign()) {
+    if (xbits.is_pos()) {
       // x is finite
       if (x_u < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();
