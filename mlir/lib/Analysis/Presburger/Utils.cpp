@@ -548,7 +548,7 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
   unsigned len = a.size() + b.size() - 1;
 
   // We define accessors to avoid out-of-bounds errors.
-  auto getItem = [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
+  auto getCoeff = [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
     if (i < arr.size())
       return arr[i];
     else
@@ -560,7 +560,7 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
   for (unsigned k = 0; k < len; ++k) {
     Fraction sum(0, 1);
     for (unsigned l = 0; l <= k; ++l)
-      sum += getItem(a, l) * getItem(b, k - l);
+      sum += getCoeff(a, l) * getCoeff(b, k - l);
     convolution.push_back(sum);
   }
   return convolution;

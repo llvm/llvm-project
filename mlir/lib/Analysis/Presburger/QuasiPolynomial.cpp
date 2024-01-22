@@ -126,7 +126,7 @@ QuasiPolynomial QuasiPolynomial::simplify() {
     // Now, we know the term is nonzero.
 
     // We now eliminate the affine functions which are constant
-    // by integrating them into the coefficients.
+    // by merging them into the coefficients.
     newAffineTerm = {};
     newCoeff = coefficients[i];
     for (ArrayRef<Fraction> term : affine[i]) {

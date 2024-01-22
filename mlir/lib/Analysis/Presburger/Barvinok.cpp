@@ -251,6 +251,8 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// a quasipolynomial which represents the exponent of the numerator
 /// of the result, and a vector which represents the exponents of the
 /// denominator of the result.
+/// If the returned value is {num, dens}, it represents the function
+/// t^num / \prod_j (1 - t^dens[j]).
 /// v represents the affine functions whose floors are multiplied by the
 /// generators, and ds represents the list of generators.
 std::pair<QuasiPolynomial, std::vector<Fraction>>
@@ -267,7 +269,7 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
   // - (μ • u_d) * (floor(d'th col of v))
   // So we store the negation of the dot products.
 
-  // We have d terms, each of whose coefficient is the negative dot product,
+  // We have d terms, each of whose coefficient is the negative dot product.
   SmallVector<Fraction> coefficients;
   coefficients.reserve(numDims);
   for (const Point &d : ds)
@@ -298,8 +300,11 @@ substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
 }
 
 /// Normalize all denominator exponents `dens` to their absolute values
-/// by multiplying and dividing by the inverses.
-/// Also, take the factors (-s) out of each term of the product.
+/// by multiplying and dividing by the inverses, in a function of the form
+/// sign * t^num / prod_j (1 - t^dens[j]).
+/// Here, sign = ± 1,
+/// num is a QuasiPolynomial, and
+/// each dens[j] is a Fraction.
 void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
                                    std::vector<Fraction> &dens) {
   // We track the number of exponents that are negative in the
@@ -313,14 +318,14 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
     }
   }
 
-  // If we have (1 - (s+1)^-c) in the denominator,
-  // multiply and divide by (s+1)^c.
+  // If we have (1 - t^-c) in the denominator, for positive c,
+  // multiply and divide by t^c.
   // We convert all negative-exponent terms at once; therefore
-  // we multiply and divide by (s+1)^sumNegExps.
+  // we multiply and divide by t^sumNegExps.
   // Then we get
-  // -(1 - (s+1)^c) in the denominator,
+  // -(1 - t^c) in the denominator,
   // increase the numerator by c, and
-  // flip the sign.
+  // flip the sign of the function.
   if (numNegExps % 2 == 1)
     sign = -sign;
   num = num - QuasiPolynomial(num.getNumInputs(), sumNegExps);
@@ -418,7 +423,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     for (unsigned j = 0, e = dens.size(); j < e; ++j)
       dens[j] = abs(dens[j]) - 1;
     // Note that at this point, the semantics of `dens[j]` changes to mean
-    // the limit of summation of (s+1)^t terms, and not the actual exponent.
+    // a term (\sum_{0 ≤ k ≤ dens[j]} (s+1)^k). The denominator is, as before,
+    // a product of these terms.
 
     // Since the -s are taken out, the sign changes if there is an odd number
     // of such terms.
@@ -426,13 +432,13 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     if (dens.size() % 2 == 1)
       sign = -sign;
 
-    // Thus the term overall has now the form
+    // Thus the term overall now has the form
     // sign'_i * (s+1)^numExp /
     // (s^r * \prod_j (\sum_{0 ≤ k < dens[j]} (s+1)^k)).
     // This means that
     // the numerator is a polynomial in s, with coefficients as
     // quasipolynomials (given by binomial coefficients), and the denominator
-    // is polynomial in s, with integral coefficients (given by taking the
+    // is a polynomial in s, with integral coefficients (given by taking the
     // convolution over all j).
 
     // Step (3) We need to find the constant term in the expansion of each
@@ -450,7 +456,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     std::vector<QuasiPolynomial> numeratorCoefficients =
         getBinomialCoefficients(numExp, r);
 
-    // Then the coefficients of each individual term in Q(s),
+    // Then we compute the coefficients of each individual term in Q(s),
     // which are (dens[i]+1) C (k+1) for 0 ≤ k ≤ dens[i].
     std::vector<std::vector<Fraction>> eachTermDenCoefficients;
     std::vector<Fraction> singleTermDenCoefficients;
