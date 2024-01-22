@@ -71,7 +71,7 @@ make_format_args(_Args&... __args _LIBCPP_LIFETIMEBOUND) {
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <class... _Args>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI __format_arg_store<wformat_context, _Args...>
-make_wformat_args(_Args&... __args) {
+make_wformat_args(_Args&... __args _LIBCPP_LIFETIMEBOUND) {
   return _VSTD::__format_arg_store<wformat_context, _Args...>(__args...);
 }
 #  endif
