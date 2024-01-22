@@ -1454,7 +1454,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_uaddlp:
   case Intrinsic::aarch64_neon_saddlp: {
     MachineIRBuilder MIB(MI);
-    MachineRegisterInfo &MRI = *MIB.getMRI();
 
     unsigned Opc = IntrinsicID == Intrinsic::aarch64_neon_uaddlp
                        ? AArch64::G_UADDLP
