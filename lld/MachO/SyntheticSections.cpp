@@ -849,8 +849,7 @@ void ObjCStubsSection::setUp() {
     // we directly reference it.
     // In other cases, typically when binding in libobjc.dylib,
     // we generate a stub to invoke objc_msgSend.
-    auto *d = dyn_cast<Defined>(objcMsgSend);
-    if (!d)
+    if (!isa<Defined>(objcMsgSend))
       in.stubs->addEntry(objcMsgSend);
   }
 
