@@ -1827,7 +1827,9 @@ struct CounterCoverageMappingBuilder
     if (const auto *Init = S->getInit()) {
       const auto start = getStart(Init);
       const auto end = getEnd(Init);
-      
+
+      // this check is to make sure typedef here which doesn't have valid source
+      // location won't crash it
       if (start.isValid() && end.isValid()) {
         markSkipped(startOfSkipped, start);
         propagateCounts(ParentCount, Init);
