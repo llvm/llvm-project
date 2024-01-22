@@ -3616,6 +3616,7 @@ static Sema::TemplateDeductionResult instantiateExplicitSpecifierDeferred(
   if (Inst.isInvalid())
     return Sema::TDK_InstantiationDepth;
   Sema::SFINAETrap Trap(S);
+  Sema::ContextRAII InstantiatedContext(S, Specialization);
   const ExplicitSpecifier InstantiatedES =
       S.instantiateExplicitSpecifier(SubstArgs, ES);
   if (InstantiatedES.isInvalid() || Trap.hasErrorOccurred()) {

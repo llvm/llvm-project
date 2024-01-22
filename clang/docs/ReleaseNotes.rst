@@ -991,6 +991,9 @@ Bug Fixes to C++ Support
   completes (except deduction guides). Fixes:
   (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
 
+- Fixed the handling of concepts with lambda expression constraints in explicit specifiers.
+  Fixes: (`#67058 <https://github.com/llvm/llvm-project/issues/67058>`_)
+
 - Fix crash when parsing nested requirement. Fixes:
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
 
