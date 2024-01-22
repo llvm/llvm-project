@@ -101,9 +101,9 @@ static cl::opt<int>
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
 static cl::opt<bool> TryUseNewDbgInfoFormat(
-      "try-experimental-debuginfo-iterators",
-      cl::desc("Enable debuginfo iterator positions, if they're built in"),
-      cl::init(false));
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
 
