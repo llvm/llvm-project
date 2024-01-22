@@ -40,20 +40,24 @@ namespace LIBC_NAMESPACE {
 constexpr static size_t MAX_AUXV_ENTRIES = 64;
 
 // Helper to recover or set errno
-struct AuxvErrnoGuard {
-  int saved;
-  bool failure;
+class AuxvErrnoGuard {
+public:
   AuxvErrnoGuard() : saved(libc_errno), failure(false) {}
   ~AuxvErrnoGuard() { libc_errno = failure ? ENOENT : saved; }
   void mark_failure() { failure = true; }
+
+private:
+  int saved;
+  bool failure;
 };
 
 // Helper to manage the memory
 static AuxEntry *auxv = nullptr;
 
-struct AuxvMMapGuard {
+class AuxvMMapGuard {
+public:
   constexpr static size_t AUXV_MMAP_SIZE = sizeof(AuxEntry) * MAX_AUXV_ENTRIES;
-  void *ptr;
+
   AuxvMMapGuard()
       : ptr(mmap(nullptr, AUXV_MMAP_SIZE, PROT_READ | PROT_WRITE,
                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) {}
@@ -77,29 +81,37 @@ struct AuxvMMapGuard {
     auxv = reinterpret_cast<AuxEntry *>(ptr);
     ptr = MAP_FAILED;
   }
-  bool allocated() { return ptr != MAP_FAILED; }
+  bool allocated() const { return ptr != MAP_FAILED; }
+  void *get() const { return ptr; }
+
+private:
+  void *ptr;
 };
 
-struct AuxvFdGuard {
-  int fd;
+class AuxvFdGuard {
+public:
   AuxvFdGuard() : fd(open("/proc/self/auxv", O_RDONLY | O_CLOEXEC)) {}
   ~AuxvFdGuard() {
     if (fd != -1) {
       close(fd);
     }
   }
-  bool valid() { return fd != -1; }
+  bool valid() const { return fd != -1; }
+  int get() const { return fd; }
+
+private:
+  int fd;
 };
 
 static void initialize_auxv_once(void) {
-  // if we cannot get atexit, we cannot register the cleanup function.
+  // If we cannot get atexit, we cannot register the cleanup function.
   if (&__cxa_atexit == nullptr)
     return;
 
   AuxvMMapGuard mmap_guard;
   if (!mmap_guard.allocated())
     return;
-  auto *ptr = reinterpret_cast<AuxEntry *>(mmap_guard.ptr);
+  auto *ptr = reinterpret_cast<AuxEntry *>(mmap_guard.get());
 
   // We get one less than the max size to make sure the search always
   // terminates. MMAP private pages are zeroed out already.
@@ -118,16 +130,20 @@ static void initialize_auxv_once(void) {
   auto *buf = reinterpret_cast<char *>(ptr);
   libc_errno = 0;
   bool error_detected = false;
+  // Read until we use up all the available space or we finish reading the file.
   while (available_size != 0) {
-    ssize_t bytes_read = read(fd_guard.fd, buf, available_size);
+    ssize_t bytes_read = read(fd_guard.get(), buf, available_size);
     if (bytes_read <= 0) {
       if (libc_errno == EINTR)
         continue;
-      error_detected = bytes_read < 0;
+      if (bytes_read == -1)
+        error_detected = true;
       break;
     }
+    buf += bytes_read;
     available_size -= bytes_read;
   }
+  // If we get out of the loop without an error, the auxv is ready.
   if (!error_detected) {
     mmap_guard.submit_to_global();
   }
@@ -136,15 +152,18 @@ static void initialize_auxv_once(void) {
 static AuxEntry read_entry(int fd) {
   AuxEntry buf;
   ssize_t size = sizeof(AuxEntry);
+  char *ptr = reinterpret_cast<char *>(&buf);
   while (size > 0) {
-    ssize_t ret = read(fd, &buf, size);
+    ssize_t ret = read(fd, ptr, size);
     if (ret < 0) {
       if (libc_errno == EINTR)
         continue;
+      // Error detected, return AT_NULL
       buf.id = AT_NULL;
       buf.value = AT_NULL;
       break;
     }
+    ptr += ret;
     size -= ret;
   }
   return buf;
@@ -158,32 +177,29 @@ LLVM_LIBC_FUNCTION(unsigned long, getauxval, (unsigned long id)) {
 
   auto search_auxv = [&errno_guard](AuxEntry *auxv,
                                     unsigned long id) -> AuxEntryType {
-    for (auto *ptr = auxv; ptr->id != AT_NULL; ptr++) {
-      if (ptr->id == id) {
+    for (auto *ptr = auxv; ptr->id != AT_NULL; ptr++)
+      if (ptr->id == id)
         return ptr->value;
-      }
-    }
+
     errno_guard.mark_failure();
     return AT_NULL;
   };
 
   // App is a weak symbol that is only defined if libc is linked to its own
   // initialization routine. We need to check if it is null.
-  if (&app != nullptr) {
+  if (&app != nullptr)
     return search_auxv(app.auxv_ptr, id);
-  }
 
   static FutexWordType once_flag;
   callonce(reinterpret_cast<CallOnceFlag *>(&once_flag), initialize_auxv_once);
-  if (auxv != nullptr) {
+  if (auxv != nullptr)
     return search_auxv(auxv, id);
-  }
 
-  // fallback to use read without mmap
+  // Fallback to use read without mmap
   AuxvFdGuard fd_guard;
   if (fd_guard.valid()) {
     while (true) {
-      AuxEntry buf = read_entry(fd_guard.fd);
+      AuxEntry buf = read_entry(fd_guard.get());
       if (buf.id == AT_NULL)
         break;
       if (buf.id == id)
