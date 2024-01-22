@@ -4166,11 +4166,9 @@ void SwiftASTContext::ValidateSectionModules(
 
   Status error;
 
-  Progress progress(
-      llvm::formatv("Loading Swift module {0}",
-                    module.GetFileSpec().GetFilename().AsCString()),
-      module_names.size());
-
+  Progress progress("Loading Swift module '{0}' dependencies",
+                    module.GetFileSpec().GetFilename().AsCString(),
+                    module_names.size());
   size_t completion = 0;
 
   for (const std::string &module_name : module_names) {
@@ -8748,11 +8746,9 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   if (cu_imports.size() == 0)
     return true;
 
-  Progress progress(
-      llvm::formatv("Getting Swift compile unit imports for '{0}'",
-                    compile_unit->GetPrimaryFile().GetFilename()),
-      cu_imports.size());
-
+  Progress progress("Getting Swift compile unit imports",
+                    compile_unit->GetPrimaryFile().GetFilename().GetCString(),
+                    cu_imports.size());
   size_t completion = 0;
   for (const SourceModule &module : cu_imports) {
     progress.Increment(++completion);
