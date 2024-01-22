@@ -892,6 +892,9 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
                                                         llvm::Value *LHSi,
                                                         llvm::Value *RHSr,
                                                         llvm::Value *RHSi) {
+  // FIXME: This could eventually be replaced by an LLVM intrinsic to
+  // avoid this long IR sequence.
+
   // (a + ib) / (c + id) = (e + if)
   llvm::Value *FAbsRHSr = EmitllvmFAbs(CGF, RHSr); // |c|
   llvm::Value *FAbsRHSi = EmitllvmFAbs(CGF, RHSi); // |d|
