@@ -3890,6 +3890,7 @@ cc_library(
         ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToAMDGPU",
+        ":ArithToArmSME",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
@@ -8038,6 +8039,27 @@ cc_library(
         ":Support",
         ":Transforms",
         ":VectorDialect",
+    ],
+)
+
+cc_library(
+    name = "ArithToArmSME",
+    srcs = glob([
+        "lib/Conversion/ArithToArmSME/*.cpp",
+        "lib/Conversion/ArithToArmSME/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ArithToArmSME/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArmSMEDialect",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":Pass",
+        ":Transforms",
+        "//llvm:Support",
     ],
 )
 
