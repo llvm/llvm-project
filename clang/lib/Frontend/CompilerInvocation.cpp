@@ -2413,6 +2413,9 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     // This option is automatically generated from UndefPrefixes.
     if (Warning == "undef-prefix")
       continue;
+    // This option is automatically generated from StrictAliasing.
+    if (Warning == "strict-aliasing")
+      continue;
     Consumer(StringRef("-W") + Warning);
   }
 

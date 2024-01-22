@@ -452,6 +452,15 @@ Improvements to Clang's diagnostics
 - Clang constexpr evaluator now diagnoses compound assignment operators against
   uninitialized variables as a read of uninitialized object.
   (`#51536 <https://github.com/llvm/llvm-project/issues/51536>`_)
+- Clang now implements ``-Wstrict-aliasing=$level``, ``$level=[0-3]``
+  with ``-Wstrict-aliasing`` defaulint to level 3.  This warns about
+  and potentially type-based aliasing-unsafe reinterpret_casts. Lower
+  levels warn about more case but with more false positives, higher
+  levels have fewer false positives at the risk of more false
+  negatives.  The warning requires require optimization to be
+  enabled. Previously these were accepted, but ignored, for GCC
+  compatibility (the preciese semantics are similar-to, but not
+  identical with, GCC).
 - Clang's ``-Wformat-truncation`` now diagnoses ``snprintf`` call that is known to
   result in string truncation.
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).

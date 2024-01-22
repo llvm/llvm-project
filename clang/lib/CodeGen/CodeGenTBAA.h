@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTBAA_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTBAA_H
 
+#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -113,7 +114,7 @@ struct TBAAAccessInfo {
 
 /// CodeGenTBAA - This class organizes the cross-module state that is used
 /// while lowering AST types to LLVM types.
-class CodeGenTBAA {
+class CodeGenTBAA : public ASTConsumer::TypeAliasing {
   ASTContext &Context;
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
@@ -208,6 +209,8 @@ public:
   /// purpose of memory transfer calls.
   TBAAAccessInfo mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
                                                 TBAAAccessInfo SrcInfo);
+
+  AliasingKind getAliasingKind(QualType &Dst, QualType &Src) override;
 };
 
 }  // end namespace CodeGen

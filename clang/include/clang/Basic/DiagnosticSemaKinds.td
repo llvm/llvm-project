@@ -17,6 +17,14 @@ def note_entity_declared_at : Note<"%0 declared here">;
 def note_callee_decl : Note<"%0 declared here">;
 def note_defined_here : Note<"%0 defined here">;
 
+def warn_strict_aliasing : Warning<
+  "dereferencing type-punned %select{pointer|reference}0 "
+  "%select{|to incomplete type }1%select{might break|breaks}2 strict aliasing">,
+  InGroup<DiagGroup<"strict-aliasing">>;
+def note_incompatible_aliasing : Note<
+  "%0 and %1 are not alias compatible">;
+def note_incomplete_aliasing : Note<"%0 is incomplete">;
+
 // For loop analysis
 def warn_variables_not_in_loop_body : Warning<
   "variable%select{s| %1|s %1 and %2|s %1, %2, and %3|s %1, %2, %3, and %4}0 "

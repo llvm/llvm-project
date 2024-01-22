@@ -99,6 +99,9 @@ VALUE_DIAGOPT(MessageLength, 32, 0)
 
 DIAGOPT(ShowSafeBufferUsageSuggestions, 1, 0)
 
+/// Level of scrutiny reinterpret_cast gets for type safetyness.
+VALUE_DIAGOPT(StrictAliasing, 2, 3)
+
 #undef DIAGOPT
 #undef ENUM_DIAGOPT
 #undef VALUE_DIAGOPT

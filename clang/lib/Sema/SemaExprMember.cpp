@@ -1906,6 +1906,8 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     }
   }
 
+  CheckStrictAliasingDeref(Base.get(), !IsArrow);
+
   return BuildMemberExpr(Base.get(), IsArrow, OpLoc, &SS,
                          /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
                          /*HadMultipleCandidates=*/false, MemberNameInfo,
