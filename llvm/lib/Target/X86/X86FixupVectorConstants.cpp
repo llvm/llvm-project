@@ -240,8 +240,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
 
-    MachineOperand &CstOp = MI.getOperand(OperandNo + X86::AddrDisp);
-    if (auto *C = X86::getConstantFromPool(MI, CstOp)) {
+    if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
       // Attempt to detect a suitable splat from increasing splat widths.
       std::pair<unsigned, unsigned> Broadcasts[] = {
           {8, OpBcst8},   {16, OpBcst16},   {32, OpBcst32},
@@ -255,7 +254,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
             unsigned NewCPI =
                 CP->getConstantPoolIndex(NewCst, Align(BitWidth / 8));
             MI.setDesc(TII->get(OpBcst));
-            CstOp.setIndex(NewCPI);
+            MI.getOperand(OperandNo + X86::AddrDisp).setIndex(NewCPI);
             return true;
           }
         }

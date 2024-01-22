@@ -29,6 +29,13 @@ rel32:
 	.word target - .
 	.size rel32, .-rel32
 
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_TARGET1 target
+# jitlink-check: *{4}(target1_abs32) = target
+	.global target1_abs32
+target1_abs32:
+	.word target(target1)
+	.size	target1_abs32, .-target1_abs32
+
 # CHECK-TYPE: {{[0-9a-f]+}} R_ARM_GOT_PREL target
 #
 # The GOT entry contains the absolute address of the external:
@@ -56,6 +63,30 @@ got_prel_offset:
 	.long	target(GOT_PREL)-((.LPC+8)-.LCPI)
 	.size	got_prel_offset, .-got_prel_offset
 	.size	got_prel, .-got_prel
+
+# EH personality routine
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_NONE __aeabi_unwind_cpp_pr0
+	.globl __aeabi_unwind_cpp_pr0
+	.type __aeabi_unwind_cpp_pr0,%function
+	.align 2
+__aeabi_unwind_cpp_pr0:
+	bx lr
+
+# Generate reference to EH personality (right now we ignore the resulting
+# R_ARM_PREL31 relocation since it's in .ARM.exidx)
+	.globl  prel31
+	.type   prel31,%function
+	.align  2
+prel31:
+	.fnstart
+	.save   {r11, lr}
+	push    {r11, lr}
+	.setfp  r11, sp
+	mov     r11, sp
+	pop     {r11, lr}
+	mov     pc, lr
+	.size   prel31,.-prel31
+	.fnend
 
 # This test is executable with any 4-byte external target:
 #  > echo "unsigned target = 42;" | clang -target armv7-linux-gnueabihf -o target.o -c -xc -
