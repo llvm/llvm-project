@@ -105,6 +105,8 @@ bool ExternalASTSource::LoadExternalSpecializations(
   return false;
 }
 
+void ExternalASTSource::LoadAllExternalSpecializations(const Decl *D) {}
+
 void ExternalASTSource::completeVisibleDeclsMap(const DeclContext *DC) {}
 
 void ExternalASTSource::FindExternalLexicalDecls(

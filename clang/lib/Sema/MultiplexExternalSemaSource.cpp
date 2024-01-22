@@ -123,6 +123,12 @@ bool MultiplexExternalSemaSource::LoadExternalSpecializations(
   return LoadedAnyDecls;
 }
 
+void MultiplexExternalSemaSource::LoadAllExternalSpecializations(
+    const Decl *D) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    Sources[i]->LoadAllExternalSpecializations(D);
+}
+
 void MultiplexExternalSemaSource::completeVisibleDeclsMap(const DeclContext *DC){
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->completeVisibleDeclsMap(DC);

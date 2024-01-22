@@ -342,6 +342,13 @@ void RedeclarableTemplateDecl::loadExternalSpecializations() const {
     for (uint32_t I = 0, N = *Specs++; I != N; ++I)
       (void)Context.getExternalSource()->GetExternalDecl(Specs[I]);
   }
+
+  // We still load all the external specializations explicitly in the case
+  // the writer specified `-fload-external-specializations-lazily`. 
+  if (!getASTContext().getLangOpts().LoadExternalSpecializationsLazily &&
+      getASTContext().getExternalSource())
+    getASTContext().getExternalSource()->LoadAllExternalSpecializations(
+        this->getCanonicalDecl());
 }
 
 template <class EntryType, typename... ProfileArguments>
@@ -367,6 +374,12 @@ RedeclarableTemplateDecl::findSpecializationImpl(
   if (auto *Ret = findLocalSpecialization(
           Specs, InsertPos, std::forward<ProfileArguments>(ProfileArgs)...))
     return Ret;
+
+  if (!getASTContext().getLangOpts().LoadExternalSpecializationsLazily) {
+    // If we didn't enable LoadExternalSpecializationsLazily, we shouldn't see
+    // anything from the external sources.
+    return nullptr;
+  }
 
   // If it is partial specialization, we are done.
   if constexpr (std::is_same_v<EntryType,
@@ -395,6 +408,9 @@ RedeclarableTemplateDecl::findSpecializationImpl(
 
 bool RedeclarableTemplateDecl::loadLazySpecializationsWithArgs(
     ArrayRef<TemplateArgument> TemplateArgs) {
+  if (!getASTContext().getLangOpts().LoadExternalSpecializationsLazily)
+    return false;
+
   auto *ExternalSource = getASTContext().getExternalSource();
   if (!ExternalSource)
     return false;

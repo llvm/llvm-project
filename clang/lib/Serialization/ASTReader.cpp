@@ -8100,11 +8100,10 @@ bool ASTReader::LoadExternalSpecializations(
   if (It == SpecializationsLookups.end())
     return false;
 
+  Deserializing LookupResults(this);
   auto HashValue = GetTemplateArgsStableHash(TemplateArgs);
 
   bool LoadedAnyDecls = false;
-
-  Deserializing LookupResults(this);
   for (DeclID ID : It->second.Table.find(HashValue)) {
     if (GetExistingDecl(ID))
       continue;
@@ -8113,6 +8112,23 @@ bool ASTReader::LoadExternalSpecializations(
   }
 
   return LoadedAnyDecls;
+}
+
+void ASTReader::LoadAllExternalSpecializations(const Decl *D) {
+  assert(D);
+
+  auto It = SpecializationsLookups.find(D);
+  if (It == SpecializationsLookups.end())
+    return;
+
+  Deserializing LookupResults(this);
+
+  for (DeclID ID : It->second.Table.findAll())
+    GetDecl(ID);
+
+  // Since we've loaded all the specializations, we can erase it from
+  // the lookup table.
+  SpecializationsLookups.erase(It);
 }
 
 void ASTReader::completeVisibleDeclsMap(const DeclContext *DC) {

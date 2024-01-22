@@ -3084,7 +3084,7 @@ struct S5 {
 };
 #else
 S5 s5;
-// expected-error@first.h:* {{'PointersAndReferences::S5::x' from module 'FirstModule' is not present in definition of 'PointersAndReferences::S5' in module 'SecondModule'}}
+// expected-error@second.h:* {{'PointersAndReferences::S5::x' from module 'SecondModule' is not present in definition of 'PointersAndReferences::S5' in module 'FirstModule'}}
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 #endif
 
@@ -4021,7 +4021,7 @@ struct Valid {
 #else
 Invalid::L2<1>::L3<1> invalid;
 // expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<>' in module 'FirstModule'}}
-// expected-note@second.h:* {{declaration of 'x' does not match}}
+// expected-note@first.h:* {{declaration of 'x' does not match}}
 Valid::L2<1>::L3<1> valid;
 #endif
 }  // namespace InjectedClassName

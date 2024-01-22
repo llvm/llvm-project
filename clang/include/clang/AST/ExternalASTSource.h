@@ -156,6 +156,9 @@ public:
   LoadExternalSpecializations(const Decl *D,
                               ArrayRef<TemplateArgument> TemplateArgs);
 
+  /// Load all the external specializations for the Decl D.
+  virtual void LoadAllExternalSpecializations(const Decl *D);
+
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
   ///

@@ -3940,6 +3940,11 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
 
+  if (Args.hasFlag(options::OPT_fload_external_specializations_lazily,
+                   options::OPT_fno_load_external_specializations_lazily,
+                   false))
+    CmdArgs.push_back("-fload-external-specializations-lazily");
+
   // Claim `-fmodule-output` and `-fmodule-output=` to avoid unused warnings.
   Args.ClaimAllArgs(options::OPT_fmodule_output);
   Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);

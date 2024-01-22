@@ -103,6 +103,8 @@ public:
   LoadExternalSpecializations(const Decl *D,
                               ArrayRef<TemplateArgument> TemplateArgs) override;
 
+  void LoadAllExternalSpecializations(const Decl *D) override;
+
   /// Ensures that the table of all visible declarations inside this
   /// context is up to date.
   void completeVisibleDeclsMap(const DeclContext *DC) override;

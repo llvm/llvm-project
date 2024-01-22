@@ -266,7 +266,7 @@ namespace clang {
           ThisDeclLoc(ThisDeclLoc) {}
 
     template <typename T> static
-    void AddLazySpecializations(T *D,
+    void AddExternalSpecializations(T *D,
                                 SmallVectorImpl<serialization::DeclID>& IDs) {
       if (IDs.empty())
         return;
@@ -2461,7 +2461,7 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     if (Record.readInt())
       ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
 
-    ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+    ASTDeclReader::AddExternalSpecializations(D, SpecIDs);
   }
 
   if (D->getTemplatedDecl()->TemplateOrInstantiation) {
@@ -2493,7 +2493,7 @@ void ASTDeclReader::VisitVarTemplateDecl(VarTemplateDecl *D) {
     if (Record.readInt())
       ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
 
-    ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+    ASTDeclReader::AddExternalSpecializations(D, SpecIDs);
   }
 }
 
@@ -2595,7 +2595,7 @@ void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
     // This FunctionTemplateDecl owns a CommonPtr; read it.
     SmallVector<serialization::DeclID, 32> SpecIDs;
     readDeclIDList(SpecIDs);
-    ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+    ASTDeclReader::AddExternalSpecializations(D, SpecIDs);
 
     if (Record.readInt())
       ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor);
@@ -4217,7 +4217,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
   ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
   DeclUpdateOffsetsMap::iterator UpdI = DeclUpdateOffsets.find(ID);
 
-  SmallVector<serialization::DeclID, 8> PendingLazyPartialSpecializationIDs;
+  SmallVector<serialization::DeclID, 8> PendingExternalSpecializationIDs;
 
   if (UpdI != DeclUpdateOffsets.end()) {
     auto UpdateOffsets = std::move(UpdI->second);
@@ -4256,7 +4256,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
 
       ASTDeclReader Reader(*this, Record, RecordLocation(F, Offset), ID,
                            SourceLocation());
-      Reader.UpdateDecl(D, PendingLazyPartialSpecializationIDs);
+      Reader.UpdateDecl(D, PendingExternalSpecializationIDs);
 
       // We might have made this declaration interesting. If so, remember that
       // we need to hand it off to the consumer.
@@ -4269,16 +4269,16 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     }
   }
   // Add the lazy specializations to the template.
-  assert((PendingLazyPartialSpecializationIDs.empty() ||
-          isa<ClassTemplateDecl, VarTemplateDecl>(D)) &&
+  assert((PendingExternalSpecializationIDs.empty() ||
+          isa<ClassTemplateDecl, VarTemplateDecl, FunctionTemplateDecl>(D)) &&
          "Must not have pending specializations");
   if (auto *CTD = dyn_cast<ClassTemplateDecl>(D))
-    ASTDeclReader::AddLazySpecializations(CTD,
-                                          PendingLazyPartialSpecializationIDs);
+    ASTDeclReader::AddExternalSpecializations(CTD, PendingExternalSpecializationIDs);
+  else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    ASTDeclReader::AddExternalSpecializations(FTD, PendingExternalSpecializationIDs);
   else if (auto *VTD = dyn_cast<VarTemplateDecl>(D))
-    ASTDeclReader::AddLazySpecializations(VTD,
-                                          PendingLazyPartialSpecializationIDs);
-  PendingLazyPartialSpecializationIDs.clear();
+    ASTDeclReader::AddExternalSpecializations(VTD, PendingExternalSpecializationIDs);
+  PendingExternalSpecializationIDs.clear();
 
   // Load the pending visible updates for this decl context, if it has any.
   auto I = PendingVisibleUpdates.find(ID);
@@ -4498,7 +4498,7 @@ static void forAllLaterRedecls(DeclT *D, Fn F) {
 
 void ASTDeclReader::UpdateDecl(Decl *D,
                                llvm::SmallVectorImpl<serialization::DeclID>
-                                   &PendingLazyPartialSpecializationIDs) {
+                                   &PendingExternalSpecializationIDs) {
   while (Record.getIdx() < Record.size()) {
     switch ((DeclUpdateKind)Record.readInt()) {
     case UPD_CXX_ADDED_IMPLICIT_MEMBER: {
@@ -4509,9 +4509,9 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       break;
     }
 
-    case UPD_CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION:
+    case UPD_CXX_ADDED_TEMPLATE_EXTERNAL_SPECIALIZATION:
       // It will be added to the template's lazy partial specialization set.
-      PendingLazyPartialSpecializationIDs.push_back(readDeclID());
+      PendingExternalSpecializationIDs.push_back(readDeclID());
       break;
 
     case UPD_CXX_ADDED_ANONYMOUS_NAMESPACE: {

@@ -4074,6 +4074,10 @@ uint64_t ASTWriter::WriteSpecializationsLookupTable(
     const NamedDecl *D,
     llvm::SmallVectorImpl<const NamedDecl *> &Specializations) {
 
+  assert(getLangOpts().LoadExternalSpecializationsLazily &&
+         "WriteSpecializationsLookupTable shouldn't be reachable unless"
+         "'-fload-external-specializations-lazily' is specified");
+
   llvm::SmallString<4096> LookupTable;
   GenerateSpecializationsLookupTable(D, Specializations, LookupTable);
 
@@ -5461,7 +5465,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
       switch (Kind) {
       case UPD_CXX_ADDED_IMPLICIT_MEMBER:
-      case UPD_CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION:
+      case UPD_CXX_ADDED_TEMPLATE_EXTERNAL_SPECIALIZATION:
       case UPD_CXX_ADDED_ANONYMOUS_NAMESPACE:
         assert(Update.getDecl() && "no decl to add?");
         Record.push_back(GetDeclRef(Update.getDecl()));

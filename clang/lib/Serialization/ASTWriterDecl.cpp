@@ -221,9 +221,6 @@ namespace clang {
         assert(!Common->ExternalSpecializations);
       }
 
-      for (auto &Entry : Common->Specializations)
-        OptionalSpecs.push_back(getSpecializationDecl(Entry));
-
       ArrayRef<DeclID> ExternalSpecializations;
       if (auto *LS = Common->ExternalSpecializations)
         ExternalSpecializations = llvm::ArrayRef(LS + 1, LS[0]);
@@ -232,17 +229,23 @@ namespace clang {
       unsigned I = Record.size();
       Record.push_back(0);
 
+      llvm::SmallVector<const Decl *, 16> EagerSpecs;
+      for (auto &Entry : Common->Specializations)
+        if (Context.getLangOpts().LoadExternalSpecializationsLazily)
+          OptionalSpecs.push_back(getSpecializationDecl(Entry));
+        else
+          EagerSpecs.push_back(getSpecializationDecl(Entry));
+
       // AddFirstDeclFromEachModule might trigger deserialization, invalidating
       // *Specializations iterators.
       //
       // We need to load all the partial specializations at once if the template
       // required. Since we can't know if a partial specializations will be
       // needed before resolving a request to instantiate the template.
-      llvm::SmallVector<const Decl *, 16> PartialSpecs;
       for (auto &Entry : getPartialSpecializations(Common))
-        PartialSpecs.push_back(getSpecializationDecl(Entry));
+        EagerSpecs.push_back(getSpecializationDecl(Entry));
 
-      for (auto *D : PartialSpecs) {
+      for (auto *D : EagerSpecs) {
         assert(D->isCanonicalDecl() && "non-canonical decl in set");
         AddFirstDeclFromEachModule(D, /*IncludeLocal*/true);
       }
@@ -271,10 +274,11 @@ namespace clang {
       if (Writer.getFirstLocalDecl(Specialization) != Specialization)
         return;
 
-      if (isa<ClassTemplatePartialSpecializationDecl,
+      if (!Context.getLangOpts().LoadExternalSpecializationsLazily ||
+          isa<ClassTemplatePartialSpecializationDecl,
               VarTemplatePartialSpecializationDecl>(Specialization))
         Writer.DeclUpdates[Template].push_back(ASTWriter::DeclUpdate(
-            UPD_CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION, Specialization));
+            UPD_CXX_ADDED_TEMPLATE_EXTERNAL_SPECIALIZATION, Specialization));
       else
         Writer.SpecializationsUpdates[cast<NamedDecl>(Template)].push_back(
             cast<NamedDecl>(Specialization));
