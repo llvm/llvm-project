@@ -101,6 +101,9 @@ llvm.mlir.global internal @dense_float_vector_3d(dense<[[[1.0, 2.0], [3.0, 4.0]]
 // CHECK{LITERAL}: @splat_float_vector_3d = internal global [2 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float 4.200000e+01, float 4.200000e+01>], [2 x <2 x float>] [<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float 4.200000e+01, float 4.200000e+01>]]
 llvm.mlir.global internal @splat_float_vector_3d(dense<42.0> : vector<2x2x2xf32>) : !llvm.array<2 x !llvm.array<2 x vector<2xf32>>>
 
+// CHECK: @dense_resource_constant = internal constant [5 x float] [float 0x3FCA034080000000, float 0xBFD0466300000000, float 0xBFD75DDF80000000, float 0xBFDE074F40000000, float 0x3FDDD3A1C0000000]
+llvm.mlir.global internal constant @dense_resource_constant(dense_resource<dense_resource_test> : tensor<5xf32>) : !llvm.array<5 x f32>
+
 //
 // Linkage attribute.
 //
@@ -1576,6 +1579,15 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %9 = llvm.mlir.undef : !llvm.ptr
   llvm.invoke %9(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr, ...)>) : !llvm.ptr, (!llvm.ptr, i32) -> ()
 }
+
+// Resources are kept at end of file. New tests should be added above this.
+{-#
+  dialect_resources: {
+    builtin: {
+      dense_resource_test: "0x08000000041A503E183382BEFCEEBABE7A3AF0BE0E9DEE3E"
+    }
+  }
+#-}
 
 // -----
 
