@@ -257,7 +257,7 @@ class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands,
                         list<Trait> traits = []> :
   LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
                   "amdgcn_" # !subst(".","_", mnemonic),
-                  [0], overloadedOperands, [], 1>,
+                  [0], overloadedOperands, traits, 1>,
   Arguments<(ins Variadic<LLVM_Type>:$args)> {
   let assemblyFormat =
     "$args attr-dict `:` functional-type($args, $res)";
