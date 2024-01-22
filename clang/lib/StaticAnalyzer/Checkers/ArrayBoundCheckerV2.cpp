@@ -419,8 +419,8 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
     if (AssumedUpperBound &&
         providesInformationAboutInteresting(*AssumedUpperBound, BR)) {
       // Even if the byte offset isn't interesting (e.g. it's a constant value),
-      // the assumption can still be interesting if it provides information about
-      // an interesting symbolic upper bound.
+      // the assumption can still be interesting if it provides information
+      // about an interesting symbolic upper bound.
       // FIXME: This code path is currently non-functional and untested because
       // `getSimplifiedOffsets()` only works when the RHS (extent) is constant.
 
