@@ -202,12 +202,19 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
 // Due to the overflow issues I think it's impossible (or at least not
 // practical) to integrate this kind of simplification into the resolution of
 // arbitrary inequalities (i.e. the code of `evalBinOp`); but this function
-// produces valid results if the arguments are memory offsets which are known
-// to be << SIZE_MAX.
+// produces valid results when the calculations are handling memory offsets
+// and every value is well below SIZE_MAX.
 // TODO: This algorithm should be moved to a central location where it's
 // available for other checkers that need to compare memory offsets.
-// NOTE: When using the results of this function, don't forget that `evalBinOp`
-// uses the evaluation rules of C++, so e.g. `(size_t)123 < -1`!
+// NOTE: the simplification preserves the order of the two operands in a
+// mathematical sense, but it may change the result produced by a C++
+// comparison operator (and the automatic type conversions).
+// For example, consider a comparison "X+1 < 0", where the LHS is stored as a
+// size_t and the RHS is stored in an int. (As size_t is unsigned, this
+// comparison is false for all values of "X".) However, the simplification may
+// turn it into "X < -1", which is still always false in a mathematical sense,
+// but can produce a true result when evaluated by `evalBinOp` (which follows
+// the rules of C++ and casts -1 to SIZE_MAX).
 static std::pair<NonLoc, nonloc::ConcreteInt>
 getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
                      SValBuilder &svalBuilder) {
@@ -401,11 +408,9 @@ const NoteTag *StateUpdateReporter::createNoteTag(CheckerContext &C) const {
   if (!AssumedNonNegative && !AssumedUpperBound)
     return nullptr;
 
-  return C.getNoteTag(
-      [*this](PathSensitiveBugReport &BR) -> std::string {
-        return getMessage(BR);
-      },
-      /*isPrunable=*/false);
+  return C.getNoteTag([*this](PathSensitiveBugReport &BR) -> std::string {
+    return getMessage(BR);
+  });
 }
 
 std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
@@ -468,8 +473,9 @@ bool StateUpdateReporter::providesInformationAboutInteresting(
     // the SymIntExpr, UnarySymExpr etc. layers...
     if (BR.isInteresting(PartSym))
       return true;
-    // ...but if both sides of the expression are symbolic (i.e. unknown), then
-    // the analyzer can't use the combined result to constrain the operands.
+    // ...but if both sides of the expression are symbolic, then there is no
+    // practical algorithm to produce separate constraints for the two
+    // operands (from the single combined result).
     if (isa<SymSymExpr>(PartSym))
       return false;
   }
@@ -549,8 +555,6 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
         // expression that calculates the past-the-end pointer.
         if (isIdiomaticPastTheEndPtr(E, ExceedsUpperBound, ByteOffset,
                                      *KnownSize, C)) {
-          // FIXME: this duplicates the `addTransition` at the end of the
-          // function, but `goto` is taboo nowdays.
           C.addTransition(ExceedsUpperBound, SUR.createNoteTag(C));
           return;
         }
