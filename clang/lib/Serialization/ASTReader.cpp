@@ -7508,6 +7508,7 @@ ASTRecordReader::readTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
   case TemplateArgument::NullPtr:
+  case TemplateArgument::StructuralValue:
   case TemplateArgument::Pack:
     // FIXME: Is this right?
     return TemplateArgumentLocInfo();
