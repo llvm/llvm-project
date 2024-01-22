@@ -510,8 +510,7 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
 }
 
 // Check if a SDValue has the toc-data attribute.
-static bool hasTocDataAttr(SDValue Val, unsigned PointerSize,
-                           const PPCSubtarget *Subtarget) {
+static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
   if (!GA)
     return false;
@@ -6098,7 +6097,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       assert(isAIXABI && "ELF ABI already handled");
 
       if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize(), Subtarget)) {
+                         CurDAG->getDataLayout().getPointerSize())) {
         replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
@@ -6111,7 +6110,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       assert(isAIXABI && "ELF ABI handled in common SelectCode");
 
       if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize(), Subtarget)) {
+                         CurDAG->getDataLayout().getPointerSize())) {
         replaceWith(PPC::ADDItoc8, N, MVT::i64);
         return;
       }
