@@ -1211,6 +1211,9 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 // when compiling for CUDA we use the non-underscored version of the noinline
 // attribute.
 //
+// This is a temporary workaround and we still expect the CUDA SDK team to solve
+// this issue properly in the SDK headers.
+//
 // See https://github.com/llvm/llvm-project/pull/73838 for more details.
 #    define _LIBCPP_NOINLINE __attribute__((noinline))
 #  elif __has_attribute(__noinline__)
