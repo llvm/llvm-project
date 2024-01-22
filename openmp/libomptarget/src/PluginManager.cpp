@@ -192,7 +192,9 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
       RTL.DeviceOffset + RTL.getNumberOfUserDevices();
 
   if (TT.TargetsTable.size() < TargetsTableMinimumSize) {
+    TT.DeviceTables.resize(TargetsTableMinimumSize, {});
     TT.TargetsImages.resize(TargetsTableMinimumSize, 0);
+    TT.TargetsEntries.resize(TargetsTableMinimumSize, {});
     TT.TargetsTable.resize(TargetsTableMinimumSize, 0);
   }
 
