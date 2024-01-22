@@ -148,11 +148,11 @@ Deprecations and Removals
   macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
   In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
 
-- Overriding `__libcpp_verbose_abort` no longer has any effect on library assertions. The only supported way
+- Overriding ``__libcpp_verbose_abort`` no longer has any effect on library assertions. The only supported way
   to customize the assertion handler that gets invoked when a hardening assertion fails is now by setting the
   ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable and providing a custom header. See the documentation on
-  overriding the default assertion handler for details. The ability to override `__libcpp_verbose_abort` will
-  be removed in an upcoming release in favor of the new overriding mechanism.
+  overriding the default assertion handler for details. The ability to override ``__libcpp_verbose_abort``
+  will be removed in an upcoming release in favor of the new overriding mechanism.
 
 - In safe mode (which is now equivalent to the ``extensive`` hardening mode), a failed assertion will now
   generate a trap rather than a call to verbose abort.
