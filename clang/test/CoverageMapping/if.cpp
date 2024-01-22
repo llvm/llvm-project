@@ -111,6 +111,14 @@ int check_constexpr_init_false_without_else(int i) {   // CHECK-NEXT: [[@LINE]]:
   return i;
 }
 
+// CHECK-LABEL: _Z32check_constexpr_init_with_if_defi:
+int check_constexpr_init_with_if_def(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
+  if constexpr(using foo = int; true) {         // CHECK-NEXT: Skipped,File 0, [[@LINE]]:3 -> [[@LINE]]:39 = 0
+    i *= foo(42);                               // CHECK-NEXT: File 0, [[@LINE-1]]:39 -> [[@LINE+1]]:4 = #0
+  }
+  return i;
+}
+
 // CHECK-LABEL: _Z32check_macro_constexpr_if_skippedi:
 int check_macro_constexpr_if_skipped(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
 #define IF_CONSTEXPR if constexpr               // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:15 = #0 (Expanded file = 1)

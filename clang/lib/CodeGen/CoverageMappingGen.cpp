@@ -1825,11 +1825,14 @@ struct CounterCoverageMappingBuilder
     SourceLocation startOfSkipped = S->getIfLoc();
 
     if (const auto *Init = S->getInit()) {
-      // don't mark initialisation as ignored
-      markSkipped(startOfSkipped, getStart(Init));
-      propagateCounts(ParentCount, Init);
-      // ignore after initialisation: '; <condition>)'...
-      startOfSkipped = getEnd(Init);
+      const auto start = getStart(Init);
+      const auto end = getEnd(Init);
+      
+      if (start.isValid() && end.isValid()) {
+        markSkipped(startOfSkipped, start);
+        propagateCounts(ParentCount, Init);
+        startOfSkipped = getEnd(Init);
+      }
     }
 
     const auto *Then = S->getThen();
