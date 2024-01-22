@@ -33,10 +33,10 @@ multiclass ShiftRotate<string m, Format RegMRM, Format MemMRM, SDPatternOperator
         def 64ri_ND : BinOpRI8U_R<m, RegMRM, Xi64, node, 1>, Sched<[ri]>, DefEFLAGS;
       }
       let Predicates = [In64BitMode] in {
-        def 8ri_EVEX  : BinOpRI8U_R<m, RegMRM, Xi8, null_frag>, Sched<[ri]>, DefEFLAGS, PL;
-        def 16ri_EVEX : BinOpRI8U_R<m, RegMRM, Xi16, null_frag>, Sched<[ri]>, DefEFLAGS, PL, PD;
-        def 32ri_EVEX : BinOpRI8U_R<m, RegMRM, Xi32, null_frag>, Sched<[ri]>, DefEFLAGS, PL;
-        def 64ri_EVEX : BinOpRI8U_R<m, RegMRM, Xi64, null_frag>, Sched<[ri]>, DefEFLAGS, PL;
+        def 8ri_EVEX  : BinOpRI8U_R<m, RegMRM, Xi8>, Sched<[ri]>, DefEFLAGS, PL;
+        def 16ri_EVEX : BinOpRI8U_R<m, RegMRM, Xi16>, Sched<[ri]>, DefEFLAGS, PL, PD;
+        def 32ri_EVEX : BinOpRI8U_R<m, RegMRM, Xi32>, Sched<[ri]>, DefEFLAGS, PL;
+        def 64ri_EVEX : BinOpRI8U_R<m, RegMRM, Xi64>, Sched<[ri]>, DefEFLAGS, PL;
       }
     }
 
@@ -51,95 +51,95 @@ multiclass ShiftRotate<string m, Format RegMRM, Format MemMRM, SDPatternOperator
       def 64mi_ND : BinOpMI8U_R<m, MemMRM, Xi64, node>, Sched<[mi, ri]>, DefEFLAGS;
     }
     let Predicates = [In64BitMode] in {
-      def 8mi_EVEX  : BinOpMI8U_M<m, MemMRM, Xi8, null_frag>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL;
-      def 16mi_EVEX : BinOpMI8U_M<m, MemMRM, Xi16, null_frag>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL, PD;
-      def 32mi_EVEX : BinOpMI8U_M<m, MemMRM, Xi32, null_frag>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL;
-      def 64mi_EVEX : BinOpMI8U_M<m, MemMRM, Xi64, null_frag>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL;
+      def 8mi_EVEX  : BinOpMI8U_M<m, MemMRM, Xi8>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL;
+      def 16mi_EVEX : BinOpMI8U_M<m, MemMRM, Xi16>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL, PD;
+      def 32mi_EVEX : BinOpMI8U_M<m, MemMRM, Xi32>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL;
+      def 64mi_EVEX : BinOpMI8U_M<m, MemMRM, Xi64>, Sched<[mi, WriteRMW]>, DefEFLAGS, PL;
     }
 
     let SchedRW = [ri] in {
-      def 8r1  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8, null_frag>;
-      def 16r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi16, null_frag>, OpSize16;
-      def 32r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi32, null_frag>, OpSize32;
-      def 64r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi64, null_frag>;
+      def 8r1  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8>;
+      def 16r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi16>, OpSize16;
+      def 32r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi32>, OpSize32;
+      def 64r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi64>;
 
       // FIXME: Assembler can't tell whether it's 8r1_ND or 8rCL when the source register is cl, e.g.
       //
       //  shlb %cl, %al
       //
       // GNU binutils distinguish them by adding an explicit $1 to asm string of 8r1_ND. But we haven't support
-      // constant immediate in ams string for X86 in TD. So we add DisassembleOnly for 8r1_ND for the time being.
+      // constant immediate in asm string for X86 in TD. So we add DisassembleOnly for 8r1_ND for the time being.
       let Predicates = [In64BitMode] in {
         def 8r1_ND  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8, null_frag, 1>, DisassembleOnly;
         def 16r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi16, null_frag, 1>, PD;
         def 32r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi32, null_frag, 1>;
         def 64r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi64, null_frag, 1>;
 
-        def 8r1_EVEX  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8, null_frag>, PL;
-        def 16r1_EVEX : UnaryOpR_RF<0xD1, RegMRM, m, Xi16, null_frag>, PL, PD;
-        def 32r1_EVEX : UnaryOpR_RF<0xD1, RegMRM, m, Xi32, null_frag>, PL;
-        def 64r1_EVEX : UnaryOpR_RF<0xD1, RegMRM, m, Xi64, null_frag>, PL;
+        def 8r1_EVEX  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8>, PL;
+        def 16r1_EVEX : UnaryOpR_RF<0xD1, RegMRM, m, Xi16>, PL, PD;
+        def 32r1_EVEX : UnaryOpR_RF<0xD1, RegMRM, m, Xi32>, PL;
+        def 64r1_EVEX : UnaryOpR_RF<0xD1, RegMRM, m, Xi64>, PL;
       }
     }
 
     let SchedRW = [mi, WriteRMW] in {
-      def 8m1  : UnaryOpM_MF<0xD1, MemMRM, m, Xi8, null_frag>;
-      def 16m1 : UnaryOpM_MF<0xD1, MemMRM, m, Xi16, null_frag>, OpSize16;
-      def 32m1 : UnaryOpM_MF<0xD1, MemMRM, m, Xi32, null_frag>, OpSize32;
-      def 64m1 : UnaryOpM_MF<0xD1, MemMRM, m, Xi64, null_frag>, Requires<[In64BitMode]>;
+      def 8m1  : UnaryOpM_MF<0xD1, MemMRM, m, Xi8>;
+      def 16m1 : UnaryOpM_MF<0xD1, MemMRM, m, Xi16>, OpSize16;
+      def 32m1 : UnaryOpM_MF<0xD1, MemMRM, m, Xi32>, OpSize32;
+      def 64m1 : UnaryOpM_MF<0xD1, MemMRM, m, Xi64>, Requires<[In64BitMode]>;
 
       let Predicates = [In64BitMode] in {
-        def 8m1_EVEX  : UnaryOpM_MF<0xD1, MemMRM, m, Xi8, null_frag>, PL;
-        def 16m1_EVEX : UnaryOpM_MF<0xD1, MemMRM, m, Xi16, null_frag>, PL, PD;
-        def 32m1_EVEX : UnaryOpM_MF<0xD1, MemMRM, m, Xi32, null_frag>, PL;
-        def 64m1_EVEX : UnaryOpM_MF<0xD1, MemMRM, m, Xi64, null_frag>, PL;
+        def 8m1_EVEX  : UnaryOpM_MF<0xD1, MemMRM, m, Xi8>, PL;
+        def 16m1_EVEX : UnaryOpM_MF<0xD1, MemMRM, m, Xi16>, PL, PD;
+        def 32m1_EVEX : UnaryOpM_MF<0xD1, MemMRM, m, Xi32>, PL;
+        def 64m1_EVEX : UnaryOpM_MF<0xD1, MemMRM, m, Xi64>, PL;
       }
     }
     let SchedRW = [mi, ri], Predicates = [In64BitMode] in {
-      def 8m1_ND  : UnaryOpM_RF<0xD1, MemMRM, m, Xi8, null_frag>;
-      def 16m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi16, null_frag>, PD;
-      def 32m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi32, null_frag>;
-      def 64m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi64, null_frag>;
+      def 8m1_ND  : UnaryOpM_RF<0xD1, MemMRM, m, Xi8>;
+      def 16m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi16>, PD;
+      def 32m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi32>;
+      def 64m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi64>;
     }
   }
 
-  let Uses = !listconcat([CL], uses) in {
+  let Uses = !listconcat([CL], uses), Defs = [EFLAGS] in {
     let Predicates = [NoNDD] in {
-      def 8rCL  : BinOpRC_R<m, RegMRM, Xi8, node>, Sched<[rCL]>, DefEFLAGS;
-      def 16rCL : BinOpRC_R<m, RegMRM, Xi16, node>, Sched<[rCL]>, DefEFLAGS, OpSize16;
-      def 32rCL : BinOpRC_R<m, RegMRM, Xi32, node>, Sched<[rCL]>, DefEFLAGS, OpSize32;
-      def 64rCL : BinOpRC_R<m, RegMRM, Xi64, node>, Sched<[rCL]>, DefEFLAGS;
+      def 8rCL  : BinOpRC_R<m, RegMRM, Xi8, node>, Sched<[rCL]>;
+      def 16rCL : BinOpRC_R<m, RegMRM, Xi16, node>, Sched<[rCL]>, OpSize16;
+      def 32rCL : BinOpRC_R<m, RegMRM, Xi32, node>, Sched<[rCL]>, OpSize32;
+      def 64rCL : BinOpRC_R<m, RegMRM, Xi64, node>, Sched<[rCL]>;
     }
     let Predicates = [HasNDD, In64BitMode] in {
-      def 8rCL_ND  : BinOpRC_R<m, RegMRM, Xi8, node, 1>, Sched<[rCL]>, DefEFLAGS;
-      def 16rCL_ND : BinOpRC_R<m, RegMRM, Xi16, node, 1>, Sched<[rCL]>, DefEFLAGS, PD;
-      def 32rCL_ND : BinOpRC_R<m, RegMRM, Xi32, node, 1>, Sched<[rCL]>, DefEFLAGS;
-      def 64rCL_ND : BinOpRC_R<m, RegMRM, Xi64, node, 1>, Sched<[rCL]>, DefEFLAGS;
+      def 8rCL_ND  : BinOpRC_R<m, RegMRM, Xi8, node, 1>, Sched<[rCL]>;
+      def 16rCL_ND : BinOpRC_R<m, RegMRM, Xi16, node, 1>, Sched<[rCL]>, PD;
+      def 32rCL_ND : BinOpRC_R<m, RegMRM, Xi32, node, 1>, Sched<[rCL]>;
+      def 64rCL_ND : BinOpRC_R<m, RegMRM, Xi64, node, 1>, Sched<[rCL]>;
     }
     let Predicates = [In64BitMode] in {
-      def 8rCL_EVEX  : BinOpRC_R<m, RegMRM, Xi8, null_frag>, Sched<[rCL]>, DefEFLAGS, PL;
-      def 16rCL_EVEX : BinOpRC_R<m, RegMRM, Xi16, null_frag>, Sched<[rCL]>, DefEFLAGS, PL, PD;
-      def 32rCL_EVEX : BinOpRC_R<m, RegMRM, Xi32, null_frag>, Sched<[rCL]>, DefEFLAGS, PL;
-      def 64rCL_EVEX : BinOpRC_R<m, RegMRM, Xi64, null_frag>, Sched<[rCL]>, DefEFLAGS, PL;
+      def 8rCL_EVEX  : BinOpRC_R<m, RegMRM, Xi8>, Sched<[rCL]>, PL;
+      def 16rCL_EVEX : BinOpRC_R<m, RegMRM, Xi16>, Sched<[rCL]>, PL, PD;
+      def 32rCL_EVEX : BinOpRC_R<m, RegMRM, Xi32>, Sched<[rCL]>, PL;
+      def 64rCL_EVEX : BinOpRC_R<m, RegMRM, Xi64>, Sched<[rCL]>, PL;
     }
 
-    def 8mCL  : BinOpMC_M<m, MemMRM, Xi8, node>, Sched<[mCL, WriteRMW]>, DefEFLAGS;
-    def 16mCL : BinOpMC_M<m, MemMRM, Xi16, node>, Sched<[mCL, WriteRMW]>, DefEFLAGS, OpSize16;
-    def 32mCL : BinOpMC_M<m, MemMRM, Xi32, node>, Sched<[mCL, WriteRMW]>, DefEFLAGS, OpSize32;
-    def 64mCL : BinOpMC_M<m, MemMRM, Xi64, node>, Sched<[mCL, WriteRMW]>, DefEFLAGS, Requires<[In64BitMode]>;
+    def 8mCL  : BinOpMC_M<m, MemMRM, Xi8, node>, Sched<[mCL, WriteRMW]>;
+    def 16mCL : BinOpMC_M<m, MemMRM, Xi16, node>, Sched<[mCL, WriteRMW]>, OpSize16;
+    def 32mCL : BinOpMC_M<m, MemMRM, Xi32, node>, Sched<[mCL, WriteRMW]>, OpSize32;
+    def 64mCL : BinOpMC_M<m, MemMRM, Xi64, node>, Sched<[mCL, WriteRMW]>, Requires<[In64BitMode]>;
 
     let Predicates = [HasNDD, In64BitMode] in {
-      def 8mCL_ND  : BinOpMC_R<m, MemMRM, Xi8, node>, Sched<[mCL, rCL]>, DefEFLAGS;
-      def 16mCL_ND : BinOpMC_R<m, MemMRM, Xi16, node>, Sched<[mCL, rCL]>, DefEFLAGS, PD;
-      def 32mCL_ND : BinOpMC_R<m, MemMRM, Xi32, node>, Sched<[mCL, rCL]>, DefEFLAGS;
-      def 64mCL_ND : BinOpMC_R<m, MemMRM, Xi64, node>, Sched<[mCL, rCL]>, DefEFLAGS;
+      def 8mCL_ND  : BinOpMC_R<m, MemMRM, Xi8, node>, Sched<[mCL, rCL]>;
+      def 16mCL_ND : BinOpMC_R<m, MemMRM, Xi16, node>, Sched<[mCL, rCL]>, PD;
+      def 32mCL_ND : BinOpMC_R<m, MemMRM, Xi32, node>, Sched<[mCL, rCL]>;
+      def 64mCL_ND : BinOpMC_R<m, MemMRM, Xi64, node>, Sched<[mCL, rCL]>;
     }
 
     let Predicates = [In64BitMode] in {
-      def 8mCL_EVEX  : BinOpMC_M<m, MemMRM, Xi8, null_frag>, Sched<[mCL, WriteRMW]>, DefEFLAGS, PL;
-      def 16mCL_EVEX : BinOpMC_M<m, MemMRM, Xi16, null_frag>, Sched<[mCL, WriteRMW]>, DefEFLAGS, PL, PD;
-      def 32mCL_EVEX : BinOpMC_M<m, MemMRM, Xi32, null_frag>, Sched<[mCL, WriteRMW]>, DefEFLAGS, PL;
-      def 64mCL_EVEX : BinOpMC_M<m, MemMRM, Xi64, null_frag>, Sched<[mCL, WriteRMW]>, DefEFLAGS, PL;
+      def 8mCL_EVEX  : BinOpMC_M<m, MemMRM, Xi8>, Sched<[mCL, WriteRMW]>, PL;
+      def 16mCL_EVEX : BinOpMC_M<m, MemMRM, Xi16>, Sched<[mCL, WriteRMW]>, PL, PD;
+      def 32mCL_EVEX : BinOpMC_M<m, MemMRM, Xi32>, Sched<[mCL, WriteRMW]>, PL;
+      def 64mCL_EVEX : BinOpMC_M<m, MemMRM, Xi64>, Sched<[mCL, WriteRMW]>, PL;
     }
   }
 }
@@ -148,10 +148,10 @@ multiclass ShiftRotate_NF<string m, Format RegMRM, Format MemMRM, SchedReadWrite
                           SchedReadWrite ri, SchedReadWrite mCL, SchedReadWrite mi> {
   let Predicates = [In64BitMode] in {
     let isConvertibleToThreeAddress = !if(!eq(m, "shl"), 1, 0) in {
-      def 8ri_NF  : BinOpRI8U_R<m, RegMRM, Xi8, null_frag>, Sched<[ri]>, NF;
-      def 16ri_NF : BinOpRI8U_R<m, RegMRM, Xi16, null_frag>, Sched<[ri]>, NF, PD;
-      def 32ri_NF : BinOpRI8U_R<m, RegMRM, Xi32, null_frag>, Sched<[ri]>, NF;
-      def 64ri_NF : BinOpRI8U_R<m, RegMRM, Xi64, null_frag>, Sched<[ri]>, NF;
+      def 8ri_NF  : BinOpRI8U_R<m, RegMRM, Xi8>, Sched<[ri]>, NF;
+      def 16ri_NF : BinOpRI8U_R<m, RegMRM, Xi16>, Sched<[ri]>, NF, PD;
+      def 32ri_NF : BinOpRI8U_R<m, RegMRM, Xi32>, Sched<[ri]>, NF;
+      def 64ri_NF : BinOpRI8U_R<m, RegMRM, Xi64>, Sched<[ri]>, NF;
 
       def 8ri_NF_ND  : BinOpRI8U_R<m, RegMRM, Xi8, null_frag, 1>, Sched<[ri]>, EVEX_NF;
       def 16ri_NF_ND : BinOpRI8U_R<m, RegMRM, Xi16, null_frag, 1>, Sched<[ri]>, EVEX_NF, PD;
@@ -159,15 +159,15 @@ multiclass ShiftRotate_NF<string m, Format RegMRM, Format MemMRM, SchedReadWrite
       def 64ri_NF_ND : BinOpRI8U_R<m, RegMRM, Xi64, null_frag, 1>, Sched<[ri]>, EVEX_NF;
     }
 
-    def 8mi_NF  : BinOpMI8U_M<m, MemMRM, Xi8, null_frag>, Sched<[mi, WriteRMW]>, NF;
-    def 16mi_NF : BinOpMI8U_M<m, MemMRM, Xi16, null_frag>, Sched<[mi, WriteRMW]>, NF, PD;
-    def 32mi_NF : BinOpMI8U_M<m, MemMRM, Xi32, null_frag>, Sched<[mi, WriteRMW]>, NF;
-    def 64mi_NF : BinOpMI8U_M<m, MemMRM, Xi64, null_frag>, Sched<[mi, WriteRMW]>, NF;
+    def 8mi_NF  : BinOpMI8U_M<m, MemMRM, Xi8>, Sched<[mi, WriteRMW]>, NF;
+    def 16mi_NF : BinOpMI8U_M<m, MemMRM, Xi16>, Sched<[mi, WriteRMW]>, NF, PD;
+    def 32mi_NF : BinOpMI8U_M<m, MemMRM, Xi32>, Sched<[mi, WriteRMW]>, NF;
+    def 64mi_NF : BinOpMI8U_M<m, MemMRM, Xi64>, Sched<[mi, WriteRMW]>, NF;
 
-    def 8mi_NF_ND  : BinOpMI8U_R<m, MemMRM, Xi8, null_frag>, Sched<[mi, ri]>, EVEX_NF;
-    def 16mi_NF_ND : BinOpMI8U_R<m, MemMRM, Xi16, null_frag>, Sched<[mi, ri]>, EVEX_NF, PD;
-    def 32mi_NF_ND : BinOpMI8U_R<m, MemMRM, Xi32, null_frag>, Sched<[mi, ri]>, EVEX_NF;
-    def 64mi_NF_ND : BinOpMI8U_R<m, MemMRM, Xi64, null_frag>, Sched<[mi, ri]>, EVEX_NF;
+    def 8mi_NF_ND  : BinOpMI8U_R<m, MemMRM, Xi8>, Sched<[mi, ri]>, EVEX_NF;
+    def 16mi_NF_ND : BinOpMI8U_R<m, MemMRM, Xi16>, Sched<[mi, ri]>, EVEX_NF, PD;
+    def 32mi_NF_ND : BinOpMI8U_R<m, MemMRM, Xi32>, Sched<[mi, ri]>, EVEX_NF;
+    def 64mi_NF_ND : BinOpMI8U_R<m, MemMRM, Xi64>, Sched<[mi, ri]>, EVEX_NF;
 
     let SchedRW = [ri] in {
       // FIXME: Assembler can't tell whether it's 8r1_NF_ND or 8rCL_NF when the source register is cl, e.g.
@@ -175,11 +175,11 @@ multiclass ShiftRotate_NF<string m, Format RegMRM, Format MemMRM, SchedReadWrite
       //  {nf} shlb %cl, %al
       //
       // GNU binutils distinguish them by adding an explicit $1 to asm string of 8r1_NF_ND. But we haven't support
-      // constant immediate in ams string for X86 in TD. So we add DisassembleOnly for 8r1_NF_ND for the time being.
-      def 8r1_NF  : UnaryOpR_R<0xD1, RegMRM, m, Xi8, null_frag>, NF;
-      def 16r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi16, null_frag>, NF, PD;
-      def 32r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi32, null_frag>, NF;
-      def 64r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi64, null_frag>, NF;
+      // constant immediate in asm string for X86 in TD. So we add DisassembleOnly for 8r1_NF_ND for the time being.
+      def 8r1_NF  : UnaryOpR_R<0xD1, RegMRM, m, Xi8>, NF;
+      def 16r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi16>, NF, PD;
+      def 32r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi32>, NF;
+      def 64r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi64>, NF;
 
       def 8r1_NF_ND  : UnaryOpR_R<0xD1, RegMRM, m, Xi8, null_frag, 1>, EVEX_NF, DisassembleOnly;
       def 16r1_NF_ND : UnaryOpR_R<0xD1, RegMRM, m, Xi16, null_frag, 1>, EVEX_NF, PD;
@@ -188,38 +188,38 @@ multiclass ShiftRotate_NF<string m, Format RegMRM, Format MemMRM, SchedReadWrite
     }
 
     let SchedRW = [mi, WriteRMW] in {
-      def 8m1_NF  : UnaryOpM_M<0xD1, MemMRM, m, Xi8, null_frag>, NF;
-      def 16m1_NF : UnaryOpM_M<0xD1, MemMRM, m, Xi16, null_frag>, NF, PD;
-      def 32m1_NF : UnaryOpM_M<0xD1, MemMRM, m, Xi32, null_frag>, NF;
-      def 64m1_NF : UnaryOpM_M<0xD1, MemMRM, m, Xi64, null_frag>, NF;
+      def 8m1_NF  : UnaryOpM_M<0xD1, MemMRM, m, Xi8>, NF;
+      def 16m1_NF : UnaryOpM_M<0xD1, MemMRM, m, Xi16>, NF, PD;
+      def 32m1_NF : UnaryOpM_M<0xD1, MemMRM, m, Xi32>, NF;
+      def 64m1_NF : UnaryOpM_M<0xD1, MemMRM, m, Xi64>, NF;
     }
     let SchedRW = [mi, ri] in {
-      def 8m1_NF_ND  : UnaryOpM_R<0xD1, MemMRM, m, Xi8, null_frag>, EVEX_NF;
-      def 16m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi16, null_frag>, EVEX_NF, PD;
-      def 32m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi32, null_frag>, EVEX_NF;
-      def 64m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi64, null_frag>, EVEX_NF;
+      def 8m1_NF_ND  : UnaryOpM_R<0xD1, MemMRM, m, Xi8>, EVEX_NF;
+      def 16m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi16>, EVEX_NF, PD;
+      def 32m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi32>, EVEX_NF;
+      def 64m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi64>, EVEX_NF;
     }
 
     let Uses = [CL] in {
-      def 8rCL_NF  : BinOpRC_R<m, RegMRM, Xi8, null_frag>, Sched<[rCL]>, NF;
-      def 16rCL_NF : BinOpRC_R<m, RegMRM, Xi16, null_frag>, Sched<[rCL]>, NF, PD;
-      def 32rCL_NF : BinOpRC_R<m, RegMRM, Xi32, null_frag>, Sched<[rCL]>, NF;
-      def 64rCL_NF : BinOpRC_R<m, RegMRM, Xi64, null_frag>, Sched<[rCL]>, NF;
+      def 8rCL_NF  : BinOpRC_R<m, RegMRM, Xi8>, Sched<[rCL]>, NF;
+      def 16rCL_NF : BinOpRC_R<m, RegMRM, Xi16>, Sched<[rCL]>, NF, PD;
+      def 32rCL_NF : BinOpRC_R<m, RegMRM, Xi32>, Sched<[rCL]>, NF;
+      def 64rCL_NF : BinOpRC_R<m, RegMRM, Xi64>, Sched<[rCL]>, NF;
 
       def 8rCL_NF_ND  : BinOpRC_R<m, RegMRM, Xi8, null_frag, 1>, Sched<[rCL]>, EVEX_NF;
       def 16rCL_NF_ND : BinOpRC_R<m, RegMRM, Xi16, null_frag, 1>, Sched<[rCL]>, EVEX_NF, PD;
       def 32rCL_NF_ND : BinOpRC_R<m, RegMRM, Xi32, null_frag, 1>, Sched<[rCL]>, EVEX_NF;
       def 64rCL_NF_ND : BinOpRC_R<m, RegMRM, Xi64, null_frag, 1>, Sched<[rCL]>, EVEX_NF;
 
-      def 8mCL_NF  : BinOpMC_M<m, MemMRM, Xi8, null_frag>, Sched<[mCL, WriteRMW]>, NF;
-      def 16mCL_NF : BinOpMC_M<m, MemMRM, Xi16, null_frag>, Sched<[mCL, WriteRMW]>, NF, PD;
-      def 32mCL_NF : BinOpMC_M<m, MemMRM, Xi32, null_frag>, Sched<[mCL, WriteRMW]>, NF;
-      def 64mCL_NF : BinOpMC_M<m, MemMRM, Xi64, null_frag>, Sched<[mCL, WriteRMW]>, NF;
+      def 8mCL_NF  : BinOpMC_M<m, MemMRM, Xi8>, Sched<[mCL, WriteRMW]>, NF;
+      def 16mCL_NF : BinOpMC_M<m, MemMRM, Xi16>, Sched<[mCL, WriteRMW]>, NF, PD;
+      def 32mCL_NF : BinOpMC_M<m, MemMRM, Xi32>, Sched<[mCL, WriteRMW]>, NF;
+      def 64mCL_NF : BinOpMC_M<m, MemMRM, Xi64>, Sched<[mCL, WriteRMW]>, NF;
 
-      def 8mCL_NF_ND  : BinOpMC_R<m, MemMRM, Xi8, null_frag>, Sched<[mCL, rCL]>, EVEX_NF;
-      def 16mCL_NF_ND : BinOpMC_R<m, MemMRM, Xi16, null_frag>, Sched<[mCL, rCL]>, EVEX_NF, PD;
-      def 32mCL_NF_ND : BinOpMC_R<m, MemMRM, Xi32, null_frag>, Sched<[mCL, rCL]>, EVEX_NF;
-      def 64mCL_NF_ND : BinOpMC_R<m, MemMRM, Xi64, null_frag>, Sched<[mCL, rCL]>, EVEX_NF;
+      def 8mCL_NF_ND  : BinOpMC_R<m, MemMRM, Xi8>, Sched<[mCL, rCL]>, EVEX_NF;
+      def 16mCL_NF_ND : BinOpMC_R<m, MemMRM, Xi16>, Sched<[mCL, rCL]>, EVEX_NF, PD;
+      def 32mCL_NF_ND : BinOpMC_R<m, MemMRM, Xi32>, Sched<[mCL, rCL]>, EVEX_NF;
+      def 64mCL_NF_ND : BinOpMC_R<m, MemMRM, Xi64>, Sched<[mCL, rCL]>, EVEX_NF;
     }
   }
 }
@@ -343,7 +343,7 @@ let Predicates = [HasNDD] in {
 // Double precision shift instructions (generalizations of rotate)
 //===----------------------------------------------------------------------===//
 
-class ShlrdOpRRI8U_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, bit ndd = 0>
+class ShlrdOpRRI8U_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag, bit ndd = 0>
   : ITy<o, MRMDestReg, t, (outs t.RegClass:$dst),
         (ins t.RegClass:$src1, t.RegClass:$src2, u8imm:$src3), m, !if(!eq(ndd, 0), triop_args, triop_ndd_args),
         []>, NDD<ndd> {
@@ -355,7 +355,7 @@ class ShlrdOpRRI8U_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                     [(set t.RegClass:$dst, (node t.RegClass:$src2, t.RegClass:$src1, (i8 imm:$src3)))]);
 }
 
-class ShlrdOpRRC_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, bit ndd = 0>
+class ShlrdOpRRC_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag, bit ndd = 0>
   : BinOpRR<o, m, !if(!eq(ndd, 0), triop_cl_args, triop_cl_ndd_args), t, (outs t.RegClass:$dst), []>, NDD<ndd> {
   let Uses = [CL];
   let SchedRW = [WriteSHDrrcl];
@@ -364,7 +364,7 @@ class ShlrdOpRRC_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, b
                     [(set t.RegClass:$dst, (node t.RegClass:$src2, t.RegClass:$src1, CL))]);
 }
 
-class ShlrdOpMRI8U_M<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
+class ShlrdOpMRI8U_M<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag>
   : ITy<o, MRMDestMem, t, (outs), (ins t.MemOperand:$src1, t.RegClass:$src2, u8imm:$src3),
         m, triop_args, []>, TB {
   let ImmT = Imm8;
@@ -376,7 +376,7 @@ class ShlrdOpMRI8U_M<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
                     [(store (node t.RegClass:$src2, (t.LoadNode addr:$src1), (i8 imm:$src3)), addr:$src1)]);
 }
 
-class ShlrdOpMRC_M<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
+class ShlrdOpMRC_M<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag>
   : BinOpMR<o, m, triop_cl_args, t, (outs), []>, TB {
   let Uses = [CL];
   let SchedRW = [WriteSHDmrcl];
@@ -386,7 +386,7 @@ class ShlrdOpMRC_M<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
                     [(store (node t.RegClass:$src2, (t.LoadNode addr:$src1), CL), addr:$src1)]);
 }
 
-class ShlrdOpMRI8U_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
+class ShlrdOpMRI8U_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag>
   : ITy<o, MRMDestMem, t, (outs t.RegClass:$dst), (ins t.MemOperand:$src1, t.RegClass:$src2, u8imm:$src3),
         m, triop_ndd_args, []>, NDD<1> {
   let ImmT = Imm8;
@@ -397,7 +397,7 @@ class ShlrdOpMRI8U_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
                     [(set t.RegClass:$dst, (node t.RegClass:$src2, (t.LoadNode addr:$src1), (i8 imm:$src3)))]);
 }
 
-class ShlrdOpMRC_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
+class ShlrdOpMRC_R<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node = null_frag>
   : BinOpMR<o, m, triop_cl_ndd_args, t, (outs t.RegClass:$dst), []>, NDD<1> {
   let Uses = [CL];
   let SchedRW = [WriteSHDmrcl];
@@ -427,13 +427,13 @@ multiclass Shlrd<bits<8> o1, bits<8> o2, bits<8> o3, string m, SDPatternOperator
   }
 
   let Predicates = [In64BitMode] in {
-    def 16rri8_NF : ShlrdOpRRI8U_R<o3, m, Xi16, null_frag>, NF, PD;
-    def 32rri8_NF : ShlrdOpRRI8U_R<o3, m, Xi32, null_frag>, NF;
-    def 64rri8_NF : ShlrdOpRRI8U_R<o3, m, Xi64, null_frag>, NF;
+    def 16rri8_NF : ShlrdOpRRI8U_R<o3, m, Xi16>, NF, PD;
+    def 32rri8_NF : ShlrdOpRRI8U_R<o3, m, Xi32>, NF;
+    def 64rri8_NF : ShlrdOpRRI8U_R<o3, m, Xi64>, NF;
 
-    def 16rrCL_NF : ShlrdOpRRC_R<o2, m, Xi16, null_frag>, NF, PD;
-    def 32rrCL_NF : ShlrdOpRRC_R<o2, m, Xi32, null_frag>, NF;
-    def 64rrCL_NF : ShlrdOpRRC_R<o2, m, Xi64, null_frag>, NF;
+    def 16rrCL_NF : ShlrdOpRRC_R<o2, m, Xi16>, NF, PD;
+    def 32rrCL_NF : ShlrdOpRRC_R<o2, m, Xi32>, NF;
+    def 64rrCL_NF : ShlrdOpRRC_R<o2, m, Xi64>, NF;
 
     def 16rri8_NF_ND : ShlrdOpRRI8U_R<o3, m, Xi16, null_frag, 1>, EVEX_NF, PD;
     def 32rri8_NF_ND : ShlrdOpRRI8U_R<o3, m, Xi32, null_frag, 1>, EVEX_NF;
@@ -443,13 +443,13 @@ multiclass Shlrd<bits<8> o1, bits<8> o2, bits<8> o3, string m, SDPatternOperator
     def 32rrCL_NF_ND : ShlrdOpRRC_R<o2, m, Xi32, null_frag, 1>, EVEX_NF;
     def 64rrCL_NF_ND : ShlrdOpRRC_R<o2, m, Xi64, null_frag, 1>, EVEX_NF;
 
-    def 16rri8_EVEX : ShlrdOpRRI8U_R<o3, m, Xi16, null_frag>, DefEFLAGS, PL, PD;
-    def 32rri8_EVEX : ShlrdOpRRI8U_R<o3, m, Xi32, null_frag>, DefEFLAGS, PL;
-    def 64rri8_EVEX : ShlrdOpRRI8U_R<o3, m, Xi64, null_frag>, DefEFLAGS, PL;
+    def 16rri8_EVEX : ShlrdOpRRI8U_R<o3, m, Xi16>, DefEFLAGS, PL, PD;
+    def 32rri8_EVEX : ShlrdOpRRI8U_R<o3, m, Xi32>, DefEFLAGS, PL;
+    def 64rri8_EVEX : ShlrdOpRRI8U_R<o3, m, Xi64>, DefEFLAGS, PL;
 
-    def 16rrCL_EVEX : ShlrdOpRRC_R<o2, m, Xi16, null_frag>, DefEFLAGS, PL, PD;
-    def 32rrCL_EVEX : ShlrdOpRRC_R<o2, m, Xi32, null_frag>, DefEFLAGS, PL;
-    def 64rrCL_EVEX : ShlrdOpRRC_R<o2, m, Xi64, null_frag>, DefEFLAGS, PL;
+    def 16rrCL_EVEX : ShlrdOpRRC_R<o2, m, Xi16>, DefEFLAGS, PL, PD;
+    def 32rrCL_EVEX : ShlrdOpRRC_R<o2, m, Xi32>, DefEFLAGS, PL;
+    def 64rrCL_EVEX : ShlrdOpRRC_R<o2, m, Xi64>, DefEFLAGS, PL;
   }
 
   def 16mri8 : ShlrdOpMRI8U_M<o1, m, Xi16, t_node>, DefEFLAGS, OpSize16;
@@ -471,29 +471,29 @@ multiclass Shlrd<bits<8> o1, bits<8> o2, bits<8> o3, string m, SDPatternOperator
   }
 
   let Predicates = [In64BitMode] in {
-    def 16mri8_NF : ShlrdOpMRI8U_M<o3, m, Xi16, null_frag>, NF, PD;
-    def 32mri8_NF : ShlrdOpMRI8U_M<o3, m, Xi32, null_frag>, NF;
-    def 64mri8_NF : ShlrdOpMRI8U_M<o3, m, Xi64, null_frag>, NF;
+    def 16mri8_NF : ShlrdOpMRI8U_M<o3, m, Xi16>, NF, PD;
+    def 32mri8_NF : ShlrdOpMRI8U_M<o3, m, Xi32>, NF;
+    def 64mri8_NF : ShlrdOpMRI8U_M<o3, m, Xi64>, NF;
 
-    def 16mrCL_NF : ShlrdOpMRC_M<o2, m, Xi16, null_frag>, NF, PD;
-    def 32mrCL_NF : ShlrdOpMRC_M<o2, m, Xi32, null_frag>, NF;
-    def 64mrCL_NF : ShlrdOpMRC_M<o2, m, Xi64, null_frag>, NF;
+    def 16mrCL_NF : ShlrdOpMRC_M<o2, m, Xi16>, NF, PD;
+    def 32mrCL_NF : ShlrdOpMRC_M<o2, m, Xi32>, NF;
+    def 64mrCL_NF : ShlrdOpMRC_M<o2, m, Xi64>, NF;
 
-    def 16mri8_NF_ND : ShlrdOpMRI8U_R<o3, m, Xi16, null_frag>, EVEX_NF, PD;
-    def 32mri8_NF_ND : ShlrdOpMRI8U_R<o3, m, Xi32, null_frag>, EVEX_NF;
-    def 64mri8_NF_ND : ShlrdOpMRI8U_R<o3, m, Xi64, null_frag>, EVEX_NF;
+    def 16mri8_NF_ND : ShlrdOpMRI8U_R<o3, m, Xi16>, EVEX_NF, PD;
+    def 32mri8_NF_ND : ShlrdOpMRI8U_R<o3, m, Xi32>, EVEX_NF;
+    def 64mri8_NF_ND : ShlrdOpMRI8U_R<o3, m, Xi64>, EVEX_NF;
 
-    def 16mrCL_NF_ND : ShlrdOpMRC_R<o2, m, Xi16, null_frag>, EVEX_NF, PD;
-    def 32mrCL_NF_ND : ShlrdOpMRC_R<o2, m, Xi32, null_frag>, EVEX_NF;
-    def 64mrCL_NF_ND : ShlrdOpMRC_R<o2, m, Xi64, null_frag>, EVEX_NF;
+    def 16mrCL_NF_ND : ShlrdOpMRC_R<o2, m, Xi16>, EVEX_NF, PD;
+    def 32mrCL_NF_ND : ShlrdOpMRC_R<o2, m, Xi32>, EVEX_NF;
+    def 64mrCL_NF_ND : ShlrdOpMRC_R<o2, m, Xi64>, EVEX_NF;
 
-    def 16mri8_EVEX : ShlrdOpMRI8U_M<o3, m, Xi16, null_frag>, DefEFLAGS, PL, PD;
-    def 32mri8_EVEX : ShlrdOpMRI8U_M<o3, m, Xi32, null_frag>, DefEFLAGS, PL;
-    def 64mri8_EVEX : ShlrdOpMRI8U_M<o3, m, Xi64, null_frag>, DefEFLAGS, PL;
+    def 16mri8_EVEX : ShlrdOpMRI8U_M<o3, m, Xi16>, DefEFLAGS, PL, PD;
+    def 32mri8_EVEX : ShlrdOpMRI8U_M<o3, m, Xi32>, DefEFLAGS, PL;
+    def 64mri8_EVEX : ShlrdOpMRI8U_M<o3, m, Xi64>, DefEFLAGS, PL;
 
-    def 16mrCL_EVEX : ShlrdOpMRC_M<o2, m, Xi16, null_frag>, DefEFLAGS, PL, PD;
-    def 32mrCL_EVEX : ShlrdOpMRC_M<o2, m, Xi32, null_frag>, DefEFLAGS, PL;
-    def 64mrCL_EVEX : ShlrdOpMRC_M<o2, m, Xi64, null_frag>, DefEFLAGS, PL;
+    def 16mrCL_EVEX : ShlrdOpMRC_M<o2, m, Xi16>, DefEFLAGS, PL, PD;
+    def 32mrCL_EVEX : ShlrdOpMRC_M<o2, m, Xi32>, DefEFLAGS, PL;
+    def 64mrCL_EVEX : ShlrdOpMRC_M<o2, m, Xi64>, DefEFLAGS, PL;
   }
 }
 

@@ -1844,7 +1844,6 @@ defm SAR : MaskedShiftAmountPats<sra>;
 // not tracking flags for these nodes.
 multiclass MaskedRotateAmountPats<SDNode frag> {
   // (rot x (and y, BitWidth - 1)) ==> (rot x, y)
-  // (rot x (and y, 63)) ==> (rot x, y)
   let Predicates = [NoNDD] in {
     def : Pat<(frag GR8:$src1, (shiftMask8 CL)),
               (!cast<Instruction>(NAME # "8rCL") GR8:$src1)>;
