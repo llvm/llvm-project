@@ -458,7 +458,7 @@ uint32_t TargetList::SendAsyncInterrupt(lldb::pid_t pid) {
   } else {
     // We don't have a valid pid to broadcast to, so broadcast to the target
     // list's async broadcaster...
-    BroadcastEvent(Process::eBroadcastBitInterrupt, nullptr);
+    BroadcastEvent(Process::eBroadcastBitInterrupt);
   }
 
   return num_async_interrupts_sent;

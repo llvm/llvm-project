@@ -28,7 +28,7 @@ TEST(BroadcasterTest, BroadcastEvent) {
   const uint32_t event_mask1 = 1;
   EXPECT_EQ(event_mask1,
             listener1_sp->StartListeningForEvents(&broadcaster, event_mask1));
-  broadcaster.BroadcastEvent(event_mask1, nullptr);
+  broadcaster.BroadcastEvent(event_mask1);
   EXPECT_TRUE(listener1_sp->GetEvent(event_sp, timeout));
   EXPECT_EQ(event_mask1, event_sp->GetType());
 
@@ -38,12 +38,12 @@ TEST(BroadcasterTest, BroadcastEvent) {
     const uint32_t event_mask2 = 1;
     EXPECT_EQ(event_mask2, listener2_sp->StartListeningForEvents(
                                &broadcaster, event_mask1 | event_mask2));
-    broadcaster.BroadcastEvent(event_mask2, nullptr);
+    broadcaster.BroadcastEvent(event_mask2);
     EXPECT_TRUE(listener2_sp->GetEvent(event_sp, timeout));
     EXPECT_EQ(event_mask2, event_sp->GetType());
 
     // Both listeners should get this event.
-    broadcaster.BroadcastEvent(event_mask1, nullptr);
+    broadcaster.BroadcastEvent(event_mask1);
     EXPECT_TRUE(listener1_sp->GetEvent(event_sp, timeout));
     EXPECT_EQ(event_mask1, event_sp->GetType());
     EXPECT_TRUE(listener2_sp->GetEvent(event_sp, timeout));
@@ -51,7 +51,7 @@ TEST(BroadcasterTest, BroadcastEvent) {
   }
 
   // Now again only one listener should be active.
-  broadcaster.BroadcastEvent(event_mask1, nullptr);
+  broadcaster.BroadcastEvent(event_mask1);
   EXPECT_TRUE(listener1_sp->GetEvent(event_sp, timeout));
   EXPECT_EQ(event_mask1, event_sp->GetType());
 }

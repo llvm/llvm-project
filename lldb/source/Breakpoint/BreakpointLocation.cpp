@@ -652,8 +652,9 @@ void BreakpointLocation::SendBreakpointLocationChangedEvent(
     auto data_sp = std::make_shared<Breakpoint::BreakpointEventData>(
         eventKind, m_owner.shared_from_this());
     data_sp->GetBreakpointLocationCollection().Add(shared_from_this());
-    m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                                       data_sp);
+    auto event_sp = std::make_shared<Event>(
+        Target::eBroadcastBitBreakpointChanged, data_sp);
+    m_owner.GetTarget().BroadcastEvent(event_sp);
   }
 }
 

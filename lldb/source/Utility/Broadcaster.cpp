@@ -305,12 +305,6 @@ void Broadcaster::BroadcasterImpl::BroadcastEvent(uint32_t event_type) {
   PrivateBroadcastEvent(event_sp, false);
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEvent(
-    uint32_t event_type, const lldb::EventDataSP &event_data_sp) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data_sp);
-  PrivateBroadcastEvent(event_sp, false);
-}
-
 void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(
     uint32_t event_type, EventData *event_data) {
   auto event_sp = std::make_shared<Event>(event_type, event_data);

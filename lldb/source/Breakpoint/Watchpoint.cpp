@@ -466,7 +466,9 @@ void Watchpoint::SendWatchpointChangedEvent(
                               Target::eBroadcastBitWatchpointChanged)) {
     auto data_sp =
         std::make_shared<WatchpointEventData>(eventKind, shared_from_this());
-    GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged, data_sp);
+    auto event_sp = std::make_shared<Event>(
+        Target::eBroadcastBitWatchpointChanged, data_sp);
+    GetTarget().BroadcastEvent(event_sp);
   }
 }
 

@@ -36,17 +36,17 @@ TEST(ListenerTest, GetEventImmediate) {
       &broadcaster, event_mask, event_sp, timeout));
 
   // Now send events and make sure they get it.
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
 
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_TRUE(listener_sp->GetEventForBroadcaster(nullptr, event_sp, timeout));
 
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_TRUE(
       listener_sp->GetEventForBroadcaster(&broadcaster, event_sp, timeout));
 
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_FALSE(listener_sp->GetEventForBroadcasterWithType(
       &broadcaster, event_mask * 2, event_sp, timeout));
   EXPECT_TRUE(listener_sp->GetEventForBroadcasterWithType(
@@ -73,17 +73,17 @@ TEST(ListenerTest, GetEventWait) {
       &broadcaster, event_mask, event_sp, timeout));
 
   // Now send events and make sure they get it.
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
 
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_TRUE(listener_sp->GetEventForBroadcaster(nullptr, event_sp, timeout));
 
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_TRUE(
       listener_sp->GetEventForBroadcaster(&broadcaster, event_sp, timeout));
 
-  broadcaster.BroadcastEvent(event_mask, nullptr);
+  broadcaster.BroadcastEvent(event_mask);
   EXPECT_FALSE(listener_sp->GetEventForBroadcasterWithType(
       &broadcaster, event_mask * 2, event_sp, timeout));
   EXPECT_TRUE(listener_sp->GetEventForBroadcasterWithType(
@@ -91,7 +91,7 @@ TEST(ListenerTest, GetEventWait) {
 
   auto delayed_broadcast = [&] {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    broadcaster.BroadcastEvent(event_mask, nullptr);
+    broadcaster.BroadcastEvent(event_mask);
   };
 
   // These should do an infinite wait at return the event our asynchronous

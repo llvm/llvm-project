@@ -202,7 +202,7 @@ bool ThreadedCommunication::StopReadThread(Status *error_ptr) {
 
   m_read_thread_enabled = false;
 
-  BroadcastEvent(eBroadcastBitReadThreadShouldExit, nullptr);
+  BroadcastEvent(eBroadcastBitReadThreadShouldExit);
 
   Status error = m_read_thread.Join(nullptr);
   return error.Success();

@@ -296,7 +296,7 @@ bool GDBRemoteClientBase::ShouldStop(const UnixSignals &signals,
 
 void GDBRemoteClientBase::OnRunPacketSent(bool first) {
   if (first)
-    BroadcastEvent(eBroadcastBitRunPacketSent, nullptr);
+    BroadcastEvent(eBroadcastBitRunPacketSent);
 }
 
 ///////////////////////////////////////

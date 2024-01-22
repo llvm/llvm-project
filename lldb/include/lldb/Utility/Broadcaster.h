@@ -172,11 +172,6 @@ public:
     m_broadcaster_sp->BroadcastEventIfUnique(event_sp);
   }
 
-  void BroadcastEvent(uint32_t event_type,
-                      const lldb::EventDataSP &event_data_sp) {
-    m_broadcaster_sp->BroadcastEvent(event_type, event_data_sp);
-  }
-
   void BroadcastEvent(uint32_t event_type) {
     m_broadcaster_sp->BroadcastEvent(event_type);
   }
@@ -347,9 +342,6 @@ protected:
     void BroadcastEventIfUnique(lldb::EventSP &event_sp);
 
     void BroadcastEvent(uint32_t event_type);
-
-    void BroadcastEvent(uint32_t event_type,
-                        const lldb::EventDataSP &event_data_sp);
 
     void BroadcastEventIfUnique(uint32_t event_type,
                                 EventData *event_data = nullptr);

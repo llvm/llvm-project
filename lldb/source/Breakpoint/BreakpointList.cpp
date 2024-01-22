@@ -20,8 +20,9 @@ static void NotifyChange(const BreakpointSP &bp, BreakpointEventType event) {
   if (target.EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged)) {
     auto event_data_sp =
         std::make_shared<Breakpoint::BreakpointEventData>(event, bp);
-    target.BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                          event_data_sp);
+    auto event_sp = std::make_shared<Event>(
+        Target::eBroadcastBitBreakpointChanged, event_data_sp);
+    target.BroadcastEvent(event_sp);
   }
 }
 

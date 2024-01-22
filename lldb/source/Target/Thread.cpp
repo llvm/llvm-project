@@ -256,7 +256,9 @@ void Thread::BroadcastSelectedFrameChange(StackID &new_frame_id) {
   if (EventTypeHasListeners(eBroadcastBitSelectedFrameChanged)) {
     auto data_sp =
         std::make_shared<ThreadEventData>(shared_from_this(), new_frame_id);
-    BroadcastEvent(eBroadcastBitSelectedFrameChanged, data_sp);
+    auto event_sp =
+        std::make_shared<Event>(eBroadcastBitSelectedFrameChanged, data_sp);
+    BroadcastEvent(event_sp);
   }
 }
 
@@ -1511,7 +1513,9 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
         thread->ClearStackFrames();
         if (broadcast && EventTypeHasListeners(eBroadcastBitStackChanged)) {
           auto data_sp = std::make_shared<ThreadEventData>(shared_from_this());
-          BroadcastEvent(eBroadcastBitStackChanged, data_sp);
+          auto event_sp =
+              std::make_shared<Event>(eBroadcastBitStackChanged, data_sp);
+          BroadcastEvent(event_sp);
         }
       } else {
         return_error.SetErrorString("Could not reset register values.");

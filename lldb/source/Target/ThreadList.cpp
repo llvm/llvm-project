@@ -729,8 +729,9 @@ void ThreadList::NotifySelectedThreadChanged(lldb::tid_t tid) {
           Thread::eBroadcastBitThreadSelected)) {
     auto data_sp =
         std::make_shared<Thread::ThreadEventData>(selected_thread_sp);
-    selected_thread_sp->BroadcastEvent(Thread::eBroadcastBitThreadSelected,
-                                       data_sp);
+    auto event_sp =
+        std::make_shared<Event>(Thread::eBroadcastBitThreadSelected, data_sp);
+    selected_thread_sp->BroadcastEvent(event_sp);
   }
 }
 

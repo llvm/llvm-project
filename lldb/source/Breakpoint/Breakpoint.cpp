@@ -984,8 +984,10 @@ void Breakpoint::SendBreakpointChangedEvent(
           Target::eBroadcastBitBreakpointChanged)) {
     std::shared_ptr<BreakpointEventData> data =
         std::make_shared<BreakpointEventData>(eventKind, shared_from_this());
+    auto event_sp =
+        std::make_shared<Event>(Target::eBroadcastBitBreakpointChanged, data);
 
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
+    GetTarget().BroadcastEvent(event_sp);
   }
 }
 
@@ -995,9 +997,12 @@ void Breakpoint::SendBreakpointChangedEvent(
     return;
 
   if (!m_being_created && !IsInternal() &&
-      GetTarget().EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                               breakpoint_data_sp);
+      GetTarget().EventTypeHasListeners(
+          Target::eBroadcastBitBreakpointChanged)) {
+    auto event_sp = std::make_shared<Event>(
+        Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
+    GetTarget().BroadcastEvent(event_sp);
+  }
 }
 
 const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {

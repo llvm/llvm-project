@@ -3648,9 +3648,10 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
     // on a control event instead of simply being on its way out (this should
     // not happen, but it apparently can).
     LLDB_LOGF(log, "Sending control event of type: %d.", signal);
-    std::shared_ptr<EventDataReceipt> event_receipt_sp(new EventDataReceipt());
-    m_private_state_control_broadcaster.BroadcastEvent(signal,
-                                                       event_receipt_sp);
+    std::shared_ptr<EventDataReceipt> event_receipt_sp =
+        std::make_shared<EventDataReceipt>();
+    auto event_sp = std::make_shared<Event>(signal, event_receipt_sp);
+    m_private_state_control_broadcaster.BroadcastEvent(event_sp);
 
     // Wait for the event receipt or for the private state thread to exit
     bool receipt_received = false;
@@ -3683,10 +3684,9 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
 
 void Process::SendAsyncInterrupt() {
   if (PrivateStateThreadIsValid())
-    m_private_state_broadcaster.BroadcastEvent(Process::eBroadcastBitInterrupt,
-                                               nullptr);
+    m_private_state_broadcaster.BroadcastEvent(Process::eBroadcastBitInterrupt);
   else
-    BroadcastEvent(Process::eBroadcastBitInterrupt, nullptr);
+    BroadcastEvent(Process::eBroadcastBitInterrupt);
 }
 
 void Process::HandlePrivateEvent(EventSP &event_sp) {
@@ -3860,9 +3860,9 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
         // to do that because we will next close the communication to the stub
         // and that will get it to shut down.  But there are remote debugging
         // cases where relying on that side-effect causes the shutdown to be 
-        // flakey, so we should send a positive signal to interrupt the wait. 
+        // flakey, so we should send a positive signal to interrupt the wait.
         Status error = HaltPrivate();
-        BroadcastEvent(eBroadcastBitInterrupt, nullptr);
+        BroadcastEvent(eBroadcastBitInterrupt);
       } else if (StateIsRunningState(m_last_broadcast_state)) {
         LLDB_LOGF(log,
                   "Process::%s (arg = %p, pid = %" PRIu64
@@ -4306,7 +4306,8 @@ void Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
                                       const StructuredDataPluginSP &plugin_sp) {
   auto data_sp = std::make_shared<EventDataStructuredData>(
       shared_from_this(), object_sp, plugin_sp);
-  BroadcastEvent(eBroadcastBitStructuredData, data_sp);
+  auto event_sp = std::make_shared<Event>(eBroadcastBitStructuredData, data_sp);
+  BroadcastEvent(event_sp);
 }
 
 StructuredDataPluginSP

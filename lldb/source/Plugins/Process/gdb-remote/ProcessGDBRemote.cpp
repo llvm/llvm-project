@@ -1090,7 +1090,9 @@ Status ProcessGDBRemote::DoAttachToProcessWithID(
           ::snprintf(packet, sizeof(packet), "vAttach;%" PRIx64, attach_pid);
       SetID(attach_pid);
       auto data_sp = std::make_shared<EventDataBytes>(packet, packet_len);
-      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
+      auto event_sp =
+          std::make_shared<Event>(eBroadcastBitAsyncContinue, data_sp);
+      m_async_broadcaster.BroadcastEvent(event_sp);
     } else
       SetExitStatus(-1, error.AsCString());
   }
@@ -1129,7 +1131,9 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
 
       auto data_sp = std::make_shared<EventDataBytes>(packet.GetString().data(),
                                                       packet.GetSize());
-      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
+      auto event_sp =
+          std::make_shared<Event>(eBroadcastBitAsyncContinue, data_sp);
+      m_async_broadcaster.BroadcastEvent(event_sp);
 
     } else
       SetExitStatus(-1, error.AsCString());
@@ -1376,7 +1380,9 @@ Status ProcessGDBRemote::DoResume() {
 
       auto data_sp = std::make_shared<EventDataBytes>(
           continue_packet.GetString().data(), continue_packet.GetSize());
-      m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
+      auto async_continue_event_sp =
+          std::make_shared<Event>(eBroadcastBitAsyncContinue, data_sp);
+      m_async_broadcaster.BroadcastEvent(async_continue_event_sp);
 
       if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
         error.SetErrorString("Resume timed out.");

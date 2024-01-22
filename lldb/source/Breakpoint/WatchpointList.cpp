@@ -26,8 +26,9 @@ lldb::watch_id_t WatchpointList::Add(const WatchpointSP &wp_sp, bool notify) {
             Target::eBroadcastBitWatchpointChanged)) {
       auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
           eWatchpointEventTypeAdded, wp_sp);
-      wp_sp->GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged,
-                                        data_sp);
+      auto event_sp = std::make_shared<Event>(
+          Target::eBroadcastBitWatchpointChanged, data_sp);
+      wp_sp->GetTarget().BroadcastEvent(event_sp);
     }
   }
   return wp_sp->GetID();
@@ -176,8 +177,9 @@ bool WatchpointList::Remove(lldb::watch_id_t watch_id, bool notify) {
               Target::eBroadcastBitWatchpointChanged)) {
         auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
             eWatchpointEventTypeRemoved, wp_sp);
-        wp_sp->GetTarget().BroadcastEvent(
+        auto event_sp = std::make_shared<Event>(
             Target::eBroadcastBitWatchpointChanged, data_sp);
+        wp_sp->GetTarget().BroadcastEvent(event_sp);
       }
     }
     m_watchpoints.erase(pos);
@@ -239,8 +241,9 @@ void WatchpointList::RemoveAll(bool notify) {
                 Target::eBroadcastBitBreakpointChanged)) {
           auto data_sp = std::make_shared<Watchpoint::WatchpointEventData>(
               eWatchpointEventTypeRemoved, *pos);
-          (*pos)->GetTarget().BroadcastEvent(
+          auto event_sp = std::make_shared<Event>(
               Target::eBroadcastBitWatchpointChanged, data_sp);
+          (*pos)->GetTarget().BroadcastEvent(event_sp);
         }
       }
     }
