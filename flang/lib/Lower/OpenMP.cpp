@@ -2318,8 +2318,9 @@ static void createBodyOfOp(
 
   if (genNested) {
     // genFIR(Evaluation&) tries to patch up unterminated blocks, causing
-    // a lot of trouble if the terminator generation is delayed past this
-    // point. Insert a temporary terminator here, then delete it.
+    // a lot of complications for our approach if the terminator generation
+    // is delayed past this point. Insert a temporary terminator here, then
+    // delete it.
     firOpBuilder.setInsertionPointToEnd(&op.getRegion().back());
     auto *temp = Fortran::lower::genOpenMPTerminator(firOpBuilder,
                                                      op.getOperation(), loc);
