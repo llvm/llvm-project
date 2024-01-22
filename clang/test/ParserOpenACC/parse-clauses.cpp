@@ -9,6 +9,14 @@ void templ() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc loop collapse(T::value)
   for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel vector_length(T::value)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc parallel vector_length(I)
+  for(;;){}
 }
 
 struct S {
