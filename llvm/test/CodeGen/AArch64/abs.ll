@@ -3,14 +3,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:         warning: Instruction selection used fallback path for abs_v4i8
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v32i8
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v2i16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v16i16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v8i32
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v4i64
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v3i8
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v7i8
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v3i16
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v7i16
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for abs_v3i32
 
@@ -300,18 +293,36 @@ declare <4 x i64> @llvm.abs.v4i64(<4 x i64>, i1)
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <3 x i8> @abs_v3i8(<3 x i8> %a){
-; CHECK-LABEL: abs_v3i8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-NEXT:    abs v0.4h, v0.4h
-; CHECK-NEXT:    umov w0, v0.h[0]
-; CHECK-NEXT:    umov w1, v0.h[1]
-; CHECK-NEXT:    umov w2, v0.h[2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: abs_v3i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-SD-NEXT:    abs v0.4h, v0.4h
+; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w1, v0.h[1]
+; CHECK-SD-NEXT:    umov w2, v0.h[2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: abs_v3i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w2
+; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    mov v0.b[3], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[4], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[5], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[6], v0.b[0]
+; CHECK-GI-NEXT:    mov v0.b[7], v0.b[0]
+; CHECK-GI-NEXT:    abs v0.8b, v0.8b
+; CHECK-GI-NEXT:    umov w0, v0.b[0]
+; CHECK-GI-NEXT:    umov w1, v0.b[1]
+; CHECK-GI-NEXT:    umov w2, v0.b[2]
+; CHECK-GI-NEXT:    ret
 entry:
   %res = call <3 x i8> @llvm.abs.v3i8(<3 x i8> %a, i1 0)
   ret <3 x i8> %res
