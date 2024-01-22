@@ -451,26 +451,26 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
 /// raw data storage if possible. This supports elements attributes of tensor or
 /// vector type and avoids constructing separate objects for individual values
 /// of the innermost dimension. Constants for other dimensions are still
-/// constructed recursively. Returns null if constructing from raw data is not
-/// supported for this type, e.g., element type is not a power-of-two-sized
-/// primitive. Reports other errors at `loc`.
+/// constructed recursively. Returns nullptr on failure and emits errors at
+/// `loc`.
 static llvm::Constant *convertDenseResourceElementsAttr(
     Location loc, DenseResourceElementsAttr denseResourceAttr,
     llvm::Type *llvmType, const ModuleTranslation &moduleTranslation) {
-  if (!denseResourceAttr)
-    return nullptr;
+  assert(denseResourceAttr && "expected non-null attribute");
 
+  // The set of types allowed by dense_resource elements are supported by LLVM.
   llvm::Type *innermostLLVMType = getInnermostElementType(llvmType);
-  if (!llvm::ConstantDataSequential::isElementTypeCompatible(innermostLLVMType))
-    return nullptr;
+  assert(
+      llvm::ConstantDataSequential::isElementTypeCompatible(innermostLLVMType));
 
   ShapedType type = denseResourceAttr.getType();
-  if (type.getNumElements() == 0)
-    return nullptr;
+  assert(type.getNumElements() > 0 && "Expected non-empty elements attribute");
 
   AsmResourceBlob *blob = denseResourceAttr.getRawHandle().getBlob();
-  if (!blob)
+  if (!blob) {
+    emitError(loc, "resource does not exist");
     return nullptr;
+  }
 
   ArrayRef<char> rawData = blob->getData();
 
@@ -481,8 +481,10 @@ static llvm::Constant *convertDenseResourceElementsAttr(
   // architecture where it is different.
   int64_t numElements = denseResourceAttr.getType().getNumElements();
   int64_t elementByteSize = rawData.size() / numElements;
-  if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits())
+  if (8 * elementByteSize != innermostLLVMType->getScalarSizeInBits()) {
+    emitError(loc, "raw data size does not match element type size");
     return nullptr;
+  }
 
   // Compute the shape of all dimensions but the innermost. Note that the
   // innermost dimension may be that of the vector element type.
@@ -516,8 +518,10 @@ static llvm::Constant *convertDenseResourceElementsAttr(
                                               innermostLLVMType);
     };
   }
-  if (!buildCstData)
+  if (!buildCstData) {
+    emitError(loc, "unsupported dense_resource type");
     return nullptr;
+  }
 
   // Create innermost constants and defer to the default constant creation
   // mechanism for other dimensions.
@@ -634,10 +638,9 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     return result;
   }
 
-  if (llvm::Constant *result = convertDenseResourceElementsAttr(
-          loc, dyn_cast<DenseResourceElementsAttr>(attr), llvmType,
-          moduleTranslation)) {
-    return result;
+  if (auto denseResourceAttr = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    return convertDenseResourceElementsAttr(loc, denseResourceAttr, llvmType,
+                                            moduleTranslation);
   }
 
   // Fall back to element-by-element construction otherwise.
