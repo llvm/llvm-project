@@ -3882,6 +3882,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
 
+  auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
+    return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
+  };
   // The actual identifier can be a nested name specifier, and in macros
   // it is often token-pasted.
   // An [[attribute]] can be before the identifier.
@@ -3903,27 +3906,26 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
     if (FormatTok->is(tok::l_square) && handleCppAttributes())
       continue;
-    bool IsNonMacroIdentifier =
-        FormatTok->is(tok::identifier) &&
-        FormatTok->TokenText != FormatTok->TokenText.upper();
     nextToken();
     // We can have macros in between 'class' and the class name.
-    if (!IsNonMacroIdentifier && FormatTok->is(tok::l_paren))
+    if (!IsNonMacroIdentifier(FormatTok->Previous) &&
+        FormatTok->is(tok::l_paren)) {
       parseParens();
+    }
   }
 
-  // Note that parsing away template declarations here leads to incorrectly
-  // accepting function declarations as record declarations.
-  // In general, we cannot solve this problem. Consider:
-  // class A<int> B() {}
-  // which can be a function definition or a class definition when B() is a
-  // macro. If we find enough real-world cases where this is a problem, we
-  // can parse for the 'template' keyword in the beginning of the statement,
-  // and thus rule out the record production in case there is no template
-  // (this would still leave us with an ambiguity between template function
-  // and class declarations).
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
+    int AngleNestingLevel = 0;
     do {
+      if (FormatTok->is(tok::less))
+        ++AngleNestingLevel;
+      else if (FormatTok->is(tok::greater))
+        --AngleNestingLevel;
+
+      if (AngleNestingLevel == 0 && FormatTok->is(tok::l_paren) &&
+          IsNonMacroIdentifier(FormatTok->Previous)) {
+        break;
+      }
       if (FormatTok->is(tok::l_brace)) {
         calculateBraceTypes(/*ExpectClassBody=*/true);
         if (!tryToParseBracedList())
