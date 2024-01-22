@@ -29,20 +29,21 @@ void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
+  auto AssignOperator =
+      binaryOperator(hasOperatorName("="), hasLHS(expr().bind("AssignLhs")),
+                     hasRHS(expr().bind("AssignRhs")));
+
   Finder->addMatcher(
       ifStmt(
           stmt().bind("if"),
+          unless(hasElse(stmt())), // Ensure `if` has no `else`
           hasCondition(binaryOperator(hasAnyOperatorName("<", ">", "<=", ">="),
                                       hasLHS(expr().bind("CondLhs")),
-                                      hasRHS(expr().bind("CondRhs")))),
-          hasThen(anyOf(stmt(binaryOperator(hasOperatorName("="),
-                                            hasLHS(expr().bind("AssignLhs")),
-                                            hasRHS(expr().bind("AssignRhs")))),
-                        compoundStmt(statementCountIs(1),
-                                     has(binaryOperator(
-                                         hasOperatorName("="),
-                                         hasLHS(expr().bind("AssignLhs")),
-                                         hasRHS(expr().bind("AssignRhs"))))))),
+                                      hasRHS(expr().bind("CondRhs")))
+                           .bind("binaryOp")),
+          hasThen(
+              anyOf(stmt(AssignOperator),
+                    compoundStmt(statementCountIs(1), has(AssignOperator)))),
           hasParent(stmt(unless(ifStmt(hasElse(
               equalsBoundNode("if"))))))), // Ensure `if` has no `else if`
       this);
@@ -55,19 +56,10 @@ void UseStdMinMaxCheck::registerPPCallbacks(const SourceManager &SM,
 }
 
 void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *CondLhs = Result.Nodes.getNodeAs<Expr>("CondLhs");
-  const auto *CondRhs = Result.Nodes.getNodeAs<Expr>("CondRhs");
-  const auto *AssignLhs = Result.Nodes.getNodeAs<Expr>("AssignLhs");
-  const auto *AssignRhs = Result.Nodes.getNodeAs<Expr>("AssignRhs");
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
   const auto &Context = *Result.Context;
   const auto &LO = Context.getLangOpts();
   const SourceManager &Source = Context.getSourceManager();
-
-  const auto *BinaryOp = dyn_cast<BinaryOperator>(If->getCond());
-  // Ignore `if` statements with `else`
-  if (If->hasElseStorage())
-    return;
 
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
@@ -75,6 +67,11 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   // Ignore Macros
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
     return;
+
+  const auto *CondLhs = Result.Nodes.getNodeAs<Expr>("CondLhs");
+  const auto *CondRhs = Result.Nodes.getNodeAs<Expr>("CondRhs");
+  const auto *AssignLhs = Result.Nodes.getNodeAs<Expr>("AssignLhs");
+  const auto *AssignRhs = Result.Nodes.getNodeAs<Expr>("AssignRhs");
 
   const auto CreateReplacement = [&](bool UseMax) {
     const auto *FunctionName = UseMax ? "std::max" : "std::min";
@@ -84,22 +81,20 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
         Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
     const auto AssignLhsStr = Lexer::getSourceText(
         Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
-    if (CondLhs->getType() != CondRhs->getType()) {
-      return (AssignLhsStr + " = " + FunctionName + "<" +
-              AssignLhs->getType().getAsString() + ">(" + CondLhsStr + ", " +
-              CondRhsStr + ");")
-          .str();
-    } else {
-      return (AssignLhsStr + " = " + FunctionName + "(" + CondLhsStr + ", " +
-              CondRhsStr + ");")
-          .str();
-    }
+    return (AssignLhsStr + " = " + FunctionName +
+            ((CondLhs->getType() != CondRhs->getType())
+                 ? "<" + AssignLhs->getType().getAsString() + ">("
+                 : "(") +
+            CondLhsStr + ", " + CondRhsStr + ");")
+        .str();
   };
+  const auto *BinaryOp = Result.Nodes.getNodeAs<BinaryOperator>("binaryOp");
+  const auto BinaryOpcode = BinaryOp->getOpcode();
   const auto OperatorStr = BinaryOp->getOpcodeStr();
-  if (((BinaryOp->getOpcode() == BO_LT || BinaryOp->getOpcode() == BO_LE) &&
+  if (((BinaryOpcode == BO_LT || BinaryOpcode == BO_LE) &&
        (tidy::utils::areStatementsIdentical(CondLhs, AssignRhs, Context) &&
         tidy::utils::areStatementsIdentical(CondRhs, AssignLhs, Context))) ||
-      ((BinaryOp->getOpcode() == BO_GT || BinaryOp->getOpcode() == BO_GE) &&
+      ((BinaryOpcode == BO_GT || BinaryOpcode == BO_GE) &&
        (tidy::utils::areStatementsIdentical(CondLhs, AssignLhs, Context) &&
         tidy::utils::areStatementsIdentical(CondRhs, AssignRhs, Context)))) {
     diag(IfLocation, "use `std::min` instead of `%0`")
@@ -111,14 +106,12 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
 
-  } else if (((BinaryOp->getOpcode() == BO_LT ||
-               BinaryOp->getOpcode() == BO_LE) &&
+  } else if (((BinaryOpcode == BO_LT || BinaryOpcode == BO_LE) &&
               (tidy::utils::areStatementsIdentical(CondLhs, AssignLhs,
                                                    Context) &&
                tidy::utils::areStatementsIdentical(CondRhs, AssignRhs,
                                                    Context))) ||
-             ((BinaryOp->getOpcode() == BO_GT ||
-               BinaryOp->getOpcode() == BO_GE) &&
+             ((BinaryOpcode == BO_GT || BinaryOpcode == BO_GE) &&
               (tidy::utils::areStatementsIdentical(CondLhs, AssignRhs,
                                                    Context) &&
                tidy::utils::areStatementsIdentical(CondRhs, AssignLhs,
