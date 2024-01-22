@@ -320,7 +320,7 @@ New Compiler Flags
   handlers will be smaller. A throw expression of a type with a
   potentially-throwing destructor will lead to an error.
 
-* ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
+* ``-fopenacc`` was added as a part of the effort to support OpenACC in Clang.
 
 * ``-fcx-limited-range`` enables the naive mathematical formulas for complex
   division and multiplication with no NaN checking of results. The default is
@@ -331,6 +331,16 @@ New Compiler Flags
   division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
   (1962). The default is ``-fno-cx-fortran-rules``.
 
+* ``-fvisibility-global-new-delete=<value>`` gives more freedom to users to
+  control how and if Clang forces a visibility for the replaceable new and
+  delete declarations. The option takes 4 values: ``force-hidden``,
+  ``force-protected``, ``force-default`` and ``source``; ``force-default`` is
+  the default. Option values with prefix ``force-`` assign such declarations
+  an implicit visibility attribute with the corresponding visibility. An option
+  value of ``source`` implies that no implicit attribute is added. Without the
+  attribute the replaceable global new and delete operators behave normally
+  (like other functions) with respect to visibility attributes, pragmas and
+  options (e.g ``--fvisibility=``).
 
 Deprecated Compiler Flags
 -------------------------
@@ -347,6 +357,9 @@ Modified Compiler Flags
   ``rtdcall``. This new default CC only works for M68k and will use the new
   ``m68k_rtdcc`` CC on every functions that are not variadic. The ``-mrtd``
   driver/frontend flag has the same effect when targeting M68k.
+* ``-fvisibility-global-new-delete-hidden`` is now a deprecated spelling of
+  ``-fvisibility-global-new-delete=force-hidden`` (``-fvisibility-global-new-delete=``
+  is new in this release).
 
 Removed Compiler Flags
 -------------------------
