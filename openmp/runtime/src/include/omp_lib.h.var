@@ -741,10 +741,10 @@
           integer(c_int), value :: device_num
         end function
 
-        function omp_target_memset_async(ptr, val, count, device_num, &
-                                         depobj_count, depobj_list) bind(c)
+        function omp_target_memset_async(ptr, val, count, device_num,                                                               &
+     &      depobj_count, depobj_list) bind(c)
           use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
-          use omp_lib_kinds
+          import
           type(c_ptr) :: omp_target_memset_async
           type(c_ptr), value :: ptr
           integer(c_int), value :: val

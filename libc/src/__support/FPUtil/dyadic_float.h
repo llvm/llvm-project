@@ -33,7 +33,7 @@ namespace LIBC_NAMESPACE::fputil {
 template <size_t Bits> struct DyadicFloat {
   using MantissaType = LIBC_NAMESPACE::cpp::UInt<Bits>;
 
-  bool sign = false;
+  Sign sign = Sign::POS;
   int exponent = 0;
   MantissaType mantissa = MantissaType(0);
 
@@ -43,13 +43,13 @@ template <size_t Bits> struct DyadicFloat {
   DyadicFloat(T x) {
     static_assert(FPBits<T>::FRACTION_LEN < Bits);
     FPBits<T> x_bits(x);
-    sign = x_bits.get_sign();
+    sign = x_bits.sign();
     exponent = x_bits.get_exponent() - FPBits<T>::FRACTION_LEN;
     mantissa = MantissaType(x_bits.get_explicit_mantissa());
     normalize();
   }
 
-  constexpr DyadicFloat(bool s, int e, MantissaType m)
+  constexpr DyadicFloat(Sign s, int e, MantissaType m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
   }
@@ -172,7 +172,7 @@ template <size_t Bits> struct DyadicFloat {
       new_mant >>= (-exponent);
     }
 
-    if (sign) {
+    if (sign.is_neg()) {
       new_mant = (~new_mant) + 1;
     }
 
@@ -251,7 +251,7 @@ template <size_t Bits>
 constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
                                       DyadicFloat<Bits> b) {
   DyadicFloat<Bits> result;
-  result.sign = (a.sign != b.sign);
+  result.sign = (a.sign != b.sign) ? Sign::NEG : Sign::POS;
   result.exponent = a.exponent + b.exponent + int(Bits);
 
   if (!(a.mantissa.is_zero() || b.mantissa.is_zero())) {

@@ -101,14 +101,6 @@ public:
   void handleWeakUndefines();
   DefinedFunction *createUndefinedStub(const WasmSignature &sig);
 
-  std::vector<ObjFile *> objectFiles;
-  std::vector<StubFile *> stubFiles;
-  std::vector<SharedFile *> sharedFiles;
-  std::vector<BitcodeFile *> bitcodeFiles;
-  std::vector<InputFunction *> syntheticFunctions;
-  std::vector<InputGlobal *> syntheticGlobals;
-  std::vector<InputTable *> syntheticTables;
-
 private:
   std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);
   std::pair<Symbol *, bool> insertName(StringRef name);

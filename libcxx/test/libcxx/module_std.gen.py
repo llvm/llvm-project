@@ -30,7 +30,6 @@ generator = module_test_generator(
     "%{test-tools}/clang_tidy_checks/libcxx-tidy.plugin",
     "%{cxx}",
     "%{flags} %{compile_flags}",
-    "std",
 )
 
 

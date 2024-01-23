@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -234,18 +235,26 @@ private:
 };
 
 #ifdef _LIBCPP_VERSION
-void std::__libcpp_verbose_abort(char const* format, ...) {
-  // Extract information from the error message. This has to stay synchronized with
-  // how we format assertions in the library.
-  va_list list;
-  va_start(list, format);
-  char const* file = va_arg(list, char const*);
-  int line = va_arg(list, int);
-  char const* expression = va_arg(list, char const*); (void)expression;
-  char const* message = va_arg(list, char const*);
-  va_end(list);
+void std::__libcpp_verbose_abort(char const* printf_format, ...) {
+  // Extract information from the error message. This has to stay synchronized with how we format assertions in the
+  // library.
+  va_list args;
+  va_start(args, printf_format);
+  char const* message = va_arg(args, char const*);
 
-  if (GlobalMatcher().Matches(file, line, message)) {
+  std::regex message_format("(.*):(\\d+): assertion (.*) failed: (.*)\\n");
+
+  std::cmatch match_result;
+  bool has_match = std::regex_match(message, match_result, message_format);
+  assert(has_match);
+  assert(match_result.size() == 5);
+
+  std::string file = match_result[1];
+  int line         = std::stoi(match_result[2]);
+  // Omitting `expression` in `match_result[3]`
+  std::string failure_reason = match_result[4];
+
+  if (GlobalMatcher().Matches(file.c_str(), line, failure_reason.c_str())) {
     std::exit(DeathTest::RK_MatchFound);
   }
   std::exit(DeathTest::RK_MatchFailure);

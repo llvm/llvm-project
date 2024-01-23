@@ -514,7 +514,7 @@ static llvm::SmallDenseSet<int64_t> getPreservedDims(AffineMap map) {
 }
 
 static SmallVector<int64_t, 2>
-getConstantsFromExprList(SmallVector<AffineExpr, 2> exprs) {
+getConstantsFromExprList(const SmallVector<AffineExpr, 2> &exprs) {
   SmallVector<int64_t, 2> vals;
   for (auto e : exprs) {
     auto constantExpr = dyn_cast<AffineConstantExpr>(e);

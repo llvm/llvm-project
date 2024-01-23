@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinkerCompileUnit.h"
 #include "llvm/DWARFLinker/DWARFLinkerBase.h"
+#include "llvm/DWARFLinker/IndexedValuesMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
@@ -33,25 +34,7 @@ namespace classic {
 class DeclContextTree;
 
 using Offset2UnitMap = DenseMap<uint64_t, CompileUnit *>;
-
-struct DebugDieValuePool {
-  DenseMap<uint64_t, uint64_t> DieValueMap;
-  SmallVector<uint64_t> DieValues;
-
-  uint64_t getValueIndex(uint64_t Value) {
-    DenseMap<uint64_t, uint64_t>::iterator It = DieValueMap.find(Value);
-    if (It == DieValueMap.end()) {
-      It = DieValueMap.insert(std::make_pair(Value, DieValues.size())).first;
-      DieValues.push_back(Value);
-    }
-    return It->second;
-  }
-
-  void clear() {
-    DieValueMap.clear();
-    DieValues.clear();
-  }
-};
+using DebugDieValuePool = IndexedValuesMap<uint64_t>;
 
 /// DwarfEmitter presents interface to generate all debug info tables.
 class DwarfEmitter {

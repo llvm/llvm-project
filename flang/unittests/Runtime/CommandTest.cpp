@@ -319,8 +319,8 @@ TEST_F(ZeroArguments, ECLValidCommandAndPadSync) {
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
   std::string spaces(cmdMsg->ElementBytes(), ' ');
-  CheckDescriptorEqInt(exitStat.get(), 0);
-  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
@@ -334,8 +334,8 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
-  CheckDescriptorEqInt(exitStat.get(), 0);
-  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
@@ -351,9 +351,9 @@ TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
 #ifdef _WIN32
   CheckDescriptorEqInt(exitStat.get(), 1);
 #else
-  CheckDescriptorEqInt(exitStat.get(), 127);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
 #endif
-  CheckDescriptorEqInt(cmdStat.get(), 3);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
   CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXX");
 }
 
@@ -387,7 +387,7 @@ TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
   CheckDescriptorEqInt(exitStat.get(), 404);
-  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 

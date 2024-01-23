@@ -1433,6 +1433,72 @@ define amdgpu_kernel void @test_setreg_set_4_bits_straddles_round_and_denorm() {
   ret void
 }
 
+define amdgpu_ps void @test_63489(i32 inreg %var.mode) {
+; GFX6-LABEL: test_63489:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x80,0xb9]
+; GFX6-NEXT:    ;;#ASMSTART
+; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX789-LABEL: test_63489:
+; GFX789:       ; %bb.0:
+; GFX789-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x00,0xb9]
+; GFX789-NEXT:    ;;#ASMSTART
+; GFX789-NEXT:    ;;#ASMEND
+; GFX789-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX10-LABEL: test_63489:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x80,0xb9]
+; GFX10-NEXT:    ;;#ASMSTART
+; GFX10-NEXT:    ;;#ASMEND
+; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_63489:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x00,0xb9]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
+  call void @llvm.amdgcn.s.setreg(i32 63489, i32 %var.mode)
+  call void asm sideeffect "", ""()
+  ret void
+}
+
+define amdgpu_ps void @test_minus_2047(i32 inreg %var.mode) {
+; GFX6-LABEL: test_minus_2047:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x80,0xb9]
+; GFX6-NEXT:    ;;#ASMSTART
+; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX789-LABEL: test_minus_2047:
+; GFX789:       ; %bb.0:
+; GFX789-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x00,0xb9]
+; GFX789-NEXT:    ;;#ASMSTART
+; GFX789-NEXT:    ;;#ASMEND
+; GFX789-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX10-LABEL: test_minus_2047:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x80,0xb9]
+; GFX10-NEXT:    ;;#ASMSTART
+; GFX10-NEXT:    ;;#ASMEND
+; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
+;
+; GFX11-LABEL: test_minus_2047:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE), s0 ; encoding: [0x01,0xf8,0x00,0xb9]
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
+  call void @llvm.amdgcn.s.setreg(i32 -2047, i32 %var.mode)
+  call void asm sideeffect "", ""()
+  ret void
+}
+
 ; FIXME: Broken for DAG
 ; define void @test_setreg_roundingmode_var_vgpr(i32 %var.mode) {
 ;   call void @llvm.amdgcn.s.setreg(i32 4097, i32 %var.mode)

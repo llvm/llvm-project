@@ -1202,6 +1202,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
+  llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
+                                                   and ds_cond_sub_u32 based on address space on gfx12 targets. This
+                                                   performs subtraction only if the memory value is greater than or
+                                                   equal to the data value.
+
+  llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
+                                                   sign-extended from the width of the underlying PC hardware register even on
+                                                   processors where the s_getpc_b64 instruction returns a zero-extended value.
+
   ==============================================   ==========================================================
 
 .. TODO::
@@ -5076,11 +5085,10 @@ The fields used by CP for code objects before V3 also match those specified in
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     3:0     4 bits  SHARED_VGPR_COUNT               GFX10-GFX11
-                                                       Number of shared VGPR blocks when executing in subvector mode. For
-                                                       wavefront size 64 the value is 0-15, representing 0-120 VGPRs (granularity
-                                                       of 8), such that (compute_pgm_rsrc1.vgprs +1)*4 + shared_vgpr_count*8 does
-                                                       not exceed 256. For wavefront size 32 shared_vgpr_count must be 0.
+     3:0     4 bits  SHARED_VGPR_COUNT               Number of shared VGPR blocks when executing in subvector mode. For
+                                                     wavefront size 64 the value is 0-15, representing 0-120 VGPRs (granularity
+                                                     of 8), such that (compute_pgm_rsrc1.vgprs +1)*4 + shared_vgpr_count*8 does
+                                                     not exceed 256. For wavefront size 32 shared_vgpr_count must be 0.
      9:4     6 bits  INST_PREF_SIZE                  GFX10
                                                        Reserved, must be 0.
                                                      GFX11

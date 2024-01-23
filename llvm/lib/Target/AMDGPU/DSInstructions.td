@@ -768,7 +768,7 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
                           !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
 }
 
-defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_ds_cond_sub_u32">;
+defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 
 } // let SubtargetPredicate = isGFX12Plus
 

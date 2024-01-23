@@ -210,14 +210,6 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
-  // Lane mask PHIs, PHI where all register operands have sgpr register class
-  // with S1 LLT, are already selected in divergence lowering pass.
-  if (I.getOpcode() == AMDGPU::PHI) {
-    assert(MRI->getType(DefReg) == LLT::scalar(1));
-    assert(TRI.isSGPRClass(MRI->getRegClass(DefReg)));
-    return true;
-  }
-
   if (DefTy == LLT::scalar(1)) {
     if (!AllowRiskySelect) {
       LLVM_DEBUG(dbgs() << "Skipping risky boolean phi\n");
@@ -3448,6 +3440,16 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   case 4:
     Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
     break;
+  case 12:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX3;
+    break;
+  case 16:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX4;
+    break;
   }
 
   MachineBasicBlock *MBB = MI.getParent();
@@ -5210,7 +5212,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegal(Register Addr) const {
 
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(STI))
+  if (STI.hasSignedScratchOffsets())
     return true;
 
   Register LHS = AddrMI->getOperand(1).getReg();
@@ -5241,7 +5243,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSV(Register Addr) const {
 
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(STI))
+  if (STI.hasSignedScratchOffsets())
     return true;
 
   Register LHS = AddrMI->getOperand(1).getReg();
@@ -5255,7 +5257,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSVImm(
     Register Addr) const {
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(STI))
+  if (STI.hasSignedScratchOffsets())
     return true;
 
   MachineInstr *AddrMI = getDefIgnoringCopies(Addr, *MRI);

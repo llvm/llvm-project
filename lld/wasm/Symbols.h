@@ -502,7 +502,7 @@ public:
       : Symbol(name, LazyKind, flags, file), archiveSymbol(sym) {}
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
-  void fetch();
+  void extract();
   void setWeak();
   MemoryBufferRef getMemberBuffer();
 

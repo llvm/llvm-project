@@ -2035,13 +2035,13 @@ void DWARFLinker::DIECloner::emitDebugAddrSection(
   if (DwarfVersion < 5)
     return;
 
-  if (AddrPool.DieValues.empty())
+  if (AddrPool.getValues().empty())
     return;
 
   MCSymbol *EndLabel = Emitter->emitDwarfDebugAddrsHeader(Unit);
   patchAddrBase(*Unit.getOutputUnitDIE(),
                 DIEInteger(Emitter->getDebugAddrSectionSize()));
-  Emitter->emitDwarfDebugAddrs(AddrPool.DieValues,
+  Emitter->emitDwarfDebugAddrs(AddrPool.getValues(),
                                Unit.getOrigUnit().getAddressByteSize());
   Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);
 }
@@ -2867,7 +2867,7 @@ Error DWARFLinker::link() {
     if (TheDwarfEmitter != nullptr) {
       TheDwarfEmitter->emitAbbrevs(Abbreviations, Options.TargetDWARFVersion);
       TheDwarfEmitter->emitStrings(DebugStrPool);
-      TheDwarfEmitter->emitStringOffsets(StringOffsetPool.DieValues,
+      TheDwarfEmitter->emitStringOffsets(StringOffsetPool.getValues(),
                                          Options.TargetDWARFVersion);
       TheDwarfEmitter->emitLineStrings(DebugLineStrPool);
       for (AccelTableKind TableKind : Options.AccelTables) {

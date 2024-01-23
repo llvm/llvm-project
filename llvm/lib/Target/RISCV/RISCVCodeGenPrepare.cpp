@@ -18,8 +18,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -51,6 +52,7 @@ public:
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitAnd(BinaryOperator &BO);
+  bool visitIntrinsicInst(IntrinsicInst &I);
 };
 
 } // end anonymous namespace
@@ -99,6 +101,62 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   // Sign extend the constant and replace the And operand.
   C = SignExtend64<32>(C);
   BO.setOperand(1, ConstantInt::get(LHS->getType(), C));
+
+  return true;
+}
+
+// LLVM vector reduction intrinsics return a scalar result, but on RISC-V vector
+// reduction instructions write the result in the first element of a vector
+// register. So when a reduction in a loop uses a scalar phi, we end up with
+// unnecessary scalar moves:
+//
+// loop:
+// vfmv.s.f v10, fa0
+// vfredosum.vs v8, v8, v10
+// vfmv.f.s fa0, v8
+//
+// This mainly affects ordered fadd reductions, since other types of reduction
+// typically use element-wise vectorisation in the loop body. This tries to
+// vectorize any scalar phis that feed into a fadd reduction:
+//
+// loop:
+// %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
+// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %phi, <vscale x 2 x float> %vec)
+//
+// ->
+//
+// loop:
+// %phi = phi <vscale x 2 x float> [ ..., %entry ], [ %acc.vec, %loop ]
+// %phi.scalar = extractelement <vscale x 2 x float> %phi, i64 0
+// %acc = call float @llvm.vector.reduce.fadd.nxv4f32(float %x, <vscale x 2 x float> %vec)
+// %acc.vec = insertelement <vscale x 2 x float> poison, float %acc.next, i64 0
+//
+// Which eliminates the scalar -> vector -> scalar crossing during instruction
+// selection.
+bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
+  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd)
+    return false;
+
+  auto *PHI = dyn_cast<PHINode>(I.getOperand(0));
+  if (!PHI || !PHI->hasOneUse() ||
+      !llvm::is_contained(PHI->incoming_values(), &I))
+    return false;
+
+  Type *VecTy = I.getOperand(1)->getType();
+  IRBuilder<> Builder(PHI);
+  auto *VecPHI = Builder.CreatePHI(VecTy, PHI->getNumIncomingValues());
+
+  for (auto *BB : PHI->blocks()) {
+    Builder.SetInsertPoint(BB->getTerminator());
+    Value *InsertElt = Builder.CreateInsertElement(
+        VecTy, PHI->getIncomingValueForBlock(BB), (uint64_t)0);
+    VecPHI->addIncoming(InsertElt, BB);
+  }
+
+  Builder.SetInsertPoint(&I);
+  I.setOperand(0, Builder.CreateExtractElement(VecPHI, (uint64_t)0));
+
+  PHI->eraseFromParent();
 
   return true;
 }

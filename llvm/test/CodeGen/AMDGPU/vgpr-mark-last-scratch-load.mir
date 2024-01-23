@@ -35,18 +35,18 @@ body:             |
     ; CHECK-NEXT: SI_SPILL_V32_SAVE $vgpr10, %stack.10, $sp_reg, 0, implicit $exec :: (store (s32) into %stack.10, addrspace 5)
     ; CHECK-NEXT: SI_SPILL_V32_SAVE $vgpr11, %stack.11, $sp_reg, 0, implicit $exec :: (store (s32) into %stack.11, addrspace 5)
     ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE1:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.1, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE2:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.2, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE3:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.3, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE4:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.4, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE5:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.5, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.5, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE6:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.6, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.6, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE7:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.7, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.7, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE8:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.8, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.8, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE9:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.9, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE10:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.10, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.10, addrspace 5)
-    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE11:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.11, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.11, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.0, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE1:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.1, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.1, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE2:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.2, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.2, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE3:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.3, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.3, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE4:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.4, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.4, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE5:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.5, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.5, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE6:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.6, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.6, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE7:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.7, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.7, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE8:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.8, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.8, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE9:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.9, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.9, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE10:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.10, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.10, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V32_RESTORE11:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.11, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.11, addrspace 5)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SI_SPILL_V32_RESTORE]], implicit [[SI_SPILL_V32_RESTORE1]], implicit [[SI_SPILL_V32_RESTORE2]], implicit [[SI_SPILL_V32_RESTORE3]], implicit [[SI_SPILL_V32_RESTORE4]], implicit [[SI_SPILL_V32_RESTORE5]], implicit [[SI_SPILL_V32_RESTORE6]], implicit [[SI_SPILL_V32_RESTORE7]], implicit [[SI_SPILL_V32_RESTORE8]], implicit [[SI_SPILL_V32_RESTORE9]], implicit [[SI_SPILL_V32_RESTORE10]], implicit [[SI_SPILL_V32_RESTORE11]]
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = COPY $vgpr1
@@ -76,7 +76,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SI_SPILL_V384_SAVE $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, %stack.0, $sp_reg, 0, implicit $exec :: (store (s384) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[SI_SPILL_V384_RESTORE:%[0-9]+]]:vreg_384 = SI_SPILL_V384_RESTORE %stack.0, $sp_reg, 0, 1, implicit $exec :: (load (s384) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: [[SI_SPILL_V384_RESTORE:%[0-9]+]]:vreg_384 = SI_SPILL_V384_RESTORE %stack.0, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s384) from %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SI_SPILL_V384_RESTORE]]
     %0:vreg_384 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
     INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
@@ -157,7 +157,7 @@ body:             |
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_MOV_B32_e32_1]], %stack.14, $sp_reg, 0, implicit $exec :: (store (s32) into %stack.14, addrspace 5)
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE1:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.11, $sp_reg, 0, 0, implicit $exec :: (load (s32) from %stack.11, addrspace 5)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[V_MOV_B32_e32_]], 0, [[SI_SPILL_V32_RESTORE1]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.14, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.14, addrspace 5)
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.14, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.14, addrspace 5)
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_MOV_B32_e32_]], %stack.13, $sp_reg, 0, implicit $exec :: (store (s32) into %stack.13, addrspace 5)
   ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE2:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.10, $sp_reg, 0, 0, implicit $exec :: (load (s32) from %stack.10, addrspace 5)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[V_MOV_B32_e32_1]], 0, [[SI_SPILL_V32_RESTORE2]], 0, 0, implicit $mode, implicit $exec
@@ -200,7 +200,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE14:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.16, $sp_reg, 0, 1, implicit $exec :: (load (s32) from %stack.16, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_V32_RESTORE14:%[0-9]+]]:vgpr_32 = SI_SPILL_V32_RESTORE %stack.16, $sp_reg, 0, 0, implicit $exec :: ("amdgpu-last-use" load (s32) from %stack.16, addrspace 5)
   ; CHECK-NEXT:   EXP_DONE 0, [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_2]], [[SI_SPILL_V32_RESTORE14]], -1, 0, 15, implicit $exec
   ; CHECK-NEXT:   EXP_DONE 0, %res5, %res6, %res7, %res8, -1, 0, 15, implicit $exec
   ; CHECK-NEXT:   EXP_DONE 0, %res9, %res10, %res11, %res12, -1, 0, 15, implicit $exec

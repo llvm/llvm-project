@@ -394,7 +394,7 @@ Custom Directives
 ~~~~~~~~~~~~~~~~~
 
 Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
-writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES``, ``ADDITIONAL_COMPILE_FLAGS``, and ``MODULE_DEPENDENCIES`` libc++-specific directives.
+writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES`` and ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific directives.
 
 .. _libc++-specific Lit Directives:
 .. list-table:: libc++-specific Lit Directives
@@ -417,13 +417,6 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
      - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
        substitution for the test that contains it. This libc++-specific Lit directive makes it possible to add special compilation flags without having to resort to writing a ``.sh.cpp`` test (see
        `Lit Meaning of libc++ Test Filenames`_), more powerful but perhaps overkill.
-   * - ``MODULE_DEPENDENCIES``
-     - ``// MODULE_DEPENDENCIES: std std.compat``
-     - This directive will build the required C++23 standard library
-       modules and add the additional compiler flags in
-       %{compile_flags}. (Libc++ offers these modules in C++20 as an
-       extension.)
-
 
 Benchmarks
 ==========

@@ -639,7 +639,7 @@ BenchmarkRunner::writeObjectFile(StringRef Buffer, StringRef FileName) const {
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   OFS.write(Buffer.data(), Buffer.size());
   OFS.flush();
-  return std::string(ResultPath.str());
+  return std::string(ResultPath);
 }
 
 BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}

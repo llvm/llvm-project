@@ -12,18 +12,18 @@
  */
 
 /* Check by llvm-dwarfdump --verify */
-// RUN: dsymutil --linker=llvm -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
+// RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
 // RUN: -y %p/../dummy-debug-map.map -o - | llvm-dwarfdump --verify - | \
 // RUN: FileCheck -check-prefixes=VERIFY %s
-// RUN: dsymutil --linker=llvm -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
+// RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
 // RUN: -y %p/../dummy-debug-map.map -no-odr -o - | llvm-dwarfdump --verify - | \
 // RUN: FileCheck -check-prefixes=VERIFY %s
 
 /* Check for llvm-dwarfdump -a output */
-// RUN: dsymutil --linker=llvm -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
+// RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
 // RUN: -y %p/../dummy-debug-map.map -o - | llvm-dwarfdump -v -a - | \
 // RUN: FileCheck -check-prefixes=CHECK %s
-// RUN: dsymutil --linker=llvm -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
+// RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../../Inputs/odr-uniquing \
 // RUN: -y %p/../dummy-debug-map.map -no-odr -o - | llvm-dwarfdump -v -a - | \
 // RUN: FileCheck -check-prefixes=CHECK-NOODR %s
 

@@ -1374,6 +1374,7 @@ def err_acc_expected_reduction_operator
 def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
+def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<

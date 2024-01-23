@@ -1,3 +1,8 @@
+if (CMAKE_VERSION VERSION_LESS 3.26)
+  message(WARNING "The libc++ modules won't be available because the CMake version is too old. Update to CMake 3.26 or later.")
+  return()
+endif()
+
 # The headers of Table 24: C++ library headers [tab:headers.cpp]
 # and the headers of Table 25: C++ headers for C library facilities [tab:headers.cpp.c]
 set(LIBCXX_MODULE_STD_SOURCES
@@ -137,6 +142,28 @@ set(LIBCXX_MODULE_STD_COMPAT_SOURCES
   std.compat/cwctype.inc
 )
 
+# TODO MODULES the CMakeLists.txt in the install directory is only temporary
+# When that is removed the configured file can use the substitution
+# LIBCXX_GENERATED_INCLUDE_TARGET_DIR avoiding this set.
+# Also clean up the parts needed to generate the install version.
+# - LIBCXX_GENERATED_INCLUDE_DIR contains the libc++ headers
+# - LIBCXX_GENERATED_INCLUDE_TARGET_DIR contains the libc++ site config
+if ("${LIBCXX_GENERATED_INCLUDE_DIR}" STREQUAL "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}")
+  # This typically happens when the target is not installed.
+  set(LIBCXX_CONFIGURED_INCLUDE_DIRS "${LIBCXX_GENERATED_INCLUDE_DIR}")
+else()
+  # It's important that the arch directory be included first so that its header files
+  # which interpose on the default include dir be included instead of the default ones.
+  set(LIBCXX_CONFIGURED_INCLUDE_DIRS
+    "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR};${LIBCXX_GENERATED_INCLUDE_DIR}"
+  )
+endif()
+configure_file(
+  "CMakeLists.txt.in"
+  "${LIBCXX_GENERATED_MODULE_DIR}/CMakeLists.txt"
+  @ONLY
+)
+
 set(LIBCXX_MODULE_STD_INCLUDE_SOURCES)
 foreach(file ${LIBCXX_MODULE_STD_SOURCES})
   set(
@@ -166,6 +193,7 @@ configure_file(
 )
 
 set(_all_modules)
+list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/CMakeLists.txt")
 list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/std.cppm")
 list(APPEND _all_modules "${LIBCXX_GENERATED_MODULE_DIR}/std.compat.cppm")
 foreach(file ${LIBCXX_MODULE_STD_SOURCES} ${LIBCXX_MODULE_STD_COMPAT_SOURCES})

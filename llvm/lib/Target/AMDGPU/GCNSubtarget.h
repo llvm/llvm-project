@@ -157,6 +157,7 @@ protected:
   bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
@@ -793,6 +794,8 @@ public:
     return HasFP8Insts;
   }
 
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -1021,6 +1024,8 @@ public:
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
+
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
   unsigned getNSAMaxSize(bool HasSampler = false) const {
@@ -1218,6 +1223,13 @@ public:
   // hasGFX940Insts and hasGFX90AInsts are also true.
   bool hasGFX950Insts() const { return GFX950Insts; }
 
+  /// Returns true if the target supports
+  /// global_load_lds_dwordx3/global_load_lds_dwordx4 or
+  /// buffer_load_dwordx3/buffer_load_dwordx4 with the lds bit.
+  bool hasLDSLoadB96_B128() const {
+    return hasGFX950Insts();
+  }
+
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
@@ -1320,6 +1332,10 @@ public:
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
+  /// values.
+  bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX12_10Insts() const { return GFX12_10Insts; }
 

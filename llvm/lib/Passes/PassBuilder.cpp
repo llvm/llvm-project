@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -1080,6 +1081,32 @@ Expected<bool> parseStructuralHashPrinterPassOptions(StringRef Params) {
 Expected<bool> parseWinEHPrepareOptions(StringRef Params) {
   return parseSinglePassOption(Params, "demote-catchswitch-only",
                                "WinEHPreparePass");
+}
+
+Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
+  GlobalMergeOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "group-by-use")
+      Result.GroupByUse = Enable;
+    else if (ParamName == "ignore-single-use")
+      Result.IgnoreSingleUse = Enable;
+    else if (ParamName == "merge-const")
+      Result.MergeConst = Enable;
+    else if (ParamName == "merge-external")
+      Result.MergeExternal = Enable;
+    else if (ParamName.consume_front("max-offset=")) {
+      if (ParamName.getAsInteger(0, Result.MaxOffset))
+        return make_error<StringError>(
+            formatv("invalid GlobalMergePass parameter '{0}' ", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 } // namespace

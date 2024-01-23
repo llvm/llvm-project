@@ -15,53 +15,44 @@
 using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
 using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
+using Sign = LIBC_NAMESPACE::fputil::Sign;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
-  Float128 x(/*sign*/ false, /*exponent*/ 0,
+  Float128 x(Sign::POS, /*exponent*/ 0,
              /*mantissa*/ Float128::MantissaType(1));
-  volatile float xf = float(x);
-  volatile double xd = double(x);
-  ASSERT_FP_EQ(1.0f, xf);
-  ASSERT_FP_EQ(1.0, xd);
+  ASSERT_FP_EQ(1.0f, float(x));
+  ASSERT_FP_EQ(1.0, double(x));
 
   Float128 y(0x1.0p-53);
-  volatile float yf = float(y);
-  volatile double yd = double(y);
-  ASSERT_FP_EQ(0x1.0p-53f, yf);
-  ASSERT_FP_EQ(0x1.0p-53, yd);
+  ASSERT_FP_EQ(0x1.0p-53f, float(y));
+  ASSERT_FP_EQ(0x1.0p-53, double(y));
 
   Float128 z = quick_add(x, y);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(xf + yf, float(z));
-  EXPECT_FP_EQ_ALL_ROUNDING(xd + yd, double(z));
+  EXPECT_FP_EQ_ALL_ROUNDING(float(x) + float(y), float(z));
+  EXPECT_FP_EQ_ALL_ROUNDING(double(x) + double(y), double(z));
 }
 
 TEST(LlvmLibcDyadicFloatTest, QuickAdd) {
-  Float192 x(/*sign*/ false, /*exponent*/ 0,
+  Float192 x(Sign::POS, /*exponent*/ 0,
              /*mantissa*/ Float192::MantissaType(0x123456));
-  volatile double xd = double(x);
-  ASSERT_FP_EQ(0x1.23456p20, xd);
+  ASSERT_FP_EQ(0x1.23456p20, double(x));
 
   Float192 y(0x1.abcdefp-20);
-  volatile double yd = double(y);
-  ASSERT_FP_EQ(0x1.abcdefp-20, yd);
+  ASSERT_FP_EQ(0x1.abcdefp-20, double(y));
 
   Float192 z = quick_add(x, y);
-
-  EXPECT_FP_EQ_ALL_ROUNDING(xd + yd, (volatile double)(z));
+  EXPECT_FP_EQ_ALL_ROUNDING(double(x) + double(y), double(z));
 }
 
 TEST(LlvmLibcDyadicFloatTest, QuickMul) {
-  Float256 x(/*sign*/ false, /*exponent*/ 0,
+  Float256 x(Sign::POS, /*exponent*/ 0,
              /*mantissa*/ Float256::MantissaType(0x123456));
-  volatile double xd = double(x);
-  ASSERT_FP_EQ(0x1.23456p20, xd);
+  ASSERT_FP_EQ(0x1.23456p20, double(x));
 
   Float256 y(0x1.abcdefp-25);
-  volatile double yd = double(y);
-  ASSERT_FP_EQ(0x1.abcdefp-25, yd);
+  ASSERT_FP_EQ(0x1.abcdefp-25, double(y));
 
   Float256 z = quick_mul(x, y);
-
-  EXPECT_FP_EQ_ALL_ROUNDING(xd * yd, double(z));
+  EXPECT_FP_EQ_ALL_ROUNDING(double(x) * double(y), double(z));
 }

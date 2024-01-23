@@ -54,6 +54,45 @@ void func() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc loop seq,
 
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse()
+  for(;;){}
+
+  // expected-error@+3{{invalid tag 'unknown' on 'collapse' clause}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(unknown:)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(force:)
+  for(;;){}
+
+  // expected-error@+2{{invalid tag 'unknown' on 'collapse' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(unknown:5)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(force:5)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(5)
+  for(;;){}
+
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop collapse(5, 6)
+  for(;;){}
 }
 
 void DefaultClause() {
@@ -667,3 +706,26 @@ void bar();
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc routine(bar) worker, vector, seq, nohost
+
+
+// Bind Clause Parsing.
+
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine bind
+void BCP1();
+
+  // expected-error@+2{{expected identifier or string literal}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine(BCP1) bind()
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine bind("ReductionClauseParsing")
+void BCP2();
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine(BCP1) bind(BCP2)
+
+  // expected-error@+2{{use of undeclared identifier 'unknown_thing'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc routine(BCP1) bind(unknown_thing)

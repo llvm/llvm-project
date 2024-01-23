@@ -1527,9 +1527,3 @@ v_swmmac_f32_16x16x32_bf8_bf8 v[6:13], v[0:1], v[2:5], 1.0
 
 v_swmmac_f32_16x16x32_bf8_bf8 v[6:13], v[0:1], v[2:5], 1
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-
-
-
-
-

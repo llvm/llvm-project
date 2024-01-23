@@ -38,6 +38,7 @@ namespace LIBC_NAMESPACE {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
+using Sign = fputil::Sign;
 
 // log2(e)
 constexpr double LOG2_E = 0x1.71547652b82fep+0;
@@ -109,13 +110,17 @@ Float128 poly_approx_f128(const Float128 &dx) {
   using MType = typename Float128::MantissaType;
 
   constexpr Float128 COEFFS_128[]{
-      {false, -127, MType({0, 0x8000000000000000})},                  // 1.0
-      {false, -128, MType({0, 0x8000000000000000})},                  // 0.5
-      {false, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
-      {false, -132, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
-      {false, -134, MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
-      {false, -137, MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
-      {false, -140, MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
+      {Sign::POS, -127, MType({0, 0x8000000000000000})},                  // 1.0
+      {Sign::POS, -128, MType({0, 0x8000000000000000})},                  // 0.5
+      {Sign::POS, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
+      {Sign::POS, -132,
+       MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
+      {Sign::POS, -134,
+       MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
+      {Sign::POS, -137,
+       MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
+      {Sign::POS, -140,
+       MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
@@ -165,7 +170,7 @@ Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
   Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
 
   int hi = static_cast<int>(kd) >> 12;
-  Float128 minus_one{true, -127 - hi, MType({0, 0x8000000000000000})};
+  Float128 minus_one{Sign::NEG, -127 - hi, MType({0, 0x8000000000000000})};
 
   Float128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
 
@@ -275,9 +280,10 @@ double set_exceptional(double x) {
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
+  using Sign = fputil::Sign;
   FPBits xbits(x);
 
-  bool x_sign = xbits.get_sign();
+  bool x_is_neg = xbits.is_neg();
   uint64_t x_u = xbits.uintval();
 
   // Upper bound: max normal number = 2^1023 * (2 - 2^-52)
@@ -392,11 +398,11 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   // -2^(-hi)
   double one_scaled =
-      FPBits::create_value(true, FPBits::EXP_BIAS - hi, 0).get_val();
+      FPBits::create_value(Sign::NEG, FPBits::EXP_BIAS - hi, 0).get_val();
 
   // 2^(mid1 + mid2) - 2^(-hi)
-  DoubleDouble hi_part = x_sign ? fputil::exact_add(one_scaled, exp_mid.hi)
-                                : fputil::exact_add(exp_mid.hi, one_scaled);
+  DoubleDouble hi_part = x_is_neg ? fputil::exact_add(one_scaled, exp_mid.hi)
+                                  : fputil::exact_add(exp_mid.hi, one_scaled);
 
   hi_part.lo += exp_mid.lo;
 
@@ -437,7 +443,9 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   double lo = fputil::multiply_add(p, mid_lo, hi_part.lo);
 
-  uint64_t err = x_sign ? (static_cast<uint64_t>(-hi) << 52) : 0;
+  // TODO: The following line leaks encoding abstraction. Use FPBits methods
+  // instead.
+  uint64_t err = x_is_neg ? (static_cast<uint64_t>(-hi) << 52) : 0;
 
   double err_d = cpp::bit_cast<double>(ERR_D + err);
 

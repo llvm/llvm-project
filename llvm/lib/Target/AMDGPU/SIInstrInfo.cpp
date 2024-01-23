@@ -2517,7 +2517,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_MUL_U64));
     break;
 
-  case AMDGPU::S_GETPC_B64_PSEUDO:
+  case AMDGPU::S_GETPC_B64_pseudo:
     MI.setDesc(get(AMDGPU::S_GETPC_B64));
     if (ST.hasGetPCZeroExtension()) {
       Register Dst = MI.getOperand(0).getReg();
@@ -5370,7 +5370,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
     return ST.useRealTrue16Insts() ? AMDGPU::V_CEIL_F16_t16_e64
                                    : AMDGPU::V_CEIL_F16_fake16_e64;
   case AMDGPU::S_FLOOR_F16:
-    return AMDGPU::V_FLOOR_F16_fake16_e64;
+    return ST.useRealTrue16Insts() ? AMDGPU::V_FLOOR_F16_t16_e64
+                                   : AMDGPU::V_FLOOR_F16_fake16_e64;
   case AMDGPU::S_TRUNC_F16:
     return AMDGPU::V_TRUNC_F16_fake16_e64;
   case AMDGPU::S_RNDNE_F16:
@@ -8888,6 +8889,7 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
       {
           {MONoClobber, "amdgpu-noclobber"},
+          {MOLastUse, "amdgpu-last-use"},
       };
 
   return ArrayRef(TargetFlags);

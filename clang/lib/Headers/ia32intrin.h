@@ -58,7 +58,7 @@ __bsrd(int __A) {
   return 31 - __builtin_clz((unsigned int)__A);
 }
 
-/// Swaps the bytes in the input. Converting little endian to big endian or
+/// Swaps the bytes in the input, converting little endian to big endian or
 ///    vice versa.
 ///
 /// \headerfile <x86intrin.h>
@@ -73,6 +73,16 @@ __bswapd(int __A) {
   return (int)__builtin_bswap32((unsigned int)__A);
 }
 
+/// Swaps the bytes in the input, converting little endian to big endian or
+///    vice versa.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c BSWAP instruction.
+///
+/// \param __A
+///    A 32-bit integer operand.
+/// \returns A 32-bit integer containing the swapped bytes.
 static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 _bswap(int __A) {
   return (int)__builtin_bswap32((unsigned int)__A);
@@ -173,12 +183,29 @@ __popcntq(unsigned long long __A)
 #endif /* __x86_64__ */
 
 #ifdef __x86_64__
+/// Returns the program status and control \c RFLAGS register with the \c VM
+///    and \c RF flags cleared.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c PUSHFQ + \c POP instruction sequence.
+///
+/// \returns The 64-bit value of the RFLAGS register.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __readeflags(void)
 {
   return __builtin_ia32_readeflags_u64();
 }
 
+/// Writes the specified value to the program status and control \c RFLAGS
+///    register. Reserved bits are not affected.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c PUSH + \c POPFQ instruction sequence.
+///
+/// \param __f
+///    The 64-bit value to write to \c RFLAGS.
 static __inline__ void __DEFAULT_FN_ATTRS
 __writeeflags(unsigned long long __f)
 {
@@ -186,12 +213,29 @@ __writeeflags(unsigned long long __f)
 }
 
 #else /* !__x86_64__ */
+/// Returns the program status and control \c EFLAGS register with the \c VM
+///    and \c RF flags cleared.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c PUSHFD + \c POP instruction sequence.
+///
+/// \returns The 32-bit value of the EFLAGS register.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 __readeflags(void)
 {
   return __builtin_ia32_readeflags_u32();
 }
 
+/// Writes the specified value to the program status and control \c EFLAGS
+///    register. Reserved bits are not affected.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c PUSH + \c POPFD instruction sequence.
+///
+/// \param __f
+///    The 32-bit value to write to \c EFLAGS.
 static __inline__ void __DEFAULT_FN_ATTRS
 __writeeflags(unsigned int __f)
 {
@@ -341,12 +385,32 @@ __crc32q(unsigned long long __C, unsigned long long __D)
 }
 #endif /* __x86_64__ */
 
+/// Reads the specified performance monitoring counter. Refer to your
+///    processor's documentation to determine which performance counters are
+///    supported.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c RDPMC instruction.
+///
+/// \param __A
+///    The performance counter to read.
+/// \returns The 64-bit value read from the performance counter.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdpmc(int __A) {
   return __builtin_ia32_rdpmc(__A);
 }
 
-/* __rdtscp */
+/// Reads the processor's time stamp counter and the \c IA32_TSC_AUX MSR
+///    \c (0xc0000103).
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c RDTSCP instruction.
+///
+/// \param __A
+///    Address of where to store the 32-bit \c IA32_TSC_AUX value.
+/// \returns The 64-bit value of the time stamp counter.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdtscp(unsigned int *__A) {
   return __builtin_ia32_rdtscp(__A);
@@ -361,42 +425,146 @@ _wbinvd(void) {
   __builtin_ia32_wbinvd();
 }
 
+/// Rotates an 8-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param __X
+///    The unsigned 8-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 __rolb(unsigned char __X, int __C) {
   return __builtin_rotateleft8(__X, __C);
 }
 
+/// Rotates an 8-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param __X
+///    The unsigned 8-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 __rorb(unsigned char __X, int __C) {
   return __builtin_rotateright8(__X, __C);
 }
 
+/// Rotates a 16-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param __X
+///    The unsigned 16-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned short __DEFAULT_FN_ATTRS_CONSTEXPR
 __rolw(unsigned short __X, int __C) {
   return __builtin_rotateleft16(__X, __C);
 }
 
+/// Rotates a 16-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param __X
+///    The unsigned 16-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned short __DEFAULT_FN_ATTRS_CONSTEXPR
 __rorw(unsigned short __X, int __C) {
   return __builtin_rotateright16(__X, __C);
 }
 
+/// Rotates a 32-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param __X
+///    The unsigned 32-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 __rold(unsigned int __X, int __C) {
   return __builtin_rotateleft32(__X, (unsigned int)__C);
 }
 
+/// Rotates a 32-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param __X
+///    The unsigned 32-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 __rord(unsigned int __X, int __C) {
   return __builtin_rotateright32(__X, (unsigned int)__C);
 }
 
 #ifdef __x86_64__
+/// Rotates a 64-bit value to the left by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROL instruction.
+///
+/// \param __X
+///    The unsigned 64-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __rolq(unsigned long long __X, int __C) {
   return __builtin_rotateleft64(__X, (unsigned long long)__C);
 }
 
+/// Rotates a 64-bit value to the right by the specified number of bits.
+///    This operation is undefined if the number of bits exceeds the size of
+///    the value.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c ROR instruction.
+///
+/// \param __X
+///    The unsigned 64-bit value to be rotated.
+/// \param __C
+///    The number of bits to rotate the value.
+/// \returns The rotated value.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __rorq(unsigned long long __X, int __C) {
   return __builtin_rotateright64(__X, (unsigned long long)__C);

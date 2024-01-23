@@ -300,7 +300,7 @@ def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
 // PSEUDO includes a workaround for a hardware anomaly where some ASICs
 // zero-extend the result from 48 bits instead of sign-extending.
 let isReMaterializable = 1 in
-def S_GETPC_B64_PSEUDO : SOP1_64_0  <"s_getpc_b64",
+def S_GETPC_B64_pseudo : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
 
@@ -1179,7 +1179,7 @@ class S_SETREG_B32_Pseudo <list<dag> pattern=[]> : SOPK_Pseudo <
   pattern>;
 
 def S_SETREG_B32 : S_SETREG_B32_Pseudo <
-  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
+  [(int_amdgcn_s_setreg (i32 SIMM16bit:$simm16), i32:$sdst)]> {
   // Use custom inserter to optimize some cases to
   // S_DENORM_MODE/S_ROUND_MODE/S_SETREG_B32_mode.
   let usesCustomInserter = 1;
