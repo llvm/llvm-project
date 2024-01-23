@@ -816,9 +816,14 @@ TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
 #define TSAN_MAYBE_INTERCEPT_MEMALIGN
 #endif
 
-#if !SANITIZER_APPLE || defined(__MAC_10_16)
+// aligned_alloc was introduced in macOS 10.15
+// Linking will fail when using an older SDK
+#if !SANITIZER_APPLE || defined(__MAC_10_15)
+// macOS 10.15 is greater than our minimal deployment target.  To ensure we
+// generate a weak reference so the TSan dylib continues to work on older
+// systems, we need to forward declare the intercepted function as "weak
+// imports".
 SANITIZER_WEAK_IMPORT void *aligned_alloc(SIZE_T __alignment, SIZE_T __size);
-
 TSAN_INTERCEPTOR(void*, aligned_alloc, uptr align, uptr sz) {
   if (in_symbolizer())
     return InternalAlloc(sz, nullptr, align);

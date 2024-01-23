@@ -1,20 +1,19 @@
 // RUN: %clang_tsan -O1 %s -o %t -undefined dynamic_lookup
-// RUN: %deflake %run %t | FileCheck %s 
+// RUN: %deflake %run %t | FileCheck %s
 
 #include "test.h"
 
 #include <stdlib.h>
 
 #if defined(__cplusplus) && (__cplusplus >= 201703L)
-#define HAVE_ALIGNED_ALLOC 1
+#  define HAVE_ALIGNED_ALLOC 1
 #endif
 
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
     __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500
-#define HAVE_ALIGNED_ALLOC 0 
+#  define HAVE_ALIGNED_ALLOC 0
 #else
 #endif
-
 
 int *mem;
 pthread_mutex_t mtx;
@@ -39,9 +38,9 @@ int main() {
 
   barrier_init(&barrier, 2);
 #if HAVE_ALIGNED_ALLOC
-  mem = (int*)aligned_alloc(8, 8);
+  mem = (int *)aligned_alloc(8, 8);
 #else
-  mem = (int*)malloc(8);
+  mem = (int *)malloc(8);
 #endif
   pthread_mutex_init(&mtx, 0);
   pthread_t t;
