@@ -2,8 +2,6 @@
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
-; XFAIL: *
-
 ;--- 1.s
 ; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=obj -mcpu=gfx1100 < 1.s > 1.o
 ; RUN: llvm-objdump --disassemble-symbols=kernel.kd 1.o | tail -n +7 | tee 1-disasm.s | FileCheck 1.s
@@ -51,6 +49,7 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; CHECK-NEXT: .amdhsa_wavefront_size32 1
+; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
 .amdhsa_kernel kernel
   .amdhsa_next_free_vgpr 32
@@ -105,6 +104,7 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; CHECK-NEXT: .amdhsa_wavefront_size32 0
+; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
 .amdhsa_kernel kernel
   .amdhsa_next_free_vgpr 32
@@ -159,6 +159,7 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; CHECK-NEXT: .amdhsa_wavefront_size32 0
+; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
 .amdhsa_kernel kernel
   .amdhsa_next_free_vgpr 32
@@ -213,6 +214,7 @@
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_id 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 ; CHECK-NEXT: .amdhsa_wavefront_size32 0
+; CHECK-NEXT: .amdhsa_uses_dynamic_stack 0
 ; CHECK-NEXT: .end_amdhsa_kernel
 .amdhsa_kernel kernel
   .amdhsa_next_free_vgpr 32
