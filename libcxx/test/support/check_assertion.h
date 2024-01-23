@@ -135,7 +135,7 @@ std::string ToString(std::array<DeathCause, N> const& causes) {
   ss << "{";
   for (std::size_t i = 0; i != N; ++i) {
     ss << ToString(causes[i]);
-    if (i+1 != N)
+    if (i + 1 != N)
       ss << ", ";
   }
   ss << "}";
@@ -209,8 +209,8 @@ public:
 
     if (std::find(expected_causes.begin(), expected_causes.end(), cause) == expected_causes.end()) {
       std::stringstream failure_description;
-      failure_description                                             //
-          << "Child died, but with a different death cause\n"         //
+      failure_description                                               //
+          << "Child died, but with a different death cause\n"           //
           << "Expected cause(s): " << ToString(expected_causes) << "\n" //
           << "Actual cause:      " << ToString(cause) << "\n";
       return DeathTestResult(Outcome::UnexpectedCause, cause, failure_description.str());
@@ -349,7 +349,8 @@ void std::__libcpp_verbose_abort(char const* format, ...) {
 #endif // _LIBCPP_VERSION
 
 template <std::size_t N, class Func>
-bool ExpectDeath(const std::array<DeathCause, N>& expected_causes, const char* stmt, Func&& func, const Matcher& matcher) {
+bool ExpectDeath(
+    const std::array<DeathCause, N>& expected_causes, const char* stmt, Func&& func, const Matcher& matcher) {
   for (auto cause : expected_causes)
     assert(IsValidCause(cause));
 
