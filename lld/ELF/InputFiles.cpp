@@ -1546,6 +1546,7 @@ template <class ELFT> void SharedFile::parse() {
       auto *s = symtab.addSymbol(
           SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
                        sym.getType(), sym.st_value, sym.st_size, alignment});
+      s->dsoDefined = true;
       if (s->file == this)
         s->versionId = ver;
     }
@@ -1563,6 +1564,7 @@ template <class ELFT> void SharedFile::parse() {
     auto *s = symtab.addSymbol(
         SharedSymbol{*this, saver().save(name), sym.getBinding(), sym.st_other,
                      sym.getType(), sym.st_value, sym.st_size, alignment});
+    s->dsoDefined = true;
     if (s->file == this)
       s->versionId = idx;
   }
@@ -1783,6 +1785,10 @@ void BinaryFile::parse() {
   symtab.addAndCheckDuplicate(Defined{this, saver.save(s + "_size"), STB_GLOBAL,
                                       STV_DEFAULT, STT_OBJECT, data.size(), 0,
                                       nullptr});
+}
+
+InputFile *elf::createInternalFile(StringRef name) {
+  return make<InputFile>(InputFile::InternalKind, MemoryBufferRef("", name));
 }
 
 ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,

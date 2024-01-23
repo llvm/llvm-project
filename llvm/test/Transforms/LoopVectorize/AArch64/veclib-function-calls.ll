@@ -828,11 +828,11 @@ define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @cospi_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call double @cospi(double [[IN:%.*]])
+; ARMPL-NEON:    [[TMP3:%.*]] = call <2 x double> @armpl_vcospiq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @cospi_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call double @cospi(double [[IN:%.*]])
+; ARMPL-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @armpl_svcospi_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body
@@ -863,11 +863,11 @@ define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @cospi_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call float @cospif(float [[IN:%.*]])
+; ARMPL-NEON:    [[TMP3:%.*]] = call <4 x float> @armpl_vcospiq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @cospi_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call float @cospif(float [[IN:%.*]])
+; ARMPL-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @armpl_svcospi_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body
@@ -1485,11 +1485,11 @@ define void @fmax_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @fmax_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call double @fmax(double [[IN:%.*]], double [[IN]])
+; ARMPL-NEON:    [[TMP3:%.*]] = call <2 x double> @armpl_vfmaxq_f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; ARMPL-SVE-LABEL: define void @fmax_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call double @fmax(double [[IN:%.*]], double [[IN]])
+; ARMPL-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @armpl_svfmax_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body
@@ -1520,11 +1520,11 @@ define void @fmax_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @fmax_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call float @fmaxf(float [[IN:%.*]], float [[IN]])
+; ARMPL-NEON:    [[TMP3:%.*]] = call <4 x float> @armpl_vfmaxq_f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; ARMPL-SVE-LABEL: define void @fmax_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call float @fmaxf(float [[IN:%.*]], float [[IN]])
+; ARMPL-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @armpl_svfmax_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body
@@ -1777,11 +1777,11 @@ define void @ilogb_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @ilogb_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call i32 @ilogb(double [[IN:%.*]])
+; ARMPL-NEON:    [[TMP3:%.*]] = call <2 x i32> @armpl_vilogbq_f64(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @ilogb_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call i32 @ilogb(double [[IN:%.*]])
+; ARMPL-SVE:    [[TMP15:%.*]] = call <vscale x 2 x i32> @armpl_svilogb_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body
@@ -1812,11 +1812,11 @@ define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ;
 ; ARMPL-NEON-LABEL: define void @ilogb_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]])
+; ARMPL-NEON:    [[TMP3:%.*]] = call <4 x i32> @armpl_vilogbq_f32(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @ilogb_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]])
+; ARMPL-SVE:    [[TMP15:%.*]] = call <vscale x 4 x i32> @armpl_svilogb_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body
@@ -1850,11 +1850,11 @@ define void @ldexp_f64(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 ;
 ; ARMPL-NEON-LABEL: define void @ldexp_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call double @ldexp(double [[IN1:%.*]], i32 [[IN2:%.*]])
+; ARMPL-NEON:    [[TMP5:%.*]] = call <2 x double> @armpl_vldexpq_f64(<2 x double> [[WIDE_LOAD:%.*]], <2 x i32> [[WIDE_LOAD1:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @ldexp_f64
 ; ARMPL-SVE-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call double @ldexp(double [[IN1:%.*]], i32 [[IN2:%.*]])
+; ARMPL-SVE:    [[TMP17:%.*]] = call <vscale x 2 x double> @armpl_svldexp_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i32> [[WIDE_MASKED_LOAD1:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body
@@ -1887,11 +1887,11 @@ define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %
 ;
 ; ARMPL-NEON-LABEL: define void @ldexp_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-NEON:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]])
+; ARMPL-NEON:    [[TMP5:%.*]] = call <4 x float> @armpl_vldexpq_f32(<4 x float> [[WIDE_LOAD:%.*]], <4 x i32> [[WIDE_LOAD1:%.*]])
 ;
 ; ARMPL-SVE-LABEL: define void @ldexp_f32
 ; ARMPL-SVE-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; ARMPL-SVE:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]])
+; ARMPL-SVE:    [[TMP17:%.*]] = call <vscale x 4 x float> @armpl_svldexp_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
   entry:
   br label %for.body

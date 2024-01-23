@@ -1322,6 +1322,21 @@ static void printSumProperty(OpAsmPrinter &printer, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Tensor/Buffer Ops
+//===----------------------------------------------------------------------===//
+
+void ReadBufferOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  // The buffer operand is read.
+  effects.emplace_back(MemoryEffects::Read::get(), getBuffer(),
+                       SideEffects::DefaultResource::get());
+  // The buffer contents are dumped.
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
 // Test Dataflow
 //===----------------------------------------------------------------------===//
 

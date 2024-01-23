@@ -3,21 +3,21 @@
 
 # ERROR-COUNT-60: error:
 # ERROR-NOT: error:
-# CHECK: {evex}	cmpaxadd	%ecx, %edx, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnbexadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe7,0x54,0x98,0x7b]
-         {evex}	cmpaxadd	%ecx, %edx, 123(%rax,%rbx,4)
+         {evex}	cmpnbexadd	%ecx, %edx, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	cmpaxadd	%r9, %r15, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnbexadd	%r9, %r15, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xe7,0x7c,0x98,0x7b]
-         {evex}	cmpaxadd	%r9, %r15, 123(%rax,%rbx,4)
+         {evex}	cmpnbexadd	%r9, %r15, 123(%rax,%rbx,4)
 
-# CHECK: cmpaxadd	%r18d, %r22d, 291(%r28,%r29,4)
+# CHECK: cmpnbexadd	%r18d, %r22d, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe7,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpaxadd	%r18d, %r22d, 291(%r28,%r29,4)
+         cmpnbexadd	%r18d, %r22d, 291(%r28,%r29,4)
 
-# CHECK: cmpaxadd	%r19, %r23, 291(%r28,%r29,4)
+# CHECK: cmpnbexadd	%r19, %r23, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe7,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpaxadd	%r19, %r23, 291(%r28,%r29,4)
+         cmpnbexadd	%r19, %r23, 291(%r28,%r29,4)
 
 # CHECK: {evex}	cmpbexadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe6,0x54,0x98,0x7b]
@@ -51,53 +51,53 @@
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe2,0xbc,0xac,0x23,0x01,0x00,0x00]
          cmpbxadd	%r19, %r23, 291(%r28,%r29,4)
 
-# CHECK: {evex}	cmpexadd	%ecx, %edx, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpzxadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe4,0x54,0x98,0x7b]
-         {evex}	cmpexadd	%ecx, %edx, 123(%rax,%rbx,4)
+         {evex}	cmpzxadd	%ecx, %edx, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	cmpexadd	%r9, %r15, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpzxadd	%r9, %r15, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xe4,0x7c,0x98,0x7b]
-         {evex}	cmpexadd	%r9, %r15, 123(%rax,%rbx,4)
+         {evex}	cmpzxadd	%r9, %r15, 123(%rax,%rbx,4)
 
-# CHECK: cmpexadd	%r18d, %r22d, 291(%r28,%r29,4)
+# CHECK: cmpzxadd	%r18d, %r22d, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe4,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpexadd	%r18d, %r22d, 291(%r28,%r29,4)
+         cmpzxadd	%r18d, %r22d, 291(%r28,%r29,4)
 
-# CHECK: cmpexadd	%r19, %r23, 291(%r28,%r29,4)
+# CHECK: cmpzxadd	%r19, %r23, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe4,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpexadd	%r19, %r23, 291(%r28,%r29,4)
+         cmpzxadd	%r19, %r23, 291(%r28,%r29,4)
 
-# CHECK: {evex}	cmpgexadd	%ecx, %edx, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnlxadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xed,0x54,0x98,0x7b]
-         {evex}	cmpgexadd	%ecx, %edx, 123(%rax,%rbx,4)
+         {evex}	cmpnlxadd	%ecx, %edx, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	cmpgexadd	%r9, %r15, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnlxadd	%r9, %r15, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xed,0x7c,0x98,0x7b]
-         {evex}	cmpgexadd	%r9, %r15, 123(%rax,%rbx,4)
+         {evex}	cmpnlxadd	%r9, %r15, 123(%rax,%rbx,4)
 
-# CHECK: cmpgexadd	%r18d, %r22d, 291(%r28,%r29,4)
+# CHECK: cmpnlxadd	%r18d, %r22d, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xed,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpgexadd	%r18d, %r22d, 291(%r28,%r29,4)
+         cmpnlxadd	%r18d, %r22d, 291(%r28,%r29,4)
 
-# CHECK: cmpgexadd	%r19, %r23, 291(%r28,%r29,4)
+# CHECK: cmpnlxadd	%r19, %r23, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xed,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpgexadd	%r19, %r23, 291(%r28,%r29,4)
+         cmpnlxadd	%r19, %r23, 291(%r28,%r29,4)
 
-# CHECK: {evex}	cmpgxadd	%ecx, %edx, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnlexadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xef,0x54,0x98,0x7b]
-         {evex}	cmpgxadd	%ecx, %edx, 123(%rax,%rbx,4)
+         {evex}	cmpnlexadd	%ecx, %edx, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	cmpgxadd	%r9, %r15, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnlexadd	%r9, %r15, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xef,0x7c,0x98,0x7b]
-         {evex}	cmpgxadd	%r9, %r15, 123(%rax,%rbx,4)
+         {evex}	cmpnlexadd	%r9, %r15, 123(%rax,%rbx,4)
 
-# CHECK: cmpgxadd	%r18d, %r22d, 291(%r28,%r29,4)
+# CHECK: cmpnlexadd	%r18d, %r22d, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xef,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpgxadd	%r18d, %r22d, 291(%r28,%r29,4)
+         cmpnlexadd	%r18d, %r22d, 291(%r28,%r29,4)
 
-# CHECK: cmpgxadd	%r19, %r23, 291(%r28,%r29,4)
+# CHECK: cmpnlexadd	%r19, %r23, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xef,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpgxadd	%r19, %r23, 291(%r28,%r29,4)
+         cmpnlexadd	%r19, %r23, 291(%r28,%r29,4)
 
 # CHECK: {evex}	cmplexadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xee,0x54,0x98,0x7b]
@@ -131,21 +131,21 @@
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xec,0xbc,0xac,0x23,0x01,0x00,0x00]
          cmplxadd	%r19, %r23, 291(%r28,%r29,4)
 
-# CHECK: {evex}	cmpnexadd	%ecx, %edx, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnzxadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe5,0x54,0x98,0x7b]
-         {evex}	cmpnexadd	%ecx, %edx, 123(%rax,%rbx,4)
+         {evex}	cmpnzxadd	%ecx, %edx, 123(%rax,%rbx,4)
 
-# CHECK: {evex}	cmpnexadd	%r9, %r15, 123(%rax,%rbx,4)
+# CHECK: {evex}	cmpnzxadd	%r9, %r15, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0x72,0xb5,0x08,0xe5,0x7c,0x98,0x7b]
-         {evex}	cmpnexadd	%r9, %r15, 123(%rax,%rbx,4)
+         {evex}	cmpnzxadd	%r9, %r15, 123(%rax,%rbx,4)
 
-# CHECK: cmpnexadd	%r18d, %r22d, 291(%r28,%r29,4)
+# CHECK: cmpnzxadd	%r18d, %r22d, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0x69,0x00,0xe5,0xb4,0xac,0x23,0x01,0x00,0x00]
-         cmpnexadd	%r18d, %r22d, 291(%r28,%r29,4)
+         cmpnzxadd	%r18d, %r22d, 291(%r28,%r29,4)
 
-# CHECK: cmpnexadd	%r19, %r23, 291(%r28,%r29,4)
+# CHECK: cmpnzxadd	%r19, %r23, 291(%r28,%r29,4)
 # CHECK: encoding: [0x62,0x8a,0xe1,0x00,0xe5,0xbc,0xac,0x23,0x01,0x00,0x00]
-         cmpnexadd	%r19, %r23, 291(%r28,%r29,4)
+         cmpnzxadd	%r19, %r23, 291(%r28,%r29,4)
 
 # CHECK: {evex}	cmpnoxadd	%ecx, %edx, 123(%rax,%rbx,4)
 # CHECK: encoding: [0x62,0xf2,0x75,0x08,0xe1,0x54,0x98,0x7b]
