@@ -83,9 +83,9 @@ subroutine acc_serial
   !$acc serial wait
   !$acc end serial
 
-! CHECK:      acc.serial {
+! CHECK:      acc.serial wait {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {waitOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc serial wait(1)
   !$acc end serial
