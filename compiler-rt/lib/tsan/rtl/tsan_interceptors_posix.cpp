@@ -14,6 +14,7 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_errno.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
@@ -816,7 +817,6 @@ TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
 #endif
 
 #if !SANITIZER_APPLE || defined(__MAC_10_16)
-# define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
 SANITIZER_WEAK_IMPORT void *aligned_alloc(SIZE_T __alignment, SIZE_T __size);
 
 TSAN_INTERCEPTOR(void*, aligned_alloc, uptr align, uptr sz) {
