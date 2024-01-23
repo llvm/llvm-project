@@ -22,26 +22,6 @@
 #include "test_iterators.h"
 #include "types.h"
 
-// Helpers
-
-template <class T>
-concept HasConstBegin = requires(const T ct) { ct.begin(); };
-
-template <class T>
-concept HasBegin = requires(T t) { t.begin(); };
-
-template <class T>
-concept HasConstAndNonConstBegin =
-    HasConstBegin<T> &&
-    // Because const begin() and non-const begin() returns different types: iterator<true> vs. iterator<false>
-    requires(T t, const T ct) { requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>; };
-
-template <class T>
-concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
-
-template <class T>
-concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
-
 // Types
 
 template <bool Simple>
@@ -69,6 +49,24 @@ struct NoConstBeginView : std::ranges::view_base {
 
 // SFINAE
 
+template <class T>
+concept HasConstBegin = requires(const T ct) { ct.begin(); };
+
+template <class T>
+concept HasBegin = requires(T t) { t.begin(); };
+
+template <class T>
+concept HasConstAndNonConstBegin =
+    HasConstBegin<T> &&
+    // Because const begin() and non-const begin() returns different types: iterator<true> vs. iterator<false>
+    requires(T t, const T ct) { requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>; };
+
+template <class T>
+concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
+
+template <class T>
+concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
+
 // simple-view<V>
 static_assert(HasOnlyConstBegin<std::ranges::enumerate_view<SimpleCommonView>>);
 
@@ -88,6 +86,7 @@ constexpr bool test() {
     std::ranges::enumerate_view view(range);
     using Iterator = std::ranges::iterator_t<decltype(view)>;
     static_assert(std::same_as<Iterator, decltype(view.begin())>);
+    static_assert(std::same_as<ValueType<int>, decltype(*view.begin())>);
   }
 
   // begin() over an empty range

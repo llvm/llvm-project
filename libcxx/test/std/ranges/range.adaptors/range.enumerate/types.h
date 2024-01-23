@@ -9,12 +9,17 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_H
 
+#include <cstddef>
 #include <ranges>
+#include <tuple>
 
 #include "test_iterators.h"
 #include "test_macros.h"
 
 // Types
+
+template<typename T, typename DifferenceT = std::ptrdiff_t>
+using ValueType = std::tuple<DifferenceT, T>;
 
 struct RangeView : std::ranges::view_base {
   using Iterator = cpp20_input_iterator<int*>;
