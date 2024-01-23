@@ -560,9 +560,23 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
-if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+option(COMPILER_RT_BUILD_STANDALONE_AARCH64_SME_RUNTIME
+  "Build standalone shared aarch64 SME runtime library."
+  OFF)
+
+if (COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
   list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
   message(STATUS "AArch64 SME ABI routines enabled")
+  if (COMPILER_RT_BUILD_STANDALONE_AARCH64_SME_RUNTIME)
+    message(STATUS "Standalone AArch64 SME runtime enabled")
+    add_custom_target(builtins-standalone-aarch64-sme-runtime)
+    add_compiler_rt_runtime(arm_sme_rt
+        SHARED
+        ARCHS "aarch64"
+        SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c
+        PARENT_TARGET builtins-standalone-aarch64-sme-runtime)
+    add_dependencies(compiler-rt builtins-standalone-aarch64-sme-runtime)
+  endif()
 else()
   message(STATUS "AArch64 SME ABI routines disabled")
 endif()
