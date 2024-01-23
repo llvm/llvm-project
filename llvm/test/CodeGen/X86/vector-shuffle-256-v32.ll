@@ -3411,7 +3411,7 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; AVX2-LABEL: shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_20_19_52_19_49_54_37_32_48_42_59_07_36_34_36_39:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,12,12,13,1,6,13,7,u,u,u,u,u,u,u,u,u,u,u,u,17,22,29,23,20,19,u,19,u,u,u,u]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,5,0,6,u,1,u>
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,u,5,0,6,u,1,u]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm1[10,13],zero,zero,ymm1[3,3],zero,ymm1[8],zero,zero,zero,ymm1[12,1],zero,zero,zero,zero,zero,ymm1[20],zero,ymm1[17,22],zero,zero,ymm1[16],zero,ymm1[27],zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
@@ -3424,7 +3424,7 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; AVX512VLBW-LABEL: shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_20_19_52_19_49_54_37_32_48_42_59_07_36_34_36_39:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,12,12,13,1,6,13,7,u,u,u,u,u,u,u,u,u,u,u,u,17,22,29,23,20,19,u,19,u,u,u,u]
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,5,0,6,u,1,u>
+; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,u,5,0,6,u,1,u]
 ; AVX512VLBW-NEXT:    vpermd %ymm0, %ymm2, %ymm2
 ; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm1[10,13],zero,zero,ymm1[3,3],zero,ymm1[8],zero,zero,zero,ymm1[12,1],zero,zero,zero,zero,zero,ymm1[20],zero,ymm1[17,22],zero,zero,ymm1[16],zero,ymm1[27],zero,zero,zero,zero,zero
 ; AVX512VLBW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
@@ -3460,7 +3460,7 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; XOPAVX2-LABEL: shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_20_19_52_19_49_54_37_32_48_42_59_07_36_34_36_39:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,12,12,13,1,6,13,7,u,u,u,u,u,u,u,u,u,u,u,u,17,22,29,23,20,19,u,19,u,u,u,u]
-; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,5,0,6,u,1,u>
+; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,u,5,0,6,u,1,u]
 ; XOPAVX2-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm1[10,13],zero,zero,ymm1[3,3],zero,ymm1[8],zero,zero,zero,ymm1[12,1],zero,zero,zero,zero,zero,ymm1[20],zero,ymm1[17,22],zero,zero,ymm1[16],zero,ymm1[27],zero,zero,zero,zero,zero
 ; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
