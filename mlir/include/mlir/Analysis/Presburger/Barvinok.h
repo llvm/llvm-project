@@ -59,8 +59,8 @@ inline PolyhedronH defineHRep(int numVars, int numSymbols = 0) {
   // nonparametric polyhedra.
   // Once the cone is defined, we use `addInequality()` to set inequalities.
   return PolyhedronH(PresburgerSpace::getSetSpace(/*numDims=*/numVars,
-                                            /*numSymbols=*/numSymbols,
-                                            /*numLocals=*/0));
+                                                  /*numSymbols=*/numSymbols,
+                                                  /*numLocals=*/0));
 }
 
 /// Get the index of a cone, i.e., the volume of the parallelepiped

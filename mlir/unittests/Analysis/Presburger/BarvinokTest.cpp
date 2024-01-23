@@ -239,6 +239,7 @@ TEST(BarvinokTest, computeNumTermsCone) {
 /// that the returned generating functions correspond to those calculated by
 /// hand.
 TEST(BarvinokTest, computeNumTermsPolytope) {
+  // A cube of side 1.
   IntMatrix ineqs = makeIntMatrix(6, 4,
                                   {{1, 0, 0, 0},
                                    {0, 1, 0, 0},
@@ -274,5 +275,14 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
            {{0, 1, 0}, {0, 0, 1}, {-1, 0, 0}},
            {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}));
 
+  // A right-angled triangle with side p.
+  ineqs = makeIntMatrix(3, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {-1, -1, 1, 0}});
+  poly = defineHRep(2, 1);
+  for (unsigned i = 0; i < 3; i++)
+    poly.addInequality(ineqs.getRow(i));
+  
+  count = polytopeGeneratingFunction(poly);
+  // There is only one chamber: p ≥ 0
+  EXPECT_EQ(count.size(), 1u);
 
 }
