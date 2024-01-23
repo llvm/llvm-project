@@ -1274,26 +1274,31 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
+  bool isRISCV = config->emachine == EM_RISCV;
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
+    // R_RISCV_TLSDESC_{LOAD_LO12_I,ADD_LO12_I,CALL} reference a label. Do not
+    // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
-      sym.setFlags(NEEDS_TLSDESC);
+      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
+        sym.setFlags(NEEDS_TLSDESC);
       c.addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
   }
 
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
-  // relaxation.
+  // optimizations.
+  // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
   // relaxation as well.
-  bool toExecRelax = !config->shared && config->emachine != EM_ARM &&
-                     config->emachine != EM_HEXAGON &&
-                     config->emachine != EM_LOONGARCH &&
-                     config->emachine != EM_RISCV &&
-                     !c.file->ppc64DisableTLSRelax;
+  bool toExecRelax =
+      !config->shared && config->emachine != EM_ARM &&
+      config->emachine != EM_HEXAGON && config->emachine != EM_LOONGARCH &&
+      !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
+      !c.file->ppc64DisableTLSRelax;
 
   // If we are producing an executable and the symbol is non-preemptable, it
   // must be defined and the code sequence can be relaxed to use Local-Exec.
@@ -1347,8 +1352,12 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
       return 1;
     }
 
-    // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
+    // Global-Dynamic/TLSDESC can be relaxed to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
+    //
+    // R_RISCV_TLSDESC_{LOAD_LO12_I,ADD_LO12_I,CALL} reference a non-preemptible
+    // label, so the LE transition will be categorized as R_RELAX_TLS_GD_TO_LE.
+    // We fix the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSGD_TO_IE);
       c.addReloc({target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type,
