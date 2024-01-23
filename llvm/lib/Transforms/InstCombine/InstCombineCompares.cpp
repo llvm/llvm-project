@@ -2969,10 +2969,11 @@ Instruction *InstCombinerImpl::foldICmpAddLikeConstant(ICmpInst &Cmp,
   // If the add does not wrap, we can always adjust the compare by subtracting
   // the constants. Equality comparisons are handled elsewhere. SGE/SLE/UGE/ULE
   // are canonicalized to SGT/SLT/UGT/ULT.
-  if (AddLike->getOpcode() == Instruction::Or ||
-      (AddLike->hasNoSignedWrap() &&
+  if (((AddLike->getOpcode() == Instruction::Or ||
+        AddLike->hasNoSignedWrap()) &&
        (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT)) ||
-      (AddLike->hasNoUnsignedWrap() &&
+      ((AddLike->getOpcode() == Instruction::Or ||
+        AddLike->hasNoUnsignedWrap()) &&
        (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT))) {
     bool Overflow;
     APInt NewC =

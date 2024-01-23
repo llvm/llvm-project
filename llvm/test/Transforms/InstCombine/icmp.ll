@@ -5138,12 +5138,62 @@ entry:
   ret i1 %cmp
 }
 
-define i1 @icmp_disjoint_or(i32 %x) {
-; CHECK-LABEL: @icmp_disjoint_or(
+define i1 @icmp_disjoint_or_sgt(i32 %x) {
+; CHECK-LABEL: @icmp_disjoint_or_sgt(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], 35
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %or_ = or disjoint i32 %x, 6
   %C = icmp sgt i32 %or_, 41
+  ret i1 %C
+}
+
+define i1 @icmp_disjoint_or_slt(i32 %x) {
+; CHECK-LABEL: @icmp_disjoint_or_slt(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], 35
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %or_ = or disjoint i32 %x, 6
+  %C = icmp slt i32 %or_, 41
+  ret i1 %C
+}
+
+define i1 @icmp_disjoint_or_ult(i32 %x) {
+; CHECK-LABEL: @icmp_disjoint_or_ult(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], 35
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %or_ = or disjoint i32 %x, 6
+  %C = icmp ult i32 %or_, 41
+  ret i1 %C
+}
+
+define i1 @icmp_disjoint_or_ugt(i32 %x) {
+; CHECK-LABEL: @icmp_disjoint_or_ugt(
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[X:%.*]], 35
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %or_ = or disjoint i32 %x, 6
+  %C = icmp ugt i32 %or_, 41
+  ret i1 %C
+}
+
+define i1 @icmp_disjoint_or_eq(i32 %x) {
+; CHECK-LABEL: @icmp_disjoint_or_eq(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %or_ = or disjoint i32 %x, 5
+  %C = icmp eq i32 %or_, 5
+  ret i1 %C
+}
+
+define i1 @icmp_disjoint_or_be(i32 %x) {
+; CHECK-LABEL: @icmp_disjoint_or_be(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %or_ = or disjoint i32 %x, 5
+  %C = icmp ne i32 %or_, 5
   ret i1 %C
 }
