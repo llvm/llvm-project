@@ -1152,12 +1152,14 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit IsAB_F64  = !or(!eq(ArgTy[1], v2f64), !eq(ArgTy[1], v4f64));
   bit IsAB_F32  = !eq(ArgTy[1], v2f32);
   bit IsAB_F16 = !or(!eq(ArgTy[1], v16f16), !eq(ArgTy[1], v8f16), !eq(ArgTy[1], v4f16));
-  bit IsAB_BF16 = !or(!eq(ArgTy[1], v16i16), !eq(ArgTy[1], v8i16), !eq(ArgTy[1], v4i16));
+  bit IsAB_BF16 = !or(!eq(ArgTy[1], v16i16), !eq(ArgTy[1], v8i16), !eq(ArgTy[1], v4i16),
+                      !eq(ArgTy[1], v16bf16), !eq(ArgTy[1], v8bf16), !eq(ArgTy[1], v4bf16));
   bit IsF16BF16 = !or(IsAB_F16, IsAB_BF16);
 
   bit IsC_F64 = !eq(ArgTy[3], v8f64);
   bit IsC_F32 = !or(!eq(ArgTy[3], v8f32), !eq(ArgTy[3], v4f32));
-  bit IsC_BF16 = !or(!eq(ArgTy[3], v8i16), !eq(ArgTy[3], v4i16));
+  bit IsC_BF16 = !or(!eq(ArgTy[3], v8i16), !eq(ArgTy[3], v4i16),
+                     !eq(ArgTy[3], v8bf16), !eq(ArgTy[3], v4bf16));
   bit IsC_F16 = !or(!eq(ArgTy[3], v8f16), !eq(ArgTy[3], v4f16));
 
   bit NegLo01 = !not(IsFP8BF8XF32);
@@ -1421,19 +1423,19 @@ def F64_F64X4_WMMA_w32        : VOP3PWMMA_Profile<[v8f64, v2f64, v2f64, v8f64], 
 def F64_F64X8_WMMA_w32        : VOP3PWMMA_Profile<[v8f64, v4f64, v4f64, v8f64], 0, 0, 0, 0, 1>;
 def F32_F32_WMMA_w32          : VOP3PWMMA_Profile<[v8f32, v2f32, v2f32, v8f32], 0, 0, 0, 0, 1>;
 def F32_XF32_WMMA_w32         : VOP3PWMMA_Profile<[v8f32, v8f32, v8f32, v8f32], 0, 0, 0, 1, 1>;
-def F32_BF16X32_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16i16, v16i16, v8f32], 0, 0, 0, 0, 1>;
+def F32_BF16X32_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16bf16, v16bf16, v8f32], 0, 0, 0, 0, 1>;
 def F32_F16X32_WMMA_w32       : VOP3PWMMA_Profile<[v8f32, v16f16, v16f16, v8f32], 0, 0, 0, 0, 1>;
 def F16_F16X32_WMMA_w32       : VOP3PWMMA_Profile<[v8f16, v16f16, v16f16, v8f16], 0, 0, 0, 0, 1>;
-def BF16_BF16X32_WMMA_w32     : VOP3PWMMA_Profile<[v8i16, v16i16, v16i16, v8i16], 0, 0, 0, 0, 1>;
-def BF16F32_BF16_WMMA_w32     : VOP3PWMMA_Profile<[v8i16, v16i16, v16i16, v8f32], 0, 0, 0, 0, 1>;
+def BF16_BF16X32_WMMA_w32     : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8bf16], 0, 0, 0, 0, 1>;
+def BF16F32_BF16_WMMA_w32     : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8f32], 0, 0, 0, 0, 1>;
 def F32_FP8BF8X64_WMMA_w32    : VOP3PWMMA_Profile<[v8f32, v8i32, v8i32, v8f32], 0, 0, 0, 1, 1>;
 def F16_FP8BF8X64_WMMA_w32    : VOP3PWMMA_Profile<[v8f16, v8i32, v8i32, v8f16], 0, 0, 0, 1, 1>;
 def I32_IU8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1>;
 def I32_IU4X128_WMMA_w32      : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1>;
 def F32_F16X64_SWMMAC_w32     : VOP3PWMMA_Profile<[v8f32, v16f16, v32f16, v8f32], 1, 16, 0, 0, 1>;
-def F32_BF16X64_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v16i16, v32i16, v8f32], 1, 16, 0, 0, 1>;
+def F32_BF16X64_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v16bf16, v32bf16, v8f32], 1, 16, 0, 0, 1>;
 def F16_F16X64_SWMMAC_w32     : VOP3PWMMA_Profile<[v8f16, v16f16, v32f16, v8f16], 1, 16, 0, 0, 1>;
-def BF16_BF16X64_SWMMAC_w32   : VOP3PWMMA_Profile<[v8i16, v16i16, v32i16, v8i16], 1, 16, 0, 0, 1>;
+def BF16_BF16X64_SWMMAC_w32   : VOP3PWMMA_Profile<[v8bf16, v16bf16, v32bf16, v8bf16], 1, 16, 0, 0, 1>;
 def F32_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32], 1, 16, 0, 1, 1>;
 def F16_FP8BF8X128_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16], 1, 16, 0, 1, 1>;
 def I32_IU8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 16, 1, 0, 1>;
