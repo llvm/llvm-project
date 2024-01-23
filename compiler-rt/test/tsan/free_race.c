@@ -1,17 +1,8 @@
-// RUN: %clang_tsan -O1 %s -o %t -undefined dynamic_lookup 
-// RUN: %deflake %run %t | FileCheck %s 
+// RUN: %clang_tsan -O1 %s -o %t
+// RUN: %deflake %run %t | FileCheck %s --check-prefix=CHECK-NOZUPP
+// RUN: %env_tsan_opts=suppressions='%s.supp':print_suppressions=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SUPP
 
 #include "test.h"
-
-#ifdef __APPLE__
-#include <os/availability.h>
-
-// Allow compilation with pre-aligned-alloc SDKs
-API_AVAILABLE(macos(10.15), ios(13.0), tvos(13.0), watchos(6.0))
-void *aligned_alloc(size_t alignment, size_t size);
-#else
-#include <stdlib.h>
-#endif
 
 int *mem;
 pthread_mutex_t mtx;
@@ -33,13 +24,8 @@ __attribute__((noinline)) void *Thread2(void *x) {
 }
 
 int main() {
-  if (aligned_alloc == NULL) {
-    fprintf(stderr, "Done.\n");
-    return 0;
-  }
-
   barrier_init(&barrier, 2);
-  mem = (int*)aligned_alloc(8, 8);
+  mem = (int*)malloc(100);
   pthread_mutex_init(&mtx, 0);
   pthread_t t;
   pthread_create(&t, NULL, Thread1, NULL);
@@ -49,11 +35,13 @@ int main() {
   return 0;
 }
 
-// CHECK: WARNING: ThreadSanitizer: heap-use-after-free
-// CHECK:   Write of size 4 at {{.*}} by main thread{{.*}}:
-// CHECK:     #0 Thread2
-// CHECK:     #1 main
-// CHECK:   Previous write of size 8 at {{.*}} by thread T1{{.*}}:
-// CHECK:     #0 free
-// CHECK:     #{{(1|2)}} Thread1
-// CHECK: SUMMARY: ThreadSanitizer: heap-use-after-free{{.*}}Thread2
+// CHECK-NOZUPP: WARNING: ThreadSanitizer: heap-use-after-free
+// CHECK-NOZUPP:   Write of size 4 at {{.*}} by main thread{{.*}}:
+// CHECK-NOZUPP:     #0 Thread2
+// CHECK-NOZUPP:     #1 main
+// CHECK-NOZUPP:   Previous write of size 8 at {{.*}} by thread T1{{.*}}:
+// CHECK-NOZUPP:     #0 free
+// CHECK-NOZUPP:     #{{(1|2)}} Thread1
+// CHECK-NOZUPP: SUMMARY: ThreadSanitizer: heap-use-after-free{{.*}}Thread2
+// CHECK-SUPP:   ThreadSanitizer: Matched 1 suppressions
+// CHECK-SUPP:    1 race:^Thread2$
