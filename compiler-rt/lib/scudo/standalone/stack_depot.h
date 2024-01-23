@@ -69,21 +69,21 @@ class alignas(16) StackDepot {
   // This is immediately followed by RingSize atomic_u64 and
   // (TabMask + 1) atomic_u32.
 
-  atomic_u64 *Ring(char *RawStackDepot) {
+  atomic_u64 *getRing(char *RawStackDepot) {
     return reinterpret_cast<atomic_u64 *>(RawStackDepot + sizeof(StackDepot));
   }
 
-  atomic_u32 *Tab(char *RawStackDepot) {
+  atomic_u32 *getTab(char *RawStackDepot) {
     return reinterpret_cast<atomic_u32 *>(RawStackDepot + sizeof(StackDepot) +
                                           sizeof(atomic_u64) * RingSize);
   }
 
-  const atomic_u64 *Ring(const char *RawStackDepot) const {
+  const atomic_u64 *getRing(const char *RawStackDepot) const {
     return reinterpret_cast<const atomic_u64 *>(RawStackDepot +
                                                 sizeof(StackDepot));
   }
 
-  const atomic_u32 *Tab(const char *RawStackDepot) const {
+  const atomic_u32 *getTab(const char *RawStackDepot) const {
     return reinterpret_cast<const atomic_u32 *>(
         RawStackDepot + sizeof(StackDepot) + sizeof(atomic_u64) * RingSize);
   }
@@ -132,25 +132,28 @@ public:
   // Insert hash of the stack trace [Begin, End) into the stack depot, and
   // return the hash.
   u32 insert(char *RawStackDepot, uptr *Begin, uptr *End) {
+    auto *Tab = getTab(RawStackDepot);
+    auto *Ring = getRing(RawStackDepot);
+
     MurMur2HashBuilder B;
     for (uptr *I = Begin; I != End; ++I)
       B.add(u32(*I) >> 2);
     u32 Hash = B.get();
 
     u32 Pos = Hash & TabMask;
-    u32 RingPos = atomic_load_relaxed(&Tab(RawStackDepot)[Pos]);
-    u64 Entry = atomic_load_relaxed(&Ring(RawStackDepot)[RingPos]);
+    u32 RingPos = atomic_load_relaxed(&Tab[Pos]);
+    u64 Entry = atomic_load_relaxed(&Ring[RingPos]);
     u64 Id = (u64(End - Begin) << 33) | (u64(Hash) << 1) | 1;
     if (Entry == Id)
       return Hash;
 
     ScopedLock Lock(RingEndMu);
     RingPos = RingEnd;
-    atomic_store_relaxed(&Tab(RawStackDepot)[Pos], RingPos);
-    atomic_store_relaxed(&Ring(RawStackDepot)[RingPos], Id);
+    atomic_store_relaxed(&Tab[Pos], RingPos);
+    atomic_store_relaxed(&Ring[RingPos], Id);
     for (uptr *I = Begin; I != End; ++I) {
       RingPos = (RingPos + 1) & RingMask;
-      atomic_store_relaxed(&Ring(RawStackDepot)[RingPos], *I);
+      atomic_store_relaxed(&Ring[RingPos], *I);
     }
     RingEnd = (RingPos + 1) & RingMask;
     return Hash;
@@ -161,11 +164,14 @@ public:
   // *RingPosPtr + *SizePtr.
   bool find(const char *RawStackDepot, u32 Hash, uptr *RingPosPtr,
             uptr *SizePtr) const {
+    auto *Tab = getTab(RawStackDepot);
+    auto *Ring = getRing(RawStackDepot);
+
     u32 Pos = Hash & TabMask;
-    u32 RingPos = atomic_load_relaxed(&Tab(RawStackDepot)[Pos]);
+    u32 RingPos = atomic_load_relaxed(&Tab[Pos]);
     if (RingPos >= RingSize)
       return false;
-    u64 Entry = atomic_load_relaxed(&Ring(RawStackDepot)[RingPos]);
+    u64 Entry = atomic_load_relaxed(&Ring[RingPos]);
     u64 HashWithTagBit = (u64(Hash) << 1) | 1;
     if ((Entry & 0x1ffffffff) != HashWithTagBit)
       return false;
@@ -177,13 +183,14 @@ public:
     MurMur2HashBuilder B;
     for (uptr I = 0; I != Size; ++I) {
       RingPos = (RingPos + 1) & RingMask;
-      B.add(u32(atomic_load_relaxed(&Ring(RawStackDepot)[RingPos])) >> 2);
+      B.add(u32(atomic_load_relaxed(&Ring[RingPos])) >> 2);
     }
     return B.get() == Hash;
   }
 
   u64 at(const char *RawStackDepot, uptr RingPos) const {
-    return atomic_load_relaxed(&Ring(RawStackDepot)[RingPos & RingMask]);
+    auto *Ring = getRing(RawStackDepot);
+    return atomic_load_relaxed(&Ring[RingPos & RingMask]);
   }
 
   // This is done for the purpose of fork safety in multithreaded programs and
