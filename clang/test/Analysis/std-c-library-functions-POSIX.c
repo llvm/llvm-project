@@ -20,7 +20,6 @@
 // CHECK: Loaded summary for: FILE *fdopen(int fd, const char *mode)
 // CHECK: Loaded summary for: FILE *tmpfile(void)
 // CHECK: Loaded summary for: FILE *freopen(const char *restrict pathname, const char *restrict mode, FILE *restrict stream)
-// CHECK: Loaded summary for: FILE *fdopen(int fd, const char *mode)
 // CHECK: Loaded summary for: int fclose(FILE *stream)
 // CHECK: Loaded summary for: int getc(FILE *)
 // CHECK: Loaded summary for: int fgetc(FILE *)

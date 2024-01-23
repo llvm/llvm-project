@@ -2207,16 +2207,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
-    // FILE *fdopen(int fd, const char *mode);
-    addToFunctionSummaryMap(
-        "fdopen",
-        Signature(ArgTypes{IntTy, ConstCharPtrTy}, RetType{FilePtrTy}),
-        Summary(NoEvalCall)
-            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
-            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
-            .ArgConstraint(NotNull(ArgNo(1))));
-
     // int fclose(FILE *stream);
     addToFunctionSummaryMap(
         "fclose", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
