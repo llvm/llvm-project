@@ -60,8 +60,8 @@ public:
   }
 
   void testOverflow(LdExpFunc func) {
-    NormalFloat x(FPBits::MAX_BIASED_EXPONENT - 10, NormalFloat::ONE + 0xF00BA,
-                  0);
+    NormalFloat x(Sign::POS, FPBits::MAX_BIASED_EXPONENT - 10,
+                  NormalFloat::ONE + 0xF00BA);
     for (int32_t exp = 10; exp < 100; ++exp) {
       ASSERT_FP_EQ(inf, func(T(x), exp));
       ASSERT_FP_EQ(neg_inf, func(-T(x), exp));
@@ -75,7 +75,7 @@ public:
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
-    T x = NormalFloat(0, MANTISSA, 0);
+    T x = NormalFloat(Sign::POS, 0, MANTISSA);
     for (int32_t exp : exp_array) {
       ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
     }
@@ -88,20 +88,21 @@ public:
     int32_t exp_array[] = {base_exponent + 5, base_exponent + 4,
                            base_exponent + 3, base_exponent + 2,
                            base_exponent + 1};
-    T x = NormalFloat(-FPBits::EXP_BIAS, MANTISSA, 0);
+    T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA);
     for (int32_t exp : exp_array) {
       ASSERT_FP_EQ(func(x, -exp), x > 0 ? zero : neg_zero);
     }
   }
 
   void testNormalOperation(LdExpFunc func) {
-    T val_array[] = {
-        // Normal numbers
-        NormalFloat(100, MANTISSA, 0), NormalFloat(-100, MANTISSA, 0),
-        NormalFloat(100, MANTISSA, 1), NormalFloat(-100, MANTISSA, 1),
-        // Subnormal numbers
-        NormalFloat(-FPBits::EXP_BIAS, MANTISSA, 0),
-        NormalFloat(-FPBits::EXP_BIAS, MANTISSA, 1)};
+    T val_array[] = {// Normal numbers
+                     NormalFloat(Sign::POS, 100, MANTISSA),
+                     NormalFloat(Sign::POS, -100, MANTISSA),
+                     NormalFloat(Sign::NEG, 100, MANTISSA),
+                     NormalFloat(Sign::NEG, -100, MANTISSA),
+                     // Subnormal numbers
+                     NormalFloat(Sign::POS, -FPBits::EXP_BIAS, MANTISSA),
+                     NormalFloat(Sign::NEG, -FPBits::EXP_BIAS, MANTISSA)};
     for (int32_t exp = 0; exp <= FPBits::FRACTION_LEN; ++exp) {
       for (T x : val_array) {
         // We compare the result of ldexp with the result
@@ -120,14 +121,14 @@ public:
     }
 
     // Normal which trigger mantissa overflow.
-    T x = NormalFloat(-FPBits::EXP_BIAS + 1,
-                      StorageType(2) * NormalFloat::ONE - StorageType(1), 0);
+    T x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1,
+                      StorageType(2) * NormalFloat::ONE - StorageType(1));
     ASSERT_FP_EQ(func(x, -1), x / 2);
     ASSERT_FP_EQ(func(-x, -1), -x / 2);
 
     // Start with a normal number high exponent but pass a very low number for
     // exp. The result should be a subnormal number.
-    x = NormalFloat(FPBits::EXP_BIAS, NormalFloat::ONE, 0);
+    x = NormalFloat(Sign::POS, FPBits::EXP_BIAS, NormalFloat::ONE);
     int exp = -FPBits::MAX_BIASED_EXPONENT - 5;
     T result = func(x, exp);
     FPBits result_bits(result);
@@ -141,7 +142,7 @@ public:
 
     // Start with a subnormal number but pass a very high number for exponent.
     // The result should not be infinity.
-    x = NormalFloat(-FPBits::EXP_BIAS + 1, NormalFloat::ONE >> 10, 0);
+    x = NormalFloat(Sign::POS, -FPBits::EXP_BIAS + 1, NormalFloat::ONE >> 10);
     exp = FPBits::MAX_BIASED_EXPONENT + 5;
     ASSERT_FALSE(FPBits(func(x, exp)).is_inf());
     // But if the exp is large enough to oversome than the normalization shift,

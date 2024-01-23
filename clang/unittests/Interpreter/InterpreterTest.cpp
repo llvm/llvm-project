@@ -251,7 +251,12 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
 static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
   std::string Name = TD->getQualifiedNameAsString();
   Value Addr;
-  cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
+  // FIXME: Consider providing an option in clang::Value to take ownership of
+  // the memory created from the interpreter.
+  // cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
+
+  // The lifetime of the temporary is extended by the clang::Value.
+  cantFail(Interp.ParseAndExecute(Name + "()", &Addr));
   return Addr;
 }
 

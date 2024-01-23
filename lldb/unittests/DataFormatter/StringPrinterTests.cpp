@@ -72,7 +72,7 @@ TEST(StringPrinterTests, CxxASCII) {
   EXPECT_EQ(fmt("🥑"), QUOTE("🥑"));
 
   // Octal (\nnn), hex (\xnn), extended octal (\unnnn or \Unnnnnnnn).
-  EXPECT_EQ(fmt(L"\uD55C"), QUOTE(L"\uD55C"));
+  EXPECT_EQ(fmt("\uD55C"), QUOTE("\uD55C"));
   EXPECT_EQ(fmt("\U00010348"), QUOTE("\U00010348"));
 
   EXPECT_EQ(fmt("\376"), QUOTE(R"(\xfe)")); // \376 is 254 in decimal.
