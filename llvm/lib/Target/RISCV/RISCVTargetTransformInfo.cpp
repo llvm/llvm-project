@@ -85,9 +85,7 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
       break;
     }
     case RISCV::VMV_X_S:
-    case RISCV::VFMV_F_S:
     case RISCV::VMV_S_X:
-    case RISCV::VFMV_S_F:
       Cost += 1;
       break;
     default:
