@@ -725,6 +725,60 @@ bool GOTBuilder::visitEdge(LinkGraph &G, Block *B, Edge &E) {
   return true;
 }
 
+/// Create a new node in the link-graph for the given stub template.
+template <size_t Size>
+static Block &allocStub(LinkGraph &G, Section &S, const uint8_t (&Code)[Size]) {
+  constexpr uint64_t Alignment = 4;
+  ArrayRef<char> Template(reinterpret_cast<const char *>(Code), Size);
+  return G.createContentBlock(S, Template, orc::ExecutorAddr(), Alignment, 0);
+}
+
+const uint8_t Armv5LongLdrPc[] = {
+    0x04, 0xf0, 0x1f, 0xe5, // ldr pc, [pc,#-4] ; L1
+    0x00, 0x00, 0x00, 0x00, // L1: .word S
+};
+
+    // TODO: There is only ARM far stub now. We should add the Thumb stub,
+    // and stubs for branches Thumb - ARM and ARM - Thumb.
+//    writeBytesUnaligned(0xe51ff004, Addr, 4); // ldr pc, [pc, #-4]
+
+Symbol &StubsManager_prev7::createEntry(LinkGraph &G, Symbol &Target) {
+  Block &B = allocStub(G, getStubsSection(G), Armv5LongLdrPc);
+  //LLVM_DEBUG({
+  //  const char *StubPtr = B.getContent().data();
+  //  HalfWords Reg12 = encodeRegMovtT1MovwT3(12);
+  //  assert(checkRegister<Thumb_MovwAbsNC>(StubPtr, Reg12) &&
+  //         checkRegister<Thumb_MovtAbs>(StubPtr + 4, Reg12) &&
+  //         "Linker generated stubs may only corrupt register r12 (IP)");
+  //});
+  B.addEdge(Data_Pointer32, 4, Target, 0);
+  return G.addAnonymousSymbol(B, 0, B.getSize(), true, false);
+}
+
+bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
+  if (E.getTarget().isDefined())
+    return false;
+
+  switch (E.getKind()) {
+  case Arm_Call:
+  case Arm_Jump24: {
+    DEBUG_WITH_TYPE("jitlink", {
+      dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
+              << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
+              << formatv("{0:x}", E.getOffset()) << ")\n";
+    });
+    E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+    return true;
+  }
+  case Thumb_Call:
+  case Thumb_Jump24:
+    // BL is never out-of-range and can always be rewritten to BLX inline.
+    // B can not target an external.
+    break;
+  }
+  return false;
+}
+
 const uint8_t Armv7ABS[] = {
     0x00, 0xc0, 0x00, 0xe3, // movw r12, #0x0000     ; lower 16-bit
     0x00, 0xc0, 0x40, 0xe3, // movt r12, #0x0000     ; upper 16-bit
@@ -736,14 +790,6 @@ const uint8_t Thumbv7ABS[] = {
     0xc0, 0xf2, 0x00, 0x0c, // movt r12, #0x0000    ; upper 16-bit
     0x60, 0x47              // bx   r12
 };
-
-/// Create a new node in the link-graph for the given stub template.
-template <size_t Size>
-static Block &allocStub(LinkGraph &G, Section &S, const uint8_t (&Code)[Size]) {
-  constexpr uint64_t Alignment = 4;
-  ArrayRef<char> Template(reinterpret_cast<const char *>(Code), Size);
-  return G.createContentBlock(S, Template, orc::ExecutorAddr(), Alignment, 0);
-}
 
 static Block &createStubThumbv7(LinkGraph &G, Section &S, Symbol &Target) {
   Block &B = allocStub(G, S, Thumbv7ABS);
