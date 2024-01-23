@@ -12,7 +12,7 @@ We’ve created a DSL and compiler for modeling micro-architecture that handles 
 
 While being significantly more expressive than TableGen’s Schedules and Itineraries used in LLVM, MDL is also more concise, and simpler to read and write while supporting a much broader class of embedded and accelerator architectures. We currently can automatically generate MDL descriptions for all upstream targets which are in many cases 1/10 the size of the equivalent TableGen descriptions.  We’ve integrated this with LLVM, and are sending out this RFC because we believe it could be valuable to the larger LLVM community.
 
-The MDL compiler, associated tools, and documentation are available as open source (at https://github.com/MPACT-ORG/llvm-project/tree/all), and we would like to explore adding this to the LLVM project, and encourage contributions from others.
+The MDL compiler, associated tools, and documentation are available as open source at [MPACT-ORG](https://github.com/MPACT-ORG/llvm-project/tree/all), and we would like to explore adding this to the LLVM project, and encourage contributions from others.
 
 ## **Background**
 
@@ -37,14 +37,14 @@ While some of these problems manifest in a few upstream LLVM targets, this colle
 
 ## **Building**
 
-*   You can build llvm with or without MDL support.  It is included by using the LLVM_ENABLE_MDL CMake parameter.  If included, it is currently used by default, and can be disabled with a command line option (--schedmdl=0).
+*   You can build llvm with or without MDL support.  It is included by using the LLVM_ENABLE_MDL CMake parameter.  If included, it is currently used by default, and can be disabled with a command line option `--schedmdl=0`.
 
 ## **Testing**
 
 *   When built without MDL support, the compiler passes all check-all tests.
 *   When built with MDL support, but disabled on the command line, the compiler passes all check-all tests.
-*   When MDL support is enabled, it passs all but 190 tests (out of ~90K+ tests). 
+*   When MDL support is enabled, it pass all but 190 tests (out of ~90K+ tests). 
 
 There is a lot more to do. For example, we plan to enhance existing back-end scheduling passes and register allocation passes to cleanly handle a larger class of embedded and accelerator architectures, based on MDL-generated information.
 
-We welcome feedback on the language design and associated tools and use model.  You can find the MDL design documentation, compiler, and other tools in our github repo in llvm/docs/mdl.
+We welcome feedback on the language design and associated tools and use model.  You can find the MDL design documentation, compiler, and other tools in our github repo in [llvm/docs/mdl](https://github.com/llvm/llvm-project/tree/main/llvm/docs/Mdl).
