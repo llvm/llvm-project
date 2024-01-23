@@ -11,17 +11,17 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/CodeGenPassBuilder.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
 namespace llvm {
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                \
   MachinePassKey PASS_NAME::Key;
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)              \
   MachinePassKey PASS_NAME::Key;
 #define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)          \
   AnalysisKey PASS_NAME::Key;
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 } // namespace llvm
