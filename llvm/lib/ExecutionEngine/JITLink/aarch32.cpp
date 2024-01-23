@@ -738,19 +738,8 @@ const uint8_t Armv5LongLdrPc[] = {
     0x00, 0x00, 0x00, 0x00, // L1: .word S
 };
 
-    // TODO: There is only ARM far stub now. We should add the Thumb stub,
-    // and stubs for branches Thumb - ARM and ARM - Thumb.
-//    writeBytesUnaligned(0xe51ff004, Addr, 4); // ldr pc, [pc, #-4]
-
 Symbol &StubsManager_prev7::createEntry(LinkGraph &G, Symbol &Target) {
   Block &B = allocStub(G, getStubsSection(G), Armv5LongLdrPc);
-  //LLVM_DEBUG({
-  //  const char *StubPtr = B.getContent().data();
-  //  HalfWords Reg12 = encodeRegMovtT1MovwT3(12);
-  //  assert(checkRegister<Thumb_MovwAbsNC>(StubPtr, Reg12) &&
-  //         checkRegister<Thumb_MovtAbs>(StubPtr + 4, Reg12) &&
-  //         "Linker generated stubs may only corrupt register r12 (IP)");
-  //});
   B.addEdge(Data_Pointer32, 4, Target, 0);
   return G.addAnonymousSymbol(B, 0, B.getSize(), true, false);
 }
@@ -764,8 +753,8 @@ bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
   case Arm_Jump24: {
     DEBUG_WITH_TYPE("jitlink", {
       dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
-              << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
-              << formatv("{0:x}", E.getOffset()) << ")\n";
+             << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
+             << formatv("{0:x}", E.getOffset()) << ")\n";
     });
     E.setTarget(this->getEntryForTarget(G, E.getTarget()));
     return true;
