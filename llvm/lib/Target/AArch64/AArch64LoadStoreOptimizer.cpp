@@ -1326,10 +1326,14 @@ static int alignTo(int Num, int PowOf2) {
 static bool mayAlias(MachineInstr &MIa,
                      SmallVectorImpl<MachineInstr *> &MemInsns,
                      AliasAnalysis *AA) {
-  for (MachineInstr *MIb : MemInsns)
-    if (MIa.mayAlias(AA, *MIb, /*UseTBAA*/ false))
+  for (MachineInstr *MIb : MemInsns) {
+    if (MIa.mayAlias(AA, *MIb, /*UseTBAA*/ false)) {
+      LLVM_DEBUG(dbgs() << "Aliasing with: "; MIb->dump());
       return true;
+    }
+  }
 
+  LLVM_DEBUG(dbgs() << "No aliases found\n");
   return false;
 }
 
@@ -1757,9 +1761,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   // Remember any instructions that read/write memory between FirstMI and MI.
   SmallVector<MachineInstr *, 4> MemInsns;
 
+  LLVM_DEBUG(dbgs() << "Find match for: "; FirstMI.dump());
   for (unsigned Count = 0; MBBI != E && Count < Limit;
        MBBI = next_nodbg(MBBI, E)) {
     MachineInstr &MI = *MBBI;
+    LLVM_DEBUG(dbgs() << "Analysing 2nd insn: "; MI.dump());
 
     UsedInBetween.accumulate(MI);
 
@@ -1859,6 +1865,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
                                               UsedRegUnits, TRI);
             MemInsns.push_back(&MI);
+            LLVM_DEBUG(dbgs() << "Offset doesn't fit in immediate, "
+                              << "keep looking.\n");
             continue;
           }
           // If the alignment requirements of the paired (scaled) instruction
@@ -1868,6 +1876,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
                                               UsedRegUnits, TRI);
             MemInsns.push_back(&MI);
+            LLVM_DEBUG(dbgs()
+                       << "Offset doesn't fit due to alignment requirements, "
+                       << "keep looking.\n");
             continue;
           }
         }
@@ -1884,14 +1895,22 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         const bool SameLoadReg = MayLoad && TRI->isSuperOrSubRegisterEq(
                                                 Reg, getLdStRegOp(MI).getReg());
 
-        // If the Rt of the second instruction was not modified or used between
-        // the two instructions and none of the instructions between the second
-        // and first alias with the second, we can combine the second into the
-        // first.
-        if (ModifiedRegUnits.available(getLdStRegOp(MI).getReg()) &&
-            !(MI.mayLoad() && !SameLoadReg &&
-              !UsedRegUnits.available(getLdStRegOp(MI).getReg())) &&
-            !mayAlias(MI, MemInsns, AA)) {
+        // If the Rt of the second instruction (destination register of the
+        // load) was not modified or used between the two instructions and none
+        // of the instructions between the second and first alias with the
+        // second, we can combine the second into the first.
+        bool RtNotModified =
+            ModifiedRegUnits.available(getLdStRegOp(MI).getReg());
+        bool RtNotUsed = !(MI.mayLoad() && !SameLoadReg &&
+                           !UsedRegUnits.available(getLdStRegOp(MI).getReg()));
+
+        LLVM_DEBUG(dbgs() << "Checking, can combine 2nd into 1st insn:\n"
+                          << "Reg '" << getLdStRegOp(MI) << "' not modified: "
+                          << (RtNotModified ? "true" : "false") << "\n"
+                          << "Reg '" << getLdStRegOp(MI) << "' not used: "
+                          << (RtNotUsed ? "true" : "false") << "\n");
+
+        if (RtNotModified && RtNotUsed && !mayAlias(MI, MemInsns, AA)) {
           // For pairs loading into the same reg, try to find a renaming
           // opportunity to allow the renaming of Reg between FirstMI and MI
           // and combine MI into FirstMI; otherwise bail and keep looking.
@@ -1904,6 +1923,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
               LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits,
                                                 UsedRegUnits, TRI);
               MemInsns.push_back(&MI);
+              LLVM_DEBUG(dbgs() << "Can't find reg for renaming, "
+                                << "keep looking.\n");
               continue;
             }
             Flags.setRenameReg(*RenameReg);
@@ -1919,10 +1940,15 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // between the two instructions and none of the instructions between the
         // first and the second alias with the first, we can combine the first
         // into the second.
-        if (!(MayLoad &&
-              !UsedRegUnits.available(getLdStRegOp(FirstMI).getReg())) &&
-            !mayAlias(FirstMI, MemInsns, AA)) {
+        RtNotModified = !(
+            MayLoad && !UsedRegUnits.available(getLdStRegOp(FirstMI).getReg()));
 
+        LLVM_DEBUG(dbgs() << "Checking, can combine 1st into 2nd insn:\n"
+                          << "Reg '" << getLdStRegOp(FirstMI)
+                          << "' not modified: "
+                          << (RtNotModified ? "true" : "false") << "\n");
+
+        if (RtNotModified && !mayAlias(FirstMI, MemInsns, AA)) {
           if (ModifiedRegUnits.available(getLdStRegOp(FirstMI).getReg())) {
             Flags.setMergeForward(true);
             Flags.clearRenameReg();
@@ -1938,8 +1964,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             MBBIWithRenameReg = MBBI;
           }
         }
-        // Unable to combine these instructions due to interference in between.
-        // Keep looking.
+        LLVM_DEBUG(dbgs() << "Unable to combine these instructions due to "
+                          << "interference in between, keep looking.\n");
       }
     }
 
@@ -1948,16 +1974,20 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
     // If the instruction wasn't a matching load or store.  Stop searching if we
     // encounter a call instruction that might modify memory.
-    if (MI.isCall())
+    if (MI.isCall()) {
+      LLVM_DEBUG(dbgs() << "Found a call, stop looking.\n");
       return E;
+    }
 
     // Update modified / uses register units.
     LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
 
     // Otherwise, if the base register is modified, we have no match, so
     // return early.
-    if (!ModifiedRegUnits.available(BaseReg))
+    if (!ModifiedRegUnits.available(BaseReg)) {
+      LLVM_DEBUG(dbgs() << "Base reg is modified, stop looking.\n");
       return E;
+    }
 
     // Update list of instructions that read/write memory.
     if (MI.mayLoadOrStore())

@@ -207,6 +207,12 @@ struct FlattenInfo {
         match(MatchedMul, m_c_Mul(m_Trunc(m_Specific(OuterInductionPHI)),
                                   m_Value(MatchedItCount)));
 
+    // Matches the pattern ptr+i*M+j, with the two additions being done via GEP.
+    bool IsGEP = match(U, m_GEP(m_GEP(m_Value(), m_Value(MatchedMul)),
+                                m_Specific(InnerInductionPHI))) &&
+                 match(MatchedMul, m_c_Mul(m_Specific(OuterInductionPHI),
+                                           m_Value(MatchedItCount)));
+
     if (!MatchedItCount)
       return false;
 
@@ -224,7 +230,7 @@ struct FlattenInfo {
 
     // Look through extends if the IV has been widened. Don't look through
     // extends if we already looked through a trunc.
-    if (Widened && IsAdd &&
+    if (Widened && (IsAdd || IsGEP) &&
         (isa<SExtInst>(MatchedItCount) || isa<ZExtInst>(MatchedItCount))) {
       assert(MatchedItCount->getType() == InnerInductionPHI->getType() &&
              "Unexpected type mismatch in types after widening");
@@ -236,7 +242,7 @@ struct FlattenInfo {
     LLVM_DEBUG(dbgs() << "Looking for inner trip count: ";
                InnerTripCount->dump());
 
-    if ((IsAdd || IsAddTrunc) && MatchedItCount == InnerTripCount) {
+    if ((IsAdd || IsAddTrunc || IsGEP) && MatchedItCount == InnerTripCount) {
       LLVM_DEBUG(dbgs() << "Found. This sse is optimisable\n");
       ValidOuterPHIUses.insert(MatchedMul);
       LinearIVUses.insert(U);
@@ -646,33 +652,40 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   if (OR != OverflowResult::MayOverflow)
     return OR;
 
-  for (Value *V : FI.LinearIVUses) {
-    for (Value *U : V->users()) {
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-        for (Value *GEPUser : U->users()) {
-          auto *GEPUserInst = cast<Instruction>(GEPUser);
-          if (!isa<LoadInst>(GEPUserInst) &&
-              !(isa<StoreInst>(GEPUserInst) &&
-                GEP == GEPUserInst->getOperand(1)))
-            continue;
-          if (!isGuaranteedToExecuteForEveryIteration(GEPUserInst,
-                                                      FI.InnerLoop))
-            continue;
-          // The IV is used as the operand of a GEP which dominates the loop
-          // latch, and the IV is at least as wide as the address space of the
-          // GEP. In this case, the GEP would wrap around the address space
-          // before the IV increment wraps, which would be UB.
-          if (GEP->isInBounds() &&
-              V->getType()->getIntegerBitWidth() >=
-                  DL.getPointerTypeSizeInBits(GEP->getType())) {
-            LLVM_DEBUG(
-                dbgs() << "use of linear IV would be UB if overflow occurred: ";
-                GEP->dump());
-            return OverflowResult::NeverOverflows;
-          }
-        }
+  auto CheckGEP = [&](GetElementPtrInst *GEP, Value *GEPOperand) {
+    for (Value *GEPUser : GEP->users()) {
+      auto *GEPUserInst = cast<Instruction>(GEPUser);
+      if (!isa<LoadInst>(GEPUserInst) &&
+          !(isa<StoreInst>(GEPUserInst) && GEP == GEPUserInst->getOperand(1)))
+        continue;
+      if (!isGuaranteedToExecuteForEveryIteration(GEPUserInst, FI.InnerLoop))
+        continue;
+      // The IV is used as the operand of a GEP which dominates the loop
+      // latch, and the IV is at least as wide as the address space of the
+      // GEP. In this case, the GEP would wrap around the address space
+      // before the IV increment wraps, which would be UB.
+      if (GEP->isInBounds() &&
+          GEPOperand->getType()->getIntegerBitWidth() >=
+              DL.getPointerTypeSizeInBits(GEP->getType())) {
+        LLVM_DEBUG(
+            dbgs() << "use of linear IV would be UB if overflow occurred: ";
+            GEP->dump());
+        return true;
       }
     }
+    return false;
+  };
+
+  // Check if any IV user is, or is used by, a GEP that would cause UB if the
+  // multiply overflows.
+  for (Value *V : FI.LinearIVUses) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
+      if (GEP->getNumIndices() == 1 && CheckGEP(GEP, GEP->getOperand(1)))
+        return OverflowResult::NeverOverflows;
+    for (Value *U : V->users())
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
+        if (CheckGEP(GEP, V))
+          return OverflowResult::NeverOverflows;
   }
 
   return OverflowResult::MayOverflow;
@@ -777,6 +790,18 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     if (FI.Widened)
       OuterValue = Builder.CreateTrunc(FI.OuterInductionPHI, V->getType(),
                                        "flatten.trunciv");
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+      // Replace the GEP with one that uses OuterValue as the offset.
+      auto *InnerGEP = cast<GetElementPtrInst>(GEP->getOperand(0));
+      Value *Base = InnerGEP->getOperand(0);
+      // When the base of the GEP doesn't dominate the outer induction phi then
+      // we need to insert the new GEP where the old GEP was.
+      if (!DT->dominates(Base, &*Builder.GetInsertPoint()))
+        Builder.SetInsertPoint(cast<Instruction>(V));
+      OuterValue = Builder.CreateGEP(GEP->getSourceElementType(), Base,
+                                     OuterValue, "flatten." + V->getName());
+    }
 
     LLVM_DEBUG(dbgs() << "Replacing: "; V->dump(); dbgs() << "with:      ";
                OuterValue->dump());

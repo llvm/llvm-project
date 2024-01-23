@@ -101,6 +101,12 @@
 #  define _LIBCPP_AVAILABILITY_HAS_BAD_ANY_CAST 1
 #  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST
 
+// These macros controls the availability of __cxa_init_primary_exception
+// in the built library, which std::make_exception_ptr might use
+// (see libcxx/include/__exception/exception_ptr.h).
+#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 1
+#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
+
 // These macros control the availability of all parts of <filesystem> that
 // depend on something in the dylib.
 #  define _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY 1
@@ -136,9 +142,9 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
 #  define _LIBCPP_AVAILABILITY_TZDB
 
-    // This controls the availability of C++23 <print>, which
-    // has a dependency on the built library (it needs access to
-    // the underlying buffer types of std::cout, std::cerr, and std::clog.
+// This controls the availability of C++23 <print>, which
+// has a dependency on the built library (it needs access to
+// the underlying buffer types of std::cout, std::cerr, and std::clog.
 #  define _LIBCPP_AVAILABILITY_HAS_PRINT 1
 #  define _LIBCPP_AVAILABILITY_PRINT
 
@@ -166,6 +172,10 @@
 #  define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS __attribute__((availability(watchos, strict, introduced = 5.0)))
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
+
+// TODO: Update once this is released
+#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
+#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION __attribute__((unavailable))
 
 // <filesystem>
 // clang-format off
@@ -264,6 +274,10 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 0
 #  define _LIBCPP_AVAILABILITY_TZDB __attribute__((unavailable))
 
+// Warning: This availability macro works differently than the other macros.
+// The dylib part of print is not needed on Apple platforms. Therefore when
+// the macro is not available the code calling the dylib is commented out.
+// The macro _LIBCPP_AVAILABILITY_PRINT is not used.
 #  define _LIBCPP_AVAILABILITY_HAS_PRINT 0
 #  define _LIBCPP_AVAILABILITY_PRINT __attribute__((unavailable))
 
@@ -297,6 +311,15 @@
 #  define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST _LIBCPP_AVAILABILITY_BAD_ANY_CAST
 #  define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
+#endif
+
+// Define availability attributes that depend on both
+// _LIBCPP_HAS_NO_EXCEPTIONS and _LIBCPP_HAS_NO_RTTI.
+#if defined(_LIBCPP_HAS_NO_EXCEPTIONS) || defined(_LIBCPP_HAS_NO_RTTI)
+#  undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
+#  undef _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
+#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
+#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
 #endif
 
 #endif // _LIBCPP___AVAILABILITY

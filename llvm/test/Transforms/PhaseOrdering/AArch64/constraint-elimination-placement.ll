@@ -100,9 +100,9 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[CALL1_I_I]], i64 [[CALL2_I_I]], i64 0
 ; CHECK-NEXT:    switch i64 [[COND_I_I]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i64 11, label [[IF_END_I:%.*]]
-; CHECK-NEXT:    i64 13, label [[TEST2_FN2_EXIT12:%.*]]
-; CHECK-NEXT:    i64 17, label [[IF_END_I31:%.*]]
+; CHECK-NEXT:      i64 11, label [[IF_END_I:%.*]]
+; CHECK-NEXT:      i64 13, label [[TEST2_FN2_EXIT12:%.*]]
+; CHECK-NEXT:      i64 17, label [[IF_END_I31:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end.i:
 ; CHECK-NEXT:    [[CALL8_I_I:%.*]] = tail call fastcc noundef i32 @test2_fn6()

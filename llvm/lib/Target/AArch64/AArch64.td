@@ -1520,7 +1520,8 @@ def ProcessorFeatures {
                                           FeaturePAuth, FeaturePerfMon];
   list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
-                                   FeatureFullFP16, FeatureFP16FML, FeatureDotProd];
+                                   FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
+                                   FeatureJS, FeatureComplxNum];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                     FeatureSSBS, FeatureRandGen, FeatureSB,
                                     FeatureSHA2, FeatureSHA3, FeatureAES];

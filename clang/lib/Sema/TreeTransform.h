@@ -3908,6 +3908,7 @@ public:
     case TemplateArgument::Null:
     case TemplateArgument::Integral:
     case TemplateArgument::Declaration:
+    case TemplateArgument::StructuralValue:
     case TemplateArgument::Pack:
     case TemplateArgument::TemplateExpansion:
     case TemplateArgument::NullPtr:
@@ -4577,7 +4578,8 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
 
   case TemplateArgument::Integral:
   case TemplateArgument::NullPtr:
-  case TemplateArgument::Declaration: {
+  case TemplateArgument::Declaration:
+  case TemplateArgument::StructuralValue: {
     // Transform a resolved template argument straight to a resolved template
     // argument. We get here when substituting into an already-substituted
     // template type argument during concept satisfaction checking.
@@ -4604,9 +4606,15 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
     else if (Arg.getKind() == TemplateArgument::NullPtr)
       Output = TemplateArgumentLoc(TemplateArgument(NewT, /*IsNullPtr=*/true),
                                    TemplateArgumentLocInfo());
-    else
+    else if (Arg.getKind() == TemplateArgument::Declaration)
       Output = TemplateArgumentLoc(TemplateArgument(NewD, NewT),
                                    TemplateArgumentLocInfo());
+    else if (Arg.getKind() == TemplateArgument::StructuralValue)
+      Output = TemplateArgumentLoc(
+          TemplateArgument(getSema().Context, NewT, Arg.getAsStructuralValue()),
+          TemplateArgumentLocInfo());
+    else
+      llvm_unreachable("unexpected template argument kind");
 
     return false;
   }
@@ -6081,12 +6089,11 @@ QualType
 TreeTransform<Derived>::TransformFunctionProtoType(TypeLocBuilder &TLB,
                                                    FunctionProtoTypeLoc TL) {
   SmallVector<QualType, 4> ExceptionStorage;
-  TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
   return getDerived().TransformFunctionProtoType(
       TLB, TL, nullptr, Qualifiers(),
       [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-        return This->getDerived().TransformExceptionSpec(
-            TL.getBeginLoc(), ESI, ExceptionStorage, Changed);
+        return getDerived().TransformExceptionSpec(TL.getBeginLoc(), ESI,
+                                                   ExceptionStorage, Changed);
       });
 }
 
@@ -6192,6 +6199,13 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
 
   // Instantiate a dynamic noexcept expression, if any.
   if (isComputedNoexcept(ESI.Type)) {
+    // Update this scrope because ContextDecl in Sema will be used in
+    // TransformExpr.
+    auto *Method = dyn_cast_if_present<CXXMethodDecl>(ESI.SourceTemplate);
+    Sema::CXXThisScopeRAII ThisScope(
+        SemaRef, Method ? Method->getParent() : nullptr,
+        Method ? Method->getMethodQualifiers() : Qualifiers{},
+        Method != nullptr);
     EnterExpressionEvaluationContext Unevaluated(
         getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
     ExprResult NoexceptExpr = getDerived().TransformExpr(ESI.NoexceptExpr);
@@ -7732,7 +7746,11 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
     if (Then.isInvalid())
       return StmtError();
   } else {
-    Then = new (getSema().Context) NullStmt(S->getThen()->getBeginLoc());
+    // Discarded branch is replaced with empty CompoundStmt so we can keep
+    // proper source location for start and end of original branch, so
+    // subsequent transformations like CoverageMapping work properly
+    Then = new (getSema().Context)
+        CompoundStmt(S->getThen()->getBeginLoc(), S->getThen()->getEndLoc());
   }
 
   // Transform the "else" branch.
@@ -7741,6 +7759,13 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
     Else = getDerived().TransformStmt(S->getElse());
     if (Else.isInvalid())
       return StmtError();
+  } else if (S->getElse() && ConstexprConditionValue &&
+             *ConstexprConditionValue) {
+    // Same thing here as with <then> branch, we are discarding it, we can't
+    // replace it with NULL nor NullStmt as we need to keep for source location
+    // range, for CoverageMapping
+    Else = new (getSema().Context)
+        CompoundStmt(S->getElse()->getBeginLoc(), S->getElse()->getEndLoc());
   }
 
   if (!getDerived().AlwaysRebuild() &&
@@ -12130,7 +12155,7 @@ TreeTransform<Derived>::TransformCXXMemberCallExpr(CXXMemberCallExpr *E) {
 
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
-  bool NeedRebuildFunc = E->getIdentKind() == SourceLocIdentKind::Function &&
+  bool NeedRebuildFunc = SourceLocExpr::MayBeDependent(E->getIdentKind()) &&
                          getSema().CurContext != E->getParentContext();
 
   if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc)
@@ -13619,12 +13644,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     auto TransformFunctionProtoTypeLoc =
         [this](TypeLocBuilder &TLB, FunctionProtoTypeLoc FPTL) -> QualType {
       SmallVector<QualType, 4> ExceptionStorage;
-      TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
       return this->TransformFunctionProtoType(
           TLB, FPTL, nullptr, Qualifiers(),
           [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-            return This->TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
-                                                ExceptionStorage, Changed);
+            return TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
+                                          ExceptionStorage, Changed);
           });
     };
 

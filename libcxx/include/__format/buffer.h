@@ -115,7 +115,7 @@ public:
 
     // The output doesn't fit in the internal buffer.
     // Copy the data in "__capacity_" sized chunks.
-    _LIBCPP_ASSERT_UNCATEGORIZED(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
+    _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     const _InCharT* __first = __str.data();
     do {
       size_t __chunk = std::min(__n, __capacity_);
@@ -134,7 +134,7 @@ public:
             class _UnaryOperation,
             __fmt_char_type _InCharT = typename iterator_traits<_Iterator>::value_type>
   _LIBCPP_HIDE_FROM_ABI void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "not a valid range");
+    _LIBCPP_ASSERT_INTERNAL(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
     __flush_on_overflow(__n);
@@ -146,7 +146,7 @@ public:
 
     // The output doesn't fit in the internal buffer.
     // Transform the data in "__capacity_" sized chunks.
-    _LIBCPP_ASSERT_UNCATEGORIZED(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
+    _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     do {
       size_t __chunk = std::min(__n, __capacity_);
       std::transform(__first, __first + __chunk, std::addressof(__ptr_[__size_]), __operation);
@@ -168,7 +168,7 @@ public:
 
     // The output doesn't fit in the internal buffer.
     // Fill the buffer in "__capacity_" sized chunks.
-    _LIBCPP_ASSERT_UNCATEGORIZED(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
+    _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     do {
       size_t __chunk = std::min(__n, __capacity_);
       std::fill_n(std::addressof(__ptr_[__size_]), __chunk, __value);
@@ -596,7 +596,7 @@ public:
             class _UnaryOperation,
             __fmt_char_type _InCharT = typename iterator_traits<_Iterator>::value_type>
   _LIBCPP_HIDE_FROM_ABI void __transform(_Iterator __first, _Iterator __last, _UnaryOperation __operation) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "not a valid range");
+    _LIBCPP_ASSERT_INTERNAL(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
     if (__size_ + __n >= __capacity_)
@@ -623,7 +623,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __grow_buffer() { __grow_buffer(__capacity_ * 1.6); }
 
   _LIBCPP_HIDE_FROM_ABI void __grow_buffer(size_t __capacity) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__capacity > __capacity_, "the buffer must grow");
+    _LIBCPP_ASSERT_INTERNAL(__capacity > __capacity_, "the buffer must grow");
     auto __result = std::__allocate_at_least(__alloc_, __capacity);
     auto __guard  = std::__make_exception_guard([&] {
       allocator_traits<_Alloc>::deallocate(__alloc_, __result.ptr, __result.count);

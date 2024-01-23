@@ -223,6 +223,9 @@ Response HandleFunction(const FunctionDecl *Function,
       (!Pattern || !Pattern->getLexicalDeclContext()->isFileContext())) {
     return Response::ChangeDecl(Function->getLexicalDeclContext());
   }
+
+  if (ForConstraintInstantiation && Function->getFriendObjectKind())
+    return Response::ChangeDecl(Function->getLexicalDeclContext());
   return Response::UseNextDecl(Function);
 }
 
@@ -344,14 +347,25 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
 
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
+
+  if (!CurDecl)
+    CurDecl = Decl::castFromDeclContext(DC);
+
   if (Innermost) {
     Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND),
                                      Innermost->asArray(), Final);
-    CurDecl = Response::UseNextDecl(ND).NextDecl;
+    // Populate placeholder template arguments for TemplateTemplateParmDecls.
+    // This is essential for the case e.g.
+    //
+    // template <class> concept Concept = false;
+    // template <template <Concept C> class T> void foo(T<int>)
+    //
+    // where parameter C has a depth of 1 but the substituting argument `int`
+    // has a depth of 0.
+    if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl))
+      HandleDefaultTempArgIntoTempTempParam(TTP, Result);
+    CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
   }
-
-  if (!ND)
-    CurDecl = Decl::castFromDeclContext(DC);
 
   while (!CurDecl->isFileContextDecl()) {
     Response R;
@@ -380,10 +394,8 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       R = Response::ChangeDecl(CTD->getLexicalDeclContext());
     } else if (!isa<DeclContext>(CurDecl)) {
       R = Response::DontClearRelativeToPrimaryNextDecl(CurDecl);
-      if (CurDecl->getDeclContext()->isTranslationUnit()) {
-        if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl)) {
-          R = HandleDefaultTempArgIntoTempTempParam(TTP, Result);
-        }
+      if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl)) {
+        R = HandleDefaultTempArgIntoTempTempParam(TTP, Result);
       }
     } else {
       R = HandleGenericDeclContext(CurDecl);
@@ -1963,9 +1975,8 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     }
   } else if (arg.getKind() == TemplateArgument::Declaration ||
              arg.getKind() == TemplateArgument::NullPtr) {
-    ValueDecl *VD;
     if (arg.getKind() == TemplateArgument::Declaration) {
-      VD = arg.getAsDecl();
+      ValueDecl *VD = arg.getAsDecl();
 
       // Find the instantiation of the template argument.  This is
       // required for nested templates.
@@ -1973,21 +1984,20 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
              getSema().FindInstantiatedDecl(loc, VD, TemplateArgs));
       if (!VD)
         return ExprError();
-    } else {
-      // Propagate NULL template argument.
-      VD = nullptr;
     }
 
-    QualType paramType = VD ? arg.getParamTypeForDecl() : arg.getNullPtrType();
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
     assert(!paramType.isNull() && "type substitution failed for param type");
     assert(!paramType->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, paramType, loc);
     refParam = paramType->isReferenceType();
   } else {
-    result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
+    result = SemaRef.BuildExpressionFromNonTypeTemplateArgument(arg, loc);
+    refParam = paramType->isReferenceType();
     assert(result.isInvalid() ||
            SemaRef.Context.hasSameType(result.get()->getType(),
-                                       arg.getIntegralType()));
+                                       paramType.getNonReferenceType()));
   }
 
   if (result.isInvalid())

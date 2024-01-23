@@ -66,6 +66,14 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {}
 
+  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+                                    int64_t &Value) const override;
+
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF, MCAsmLayout &Layout,
+                          bool &WasRelaxed) const override;
+  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+                     bool &WasRelaxed) const override;
+
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 

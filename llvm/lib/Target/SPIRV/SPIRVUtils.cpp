@@ -228,8 +228,8 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
-  if (auto *GI = dyn_cast<GIntrinsic>(&MI))
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
+  if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->is(IntrinsicID);
   return false;
 }

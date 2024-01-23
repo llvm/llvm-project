@@ -24,6 +24,30 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 // -----
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  // CHECK:         spirv.SpecConstant @sc = 1 : i8
+  // CHECK-NEXT:    spirv.GlobalVariable @var initializer(@sc) : !spirv.ptr<i8, Uniform>
+  spirv.SpecConstant @sc = 1 : i8
+
+  spirv.GlobalVariable @var initializer(@sc) : !spirv.ptr<i8, Uniform>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  // CHECK:         spirv.SpecConstantComposite @scc (@sc0, @sc1, @sc2) : !spirv.array<3 x i8>
+  // CHECK-NEXT:    spirv.GlobalVariable @var initializer(@scc) : !spirv.ptr<!spirv.array<3 x i8>, Uniform>
+  spirv.SpecConstant @sc0 = 1 : i8
+  spirv.SpecConstant @sc1 = 2 : i8
+  spirv.SpecConstant @sc2 = 3 : i8
+
+  spirv.SpecConstantComposite @scc (@sc0, @sc1, @sc2) : !spirv.array<3 x i8>
+
+  spirv.GlobalVariable @var initializer(@scc) : !spirv.ptr<!spirv.array<3 x i8>, Uniform>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.GlobalVariable @globalInvocationID built_in("GlobalInvocationId") : !spirv.ptr<vector<3xi32>, Input>
   spirv.func @foo() "None" {
     // CHECK: %[[ADDR:.*]] = spirv.mlir.addressof @globalInvocationID : !spirv.ptr<vector<3xi32>, Input>

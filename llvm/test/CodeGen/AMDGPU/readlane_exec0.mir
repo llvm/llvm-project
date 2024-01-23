@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -march=amdgcn -mcpu=fiji -run-pass=si-late-branch-lowering -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+# RUN: llc -o - %s -mtriple=amdgcn -mcpu=fiji -run-pass=si-late-branch-lowering -verify-machineinstrs | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: readlane_exec0
 # GCN: bb.0

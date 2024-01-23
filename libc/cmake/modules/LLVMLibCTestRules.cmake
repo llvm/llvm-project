@@ -187,7 +187,7 @@ function(create_libc_unittest fq_target_name)
   if(LLVM_LIBC_FULL_BUILD)
     target_compile_options(
       ${fq_build_target_name}
-      PRIVATE -ffreestanding
+      PRIVATE -ffreestanding -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
     )
   endif()
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
@@ -435,6 +435,13 @@ function(add_libc_fuzzer target_name)
 
 endfunction(add_libc_fuzzer)
 
+# Get libgcc_s to be used in hermetic and integration tests.
+if(NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
+                  OUTPUT_VARIABLE LIBGCC_S_LOCATION)
+  string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
+endif()
+
 # DEPRECATED: Use add_hermetic_test instead.
 #
 # Rule to add an integration test. An integration test is like a unit test
@@ -498,10 +505,14 @@ function(add_integration_test test_name)
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
-      # __stack_chk_fail should always be included to allow building libc with
-      # stack protector.
-      libc.src.compiler.__stack_chk_fail
   )
+
+  if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+    # __stack_chk_fail should always be included if supported to allow building
+    # libc with the stack protector enabled.
+    list(APPEND fq_deps_list libc.src.compiler.__stack_chk_fail)
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -560,8 +571,13 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    # Older version of gcc does not support `nostdlib++` flag.  We use
+    # `nostdlib` and link against libgcc_s, which cannot be linked statically.
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
+    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
@@ -668,12 +684,15 @@ function(add_libc_hermetic_test test_name)
       libc.src.string.memmove
       libc.src.string.memset
       libc.src.__support.StringUtil.error_to_string
-      # __stack_chk_fail should always be included to allow building libc with
-      # stack protector.
-      libc.src.compiler.__stack_chk_fail
   )
 
-  if(TARGET libc.src.time.clock)
+  if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+    # __stack_chk_fail should always be included if supported to allow building
+    # libc with the stack protector enabled.
+    list(APPEND fq_deps_list libc.src.compiler.__stack_chk_fail)
+  endif()
+
+  if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # We will link in the 'clock' implementation if it exists for test timing.
     list(APPEND fq_deps_list libc.src.time.clock)
   endif()
@@ -734,8 +753,13 @@ function(add_libc_hermetic_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    # Older version of gcc does not support `nostdlib++` flag.  We use
+    # `nostdlib` and link against libgcc_s, which cannot be linked statically.
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
+    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}

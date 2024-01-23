@@ -2809,6 +2809,110 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
 
+Fine Tuning Profile Collection
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The PGO infrastructure provides user program knobs to fine tune profile
+collection. Specifically, the PGO runtime provides the following functions
+that can be used to control the regions in the program where profiles should
+be collected.
+
+ * ``void __llvm_profile_set_filename(const char *Name)``: changes the name of
+   the profile file to ``Name``.
+ * ``void __llvm_profile_reset_counters(void)``: resets all counters to zero.
+ * ``int __llvm_profile_dump(void)``: write the profile data to disk.
+ * ``int __llvm_orderfile_dump(void)``: write the order file to disk.
+
+For example, the following pattern can be used to skip profiling program
+initialization, profile two specific hot regions, and skip profiling program
+cleanup:
+
+.. code-block:: c
+
+    int main() {
+      initialize();
+
+      // Reset all profile counters to 0 to omit profile collected during
+      // initialize()'s execution.
+      __llvm_profile_reset_counters();
+      ... hot region 1
+      // Dump the profile for hot region 1.
+      __llvm_profile_set_filename("region1.profraw");
+      __llvm_profile_dump();
+
+      // Reset counters before proceeding to hot region 2.
+      __llvm_profile_reset_counters();
+      ... hot region 2
+      // Dump the profile for hot region 2.
+      __llvm_profile_set_filename("region2.profraw");
+      __llvm_profile_dump();
+
+      // Since the profile has been dumped, no further profile data
+      // will be collected beyond the above __llvm_profile_dump().
+      cleanup();
+      return 0;
+    }
+
+These APIs' names can be introduced to user programs in two ways.
+They can be declared as weak symbols on platforms which support
+treating weak symbols as ``null`` during linking. For example, the user can
+have
+
+.. code-block:: c
+
+    __attribute__((weak)) int __llvm_profile_dump(void);
+
+    // Then later in the same source file
+    if (__llvm_profile_dump)
+      if (__llvm_profile_dump() != 0) { ... }
+    // The first if condition tests if the symbol is actually defined.
+    // Profile dumping only happens if the symbol is defined. Hence,
+    // the user program works correctly during normal (not profile-generate)
+    // executions.
+
+Alternatively, the user program can include the header
+``profile/instr_prof_interface.h``, which contains the API names. For example,
+
+.. code-block:: c
+
+    #include "profile/instr_prof_interface.h"
+
+    // Then later in the same source file
+    if (__llvm_profile_dump() != 0) { ... }
+
+The user code does not need to check if the API names are defined, because
+these names are automatically replaced by ``(0)`` or the equivalence of noop
+if the ``clang`` is not compiling for profile generation.
+
+Such replacement can happen because ``clang`` adds one of two macros depending
+on the ``-fprofile-generate`` and the ``-fprofile-use`` flags.
+
+ * ``__LLVM_INSTR_PROFILE_GENERATE``: defined when one of
+   ``-fprofile[-instr]-generate``/``-fcs-profile-generate`` is in effect.
+ * ``__LLVM_INSTR_PROFILE_USE``: defined when one of
+   ``-fprofile-use``/``-fprofile-instr-use`` is in effect.
+
+The two macros can be used to provide more flexibiilty so a user program
+can execute code specifically intended for profile generate or profile use.
+For example, a user program can have special logging during profile generate:
+
+.. code-block:: c
+
+    #if __LLVM_INSTR_PROFILE_GENERATE
+    expensive_logging_of_full_program_state();
+    #endif
+
+The logging is automatically excluded during a normal build of the program,
+hence it does not impact performance during a normal execution.
+
+It is advised to use such fine tuning only in a program's cold regions. The weak
+symbols can introduce extra control flow (the ``if`` checks), while the macros
+(hence declarations they guard in ``profile/instr_prof_interface.h``)
+can change the control flow of the functions that use them between profile
+generation and profile use (which can lead to discarded counters in such
+functions). Using these APIs in the program's cold regions introduces less
+overhead and leads to more optimized code.
+
 Disabling Instrumentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3963,6 +4067,60 @@ implicitly included in later levels.
 - ``-march=x86-64-v3``: (close to Haswell) AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE
 - ``-march=x86-64-v4``: AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
 
+`Intel AVX10 ISA <https://cdrdv2.intel.com/v1/dl/getContent/784267>`_ is
+a major new vector ISA incorporating the modern vectorization aspects of
+Intel AVX-512. This ISA will be supported on all future Intel processors.
+Users are supposed to use the new options ``-mavx10.N`` and ``-mavx10.N-512``
+on these processors and should not use traditional AVX512 options anymore.
+
+The ``N`` in ``-mavx10.N`` represents a continuous integer number starting
+from ``1``. ``-mavx10.N`` is an alias of ``-mavx10.N-256``, which means to
+enable all instructions within AVX10 version N at a maximum vector length of
+256 bits. ``-mavx10.N-512`` enables all instructions at a maximum vector
+length of 512 bits, which is a superset of instructions ``-mavx10.N`` enabled.
+
+Current binaries built with AVX512 features can run on Intel AVX10/512 capable
+processors without re-compile, but cannot run on AVX10/256 capable processors.
+Users need to re-compile their code with ``-mavx10.N``, and maybe update some
+code that calling to 512-bit X86 specific intrinsics and passing or returning
+512-bit vector types in function call, if they want to run on AVX10/256 capable
+processors. Binaries built with ``-mavx10.N`` can run on both AVX10/256 and
+AVX10/512 capable processors.
+
+Users can add a ``-mno-evex512`` in the command line with AVX512 options if
+they want to run the binary on both legacy AVX512 and new AVX10/256 capable
+processors. The option has the same constraints as ``-mavx10.N``, i.e.,
+cannot call to 512-bit X86 specific intrinsics and pass or return 512-bit vector
+types in function call.
+
+Users should avoid using AVX512 features in function target attributes when
+developing code for AVX10. If they have to do so, they need to add an explicit
+``evex512`` or ``no-evex512`` together with AVX512 features for 512-bit or
+non-512-bit functions respectively to avoid unexpected code generation. Both
+command line option and target attribute of EVEX512 feature can only be used
+with AVX512. They don't affect vector size of AVX10.
+
+User should not mix the use AVX10 and AVX512 options together at any time,
+because the option combinations are conflicting sometimes. For example, a
+combination of ``-mavx512f -mavx10.1-256`` doesn't show a clear intention to
+compiler, since instructions in AVX512F and AVX10.1/256 intersect but do not
+overlap. In this case, compiler will emit warning for it, but the behavior
+is determined. It will generate the same code as option ``-mavx10.1-512``.
+A similar case is ``-mavx512f -mavx10.2-256``, which equals to
+``-mavx10.1-512 -mavx10.2-256``, because ``avx10.2-256`` implies ``avx10.1-256``
+and ``-mavx512f -mavx10.1-256`` equals to ``-mavx10.1-512``.
+
+There are some new macros introduced with AVX10 support. ``-mavx10.1-256`` will
+enable ``__AVX10_1__`` and ``__EVEX256__``, while ``-mavx10.1-512`` enables
+``__AVX10_1__``, ``__EVEX256__``, ``__EVEX512__``  and ``__AVX10_1_512__``.
+Besides, both ``-mavx10.1-256`` and ``-mavx10.1-512`` will enable all AVX512
+feature specific macros. A AVX512 feature will enable both ``__EVEX256__``,
+``__EVEX512__`` and its own macro. So ``__EVEX512__`` can be used to guard code
+that can run on both legacy AVX512 and AVX10/512 capable processors but cannot
+run on AVX10/256, while a AVX512 macro like ``__AVX512F__`` cannot tell the
+difference among the three options. Users need to check additional macros
+``__AVX10_1__`` and ``__EVEX512__`` if they want to make distinction.
+
 ARM
 ^^^
 
@@ -4382,11 +4540,11 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fmerge-all-constants   Allow merging of constants
       -fms-compatibility-version=<value>
                               Dot-separated value representing the Microsoft compiler version
-                              number to report in _MSC_VER (0 = don't define it (default))
+                              number to report in _MSC_VER (0 = don't define it; default is same value as installed cl.exe, or 1933)
       -fms-compatibility      Enable full Microsoft Visual C++ compatibility
       -fms-extensions         Accept some non-standard constructs supported by the Microsoft compiler
       -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER
-                              (0 = don't define it (default))
+                              (0 = don't define it; default is same value as installed cl.exe, or 1933)
       -fno-addrsig            Don't emit an address-significance table
       -fno-builtin-<value>    Disable implicit builtin knowledge of a specific function
       -fno-builtin            Disable implicit builtin knowledge of functions

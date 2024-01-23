@@ -320,8 +320,8 @@ func.func @masked_matvec_k_mk_m(%A: vector<4x2xf32>,
                                 %x: vector<2xf32>,
                                 %b: vector<4xf32>,
                                 %mask: vector<4x2xi1>) -> vector<4xf32> {
-  // CHECK:         vector.transpose %[[MASK]]
   // CHECK:         vector.transpose %[[A]]
+  // CHECK:         vector.transpose %[[MASK]]
   // CHECK-COUNT-2: vector.mask %{{.*}} { vector.outerproduct %{{.*}}, %{{.*}}, %{{.*}} {kind = #vector.kind<add>} : vector<4xf32>, f32 }
   %res = vector.mask %mask {
       vector.contract #matvec_trait_3 %x, %A, %b
@@ -339,8 +339,8 @@ func.func @masked_matvec_k_mk_m_scalable_parallel_dim(%A: vector<[4]x2xf32>,
                                                       %x: vector<2xf32>,
                                                       %b: vector<[4]xf32>,
                                                       %mask: vector<[4]x2xi1>) -> vector<[4]xf32> {
-  // CHECK:         vector.transpose %[[MASK]]
   // CHECK:         vector.transpose %[[A]]
+  // CHECK:         vector.transpose %[[MASK]]
   // CHECK-COUNT-2: vector.mask %{{.*}} { vector.outerproduct %{{.*}}, %{{.*}}, %{{.*}} {kind = #vector.kind<add>} : vector<[4]xf32>, f32 }
   %res = vector.mask %mask {
       vector.contract #matvec_trait_3 %x, %A, %b
@@ -639,6 +639,18 @@ func.func @masked_tmatvec_k_km_m_scalable_parallel_dim(%A: vector<2x[4]xf32>,
       : vector<2xf32>, vector<2x[4]xf32>, vector<[4]xf32> into vector<[4]xf32>
   } : vector<2x[4]xi1> -> vector<[4]xf32>
   return %res : vector<[4]xf32>
+}
+
+// Unrolling scalable reduction dim is not supported - bail out
+// CHECK-LABEL: @masked_extract_contract2_scalable_reduction_dim(
+// CHECK:         vector.contract {{.*}} : vector<[2]x[3]xf32>, vector<[3]xf32> into vector<[2]xf32>
+func.func @masked_extract_contract2_scalable_reduction_dim(%arg0: vector<[2]x[3]xf32>,
+                                    %arg1: vector<[3]xf32>,
+                                    %arg2: vector<[2]xf32>,
+                                    %m: vector<[2]x[3]xi1>) -> vector<[2]xf32> {
+  %0 = vector.mask %m { vector.contract #matvec_trait_1 %arg0, %arg1, %arg2
+          : vector<[2]x[3]xf32>, vector<[3]xf32> into vector<[2]xf32> } : vector<[2]x[3]xi1> -> vector<[2]xf32>
+  return %0 : vector<[2]xf32>
 }
 
 // ============================================================================

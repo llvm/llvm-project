@@ -30,7 +30,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -3176,7 +3175,6 @@ static int order_main(int argc, const char *argv[]) {
 int llvm_profdata_main(int argc, char **argvNonConst,
                        const llvm::ToolContext &) {
   const char **argv = const_cast<const char **>(argvNonConst);
-  InitLLVM X(argc, argv);
 
   StringRef ProgName(sys::path::filename(argv[0]));
 

@@ -392,6 +392,23 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -516,6 +533,23 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -642,6 +676,23 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -767,6 +818,23 @@ the configuration (without a prefix: ``Auto``).
       false:
       a &= 2;
       bbb = 2;
+
+  * ``bool AlignFunctionPointers`` Only for ``AlignConsecutiveDeclarations``. Whether function pointers are
+    aligned.
+
+    .. code-block:: c++
+
+      true:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int      (*f)();
+
+      false:
+      unsigned i;
+      int     &r;
+      int     *p;
+      int (*f)();
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -4364,6 +4432,11 @@ the configuration (without a prefix: ``Auto``).
 **PenaltyBreakOpenParenthesis** (``Unsigned``) :versionbadge:`clang-format 14` :ref:`¶ <PenaltyBreakOpenParenthesis>`
   The penalty for breaking after ``(``.
 
+.. _PenaltyBreakScopeResolution:
+
+**PenaltyBreakScopeResolution** (``Unsigned``) :versionbadge:`clang-format 18` :ref:`¶ <PenaltyBreakScopeResolution>`
+  The penalty for breaking after ``::``.
+
 .. _PenaltyBreakString:
 
 **PenaltyBreakString** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <PenaltyBreakString>`
@@ -4925,6 +4998,11 @@ the configuration (without a prefix: ``Auto``).
        int foo;                           int foo;
        int bar;                           int bar;
      } // namespace b                   } // namespace b
+
+.. _SkipMacroDefinitionBody:
+
+**SkipMacroDefinitionBody** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <SkipMacroDefinitionBody>`
+  Do not format macro definition body.
 
 .. _SortIncludes:
 

@@ -1115,6 +1115,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     int NumWritePtrChecks = 0;
     bool CanDoAliasSetRT = true;
     ++ASId;
+    auto ASPointers = AS.getPointers();
 
     // We assign consecutive id to access from different dependence sets.
     // Accesses within the same set don't need a runtime check.
@@ -1126,8 +1127,8 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     // First, count how many write and read accesses are in the alias set. Also
     // collect MemAccessInfos for later.
     SmallVector<MemAccessInfo, 4> AccessInfos;
-    for (const auto &A : AS) {
-      Value *Ptr = A.getValue();
+    for (const Value *Ptr_ : ASPointers) {
+      Value *Ptr = const_cast<Value *>(Ptr_);
       bool IsWrite = Accesses.count(MemAccessInfo(Ptr, true));
       if (IsWrite)
         ++NumWritePtrChecks;
@@ -1140,10 +1141,11 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     // or a single write and no reads.
     if (NumWritePtrChecks == 0 ||
         (NumWritePtrChecks == 1 && NumReadPtrChecks == 0)) {
-      assert((AS.size() <= 1 ||
-              all_of(AS,
-                     [this](auto AC) {
-                       MemAccessInfo AccessWrite(AC.getValue(), true);
+      assert((ASPointers.size() <= 1 ||
+              all_of(ASPointers,
+                     [this](const Value *Ptr) {
+                       MemAccessInfo AccessWrite(const_cast<Value *>(Ptr),
+                                                 true);
                        return DepCands.findValue(AccessWrite) == DepCands.end();
                      })) &&
              "Can only skip updating CanDoRT below, if all entries in AS "
@@ -1271,8 +1273,9 @@ void AccessAnalysis::processMemAccesses() {
   // set.
   for (const auto &AS : AST) {
     // Note that both the alias-set tracker and the alias sets themselves used
-    // linked lists internally and so the iteration order here is deterministic
-    // (matching the original instruction order within each set).
+    // ordered collections internally and so the iteration order here is
+    // deterministic.
+    auto ASPointers = AS.getPointers();
 
     bool SetHasWrite = false;
 
@@ -1289,8 +1292,8 @@ void AccessAnalysis::processMemAccesses() {
       bool UseDeferred = SetIteration > 0;
       PtrAccessMap &S = UseDeferred ? DeferredAccesses : Accesses;
 
-      for (const auto &AV : AS) {
-        Value *Ptr = AV.getValue();
+      for (const Value *Ptr_ : ASPointers) {
+        Value *Ptr = const_cast<Value *>(Ptr_);
 
         // For a single memory access in AliasSetTracker, Accesses may contain
         // both read and write, and they both need to be handled for CheckDeps.

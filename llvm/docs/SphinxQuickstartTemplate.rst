@@ -170,7 +170,7 @@ Generating the documentation
 
 You can generate the HTML documentation from the sources locally if you want to
 see what they would look like. In addition to the normal
-`build tools <docs/GettingStarted.html>`_
+`build tools <GettingStarted.html>`_
 you need to install `Sphinx`_ and the necessary extensions
 using the following command inside the ``llvm-project`` checkout:
 

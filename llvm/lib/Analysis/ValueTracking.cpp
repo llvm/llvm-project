@@ -4019,6 +4019,12 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
   if (Pred == FCmpInst::FCMP_UNO && !ConstRHS->isNaN())
     return {LHS, fcNan};
 
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return {LHS, fcAllFlags};
+
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return {LHS, fcNone};
+
   if (ConstRHS->isZero()) {
     // Compares with fcNone are only exactly equal to fcZero if input denormals
     // are not flushed.
@@ -4059,7 +4065,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
       return {LHS, fcNegative | fcPosZero | fcNan};
     default:
-      break;
+      llvm_unreachable("all compare types are handled");
     }
 
     return {nullptr, fcAllFlags};
@@ -4178,8 +4184,22 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       Mask = fcNone;
       break;
     }
+    case FCmpInst::FCMP_OLE:
+    case FCmpInst::FCMP_UGT: {
+      if (ConstRHS->isNegative()) {
+        Mask = IsFabs ? fcNone : fcNegInf;
+        break;
+      }
+
+      // fcmp ole x, +inf -> fcmp ord x, x
+      // fcmp ole fabs(x), +inf -> fcmp ord x, x
+      // fcmp ole x, -inf -> fcmp oeq x, -inf
+      // fcmp ole fabs(x), -inf -> false
+      Mask = ~fcNan;
+      break;
+    }
     default:
-      return {nullptr, fcAllFlags};
+      llvm_unreachable("all compare types are handled");
     }
   } else if (ConstRHS->isSmallestNormalized() && !ConstRHS->isNegative()) {
     // Match pattern that's used in __builtin_isnormal.

@@ -68,6 +68,7 @@ class HTMLDiagnostics : public PathDiagnosticConsumer {
   bool noDir = false;
   const Preprocessor &PP;
   const bool SupportsCrossFileDiagnostics;
+  llvm::StringSet<> EmittedHashes;
 
 public:
   HTMLDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
@@ -301,6 +302,17 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
       }
   }
 
+  SmallString<32> IssueHash = getIssueHash(D, PP);
+  auto [It, IsNew] = EmittedHashes.insert(IssueHash);
+  if (!IsNew) {
+    // We've already emitted a duplicate issue. It'll get overwritten anyway.
+    return;
+  }
+
+  // FIXME: This causes each file to be re-parsed and syntax-highlighted
+  // and macro-expanded separately for each report. We could cache such rewrites
+  // across all reports and only re-do the part that's actually different:
+  // the warning/note bubbles.
   std::string report = GenerateHTML(D, R, SMgr, path, declName.c_str());
   if (report.empty()) {
     llvm::errs() << "warning: no diagnostics generated for main file.\n";
@@ -332,7 +344,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
              << declName.c_str() << "-" << offsetDecl << "-";
   }
 
-  FileName << StringRef(getIssueHash(D, PP)).substr(0, 6).str() << ".html";
+  FileName << StringRef(IssueHash).substr(0, 6).str() << ".html";
 
   SmallString<128> ResultPath;
   llvm::sys::path::append(ResultPath, Directory, FileName.str());

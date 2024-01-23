@@ -481,21 +481,28 @@ public:
   bool Pre(const parser::OmpClause::Reduction &x) {
     const parser::OmpReductionOperator &opr{
         std::get<parser::OmpReductionOperator>(x.v.t)};
+    auto createDummyProcSymbol = [&](const parser::Name *name) {
+      // If name resolution failed, create a dummy symbol
+      const auto namePair{
+          currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
+      auto &newSymbol{*namePair.first->second};
+      name->symbol = &newSymbol;
+    };
     if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
       if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
         if (!name->symbol) {
-          const auto namePair{currScope().try_emplace(
-              name->source, Attrs{}, ProcEntityDetails{})};
-          auto &symbol{*namePair.first->second};
-          name->symbol = &symbol;
-          name->symbol->set(Symbol::Flag::OmpReduction);
-          AddToContextObjectWithDSA(*name->symbol, Symbol::Flag::OmpReduction);
+          if (!ResolveName(name)) {
+            createDummyProcSymbol(name);
+          }
         }
       }
       if (const auto *procRef{
               parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-        ResolveOmp(*procRef->v.thing.component.symbol,
-            Symbol::Flag::OmpReduction, currScope());
+        if (!procRef->v.thing.component.symbol) {
+          if (!ResolveName(&procRef->v.thing.component)) {
+            createDummyProcSymbol(&procRef->v.thing.component);
+          }
+        }
       }
     }
     const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
@@ -945,25 +952,45 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
     const auto &clauses = std::get<Fortran::parser::AccClauseList>(x.t);
     for (const Fortran::parser::AccClause &clause : clauses.v) {
       if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-        info.set_isSeq();
+        if (info.deviceTypeInfos().empty()) {
+          info.set_isSeq();
+        } else {
+          info.deviceTypeInfos().back().set_isSeq();
+        }
       } else if (const auto *gangClause =
                      std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
-        info.set_isGang();
+        if (info.deviceTypeInfos().empty()) {
+          info.set_isGang();
+        } else {
+          info.deviceTypeInfos().back().set_isGang();
+        }
         if (gangClause->v) {
           const Fortran::parser::AccGangArgList &x = *gangClause->v;
           for (const Fortran::parser::AccGangArg &gangArg : x.v) {
             if (const auto *dim =
                     std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
               if (const auto v{EvaluateInt64(context_, dim->v)}) {
-                info.set_gangDim(*v);
+                if (info.deviceTypeInfos().empty()) {
+                  info.set_gangDim(*v);
+                } else {
+                  info.deviceTypeInfos().back().set_gangDim(*v);
+                }
               }
             }
           }
         }
       } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-        info.set_isVector();
+        if (info.deviceTypeInfos().empty()) {
+          info.set_isVector();
+        } else {
+          info.deviceTypeInfos().back().set_isVector();
+        }
       } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-        info.set_isWorker();
+        if (info.deviceTypeInfos().empty()) {
+          info.set_isWorker();
+        } else {
+          info.deviceTypeInfos().back().set_isWorker();
+        }
       } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
         info.set_isNohost();
       } else if (const auto *bindClause =
@@ -971,7 +998,12 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
         if (const auto *name =
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
           if (Symbol *sym = ResolveFctName(*name)) {
-            info.set_bindName(sym->name().ToString());
+            if (info.deviceTypeInfos().empty()) {
+              info.set_bindName(sym->name().ToString());
+            } else {
+              info.deviceTypeInfos().back().set_bindName(
+                  sym->name().ToString());
+            }
           } else {
             context_.Say((*name).source,
                 "No function or subroutine declared for '%s'"_err_en_US,
@@ -986,8 +1018,19 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
           std::string str{std::get<std::string>(charConst->t)};
           std::stringstream bindName;
           bindName << "\"" << str << "\"";
-          info.set_bindName(bindName.str());
+          if (info.deviceTypeInfos().empty()) {
+            info.set_bindName(bindName.str());
+          } else {
+            info.deviceTypeInfos().back().set_bindName(bindName.str());
+          }
         }
+      } else if (const auto *dType =
+                     std::get_if<Fortran::parser::AccClause::DeviceType>(
+                         &clause.u)) {
+        const parser::AccDeviceTypeExprList &deviceTypeExprList = dType->v;
+        OpenACCRoutineDeviceTypeInfo dtypeInfo;
+        dtypeInfo.set_dType(deviceTypeExprList.v.front().v);
+        info.add_deviceTypeInfo(dtypeInfo);
       }
     }
     symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
@@ -1277,7 +1320,7 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
   if (symbol && !dirContext_.empty() && GetContext().withinConstruct) {
     if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
-        !IsObjectWithDSA(*symbol)) {
+        !symbol->has<SubprogramDetails>() && !IsObjectWithDSA(*symbol)) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
@@ -1910,7 +1953,12 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
-        } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone) {
+        } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
+            !symbol->test(Symbol::Flag::OmpThreadprivate) &&
+            // Exclude indices of sequential loops that are privatised in
+            // the scope of the parallel region, and not in this scope.
+            // TODO: check whether this should be caught in IsObjectWithDSA
+            !symbol->test(Symbol::Flag::OmpPrivate)) {
           context_.Say(name.source,
               "The DEFAULT(NONE) clause requires that '%s' must be listed in "
               "a data-sharing attribute clause"_err_en_US,

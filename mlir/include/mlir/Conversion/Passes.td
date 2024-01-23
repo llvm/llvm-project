@@ -165,6 +165,15 @@ def ConvertArithToSPIRV : Pass<"convert-arith-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToArmSME
+//===----------------------------------------------------------------------===//
+
+def ArithToArmSMEConversionPass : Pass<"convert-arith-to-arm-sme"> {
+  let summary = "Convert Arith dialect to ArmSME dialect";
+  let dependentDialects = ["arm_sme::ArmSMEDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArmNeon2dToIntr
 //===----------------------------------------------------------------------===//
 
@@ -564,10 +573,6 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">,
-    Option<"useCoopMatrixNV", "use-coop-matrix-nv",
-           "bool", /*default=*/"false",
-           "Use the NV cooperative matrix extension insted of the KHR extension"
-           " to lower GPU WMMA ops">,
   ];
 }
 
