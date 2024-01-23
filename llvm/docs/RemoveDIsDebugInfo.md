@@ -10,7 +10,7 @@ We're planning on removing debug info intrinsics from LLVM, as they're slow, unw
     call void @a_normal_function()
 ```
 
-with dbg.value intrinsics representing debug info records, it would instead be printed as:
+with `dbg.value` intrinsics representing debug info records, it would instead be printed as:
 
 ```text
     %add = add i32 %foo, %bar
@@ -24,9 +24,9 @@ The debug records are not instructions, do not appear in the instruction list, a
 
 # Great, what do I need to do!
 
-Approximately nothing -- we've already instrumented all of LLVM to handle these new records ("DPValues") and behave identically to past LLVM behaviour. We plan on turning this on by default some time soon, with IR converted to the intrinsic form of debug info at terminals (textual IR, bitcode) for a short while, before then changing the textual IR and bitcode formats.
+Approximately nothing -- we've already instrumented all of LLVM to handle these new records ("`DPValues`") and behave identically to past LLVM behaviour. We plan on turning this on by default some time soon, with IR converted to the intrinsic form of debug info at terminals (textual IR, bitcode) for a short while, before then changing the textual IR and bitcode formats.
 
-There are two significant changes to be aware of. Firstly, we're adding a single bit of debug relevant data to the BasicBlock::iterator class (it's so that we can determine whether ranges intend on including debug info at the beginning of a block or not). That means when writing passes that insert LLVM-IR instructions, you need to identify positions with BasicBlock::iterator rather than just a bare Instruction *. Most of the time this means that after identifying where you intend on inserting something, you must also call getIterator on the instruction position -- however when inserting at the start of a block you _must_ use getFirstInsertionPt, getFirstNonPHIIt or begin and use that iterator to insert, rather than just fetching a pointer to the first instruction.
+There are two significant changes to be aware of. Firstly, we're adding a single bit of debug relevant data to the `BasicBlock::iterator` class (it's so that we can determine whether ranges intend on including debug info at the beginning of a block or not). That means when writing passes that insert LLVM IR instructions, you need to identify positions with `BasicBlock::iterator` rather than just a bare `Instruction *`. Most of the time this means that after identifying where you intend on inserting something, you must also call `getIterator` on the instruction position -- however when inserting at the start of a block you _must_ use `getFirstInsertionPt`, `getFirstNonPHIIt` or `begin` and use that iterator to insert, rather than just fetching a pointer to the first instruction.
 
 The second matter is that if you transfer sequences of instructions from one place to another manually, i.e. repeatedly using `moveBefore` where you might have used `splice`, then you should instead use the method `moveBeforePreserving`. `moveBeforePreserving` will transfer debug info records with the instruction they're attached to. This is something that happens automatically today -- if you use `moveBefore` on every element of an instruction sequence, then debug intrinsics will be moved in the normal course of your code, but we lose this behaviour with non-instruction debug info.
 
@@ -40,11 +40,11 @@ This will all happen transparently without needing to think about it!
 
 ## What exactly have you replaced debug intrinsics with?
 
-We're using a dedicated C++ class called DPValue to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each DPValue object in any LLVM-IR program. This class stores exactly the same information as is stored in debugging intrinsics. It also has almost entirely the same set of methods, that behave in the same way:
+We're using a dedicated C++ class called `DPValue` to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each `DPValue` object in any LLVM IR program. This class stores exactly the same information as is stored in debugging intrinsics. It also has almost entirely the same set of methods, that behave in the same way:
 
   https://llvm.org/docs/doxygen/classllvm_1_1DPValue.html
 
-This allows you to treat a DPValue as if it's a dbg.value intrinsic most of the time, for example in generic (auto-param) lambdas.
+This allows you to treat a `DPValue` as if it's a `dbg.value` intrinsic most of the time, for example in generic (auto-param) lambdas.
 
 ## How do these DPValues fit into the instruction stream?
 
@@ -70,27 +70,27 @@ Like so:
  +-----------+    +-----------+   +-----------+
 ```
 
-Each instruction has a pointer to a DPMarker (which will become optional), that contains a list of DPValue objects. No debugging records appear in the in struction list at all. DPValues have a parent pointer to their owning DPMarker, and each DPMarker has a pointer back to it's owning instruction.
+Each instruction has a pointer to a `DPMarker` (which will become optional), that contains a list of `DPValue` objects. No debugging records appear in the instruction list at all. `DPValue`s have a parent pointer to their owning `DPMarker`, and each `DPMarker` has a pointer back to it's owning instruction.
 
-Not shown are the links from DPValues to other parts of the Value/Metadata hierachy: DPValues have raw pointers to DILocalVariable, DIExpression and DILocation objects, and references to Values are stored in a DebugValueUser base class. This refers to a ValueAsMetadata object referring to Values, via the TrackingMetadata facility.
+Not shown are the links from DPValues to other parts of the `Value`/`Metadata` hierachy: `DPValue`s have raw pointers to `DILocalVariable`, `DIExpression` and `DILocation` objects, and references to `Value`s are stored in a `DebugValueUser` base class. This refers to a `ValueAsMetadata` object referring to `Value`s, via the `TrackingMetadata` facility.
 
-The various kinds of debug intrinsic (value, declare, assign) are all stored in the DPValue object, with a "Type" field disamgibuating which is which.
+The various kinds of debug intrinsic (value, declare, assign) are all stored in the `DPValue` object, with a "Type" field disamgibuating which is which.
 
 ## Finding debug info records
 
-Utilities such as findDbgUsers and the like now have an optional argument that will return the set of DPValue records that refer to a Value. You should be able to treat them the same as intrinsics.
+Utilities such as `findDbgUsers` and the like now have an optional argument that will return the set of `DPValue` records that refer to a `Value`. You should be able to treat them the same as intrinsics.
 
 ## Examining debug info records at positions
 
-Call "Instruction::getDbgValueRange()" to get the range of DPValue objects that are attached to an instruction.
+Call `Instruction::getDbgValueRange()` to get the range of `DPValue` objects that are attached to an instruction.
 
 ## Moving around, deleting
 
-You can use DPValue::removeFromParent to unlink a DPValue from it's marker, and then BasicBlock::insertDPValueBefore or BasicBlock::insertDPValueAfter to re-insert the DPValue somewhere else. You cannot insert a DPValue at an arbitary point in a list of DPValues (if you're doing this with dbg.values then it's unlikely to be correct).
+You can use `DPValue::removeFromParent` to unlink a `DPValue` from it's marker, and then `BasicBlock::insertDPValueBefore` or `BasicBlock::insertDPValueAfter` to re-insert the `DPValue` somewhere else. You cannot insert a `DPValue` at an arbitary point in a list of `DPValue`s (if you're doing this with `dbg.value`s then it's unlikely to be correct).
 
-Erase DPValues by calling eraseFromParent or deleteInstr if it's already been removed.
+Erase `DPValue`s by calling `eraseFromParent` or `deleteInstr` if it's already been removed.
 
-## What about dangling DPValues?
+## What about dangling `DPValue`s?
 
 If you have a block like so:
 
@@ -101,6 +101,6 @@ If you have a block like so:
       br label %xyzzy
 ```
 
-your optimisation pass may wish to erase the terminator and then do something to the block. This is easy to do when debug info is kept in instructions, but with DPValues there is no trailing instruction to attach the variable information to in the lbock above, once the terminator is erased. For such degenerate blocks, DPValues are stored temporarily in a map in LLVMContext, and are re-inserted when a terminator is reinserted to the block or other instruction inserted at end().
+your optimisation pass may wish to erase the terminator and then do something to the block. This is easy to do when debug info is kept in instructions, but with `DPValue`s there is no trailing instruction to attach the variable information to in the block above, once the terminator is erased. For such degenerate blocks, `DPValue`s are stored temporarily in a map in `LLVMContext`, and are re-inserted when a terminator is reinserted to the block or other instruction inserted at `end()`.
 
 This can technically lead to trouble in the vanishingly rare scenario where an optimisation pass erases a terminator and then decides to erase the whole block. (We recommend not doing that).

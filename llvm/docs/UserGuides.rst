@@ -180,7 +180,7 @@ Optimizations
    stages of compilation.
 
 :doc:`RemoveDIsDebugInfo`
-   This is a migration guide describing how to move from debug-info using
+   This is a migration guide describing how to move from debug info using
    intrinsics such as dbg.value to using the non-instruction DPValue object.
 
 :doc:`InstrProfileFormat`
