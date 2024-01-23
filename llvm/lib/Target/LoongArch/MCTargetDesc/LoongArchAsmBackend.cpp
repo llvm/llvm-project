@@ -184,11 +184,10 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
 bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
     const MCAlignFragment &AF, unsigned &Size) {
   // Calculate Nops Size only when linker relaxation enabled.
-  const MCSubtargetInfo *STI = AF.getSubtargetInfo();
-  if (!STI->hasFeature(LoongArch::FeatureRelax))
+  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
     return false;
 
-  // Ignore alignment if the minimum Nop size is less than the MaxBytesToEmit.
+  // Ignore alignment if MaxBytesToEmit is less than the minimum Nop size.
   const unsigned MinNopLen = 4;
   if (AF.getMaxBytesToEmit() < MinNopLen)
     return false;
@@ -208,8 +207,7 @@ bool LoongArchAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
 bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
     MCAssembler &Asm, const MCAsmLayout &Layout, MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
-  const MCSubtargetInfo *STI = AF.getSubtargetInfo();
-  if (!STI->hasFeature(LoongArch::FeatureRelax))
+  if (!AF.getSubtargetInfo()->hasFeature(LoongArch::FeatureRelax))
     return false;
 
   // Calculate total Nops we need to insert. If there are none to insert
@@ -227,7 +225,7 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
   const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
   if (MCSym == nullptr) {
     // Create a symbol and make the value of symbol is zero.
-    MCSymbol *Sym = Ctx.createTempSymbol(".Lla-relax-align", false);
+    MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
     Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
     Asm.registerSymbol(*Sym);
     MCSym = MCSymbolRefExpr::create(Sym, Ctx);

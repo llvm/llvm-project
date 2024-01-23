@@ -1,53 +1,79 @@
-# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax %s \
-# RUN:     | llvm-readelf -rs - | FileCheck %s --check-prefix=NORELAX
-# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s \
-# RUN:     | llvm-readelf -rs - | FileCheck %s --check-prefix=RELAX
-# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s \
-# RUN:     | llvm-objdump -d - | FileCheck -check-prefix=RELAX-INST %s
+## The file testing Nop insertion with R_LARCH_ALIGN for relaxation.
 
-# NORELAX: There are no relocations in this file.
-# NORELAX: Symbol table '.symtab' contains 1 entries:
-
-# RELAX:       0000000000000000  0000000100000066 R_LARCH_ALIGN          0000000000000000 {{.*}} + 4
-# RELAX-NEXT:  0000000000000010  0000000100000066 R_LARCH_ALIGN          0000000000000000 {{.*}} + 5
-# RELAX-NEXT:  000000000000002c  0000000100000066 R_LARCH_ALIGN          0000000000000000 {{.*}} + 4
-# RELAX-NEXT:  000000000000003c  0000000100000066 R_LARCH_ALIGN          0000000000000000 {{.*}} + b04
-# RELAX-NEXT:  0000000000000048  0000000100000066 R_LARCH_ALIGN          0000000000000000 {{.*}} + 4
-# RELAX-EMPTY:
-# RELAX:       0000000000000000  0000000200000066 R_LARCH_ALIGN          0000000000000000 <null> + 4
-# RELAX-EMPTY:
-# RELAX:       Symbol table '.symtab' contains 3 entries:
-# RELAX:       0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
-# RELAX-NEXT:  1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     2
-# RELAX-NEXT:  2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     4
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax %s -o %t
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=INSTR
+# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.r
+# RUN: llvm-objdump -d %t.r | FileCheck %s --check-prefixes=INSTR,RELAX-INSTR
+# RUN: llvm-readobj -r %t.r | FileCheck %s --check-prefixes=RELOC,RELAX-RELOC
 
 .text
-.p2align 4        # A = 0x0
-nop
-.p2align 5        # B = A + 3 * NOP + NOP = 0x10
-.p2align 4        # C = B + 7 * NOP = 0x2C
-nop
-.p2align 4, , 11  # D = C + 3 * NOP + NOP = 0x3C
-## Not emit the third parameter.
-.p2align 4, , 12  # E = D + 3 * NOP = 0x48
-                  # END = E + 3 * NOP = 0x54 = 21 * NOP
+break 0
+# INSTR: break 0
 
-## Not emit R_LARCH_ALIGN if code alignment great than alignment directive.
+## Not emit R_LARCH_ALIGN if alignment directive is less than or equal to
+## minimum code alignment(a.k.a 4).
 .p2align 2
 .p2align 1
 .p2align 0
+
 ## Not emit instructions if max emit bytes less than min nop size.
 .p2align 4, , 2
+
 ## Not emit R_LARCH_ALIGN if alignment directive with specific padding value.
+## The behavior is the same as GNU assembler.
+break 1
 .p2align 4, 1
-nop
+# INSTR-NEXT:    break 1
+# INSTR-COUNT-2: 01 01 01 01
+
+break 2
 .p2align 4, 1, 12
+# INSTR-NEXT:    break 2
+# INSTR-COUNT-3: 01 01 01 01
 
-# RELAX-INST:           <.text>:
-# RELAX-INST-COUNT-21:    nop
-# RELAX-INST-COUNT-3:     01 01 01 01
-# RELAX-INST-NEXT:        nop
-# RELAX-INST-COUNT-3:     01 01 01 01
+break 3
+.p2align 4
+# INSTR-NEXT:    break 3
+# INSTR-COUNT-3: nop
 
+break 4
+.p2align 5
+.p2align 4
+# INSTR-NEXT:          break 4
+# INSTR-COUNT-3:       nop
+# RELAX-INSTR-COUNT-7: nop
+
+break 5
+.p2align 4, , 11
+# INSTR-NEXT: break 5
+# RELAX-INSTR-COUNT-3: nop
+
+break 6
+## Not emit the third parameter.
+.p2align 4, , 12
+# INSTR-NEXT:       break 6
+# INSTR-NEXT:       nop
+# INSTR-NEXT:       nop
+# RELAX-INSTR-NEXT: nop
+
+ret
+# INSNR-NEXT: ret
+
+## Test the symbol index is different from .text.
 .section .text2, "ax"
 .p2align 4
+break 7
+
+# RELOC:            Relocations [
+# RELAX-RELOC-NEXT:   Section ({{.*}}) .rela.text {
+# RELAX-RELOC-NEXT:     0x24 R_LARCH_ALIGN .Lla-relax-align0 0x4
+# RELAX-RELOC-NEXT:     0x34 R_LARCH_ALIGN .Lla-relax-align0 0x5
+# RELAX-RELOC-NEXT:     0x50 R_LARCH_ALIGN .Lla-relax-align0 0x4
+# RELAX-RELOC-NEXT:     0x60 R_LARCH_ALIGN .Lla-relax-align0 0xB04
+# RELAX-RELOC-NEXT:     0x70 R_LARCH_ALIGN .Lla-relax-align0 0x4
+# RELAX-RELOC-NEXT:   }
+# RELAX-RELOC-NEXT:   Section ({{.*}}) .rela.text2 {
+# RELAX-RELOC-NEXT:     0x0 R_LARCH_ALIGN .Lla-relax-align1 0x4
+# RELAX-RELOC-NEXT:   }
+# RELOC-NEXT:       ]

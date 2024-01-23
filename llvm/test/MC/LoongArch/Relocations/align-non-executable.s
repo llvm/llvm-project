@@ -1,3 +1,8 @@
+## A label difference separated by an alignment directive, when the
+## referenced symbols are in a non-executable section with instructions,
+## should generate ADD/SUB relocations.
+## https://github.com/llvm/llvm-project/pull/76552
+
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s \
 # RUN:     | llvm-readobj -r - | FileCheck --check-prefixes=CHECK,RELAX %s
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax %s \
