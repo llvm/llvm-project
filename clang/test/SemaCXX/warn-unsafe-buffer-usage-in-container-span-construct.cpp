@@ -73,6 +73,26 @@ namespace construct_wt_ptr_size {
     }
     return std::span<int>{p, 10};                    // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
   }
+
+  void notWarnSafeCases(unsigned n, int *p) {
+    int X;
+    unsigned Y = 10;
+    std::span<int> S = std::span{&X, 1}; // no-warning
+    int Arr[10];
+
+    S = std::span{&X, 2};                // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    S = std::span{new int[10], 10};      // no-warning
+    S = std::span{new int[n], n};        // no-warning
+    S = std::span{new int, 1};           // no-warning
+    S = std::span{new int, X};           // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    S = std::span{new int[n--], n--};    // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    S = std::span{new int[10], 11};      // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+    S = std::span{new int[10], 9};       // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}  // not smart enough to tell its safe
+    S = std::span{new int[10], Y};       // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}  // not smart enough to tell its safe
+    S = std::span{Arr, 10};              // no-warning
+    S = std::span{Arr, Y};               // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}  // not smart enough to tell its safe
+    S = std::span{p, 0};                 // no-warning
+  }
 } // namespace construct_wt_ptr_size
 
 namespace construct_wt_begin_end {
