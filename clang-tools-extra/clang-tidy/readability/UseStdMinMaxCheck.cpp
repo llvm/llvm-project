@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 
 static const llvm::StringRef AlgorithmHeader("<algorithm>");
 
-static bool MinCondition(const BinaryOperator::Opcode &Op, const Expr *CondLhs,
+static bool minCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
                          const Expr *CondRhs, const Expr *AssignLhs,
                          const Expr *AssignRhs, const ASTContext &Context) {
   if ((Op == BO_LT || Op == BO_LE) &&
@@ -34,7 +34,7 @@ static bool MinCondition(const BinaryOperator::Opcode &Op, const Expr *CondLhs,
   return false;
 }
 
-static bool MaxCondition(const BinaryOperator::Opcode &Op, const Expr *CondLhs,
+static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
                          const Expr *CondRhs, const Expr *AssignLhs,
                          const Expr *AssignRhs, const ASTContext &Context) {
   if ((Op == BO_LT || Op == BO_LE) &&
@@ -51,16 +51,15 @@ static bool MaxCondition(const BinaryOperator::Opcode &Op, const Expr *CondLhs,
 }
 
 static std::string
-CreateReplacement(const bool UseMax, const BinaryOperator::Opcode &Op,
-                  const Expr *CondLhs, const Expr *CondRhs,
-                  const Expr *AssignLhs, const ASTContext &Context,
-                  const SourceManager &Source, const LangOptions &LO,
-                  const StringRef &FunctionName) {
-  const auto CondLhsStr = Lexer::getSourceText(
+createReplacement(const BinaryOperator::Opcode Op, const Expr *CondLhs,
+                  const Expr *CondRhs, const Expr *AssignLhs,
+                  const ASTContext &Context, const SourceManager &Source,
+                  const LangOptions &LO, StringRef FunctionName) {
+  const llvm::StringRef CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
-  const auto CondRhsStr = Lexer::getSourceText(
+  const llvm::StringRef CondRhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
-  const auto AssignLhsStr = Lexer::getSourceText(
+  const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
   return (AssignLhsStr + " = " + FunctionName +
           ((CondLhs->getType() != CondRhs->getType())
@@ -126,25 +125,24 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
     return;
 
-  auto ReplaceAndDiagnose = [&](bool UseMax) {
-    const llvm::StringRef FunctionName = UseMax ? "std::max" : "std::min";
-    diag(IfLocation, "use `std::%0` instead of `%1`")
-        << (UseMax ? "max" : "min") << OperatorStr
+  auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
+    diag(IfLocation, "use `%0` instead of `%1`")
+        << FunctionName << OperatorStr
         << FixItHint::CreateReplacement(
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
-               CreateReplacement(UseMax, BinaryOpcode, CondLhs, CondRhs,
-                                 AssignLhs, Context, Source, LO, FunctionName))
+               createReplacement(BinaryOpcode, CondLhs, CondRhs, AssignLhs,
+                                 Context, Source, LO, FunctionName))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };
 
-  if (MinCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
+  if (minCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
                    Context)) {
-    ReplaceAndDiagnose(/*UseMax=*/false);
-  } else if (MaxCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
+    ReplaceAndDiagnose("std::min");
+  } else if (maxCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
                           Context)) {
-    ReplaceAndDiagnose(/*UseMax=*/true);
+    ReplaceAndDiagnose("std::max");
   }
 }
 
