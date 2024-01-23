@@ -7,7 +7,6 @@ add_libc_test(
   SRCS
     atof_test.cpp
   DEPENDS
-    libc.src.__support.CPP.limits
     libc.src.errno.errno
     libc.src.stdlib.atof
 )
@@ -63,7 +62,6 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     SRCS
       strtod_test.cpp
     DEPENDS
-      libc.src.__support.CPP.limits
       libc.src.__support.FPUtil.fenv_impl
       libc.src.errno.errno
       libc.src.stdlib.strtod
@@ -77,7 +75,6 @@ add_fp_unittest(
   SRCS
     strtof_test.cpp
   DEPENDS
-    libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fenv_impl
     libc.src.errno.errno
     libc.src.stdlib.strtof
@@ -137,7 +134,6 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     SRCS
       strtold_test.cpp
     DEPENDS
-      libc.src.__support.CPP.limits
       libc.src.__support.uint128
       libc.src.errno.errno
       libc.src.stdlib.strtold

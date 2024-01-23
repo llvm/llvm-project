@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/time/mktime.h"
 #include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"

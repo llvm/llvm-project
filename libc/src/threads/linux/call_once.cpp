@@ -9,7 +9,7 @@
 #include "Futex.h"
 
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/limits.h"     // For INT_MAX.
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/threads/call_once.h"

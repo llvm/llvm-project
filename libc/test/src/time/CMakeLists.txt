@@ -139,7 +139,6 @@ add_libc_test(
     clock_test.cpp
   DEPENDS
     libc.include.time
-    libc.src.__support.CPP.limits
     libc.src.errno.errno
     libc.src.time.clock
 )

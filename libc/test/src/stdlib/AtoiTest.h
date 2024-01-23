@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN, LLONG_MAX, LLONG_MIN
 #include "src/__support/CPP/type_traits.h"
 #include "test/UnitTest/Test.h"
 

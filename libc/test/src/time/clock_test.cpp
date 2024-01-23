@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/limits.h"
 #include "src/time/clock.h"
 #include "test/UnitTest/Test.h"
 
