@@ -15,13 +15,14 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST(LlvmLibcGetauxvalTest, Basic) {
-  EXPECT_THAT(LIBC_NAMESPACE::getauxval(AT_PAGESZ), returns(GT(0ul)));
+  EXPECT_THAT(LIBC_NAMESPACE::getauxval(AT_PAGESZ),
+              returns(GT(0ul)).with_errno(EQ(0)));
   const char *filename;
   auto getfilename = [&filename]() {
     auto value = LIBC_NAMESPACE::getauxval(AT_EXECFN);
     filename = reinterpret_cast<const char *>(value);
     return value;
   };
-  EXPECT_THAT(getfilename(), returns(NE(0ul)));
+  EXPECT_THAT(getfilename(), returns(NE(0ul)).with_errno(EQ(0)));
   ASSERT_TRUE(LIBC_NAMESPACE::strstr(filename, "getauxval_test") != nullptr);
 }
