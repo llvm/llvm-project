@@ -1,6 +1,3 @@
-// UNSUPPORTED: target={{.*windows.*}}
-// __llvm_orderfile_dump() is not supported on Windows.
-
 // Testing profile generate.
 // RUN: %clang_profgen %s -S -emit-llvm -o - | FileCheck %s --check-prefix=PROFGEN
 // RUN: %clang_pgogen %s -S -emit-llvm -o - | FileCheck %s --check-prefix=PROFGEN
@@ -38,12 +35,8 @@ int main() {
     return 2;
   // PROFGEN: %{{.*}} = call {{(signext )*}}i32 @__llvm_profile_dump()
   // PROFUSE-NOT: %{{.*}} = call {{(signext )*}}i32 @__llvm_profile_dump()
-  __llvm_orderfile_dump();
-  // PROFGEN: %{{.*}} = call {{(signext )*}}i32 @__llvm_orderfile_dump()
-  // PROFUSE-NOT: %{{.*}} = call {{(signext )*}}i32 @__llvm_orderfile_dump()
   return z + bar() - 11;
 }
 
 // PROFUSE-NOT: declare void @__llvm_profile_set_filename(ptr noundef)
 // PROFUSE-NOT: declare signext i32 @__llvm_profile_dump()
-// PROFUSE-NOT: declare signext i32 @__llvm_orderfile_dump()
