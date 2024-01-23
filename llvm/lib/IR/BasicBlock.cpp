@@ -74,9 +74,6 @@ void BasicBlock::convertToNewDbgValues() {
   for (Instruction &I : make_early_inc_range(InstList)) {
     assert(!I.DbgMarker && "DbgMarker already set on old-format instrs?");
     if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-      if (isa<DbgAssignIntrinsic>(DVI))
-        continue;
-
       // Convert this dbg.value to a DPValue.
       DPValue *Value = new DPValue(DVI);
       DPVals.push_back(Value);
