@@ -2266,8 +2266,6 @@ public:
         if (!isa<PointerType>(destType))
           return;
 
-        const Expr *subExpr = ECE->getSubExpr();
-
         const uint64_t dSize =
             Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
 
