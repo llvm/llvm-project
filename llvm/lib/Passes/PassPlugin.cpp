@@ -14,20 +14,37 @@
 using namespace llvm;
 
 Expected<PassPlugin> PassPlugin::Load(const std::string &Filename) {
+  // First, see if the plugin is available in the current executable, with the
+  // suffix of the symbol being given by the `Filename` otherwise, try loading
+  // the plugin via the file
   std::string Error;
-  auto Library =
-      sys::DynamicLibrary::getPermanentLibrary(Filename.c_str(), &Error);
-  if (!Library.isValid())
-    return make_error<StringError>(Twine("Could not load library '") +
-                                       Filename + "': " + Error,
-                                   inconvertibleErrorCode());
 
-  PassPlugin P{Filename, Library};
+  auto Library = sys::DynamicLibrary::getPermanentLibrary(nullptr, &Error);
+  if (!Library.isValid())
+    return make_error<StringError>("Could not load current executable",
+                                   inconvertibleErrorCode());
 
   // llvmGetPassPluginInfo should be resolved to the definition from the plugin
   // we are currently loading.
+  std::string symbolName = "llvmGetPassPluginInfo" + Filename;
   intptr_t getDetailsFn =
-      (intptr_t)Library.getAddressOfSymbol("llvmGetPassPluginInfo");
+      (intptr_t)Library.getAddressOfSymbol(symbolName.c_str());
+
+  if (!getDetailsFn) {
+    Library = sys::DynamicLibrary::getPermanentLibrary(
+        (Filename == "") ? nullptr : Filename.c_str(), &Error);
+    if (!Library.isValid())
+      return make_error<StringError>(Twine("Could not load library '") +
+                                         Filename + "': " + Error,
+                                     inconvertibleErrorCode());
+
+    // llvmGetPassPluginInfo should be resolved to the definition from the
+    // plugin we are currently loading.
+    getDetailsFn =
+        (intptr_t)Library.getAddressOfSymbol("llvmGetPassPluginInfo");
+  }
+
+  PassPlugin P{Filename, Library};
 
   if (!getDetailsFn)
     // If the symbol isn't found, this is probably a legacy plugin, which is an
