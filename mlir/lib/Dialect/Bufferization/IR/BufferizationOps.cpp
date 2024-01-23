@@ -505,9 +505,7 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
     // of the source.
     for (Operation *pos = cloneOp->getNextNode(); pos != redundantDealloc;
          pos = pos->getNextNode()) {
-      // If the next node is nullptr, it indicates there is no redundantDealloc
-      // after cloneOp, means that there is a redundantDealloc preseding
-      // cloneOp.
+      // Bail if we run out of operations while looking for a deallocation op.
       if (!pos)
         return failure();
       auto effectInterface = dyn_cast<MemoryEffectOpInterface>(pos);
