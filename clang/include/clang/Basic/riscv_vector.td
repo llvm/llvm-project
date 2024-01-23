@@ -2479,6 +2479,8 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }
       }] in {
 
+    // Since the vcreate_v uses LFixedLog2LMUL, setting the Log2LMUL to [-3] can
+    // avoid creating the intrinsics which contain the same name and prototype.
     let Log2LMUL = [-3] in {
       defm : RVVNonTupleVCreateBuiltin<1, [0]>;
       defm : RVVNonTupleVCreateBuiltin<2, [0, 1]>;
