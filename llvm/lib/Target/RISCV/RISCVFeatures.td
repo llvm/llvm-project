@@ -115,7 +115,7 @@ def FeatureStdExtZicfilp
                        "'Zicfilp' (Landing pad)">;
 def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfilp),
-                                         "'Zicfilp' (Landing pad)">;
+                                          "'Zicfilp' (Landing pad)">;
 
 def FeatureStdExtZicfiss
     : SubtargetFeature<"experimental-zicfiss", "HasStdExtZicfiss", "true",
