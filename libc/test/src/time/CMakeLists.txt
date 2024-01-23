@@ -70,8 +70,8 @@ add_libc_unittest(
   HDRS
     TmMatcher.h
   DEPENDS
-    libc.src.time.gmtime
     libc.src.__support.CPP.limits
+    libc.src.time.gmtime
 )
 
 add_libc_unittest(
@@ -98,8 +98,8 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
-    libc.src.time.mktime
     libc.src.__support.CPP.limits
+    libc.src.time.mktime
 )
 
 # Sleeping is not supported on older NVPTX architectures.
@@ -126,8 +126,9 @@ add_libc_unittest(
     time_test.cpp
   DEPENDS
     libc.include.time
-    libc.src.time.time
+    libc.src.__support.CPP.limits
     libc.src.errno.errno
+    libc.src.time.time
 )
 
 add_libc_test(

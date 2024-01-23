@@ -10,6 +10,7 @@ add_entrypoint_object(
     call_once.h
   DEPENDS
     libc.include.threads
+    libc.src.__support.CPP.limits
     libc.src.__support.threads.callonce
 )
 
