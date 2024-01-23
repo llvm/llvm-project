@@ -42,8 +42,8 @@ namespace {
 /// ```
 ///
 /// This results in the reduce computation of the linalg operation.
-/// In case linalg op has multiple uses we optimize only only if
-/// each use is a small portion of the result i.e. each use is an
+/// In case linalg op has multiple uses we optimize only if each
+/// use is a small portion of the result i.e. each use is an
 /// extract_slice.
 struct BubbleUpExtractSliceOpPattern
     : OpRewritePattern<tensor::ExtractSliceOp> {
@@ -76,11 +76,11 @@ struct BubbleUpExtractSliceOpPattern
         return rewriter.notifyMatchFailure(sliceOp,
                                            "expected single use of linalg op");
       if (!sliceOpOther.hasUnitStride())
-        return rewriter.notifyMatchFailure(sliceOp, "expected unit stride");
+        return rewriter.notifyMatchFailure(sliceOpOther, "expected unit stride");
 
       if (sliceOpOther.getType().getRank() !=
           sliceOpOther.getSourceType().getRank())
-        return rewriter.notifyMatchFailure(sliceOp,
+        return rewriter.notifyMatchFailure(sliceOpOther,
                                            "expected no rank reduction");
     }
 
