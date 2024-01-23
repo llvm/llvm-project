@@ -13,7 +13,24 @@
 #include "src/__support/CPP/type_traits/is_signed.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
+// Coax GCC to NOT attempt to include_next limits.h from glibc. llvmlibc should
+// include this file rather than <limits.h> directy for this reason.
+#ifndef __clang__
+#define _LIBC_LIMITS_H_
+#endif
 #include <limits.h> // CHAR_BIT
+
+// GCC's limits.h only defines these for __STDC_VERSION__ >= 199901L, i.e. not
+// C++.
+#ifndef LLONG_MAX
+#define LLONG_MAX __LONG_LONG_MAX__
+#endif
+#ifndef LLONG_MIN
+#define LLONG_MIN (-LONG_MAX - 1LL)
+#endif
+#ifndef ULLONG_MAX
+#define ULLONG_MAX (~0ULL)
+#endif
 
 namespace LIBC_NAMESPACE {
 namespace cpp {

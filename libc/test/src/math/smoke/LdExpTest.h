@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 
+#include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/NormalFloat.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 

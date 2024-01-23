@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt128.h"
 #include "src/errno/libc_errno.h"
@@ -13,7 +14,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 #if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
