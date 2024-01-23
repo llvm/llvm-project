@@ -1122,7 +1122,6 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
     ProgramStateRef StateNotFailed =
         State->BindExpr(CE, C.getLocationContext(), RetVal);
     SValBuilder &SVB = C.getSValBuilder();
-    ASTContext &ASTC = C.getASTContext();
     auto Cond =
         SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(CE->getType()),
                       SVB.getConditionType())
