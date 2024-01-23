@@ -49,14 +49,16 @@ using PolyhedronV = IntMatrix;
 using ConeH = PolyhedronH;
 using ConeV = PolyhedronV;
 
-inline ConeH defineHRep(int numVars, int numSymbols = 0) {
+inline PolyhedronH defineHRep(int numVars, int numSymbols = 0) {
   // We don't distinguish between domain and range variables, so
   // we set the number of domain variables as 0 and the number of
   // range variables as the number of actual variables.
-  // There are no symbols (we don't work with parametric cones) and no local
-  // (existentially quantified) variables.
+  // numSymbols is the number of parameters; it is
+  // There are no local (existentially quantified) variables.
+  // The number of symbols is the number of parameters. By default, we consider
+  // nonparametric polyhedra.
   // Once the cone is defined, we use `addInequality()` to set inequalities.
-  return ConeH(PresburgerSpace::getSetSpace(/*numDims=*/numVars,
+  return PolyhedronH(PresburgerSpace::getSetSpace(/*numDims=*/numVars,
                                             /*numSymbols=*/numSymbols,
                                             /*numLocals=*/0));
 }
