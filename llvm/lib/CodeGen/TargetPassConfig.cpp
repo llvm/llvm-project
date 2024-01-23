@@ -1246,7 +1246,7 @@ void TargetPassConfig::addMachinePasses() {
         // enabled, this may result in performance regression.
         WithColor::warning()
             << "Using AutoFDO without FSDiscriminator for MFS may regress "
-               "performance.";
+               "performance.\n";
       }
     }
     addPass(createMachineFunctionSplitterPass());
