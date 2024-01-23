@@ -63,6 +63,12 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
   // __iterator_category<_Iter>>::value,
   //       "lower_bound() is a multipass algorithm and requires forward iterator or better");
 
+  // split the step 0 scenario: this allows us to match worst-case complexity
+  // when replacing linear search
+  if (__first == __last || !std::__invoke(__comp, std::__invoke(__proj, *__first), __value))
+    return __first;
+  ++__first;
+
   using _Distance = typename iterator_traits<_Iter>::difference_type;
   for (_Distance __step = 1; __first != __last; __step <<= 1) {
     auto __it   = __first;
