@@ -216,7 +216,7 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   // We copy these columns and return them.
   ParamPoint vertex =
       equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/numEqs - 1,
-                             /*fromRow=*/numEqs, /*toRow=*/numCols);
+                             /*fromColumn=*/numEqs, /*toColumn=*/numCols - 1);
   for (unsigned i = 0; i < numEqs; ++i)
     vertex.negateRow(i);
 

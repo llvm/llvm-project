@@ -125,7 +125,7 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
   EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
 }
 
-TEST(BarvinokTest, computeNumTerms) {
+TEST(BarvinokTest, computeNumTermsCone) {
   // The following test is taken from
   // Verdoolaege, Sven, et al. "Counting integer points in parametric
   // polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
@@ -233,4 +233,20 @@ TEST(BarvinokTest, computeNumTerms) {
     for (unsigned j = 0; j < 2; j++)
       for (unsigned k = 0; k < 2; k++)
         EXPECT_EQ(count[i][j][k], 1);
+}
+
+TEST(BarvinokTest, computeNumTermsPolytope) {
+  IntMatrix ineqs = makeIntMatrix(6, 4, {{1, 0, 0, 0},
+                                         {0, 1, 0, 0},
+                                         {0, 0, 1, 0},
+                                         {-1, 0, 0, 1},
+                                         {0, -1, 0, 1},
+                                         {0, 0, -1, 1}});
+    PolyhedronH poly = defineHRep(3);
+    for (unsigned i = 0; i < 6; i++)
+        poly.addInequality(ineqs.getRow(i));
+
+  std::vector<std::pair<PresburgerRelation, GeneratingFunction>> count = polytopeGeneratingFunction(poly);
+  EXPECT_EQ(count.size(), 1u);
+
 }
