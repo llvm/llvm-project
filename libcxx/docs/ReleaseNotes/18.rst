@@ -237,6 +237,29 @@ LLVM 20
 ABI Affecting Changes
 ---------------------
 
+- When the shared/static library is built with ``-fno-exceptions``, the behavior of ``operator new`` was changed
+  to make it standards-conforming. In LLVM 17 and before, the throwing versions of ``operator new`` would return
+  ``nullptr`` upon failure to allocate, when the shared/static library was built with exceptions disabled. This
+  was non-conforming, since the throwing versions of ``operator new`` are never expected to return ``nullptr``, and
+  this non-conformance could actually lead to miscompiles in subtle cases.
+
+  Starting in LLVM 18, the throwing versions of ``operator new`` will abort the program when they fail to allocate
+  if the shared/static library has been built with ``-fno-exceptions``. This is consistent with the behavior of all
+  other potentially-throwing functions in the library, which abort the program instead of throwing when ``-fno-exceptions``
+  is used.
+
+  Furthermore, when the shared/static library is built with ``-fno-exceptions``, users who override the throwing
+  version of ``operator new`` will now need to also override the ``std::nothrow_t`` version of ``operator new`` if
+  they want to use it. Indeed, this is because there is no way to implement a conforming ``operator new(nothrow)``
+  from a conforming potentially-throwing ``operator new`` when compiled with ``-fno-exceptions``. In that case, using
+  ``operator new(nothrow)`` without overriding it explicitly but after overriding the throwing ``operator new`` will
+  result in an error.
+
+  Note that this change only impacts vendors/users that build the shared/static library themselves and pass
+  ``-DLIBCXX_ENABLE_EXCEPTIONS=OFF``, which is not the default configuration. If you are using the default
+  configuration of the library, the libc++ shared/static library will be built with exceptions enabled, and
+  there is no change between LLVM 17 and LLVM 18, even for users who build their own code using ``-fno-exceptions``.
+
 - The symbol of a non-visible function part of ``std::system_error`` was removed.
   This is not a breaking change as the private function ``__init`` was never referenced internally outside of the dylib.
 
