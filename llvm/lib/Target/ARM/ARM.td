@@ -704,6 +704,8 @@ def HasV9_4aOps   : SubtargetFeature<"v9.4a", "HasV9_4aOps", "true",
                                    "Support ARM v9.4a instructions",
                                    [HasV8_9aOps, HasV9_3aOps]>;
 
+// Armv9.5-A is a v9-only architecture. From v9.5-A onwards there's no mapping
+// to an equivalent v8.x version.
 def HasV9_5aOps   : SubtargetFeature<"v9.5a", "HasV9_5aOps", "true",
                                    "Support ARM v9.5a instructions",
                                    [HasV9_4aOps]>;
