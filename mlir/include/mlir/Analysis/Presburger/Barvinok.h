@@ -49,7 +49,7 @@ using PolyhedronV = IntMatrix;
 using ConeH = PolyhedronH;
 using ConeV = PolyhedronV;
 
-inline ConeH defineHRep(int numVars) {
+inline ConeH defineHRep(int numVars, int numSymbols = 0) {
   // We don't distinguish between domain and range variables, so
   // we set the number of domain variables as 0 and the number of
   // range variables as the number of actual variables.
@@ -57,7 +57,7 @@ inline ConeH defineHRep(int numVars) {
   // (existentially quantified) variables.
   // Once the cone is defined, we use `addInequality()` to set inequalities.
   return ConeH(PresburgerSpace::getSetSpace(/*numDims=*/numVars,
-                                            /*numSymbols=*/0,
+                                            /*numSymbols=*/numSymbols,
                                             /*numLocals=*/0));
 }
 

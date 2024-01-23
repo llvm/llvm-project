@@ -363,7 +363,7 @@ Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
   Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
   for (unsigned i = fromRow; i <= toRow; i++)
     for (unsigned j = fromColumn; j <= toColumn; j++)
-      subMatrix(i, j) = at(i, j);
+      subMatrix(i - fromRow, j - fromColumn) = at(i, j);
   return subMatrix;
 }
 

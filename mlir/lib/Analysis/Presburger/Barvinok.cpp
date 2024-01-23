@@ -360,8 +360,7 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   // those numbers whose binary representation has numVars 1's and the
   // rest 0's.
   unsigned upperBound = ((1ul << numVars) - 1ul) << (numIneqs - numVars);
-  for (std::bitset<16> indicator(((1ul << numVars) - 1ul)
-                                 << (numIneqs - numVars));
+  for (std::bitset<16> indicator(upperBound);
        indicator.to_ulong() <= upperBound;
        indicator = std::bitset<16>(indicator.to_ulong() - 1)) {
 
@@ -375,9 +374,10 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
     // These are column-wise splits of the inequalities;
     // a2 stores the coefficients of the variables, and
     // b2c2 stores the coefficients of the parameters and the constant term.
-    a2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - 1, 0, numVars - 1));
-    b2c2 = FracMatrix(
-        remainder.getSubMatrix(0, numIneqs - 1, numVars, numVars + numSymbols));
+    a2 = FracMatrix(
+        remainder.getSubMatrix(0, numIneqs - numVars - 1, 0, numVars - 1));
+    b2c2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - numVars - 1, numVars,
+                                             numVars + numSymbols));
 
     // Find the vertex, if any, corresponding to the current subset of
     // inequalities.
