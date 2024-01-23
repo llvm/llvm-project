@@ -1906,6 +1906,16 @@ foreach Inst = ["XVFLOGB_D", "XVFCLASS_D", "XVFSQRT_D", "XVFRECIP_D", "XVFRSQRT_
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4f64 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
 
+// 256-Bit vector FP approximate reciprocal operation
+let Predicates = [HasFrecipe] in {
+foreach Inst = ["XVFRECIPE_S", "XVFRSQRTE_S"] in
+  def : Pat<(deriveLASXIntrinsic<Inst>.ret (v8f32 LASX256:$xj)),
+            (!cast<LAInst>(Inst) LASX256:$xj)>;
+foreach Inst = ["XVFRECIPE_D", "XVFRSQRTE_D"] in
+  def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4f64 LASX256:$xj)),
+            (!cast<LAInst>(Inst) LASX256:$xj)>;
+}
+
 def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),
           (XVPICKVE_W v8f32:$xj, (to_valid_timm timm:$imm))>;
 def : Pat<(int_loongarch_lasx_xvpickve_d_f v4f64:$xj, timm:$imm),
