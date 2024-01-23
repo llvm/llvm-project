@@ -641,11 +641,11 @@ public:
   template <class... _Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
 #if _LIBCPP_STD_VER >= 17
-      reference
-      emplace_back(_Args&&... __args);
+  reference
+  emplace_back(_Args&&... __args);
 #else
-      void
-      emplace_back(_Args&&... __args);
+  void
+  emplace_back(_Args&&... __args);
 #endif
 
 #if _LIBCPP_STD_VER >= 23
@@ -831,8 +831,8 @@ private:
   // For more details, see the "Using libc++" documentation page or
   // the documentation for __sanitizer_annotate_contiguous_container.
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_contiguous_container(
-      const void* __old_mid, const void* __new_mid) const {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
 #ifndef _LIBCPP_HAS_NO_ASAN

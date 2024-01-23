@@ -29,8 +29,8 @@ private:
   mutex_type& __m_;
 
 public:
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI explicit lock_guard(mutex_type& __m)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
+  _LIBCPP_NODISCARD_EXT
+  _LIBCPP_HIDE_FROM_ABI explicit lock_guard(mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
       : __m_(__m) {
     __m_.lock();
   }

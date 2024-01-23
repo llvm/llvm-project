@@ -292,8 +292,8 @@ operator>=(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y) {
 #if _LIBCPP_STD_VER >= 20
 template <class _Iter1, three_way_comparable_with<_Iter1> _Iter2>
 inline _LIBCPP_HIDE_FROM_ABI constexpr auto
-operator<=>(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
-    -> compare_three_way_result_t<_Iter1, _Iter2> {
+operator<=>(const move_iterator<_Iter1>& __x,
+            const move_iterator<_Iter2>& __y) -> compare_three_way_result_t<_Iter1, _Iter2> {
   return __x.base() <=> __y.base();
 }
 #endif // _LIBCPP_STD_VER >= 20

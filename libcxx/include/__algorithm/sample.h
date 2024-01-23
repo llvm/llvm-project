@@ -34,13 +34,13 @@ template <class _AlgPolicy,
           class _SampleIterator,
           class _Distance,
           class _UniformRandomNumberGenerator>
-_LIBCPP_HIDE_FROM_ABI _SampleIterator __sample(
-    _PopulationIterator __first,
-    _PopulationSentinel __last,
-    _SampleIterator __output_iter,
-    _Distance __n,
-    _UniformRandomNumberGenerator& __g,
-    input_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _SampleIterator
+__sample(_PopulationIterator __first,
+         _PopulationSentinel __last,
+         _SampleIterator __output_iter,
+         _Distance __n,
+         _UniformRandomNumberGenerator& __g,
+         input_iterator_tag) {
   _Distance __k = 0;
   for (; __first != __last && __k < __n; ++__first, (void)++__k)
     __output_iter[__k] = *__first;
@@ -59,13 +59,13 @@ template <class _AlgPolicy,
           class _SampleIterator,
           class _Distance,
           class _UniformRandomNumberGenerator>
-_LIBCPP_HIDE_FROM_ABI _SampleIterator __sample(
-    _PopulationIterator __first,
-    _PopulationSentinel __last,
-    _SampleIterator __output_iter,
-    _Distance __n,
-    _UniformRandomNumberGenerator& __g,
-    forward_iterator_tag) {
+_LIBCPP_HIDE_FROM_ABI _SampleIterator
+__sample(_PopulationIterator __first,
+         _PopulationSentinel __last,
+         _SampleIterator __output_iter,
+         _Distance __n,
+         _UniformRandomNumberGenerator& __g,
+         forward_iterator_tag) {
   _Distance __unsampled_sz = _IterOps<_AlgPolicy>::distance(__first, __last);
   for (__n = std::min(__n, __unsampled_sz); __n != 0; ++__first) {
     _Distance __r = uniform_int_distribution<_Distance>(0, --__unsampled_sz)(__g);
@@ -83,12 +83,12 @@ template <class _AlgPolicy,
           class _SampleIterator,
           class _Distance,
           class _UniformRandomNumberGenerator>
-_LIBCPP_HIDE_FROM_ABI _SampleIterator __sample(
-    _PopulationIterator __first,
-    _PopulationSentinel __last,
-    _SampleIterator __output_iter,
-    _Distance __n,
-    _UniformRandomNumberGenerator& __g) {
+_LIBCPP_HIDE_FROM_ABI _SampleIterator
+__sample(_PopulationIterator __first,
+         _PopulationSentinel __last,
+         _SampleIterator __output_iter,
+         _Distance __n,
+         _UniformRandomNumberGenerator& __g) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "N must be a positive number.");
 
   using _PopIterCategory = typename _IterOps<_AlgPolicy>::template __iterator_category<_PopulationIterator>;

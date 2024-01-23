@@ -70,10 +70,10 @@ private:
   static _LIBCPP_CONSTEXPR const size_t _EDt               = numeric_limits<_Engine_result_type>::digits;
   static _LIBCPP_CONSTEXPR const _Working_result_type __y0 = __w0 >= _WDt ? 0 : (_Rp >> __w0) << __w0;
   static _LIBCPP_CONSTEXPR const _Working_result_type __y1 = __w0 >= _WDt - 1 ? 0 : (_Rp >> (__w0 + 1)) << (__w0 + 1);
-  static _LIBCPP_CONSTEXPR const
-      _Engine_result_type __mask0 = __w0 > 0 ? _Engine_result_type(~0) >> (_EDt - __w0) : _Engine_result_type(0);
-  static _LIBCPP_CONSTEXPR const _Engine_result_type __mask1 =
-      __w0 < _EDt - 1 ? _Engine_result_type(~0) >> (_EDt - (__w0 + 1)) : _Engine_result_type(~0);
+  static _LIBCPP_CONSTEXPR const _Engine_result_type
+      __mask0 = __w0 > 0 ? _Engine_result_type(~0) >> (_EDt - __w0) : _Engine_result_type(0);
+  static _LIBCPP_CONSTEXPR const _Engine_result_type
+      __mask1 = __w0 < _EDt - 1 ? _Engine_result_type(~0) >> (_EDt - (__w0 + 1)) : _Engine_result_type(~0);
 
 public:
   static _LIBCPP_CONSTEXPR const result_type _Min = 0;

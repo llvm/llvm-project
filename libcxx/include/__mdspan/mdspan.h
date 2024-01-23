@@ -269,8 +269,8 @@ private:
 
 template <class _ElementType, class... _OtherIndexTypes>
   requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
-explicit mdspan(_ElementType*, _OtherIndexTypes...)
-    -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
+explicit mdspan(_ElementType*,
+                _OtherIndexTypes...) -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
 
 template <class _Pointer>
   requires(is_pointer_v<remove_reference_t<_Pointer>>)

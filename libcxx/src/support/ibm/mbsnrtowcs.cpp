@@ -18,12 +18,12 @@
 // Returns (size_t) -1 when an invalid sequence is encountered.
 // Leaves *`src` pointing to the next character to convert or NULL
 // if a null character was converted from *`src`.
-_LIBCPP_EXPORTED_FROM_ABI size_t mbsnrtowcs(
-    wchar_t* __restrict dst,
-    const char** __restrict src,
-    size_t src_size_bytes,
-    size_t max_dest_chars,
-    mbstate_t* __restrict ps) {
+_LIBCPP_EXPORTED_FROM_ABI size_t
+mbsnrtowcs(wchar_t* __restrict dst,
+           const char** __restrict src,
+           size_t src_size_bytes,
+           size_t max_dest_chars,
+           mbstate_t* __restrict ps) {
   const size_t terminated_sequence = static_cast<size_t>(0);
   const size_t invalid_sequence    = static_cast<size_t>(-1);
   const size_t incomplete_sequence = static_cast<size_t>(-2);
