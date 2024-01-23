@@ -2129,6 +2129,16 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
           << A->getSpelling() << Val;
     }
   }
+
+  // Forward the -mglobal-merge option for explicit control over the pass.
+  if (Arg *A = Args.getLastArg(options::OPT_mglobal_merge,
+                               options::OPT_mno_global_merge)) {
+    CmdArgs.push_back("-mllvm");
+    if (A->getOption().matches(options::OPT_mno_global_merge))
+      CmdArgs.push_back("-riscv-enable-global-merge=false");
+    else
+      CmdArgs.push_back("-riscv-enable-global-merge=true");
+  }
 }
 
 void Clang::AddSparcTargetArgs(const ArgList &Args,
