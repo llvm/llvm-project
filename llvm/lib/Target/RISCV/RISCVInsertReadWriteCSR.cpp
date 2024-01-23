@@ -66,29 +66,29 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
   bool Changed = false;
   MachineInstr *LastFRMChanger = nullptr;
   unsigned CurrentRM = RISCVFPRndMode::DYN;
-  std::optional<Register> SavedFRM;
+  Register SavedFRM;
 
   for (MachineInstr &MI : MBB) {
     if (MI.getOpcode() == RISCV::SwapFRMImm ||
         MI.getOpcode() == RISCV::WriteFRMImm) {
       CurrentRM = MI.getOperand(0).getImm();
-      SavedFRM = std::nullopt;
+      SavedFRM = Register();
       continue;
     }
 
     if (MI.getOpcode() == RISCV::WriteFRM) {
       CurrentRM = RISCVFPRndMode::DYN;
-      SavedFRM = std::nullopt;
+      SavedFRM = Register();
       continue;
     }
 
     if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::FRM)) {
       // Restore FRM before unknown operations.
-      if (SavedFRM.has_value())
+      if (SavedFRM.isValid())
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRM))
-            .addReg(*SavedFRM);
+            .addReg(SavedFRM);
       CurrentRM = RISCVFPRndMode::DYN;
-      SavedFRM = std::nullopt;
+      SavedFRM = Register();
       continue;
     }
 
@@ -111,11 +111,11 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
     if (InstrRM == CurrentRM)
       continue;
 
-    if (!SavedFRM.has_value()) {
+    if (!SavedFRM.isValid()) {
       // Save current FRM value to SavedFRM.
       MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
       SavedFRM = MRI->createVirtualRegister(&RISCV::GPRRegClass);
-      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm), *SavedFRM)
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm), SavedFRM)
           .addImm(InstrRM);
     } else {
       // Don't need to save current FRM when SavedFRM having value.
@@ -126,11 +126,11 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
   }
 
   // Restore FRM if needed.
-  if (SavedFRM.has_value()) {
+  if (SavedFRM.isValid()) {
     assert(LastFRMChanger && "Expected valid pointer.");
     MachineInstrBuilder MIB =
         BuildMI(*MBB.getParent(), {}, TII->get(RISCV::WriteFRM))
-            .addReg(*SavedFRM);
+            .addReg(SavedFRM);
     MBB.insertAfter(LastFRMChanger, MIB);
   }
 
