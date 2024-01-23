@@ -14,6 +14,7 @@
 #  define NOMINMAX
 #  include <windows.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
+#  include <array>
 #  include <csignal>
 #  include <sys/sysctl.h>
 #  include <sys/types.h>
@@ -59,35 +60,31 @@ bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
 
 #elif defined(__APPLE__) || defined(__FreeBSD__)
 
+// Returns true if the current process is being debugged (either
+// running under the debugger or has a debugger attached post facto).
 bool __is_debugger_present() noexcept {
   // Technical Q&A QA1361: Detecting the Debugger
   // https://developer.apple.com/library/archive/qa/qa1361/_index.html
 
-  int junk;
-  int mib[4];
-  struct kinfo_proc info;
-  size_t size;
+  // Initialize mib, which tells 'sysctl' to fetch the information about the current process.
 
-  // Initialize the flags so that, if sysctl fails for some bizarre
+  array mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, ::getpid()};
+
+  // Initialize the flags so that, if 'sysctl' fails for some bizarre
   // reason, we get a predictable result.
 
-  info.kp_proc.p_flag = 0;
-
-  // Initialize mib, which tells sysctl the info we want, in this case
-  // we're looking for information about a specific process ID.
-
-  mib[0] = CTL_KERN;
-  mib[1] = KERN_PROC;
-  mib[2] = KERN_PROC_PID;
-  mib[3] = getpid();
+  struct kinfo_proc info {};
 
   // Call sysctl.
+  // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sysctl.3.html
 
-  size = sizeof(info);
-  junk = sysctl(mib, sizeof(mib) / sizeof(*mib), &info, &size, NULL, 0);
-  _LIBCPP_ASSERT_INTERNAL(junk == 0, "'sysctl' runtime error");
+  size_t info_size = sizeof(info);
+  if (::sysctl(mib.data(), mib.size(), &info, &info_size, nullptr, 0) != 0) {
+    _LIBCPP_ASSERT_INTERNAL(false, "'sysctl' runtime error");
+    return false;
+  }
 
-  // We're being debugged if the P_TRACED flag is set.
+  // If the process is being debugged if the 'P_TRACED' flag is set.
   // https://github.com/freebsd/freebsd-src/blob/7f3184ba797452703904d33377dada5f0f8eae96/sys/sys/proc.h#L822
 
   return ((info.kp_proc.p_flag & P_TRACED) != 0);
@@ -109,12 +106,13 @@ bool __is_debugger_present() noexcept {
 
     std::string token;
     while (status_file >> token) {
+      // If the process is being debugged "TracerPid"'s value is non-zero.
       if (token == "TracerPid:") {
         int pid;
         status_file >> pid;
         return pid != 0;
       }
-      std::getline(status_file, token);
+      getline(status_file, token);
     }
   } catch (...) {
     _LIBCPP_ASSERT_INTERNAL(false, "Failed to parse '/proc/self/status'.");
