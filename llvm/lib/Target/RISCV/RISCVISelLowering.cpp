@@ -4696,8 +4696,7 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
       // less an implementation question, and more a profitability one.
       return SDValue();
 
-    if (OutMasks[DstVecIdx].second.empty())
-      OutMasks[DstVecIdx].second.assign(ElemsPerVReg, -1);
+    OutMasks[DstVecIdx].second.resize(ElemsPerVReg, -1);
     OutMasks[DstVecIdx].second[DstSubIdx] = SrcSubIdx;
   }
 
