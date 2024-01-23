@@ -54,3 +54,10 @@
 // CHECK: #loc1 = loc(fused<memref<1xi32>
 // CHECK-NOT: #map
 "test.op"() {alias_test = loc(fused<memref<1xi32, affine_map<(d0) -> (d0)>>>["test.mlir":10:8])} : () -> ()
+
+// -----
+
+// CHECK: #test.conditional_alias<hello>
+"test.op"() {attr = #test.conditional_alias<"hello">} : () -> ()
+// CHECK-NEXT: #test.conditional_alias<#test_encoding>
+"test.op"() {attr = #test.conditional_alias<"alias_test:tensor_encoding">} : () -> ()
