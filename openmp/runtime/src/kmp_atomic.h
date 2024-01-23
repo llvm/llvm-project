@@ -1029,7 +1029,6 @@ void __kmpc_atomic_cmplx4_rd(kmp_cmplx32 *out, ident_t *id_ref, int gtid,
 kmp_cmplx32 __kmpc_atomic_cmplx4_rd(ident_t *id_ref, int gtid,
                                     kmp_cmplx32 *loc);
 #endif
-
 kmp_cmplx64 __kmpc_atomic_cmplx8_rd(ident_t *id_ref, int gtid,
                                     kmp_cmplx64 *loc);
 kmp_cmplx80 __kmpc_atomic_cmplx10_rd(ident_t *id_ref, int gtid,
