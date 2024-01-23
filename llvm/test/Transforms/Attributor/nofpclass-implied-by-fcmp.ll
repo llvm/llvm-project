@@ -2396,6 +2396,110 @@ define float @assume_oeq_smallest_normal_known_pos(float nofpclass(ninf nsub nno
 }
 
 ;---------------------------------------------------------------------
+; compare to inf
+;---------------------------------------------------------------------
+
+define float @assume_ole_pinf(float %arg) {
+; CHECK-LABEL: define float @assume_ole_pinf(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fcmp = fcmp ole float %arg, 0x7FF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+define float @assume_ole_ninf(float %arg) {
+; CHECK-LABEL: define float @assume_ole_ninf(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[ARG]], 0xFFF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fcmp = fcmp ole float %arg, 0xFFF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+define float @assume_ugt_pinf(float %arg) {
+; CHECK-LABEL: define float @assume_ugt_pinf(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fcmp = fcmp ugt float %arg, 0x7FF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+define float @assume_ugt_ninf(float %arg) {
+; CHECK-LABEL: define float @assume_ugt_ninf(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[ARG]], 0xFFF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fcmp = fcmp ugt float %arg, 0xFFF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+define float @assume_fabs_ole_pinf(float %arg) {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_ole_pinf(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fcmp = fcmp ole float %fabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+define float @assume_fabs_ole_ninf(float %arg) {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_ole_ninf(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fcmp = fcmp ole float %fabs, 0xFFF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+define float @assume_fabs_ugt_pinf(float %arg) {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_ugt_pinf(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fcmp = fcmp ugt float %fabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+define float @assume_fabs_ugt_ninf(float %arg) {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_fabs_ugt_ninf(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs = call float @llvm.fabs.f32(float %arg)
+  %fcmp = fcmp ugt float %fabs, 0xFFF0000000000000
+  call void @llvm.assume(i1 %fcmp)
+  ret float %arg
+}
+
+;---------------------------------------------------------------------
 ; fcmp false
 ;---------------------------------------------------------------------
 
