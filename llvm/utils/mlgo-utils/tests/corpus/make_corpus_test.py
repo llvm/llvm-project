@@ -1,4 +1,4 @@
-# REQUIRES: python-38, absl
+# REQUIRES: python-38, system-linux
 
 ## Test the functionality of make_corpus_lib
 

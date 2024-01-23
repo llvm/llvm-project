@@ -395,6 +395,7 @@ Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
   switch (Kind) {
   case Data_Delta32:
   case Data_Pointer32:
+  case Data_RequestGOTAndTransformToDelta32:
     return SignExtend64<32>(support::endian::read32(FixupPtr, Endian));
   default:
     return make_error<JITLinkError>(
@@ -464,15 +465,6 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();
   char *FixupPtr = BlockWorkingMem + E.getOffset();
 
-  auto Write32 = [FixupPtr, Endian = G.getEndianness()](int64_t Value) {
-    assert(isInt<32>(Value) && "Must be in signed 32-bit range");
-    uint32_t Imm = static_cast<int32_t>(Value);
-    if (LLVM_LIKELY(Endian == endianness::little))
-      endian::write32<endianness::little>(FixupPtr, Imm);
-    else
-      endian::write32<endianness::big>(FixupPtr, Imm);
-  };
-
   Edge::Kind Kind = E.getKind();
   uint64_t FixupAddress = (B.getAddress() + E.getOffset()).getValue();
   int64_t Addend = E.getAddend();
@@ -487,16 +479,24 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
     int64_t Value = TargetAddress - FixupAddress + Addend;
     if (!isInt<32>(Value))
       return makeTargetOutOfRangeError(G, B, E);
-    Write32(Value);
+    if (LLVM_LIKELY(G.getEndianness() == endianness::little))
+      endian::write32le(FixupPtr, Value);
+    else
+      endian::write32be(FixupPtr, Value);
     return Error::success();
   }
   case Data_Pointer32: {
     int64_t Value = TargetAddress + Addend;
-    if (!isInt<32>(Value))
+    if (!isUInt<32>(Value))
       return makeTargetOutOfRangeError(G, B, E);
-    Write32(Value);
+    if (LLVM_LIKELY(G.getEndianness() == endianness::little))
+      endian::write32le(FixupPtr, Value);
+    else
+      endian::write32be(FixupPtr, Value);
     return Error::success();
   }
+  case Data_RequestGOTAndTransformToDelta32:
+    llvm_unreachable("Should be transformed");
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -678,6 +678,52 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   }
 }
 
+const uint8_t GOTEntryInit[] = {
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+};
+
+/// Create a new node in the link-graph for the given pointer value.
+template <size_t Size>
+static Block &allocPointer(LinkGraph &G, Section &S,
+                           const uint8_t (&Content)[Size]) {
+  static_assert(Size == 4, "Pointers are 32-bit");
+  constexpr uint64_t Alignment = 4;
+  ArrayRef<char> Init(reinterpret_cast<const char *>(Content), Size);
+  return G.createContentBlock(S, Init, orc::ExecutorAddr(), Alignment, 0);
+}
+
+Symbol &GOTBuilder::createEntry(LinkGraph &G, Symbol &Target) {
+  if (!GOTSection)
+    GOTSection = &G.createSection(getSectionName(), orc::MemProt::Read);
+  Block &B = allocPointer(G, *GOTSection, GOTEntryInit);
+  constexpr int64_t GOTEntryAddend = 0;
+  B.addEdge(Data_Pointer32, 0, Target, GOTEntryAddend);
+  return G.addAnonymousSymbol(B, 0, B.getSize(), false, false);
+}
+
+bool GOTBuilder::visitEdge(LinkGraph &G, Block *B, Edge &E) {
+  Edge::Kind KindToSet = Edge::Invalid;
+  switch (E.getKind()) {
+  case aarch32::Data_RequestGOTAndTransformToDelta32: {
+    KindToSet = aarch32::Data_Delta32;
+    break;
+  }
+  default:
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "  Transforming " << G.getEdgeKindName(E.getKind())
+                    << " edge at " << B->getFixupAddress(E) << " ("
+                    << B->getAddress() << " + "
+                    << formatv("{0:x}", E.getOffset()) << ") into "
+                    << G.getEdgeKindName(KindToSet) << "\n");
+  E.setKind(KindToSet);
+  E.setTarget(getEntryForTarget(G, E.getTarget()));
+  return true;
+}
+
 const uint8_t Thumbv7ABS[] = {
     0x40, 0xf2, 0x00, 0x0c, // movw r12, #0x0000    ; lower 16-bit
     0xc0, 0xf2, 0x00, 0x0c, // movt r12, #0x0000    ; upper 16-bit
@@ -709,6 +755,7 @@ const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
     KIND_NAME_CASE(Data_Delta32)
     KIND_NAME_CASE(Data_Pointer32)
+    KIND_NAME_CASE(Data_RequestGOTAndTransformToDelta32)
     KIND_NAME_CASE(Arm_Call)
     KIND_NAME_CASE(Arm_Jump24)
     KIND_NAME_CASE(Arm_MovwAbsNC)
@@ -719,6 +766,7 @@ const char *getEdgeKindName(Edge::Kind K) {
     KIND_NAME_CASE(Thumb_MovtAbs)
     KIND_NAME_CASE(Thumb_MovwPrelNC)
     KIND_NAME_CASE(Thumb_MovtPrel)
+    KIND_NAME_CASE(None)
   default:
     return getGenericEdgeKindName(K);
   }
