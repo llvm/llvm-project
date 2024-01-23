@@ -4667,18 +4667,15 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   // is already m1 or smaller, no point in splitting further.
   const unsigned MinVLen = Subtarget.getRealMinVLen();
   const unsigned MaxVLen = Subtarget.getRealMaxVLen();
-  if (MinVLen != MaxVLen ||
-      VT.getSizeInBits().getKnownMinValue() <= MinVLen)
+  if (MinVLen != MaxVLen || VT.getSizeInBits().getFixedValue() <= MinVLen)
     return SDValue();
 
   MVT ElemVT = VT.getVectorElementType();
   unsigned ElemsPerVReg = MinVLen / ElemVT.getFixedSizeInBits();
   unsigned VRegsPerSrc = NumElts / ElemsPerVReg;
 
-  SmallVector<std::pair<int, SmallVector<int>>> OutMasks;
-  OutMasks.resize(VRegsPerSrc);
-  for (unsigned i = 0; i < OutMasks.size(); i++)
-    OutMasks[i].first = -1;
+  SmallVector<std::pair<int, SmallVector<int>>>
+    OutMasks(VRegsPerSrc, {-1, {}});
 
   // Check if our mask can be done as a 1-to-1 mapping from source
   // to destination registers in the group without needing to
@@ -4699,7 +4696,8 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
       // less an implementation question, and more a profitability one.
       return SDValue();
 
-    OutMasks[DstVecIdx].second.resize(ElemsPerVReg);
+    if (OutMasks[DstVecIdx].second.empty())
+      OutMasks[DstVecIdx].second.assign(ElemsPerVReg, -1);
     OutMasks[DstVecIdx].second[DstSubIdx] = SrcSubIdx;
   }
 
