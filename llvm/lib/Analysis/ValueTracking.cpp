@@ -4019,6 +4019,12 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
   if (Pred == FCmpInst::FCMP_UNO && !ConstRHS->isNaN())
     return {LHS, fcNan};
 
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return {LHS, fcAllFlags};
+
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return {LHS, fcNone};
+
   if (ConstRHS->isZero()) {
     // Compares with fcNone are only exactly equal to fcZero if input denormals
     // are not flushed.
