@@ -48,7 +48,7 @@ public:
     float result = LIBC_NAMESPACE::strtof(inputString, &str_end);
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
-    EXPECT_FP_EQ(result, static_cast<float>(expected_fp));
+    EXPECT_FP_EQ(result, expected_fp.get_val());
     EXPECT_EQ(libc_errno, expectedErrno);
   }
 };
