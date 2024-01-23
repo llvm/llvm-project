@@ -2625,7 +2625,7 @@ multiclass SOPP_Real_With_Relaxation_gfx11_gfx12<bits<7>op> :
 defm S_SETKILL                    : SOPP_Real_32_gfx11_gfx12<0x001>;
 defm S_SETHALT                    : SOPP_Real_32_gfx11_gfx12<0x002>;
 defm S_SLEEP                      : SOPP_Real_32_gfx11_gfx12<0x003>;
-defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11_gfx12<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
+defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;
