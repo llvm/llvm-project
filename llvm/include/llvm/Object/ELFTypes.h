@@ -929,15 +929,16 @@ struct BBAddrMap {
   // Returns the total number of bb entries in all bb ranges.
   size_t getNumBBEntries() const {
     size_t NumBBEntries = 0;
-    for (const auto &BBR: BBRanges)
+    for (const auto &BBR : BBRanges)
       NumBBEntries += BBR.BBEntries.size();
     return NumBBEntries;
   }
 
   // Returns the index of the bb range with the given base address, or
   // `std::nullopt` if no such range exists.
-  std::optional<size_t> getBBRangeIndexForBaseAddress(uint64_t BaseAddress) const {
-    for (size_t I=0; I<BBRanges.size(); ++I)
+  std::optional<size_t>
+  getBBRangeIndexForBaseAddress(uint64_t BaseAddress) const {
+    for (size_t I = 0; I < BBRanges.size(); ++I)
       if (BBRanges[I].BaseAddress == BaseAddress)
         return I;
     return {};

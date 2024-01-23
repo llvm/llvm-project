@@ -53,6 +53,14 @@
 # CHECK-NEXT:     0000: 02002000 00000000 0000020D 010203
 # CHECK-NEXT:   )
 
+# Case 7: Specify empty BBRanges.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 0200
+# CHECK-NEXT:   )
+
+
+
 --- !ELF
 FileHeader:
   Class: ELFCLASS64
@@ -121,6 +129,15 @@ Sections:
                AddressOffset: 0x00000001
                Size:          0x00000002
                Metadata:      0x00000003
+
+## 7) We can produce a SHT_LLVM_BB_ADDR_MAP section from a description with one entry with empty BBRanges.
+  - Name: '.llvm_bb_addr_map (7)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        BBRanges: []
+
+
 
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID

@@ -177,83 +177,81 @@ struct BBAddrMapLabel {
   std::string PGOAnalysis;
 };
 
-
 // This class represents the BBAddrMap and PGOMap associated with a single
 // function.
 class BBAddrMapFunctionEntry {
- public:
-  BBAddrMapFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap) : AddrMap(std::move(AddrMap)), PGOMap(std::move(PGOMap)) {}
+public:
+  BBAddrMapFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap)
+      : AddrMap(std::move(AddrMap)), PGOMap(std::move(PGOMap)) {}
 
-  const BBAddrMap &getAddrMap() const {
-    return AddrMap;
-  }
+  const BBAddrMap &getAddrMap() const { return AddrMap; }
 
   // Returns the PGO string associated with the entry of index `PGOBBEntryIndex`
   // in `PGOMap`.
   std::string constructPGOLabelString(size_t PGOBBEntryIndex) const {
     if (!PGOMap.FeatEnable.hasPGOAnalysis())
       return "";
-  std::string PGOString;
-  raw_string_ostream PGOSS(PGOString);
+    std::string PGOString;
+    raw_string_ostream PGOSS(PGOString);
 
-  PGOSS << " (";
-  if (PGOMap.FeatEnable.FuncEntryCount && PGOBBEntryIndex == 0) {
-    PGOSS << "Entry count: " << Twine(PGOMap.FuncEntryCount);
-    if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
-      PGOSS << ", ";
-    }
-  }
-
-  if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
-
-    assert(PGOBBEntryIndex < PGOMap.BBEntries.size() &&
-           "Expected PGOAnalysisMap and BBAddrMap to have the same entires");
-    const PGOAnalysisMap::PGOBBEntry &PGOBBEntry =
-        PGOMap.BBEntries[PGOBBEntryIndex];
-
-    if (PGOMap.FeatEnable.BBFreq) {
-      PGOSS << "Frequency: " << Twine(PGOBBEntry.BlockFreq.getFrequency());
-      if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
+    PGOSS << " (";
+    if (PGOMap.FeatEnable.FuncEntryCount && PGOBBEntryIndex == 0) {
+      PGOSS << "Entry count: " << Twine(PGOMap.FuncEntryCount);
+      if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
         PGOSS << ", ";
       }
     }
-    if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
-      PGOSS << "Successors: ";
-      interleaveComma(
-          PGOBBEntry.Successors, PGOSS,
-          [&PGOSS](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
-            PGOSS << "BB" << SE.ID << ":";
-            PGOSS.write_hex(SE.Prob.getNumerator());
-          });
+
+    if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
+
+      assert(PGOBBEntryIndex < PGOMap.BBEntries.size() &&
+             "Expected PGOAnalysisMap and BBAddrMap to have the same entires");
+      const PGOAnalysisMap::PGOBBEntry &PGOBBEntry =
+          PGOMap.BBEntries[PGOBBEntryIndex];
+
+      if (PGOMap.FeatEnable.BBFreq) {
+        PGOSS << "Frequency: " << Twine(PGOBBEntry.BlockFreq.getFrequency());
+        if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
+          PGOSS << ", ";
+        }
+      }
+      if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
+        PGOSS << "Successors: ";
+        interleaveComma(
+            PGOBBEntry.Successors, PGOSS,
+            [&PGOSS](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
+              PGOSS << "BB" << SE.ID << ":";
+              PGOSS.write_hex(SE.Prob.getNumerator());
+            });
+      }
     }
+    PGOSS << ")";
+
+    return PGOString;
   }
-  PGOSS << ")";
 
-  return PGOString;
-}
 private:
-    const BBAddrMap AddrMap;
-    const PGOAnalysisMap PGOMap;
-
-  };
+  const BBAddrMap AddrMap;
+  const PGOAnalysisMap PGOMap;
+};
 
 // This class represents the BBAddrMap and PGOMap of potentially multiple
 // functions in a section.
 class BBAddrMapInfo {
- public:
+public:
   void clear() {
     FunctionAddrToMap.clear();
     RangeBaseAddrToFunctionAddr.clear();
   }
-  bool empty() const {
-    return FunctionAddrToMap.empty();
-  }
+  bool empty() const { return FunctionAddrToMap.empty(); }
 
   void AddFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap) {
     uint64_t FunctionAddr = AddrMap.getFunctionAddress();
-    for (size_t I=1; I < AddrMap.BBRanges.size(); ++I)
-      RangeBaseAddrToFunctionAddr.emplace(AddrMap.BBRanges[I].BaseAddress, FunctionAddr);
-    [[maybe_unused]] auto R = FunctionAddrToMap.try_emplace(FunctionAddr, std::move(AddrMap), std::move(PGOMap));
+    for (size_t I = 1; I < AddrMap.BBRanges.size(); ++I)
+      RangeBaseAddrToFunctionAddr.emplace(AddrMap.BBRanges[I].BaseAddress,
+                                          FunctionAddr);
+    [[maybe_unused]] auto R = FunctionAddrToMap.try_emplace(
+        FunctionAddr, std::move(AddrMap), std::move(PGOMap));
     assert(R.second && "duplicate function address");
   }
 
@@ -263,11 +261,12 @@ class BBAddrMapInfo {
     if (S != RangeBaseAddrToFunctionAddr.end())
       FunctionAddr = S->second;
     auto R = FunctionAddrToMap.find(FunctionAddr);
-    if (R == FunctionAddrToMap.end()) return nullptr;
+    if (R == FunctionAddrToMap.end())
+      return nullptr;
     return &R->second;
   }
 
- private:
+private:
   std::unordered_map<uint64_t, BBAddrMapFunctionEntry> FunctionAddrToMap;
   std::unordered_map<uint64_t, uint64_t> RangeBaseAddrToFunctionAddr;
 };
@@ -1367,23 +1366,26 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
 }
 
 static void collectBBAddrMapLabels(
-    const BBAddrMapInfo &FullAddrMap,
-    uint64_t SectionAddr, uint64_t Start, uint64_t End,
+    const BBAddrMapInfo &FullAddrMap, uint64_t SectionAddr, uint64_t Start,
+    uint64_t End,
     std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> &Labels) {
   if (FullAddrMap.empty())
     return;
   Labels.clear();
   uint64_t StartAddress = SectionAddr + Start;
   uint64_t EndAddress = SectionAddr + End;
-  const BBAddrMapFunctionEntry *FunctionMap = FullAddrMap.getEntryForAddress(StartAddress);
+  const BBAddrMapFunctionEntry *FunctionMap =
+      FullAddrMap.getEntryForAddress(StartAddress);
   if (!FunctionMap)
     return;
-  std::optional<size_t> BBRangeIndex = FunctionMap->getAddrMap().getBBRangeIndexForBaseAddress(StartAddress);
+  std::optional<size_t> BBRangeIndex =
+      FunctionMap->getAddrMap().getBBRangeIndexForBaseAddress(StartAddress);
   if (!BBRangeIndex)
     return;
   size_t NumBBEntriesBeforeRange = 0;
-  for (size_t I=0; I < *BBRangeIndex; ++I)
-    NumBBEntriesBeforeRange += FunctionMap->getAddrMap().BBRanges[I].BBEntries.size();
+  for (size_t I = 0; I < *BBRangeIndex; ++I)
+    NumBBEntriesBeforeRange +=
+        FunctionMap->getAddrMap().BBRanges[I].BBEntries.size();
   const auto &BBRange = FunctionMap->getAddrMap().BBRanges[*BBRangeIndex];
   for (size_t I = 0; I < BBRange.BBEntries.size(); ++I) {
     const BBAddrMap::BBEntry &BBEntry = BBRange.BBEntries[I];
@@ -1392,7 +1394,9 @@ static void collectBBAddrMapLabels(
       continue;
 
     std::string LabelString = ("BB" + Twine(BBEntry.ID)).str();
-    Labels[BBAddress].push_back({LabelString, FunctionMap->constructPGOLabelString(NumBBEntriesBeforeRange + I)});
+    Labels[BBAddress].push_back(
+        {LabelString,
+         FunctionMap->constructPGOLabelString(NumBBEntriesBeforeRange + I)});
   }
 }
 
@@ -1762,7 +1766,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       }
       for (auto &&[FunctionBBAddrMap, FunctionPGOAnalysis] :
            zip_equal(*std::move(BBAddrMapsOrErr), std::move(PGOAnalyses))) {
-        FullAddrMap.AddFunctionEntry(std::move(FunctionBBAddrMap), std::move(FunctionPGOAnalysis));
+        FullAddrMap.AddFunctionEntry(std::move(FunctionBBAddrMap),
+                                     std::move(FunctionPGOAnalysis));
       }
     }
   };
@@ -2098,8 +2103,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                                   DT->DisAsm.get(), DT->InstPrinter.get(),
                                   PrimaryTarget.SubtargetInfo.get(),
                                   SectionAddr, Index, End, AllLabels);
-        collectBBAddrMapLabels(FullAddrMap,
-                               SectionAddr, Index, End, BBAddrMapLabels);
+        collectBBAddrMapLabels(FullAddrMap, SectionAddr, Index, End,
+                               BBAddrMapLabels);
       }
 
       if (DT->InstrAnalysis)
