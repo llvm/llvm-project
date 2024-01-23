@@ -815,14 +815,19 @@ TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
 #define TSAN_MAYBE_INTERCEPT_MEMALIGN
 #endif
 
-#if !SANITIZER_APPLE
+#if !SANITIZER_APPLE || defined(__MAC_10_16)
+# define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
+SANITIZER_WEAK_IMPORT void *aligned_alloc(SIZE_T __alignment, SIZE_T __size);
+
 TSAN_INTERCEPTOR(void*, aligned_alloc, uptr align, uptr sz) {
   if (in_symbolizer())
     return InternalAlloc(sz, nullptr, align);
   SCOPED_INTERCEPTOR_RAW(aligned_alloc, align, sz);
   return user_aligned_alloc(thr, pc, align, sz);
 }
+#endif
 
+#if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
   if (in_symbolizer())
     return InternalAlloc(sz, nullptr, GetPageSizeCached());
