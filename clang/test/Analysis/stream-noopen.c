@@ -64,6 +64,7 @@ void test_fgetc(FILE *F) {
     if (errno) {} // expected-warning {{undefined}}
   } else {
     clang_analyzer_eval(errno != 0); // expected-warning {{TRUE}}
+                                     // expected-warning@-1 {{FALSE}}
   }
   clang_analyzer_eval(feof(F)); // expected-warning {{UNKNOWN}}
   clang_analyzer_eval(ferror(F)); // expected-warning {{UNKNOWN}}
@@ -92,9 +93,18 @@ void test_fgets(char *Buf, int N, FILE *F) {
   } else {
     clang_analyzer_eval(Ret == 0); // expected-warning {{TRUE}}
     clang_analyzer_eval(errno != 0); // expected-warning {{TRUE}}
+                                     // expected-warning@-1 {{FALSE}}
   }
   clang_analyzer_eval(feof(F)); // expected-warning {{UNKNOWN}}
   clang_analyzer_eval(ferror(F)); // expected-warning {{UNKNOWN}}
+
+  char Buf1[10];
+  Ret = fgets(Buf1, 11, F); // expected-warning {{The 1st argument to 'fgets' is a buffer with size 10}}
+}
+
+void test_fgets_bufsize(FILE *F) {
+  char Buf[10];
+  fgets(Buf, 11, F); // expected-warning {{The 1st argument to 'fgets' is a buffer with size 10}}
 }
 
 void test_fputs(char *Buf, FILE *F) {

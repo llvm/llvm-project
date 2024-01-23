@@ -2236,7 +2236,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .Case({ReturnValueCondition(WithinRange, {{0, UCharRangeMax}})},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
-                  ErrnoNEZeroIrrelevant, GenericFailureMsg)
+                  ErrnoIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int fputc(int c, FILE *stream);
@@ -2245,13 +2245,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         {"putc", "fputc"},
         Signature(ArgTypes{IntTy, FilePtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
+            .Case({ArgumentCondition(0, WithinRange, Range(0, UCharRangeMax)),
+                   ReturnValueCondition(BO_EQ, ArgNo(0))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(0, OutOfRange, Range(0, UCharRangeMax)),
+                   ReturnValueCondition(WithinRange, Range(0, UCharRangeMax))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case({ReturnValueCondition(WithinRange, SingleValue(EOFv))},
                   ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(NotNull(ArgNo(1)))
-            .ArgConstraint(
-                ArgumentCondition(0, WithinRange, {{0, UCharRangeMax}})));
+            .ArgConstraint(NotNull(ArgNo(1))));
 
     // char *fgets(char *restrict s, int n, FILE *restrict stream);
     addToFunctionSummaryMap(
@@ -2261,9 +2263,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(BO_EQ, ArgNo(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
-            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .Case({IsNull(Ret)}, ErrnoIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(
+                BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
     // int fputs(const char *restrict s, FILE *restrict stream);
