@@ -3141,7 +3141,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .setMIFlag(Flag);
     uint32_t PrevShiftAmount = 0;
     for (uint32_t ShiftAmount = 0; NumOfVReg >> ShiftAmount; ShiftAmount++) {
-      if (NumOfVReg & (1 << ShiftAmount)) {
+      if (NumOfVReg & (1LL << ShiftAmount)) {
         if (ShiftAmount)
           BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
               .addReg(DestReg, RegState::Kill)
