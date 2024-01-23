@@ -28,7 +28,7 @@ public:
     using Sign = LIBC_NAMESPACE::fputil::Sign;
     EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero(Sign::POS))));
     EXPECT_EQ(FP_ILOGB0, func(T(FPBits::zero(Sign::NEG))));
-    EXPECT_EQ(FP_ILOGBNAN, func(T(FPBits::build_quiet_nan(Sign::POS, 1))));
+    EXPECT_EQ(FP_ILOGBNAN, func(T(FPBits::build_quiet_nan())));
     EXPECT_EQ(INT_MAX, func(T(FPBits::inf(Sign::POS))));
     EXPECT_EQ(INT_MAX, func(T(FPBits::inf(Sign::NEG))));
   }
