@@ -855,6 +855,7 @@ public:
                        ArrayRef<const Attr *> Attrs = std::nullopt);
   mlir::LogicalResult buildSwitchStmt(const clang::SwitchStmt &S);
 
+  mlir::LogicalResult buildCXXTryStmtUnderScope(const clang::CXXTryStmt &S);
   mlir::LogicalResult buildCXXTryStmt(const clang::CXXTryStmt &S);
   void enterCXXTryStmt(const CXXTryStmt &S, mlir::cir::CatchOp catchOp,
                        bool IsFnTryBlock = false);
@@ -1085,7 +1086,8 @@ public:
 
   /// Emit the alloca and debug information for a
   /// local variable.  Does not emit initialization or destruction.
-  AutoVarEmission buildAutoVarAlloca(const clang::VarDecl &D);
+  AutoVarEmission buildAutoVarAlloca(const clang::VarDecl &D,
+                                     mlir::OpBuilder::InsertPoint = {});
 
   void buildAutoVarInit(const AutoVarEmission &emission);
   void buildAutoVarCleanups(const AutoVarEmission &emission);

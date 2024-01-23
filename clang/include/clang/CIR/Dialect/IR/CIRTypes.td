@@ -267,20 +267,21 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 def VoidPtr : Type<
     And<[
       CPred<"$_self.isa<::mlir::cir::PointerType>()">,
-      CPred<"$_self.cast<::mlir::cir::PointerType>().getPointee().isa<::mlir::cir::VoidType>()">,
+      CPred<"$_self.cast<::mlir::cir::PointerType>()"
+            ".getPointee().isa<::mlir::cir::VoidType>()">,
     ]>, "void*">,
     BuildableType<
       "mlir::cir::PointerType::get($_builder.getContext(),"
       "mlir::cir::VoidType::get($_builder.getContext()))"> {
 }
 
-// Pointer to exception info
+// Pointers to exception info
 def ExceptionInfoPtr : Type<
     And<[
       CPred<"$_self.isa<::mlir::cir::PointerType>()">,
       CPred<"$_self.cast<::mlir::cir::PointerType>()"
             ".getPointee().isa<::mlir::cir::ExceptionInfoType>()">,
-    ]>, "void*">,
+    ]>, "!cir.eh_info*">,
     BuildableType<
       "mlir::cir::PointerType::get($_builder.getContext(),"
       "mlir::cir::ExceptionInfoType::get($_builder.getContext()))"> {

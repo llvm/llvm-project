@@ -1157,9 +1157,7 @@ parseCatchOp(OpAsmParser &parser,
       if (parser.parseRParen().failed())
         return parser.emitError(parser.getCurrentLocation(), "expected ')'");
     }
-    catchList.push_back(mlir::cir::CatchEntryAttr::get(
-        parser.getContext(), exceptionType, exceptionTypeInfo));
-
+    catchList.push_back(exceptionTypeInfo);
     return parseAndCheckRegion();
   };
 
@@ -1182,16 +1180,12 @@ void printCatchOp(OpAsmPrinter &p, CatchOp op,
   llvm::interleaveComma(catchList, p, [&](const Attribute &a) {
     p.printNewline();
     p.increaseIndent();
-    auto attr = a.cast<CatchEntryAttr>();
-    auto exType = attr.getExceptionType();
-    auto exRtti = attr.getExceptionTypeInfo();
+    auto exRtti = a;
 
-    if (!exType) {
+    if (!exRtti) {
       p << "all";
     } else {
       p << "type (";
-      p.printType(exType);
-      p << ", ";
       p.printAttribute(exRtti);
       p << ") ";
     }
@@ -1231,9 +1225,10 @@ void CatchOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 }
 
 void CatchOp::build(
-    OpBuilder &builder, OperationState &result,
+    OpBuilder &builder, OperationState &result, mlir::Value exceptionInfo,
     function_ref<void(OpBuilder &, Location, OperationState &)> catchBuilder) {
   assert(catchBuilder && "the builder callback for regions must be present");
+  result.addOperands(ValueRange{exceptionInfo});
   OpBuilder::InsertionGuard guardCatch(builder);
   catchBuilder(builder, result.location, result);
 }

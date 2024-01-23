@@ -182,6 +182,8 @@ public:
     return CatchTypeInfo{rtti, 0};
   }
 
+  void emitBeginCatch(CIRGenFunction &CGF, const CXXCatchStmt *C) override;
+
   bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const override;
   mlir::cir::GlobalOp getAddrOfVTable(const CXXRecordDecl *RD,
                                       CharUnits VPtrOffset) override;
@@ -584,6 +586,200 @@ void CIRGenItaniumCXXABI::buildCXXDestructors(const CXXDestructorDecl *D) {
   // appropriate operator delete.
   if (D->isVirtual())
     CGM.buildGlobal(GlobalDecl(D, Dtor_Deleting));
+}
+
+namespace {
+/// From traditional LLVM, useful info for LLVM lowering support:
+/// A cleanup to call __cxa_end_catch.  In many cases, the caught
+/// exception type lets us state definitively that the thrown exception
+/// type does not have a destructor.  In particular:
+///   - Catch-alls tell us nothing, so we have to conservatively
+///     assume that the thrown exception might have a destructor.
+///   - Catches by reference behave according to their base types.
+///   - Catches of non-record types will only trigger for exceptions
+///     of non-record types, which never have destructors.
+///   - Catches of record types can trigger for arbitrary subclasses
+///     of the caught type, so we have to assume the actual thrown
+///     exception type might have a throwing destructor, even if the
+///     caught type's destructor is trivial or nothrow.
+struct CallEndCatch final : EHScopeStack::Cleanup {
+  CallEndCatch(bool MightThrow) : MightThrow(MightThrow) {}
+  bool MightThrow;
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    if (!MightThrow) {
+      // Traditional LLVM codegen would emit a call to __cxa_end_catch
+      // here. For CIR, just let it pass since the cleanup is going
+      // to be emitted on a later pass when lowering the catch region.
+      // CGF.EmitNounwindRuntimeCall(getEndCatchFn(CGF.CGM));
+      CGF.getBuilder().create<mlir::cir::YieldOp>(*CGF.currSrcLoc);
+      return;
+    }
+
+    // Traditional LLVM codegen would emit a call to __cxa_end_catch
+    // here. For CIR, just let it pass since the cleanup is going
+    // to be emitted on a later pass when lowering the catch region.
+    // CGF.EmitRuntimeCallOrInvoke(getEndCatchFn(CGF.CGM));
+    CGF.getBuilder().create<mlir::cir::YieldOp>(*CGF.currSrcLoc);
+  }
+};
+} // namespace
+
+/// From traditional LLVM codegen, useful info for LLVM lowering support:
+/// Emits a call to __cxa_begin_catch and enters a cleanup to call
+/// __cxa_end_catch. If -fassume-nothrow-exception-dtor is specified, we assume
+/// that the exception object's dtor is nothrow, therefore the __cxa_end_catch
+/// call can be marked as nounwind even if EndMightThrow is true.
+///
+/// \param EndMightThrow - true if __cxa_end_catch might throw
+static mlir::Value CallBeginCatch(CIRGenFunction &CGF, mlir::Value Exn,
+                                  mlir::Type ParamTy, bool EndMightThrow) {
+  // llvm::CallInst *call =
+  //     CGF.EmitNounwindRuntimeCall(getBeginCatchFn(CGF.CGM), Exn);
+  auto catchParam = CGF.getBuilder().create<mlir::cir::CatchParamOp>(
+      Exn.getLoc(), ParamTy, Exn);
+
+  CGF.EHStack.pushCleanup<CallEndCatch>(
+      NormalAndEHCleanup,
+      EndMightThrow && !CGF.CGM.getLangOpts().AssumeNothrowExceptionDtor);
+
+  return catchParam;
+}
+
+/// A "special initializer" callback for initializing a catch
+/// parameter during catch initialization.
+static void InitCatchParam(CIRGenFunction &CGF, const VarDecl &CatchParam,
+                           Address ParamAddr, SourceLocation Loc) {
+  // Load the exception from where the landing pad saved it.
+  auto Exn = CGF.currExceptionInfo.exceptionAddr;
+
+  CanQualType CatchType =
+      CGF.CGM.getASTContext().getCanonicalType(CatchParam.getType());
+  auto CIRCatchTy = CGF.convertTypeForMem(CatchType);
+
+  // If we're catching by reference, we can just cast the object
+  // pointer to the appropriate pointer.
+  if (isa<ReferenceType>(CatchType)) {
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  // Scalars and complexes.
+  TypeEvaluationKind TEK = CGF.getEvaluationKind(CatchType);
+  if (TEK != TEK_Aggregate) {
+    // Notes for LLVM lowering:
+    // If the catch type is a pointer type, __cxa_begin_catch returns
+    // the pointer by value.
+    if (CatchType->hasPointerRepresentation()) {
+      auto catchParam = CallBeginCatch(CGF, Exn, CIRCatchTy, false);
+
+      switch (CatchType.getQualifiers().getObjCLifetime()) {
+      case Qualifiers::OCL_Strong:
+        llvm_unreachable("NYI");
+        // arc retain non block:
+        assert(!UnimplementedFeature::ARC());
+        [[fallthrough]];
+
+      case Qualifiers::OCL_None:
+      case Qualifiers::OCL_ExplicitNone:
+      case Qualifiers::OCL_Autoreleasing:
+        CGF.getBuilder().createStore(Exn.getLoc(), catchParam, ParamAddr);
+        return;
+
+      case Qualifiers::OCL_Weak:
+        llvm_unreachable("NYI");
+        // arc init weak:
+        assert(!UnimplementedFeature::ARC());
+        return;
+      }
+      llvm_unreachable("bad ownership qualifier!");
+    }
+
+    // Otherwise, it returns a pointer into the exception object.
+    auto catchParam = CallBeginCatch(
+        CGF, Exn, CGF.getBuilder().getPointerTo(CIRCatchTy), false);
+    LValue srcLV = CGF.MakeNaturalAlignAddrLValue(catchParam, CatchType);
+    LValue destLV = CGF.makeAddrLValue(ParamAddr, CatchType);
+    switch (TEK) {
+    case TEK_Complex:
+      llvm_unreachable("NYI");
+      return;
+    case TEK_Scalar: {
+      auto exnLoad = CGF.buildLoadOfScalar(srcLV, catchParam.getLoc());
+      CGF.buildStoreOfScalar(exnLoad, destLV, /*init*/ true);
+      return;
+    }
+    case TEK_Aggregate:
+      llvm_unreachable("evaluation kind filtered out!");
+    }
+    llvm_unreachable("bad evaluation kind");
+  }
+
+  // Check for a copy expression.  If we don't have a copy expression,
+  // that means a trivial copy is okay.
+  const Expr *copyExpr = CatchParam.getInit();
+  if (!copyExpr) {
+    llvm_unreachable("NYI");
+  }
+
+  llvm_unreachable("NYI");
+}
+
+/// Begins a catch statement by initializing the catch variable and
+/// calling __cxa_begin_catch.
+void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &CGF,
+                                         const CXXCatchStmt *S) {
+  // Notes for LLVM lowering:
+  // We have to be very careful with the ordering of cleanups here:
+  //   C++ [except.throw]p4:
+  //     The destruction [of the exception temporary] occurs
+  //     immediately after the destruction of the object declared in
+  //     the exception-declaration in the handler.
+  //
+  // So the precise ordering is:
+  //   1.  Construct catch variable.
+  //   2.  __cxa_begin_catch
+  //   3.  Enter __cxa_end_catch cleanup
+  //   4.  Enter dtor cleanup
+  //
+  // We do this by using a slightly abnormal initialization process.
+  // Delegation sequence:
+  //   - ExitCXXTryStmt opens a RunCleanupsScope
+  //     - EmitAutoVarAlloca creates the variable and debug info
+  //       - InitCatchParam initializes the variable from the exception
+  //       - CallBeginCatch calls __cxa_begin_catch
+  //       - CallBeginCatch enters the __cxa_end_catch cleanup
+  //     - EmitAutoVarCleanups enters the variable destructor cleanup
+  //   - EmitCXXTryStmt emits the code for the catch body
+  //   - EmitCXXTryStmt close the RunCleanupsScope
+
+  VarDecl *CatchParam = S->getExceptionDecl();
+  if (!CatchParam) {
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  auto getCatchParamAllocaIP = [&]() {
+    auto currIns = CGF.getBuilder().saveInsertionPoint();
+    auto currParent = currIns.getBlock()->getParentOp();
+    mlir::Operation *scopeLikeOp =
+        currParent->getParentOfType<mlir::cir::ScopeOp>();
+    if (!scopeLikeOp)
+      scopeLikeOp = currParent->getParentOfType<mlir::cir::FuncOp>();
+    assert(scopeLikeOp && "unknown outermost scope-like parent");
+    assert(scopeLikeOp->getNumRegions() == 1 && "expected single region");
+
+    auto *insertBlock = &scopeLikeOp->getRegion(0).getBlocks().back();
+    return CGF.getBuilder().getBestAllocaInsertPoint(insertBlock);
+  };
+
+  // Emit the local. Make sure the alloca's superseed the current scope, since
+  // these are going to be consumed by `cir.catch`, which is not within the
+  // current scope.
+  auto var = CGF.buildAutoVarAlloca(*CatchParam, getCatchParamAllocaIP());
+  InitCatchParam(CGF, *CatchParam, var.getObjectAddress(CGF), S->getBeginLoc());
+  // FIXME(cir): double check cleanups here are happening in the right blocks.
+  CGF.buildAutoVarCleanups(var);
 }
 
 mlir::cir::GlobalOp

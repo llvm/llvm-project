@@ -636,7 +636,7 @@ def ConditionOp : CIR_Op<"condition", [
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "ForOp", "AwaitOp",
-                 "TernaryOp", "GlobalOp", "DoWhileOp"]>]> {
+                 "TernaryOp", "GlobalOp", "DoWhileOp", "CatchOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -726,24 +726,23 @@ def ContinueOp : CIR_Op<"continue", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def ResumeOp : CIR_Op<"resume", [ReturnLike, Terminator,
-    ParentOneOf<["CatchOp"]>]> {
+                                 ParentOneOf<["CatchOp"]>]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
     The `cir.resume` operation terminates a region on `cir.catch`, "resuming"
-    or continuing the unwind process. The incoming argument is of !cir.eh_info
-    populated by `cir.try_call` and available in `cir.catch`.
+    or continuing the unwind process.
 
     Examples:
     ```mlir
-    cir.catch %4 {
+    cir.catch ... {
       ...
-      fallback { cir.resume(%0) };
+      fallback { cir.resume };
     }
     ```
   }];
 
-  let arguments = (ins ExceptionInfoPtr:$ptr);
-  let assemblyFormat = "$ptr attr-dict";
+  let arguments = (ins);
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2318,18 +2317,6 @@ def TryOp : CIR_Op<"try",
 // CatchOp
 //===----------------------------------------------------------------------===//
 
-def CatchEntryAttr : AttrDef<CIR_Dialect, "CatchEntry"> {
-  let parameters = (ins "mlir::Type":$exception_type,
-                        "Attribute":$exception_type_info);
-  let mnemonic = "type";
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-def CatchArrayAttr :
-  TypedArrayAttrBase<CatchEntryAttr, "cir.catch entry array attribute"> {
-  let constBuilderCall = ?;
-}
-
 def CatchOp : CIR_Op<"catch",
       [SameVariadicOperandSize,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -2339,7 +2326,7 @@ def CatchOp : CIR_Op<"catch",
   }];
 
   let arguments = (ins CIR_AnyType:$exception_info,
-                       OptionalAttr<CatchArrayAttr>:$catchers);
+                       OptionalAttr<ArrayAttr>:$catchers);
   let regions = (region VariadicRegion<AnyRegion>:$regions);
 
   // Already verified elsewhere
@@ -2348,6 +2335,7 @@ def CatchOp : CIR_Op<"catch",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins
+      "Value":$exception_info,
       "function_ref<void(OpBuilder &, Location, OperationState &)>"
       :$catchBuilder)>
   ];
@@ -2358,6 +2346,32 @@ def CatchOp : CIR_Op<"catch",
       custom<CatchOp>($regions, $catchers)
     `)` attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CatchParamOp : CIR_Op<"catch_param"> {
+  let summary = "Materialize the catch clause formal parameter";
+  let description = [{
+    The `cir.catch_param` binds to a the C/C++ catch clause param and allow
+    it to be materialized. This operantion grabs the param by looking into
+    a exception info `!cir.eh_info` argument.
+
+    Example:
+    ```mlir
+    // TBD
+    ```
+  }];
+
+  let arguments = (ins ExceptionInfoPtr:$exception_info);
+  let results = (outs CIR_AnyType:$param);
+  let assemblyFormat = [{
+    `(` $exception_info `)` `->` qualified(type($param)) attr-dict
+  }];
+
+  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
