@@ -12,7 +12,7 @@
 ; RUN: opt -module-summary %s -o a.o
 ; RUN: opt -module-summary %S/Inputs/defsym-bar.ll -o b.o
 ; RUN: ld.lld a.o b.o -shared -o a2.so -defsym=bar2=bar3 -save-temps
-; RUN: llvm-readelf --symbols a2.so1.lto.o | FileCheck --check-prefix=OBJ %s
+; RUN: llvm-readelf --symbols a2.so.lto.a.o | FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-objdump -d a2.so | FileCheck %s
 
 ; OBJ:  UND bar2
