@@ -477,8 +477,7 @@ GetNominal(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node) {
 
 /// Return a pair of module name and type name, given a mangled name.
 static std::optional<std::pair<StringRef, StringRef>>
-GetNominal(llvm::StringRef mangled_name) {
-  swift::Demangle::Demangler dem;
+GetNominal(llvm::StringRef mangled_name, swift::Demangle::Demangler &dem) {
   auto *node = GetDemangledType(dem, mangled_name);
   /// Builtin names belong to the builtin module, and are stored only with their
   /// mangled name.
@@ -1827,7 +1826,9 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
   auto *M = GetModule();
   if (!M)
     return {};
-  auto module_type = GetNominal(AsMangledName(opaque_type));
+
+  swift::Demangle::Demangler dem;
+  auto module_type = GetNominal(AsMangledName(opaque_type), dem);
   if (!module_type)
     return {};
   // DW_AT_linkage_name is not part of the accelerator table, so
