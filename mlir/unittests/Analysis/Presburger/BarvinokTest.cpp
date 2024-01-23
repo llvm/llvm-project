@@ -235,18 +235,44 @@ TEST(BarvinokTest, computeNumTermsCone) {
         EXPECT_EQ(count[i][j][k], 1);
 }
 
+/// We define some simple polyhedra with unimodular tangent cones and verify
+/// that the returned generating functions correspond to those calculated by
+/// hand.
 TEST(BarvinokTest, computeNumTermsPolytope) {
-  IntMatrix ineqs = makeIntMatrix(6, 4, {{1, 0, 0, 0},
-                                         {0, 1, 0, 0},
-                                         {0, 0, 1, 0},
-                                         {-1, 0, 0, 1},
-                                         {0, -1, 0, 1},
-                                         {0, 0, -1, 1}});
-    PolyhedronH poly = defineHRep(3);
-    for (unsigned i = 0; i < 6; i++)
-        poly.addInequality(ineqs.getRow(i));
+  IntMatrix ineqs = makeIntMatrix(6, 4,
+                                  {{1, 0, 0, 0},
+                                   {0, 1, 0, 0},
+                                   {0, 0, 1, 0},
+                                   {-1, 0, 0, 1},
+                                   {0, -1, 0, 1},
+                                   {0, 0, -1, 1}});
+  PolyhedronH poly = defineHRep(3);
+  for (unsigned i = 0; i < 6; i++)
+    poly.addInequality(ineqs.getRow(i));
 
-  std::vector<std::pair<PresburgerRelation, GeneratingFunction>> count = polytopeGeneratingFunction(poly);
+  std::vector<std::pair<PresburgerRelation, GeneratingFunction>> count =
+      polytopeGeneratingFunction(poly);
+  // There is only one chamber, as it is non-parametric.
   EXPECT_EQ(count.size(), 1u);
+
+  GeneratingFunction gf = count[0].second;
+  EXPECT_EQ_REPR_GENERATINGFUNCTION(
+      gf,
+      GeneratingFunction(
+          0, {1, 1, 1, 1, 1, 1, 1, 1},
+          {makeFracMatrix(1, 3, {{1, 1, 1}}), makeFracMatrix(1, 3, {{0, 1, 1}}),
+           makeFracMatrix(1, 3, {{0, 1, 1}}), makeFracMatrix(1, 3, {{0, 0, 1}}),
+           makeFracMatrix(1, 3, {{0, 1, 1}}), makeFracMatrix(1, 3, {{0, 0, 1}}),
+           makeFracMatrix(1, 3, {{0, 0, 1}}),
+           makeFracMatrix(1, 3, {{0, 0, 0}})},
+          {{{-1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+           {{1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+           {{0, 1, 0}, {-1, 0, 0}, {0, 0, -1}},
+           {{1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+           {{0, 0, 1}, {-1, 0, 0}, {0, -1, 0}},
+           {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}},
+           {{0, 1, 0}, {0, 0, 1}, {-1, 0, 0}},
+           {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}));
+
 
 }
