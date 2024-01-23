@@ -92,7 +92,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __atomic_semaphore_base(ptrdiff_t __count) : __a_(__count) {}
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void release(ptrdiff_t __update = 1) {
     auto __old = __a_.fetch_add(__update, memory_order_release);
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= _LIBCPP_SEMAPHORE_MAX - __old, "update is greater than the expected value");
 
     if (__old > 0) {
@@ -138,11 +138,11 @@ public:
   static constexpr ptrdiff_t max() noexcept { return __least_max_value; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit counting_semaphore(ptrdiff_t __count) : __semaphore_(__count) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count >= 0,
         "counting_semaphore::counting_semaphore(ptrdiff_t): counting_semaphore cannot be "
         "initialized with a negative value");
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count <= max(),
         "counting_semaphore::counting_semaphore(ptrdiff_t): counting_semaphore cannot be "
         "initialized with a value greater than max()");
@@ -153,7 +153,7 @@ public:
   counting_semaphore& operator=(const counting_semaphore&) = delete;
 
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void release(ptrdiff_t __update = 1) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__update >= 0, "counting_semaphore:release called with a negative value");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update >= 0, "counting_semaphore:release called with a negative value");
     __semaphore_.release(__update);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void acquire() { __semaphore_.acquire(); }

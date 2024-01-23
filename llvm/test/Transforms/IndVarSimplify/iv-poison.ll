@@ -29,3 +29,91 @@ bb1:                                              ; preds = %bb1, %bb
 common.ret:                                       ; preds = %bb1
   ret i2 %i2
 }
+
+define i4 @iv_hoist_nsw_poison2(i4 %0, i4 %end, i4 %start) {
+; CHECK-LABEL: @iv_hoist_nsw_poison2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV_0:%.*]] = phi i4 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_0_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_0_NEXT]] = add i4 [[IV_0]], 1
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i4 [[IV_0]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i4 [ [[IV_0_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    ret i4 [[IV_1_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.0 = phi i4 [ %start, %entry ], [ %iv.0.next, %loop ]
+  %iv.1 = phi i4 [ %start, %entry ], [ %iv.1.next, %loop ]
+  %iv.0.next = add i4 %iv.0, 1
+  %iv.1.next = add nsw i4 %iv.1, 1
+  %.not.not = icmp ult i4 %iv.0, %end
+  br i1 %.not.not, label %exit, label %loop
+
+exit:
+  ret i4 %iv.1.next
+}
+
+define i2 @iv_hoist_both_adds_nsw(i2 %arg) {
+; CHECK-LABEL: @iv_hoist_both_adds_nsw(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV_0:%.*]] = phi i2 [ 1, [[BB:%.*]] ], [ [[IV_0_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_0_NEXT]] = add nuw i2 [[IV_0]], 1
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i2 1, [[ARG:%.*]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i2 [ [[IV_0_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    ret i2 [[IV_1_NEXT_LCSSA]]
+;
+bb:
+  br label %loop
+
+loop:
+  %iv.0 = phi i2 [ 1, %bb ], [ %iv.0.next, %loop ]
+  %iv.1 = phi i2 [ 1, %bb ], [ %iv.1.next, %loop ]
+  %iv.0.next = add nsw i2 %iv.0, 1
+  %iv.1.next = add nsw i2 %iv.1, 1
+  %.not.not = icmp ult i2 %iv.0, %arg
+  br i1 %.not.not, label %exit, label %loop
+
+exit:
+  ret i2 %iv.1.next
+}
+
+define i4 @iv_hoist_nsw_poison_extra_use(i4 %0, i4 %end, i4 %start) {
+; CHECK-LABEL: @iv_hoist_nsw_poison_extra_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV_0:%.*]] = phi i4 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_0_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_0_NEXT]] = add i4 [[IV_0]], 1
+; CHECK-NEXT:    call void @use(i4 [[IV_0_NEXT]])
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i4 [[IV_0]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i4 [ [[IV_0_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    ret i4 [[IV_1_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.0 = phi i4 [ %start, %entry ], [ %iv.0.next, %loop ]
+  %iv.1 = phi i4 [ %start, %entry ], [ %iv.1.next, %loop ]
+  %iv.0.next = add i4 %iv.0, 1
+  call void @use(i4 %iv.0.next)
+  %iv.1.next = add nsw i4 %iv.1, 1
+  %.not.not = icmp ult i4 %iv.0, %end
+  br i1 %.not.not, label %exit, label %loop
+
+exit:
+  ret i4 %iv.1.next
+}
+
+declare void @use(i4)

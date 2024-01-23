@@ -533,9 +533,8 @@ Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
   return Error::success();
 }
 
-template <typename OutStreamer>
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
-    const llvm::dsymutil::DebugMapObject *Obj, OutStreamer *Streamer,
+    const llvm::dsymutil::DebugMapObject *Obj, classic::DwarfStreamer *Streamer,
     std::vector<uint64_t> &SectionToOffsetInDwarf,
     std::vector<MachOUtils::DwarfRelocationApplicationInfo>
         &RelocationsToApply) {
@@ -649,14 +648,32 @@ bool DwarfLinkerForBinary::linkImpl(
       },
       Options.Translator ? TranslationLambda : nullptr);
 
+  std::unique_ptr<classic::DwarfStreamer> Streamer;
   if (!Options.NoOutput) {
-    if (Error Err = GeneralLinker->createEmitter(Map.getTriple(), ObjectType,
-                                                 OutFile)) {
-      handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+    if (Expected<std::unique_ptr<classic::DwarfStreamer>> StreamerOrErr =
+            classic::DwarfStreamer::createStreamer(
+                Map.getTriple(), ObjectType, OutFile, Options.Translator,
+                [&](const Twine &Warning, StringRef Context,
+                    const DWARFDie *DIE) {
+                  reportWarning(Warning, Context, DIE);
+                }))
+      Streamer = std::move(*StreamerOrErr);
+    else {
+      handleAllErrors(StreamerOrErr.takeError(), [&](const ErrorInfoBase &EI) {
         reportError(EI.message(), "dwarf streamer init");
       });
       return false;
     }
+
+    if constexpr (std::is_same<Linker, parallel::DWARFLinker>::value) {
+      GeneralLinker->setOutputDWARFHandler(
+          Map.getTriple(),
+          [&](std::shared_ptr<parallel::SectionDescriptorBase> Section) {
+            Streamer->emitSectionContents(Section->getContents(),
+                                          Section->getKind());
+          });
+    } else
+      GeneralLinker->setOutputDWARFEmitter(Streamer.get());
   }
 
   remarks::RemarkLinker RL;
@@ -749,7 +766,7 @@ bool DwarfLinkerForBinary::linkImpl(
     auto SectionToOffsetInDwarf =
         calculateStartOfStrippableReflectionSections(Map);
     for (const auto &Obj : Map.objects())
-      copySwiftReflectionMetadata(Obj.get(), GeneralLinker->getEmitter(),
+      copySwiftReflectionMetadata(Obj.get(), Streamer.get(),
                                   SectionToOffsetInDwarf, RelocationsToApply);
   }
 
@@ -796,7 +813,7 @@ bool DwarfLinkerForBinary::linkImpl(
 
       // Copy the module into the .swift_ast section.
       if (!Options.NoOutput)
-        GeneralLinker->getEmitter()->emitSwiftAST((*ErrorOrMem)->getBuffer());
+        Streamer->emitSwiftAST((*ErrorOrMem)->getBuffer());
 
       continue;
     }
@@ -850,10 +867,9 @@ bool DwarfLinkerForBinary::linkImpl(
       ObjectType == Linker::OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
         Options.VFS, Map, Options.Translator,
-        *GeneralLinker->getEmitter()->getAsmPrinter().OutStreamer, OutFile,
-        RelocationsToApply);
+        *Streamer->getAsmPrinter().OutStreamer, OutFile, RelocationsToApply);
 
-  GeneralLinker->getEmitter()->finish();
+  Streamer->finish();
   return true;
 }
 
@@ -1025,13 +1041,13 @@ DwarfLinkerForBinary::AddressManager::getRelocValue(const ValidReloc &Reloc) {
 std::optional<int64_t>
 DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
     const std::vector<ValidReloc> &AllRelocs, uint64_t StartOffset,
-    uint64_t EndOffset) {
+    uint64_t EndOffset, bool Verbose) {
   std::vector<ValidReloc> Relocs =
       getRelocations(AllRelocs, StartOffset, EndOffset);
   if (Relocs.size() == 0)
     return std::nullopt;
 
-  if (Linker.Options.Verbose)
+  if (Verbose)
     printReloc(Relocs[0]);
 
   return getRelocValue(Relocs[0]);
@@ -1061,7 +1077,7 @@ getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
 std::optional<int64_t>
 DwarfLinkerForBinary::AddressManager::getExprOpAddressRelocAdjustment(
     DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
-    uint64_t EndOffset) {
+    uint64_t EndOffset, bool Verbose) {
   switch (Op.getCode()) {
   default: {
     assert(false && "Specified operation does not have address operand");
@@ -1073,11 +1089,13 @@ DwarfLinkerForBinary::AddressManager::getExprOpAddressRelocAdjustment(
   case dwarf::DW_OP_const4s:
   case dwarf::DW_OP_const8s:
   case dwarf::DW_OP_addr: {
-    return hasValidRelocationAt(ValidDebugInfoRelocs, StartOffset, EndOffset);
+    return hasValidRelocationAt(ValidDebugInfoRelocs, StartOffset, EndOffset,
+                                Verbose);
   } break;
   case dwarf::DW_OP_constx:
   case dwarf::DW_OP_addrx: {
-    return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset);
+    return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset,
+                                Verbose);
   } break;
   }
 
@@ -1086,7 +1104,7 @@ DwarfLinkerForBinary::AddressManager::getExprOpAddressRelocAdjustment(
 
 std::optional<int64_t>
 DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
-    const DWARFDie &DIE) {
+    const DWARFDie &DIE, bool Verbose) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
   std::optional<uint32_t> LowPcIdx =
@@ -1103,7 +1121,7 @@ DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
     std::tie(LowPcOffset, LowPcEndOffset) =
         getAttributeOffsets(Abbrev, *LowPcIdx, Offset, *DIE.getDwarfUnit());
     return hasValidRelocationAt(ValidDebugInfoRelocs, LowPcOffset,
-                                LowPcEndOffset);
+                                LowPcEndOffset, Verbose);
   }
   case dwarf::DW_FORM_addrx:
   case dwarf::DW_FORM_addrx1:
@@ -1114,9 +1132,9 @@ DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
     if (std::optional<uint64_t> AddressOffset =
             DIE.getDwarfUnit()->getIndexedAddressOffset(
                 AddrValue->getRawUValue()))
-      return hasValidRelocationAt(ValidDebugAddrRelocs, *AddressOffset,
-                                  *AddressOffset +
-                                      DIE.getDwarfUnit()->getAddressByteSize());
+      return hasValidRelocationAt(
+          ValidDebugAddrRelocs, *AddressOffset,
+          *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize(), Verbose);
 
     Linker.reportWarning("no base offset for address table", SrcFileName);
     return std::nullopt;

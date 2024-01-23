@@ -108,6 +108,10 @@ parse_args()
           COMPILE_ONLY="True"
         fi
 
+        if [[ $1 == "-S" ]]; then
+          COMPILE_ONLY="True"
+        fi
+
         if [[ $1 == "-E" ]]; then
           PREPROCESS_ONLY="True"
         fi

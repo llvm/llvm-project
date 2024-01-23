@@ -186,6 +186,7 @@ namespace macros {
   }
 }
 
+#if __cplusplus < 201703L
 namespace Template {
   // FIXME: These cases should not warn.
   template<int *p> void f() { if (p) {} } // expected-warning 2{{will always evaluate to 'true'}} expected-cxx11-warning {{implicit conversion of nullptr}}
@@ -205,3 +206,4 @@ namespace Template {
 #endif
   template void h<d>();
 }
+#endif // __cplusplus < 201703L

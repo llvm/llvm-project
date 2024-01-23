@@ -661,6 +661,10 @@ Expected<bool> parseGlobalDCEPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "vfe-linkage-unit-visibility", "GlobalDCE");
 }
 
+Expected<bool> parseCGProfilePassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "in-lto-post-link", "CGProfile");
+}
+
 Expected<bool> parseInlinerPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "only-mandatory", "InlinerPass");
 }
