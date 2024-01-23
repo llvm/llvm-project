@@ -1369,7 +1369,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
     // Get relocation adjustment value for the current function.
     FuncAddressAdjustment =
         getContaingFile().Addresses->getSubprogramRelocAdjustment(
-            getDIE(InputDieEntry));
+            getDIE(InputDieEntry), false);
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_label) {
     // Get relocation adjustment value for the current label.
     std::optional<uint64_t> lowPC =
@@ -1383,7 +1383,7 @@ DIE *CompileUnit::createPlainDIEandCloneAttributes(
     // Get relocation adjustment value for the current variable.
     std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
         getContaingFile().Addresses->getVariableRelocAdjustment(
-            getDIE(InputDieEntry));
+            getDIE(InputDieEntry), false);
 
     HasLocationExpressionAddress = LocExprAddrAndRelocAdjustment.first;
     if (LocExprAddrAndRelocAdjustment.first &&

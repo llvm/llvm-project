@@ -739,7 +739,7 @@ bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
       // enclosing function, unless requested explicitly.
       std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
           Entry.CU->getContaingFile().Addresses->getVariableRelocAdjustment(
-              DIE);
+              DIE, Entry.CU->getGlobalData().getOptions().Verbose);
 
       if (LocExprAddrAndRelocAdjustment.first)
         Info.setHasAnAddress();
@@ -782,7 +782,7 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
 
     RelocAdjustment =
         Entry.CU->getContaingFile().Addresses->getSubprogramRelocAdjustment(
-            DIE);
+            DIE, Entry.CU->getGlobalData().getOptions().Verbose);
     if (!RelocAdjustment)
       return false;
 
