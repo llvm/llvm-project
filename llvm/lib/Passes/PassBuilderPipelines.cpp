@@ -1144,10 +1144,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  if (EnablePGOForceFunctionAttrs && PGOOpt &&
-      (PGOOpt->Action == PGOOptions::SampleUse ||
-       PGOOpt->Action == PGOOptions::IRUse ||
-       PGOOpt->CSAction == PGOOptions::CSIRUse))
+  if (EnablePGOForceFunctionAttrs)
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));

@@ -14,21 +14,28 @@
 
 using namespace llvm;
 
+static bool shouldRunOnFunction(Function &F, ProfileSummaryInfo &PSI,
+                                FunctionAnalysisManager &FAM) {
+  if (F.hasFnAttribute(Attribute::Cold))
+    return true;
+  if (!PSI.hasProfileSummary())
+    return false;
+  BlockFrequencyInfo &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+  return PSI.isFunctionColdInCallGraph(&F, BFI);
+}
+
 PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
                                                  ModuleAnalysisManager &AM) {
   if (ColdType == PGOOptions::ColdFuncOpt::Default)
     return PreservedAnalyses::all();
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
-  if (!PSI.hasProfileSummary())
-    return PreservedAnalyses::all();
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool MadeChange = false;
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
-    BlockFrequencyInfo &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-    if (!PSI.isFunctionColdInCallGraph(&F, BFI))
+    if (!shouldRunOnFunction(F, PSI, FAM))
       continue;
     // Add optsize/minsize/optnone if requested.
     switch (ColdType) {

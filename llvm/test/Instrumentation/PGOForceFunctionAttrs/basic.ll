@@ -27,6 +27,12 @@
 ; CHECK: Function Attrs: noinline optnone{{$}}
 ; CHECK-NEXT: define void @cold3()
 
+; NONE: Function Attrs: cold{{$}}
+; OPTSIZE: Function Attrs: cold optsize{{$}}
+; MINSIZE: Function Attrs: cold minsize{{$}}
+; OPTNONE: Function Attrs: cold noinline optnone{{$}}
+; CHECK-NEXT: define void @cold4()
+
 ; CHECK-NOT: Function Attrs: {{.*}}optsize
 ; CHECK-NOT: Function Attrs: {{.*}}minsize
 ; CHECK-NOT: Function Attrs: {{.*}}optnone
@@ -49,6 +55,11 @@ define void @cold2() minsize !prof !27 {
 }
 
 define void @cold3() noinline optnone !prof !27 {
+  store i32 1, ptr @s, align 4
+  ret void
+}
+
+define void @cold4() cold {
   store i32 1, ptr @s, align 4
   ret void
 }
