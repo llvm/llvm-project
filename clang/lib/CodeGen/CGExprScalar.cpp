@@ -723,6 +723,11 @@ public:
     if (Ops.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
+        if (CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
+          if (CanElideOverflowCheck(CGF.getContext(), Ops))
+            return Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul");
+          return EmitOverflowCheckedBinOp(Ops);
+        }
         return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -2516,6 +2521,12 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   StringRef Name = IsInc ? "inc" : "dec";
   switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
   case LangOptions::SOB_Defined:
+    if (CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
+      if (!E->canOverflow())
+        return Builder.CreateNSWAdd(InVal, Amount, Name);
+      return EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
+          E, InVal, IsInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
+    }
     return Builder.CreateAdd(InVal, Amount, Name);
   case LangOptions::SOB_Undefined:
     if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -3409,7 +3420,7 @@ Value *ScalarExprEmitter::EmitCompoundAssign(const CompoundAssignOperator *E,
 
 void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
     const BinOpInfo &Ops, llvm::Value *Zero, bool isDiv) {
-  SmallVector<std::pair<llvm::Value *, SanitizerMask>, 2> Checks;
+  SmallVector<std::pair<llvm::Value *, SanitizerMask>, 3> Checks;
 
   if (CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero)) {
     Checks.push_back(std::make_pair(Builder.CreateICmpNE(Ops.RHS, Zero),
@@ -3417,7 +3428,8 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   }
 
   const auto *BO = cast<BinaryOperator>(Ops.E);
-  if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
+  if (CGF.SanOpts.hasOneOf(SanitizerKind::SignedIntegerOverflow |
+      SanitizerKind::SignedIntegerWrap) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
       Ops.mayHaveIntegerOverflow()) {
@@ -3430,8 +3442,13 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
     llvm::Value *LHSCmp = Builder.CreateICmpNE(Ops.LHS, IntMin);
     llvm::Value *RHSCmp = Builder.CreateICmpNE(Ops.RHS, NegOne);
     llvm::Value *NotOverflow = Builder.CreateOr(LHSCmp, RHSCmp, "or");
-    Checks.push_back(
-        std::make_pair(NotOverflow, SanitizerKind::SignedIntegerOverflow));
+    if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+      Checks.push_back(
+          std::make_pair(NotOverflow, SanitizerKind::SignedIntegerOverflow));
+    if (CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap))
+      Checks.push_back(
+          std::make_pair(NotOverflow, SanitizerKind::SignedIntegerWrap));
+
   }
 
   if (Checks.size() > 0)
@@ -3441,8 +3458,9 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
 Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
-    if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
-         CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
+    if (CGF.SanOpts.hasOneOf(SanitizerKind::IntegerDivideByZero |
+        SanitizerKind::SignedIntegerOverflow |
+        SanitizerKind::SignedIntegerWrap) &&
         Ops.Ty->isIntegerType() &&
         (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
       llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
@@ -3490,8 +3508,9 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
 
 Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   // Rem in C can't be a floating point type: C99 6.5.5p2.
-  if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
-       CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
+  if (CGF.SanOpts.hasOneOf(SanitizerKind::IntegerDivideByZero |
+      SanitizerKind::SignedIntegerOverflow |
+      SanitizerKind::SignedIntegerWrap) &&
       Ops.Ty->isIntegerType() &&
       (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
@@ -3553,12 +3572,19 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   const std::string *handlerName =
     &CGF.getLangOpts().OverflowHandler;
   if (handlerName->empty()) {
-    // If the signed-integer-overflow sanitizer is enabled, emit a call to its
-    // runtime. Otherwise, this is a -ftrapv check, so just emit a trap.
-    if (!isSigned || CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) {
+    // If the signed-integer-overflow or signed-integer-wrap sanitizer is
+    // enabled, emit a call to its runtime. Otherwise, this is a -ftrapv check,
+    // so just emit a trap.
+    if (!isSigned || CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)
+                  || CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
       llvm::Value *NotOverflow = Builder.CreateNot(overflow);
-      SanitizerMask Kind = isSigned ? SanitizerKind::SignedIntegerOverflow
-                              : SanitizerKind::UnsignedIntegerOverflow;
+
+      SanitizerMask Kind = SanitizerKind::UnsignedIntegerOverflow;
+      if (isSigned)
+        Kind = CGF.getLangOpts().getSignedOverflowBehavior() ==
+            LangOptions::SOB_Defined ? SanitizerKind::SignedIntegerWrap :
+                                       SanitizerKind::SignedIntegerOverflow;
+
       EmitBinOpCheck(std::make_pair(NotOverflow, Kind), Ops);
     } else
       CGF.EmitTrapCheck(Builder.CreateNot(overflow), OverflowKind);
@@ -3861,6 +3887,11 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
   if (op.Ty->isSignedIntegerOrEnumerationType()) {
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
+      if (CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
+        if (CanElideOverflowCheck(CGF.getContext(), op))
+          return Builder.CreateNSWAdd(op.LHS, op.RHS, "add");
+        return EmitOverflowCheckedBinOp(op);
+      }
       return Builder.CreateAdd(op.LHS, op.RHS, "add");
     case LangOptions::SOB_Undefined:
       if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
@@ -4015,6 +4046,11 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     if (op.Ty->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined:
+        if (CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
+          if (CanElideOverflowCheck(CGF.getContext(), op))
+            return Builder.CreateNSWSub(op.LHS, op.RHS, "sub");
+          return EmitOverflowCheckedBinOp(op);
+        }
         return Builder.CreateSub(op.LHS, op.RHS, "sub");
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))

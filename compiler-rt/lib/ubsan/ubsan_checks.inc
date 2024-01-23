@@ -31,6 +31,8 @@ UBSAN_CHECK(AlignmentAssumption, "alignment-assumption", "alignment")
 UBSAN_CHECK(InsufficientObjectSize, "insufficient-object-size", "object-size")
 UBSAN_CHECK(SignedIntegerOverflow, "signed-integer-overflow",
             "signed-integer-overflow")
+UBSAN_CHECK(SignedIntegerWrap, "signed-integer-wrap",
+            "signed-integer-wrap")
 UBSAN_CHECK(UnsignedIntegerOverflow, "unsigned-integer-overflow",
             "unsigned-integer-overflow")
 UBSAN_CHECK(IntegerDivideByZero, "integer-divide-by-zero",

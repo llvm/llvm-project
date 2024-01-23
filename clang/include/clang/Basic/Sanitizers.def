@@ -104,6 +104,7 @@ SANITIZER("shift-base", ShiftBase)
 SANITIZER("shift-exponent", ShiftExponent)
 SANITIZER_GROUP("shift", Shift, ShiftBase | ShiftExponent)
 SANITIZER("signed-integer-overflow", SignedIntegerOverflow)
+SANITIZER("signed-integer-wrap", SignedIntegerWrap)
 SANITIZER("unreachable", Unreachable)
 SANITIZER("vla-bound", VLABound)
 SANITIZER("vptr", Vptr)
@@ -144,7 +145,7 @@ SANITIZER_GROUP("undefined", Undefined,
                     IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
                     PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
                     SignedIntegerOverflow | Unreachable | VLABound | Function |
-                    Vptr)
+                    Vptr | SignedIntegerWrap)
 
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)
@@ -179,7 +180,7 @@ SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
 SANITIZER_GROUP("integer", Integer,
                 ImplicitConversion | IntegerDivideByZero | Shift |
                     SignedIntegerOverflow | UnsignedIntegerOverflow |
-                    UnsignedShiftBase)
+                    UnsignedShiftBase | SignedIntegerWrap)
 
 SANITIZER("local-bounds", LocalBounds)
 SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)
