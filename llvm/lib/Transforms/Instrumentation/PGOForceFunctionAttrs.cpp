@@ -10,6 +10,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -32,7 +33,7 @@ PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
     // Add optsize/minsize/optnone if requested.
     switch (ColdType) {
     case PGOOptions::ColdFuncOpt::Default:
-      assert(false);
+      llvm_unreachable("bailed out for default above");
       break;
     case PGOOptions::ColdFuncOpt::OptSize:
       if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
