@@ -64,6 +64,9 @@ enum NodeType : unsigned {
   RESTORE_ZT,
   SAVE_ZT,
 
+  // A call with the callee in x16, i.e. "blr x16".
+  CALL_ARM64EC_TO_X64,
+
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
@@ -1070,6 +1073,8 @@ private:
   SDValue getTargetNode(ConstantPoolSDNode *N, EVT Ty, SelectionDAG &DAG,
                         unsigned Flag) const;
   SDValue getTargetNode(BlockAddressSDNode *N, EVT Ty, SelectionDAG &DAG,
+                        unsigned Flag) const;
+  SDValue getTargetNode(ExternalSymbolSDNode *N, EVT Ty, SelectionDAG &DAG,
                         unsigned Flag) const;
   template <class NodeTy>
   SDValue getGOT(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;

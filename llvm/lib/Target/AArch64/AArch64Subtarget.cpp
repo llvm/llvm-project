@@ -398,8 +398,6 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
 
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
     if (GV->hasDLLImportStorageClass()) {
-      if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy())
-        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORTAUX;
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
     if (getTargetTriple().isOSWindows())
@@ -439,11 +437,18 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {
-    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy() &&
-        GV->hasDLLImportStorageClass()) {
-      // On Arm64EC, if we're calling a function directly, use MO_DLLIMPORT,
-      // not MO_DLLIMPORTAUX.
-      return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
+    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
+      if (GV->hasDLLImportStorageClass()) {
+        // On Arm64EC, if we're calling a symbol from the import table
+        // directly, use MO_ARM64EC_CALLMANGLE.
+        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT |
+               AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
+      if (GV->hasExternalLinkage()) {
+        // If we're calling a symbol directly, use the mangled form in the
+        // call instruction.
+        return AArch64II::MO_ARM64EC_CALLMANGLE;
+      }
     }
 
     // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
