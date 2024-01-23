@@ -278,28 +278,27 @@ class PRBuildbotInformation:
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
 Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/).
-
-If there is a problem with a build, you may recieve an email describing the problem.
-Please check whether the problem has been caused by your change specifically, as
-the build may include changes from many authors. If the same problem affects many builds,
-you may get many emails describing the same problem.
-
-You may also be notified of a problem by a comment added to this PR.
+by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build,
+you may recieve a report via email or a comment on this PR.
 
 You can also track the progress of your change using the [build bot console view](https://lab.llvm.org/buildbot/#/console).
 However this page only shows recent changes. If yours is not listed there, rely on
 the other notifications.
 
+Please check whether problems have been caused by your change specifically, as
+the builds can include changes from many authors. It is not uncommon for your
+change to be included in a build that fails due to someone else's changes, or
+infrastructure issues.
+
 If you are unsure whether your change has caused a problem, you can ask questions in
 a comment on this PR or on [Discord](https://discord.com/invite/xS7Z362).
 
-If your change causes an ongoing issue, it may be reverted. This is a [normal part of LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy)
+If your change does cause a problem, it may be reverted. This is a [normal part of LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy)
 and is not a comment on yourself as an author. The revert commit (or a comment on this PR)
 should explain why it was reverted and how to fix your changes. Please open a new
 PR with the fixed changes and describe what was done to fix them.
 
-If you want to revert your own change, you can [create a new PR](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/reverting-a-pull-request) to do that.
+If you want to revert your own change, you can [create a revert PR](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/reverting-a-pull-request) to do that.
 
 If you do not receive any reports of problems, no action is required from you.
 Your changes are working as expected, well done!
