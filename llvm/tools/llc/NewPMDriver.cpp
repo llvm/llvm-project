@@ -51,16 +51,10 @@ extern cl::opt<bool> PrintPipelinePasses;
 
 using namespace llvm;
 
-static cl::opt<RegAllocType> RegAlloc(
-    "regalloc-npm", cl::desc("Register allocator to use for new pass manager"),
-    cl::Hidden, cl::ValueOptional, cl::init(RegAllocType::Default),
-    cl::values(
-        clEnumValN(RegAllocType::Default, "default",
-                   "pick register allocator based on -O option"),
-        clEnumValN(RegAllocType::Basic, "basic", "basic register allocator"),
-        clEnumValN(RegAllocType::Fast, "fast", "fast register allocator"),
-        clEnumValN(RegAllocType::Greedy, "greedy", "greedy register allocator"),
-        clEnumValN(RegAllocType::PBQP, "pbqp", "PBQP register allocator")));
+static cl::opt<std::string>
+    RegAlloc("regalloc-npm",
+             cl::desc("Register allocator to use for new pass manager"),
+             cl::Hidden, cl::init("default"));
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
