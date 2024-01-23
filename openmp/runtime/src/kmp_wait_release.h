@@ -20,6 +20,8 @@
 #include "ompt-specific.h"
 #endif
 
+#include "llvm/Support/Compiler.h"
+
 /*!
 @defgroup WAIT_RELEASE Wait/Release operations
 
