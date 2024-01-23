@@ -12769,14 +12769,14 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   SDValue N0 = N.getOperand(0);
   if (N0.getOpcode() != ISD::ZERO_EXTEND &&
       N0.getOpcode() != RISCVISD::VZEXT_VL)
-    return false;;
+    return false;
   if (!N0->hasOneUse())
-    return false;;
+    return false;
 
   APInt ShAmt;
   SDValue N1 = N.getOperand(1);
   if (!ISD::isConstantSplatVector(N1.getNode(), ShAmt))
-    return false;;
+    return false;
 
   SDValue Src = N0.getOperand(0);
   EVT SrcVT = Src.getValueType();
