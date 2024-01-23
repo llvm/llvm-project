@@ -398,6 +398,8 @@ Expected<int64_t> readAddendData(LinkGraph &G, Block &B, Edge::OffsetT Offset,
   case Data_Pointer32:
   case Data_RequestGOTAndTransformToDelta32:
     return SignExtend64<32>(support::endian::read32(FixupPtr, Endian));
+  case Data_PRel31:
+    return SignExtend64<31>(support::endian::read32(FixupPtr, Endian));
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -472,9 +474,8 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
 
-  // Regular data relocations have size 4, alignment 1 and write the full 32-bit
-  // result to the place; no need for overflow checking. There are three
-  // exceptions: R_ARM_ABS8, R_ARM_ABS16, R_ARM_PREL31
+  // Data relocations have alignment 1, size 4 (except R_ARM_ABS8 and
+  // R_ARM_ABS16) and write the full 32-bit result (except R_ARM_PREL31).
   switch (Kind) {
   case Data_Delta32: {
     int64_t Value = TargetAddress - FixupAddress + Addend;
@@ -494,6 +495,19 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
       endian::write32le(FixupPtr, Value);
     else
       endian::write32be(FixupPtr, Value);
+    return Error::success();
+  }
+  case Data_PRel31: {
+    int64_t Value = TargetAddress - FixupAddress + Addend;
+    if (!isInt<31>(Value))
+      return makeTargetOutOfRangeError(G, B, E);
+    if (LLVM_LIKELY(G.getEndianness() == endianness::little)) {
+      uint32_t MSB = endian::read32le(FixupPtr) & 0x80000000;
+      endian::write32le(FixupPtr, MSB | (Value & ~0x80000000));
+    } else {
+      uint32_t MSB = endian::read32be(FixupPtr) & 0x80000000;
+      endian::write32be(FixupPtr, MSB | (Value & ~0x80000000));
+    }
     return Error::success();
   }
   case Data_RequestGOTAndTransformToDelta32:
@@ -856,6 +870,7 @@ const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
     KIND_NAME_CASE(Data_Delta32)
     KIND_NAME_CASE(Data_Pointer32)
+    KIND_NAME_CASE(Data_PRel31)
     KIND_NAME_CASE(Data_RequestGOTAndTransformToDelta32)
     KIND_NAME_CASE(Arm_Call)
     KIND_NAME_CASE(Arm_Jump24)
