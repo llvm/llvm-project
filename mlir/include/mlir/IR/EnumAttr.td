@@ -450,11 +450,13 @@ class ConstantEnumCaseBase<Attr attribute,
   )
 >;
 
-/// Constant attribute for defining enum values. `attribute` should be one of
-/// `EnumAttrInfo` or `EnumAttr` and `symbol` the string representation of an
-/// enum case. Multiple enum values of a bit-enum can be combined using `|` as
-/// a separator. Note that there mustn't be any whitespace around the
+/// Attribute constraint matching a constant enum case. `attribute` should be
+/// one of `EnumAttrInfo` or `EnumAttr` and `symbol` the string representation
+/// of an enum case. Multiple enum values of a bit-enum can be combined using
+/// `|` as a separator. Note that there mustn't be any whitespace around the
 /// separator.
+/// This attribute constraint is additionally buildable, making it possible to
+/// use it in result patterns.
 ///
 /// Examples:
 /// * ConstantEnumCase<Arith_IntegerOverflowAttr, "nsw|nuw">
