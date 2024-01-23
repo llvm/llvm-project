@@ -67,7 +67,7 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
     }
   }
 
-  return result.get_val();
+  return static_cast<float>(result.get_val());
 }
 
 } // namespace LIBC_NAMESPACE
