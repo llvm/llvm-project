@@ -20,6 +20,8 @@
 #define __LIBC_COMPILER_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
 #endif // __clang__, __GNUC__
 
+// TODO: Simplify and update the type detection, especially when clang supports
+// _Float128 C23 type.
 #if (defined(__LIBC_COMPILER_GCC_VER) && (__LIBC_COMPILER_GCC_VER >= 1301)) && \
     (defined(__aarch64__) || defined(__riscv) || defined(__x86_64__))
 #define LIBC_COMPILER_HAS_C23_FLOAT128
