@@ -24,6 +24,7 @@ typedef short  v8s   __attribute__((ext_vector_type(8)));
 typedef short  v16s  __attribute__((ext_vector_type(16)));
 typedef short  v32s  __attribute__((ext_vector_type(32)));
 typedef double v4d   __attribute__((ext_vector_type(4)));
+typedef __bf16 v8bf16   __attribute__((ext_vector_type(8)));
 
 
 #ifdef MFMA_GFX908_TESTS
@@ -424,5 +425,10 @@ v16f test_mfma_f32_32x32x16_f16(v8h a, v8h b, v16f c)
   return __builtin_amdgcn_mfma_f32_32x32x16_f16(a, b, c, 1, 2, 3);
 }
 
+// CHECK-GFX950-LABEL: @test_mfma_f32_32x32x16_bf16(
+// CHECK-GFX950: tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> %a, <8 x bfloat> %b, <16 x float> %c, i32 1, i32 2, i32 3)
+v16f test_mfma_f32_32x32x16_bf16(v8bf16 a, v8bf16 b, v16f c) {
+  return __builtin_amdgcn_mfma_f32_32x32x16_bf16(a, b, c, 1, 2, 3);
+}
 
 #endif
