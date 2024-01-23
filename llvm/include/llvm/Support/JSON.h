@@ -488,6 +488,11 @@ private:
     // string). Objects that have had their memory poisoned may cause an ASan
     // error if their memory is reused without calling their destructor.
     // Unpoisoning the memory prevents this error from occurring.
+    // FIXME: This is a temporary solution to prevent buildbots from failing.
+    //  The more appropriate approach would be to call the object's destructor
+    //  to unpoison memory. This would prevent any potential memory leaks (long
+    //  strings). Read for details:
+    //  https://github.com/llvm/llvm-project/pull/79065#discussion_r1462621761
     __asan_unpoison_memory_region(&Union, sizeof(T));
 #endif
     new (reinterpret_cast<T *>(&Union)) T(std::forward<U>(V)...);
