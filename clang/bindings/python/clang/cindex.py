@@ -3586,6 +3586,7 @@ class Rewriter(ClangObject):
         """
         Writes the main file to stdout.
         """
+        sys.stdout.flush()
         conf.lib.clang_CXRewriter_writeMainFileToStdOut(self)
 
 
