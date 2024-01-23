@@ -7938,6 +7938,9 @@ static bool handleArmStateAttribute(Sema &S,
     if (StateName == "za") {
       Shift = FunctionType::SME_ZAShift;
       ExistingState = FunctionType::getArmZAState(EPI.AArch64SMEAttributes);
+    } else if (StateName == "zt0") {
+      Shift = FunctionType::SME_ZT0Shift;
+      ExistingState = FunctionType::getArmZT0State(EPI.AArch64SMEAttributes);
     } else {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
       Attr.setInvalid();

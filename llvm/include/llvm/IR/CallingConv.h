@@ -251,6 +251,16 @@ namespace CallingConv {
     /// Used by GraalVM. Two additional registers are reserved.
     GRAAL = 107,
 
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// x64 code and thunks. This is basically the x64 calling convention using
+    /// ARM64 register names. The first parameter is mapped to x9.
+    ARM64EC_Thunk_X64 = 108,
+
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// ARM64 code and thunks. This is just the ARM64 calling convention,
+    /// except that the first parameter is mapped to x9.
+    ARM64EC_Thunk_Native = 109,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

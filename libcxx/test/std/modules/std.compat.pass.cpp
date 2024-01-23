@@ -12,10 +12,6 @@
 
 // XFAIL: has-no-cxx-module-support
 
-// picolibc does not provide the required timespec_get function, and the
-// "using-if-exists" mechanism apparently did not work here.
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-
 // A minimal test to validate import works.
 
 // MODULE_DEPENDENCIES: std.compat

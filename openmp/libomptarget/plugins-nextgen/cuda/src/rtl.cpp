@@ -77,8 +77,9 @@ CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
   /// Create the CUDA image with the id and the target image pointer.
-  CUDADeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), Module(nullptr) {}
+  CUDADeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                    const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage), Module(nullptr) {}
 
   /// Load the image as a CUDA module.
   Error loadModule() {
@@ -468,14 +469,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate and construct a CUDA kernel.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    new (CUDAKernel) CUDAKernelTy(KernelEntry.name);
+    new (CUDAKernel) CUDAKernelTy(Name);
 
     return *CUDAKernel;
   }
@@ -530,7 +530,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     // Allocate and initialize the image object.
     CUDADeviceImageTy *CUDAImage = Plugin::get().allocate<CUDADeviceImageTy>();
-    new (CUDAImage) CUDADeviceImageTy(ImageId, TgtImage);
+    new (CUDAImage) CUDADeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the CUDA module.
     if (auto Err = CUDAImage->loadModule())
