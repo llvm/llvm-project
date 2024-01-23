@@ -33,6 +33,7 @@
 cd %S/Inputs # or copy %S/Inputs/mcdc-maxbs.c into the working directory
 clang -O3 -fcoverage-mcdc -fprofile-instr-generate \
     -fcoverage-mapping -fcoverage-compilation-dir=. \
+    -mllvm -enable-name-compression=false \
     mcdc-maxbs.c -c -o mcdc-maxbs.o
 
 # Instructions for regenerating the test vector:
