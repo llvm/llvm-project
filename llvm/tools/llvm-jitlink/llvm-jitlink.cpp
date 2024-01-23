@@ -1265,8 +1265,52 @@ Session::findSectionInfo(StringRef FileName, StringRef SectionName) {
   return SecInfoItr->second;
 }
 
+class MemoryMatcher {
+public:
+  MemoryMatcher(ArrayRef<char> Content)
+      : Pos(Content.data()), End(Pos + Content.size()) {}
+
+  template <typename MaskType> bool matchMask(MaskType Mask) {
+    if (Mask == (Mask & *reinterpret_cast<const MaskType *>(Pos))) {
+      Pos += sizeof(MaskType);
+      return true;
+    }
+    return false;
+  }
+
+  template <typename ValueType> bool matchEqual(ValueType Value) {
+    if (Value == *reinterpret_cast<const ValueType *>(Pos)) {
+      Pos += sizeof(ValueType);
+      return true;
+    }
+    return false;
+  }
+
+  bool done() const { return Pos == End; }
+
+private:
+  const char *Pos;
+  const char *End;
+};
+
 static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
-  // Implement acutal stub kind detection
+  constexpr uint32_t Armv7MovWTle = 0xe300c000;
+  constexpr uint32_t Armv7BxR12le = 0xe12fff1c;
+  constexpr uint32_t Thumbv7MovWTle = 0x0c00f240;
+  constexpr uint16_t Thumbv7BxR12le = 0x4760;
+
+  MemoryMatcher M(Stub.getContent());
+  if (M.matchMask(Thumbv7MovWTle)) {
+    if (M.matchMask(Thumbv7MovWTle))
+      if (M.matchEqual(Thumbv7BxR12le))
+        if (M.done())
+          return "thumbv7_abs_le";
+  } else if (M.matchMask(Armv7MovWTle)) {
+    if (M.matchMask(Armv7MovWTle))
+      if (M.matchEqual(Armv7BxR12le))
+        if (M.done())
+          return "armv7_abs_le";
+  }
   return "";
 }
 
