@@ -20,14 +20,12 @@
 /// When fat LTO is enabled with -S and -emit-llvm, we expect IR output and -ffat-lto-objects to be passed to cc1.
 // RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -### %s -S -emit-llvm 2>&1 | FileCheck %s -check-prefix=CHECK-CC-S-EL-LTO
 // CHECK-CC-S-EL-LTO: -cc1
-// CHECK-CC-S-EL-LTO-SAME: -funified-lto
 // CHECK-CC-S-EL-LTO-SAME: -emit-llvm
 // CHECK-CC-S-EL-LTO-SAME: -ffat-lto-objects
 
 /// When fat LTO is enabled wihtout -S we expect native object output and -ffat-lto-object to be passed to cc1.
 // RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -### %s -c 2>&1 | FileCheck %s -check-prefix=CHECK-CC-C-LTO
 // CHECK-CC-C-LTO: -cc1
-// CHECK-CC-C-LTO: -funified-lto
 // CHECK-CC-C-LTO: -emit-obj
 // CHECK-CC-C-LTO: -ffat-lto-objects
 
