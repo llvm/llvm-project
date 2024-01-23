@@ -635,7 +635,9 @@ def ROCDL_TargettAttr :
     StringRefParameter<"Target triple.", "\"amdgcn-amd-amdhsa\"">:$triple,
     StringRefParameter<"Target chip.", "\"gfx900\"">:$chip,
     StringRefParameter<"Target chip features.", "\"\"">:$features,
-    StringRefParameter<"ABI version.", "\"400\"">:$abi,
+    // Also update the default builder below and rocdl-attach-target in
+    // Dialect/GPU/Transforms/Passes.td .
+    StringRefParameter<"ABI version.", "\"500\"">:$abi,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
   );
@@ -647,7 +649,7 @@ def ROCDL_TargettAttr :
                      CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
                      CArg<"StringRef", "\"gfx900\"">:$chip,
                      CArg<"StringRef", "\"\"">:$features,
-                     CArg<"StringRef", "\"400\"">:$abiVersion,
+                     CArg<"StringRef", "\"500\"">:$abiVersion,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
       return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,
