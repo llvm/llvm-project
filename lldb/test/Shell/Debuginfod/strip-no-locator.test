@@ -1,24 +1,22 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# RUN: mkdir -p %t/output
+# Scenario 1 baseline:
+# * A plain stripped binary, add the unstripped binary as a symbol file
+# * Sanity for functional parity with Debuginfod-provided symbols
 
-# Scenario 1
-#  A simple stripped binary, add the unstripped binary as a symbol file
-#  (Sanity for comparison with Debuginfod-provided symbols)
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
 
-# RUN: yaml2obj %p/Inputs/bin-normal.yaml -o %t/output/bin-normal
-# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/output/bin-stripped
-# RUN: chmod a+x %t/output/bin-stripped
-
-# Run a negative test (make sure we don't have symbols)
+# RUN: yaml2obj %p/Inputs/bin-normal.yaml -o %t/bin-normal
+# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/bin-stripped
+# RUN: chmod a+x %t/bin-stripped
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
-# RUN:       -o "target create %t/output/bin-stripped" \
-# RUN:       -o "target symbols add %t/output/bin-normal" \
+# RUN:       -o "target create %t/bin-stripped" \
+# RUN:       -o "target symbols add %t/bin-normal" \
 # RUN:       -o "b func" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
 
-# Should NOT have source file information:
-
+# Should have correct source file and line information:
 # CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}

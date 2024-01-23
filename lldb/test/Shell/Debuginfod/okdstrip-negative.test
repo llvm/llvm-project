@@ -1,24 +1,20 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# We set up a file-system 'hosted' Debuginfod server
+# Scenario 2 negative:
+# * A stripped binary, with an "-only-keep-debug" symbols which is *not* there.
+# * LLDB should fail to find the OKD file automatically using .gnu.debuglink.
 
-# RUN: mkdir -p %t/output
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
 
-# Scenario 2
-#  A stripped binary, with an "-only-keep-debug" symbols which is *not* there.
-#  LLDB should fail to find the OKD file automatically using .gnu.debuglink
-
-# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/output/bin-stripped.tmp
-# RUN: yaml2obj %p/Inputs/sym-stripped.yaml -o %t/output/bin-stripped.dbg
-# RUN: llvm-objcopy %t/output/bin-stripped.tmp --add-gnu-debuglink=%t/output/bin-stripped.dbg %t/output/bin-stripped
-# Don't leave the stripped .dbg file laying around for the debugger to discover
-# RUN: rm %t/output/bin-stripped.dbg
-# RUN: chmod a+x %t/output/bin-stripped
-
-# Verify that we find symbols from the Debuginfod service
+# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/bin-stripped.tmp
+# RUN: yaml2obj %p/Inputs/sym-stripped.yaml -o %t/bin-stripped.dbg
+# RUN: llvm-objcopy %t/bin-stripped.tmp --add-gnu-debuglink=%t/bin-stripped.dbg %t/bin-stripped
+# RUN: rm %t/bin-stripped.dbg
+# RUN: chmod a+x %t/bin-stripped
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
-# RUN:       -o "target create %t/output/bin-stripped" \
+# RUN:       -o "target create %t/bin-stripped" \
 # RUN:       -o "b func" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s

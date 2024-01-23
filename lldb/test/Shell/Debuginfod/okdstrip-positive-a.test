@@ -1,33 +1,28 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# We set up a file-system 'hosted' Debuginfod server
+# Scenario 2a:
+#  A stripped binary, with an "-only-keep-debug" symbols file.
+#  LLDB should request the symbols from Debuginfod as 'debuginfo'.
 
-# RUN: mkdir -p %t/output
+# Set up a file-system 'hosted' Debuginfod server.
+# RUN: rm -rf %t
 # RUN: mkdir -p %t/cache
 # RUN: mkdir -p %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d
 
-# Scenario 2a
-#  A stripped binary, with an "-only-keep-debug" symbols file
-#  LLDB should request the symbols from Debuginfod as 'debuginfo'
-
-# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/output/bin-stripped.tmp
-# RUN: yaml2obj %p/Inputs/sym-stripped.yaml -o %t/output/bin-stripped.dbg
-# RUN: llvm-objcopy %t/output/bin-stripped.tmp --add-gnu-debuglink=%t/output/bin-stripped.dbg %t/output/bin-stripped
-# Move the stripped .dbg into the file:// hosted Debuginfod location
-# RUN: mv %t/output/bin-stripped.dbg %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d/debuginfo
-# RUN: chmod a+x %t/output/bin-stripped
-
-# Verify that we find symbols from the Debuginfod service
+# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/bin-stripped.tmp
+# RUN: yaml2obj %p/Inputs/sym-stripped.yaml -o %t/bin-stripped.dbg
+# RUN: llvm-objcopy %t/bin-stripped.tmp --add-gnu-debuglink=%t/bin-stripped.dbg %t/bin-stripped
+# RUN: mv %t/bin-stripped.dbg %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d/debuginfo
+# RUN: chmod a+x %t/bin-stripped
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup true" \
 # RUN:       -o "settings set plugin.symbol-locator.debuginfod.cache-path %t/cache" \
 # RUN:       -o "settings clear plugin.symbol-locator.debuginfod.server-urls" \
 # RUN:       -o "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%t" \
-# RUN:       -o "target create %t/output/bin-stripped" \
+# RUN:       -o "target create %t/bin-stripped" \
 # RUN:       -o "b func" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
 
-# Should have source file information:
-
+# Should have source file and line information:
 # CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}

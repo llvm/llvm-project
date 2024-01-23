@@ -1,35 +1,30 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# We set up a file-system 'hosted' Debuginfod server
+# Scenario 3:
+# * A split-dwarf binary with a Debuginfod-hosted .dwp file.
 
-# RUN: mkdir -p %t/output
+# Set up a file-system 'hosted' Debuginfod server
+# RUN: rm -rf %t
 # RUN: mkdir -p %t/cache
 # RUN: mkdir -p %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094
 
-# Scenario 2
-#  A stripped binary, with an "-only-keep-debug" symbols file
-#  Debuginfo has the 'okd' file as the 'debuginfo' item
-# LLDB should ask Debuginfod for it's symbols
-
-# RUN: yaml2obj %p/Inputs/bin-split.yaml -o %t/output/bin-split
+# RUN: yaml2obj %p/Inputs/bin-split.yaml -o %t/bin-split
 # RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094/debuginfo
-# RUN: chmod a+x %t/output/bin-split
-
-# Positive test: We find the DWP file with the Debuginfod service
+# RUN: chmod a+x %t/bin-split
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup true" \
 # RUN:       -o "settings set plugin.symbol-locator.debuginfod.cache-path %t/cache" \
 # RUN:       -o "settings clear plugin.symbol-locator.debuginfod.server-urls" \
 # RUN:       -o "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%t" \
-# RUN:       -o "target create %t/output/bin-split" \
+# RUN:       -o "target create %t/bin-split" \
 # RUN:       -o "target modules dump separate-debug-info" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
 
-# CHECK: Symbol file: {{.*}}/output/bin-split
+# CHECK: Symbol file: {{.*}}/bin-split
 # CHECK-NEXT: Type: "dwo"
 # CHECK-NEXT: Dwo ID{{.*}}
-# CHECK: {{[- ]+}}
-# The cache key is stable, so we can mandate that we discover this thing from the cache
+# CHECK-NEXT: {{[- ]+}}
+# The cache key is stable, so mandating it's location verifies it was cached
 # The '.tmp' (sort of) ensures the cache is our private cache, not the system cache
-# CHECK: {{0x[0-9a-f]+.* +.*}}.tmp/cache/llvmcache-6559017670391320133{{ *$}}
+# CHECK-NEXT: {{0x[0-9a-f]+.* +}}/{{.*}}.tmp/cache/llvmcache-6559017670391320133{{ *$}}

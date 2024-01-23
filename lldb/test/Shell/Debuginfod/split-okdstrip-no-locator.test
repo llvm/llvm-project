@@ -1,25 +1,27 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# We set up a file-system 'hosted' Debuginfod server
+# Scenario 5 baseline:
+# * A stripped, split binary, with --add-gnu-debuglink symbols automatically
+# * found, with a .dwp file located next to the binary.
 
-# RUN: mkdir -p %t/output
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
 
-# Scenario 4: No locator
-#  A stripped, split binary, symbols manually added and a .dwp file right next to the binary
-
-# RUN: yaml2obj %p/Inputs/bin-split-stripped.yaml -o %t/output/bin-split-stripped.tmp
-# RUN: yaml2obj %p/Inputs/sym-split.yaml -o %t/output/sym-split
-# RUN: llvm-objcopy %t/output/bin-split-stripped.tmp --add-gnu-debuglink=%t/output/sym-split %t/output/bin-split-stripped
-# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/output/bin-split-stripped.dwp
-# RUN: chmod a+x %t/output/bin-split-stripped
+# RUN: yaml2obj %p/Inputs/bin-split-stripped.yaml -o %t/bin-split-stripped.tmp
+# RUN: yaml2obj %p/Inputs/sym-split.yaml -o %t/sym-split
+# RUN: llvm-objcopy %t/bin-split-stripped.tmp --add-gnu-debuglink=%t/sym-split %t/bin-split-stripped
+# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/bin-split-stripped.dwp
+# RUN: chmod a+x %t/bin-split-stripped
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
-# RUN:       -o "target create %t/output/bin-split-stripped" \
+# RUN:       -o "target create %t/bin-split-stripped" \
 # RUN:       -o "target modules dump separate-debug-info" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
 
-# CHECK: Symbol file: {{.*}}/bin-split
+# CHECK: Symbol file: {{.*}}/bin-split-stripped
 # CHECK-NEXT: Type: "dwo"
 # CHECK-NEXT: Dwo ID{{.*}}
-# CHECK: {{0x[0-9a-f]+.* +.*}}/output/bin-split-stripped.dwp(gen/bin-split.dwo){{ *$}}
+# CHECK-NEXT: {{[- ]+}}
+# Verify it found the DWP file properly
+# CHECK-NEXT: 0x{{[0-9a-f]+.* +}}/{{.*}}/bin-split-stripped.dwp({{.*}}bin-split.dwo){{ *$}}

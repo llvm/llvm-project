@@ -1,35 +1,26 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# We set up a file-system 'hosted' Debuginfod server
+# Scenario 1b:
+# * A plain stripped binary
+# * Debuginfod has the unstripped binary as the 'executable'
 
-# RUN: mkdir -p %t/output
+# Set up a file-system 'hosted' Debuginfod server:
+# RUN: rm -rf %t
 # RUN: mkdir -p %t/cache
 # RUN: mkdir -p %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d
 
-# Scenario 1a
-#  A simple stripped binary
-#  Debuginfod has the unstripped binary as the 'executable'
-
-# Put the unstripped binary in the Debuginfod server as 'executable'
-
 # RUN: yaml2obj %p/Inputs/bin-normal.yaml -o %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d/executable
-# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/output/bin-stripped
-# RUN: chmod a+x %t/output/bin-stripped
-
-# First, run a negative test (make sure we don't have symbols)
-
-# Scenario 1, postive test: Can we pull the executable
-# from Debuginfod and get a breakpoint set properly?
+# RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/bin-stripped
+# RUN: chmod a+x %t/bin-stripped
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup true" \
 # RUN:       -o "settings set plugin.symbol-locator.debuginfod.cache-path %t/cache" \
 # RUN:       -o "settings clear plugin.symbol-locator.debuginfod.server-urls" \
 # RUN:       -o "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%t" \
-# RUN:       -o "target create %t/output/bin-stripped" \
+# RUN:       -o "target create %t/bin-stripped" \
 # RUN:       -o "b func" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
 
-# Should have source file info:
-
+# Should have source file and line info:
 # CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}

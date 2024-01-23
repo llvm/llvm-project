@@ -1,21 +1,17 @@
 # REQUIRES: system-linux && native && target-x86_64
 
-# We set up a file-system 'hosted' Debuginfod server
+# Scenario 3 baseline:
+# * A split-dwarf binary with the .dwp file right next to the binary.
 
-# RUN: rm -rf %t || echo ok
-# RUN: mkdir -p %t/output
-# RUN: mkdir -p %t/cache
-# RUN: mkdir -p %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
 
-# Scenario 3: No locator
-#  A split binary, with a .dwp file right next to the binary
-
-# RUN: yaml2obj %p/Inputs/bin-split.yaml -o %t/output/bin-split
-# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/output/bin-split.dwp
-# RUN: chmod a+x %t/output/bin-split
+# RUN: yaml2obj %p/Inputs/bin-split.yaml -o %t/bin-split
+# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/bin-split.dwp
+# RUN: chmod a+x %t/bin-split
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
-# RUN:       -o "target create %t/output/bin-split" \
+# RUN:       -o "target create %t/bin-split" \
 # RUN:       -o "target modules dump separate-debug-info" \
 # RUN:       -o "quit" \
 # RUN:        2>&1 | FileCheck %s
@@ -24,3 +20,5 @@
 # CHECK-NEXT: Type: "dwo"
 # CHECK-NEXT: Dwo ID{{.*}}
 # CHECK-NEXT: {{^[- ]+$}}
+# Verify it found the DWP file properly:
+# CHECK-NEXT: 0x{{[0-9a-f]+.* +}}/{{.*}}/bin-split.dwp({{.*}}bin-split.dwo){{ *$}}
