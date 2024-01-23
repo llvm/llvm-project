@@ -4672,12 +4672,6 @@ QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
 QualType ASTContext::getUsingType(const UsingShadowDecl *Found,
                                   QualType Underlying) const {
   llvm::FoldingSetNodeID ID;
-  UsingType::Profile(ID, Found, Underlying);
-
-  void *InsertPos = nullptr;
-  if (UsingType *T = UsingTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(T, 0);
-
   const Type *TypeForDecl =
       cast<TypeDecl>(Found->getTargetDecl())->getTypeForDecl();
 
@@ -4687,6 +4681,13 @@ QualType ASTContext::getUsingType(const UsingShadowDecl *Found,
 
   if (Underlying.getTypePtr() == TypeForDecl)
     Underlying = QualType();
+  UsingType::Profile(ID, Found, Underlying);
+
+  void *InsertPos = nullptr;
+  if (UsingType *T = UsingTypes.FindNodeOrInsertPos(ID, InsertPos)) {
+    return QualType(T, 0);
+  }
+
   void *Mem =
       Allocate(UsingType::totalSizeToAlloc<QualType>(!Underlying.isNull()),
                alignof(UsingType));
