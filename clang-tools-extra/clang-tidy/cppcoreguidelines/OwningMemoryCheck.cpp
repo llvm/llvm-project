@@ -179,8 +179,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                                  equalsBoundNode("context"),
                                  equalsBoundNode("function_decl"))))
                       .bind("bad_owner_return")))),
-          returns(qualType(qualType().bind("result"),
-                           unless(hasDeclaration(OwnerDecl))))),
+          returns(qualType(unless(hasDeclaration(OwnerDecl))).bind("result"))),
       this);
 
   // Matching on lambdas, that return an owner/resource, but don't declare
@@ -204,8 +203,8 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
                       hasAncestor(decl(equalsBoundNode("context"),
                                        equalsBoundNode("scope-decl"))))
                       .bind("bad_owner_return")))),
-          hasCallOperator(returns(qualType(qualType().bind("result"),
-                                           unless(hasDeclaration(OwnerDecl))))))
+          hasCallOperator(returns(
+              qualType(unless(hasDeclaration(OwnerDecl))).bind("result"))))
           .bind("lambda"),
       this);
 
