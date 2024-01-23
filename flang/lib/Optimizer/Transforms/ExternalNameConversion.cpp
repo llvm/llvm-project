@@ -44,20 +44,6 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
                                                   appendUnderscore);
 }
 
-/// Update the early outlining parent name
-void updateEarlyOutliningParentName(mlir::func::FuncOp funcOp,
-                                    bool appendUnderscore) {
-  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
-          funcOp.getOperation())) {
-    auto oldName = earlyOutlineOp.getParentName();
-    if (oldName != "") {
-      auto dName = fir::NameUniquer::deconstruct(oldName);
-      std::string newName = mangleExternalName(dName, appendUnderscore);
-      earlyOutlineOp.setParentName(newName);
-    }
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
 //===----------------------------------------------------------------------===//
@@ -93,8 +79,6 @@ public:
       op->setAttr(fir::getInternalFuncNameAttrName(),
                   mlir::StringAttr::get(op->getContext(), oldName));
     }
-
-    updateEarlyOutliningParentName(op, appendUnderscore);
     rewriter.finalizeOpModification(op);
     return ret;
   }

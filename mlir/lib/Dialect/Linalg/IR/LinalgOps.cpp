@@ -2043,7 +2043,8 @@ static LogicalResult appendMangledType(llvm::raw_string_ostream &ss, Type t) {
     if (failed(appendMangledType(ss, vec.getElementType())))
       return failure();
     return success();
-  } else if (t.isSignlessIntOrIndexOrFloat()) {
+  }
+  if (t.isSignlessIntOrIndexOrFloat()) {
     ss << t;
     return success();
   }

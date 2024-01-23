@@ -127,9 +127,8 @@ const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural) {
     return ((plural) ? KMP_I18N_STR(Threads) : KMP_I18N_STR(Thread));
   case KMP_HW_PROC_GROUP:
     return ((plural) ? KMP_I18N_STR(ProcGroups) : KMP_I18N_STR(ProcGroup));
-  default:
-    return KMP_I18N_STR(Unknown);
   }
+  return KMP_I18N_STR(Unknown);
 }
 
 const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
@@ -158,9 +157,8 @@ const char *__kmp_hw_get_keyword(kmp_hw_t type, bool plural) {
     return ((plural) ? "threads" : "thread");
   case KMP_HW_PROC_GROUP:
     return ((plural) ? "proc_groups" : "proc_group");
-  default:
-    return ((plural) ? "unknowns" : "unknown");
   }
+  return ((plural) ? "unknowns" : "unknown");
 }
 
 const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
@@ -173,9 +171,8 @@ const char *__kmp_hw_get_core_type_string(kmp_hw_core_type_t type) {
   case KMP_HW_CORE_TYPE_CORE:
     return "Intel(R) Core(TM) processor";
 #endif
-  default:
-    return "unknown";
   }
+  return "unknown";
 }
 
 #if KMP_AFFINITY_SUPPORTED
@@ -1249,10 +1246,9 @@ bool kmp_topology_t::filter_hw_subset() {
 #endif
       case KMP_HW_CORE_TYPE_UNKNOWN:
         return 0;
-      default:
-        KMP_ASSERT(0);
-        return 0;
       }
+      KMP_ASSERT(0);
+      return 0;
     }
   };
   struct core_eff_indexer {

@@ -58,13 +58,13 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     // correct (when it matters).
     fputil::FPBits<double> t(
         (bit_prod.get_biased_exponent() >= bitz.get_biased_exponent())
-            ? ((double(bit_sum) - double(bit_prod)) - double(bitz))
-            : ((double(bit_sum) - double(bitz)) - double(bit_prod)));
+            ? ((bit_sum.get_val() - bit_prod.get_val()) - bitz.get_val())
+            : ((bit_sum.get_val() - bitz.get_val()) - bit_prod.get_val()));
 
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
     if (!t.is_zero() && ((bit_sum.get_mantissa() & 0xfff'ffffULL) == 0)) {
-      if (bit_sum.get_sign() != t.get_sign()) {
+      if (bit_sum.sign() != t.sign()) {
         bit_sum.set_mantissa(bit_sum.get_mantissa() + 1);
       } else if (bit_sum.get_mantissa()) {
         bit_sum.set_mantissa(bit_sum.get_mantissa() - 1);
@@ -72,7 +72,7 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     }
   }
 
-  return static_cast<float>(static_cast<double>(bit_sum));
+  return static_cast<float>(bit_sum.get_val());
 }
 
 namespace internal {
@@ -104,24 +104,22 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   int z_exp = 0;
 
   // Normalize denormal inputs.
-  if (LIBC_UNLIKELY(FPBits(x).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(x).is_subnormal())) {
     x_exp -= 52;
     x *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(y).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(y).is_subnormal())) {
     y_exp -= 52;
     y *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(z).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(z).is_subnormal())) {
     z_exp -= 52;
     z *= 0x1.0p+52;
   }
 
   FPBits x_bits(x), y_bits(y), z_bits(z);
-  bool x_sign = x_bits.get_sign();
-  bool y_sign = y_bits.get_sign();
-  bool z_sign = z_bits.get_sign();
-  bool prod_sign = x_sign != y_sign;
+  const Sign z_sign = z_bits.sign();
+  Sign prod_sign = (x_bits.sign() == y_bits.sign()) ? Sign::POS : Sign::NEG;
   x_exp += x_bits.get_biased_exponent();
   y_exp += y_bits.get_biased_exponent();
   z_exp += z_bits.get_biased_exponent();
@@ -132,9 +130,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     return x * y + z;
 
   // Extract mantissa and append hidden leading bits.
-  UInt128 x_mant = x_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  UInt128 y_mant = y_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  UInt128 z_mant = z_bits.get_mantissa() | FPBits::MIN_NORMAL;
+  UInt128 x_mant = x_bits.get_explicit_mantissa();
+  UInt128 y_mant = y_bits.get_explicit_mantissa();
+  UInt128 z_mant = z_bits.get_explicit_mantissa();
 
   // If the exponent of the product x*y > the exponent of z, then no extra
   // precision beside the entire product x*y is needed.  On the other hand, when
@@ -248,27 +246,24 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     }
   } else {
     // Return +0.0 when there is exact cancellation, i.e., x*y == -z exactly.
-    prod_sign = false;
+    prod_sign = Sign::POS;
   }
 
   // Finalize the result.
   int round_mode = fputil::quick_get_round();
   if (LIBC_UNLIKELY(r_exp >= FPBits::MAX_BIASED_EXPONENT)) {
     if ((round_mode == FE_TOWARDZERO) ||
-        (round_mode == FE_UPWARD && prod_sign) ||
-        (round_mode == FE_DOWNWARD && !prod_sign)) {
-      result = FPBits::MAX_NORMAL;
-      return prod_sign ? -cpp::bit_cast<double>(result)
-                       : cpp::bit_cast<double>(result);
+        (round_mode == FE_UPWARD && prod_sign.is_neg()) ||
+        (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
+      return FPBits::max_normal(prod_sign).get_val();
     }
-    return prod_sign ? static_cast<double>(FPBits::neg_inf())
-                     : static_cast<double>(FPBits::inf());
+    return FPBits::inf(prod_sign).get_val();
   }
 
   // Remove hidden bit and append the exponent field and sign bit.
   result = (result & FPBits::FRACTION_MASK) |
            (static_cast<uint64_t>(r_exp) << FPBits::FRACTION_LEN);
-  if (prod_sign) {
+  if (prod_sign.is_neg()) {
     result |= FPBits::SIGN_MASK;
   }
 
@@ -276,8 +271,8 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   if (round_mode == FE_TONEAREST) {
     if (round_bit && (sticky_bits || ((result & 1) != 0)))
       ++result;
-  } else if ((round_mode == FE_UPWARD && !prod_sign) ||
-             (round_mode == FE_DOWNWARD && prod_sign)) {
+  } else if ((round_mode == FE_UPWARD && prod_sign.is_pos()) ||
+             (round_mode == FE_DOWNWARD && prod_sign.is_neg())) {
     if (round_bit || sticky_bits)
       ++result;
   }

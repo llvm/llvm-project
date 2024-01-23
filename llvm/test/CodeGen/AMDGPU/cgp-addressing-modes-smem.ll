@@ -34,7 +34,7 @@ define amdgpu_cs void @test_sink_smem_offset_400(ptr addrspace(4) inreg %ptr, i3
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:  .LBB0_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x190
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -100,7 +100,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000(ptr addrspace(4) inreg %ptr, i
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:  .LBB1_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0xfa0
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -154,7 +154,7 @@ define amdgpu_cs void @test_sink_smem_offset_4000000(ptr addrspace(4) inreg %ptr
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:  .LBB2_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x3d0900
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -209,7 +209,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000(ptr addrspace(4) inreg %pt
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x2625a00
 ; GFX12-NEXT:  .LBB3_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x0
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -255,7 +255,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000000(ptr addrspace(4) inreg 
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:  .LBB4_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x0
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -309,7 +309,7 @@ define amdgpu_cs void @test_sink_smem_offset_neg400(ptr addrspace(4) inreg %ptr,
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:  .LBB5_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_load_b32 s3, s[0:1], -0x190
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

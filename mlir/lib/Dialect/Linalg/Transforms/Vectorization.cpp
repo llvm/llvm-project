@@ -2499,8 +2499,8 @@ struct Conv1DGenerator
       return;
     // (LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC) OR
     // (non-channeled convolution -> LHS and RHS both have single dimensions).
-    if (!((lhsShapedType.getRank() == 3 && resShapedType.getRank() == 3) ||
-          (lhsShapedType.getRank() == 1 && resShapedType.getRank() == 1)))
+    if ((lhsShapedType.getRank() != 3 || resShapedType.getRank() != 3) &&
+        (lhsShapedType.getRank() != 1 || resShapedType.getRank() != 1))
       return;
 
     Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));
