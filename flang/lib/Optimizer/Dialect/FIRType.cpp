@@ -1257,7 +1257,7 @@ changeTypeShape(mlir::Type type,
         return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
       })
       .Default([&](mlir::Type t) -> mlir::Type {
-        assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType> ||
+        assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
                 llvm::isa<mlir::NoneType>(t)) &&
                "unexpected FIR leaf type");
         if (newShape)
