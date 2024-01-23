@@ -227,6 +227,7 @@ int llvm::compileModuleWithNewPM(
           return PassName.empty() ? ClassName : PassName;
         });
         outs() << "MIR pipeline: " << MIRPipeline << '\n';
+        return 0;
       }
 
       RunPasses(BOS.get(), Out.get(), M.get(), Context, Buffer, &MPM, &MAM,
