@@ -1678,7 +1678,7 @@ namespace ImplicitConstexpr {
   struct R { constexpr R() noexcept; constexpr R(const R&) noexcept; constexpr R(R&&) noexcept; ~R() noexcept; };
   struct S { R r; }; // expected-note 3{{here}}
   struct T { T(const T&) noexcept; T(T &&) noexcept; ~T() noexcept; };
-  struct U { T t; }; // expected-note 3{{here}}
+  struct U { T t; }; // cxx11_20-note 3{{here}}
   static_assert(!__is_literal_type(Q), "");
   static_assert(!__is_literal_type(R), "");
   static_assert(!__is_literal_type(S), "");
@@ -1691,9 +1691,9 @@ namespace ImplicitConstexpr {
     friend S::S() noexcept; // expected-error {{follows constexpr}}
     friend S::S(S&&) noexcept; // expected-error {{follows constexpr}}
     friend S::S(const S&) noexcept; // expected-error {{follows constexpr}}
-    friend constexpr U::U() noexcept; // expected-error {{follows non-constexpr}}
-    friend constexpr U::U(U&&) noexcept; // expected-error {{follows non-constexpr}}
-    friend constexpr U::U(const U&) noexcept; // expected-error {{follows non-constexpr}}
+    friend constexpr U::U() noexcept; // cxx11_20-error {{follows non-constexpr}}
+    friend constexpr U::U(U&&) noexcept; // cxx11_20-error {{follows non-constexpr}}
+    friend constexpr U::U(const U&) noexcept; // cxx11_20-error {{follows non-constexpr}}
   };
 }
 
@@ -2277,7 +2277,8 @@ namespace InheritedCtor {
   struct A { constexpr A(int) {} };
 
   struct B : A { int n; using A::A; }; // expected-note {{here}}
-  constexpr B b(0); // expected-error {{constant expression}} expected-note {{derived class}}
+  constexpr B b(0); // expected-error {{constant expression}} cxx11_20-note {{derived class}}\
+                    // cxx23-note {{not initialized}}
 
   struct C : A { using A::A; struct { union { int n, m = 0; }; union { int a = 0; }; int k = 0; }; struct {}; union {}; }; // expected-warning 6{{}}
   constexpr C c(0);

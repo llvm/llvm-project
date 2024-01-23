@@ -9565,9 +9565,6 @@ def err_defaulted_copy_assign_not_ref : Error<
 def ext_incorrect_defaulted_constexpr : ExtWarn<
   "defaulted definition of %sub{select_special_member_kind}0 that marked %select{constexpr|consteval}1 "
   "but never produces a constant expression is a C++23 extension">, InGroup<CXX23>, DefaultError;
-def warn_cxx23_compat_incorrect_defaulted_constexpr : Warning<
-  "defaulted definition of %sub{select_special_member_kind}0 that marked %select{constexpr|consteval}1 "
-  "but never produces a constant expression is incompatible with C++ standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_incorrect_defaulted_constexpr_with_vb: Error<
   "%sub{select_special_member_kind}0 cannot be 'constexpr' in a class with virtual base class">;
 def warn_defaulted_method_deleted : Warning<

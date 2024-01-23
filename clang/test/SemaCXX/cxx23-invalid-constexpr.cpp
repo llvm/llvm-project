@@ -48,10 +48,8 @@ constexpr int F2(NonLiteral N) {
   return 8;
 }
 
-class Derived : public NonLiteral { // cxx23-note {{declared here}}
+class Derived : public NonLiteral {
   constexpr ~Derived() {}; // precxx20-error {{destructor cannot be declared constexpr}}
-  // cxx23-warning@-1{{constexpr destructor is incompatible with C++ standards before C++23 because base class 'NonLiteral' does not have a constexpr destructor}}
-
 };
 
 class Derived1 : public NonLiteral {
@@ -84,15 +82,14 @@ private:
 };
 
 struct WrapperNonT {
-  constexpr WrapperNonT() = default; // cxx23-warning {{defaulted definition of default constructor that marked constexpr but never produces a constant expression is incompatible with C++ standards before C++23}}
-  // expected-note@-1 {{declared here}}
-  constexpr WrapperNonT(WrapperNonT const&) = default; // cxx23-warning {{defaulted definition of copy constructor that marked constexpr but never produces a constant expression is incompatible with C++ standards before C++23}}
+  constexpr WrapperNonT() = default;
+  constexpr WrapperNonT(WrapperNonT const&) = default;
   constexpr WrapperNonT(X const& t) : t(t) { } // cxx23-warning {{constexpr constructor that never produces a constant expression is incompatible with C++ standards before C++23}}
   // cxx23-note@-1 {{non-constexpr constructor 'X' cannot be used in a constant expression}}
-  constexpr WrapperNonT(WrapperNonT &&) = default; // cxx23-warning {{defaulted definition of move constructor that marked constexpr but never produces a constant expression is incompatible with C++ standards before C++23}}
-  constexpr WrapperNonT& operator=(WrapperNonT &) = default; // cxx23-warning {{defaulted definition of copy assignment operator that marked constexpr but never produces a constant expression is incompatible with C++ standards before C++23}}
+  constexpr WrapperNonT(WrapperNonT &&) = default;
+  constexpr WrapperNonT& operator=(WrapperNonT &) = default;
   // cxx11-error@-1 {{an explicitly-defaulted copy assignment operator may not have 'const', 'constexpr' or 'volatile' qualifiers}}
-  constexpr WrapperNonT& operator=(WrapperNonT&& other) = default; // cxx23-warning {{defaulted definition of move assignment operator that marked constexpr but never produces a constant expression is incompatible with C++ standards before C++23}}
+  constexpr WrapperNonT& operator=(WrapperNonT&& other) = default;
   // cxx11-error@-1 {{an explicitly-defaulted move assignment operator may not have 'const', 'constexpr' or 'volatile' qualifiers}}
   constexpr X get() const { return t; } // cxx23-warning {{constexpr function with non-literal return type 'X' is incompatible with C++ standards before C++23}}
   // cxx23-warning@-1{{constexpr function that never produces a constant expression is incompatible with C++ standards before C++23}}
@@ -153,11 +150,10 @@ void test() {
   WrapperNonT x1;
   NonDefaultMembers x2;
 
-  // TODO produces note with an invalid source location
+  // TODO these produce notes with an invalid source location.
   // static_assert((Wrapper<X>(), true));
-  
-  static_assert((WrapperNonT(), true),""); // expected-error{{expression is not an integral constant expression}}\
-                                        // expected-note {{non-constexpr constructor 'WrapperNonT' cannot be used in a constant expression}}
+  // static_assert((WrapperNonT(), true),""); 
+
   static_assert((NonDefaultMembers(), true),""); // expected-error{{expression is not an integral constant expression}} \
                                               // expected-note {{in call to}}
   constexpr bool FFF = (NonDefaultMembers() == NonDefaultMembers()); // expected-error{{must be initialized by a constant expression}} \
