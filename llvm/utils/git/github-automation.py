@@ -280,27 +280,29 @@ class PRBuildbotInformation:
 Your changes will be combined with recent changes from other authors, then tested
 by our [build bots](https://lab.llvm.org/buildbot/).
 
-If there is a problem with a build, all the change authors will receive an email
-describing the problem. Please check whether the problem has been caused by your
-change specifically, as the change set may include many authors. If the problem affects many
-configurations, you may get many emails for the same problem.
+If there is a problem with a build, you may recieve an email describing the problem.
+Please check whether the problem has been caused by your change specifically, as
+the build may include changes from many authors. If the same problem affects many builds,
+you may get many emails describing the same problem.
 
-If you are using a GitHub `noreply` email address, you will not receive these emails.
-Instead, someone will comment on this PR to inform you of the issue.
+You may also be notified of a problem by a comment added to this PR.
 
 You can also track the progress of your change using the [build bot console view](https://lab.llvm.org/buildbot/#/console).
-However, this page only shows recent changes. If yours is not listed there, rely on the notifications.
+However this page only shows recent changes. If yours is not listed there, rely on
+the other notifications.
 
-If you do not receive any reports of problems, no action is required from you.
-Your changes are working as expected, well done!
+If you are unsure whether your change has caused a problem, you can ask questions in
+a comment on this PR or on [Discord](https://discord.com/invite/xS7Z362).
 
 If your change causes an ongoing issue, it may be reverted. This is a [normal part of LLVM development](https://llvm.org/docs/DeveloperPolicy.html#patch-reversion-policy)
 and is not a comment on yourself as an author. The revert commit (or a comment on this PR)
 should explain why it was reverted and how to fix your changes. Please open a new
 PR with the fixed changes and describe what was done to fix them.
 
-If you are unsure how to fix a problem, you can send questions in a reply
-to the notification email, add a comment to this PR, or ask on [Discord](https://discord.com/invite/xS7Z362).
+If you want to revert your own change, you can [create a new PR](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/reverting-a-pull-request) to do that.
+
+If you do not receive any reports of problems, no action is required from you.
+Your changes are working as expected, well done!
 """
         self.pr.as_issue().create_comment(comment)
         return True
