@@ -1,6 +1,6 @@
 # What's all this then?
 
-We're planning on removing debug-info intrinsics from LLVM, as they're slow, unweildy and can confuse optimisation passes if they're not expecting them. Instead of having a sequence of instructions that looks like this:
+We're planning on removing debug info intrinsics from LLVM, as they're slow, unwieldy and can confuse optimisation passes if they're not expecting them. Instead of having a sequence of instructions that looks like this:
 
 ```text
     %add = add i32 %foo, %bar
@@ -10,7 +10,7 @@ We're planning on removing debug-info intrinsics from LLVM, as they're slow, unw
     call void @a_normal_function()
 ```
 
-with dbg.value intrinsics representing debug-info records, it would instead be printed as:
+with dbg.value intrinsics representing debug info records, it would instead be printed as:
 
 ```text
     %add = add i32 %foo, %bar
@@ -20,19 +20,19 @@ with dbg.value intrinsics representing debug-info records, it would instead be p
     call void @a_normal_function()
 ```
 
-Where the debug records are not instructions, do not appear in the instruction list, and won't appear in your optimisation passes unless you go digging for them deliberately.
+The debug records are not instructions, do not appear in the instruction list, and won't appear in your optimisation passes unless you go digging for them deliberately.
 
 # Great, what do I need to do!
 
-Approximately nothing -- we've already instrumented all of LLVM to handle these new records ("DPValues") and behave identically to past LLVM behaviour. We plan on turning this on by default some time soon, with IR converted to the intrinsic-form of debug-info at terminals (textual IR, Bitcode) for a short while, before then changing the textual IR and Bitcode formats.
+Approximately nothing -- we've already instrumented all of LLVM to handle these new records ("DPValues") and behave identically to past LLVM behaviour. We plan on turning this on by default some time soon, with IR converted to the intrinsic form of debug info at terminals (textual IR, bitcode) for a short while, before then changing the textual IR and bitcode formats.
 
-There are two significant changes to be aware of. Firstly, we're adding a single bit of debug-info relevant data to the BasicBlock::iterator class (it's so that we can determine whether ranges intend on including debug-info at the beginning of a block or not). That means when writing passes that insert LLVM-IR instructions, you need to identify positions with BasicBlock::iterator rather than just a bare Instruction *. Most of the time this means that after identifying where you intend on inserting something, you must also call getIterator on the instruction position -- however when inserting at the start of a block you _must_ use getFirstInsertionPt, getFirstNonPHIIt or begin and use that iterator to insert, rather than just fetching a pointer to the first instruction.
+There are two significant changes to be aware of. Firstly, we're adding a single bit of debug relevant data to the BasicBlock::iterator class (it's so that we can determine whether ranges intend on including debug info at the beginning of a block or not). That means when writing passes that insert LLVM-IR instructions, you need to identify positions with BasicBlock::iterator rather than just a bare Instruction *. Most of the time this means that after identifying where you intend on inserting something, you must also call getIterator on the instruction position -- however when inserting at the start of a block you _must_ use getFirstInsertionPt, getFirstNonPHIIt or begin and use that iterator to insert, rather than just fetching a pointer to the first instruction.
 
-The second matter is that if you transfer sequences of instructions from one place to another manually, i.e. repeatedly using moveBefore where you might have used splice, then you should instead use the method moveBeforePreserving. moveBeforePreserving will transfer debug-info records with the instruction they're attached to. This is something that happens automatically today -- if you use moveBefore on every element of an instruction sequence, then debug intrinsics will be moved in the normal course of your code, but we lose this behaviour with non-instruction debug-info.
+The second matter is that if you transfer sequences of instructions from one place to another manually, i.e. repeatedly using `moveBefore` where you might have used `splice`, then you should instead use the method `moveBeforePreserving`. `moveBeforePreserving` will transfer debug info records with the instruction they're attached to. This is something that happens automatically today -- if you use `moveBefore` on every element of an instruction sequence, then debug intrinsics will be moved in the normal course of your code, but we lose this behaviour with non-instruction debug info.
 
 # Anything else?
 
-Not really, but here's an "old vs new" comparison of how to do certain things and quickstart for how this "new" debug-info is structured.
+Not really, but here's an "old vs new" comparison of how to do certain things and quickstart for how this "new" debug info is structured.
 
 ## Skipping debug records, ignoring debug-uses of Values, stably counting instructions...
 
@@ -40,7 +40,7 @@ This will all happen transparently without needing to think about it!
 
 ## What exactly have you replaced debug intrinsics with?
 
-We're using a dedicated C++ class called DPValue to store debug-info, with a one-to-one relationship between each instance of a debug intrinsic and each DPValue object in any LLVM-IR program. This class stores exactly the same information as is stored in debugging intrinsics. It also has almost entirely the same set of methods, that behave in the same way:
+We're using a dedicated C++ class called DPValue to store debug info, with a one-to-one relationship between each instance of a debug intrinsic and each DPValue object in any LLVM-IR program. This class stores exactly the same information as is stored in debugging intrinsics. It also has almost entirely the same set of methods, that behave in the same way:
 
   https://llvm.org/docs/doxygen/classllvm_1_1DPValue.html
 
@@ -76,11 +76,11 @@ Not shown are the links from DPValues to other parts of the Value/Metadata hiera
 
 The various kinds of debug intrinsic (value, declare, assign) are all stored in the DPValue object, with a "Type" field disamgibuating which is which.
 
-## Finding debug-info records
+## Finding debug info records
 
 Utilities such as findDbgUsers and the like now have an optional argument that will return the set of DPValue records that refer to a Value. You should be able to treat them the same as intrinsics.
 
-## Examining debug-info records at positions
+## Examining debug info records at positions
 
 Call "Instruction::getDbgValueRange()" to get the range of DPValue objects that are attached to an instruction.
 
@@ -101,6 +101,6 @@ If you have a block like so:
       br label %xyzzy
 ```
 
-your optimisation pass may wish to erase the terminator and then do something to the block. This is easy to do when debug-info is kept in instructions, but with DPValues there is no trailing instruction to attach the variable information to in the lbock above, once the terminator is erased. For such degenerate blocks, DPValues are stored temporarily in a map in LLVMContext, and are re-inserted when a terminator is reinserted to the block or other instruction inserted at end().
+your optimisation pass may wish to erase the terminator and then do something to the block. This is easy to do when debug info is kept in instructions, but with DPValues there is no trailing instruction to attach the variable information to in the lbock above, once the terminator is erased. For such degenerate blocks, DPValues are stored temporarily in a map in LLVMContext, and are re-inserted when a terminator is reinserted to the block or other instruction inserted at end().
 
 This can technically lead to trouble in the vanishingly rare scenario where an optimisation pass erases a terminator and then decides to erase the whole block. (We recommend not doing that).
