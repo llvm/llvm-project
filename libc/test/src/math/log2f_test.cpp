@@ -39,7 +39,7 @@ TEST_F(LlvmLibcLog2fTest, TrickyInputs) {
       0x3f80079bU, 0x3f81d0b5U, 0x3f82e602U, 0x3f83c98dU, 0x3f8cba39U};
 
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log2, x,
                                    LIBC_NAMESPACE::log2f(x), 0.5);
   }
@@ -49,7 +49,7 @@ TEST_F(LlvmLibcLog2fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
     libc_errno = 0;

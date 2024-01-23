@@ -74,9 +74,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
-          NewRecipe =
-              new VPWidenCallRecipe(*CI, drop_end(Ingredient.operands()),
-                                    getVectorIntrinsicIDForCall(CI, &TLI));
+          NewRecipe = new VPWidenCallRecipe(
+              *CI, drop_end(Ingredient.operands()),
+              getVectorIntrinsicIDForCall(CI, &TLI), CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {

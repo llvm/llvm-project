@@ -70,6 +70,41 @@ void OpenACCDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// device_type support helpers
+//===----------------------------------------------------------------------===//
+
+static bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
+  if (arrayAttr && *arrayAttr && arrayAttr->size() > 0)
+    return true;
+  return false;
+}
+
+static bool hasDeviceType(std::optional<mlir::ArrayAttr> arrayAttr,
+                          mlir::acc::DeviceType deviceType) {
+  if (!hasDeviceTypeValues(arrayAttr))
+    return false;
+
+  for (auto attr : *arrayAttr) {
+    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
+    if (deviceTypeAttr.getValue() == deviceType)
+      return true;
+  }
+
+  return false;
+}
+
+static void printDeviceTypes(mlir::OpAsmPrinter &p,
+                             std::optional<mlir::ArrayAttr> deviceTypes) {
+  if (!hasDeviceTypeValues(deviceTypes))
+    return;
+
+  p << "[";
+  llvm::interleaveComma(*deviceTypes, p,
+                        [&](mlir::Attribute attr) { p << attr; });
+  p << "]";
+}
+
+//===----------------------------------------------------------------------===//
 // DataBoundsOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DataBoundsOp::verify() {
@@ -722,11 +757,7 @@ bool acc::ParallelOp::hasAsyncOnly() {
 }
 
 bool acc::ParallelOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getAsyncOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getAsyncOnly(), deviceType);
 }
 
 mlir::Value acc::ParallelOp::getAsyncValue() {
@@ -789,11 +820,7 @@ bool acc::ParallelOp::hasWaitOnly() {
 }
 
 bool acc::ParallelOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getWaitOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getWaitOnly(), deviceType);
 }
 
 mlir::Operation::operand_range ParallelOp::getWaitValues() {
@@ -818,6 +845,7 @@ static ParseResult parseNumGangs(
     if (failed(parser.parseLBrace()))
       return failure();
 
+    int32_t crtOperandsSize = operands.size();
     if (failed(parser.parseCommaSeparatedList(
             mlir::AsmParser::Delimiter::None, [&]() {
               if (parser.parseOperand(operands.emplace_back()) ||
@@ -826,8 +854,7 @@ static ParseResult parseNumGangs(
               return success();
             })))
       return failure();
-
-    seg.push_back(operands.size());
+    seg.push_back(operands.size() - crtOperandsSize);
 
     if (failed(parser.parseRBrace()))
       return failure();
@@ -981,17 +1008,12 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
   llvm::SmallVector<mlir::Attribute> keywordOnlyDeviceTypeAttributes;
   bool needCommaBeforeOperands = false;
 
-  // Keyword only
-  if (failed(parser.parseOptionalLParen())) {
-    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    keywordOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
-    return success();
-  }
+  if (failed(parser.parseOptionalLParen()))
+    return failure();
 
   // Parse keyword only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
+    // Parse keyword only attributes
     if (failed(parser.parseCommaSeparatedList([&]() {
           if (parser.parseAttribute(
                   keywordOnlyDeviceTypeAttributes.emplace_back()))
@@ -1002,6 +1024,13 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
+  } else if (succeeded(parser.parseOptionalRParen())) {
+    // Keyword only
+    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    keywordOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
+    return success();
   }
 
   if (needCommaBeforeOperands && failed(parser.parseComma()))
@@ -1033,37 +1062,23 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
   return success();
 }
 
-static bool hasDeviceTypeValues(std::optional<mlir::ArrayAttr> arrayAttr) {
-  if (arrayAttr && *arrayAttr && arrayAttr->size() > 0)
-    return true;
-  return false;
-}
-
-static void printDeviceTypes(mlir::OpAsmPrinter &p,
-                             std::optional<mlir::ArrayAttr> deviceTypes) {
-  if (!hasDeviceTypeValues(deviceTypes))
-    return;
-
-  p << "[";
-  llvm::interleaveComma(*deviceTypes, p,
-                        [&](mlir::Attribute attr) { p << attr; });
-  p << "]";
-}
-
 static void printDeviceTypeOperandsWithKeywordOnly(
     mlir::OpAsmPrinter &p, mlir::Operation *op, mlir::OperandRange operands,
     mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
     std::optional<mlir::ArrayAttr> keywordOnlyDeviceTypes) {
 
+  p << "(";
+
   if (operands.begin() == operands.end() && keywordOnlyDeviceTypes &&
       keywordOnlyDeviceTypes->size() == 1) {
     auto deviceTypeAttr =
         mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*keywordOnlyDeviceTypes)[0]);
-    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
+    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None) {
+      p << ")";
       return;
+    }
   }
 
-  p << "(";
   printDeviceTypes(p, keywordOnlyDeviceTypes);
   if (hasDeviceTypeValues(keywordOnlyDeviceTypes) &&
       hasDeviceTypeValues(deviceTypes))
@@ -1093,11 +1108,7 @@ bool acc::SerialOp::hasAsyncOnly() {
 }
 
 bool acc::SerialOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getAsyncOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getAsyncOnly(), deviceType);
 }
 
 mlir::Value acc::SerialOp::getAsyncValue() {
@@ -1114,11 +1125,7 @@ bool acc::SerialOp::hasWaitOnly() {
 }
 
 bool acc::SerialOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getWaitOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getWaitOnly(), deviceType);
 }
 
 mlir::Operation::operand_range SerialOp::getWaitValues() {
@@ -1177,11 +1184,7 @@ bool acc::KernelsOp::hasAsyncOnly() {
 }
 
 bool acc::KernelsOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getAsyncOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getAsyncOnly(), deviceType);
 }
 
 mlir::Value acc::KernelsOp::getAsyncValue() {
@@ -1228,11 +1231,7 @@ bool acc::KernelsOp::hasWaitOnly() {
 }
 
 bool acc::KernelsOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getWaitOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getWaitOnly(), deviceType);
 }
 
 mlir::Operation::operand_range KernelsOp::getWaitValues() {
@@ -1329,17 +1328,12 @@ static ParseResult parseGangClause(
   bool needCommaBetweenValues = false;
   bool needCommaBeforeOperands = false;
 
-  // Gang only keyword
-  if (failed(parser.parseOptionalLParen())) {
-    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    gangOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
-    return success();
-  }
+  if (failed(parser.parseOptionalLParen()))
+    return failure();
 
   // Parse gang only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
+    // Parse gang only attributes
     if (failed(parser.parseCommaSeparatedList([&]() {
           if (parser.parseAttribute(
                   gangOnlyDeviceTypeAttributes.emplace_back()))
@@ -1350,6 +1344,13 @@ static ParseResult parseGangClause(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
+  } else if (succeeded(parser.parseOptionalRParen())) {
+    // Gang only keyword
+    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    gangOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
+    return success();
   }
 
   auto argNum = mlir::acc::GangArgTypeAttr::get(parser.getContext(),
@@ -1449,16 +1450,18 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
                      std::optional<mlir::DenseI32ArrayAttr> segments,
                      std::optional<mlir::ArrayAttr> gangOnlyDeviceTypes) {
 
+  p << "(";
   if (operands.begin() == operands.end() &&
       hasDeviceTypeValues(gangOnlyDeviceTypes) &&
       gangOnlyDeviceTypes->size() == 1) {
     auto deviceTypeAttr =
         mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*gangOnlyDeviceTypes)[0]);
-    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
+    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None) {
+      p << ")";
       return;
+    }
   }
 
-  p << "(";
   printDeviceTypes(p, gangOnlyDeviceTypes);
 
   if (hasDeviceTypeValues(gangOnlyDeviceTypes) &&
@@ -1522,6 +1525,11 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
 }
 
 LogicalResult acc::LoopOp::verify() {
+  if (!getUpperbound().empty() && getInclusiveUpperbound() &&
+      (getUpperbound().size() != getInclusiveUpperbound()->size()))
+    return emitError() << "inclusiveUpperbound size is expected to be the same"
+                       << " as upperbound size";
+
   // Check collapse
   if (getCollapseAttr() && !getCollapseDeviceTypeAttr())
     return emitOpError() << "collapse device_type attr must be define when"
@@ -1635,7 +1643,9 @@ unsigned LoopOp::getNumDataOperands() {
 }
 
 Value LoopOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getGangOperands().size();
+  unsigned numOptional =
+      getLowerbound().size() + getUpperbound().size() + getStep().size();
+  numOptional += getGangOperands().size();
   numOptional += getVectorOperands().size();
   numOptional += getWorkerNumOperands().size();
   numOptional += getTileOperands().size();
@@ -1646,11 +1656,7 @@ Value LoopOp::getDataOperand(unsigned i) {
 bool LoopOp::hasAuto() { return hasAuto(mlir::acc::DeviceType::None); }
 
 bool LoopOp::hasAuto(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getAuto_()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getAuto_(), deviceType);
 }
 
 bool LoopOp::hasIndependent() {
@@ -1658,21 +1664,13 @@ bool LoopOp::hasIndependent() {
 }
 
 bool LoopOp::hasIndependent(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getIndependent()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getIndependent(), deviceType);
 }
 
 bool LoopOp::hasSeq() { return hasSeq(mlir::acc::DeviceType::None); }
 
 bool LoopOp::hasSeq(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getSeq()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getSeq(), deviceType);
 }
 
 mlir::Value LoopOp::getVectorValue() {
@@ -1687,11 +1685,7 @@ mlir::Value LoopOp::getVectorValue(mlir::acc::DeviceType deviceType) {
 bool LoopOp::hasVector() { return hasVector(mlir::acc::DeviceType::None); }
 
 bool LoopOp::hasVector(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getVector()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getVector(), deviceType);
 }
 
 mlir::Value LoopOp::getWorkerValue() {
@@ -1706,11 +1700,7 @@ mlir::Value LoopOp::getWorkerValue(mlir::acc::DeviceType deviceType) {
 bool LoopOp::hasWorker() { return hasWorker(mlir::acc::DeviceType::None); }
 
 bool LoopOp::hasWorker(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getWorker()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getWorker(), deviceType);
 }
 
 mlir::Operation::operand_range LoopOp::getTileValues() {
@@ -1771,11 +1761,59 @@ mlir::Value LoopOp::getGangValue(mlir::acc::GangArgType gangArgType,
 bool LoopOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
 
 bool LoopOp::hasGang(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getGang()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
+  return hasDeviceType(getGang(), deviceType);
+}
+
+llvm::SmallVector<mlir::Region *> acc::LoopOp::getLoopRegions() {
+  return {&getRegion()};
+}
+
+/// loop-control ::= `(` ssa-id-and-type-list `)` `=` `(` ssa-id-and-type-list
+/// `)` `to` `(` ssa-id-and-type-list `)` `step` `(` ssa-id-and-type-list `)`
+ParseResult
+parseLoopControl(OpAsmParser &parser, Region &region,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerbound,
+                 SmallVectorImpl<Type> &lowerboundType,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperbound,
+                 SmallVectorImpl<Type> &upperboundType,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &step,
+                 SmallVectorImpl<Type> &stepType) {
+
+  SmallVector<OpAsmParser::Argument> inductionVars;
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseArgumentList(inductionVars, OpAsmParser::Delimiter::None,
+                                 /*allowType=*/true) ||
+        parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
+        parser.parseOperandList(lowerbound, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(lowerboundType) || parser.parseRParen() ||
+        parser.parseKeyword("to") || parser.parseLParen() ||
+        parser.parseOperandList(upperbound, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(upperboundType) || parser.parseRParen() ||
+        parser.parseKeyword("step") || parser.parseLParen() ||
+        parser.parseOperandList(step, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(stepType) || parser.parseRParen())
+      return failure();
   }
-  return false;
+  return parser.parseRegion(region, inductionVars);
+}
+
+void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
+                      ValueRange lowerbound, TypeRange lowerboundType,
+                      ValueRange upperbound, TypeRange upperboundType,
+                      ValueRange steps, TypeRange stepType) {
+  ValueRange regionArgs = region.front().getArguments();
+  if (!regionArgs.empty()) {
+    p << "(";
+    llvm::interleaveComma(regionArgs, p,
+                          [&p](Value v) { p << v << " : " << v.getType(); });
+    p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
+      << upperbound << " : " << upperboundType << ") "
+      << " step (" << steps << " : " << stepType << ") ";
+  }
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1815,11 +1853,7 @@ bool acc::DataOp::hasAsyncOnly() {
 }
 
 bool acc::DataOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getAsyncOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getAsyncOnly(), deviceType);
 }
 
 mlir::Value DataOp::getAsyncValue() {
@@ -1834,11 +1868,7 @@ mlir::Value DataOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
 bool DataOp::hasWaitOnly() { return hasWaitOnly(mlir::acc::DeviceType::None); }
 
 bool DataOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
-  if (auto arrayAttr = getWaitOnly()) {
-    if (findSegment(*arrayAttr, deviceType))
-      return true;
-  }
-  return false;
+  return hasDeviceType(getWaitOnly(), deviceType);
 }
 
 mlir::Operation::operand_range DataOp::getWaitValues() {
@@ -2090,20 +2120,6 @@ LogicalResult acc::DeclareOp::verify() {
 //===----------------------------------------------------------------------===//
 // RoutineOp
 //===----------------------------------------------------------------------===//
-
-static bool hasDeviceType(std::optional<mlir::ArrayAttr> arrayAttr,
-                          mlir::acc::DeviceType deviceType) {
-  if (!hasDeviceTypeValues(arrayAttr))
-    return false;
-
-  for (auto attr : *arrayAttr) {
-    auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
-    if (deviceTypeAttr.getValue() == deviceType)
-      return true;
-  }
-
-  return false;
-}
 
 static unsigned getParallelismForDeviceType(acc::RoutineOp op,
                                             acc::DeviceType dtype) {

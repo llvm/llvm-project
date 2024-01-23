@@ -4103,7 +4103,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // do the usual thing: check argument shadow and mark all outputs as
       // clean. Note that any side effects of the inline asm that are not
       // immediately visible in its constraints are not handled.
-      if (ClHandleAsmConservative && MS.CompileKernel)
+      // For now, handle inline asm by default for KMSAN.
+      bool HandleAsm = ClHandleAsmConservative.getNumOccurrences()
+                           ? ClHandleAsmConservative
+                           : MS.CompileKernel;
+      if (HandleAsm)
         visitAsmInstruction(CB);
       else
         visitInstruction(CB);
@@ -4557,7 +4561,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return;
     Value *SizeVal =
       IRB.CreateTypeSize(MS.IntptrTy, DL.getTypeStoreSize(ElemTy));
-    IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    if (MS.CompileKernel) {
+      IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    } else {
+      // ElemTy, derived from elementtype(), does not encode the alignment of
+      // the pointer. Conservatively assume that the shadow memory is unaligned.
+      auto [ShadowPtr, _] =
+          getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
+      IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
+    }
   }
 
   /// Get the number of output arguments returned by pointers.

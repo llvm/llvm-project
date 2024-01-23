@@ -1770,6 +1770,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
+  // Also clone DPValues from the existing terminator, and all others (to
+  // duplicate existing hoisting behaviour).
+  NT->cloneDebugInfoFrom(I1);
+  for (Instruction *OtherSuccTI : OtherSuccTIs)
+    NT->cloneDebugInfoFrom(OtherSuccTI);
   NT->setDebugLoc(DILocation::getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.
@@ -3101,10 +3106,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
-      if (llvm::is_contained(DAI->location_ops(), OrigV))
-        DAI->replaceVariableLocationOp(OrigV, S);
-    }
+    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+      if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
+        DbgAssign->replaceVariableLocationOp(OrigV, S);
+    };
+    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
+    for_each(at::getDPVAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -3133,7 +3140,9 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   // instructions, in the same way that dbg.value intrinsics are dropped at the
   // end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
-    It.dropDbgValues();
+    for (DPValue &DPV : make_early_inc_range(It.getDbgValueRange()))
+      if (!DPV.isDbgAssign())
+        It.dropOneDbgValue(&DPV);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 

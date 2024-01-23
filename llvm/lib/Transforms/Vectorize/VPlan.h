@@ -1352,9 +1352,9 @@ class VPWidenCallRecipe : public VPSingleDefRecipe {
 public:
   template <typename IterT>
   VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments,
-                    Intrinsic::ID VectorIntrinsicID,
+                    Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
                     Function *Variant = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, &I),
+      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, &I, DL),
         VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {}
 
   ~VPWidenCallRecipe() override = default;

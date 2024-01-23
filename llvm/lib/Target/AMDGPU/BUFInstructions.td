@@ -485,7 +485,7 @@ class MUBUF_Load_Pseudo <string opName,
                          list<dag> pattern=[],
                          // Workaround bug bz30254
                          int addrKindCopy = addrKind,
-                         RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret,
+                         RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret.RegClass,
                          RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdata_rc, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
@@ -601,7 +601,7 @@ class MUBUF_Store_Pseudo <string opName,
                           int addrKindCopy = addrKind>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 getMUBUFIns<addrKindCopy, [getVregSrcForVT<store_vt>.ret], isTFE, hasGFX12Enc>.ret,
+                 getMUBUFIns<addrKindCopy, [getVregSrcForVT<store_vt>.ret.RegClass], isTFE, hasGFX12Enc>.ret,
                  getMUBUFAsmOps<addrKindCopy, 0, 0, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKindCopy> {
@@ -1569,27 +1569,28 @@ multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string
                                        # !if(!eq(RtnMode, "ret"), "", "_noret")
                                        # "_" # vt.Size);
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
+  defvar data_vt_RC = getVregSrcForVT<data_vt>.ret.RegClass;
 
   let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
   defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
-    getVregSrcForVT<data_vt>.ret:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
+    data_vt_RC:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
     offset:$offset);
   def : GCNPat<
     (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset), data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
-      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS OffsetResDag, getVregSrcForVT<data_vt>.ret)),
+      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS OffsetResDag, data_vt_RC)),
         !if(!eq(vt, i32), sub0, sub0_sub1)),
       OffsetResDag)
   >;
 
   defvar Addr64ResDag = (!cast<MUBUF_Pseudo>(Inst # "_ADDR64" # InstSuffix)
-    getVregSrcForVT<data_vt>.ret:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
+    data_vt_RC:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
     SCSrc_b32:$soffset, offset:$offset);
   def : GCNPat<
     (vt (Op (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
       data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
-      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS Addr64ResDag, getVregSrcForVT<data_vt>.ret)),
+      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS Addr64ResDag, data_vt_RC)),
         !if(!eq(vt, i32), sub0, sub0_sub1)),
       Addr64ResDag)
   >;
@@ -1712,7 +1713,7 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_xor", i64, "BUFFER_ATOMIC_XOR_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_inc", i64, "BUFFER_ATOMIC_INC_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i64, "BUFFER_ATOMIC_DEC_X2">;
 
-let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
+let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX12Plus in {
@@ -1820,7 +1821,7 @@ multiclass SIBufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, stri
       (extract_cpol_set_glc $auxiliary),
       (extract_cpol $auxiliary));
     defvar SrcRC = getVregSrcForVT<vt>.ret;
-    defvar DataRC = getVregSrcForVT<data_vt>.ret;
+    defvar DataRC = getVregSrcForVT<data_vt>.ret.RegClass;
     defvar SubLo = !if(!eq(vt, i32), sub0, sub0_sub1);
     defvar SubHi = !if(!eq(vt, i32), sub1, sub2_sub3);
 

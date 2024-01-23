@@ -580,7 +580,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   auto &CI = *cast<CallInst>(getUnderlyingInstr());
   assert(!isa<DbgInfoIntrinsic>(CI) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
-  State.setDebugLocFrom(CI.getDebugLoc());
+  State.setDebugLocFrom(getDebugLoc());
 
   bool UseIntrinsic = VectorIntrinsicID != Intrinsic::not_intrinsic;
   FunctionType *VFTy = nullptr;

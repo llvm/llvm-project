@@ -1533,6 +1533,21 @@ bool Value::eraseMetadata(unsigned KindID) {
   return Changed;
 }
 
+void Value::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
+  if (!HasMetadata)
+    return;
+
+  auto &MetadataStore = getContext().pImpl->ValueMetadata;
+  MDAttachments &Info = MetadataStore.find(this)->second;
+  assert(!Info.empty() && "bit out of sync with hash table");
+  Info.remove_if([Pred](const MDAttachments::Attachment &I) {
+    return Pred(I.MDKind, I.Node);
+  });
+
+  if (Info.empty())
+    clearMetadata();
+}
+
 void Value::clearMetadata() {
   if (!HasMetadata)
     return;
@@ -1556,6 +1571,13 @@ MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
   return Value::getMetadata(KindID);
 }
 
+void Instruction::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
+  if (DbgLoc && Pred(LLVMContext::MD_dbg, DbgLoc.getAsMDNode()))
+    DbgLoc = {};
+
+  Value::eraseMetadataIf(Pred);
+}
+
 void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
@@ -1566,17 +1588,9 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   // A DIAssignID attachment is debug metadata, don't drop it.
   KnownSet.insert(LLVMContext::MD_DIAssignID);
 
-  auto &MetadataStore = getContext().pImpl->ValueMetadata;
-  MDAttachments &Info = MetadataStore.find(this)->second;
-  assert(!Info.empty() && "bit out of sync with hash table");
-  Info.remove_if([&KnownSet](const MDAttachments::Attachment &I) {
-    return !KnownSet.count(I.MDKind);
+  Value::eraseMetadataIf([&KnownSet](unsigned MDKind, MDNode *Node) {
+    return !KnownSet.count(MDKind);
   });
-
-  if (Info.empty()) {
-    // Drop our entry at the store.
-    clearMetadata();
-  }
 }
 
 void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
