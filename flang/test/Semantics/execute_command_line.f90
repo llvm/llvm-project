@@ -1,6 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Tests for the EXECUTE_COMMAND_LINE intrinsics
-subroutine bad_kind(command, exitVal, cmdVal)
+
+subroutine bad_kind_error(command, exitVal, cmdVal)
 CHARACTER(30) :: command
 INTEGER(KIND=2) :: exitVal
 INTEGER(KIND=1) :: cmdVal
@@ -9,7 +10,7 @@ call execute_command_line(command, exitstat=exitVal)
 
 !ERROR: Actual argument for 'cmdstat=' has bad type or kind 'INTEGER(1)'
 call execute_command_line(command, cmdstat=cmdVal)
-end subroutine bad_kind
+end subroutine bad_kind_error
 
 subroutine good_kind_equal(command, exitVal, cmdVal)
 CHARACTER(30) :: command

@@ -856,10 +856,9 @@ used in constant expressions have currently no folding support at all.
 |------------|-----------------------------------------------------------------------|
 | `COMMAND`  | Shall be a default CHARACTER scalar.                                  |
 | `WAIT`     | (Optional) Shall be a default LOGICAL scalar.                         |
-| `EXITSTAT` | (Optional) Shall be an INTEGER with kind greater than or equal to 2.  |
+| `EXITSTAT` | (Optional) Shall be an INTEGER with kind greater than or equal to 4.  |
 | `CMDSTAT`  | (Optional) Shall be an INTEGER with kind greater than or equal to 2.  |
 | `CMDMSG`   | (Optional) Shall be a CHARACTER scalar of the default kind.           |
-
 
 #### Implementation Specifics
 
