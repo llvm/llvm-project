@@ -93,11 +93,10 @@ public:
     std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
     runPerfInRange(myFunc, otherFunc, /* startingBit= */ StorageType(0),
-                   /* endingBit= */ FPBits::max_subnormal().uintval(), log);
+                   /* endingBit= */ FPBits::MAX_SUBNORMAL, log);
     log << "\n Performance tests with inputs in normal range:\n";
-    runPerfInRange(myFunc, otherFunc,
-                   /* startingBit= */ FPBits::min_normal().uintval(),
-                   /* endingBit= */ FPBits::max_normal().uintval(), log);
+    runPerfInRange(myFunc, otherFunc, /* startingBit= */ FPBits::MIN_NORMAL,
+                   /* endingBit= */ FPBits::MAX_NORMAL, log);
   }
 };
 
