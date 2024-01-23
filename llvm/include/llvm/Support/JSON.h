@@ -50,6 +50,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -482,7 +483,7 @@ private:
   friend class Object;
 
   template <typename T, typename... U> void create(U &&... V) {
-#if defined(LLVM_ADDRESS_SANITIZER_BUILD)
+#if LLVM_ADDRESS_SANITIZER_BUILD
     // Unpoisoning to prevent overwriting poisoned object (e.g., annotated short
     // string). Objects that have had their memory poisoned may cause an ASan
     // error if their memory is reused without calling their destructor.
