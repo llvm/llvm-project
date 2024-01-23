@@ -1508,7 +1508,8 @@ DbgAssignIntrinsic *CastToDbgAssign(DbgVariableIntrinsic *DVI) {
 }
 
 DPValue *CastToDbgAssign(DPValue *DPV) {
-  assert(DPV->isDbgAssign() && "Attempted to cast non-assign DPValue to DPVAssign.");
+  assert(DPV->isDbgAssign() &&
+         "Attempted to cast non-assign DPValue to DPVAssign.");
   return DPV;
 }
 
