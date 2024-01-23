@@ -727,8 +727,6 @@ struct FPBits final : public internal::FPRep<get_fp_type<T>(), FPBits<T>> {
   // Floating-point conversions.
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
-  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
-
   // TODO: Use an uint32_t for 'biased_exp'.
   LIBC_INLINE static constexpr FPBits<T>
   create_value(Sign sign, StorageType biased_exp, StorageType mantissa) {

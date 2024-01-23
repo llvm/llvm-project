@@ -67,7 +67,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
         fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
-      return x + static_cast<float>(FPBits::inf());
+      return x + FPBits::inf().get_val();
     }
   }
   // For -104 < x < 89, to compute exp(x), we perform the following range
