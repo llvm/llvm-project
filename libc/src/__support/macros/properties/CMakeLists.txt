@@ -33,4 +33,5 @@ add_header_library(
     .compiler
     .cpu_features
     .os
+    libc.include.llvm-libc-types.float128
 )
