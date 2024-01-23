@@ -33,7 +33,8 @@ using namespace cir;
 using namespace clang;
 
 CIRGenFunction::AutoVarEmission
-CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
+CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
+                                   mlir::OpBuilder::InsertPoint ip) {
   QualType Ty = D.getType();
   // TODO: (|| Ty.getAddressSpace() == LangAS::opencl_private &&
   //        getLangOpts().OpenCL))
@@ -134,7 +135,7 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
       // Create the temp alloca and declare variable using it.
       mlir::Value addrVal;
       address = CreateTempAlloca(allocaTy, allocaAlignment, loc, D.getName(),
-                                 /*ArraySize=*/nullptr, &allocaAddr);
+                                 /*ArraySize=*/nullptr, &allocaAddr, ip);
       if (failed(declare(address, &D, Ty, getLoc(D.getSourceRange()), alignment,
                          addrVal))) {
         CGM.emitError("Cannot declare variable");

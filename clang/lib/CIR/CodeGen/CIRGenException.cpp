@@ -27,6 +27,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace cir;
 using namespace clang;
@@ -275,13 +276,34 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
     llvm_unreachable("NYI");
   }
 
-  getBuilder().create<mlir::cir::ResumeOp>(catchOp.getLoc(),
-                                           currExceptionInfo.exceptionAddr);
+  getBuilder().create<mlir::cir::ResumeOp>(catchOp.getLoc());
   getBuilder().restoreInsertionPoint(ip);
   return resumeBlock;
 }
 
 mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
+  auto loc = getLoc(S.getSourceRange());
+  mlir::OpBuilder::InsertPoint scopeIP;
+
+  // Create a scope to hold try local storage for catch params.
+  [[maybe_unused]] auto s = builder.create<mlir::cir::ScopeOp>(
+      loc, /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        scopeIP = getBuilder().saveInsertionPoint();
+      });
+
+  auto r = mlir::success();
+  {
+    mlir::OpBuilder::InsertionGuard guard(getBuilder());
+    getBuilder().restoreInsertionPoint(scopeIP);
+    r = buildCXXTryStmtUnderScope(S);
+    getBuilder().create<mlir::cir::YieldOp>(loc);
+  }
+  return r;
+}
+
+mlir::LogicalResult
+CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   const llvm::Triple &T = getTarget().getTriple();
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
@@ -289,56 +311,84 @@ mlir::LogicalResult CIRGenFunction::buildCXXTryStmt(const CXXTryStmt &S) {
       (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
   assert(!IsTargetDevice && "NYI");
 
-  auto tryLoc = getLoc(S.getBeginLoc());
   auto numHandlers = S.getNumHandlers();
-
-  // FIXME(cir): add catchOp to the lastest possible position
-  // inside the cleanup block.
+  auto tryLoc = getLoc(S.getBeginLoc());
   auto scopeLoc = getLoc(S.getSourceRange());
-  auto res = mlir::success();
 
-  // This scope represents the higher level try {} statement.
-  builder.create<mlir::cir::ScopeOp>(
+  mlir::OpBuilder::InsertPoint beginInsertTryBody;
+  auto ehPtrTy = mlir::cir::PointerType::get(
+      getBuilder().getContext(),
+      getBuilder().getType<::mlir::cir::ExceptionInfoType>());
+  mlir::Value exceptionInfoInsideTry;
+
+  // Create the scope to represent only the C/C++ `try {}` part. However, don't
+  // populate right away. Reserve some space to store the exception info but
+  // don't emit the bulk right away, for now only make sure the scope returns
+  // the exception information.
+  auto tryScope = builder.create<mlir::cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        CIRGenFunction::LexicalScope lexScope{*this, loc,
-                                              builder.getInsertionBlock()};
+      [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
         // Allocate space for our exception info that might be passed down
         // to `cir.try_call` everytime a call happens.
-        auto exceptionInfo = buildAlloca(
-            "__exception_ptr",
-            mlir::cir::PointerType::get(
-                b.getContext(), b.getType<::mlir::cir::ExceptionInfoType>()),
-            loc, CharUnits::One());
+        yieldTy = ehPtrTy;
+        exceptionInfoInsideTry = b.create<mlir::cir::AllocaOp>(
+            loc, /*addr type*/ getBuilder().getPointerTo(yieldTy),
+            /*var type*/ yieldTy, "__exception_ptr",
+            CGM.getSize(CharUnits::One()), nullptr);
 
-        // Create the skeleton for the catch statements to be further populated
-        // by cir::CIRGenFunction::buildLandingPad.
-        auto catchOp = builder.create<mlir::cir::CatchOp>(
-            tryLoc, // FIXME(cir): we can do better source location here.
-            [&](mlir::OpBuilder &b, mlir::Location loc,
-                mlir::OperationState &result) {
-              mlir::OpBuilder::InsertionGuard guard(b);
-              // Once for each handler and one for fallback (which could be a
-              // resume or rethrow).
-              for (int i = 0, e = numHandlers + 1; i != e; ++i) {
-                auto *r = result.addRegion();
-                builder.createBlock(r);
-              }
-            });
-        ExceptionInfoRAIIObject ehx{*this, {exceptionInfo, catchOp}};
-
-        // Do actual emission.
-        enterCXXTryStmt(S, catchOp);
-
-        if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed()) {
-          res = mlir::failure();
-          return;
-        }
-
-        exitCXXTryStmt(S);
+        beginInsertTryBody = getBuilder().saveInsertionPoint();
       });
 
-  return res;
+  // The catch {} parts consume the exception information provided by a
+  // try scope. Also don't emit the code right away for catch clauses, for
+  // now create the regions and consume the try scope result.
+  // Note that clauses are later populated in CIRGenFunction::buildLandingPad.
+  auto catchOp = builder.create<mlir::cir::CatchOp>(
+      tryLoc,
+      tryScope->getResult(
+          0), // FIXME(cir): we can do better source location here.
+      [&](mlir::OpBuilder &b, mlir::Location loc,
+          mlir::OperationState &result) {
+        mlir::OpBuilder::InsertionGuard guard(b);
+        // Once for each handler and one for fallback (which could be a
+        // resume or rethrow).
+        for (int i = 0, e = numHandlers + 1; i != e; ++i) {
+          auto *r = result.addRegion();
+          builder.createBlock(r);
+        }
+      });
+
+  // Finally emit the body for try/catch.
+  auto emitTryCatchBody = [&]() -> mlir::LogicalResult {
+    auto loc = catchOp.getLoc();
+    mlir::OpBuilder::InsertionGuard guard(getBuilder());
+    getBuilder().restoreInsertionPoint(beginInsertTryBody);
+    CIRGenFunction::LexicalScope lexScope{*this, loc,
+                                          getBuilder().getInsertionBlock()};
+
+    {
+      ExceptionInfoRAIIObject ehx{*this, {exceptionInfoInsideTry, catchOp}};
+      // Attach the basic blocks for the catchOp regions into ScopeCatch info.
+      enterCXXTryStmt(S, catchOp);
+      // Emit the body for the `try {}` part.
+      if (buildStmt(S.getTryBlock(), /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+
+      auto v = getBuilder().create<mlir::cir::LoadOp>(loc, ehPtrTy,
+                                                      exceptionInfoInsideTry);
+      getBuilder().create<mlir::cir::YieldOp>(loc, v.getResult());
+    }
+
+    {
+      ExceptionInfoRAIIObject ehx{*this, {tryScope->getResult(0), catchOp}};
+      // Emit catch clauses.
+      exitCXXTryStmt(S);
+    }
+
+    return mlir::success();
+  };
+
+  return emitTryCatchBody();
 }
 
 /// Emit the structure of the dispatch block for the given catch scope.
@@ -449,7 +499,85 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
 
   // Emit the structure of the EH dispatch for this catch.
   buildCatchDispatchBlock(*this, CatchScope);
-  llvm_unreachable("NYI");
+
+  // Copy the handler blocks off before we pop the EH stack.  Emitting
+  // the handlers might scribble on this memory.
+  SmallVector<EHCatchScope::Handler, 8> Handlers(
+      CatchScope.begin(), CatchScope.begin() + NumHandlers);
+
+  EHStack.popCatch();
+
+  // Determine if we need an implicit rethrow for all these catch handlers;
+  // see the comment below.
+  bool doImplicitRethrow = false;
+  if (IsFnTryBlock)
+    doImplicitRethrow = isa<CXXDestructorDecl>(CurCodeDecl) ||
+                        isa<CXXConstructorDecl>(CurCodeDecl);
+
+  // Wasm uses Windows-style EH instructions, but merges all catch clauses into
+  // one big catchpad. So we save the old funclet pad here before we traverse
+  // each catch handler.
+  SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
+  mlir::Block *WasmCatchStartBlock = nullptr;
+  if (EHPersonality::get(*this).isWasmPersonality()) {
+    llvm_unreachable("NYI");
+  }
+
+  bool HasCatchAll = false;
+  for (unsigned I = NumHandlers; I != 0; --I) {
+    HasCatchAll |= Handlers[I - 1].isCatchAll();
+    mlir::Block *CatchBlock = Handlers[I - 1].Block;
+    mlir::OpBuilder::InsertionGuard guard(getBuilder());
+    getBuilder().setInsertionPointToStart(CatchBlock);
+
+    // Catch the exception if this isn't a catch-all.
+    const CXXCatchStmt *C = S.getHandler(I - 1);
+
+    // Enter a cleanup scope, including the catch variable and the
+    // end-catch.
+    RunCleanupsScope CatchScope(*this);
+
+    // Initialize the catch variable and set up the cleanups.
+    SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
+    CGM.getCXXABI().emitBeginCatch(*this, C);
+
+    // Emit the PGO counter increment.
+    assert(!UnimplementedFeature::incrementProfileCounter());
+
+    // Perform the body of the catch.
+    (void)buildStmt(C->getHandlerBlock(), /*useCurrentScope=*/true);
+
+    // [except.handle]p11:
+    //   The currently handled exception is rethrown if control
+    //   reaches the end of a handler of the function-try-block of a
+    //   constructor or destructor.
+
+    // It is important that we only do this on fallthrough and not on
+    // return.  Note that it's illegal to put a return in a
+    // constructor function-try-block's catch handler (p14), so this
+    // really only applies to destructors.
+    if (doImplicitRethrow && HaveInsertPoint()) {
+      llvm_unreachable("NYI");
+    }
+
+    // Fall out through the catch cleanups.
+    CatchScope.ForceCleanup();
+  }
+
+  // Because in wasm we merge all catch clauses into one big catchpad, in case
+  // none of the types in catch handlers matches after we test against each   of
+  // them, we should unwind to the next EH enclosing scope. We generate a   call
+  // to rethrow function here to do that.
+  if (EHPersonality::get(*this).isWasmPersonality() && !HasCatchAll) {
+    assert(WasmCatchStartBlock);
+    // Navigate for the "rethrow" block we created in emitWasmCatchPadBlock().
+    // Wasm uses landingpad-style conditional branches to compare selectors, so
+    // we follow the false destination for each of the cond branches to reach
+    // the rethrow block.
+    llvm_unreachable("NYI");
+  }
+
+  assert(!UnimplementedFeature::incrementProfileCounter());
 }
 
 /// Check whether this is a non-EH scope, i.e. a scope which doesn't
