@@ -2809,7 +2809,12 @@ class AMDGPULoadTr<LLVMType ptr_ty>:
 // <4 x half>   @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1))  -> global_load_tr_b128
 // <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1)) -> global_load_tr_b128
 
-def int_amdgcn_global_load_tr : AMDGPULoadTr<global_ptr_ty>;
+def int_amdgcn_global_load_tr    : AMDGPULoadTr<global_ptr_ty>;
+def int_amdgcn_global_load_tr_b4 : AMDGPULoadTr<global_ptr_ty>;
+def int_amdgcn_global_load_tr_b6 : AMDGPULoadTr<global_ptr_ty>;
+def int_amdgcn_ds_load_tr        : AMDGPULoadTr<local_ptr_ty>;
+def int_amdgcn_ds_load_tr_b4     : AMDGPULoadTr<local_ptr_ty>;
+def int_amdgcn_ds_load_tr_b6     : AMDGPULoadTr<local_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :

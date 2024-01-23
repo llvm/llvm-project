@@ -467,6 +467,12 @@ def : SourceOfDivergence<int_amdgcn_swmmac_f16_16x16x128_bf8_fp8>;
 def : SourceOfDivergence<int_amdgcn_swmmac_f16_16x16x128_bf8_bf8>;
 def : SourceOfDivergence<int_amdgcn_swmmac_i32_16x16x256_iu4>;
 def : SourceOfDivergence<int_amdgcn_swmmac_i32_16x16x128_iu8>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr_b4>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr_b6>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr_b4>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr_b6>;
 
 // The dummy boolean output is divergent from the IR's perspective,
 // but the mask results are uniform. These produce a divergent and

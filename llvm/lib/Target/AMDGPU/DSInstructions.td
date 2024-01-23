@@ -1220,6 +1220,21 @@ def : GCNPat <
     sub0)
 >;
 
+class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPat <
+  (vt (node (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (inst $ptr, offset:$offset, (i1 0))
+>;
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
+def : DSLoadTrPat <DS_LOAD_B64_TR_B8,  v2i32, int_amdgcn_ds_load_tr>;
+def : DSLoadTrPat <DS_LOAD_B64_TR_B4,  v2i32, int_amdgcn_ds_load_tr_b4>;
+def : DSLoadTrPat <DS_LOAD_B128_TR_B6, v4i32, int_amdgcn_ds_load_tr_b6>;
+
+foreach vt16 = [v8i16, v8f16, v8bf16] in {
+def : DSLoadTrPat <DS_LOAD_B128_TR_B16,  vt16, int_amdgcn_ds_load_tr>;
+}
+} //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
