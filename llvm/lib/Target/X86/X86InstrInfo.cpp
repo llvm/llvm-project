@@ -4688,6 +4688,10 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::SUB32rm:
   case X86::SUB16rm:
   case X86::SUB8rm:
+  case X86::SUB64rm_ND:
+  case X86::SUB32rm_ND:
+  case X86::SUB16rm_ND:
+  case X86::SUB8rm_ND:
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     CmpMask = 0;
@@ -4697,6 +4701,10 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::SUB32rr:
   case X86::SUB16rr:
   case X86::SUB8rr:
+  case X86::SUB64rr_ND:
+  case X86::SUB32rr_ND:
+  case X86::SUB16rr_ND:
+  case X86::SUB8rr_ND:
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = MI.getOperand(2).getReg();
     CmpMask = 0;
@@ -4706,6 +4714,10 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::SUB32ri:
   case X86::SUB16ri:
   case X86::SUB8ri:
+  case X86::SUB64ri32_ND:
+  case X86::SUB32ri_ND:
+  case X86::SUB16ri_ND:
+  case X86::SUB8ri_ND:
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(2).isImm()) {
@@ -4753,7 +4765,11 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   case X86::SUB64rr:
   case X86::SUB32rr:
   case X86::SUB16rr:
-  case X86::SUB8rr: {
+  case X86::SUB8rr:
+  case X86::SUB64rr_ND:
+  case X86::SUB32rr_ND:
+  case X86::SUB16rr_ND:
+  case X86::SUB8rr_ND: {
     Register OISrcReg;
     Register OISrcReg2;
     int64_t OIMask;
@@ -4779,6 +4795,10 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   case X86::SUB32ri:
   case X86::SUB16ri:
   case X86::SUB8ri:
+  case X86::SUB64ri32_ND:
+  case X86::SUB32ri_ND:
+  case X86::SUB16ri_ND:
+  case X86::SUB8ri_ND:
   case X86::TEST64rr:
   case X86::TEST32rr:
   case X86::TEST16rr:
@@ -5121,7 +5141,19 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case X86::SUB64rr:
   case X86::SUB32rr:
   case X86::SUB16rr:
-  case X86::SUB8rr: {
+  case X86::SUB8rr:
+  case X86::SUB64ri32_ND:
+  case X86::SUB32ri_ND:
+  case X86::SUB16ri_ND:
+  case X86::SUB8ri_ND:
+  case X86::SUB64rm_ND:
+  case X86::SUB32rm_ND:
+  case X86::SUB16rm_ND:
+  case X86::SUB8rm_ND:
+  case X86::SUB64rr_ND:
+  case X86::SUB32rr_ND:
+  case X86::SUB16rr_ND:
+  case X86::SUB8rr_ND: {
     if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
       return false;
     // There is no use of the destination register, we can replace SUB with CMP.
@@ -5130,39 +5162,51 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     default:
       llvm_unreachable("Unreachable!");
     case X86::SUB64rm:
+    case X86::SUB64rm_ND:
       NewOpcode = X86::CMP64rm;
       break;
     case X86::SUB32rm:
+    case X86::SUB32rm_ND:
       NewOpcode = X86::CMP32rm;
       break;
     case X86::SUB16rm:
+    case X86::SUB16rm_ND:
       NewOpcode = X86::CMP16rm;
       break;
     case X86::SUB8rm:
+    case X86::SUB8rm_ND:
       NewOpcode = X86::CMP8rm;
       break;
     case X86::SUB64rr:
+    case X86::SUB64rr_ND:
       NewOpcode = X86::CMP64rr;
       break;
     case X86::SUB32rr:
+    case X86::SUB32rr_ND:
       NewOpcode = X86::CMP32rr;
       break;
     case X86::SUB16rr:
+    case X86::SUB16rr_ND:
       NewOpcode = X86::CMP16rr;
       break;
     case X86::SUB8rr:
+    case X86::SUB8rr_ND:
       NewOpcode = X86::CMP8rr;
       break;
     case X86::SUB64ri32:
+    case X86::SUB64ri32_ND:
       NewOpcode = X86::CMP64ri32;
       break;
     case X86::SUB32ri:
+    case X86::SUB32ri_ND:
       NewOpcode = X86::CMP32ri;
       break;
     case X86::SUB16ri:
+    case X86::SUB16ri_ND:
       NewOpcode = X86::CMP16ri;
       break;
     case X86::SUB8ri:
+    case X86::SUB8ri_ND:
       NewOpcode = X86::CMP8ri;
       break;
     }
