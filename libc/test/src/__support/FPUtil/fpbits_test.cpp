@@ -287,7 +287,7 @@ TEST(LlvmLibcFPBitsTest, FloatType) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBF900000 = (S: 1, E: 0x007F, M: 0x00100000)");
 
-  FloatBits quiet_nan = FloatBits::build_quiet_nan(Sign::POS, 1);
+  FloatBits quiet_nan = FloatBits::build_quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
@@ -298,8 +298,7 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::build_nan(Sign::POS, 1)).c_str(),
-               "(NaN)");
+  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::build_nan()).c_str(), "(NaN)");
 
   DoubleBits zero(0.0);
   EXPECT_TRUE(zero.is_pos());
@@ -349,7 +348,7 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBFF2000000000000 = (S: 1, E: 0x03FF, M: 0x0002000000000000)");
 
-  DoubleBits quiet_nan = DoubleBits::build_quiet_nan(Sign::POS, 1);
+  DoubleBits quiet_nan = DoubleBits::build_quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
@@ -431,7 +430,7 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
       "0x000000000000BFFF9000000000000000 = "
       "(S: 1, E: 0x3FFF, I: 1, M: 0x00000000000000001000000000000000)");
 
-  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan(Sign::POS, 1);
+  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #else
@@ -506,7 +505,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan(Sign::POS, 1);
+  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 #endif
 }
@@ -581,7 +580,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  Float128Bits quiet_nan = Float128Bits::build_quiet_nan(Sign::POS, 1);
+  Float128Bits quiet_nan = Float128Bits::build_quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #endif // LIBC_COMPILER_HAS_FLOAT128

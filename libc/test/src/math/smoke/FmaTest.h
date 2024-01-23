@@ -25,7 +25,7 @@ private:
   const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T zero = T(FPBits::zero(Sign::POS));
   const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(Sign::POS, 1));
+  const T nan = T(FPBits::build_quiet_nan());
 
 public:
   void test_special_numbers(Func func) {
