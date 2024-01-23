@@ -185,7 +185,8 @@ C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Implemented `P1907R1 <https://wg21.link/P1907R1>` which extends allowed non-type template argument
   kinds with e.g. floating point values and pointers and references to subobjects.
-  This feature is still experimental. Accordingly, `__cpp_nontype_template_args` was not updated.
+  This feature is still experimental. Accordingly, ``__cpp_nontype_template_args`` was not updated.
+  However, its support can be tested with ``__has_extension(cxx_generalized_nttp)``.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -194,6 +195,7 @@ C++23 Feature Support
   `CWG2653 <https://wg21.link/CWG2653>`_, `CWG2687 <https://wg21.link/CWG2687>`_). Because the
   support for this feature is still experimental, the feature test macro ``__cpp_explicit_this_parameter``
   was not set in this version.
+  However, its support can be tested with ``__has_extension(cxx_explicit_this_parameter)``.
 
 - Added a separate warning to warn the use of attributes on lambdas as a C++23 extension
   in previous language versions: ``-Wc++23-lambda-attributes``.
@@ -320,7 +322,7 @@ New Compiler Flags
   handlers will be smaller. A throw expression of a type with a
   potentially-throwing destructor will lead to an error.
 
-* ``-fopenacc`` was added as a part of the effort to support OpenACC in clang.
+* ``-fopenacc`` was added as a part of the effort to support OpenACC in Clang.
 
 * ``-fcx-limited-range`` enables the naive mathematical formulas for complex
   division and multiplication with no NaN checking of results. The default is
@@ -331,6 +333,16 @@ New Compiler Flags
   division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
   (1962). The default is ``-fno-cx-fortran-rules``.
 
+* ``-fvisibility-global-new-delete=<value>`` gives more freedom to users to
+  control how and if Clang forces a visibility for the replaceable new and
+  delete declarations. The option takes 4 values: ``force-hidden``,
+  ``force-protected``, ``force-default`` and ``source``; ``force-default`` is
+  the default. Option values with prefix ``force-`` assign such declarations
+  an implicit visibility attribute with the corresponding visibility. An option
+  value of ``source`` implies that no implicit attribute is added. Without the
+  attribute the replaceable global new and delete operators behave normally
+  (like other functions) with respect to visibility attributes, pragmas and
+  options (e.g ``--fvisibility=``).
 
 Deprecated Compiler Flags
 -------------------------
@@ -347,6 +359,9 @@ Modified Compiler Flags
   ``rtdcall``. This new default CC only works for M68k and will use the new
   ``m68k_rtdcc`` CC on every functions that are not variadic. The ``-mrtd``
   driver/frontend flag has the same effect when targeting M68k.
+* ``-fvisibility-global-new-delete-hidden`` is now a deprecated spelling of
+  ``-fvisibility-global-new-delete=force-hidden`` (``-fvisibility-global-new-delete=``
+  is new in this release).
 
 Removed Compiler Flags
 -------------------------
@@ -583,6 +598,11 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
+- The warning `-Wnan-infinity-disabled` is now emitted when ``INFINITY``
+  or ``NAN`` are used in arithmetic operations or function arguments in
+  floating-point mode where ``INFINITY`` or ``NAN`` don't have the expected
+  values.
+
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
 - Clang now diagnoses ``auto`` and ``decltype(auto)`` in declarations of conversion function template
@@ -590,7 +610,6 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
-- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
 - Clang now diagnoses incorrect usage of ``const`` and ``pure`` attributes, so ``-Wignored-attributes`` diagnoses more cases.
 - Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
   expressions on matrix types or builtin functions without an argument list) as placement-args
@@ -812,7 +831,7 @@ Bug Fixes in This Version
   invalidation by invalid initializer Expr.
   Fixes (`#30908 <https://github.com/llvm/llvm-project/issues/30908>`_)
 - Clang now emits correct source location for code-coverage regions in `if constexpr`
-  and `if consteval` branches.
+  and `if consteval` branches. Untaken branches are now skipped.
   Fixes (`#54419 <https://github.com/llvm/llvm-project/issues/54419>`_)
 - Fix assertion failure when declaring a template friend function with
   a constrained parameter in a template class that declares a class method
@@ -838,6 +857,8 @@ Bug Fixes in This Version
 - Fix an issue with missing symbol definitions when the first coroutine
   statement appears in a discarded ``if constexpr`` branch.
   Fixes (`#78290 <https://github.com/llvm/llvm-project/issues/78290>`_)
+- Fixed assertion failure with deleted overloaded unary operators.
+  Fixes (`#78314 <https://github.com/llvm/llvm-project/issues/78314>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1026,6 +1047,13 @@ Bug Fixes to C++ Support
 - Remove recorded `#pragma once` state for headers included in named modules.
   Fixes (`#77995 <https://github.com/llvm/llvm-project/issues/77995>`_)
 
+- Set the ``__cpp_auto_cast`` feature test macro in C++23 mode.
+
+- Fix crash for inconsistent deducing state of function return types
+  in importing modules.
+  Fixes (`#78830 <https://github.com/llvm/llvm-project/issues/78830>`_)
+  Fixes (`#60085 <https://github.com/llvm/llvm-project/issues/60085>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -1090,6 +1118,9 @@ AMDGPU Support
   arguments in C ABI. Callee is responsible for allocating stack memory and
   copying the value of the struct if modified. Note that AMDGPU backend still
   supports byval for struct arguments.
+- The default value for ``-mcode-object-version`` is now 5.
+  See `AMDHSA Code Object V5 Metadata <https://llvm.org/docs/AMDGPUUsage.html#code-object-v5-metadata>`_
+  for more details.
 
 X86 Support
 ^^^^^^^^^^^
@@ -1166,8 +1197,14 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
-- The ``model`` attribute is now supported for overriding the default code
-  model used to access global variables. The following values are supported:
+- Added builtins support for all LSX (128-bits SIMD) and LASX (256-bits SIMD)
+  instructions.
+- Added builtins support for approximate calculation instructions that were
+  introduced in LoongArch Reference Manual V1.10.
+- Made ``-mcmodel=`` compatible with LoongArch gcc that accepted ``normal``,
+  ``medium`` and ``extreme``.
+- The ``model`` attribute was now supported for overriding the default code
+  model used to access global variables. The following values were supported:
   ``normal``, ``medium`` and ``extreme``.
 
   *Example Code*:
@@ -1175,6 +1212,10 @@ LoongArch Support
   .. code-block:: c
 
      int var __attribute((model("extreme")));
+
+- Default to ``-fno-direct-access-external-data`` for non-PIC.
+- An ABI mismatch with gcc/g++ about empty structs/unions passing was fixed.
+- ``_mcount`` was generated instead of ``mcount``.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -1377,9 +1418,11 @@ Improvements
   `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
 
 - Improved the ``alpha.unix.Stream`` checker by modeling more functions
-  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``
-  and no not recognize alternative ``fopen`` and ``tmpfile`` implementations.
-  (`#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
+  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``,
+  ``getdelim``, ``getline`` and no not recognize alternative
+  ``fopen`` and ``tmpfile`` implementations.
+  (`#78693 <https://github.com/llvm/llvm-project/pull/78693>`_,
+  `#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
   `#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
   `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
   `#72627 <https://github.com/llvm/llvm-project/pull/72627>`_,

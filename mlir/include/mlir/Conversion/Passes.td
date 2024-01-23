@@ -125,6 +125,12 @@ def ArithToAMDGPUConversionPass : Pass<"convert-arith-to-amdgpu"> {
   }];
 
   let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
+
+  let options = [
+    Option<"saturateFP8Truncf", "saturate-fp8-truncf", "bool",
+           /*default=*/"false",
+           "Use saturating truncation for 8-bit float types">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -162,6 +168,15 @@ def ConvertArithToSPIRV : Pass<"convert-arith-to-spirv"> {
            "Enable fast math mode (assuming no NaN and infinity for floating "
            "point values) when performing conversion">
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// ArithToArmSME
+//===----------------------------------------------------------------------===//
+
+def ArithToArmSMEConversionPass : Pass<"convert-arith-to-arm-sme"> {
+  let summary = "Convert Arith dialect to ArmSME dialect";
+  let dependentDialects = ["arm_sme::ArmSMEDialect"];
 }
 
 //===----------------------------------------------------------------------===//

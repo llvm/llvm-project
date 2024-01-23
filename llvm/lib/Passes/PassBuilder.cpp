@@ -661,6 +661,10 @@ Expected<bool> parseGlobalDCEPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "vfe-linkage-unit-visibility", "GlobalDCE");
 }
 
+Expected<bool> parseCGProfilePassOptions(StringRef Params) {
+  return parseSinglePassOption(Params, "in-lto-post-link", "CGProfile");
+}
+
 Expected<bool> parseInlinerPassOptions(StringRef Params) {
   return parseSinglePassOption(Params, "only-mandatory", "InlinerPass");
 }
@@ -741,6 +745,26 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
     } else {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
+Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
+  EmbedBitcodeOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "thinlto") {
+      Result.IsThinLTO = true;
+    } else if (ParamName == "emit-summary") {
+      Result.EmitLTOSummary = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid EmbedBitcode pass parameter '{0}' ", ParamName)
               .str(),
           inconvertibleErrorCode());
     }

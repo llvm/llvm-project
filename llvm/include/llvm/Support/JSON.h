@@ -47,9 +47,10 @@
 #define LLVM_SUPPORT_JSON_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -482,6 +483,18 @@ private:
   friend class Object;
 
   template <typename T, typename... U> void create(U &&... V) {
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    // Unpoisoning to prevent overwriting poisoned object (e.g., annotated short
+    // string). Objects that have had their memory poisoned may cause an ASan
+    // error if their memory is reused without calling their destructor.
+    // Unpoisoning the memory prevents this error from occurring.
+    // FIXME: This is a temporary solution to prevent buildbots from failing.
+    //  The more appropriate approach would be to call the object's destructor
+    //  to unpoison memory. This would prevent any potential memory leaks (long
+    //  strings). Read for details:
+    //  https://github.com/llvm/llvm-project/pull/79065#discussion_r1462621761
+    __asan_unpoison_memory_region(&Union, sizeof(T));
+#endif
     new (reinterpret_cast<T *>(&Union)) T(std::forward<U>(V)...);
   }
   template <typename T> T &as() const {

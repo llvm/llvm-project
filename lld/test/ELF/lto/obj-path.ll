@@ -67,12 +67,12 @@
 ;; Ensure lld emits empty combined module if specific obj-path.
 ; RUN: mkdir obj
 ; RUN: ld.lld --plugin-opt=obj-path=objpath.o -shared 1.bc d/2.bc -o obj/out --save-temps
-; RUN: ls obj/out.lto.o obj/out1.lto.o obj/out2.lto.o
+; RUN: ls obj/out.lto.o out.lto.1.o d/out.lto.2.o
 
 ;; Ensure lld does not emit empty combined module by default.
 ; RUN: rm -fr obj && mkdir obj
 ; RUN: ld.lld -shared 1.bc d/2.bc -o obj/out --save-temps
-; RUN: ls obj/out*.lto.* | count 2
+; RUN: not test -e obj/out.lto.o
 
 ; EMPTY:     file format elf64-x86-64
 ; EMPTY-NOT: {{.}}

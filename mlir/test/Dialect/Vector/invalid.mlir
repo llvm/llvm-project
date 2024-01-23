@@ -667,13 +667,6 @@ func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected offsets attribute of rank no greater than vector rank}}
-  %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
-}
-
-// -----
-
-func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
   // expected-error@+1 {{op expected offsets dimension 0 to be confined to [0, 4)}}
   %1 = vector.extract_strided_slice %arg0 {offsets = [100], sizes = [100], strides = [100]} : vector<4x8x16xf32> to vector<100x8x16xf32>
 }

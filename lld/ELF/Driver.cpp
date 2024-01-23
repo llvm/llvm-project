@@ -105,6 +105,7 @@ void Ctx::reset() {
   whyExtractRecords.clear();
   backwardReferences.clear();
   auxiliaryFiles.clear();
+  internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
   needsTlsLd.store(false, std::memory_order_relaxed);
@@ -553,65 +554,15 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
   return ret;
 }
 
-constexpr const char *knownZFlags[] = {
-    "combreloc",
-    "copyreloc",
-    "defs",
-    "execstack",
-    "force-bti",
-    "force-ibt",
-    "global",
-    "hazardplt",
-    "ifunc-noplt",
-    "initfirst",
-    "interpose",
-    "keep-text-section-prefix",
-    "lazy",
-    "muldefs",
-    "nocombreloc",
-    "nocopyreloc",
-    "nodefaultlib",
-    "nodelete",
-    "nodlopen",
-    "noexecstack",
-    "nognustack",
-    "nokeep-text-section-prefix",
-    "nopack-relative-relocs",
-    "norelro",
-    "noseparate-code",
-    "nostart-stop-gc",
-    "notext",
-    "now",
-    "origin",
-    "pac-plt",
-    "pack-relative-relocs",
-    "rel",
-    "rela",
-    "relro",
-    "retpolineplt",
-    "rodynamic",
-    "separate-code",
-    "separate-loadable-segments",
-    "shstk",
-    "start-stop-gc",
-    "text",
-    "undefs",
-    "wxneeded",
-};
-
-static bool isKnownZFlag(StringRef s) {
-  return llvm::is_contained(knownZFlags, s) ||
-         s.starts_with("common-page-size=") || s.starts_with("bti-report=") ||
-         s.starts_with("cet-report=") ||
-         s.starts_with("dead-reloc-in-nonalloc=") ||
-         s.starts_with("max-page-size=") || s.starts_with("stack-size=") ||
-         s.starts_with("start-stop-visibility=");
-}
-
 // Report a warning for an unknown -z option.
 static void checkZOptions(opt::InputArgList &args) {
+  // This function is called before getTarget(), when certain options are not
+  // initialized yet. Claim them here.
+  args::getZOptionValue(args, OPT_z, "max-page-size", 0);
+  args::getZOptionValue(args, OPT_z, "common-page-size", 0);
+  getZFlag(args, "rel", "rela", false);
   for (auto *arg : args.filtered(OPT_z))
-    if (!isKnownZFlag(arg->getValue()))
+    if (!arg->isClaimed())
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
@@ -629,7 +580,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
   errorHandler().suppressWarnings = args.hasArg(OPT_no_warnings);
-  checkZOptions(args);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -672,6 +622,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   readConfigs(args);
+  checkZOptions(args);
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
@@ -2388,7 +2339,8 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
 
 static Symbol *addUnusedUndefined(StringRef name,
                                   uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
+  return symtab.addSymbol(
+      Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2746,6 +2698,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
     symtab.insert(arg->getValue())->traced = true;
+
+  ctx.internalFile = createInternalFile("<internal>");
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
