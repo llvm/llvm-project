@@ -68,7 +68,7 @@ template <typename T> struct FPTest : public Test {
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
   static constexpr T zero = T(FPBits::zero(Sign::POS));
   static constexpr T neg_zero = T(FPBits::zero(Sign::NEG));
-  static constexpr T aNaN = T(FPBits::build_quiet_nan(Sign::POS, 1));
+  static constexpr T aNaN = T(FPBits::build_quiet_nan());
   static constexpr T sNaN = T(FPBits::build_nan(Sign::POS, 1));
   static constexpr T inf = T(FPBits::inf(Sign::POS));
   static constexpr T neg_inf = T(FPBits::inf(Sign::NEG));
@@ -97,7 +97,7 @@ template <typename T> struct FPTest : public Test {
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
   const T zero = T(FPBits::zero(Sign::POS));                                   \
   const T neg_zero = T(FPBits::zero(Sign::NEG));                               \
-  const T aNaN = T(FPBits::build_quiet_nan(Sign::POS, 1));                     \
+  const T aNaN = T(FPBits::build_quiet_nan());                                 \
   const T sNaN = T(FPBits::build_nan(Sign::POS, 1));                           \
   const T inf = T(FPBits::inf(Sign::POS));                                     \
   const T neg_inf = T(FPBits::inf(Sign::NEG));                                 \
