@@ -372,7 +372,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     StringRef objBuf;
     if (files[i]) {
       // When files[i] is not null, we get the native relocatable file from the
-      // cache. filenames[i] contains the original bitcode file path.
+      // cache. filenames[i] contains the original BitcodeFile's identifier.
       objBuf = files[i]->getBuffer();
       bitcodeFilePath = filenames[i];
     } else {
@@ -393,7 +393,12 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
                        (i == 0 ? Twine("") : Twine('.') + Twine(i)) + ext);
     } else {
       StringRef directory = sys::path::parent_path(bitcodeFilePath);
-      StringRef baseName = sys::path::stem(bitcodeFilePath);
+      // For an archive member, which has an identifier like "d/a.a(coll.o at
+      // 8)" (see BitcodeFile::BitcodeFile), use the filename; otherwise, use
+      // the stem (d/a.o => a).
+      StringRef baseName = bitcodeFilePath.ends_with(")")
+                               ? sys::path::filename(bitcodeFilePath)
+                               : sys::path::stem(bitcodeFilePath);
       StringRef outputFileBaseName = sys::path::filename(config->outputFile);
       SmallString<256> path;
       sys::path::append(path, directory,
