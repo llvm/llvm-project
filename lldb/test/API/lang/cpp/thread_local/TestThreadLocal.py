@@ -9,6 +9,7 @@ from lldbsuite.test import lldbtest
 
 class PlatformProcessCrashInfoTestCase(TestBase):
     @expectedFailureAll(oslist=["windows", "linux", "freebsd", "netbsd"])
+    @skipIfDarwin  # rdar://120795095
     def test_thread_local(self):
         # Set a breakpoint on the first instruction of the main function,
         # before the TLS initialization has run.

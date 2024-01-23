@@ -1868,7 +1868,7 @@ define <8 x i16> @constant_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ;
 ; SSE41-LABEL: constant_funnnel_v8i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <u,32768,16384,8192,4096,2048,1024,512>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [u,32768,16384,8192,4096,2048,1024,512]
 ; SSE41-NEXT:    pmulhuw %xmm1, %xmm2
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3,4,5,6,7]
 ; SSE41-NEXT:    paddw %xmm0, %xmm0

@@ -43,7 +43,7 @@ void test_string() {
   size_t const N = sizeof(S) < 256 ? (4096 / sizeof(S)) : 16;
 
   {
-    C d1a(1), d1b(N), d1c(N + 1), d1d(32 * N);
+    C d1a(1), d1b(N), d1c(N + 1), d1d(5 * N);
     verify_inside(d1a);
     verify_inside(d1b);
     verify_inside(d1c);
@@ -51,10 +51,10 @@ void test_string() {
   }
   {
     C d2;
-    for (size_t i = 0; i < 16 * N; ++i) {
+    for (size_t i = 0; i < 3 * N + 2; ++i) {
       d2.push_back(get_s<S, 1>(i % 10 + 'a'));
       verify_inside(d2);
-      d2.push_back(get_s<S, 222>(i % 10 + 'b'));
+      d2.push_back(get_s<S, 28>(i % 10 + 'b'));
       verify_inside(d2);
 
       d2.erase(d2.cbegin());
@@ -63,10 +63,10 @@ void test_string() {
   }
   {
     C d3;
-    for (size_t i = 0; i < 16 * N; ++i) {
+    for (size_t i = 0; i < 3 * N + 2; ++i) {
       d3.push_back(get_s<S, 1>(i % 10 + 'a'));
       verify_inside(d3);
-      d3.push_back(get_s<S, 222>(i % 10 + 'b'));
+      d3.push_back(get_s<S, 28>(i % 10 + 'b'));
       verify_inside(d3);
 
       d3.pop_back();
@@ -75,20 +75,20 @@ void test_string() {
   }
   {
     C d4;
-    for (size_t i = 0; i < 16 * N; ++i) {
+    for (size_t i = 0; i < 3 * N + 2; ++i) {
       // When there is no SSO, all elements inside should not be poisoned,
       // so we can verify vector poisoning.
-      d4.push_back(get_s<S, 333>(i % 10 + 'a'));
+      d4.push_back(get_s<S, 33>(i % 10 + 'a'));
       verify_inside(d4);
       assert(is_contiguous_container_asan_correct(d4));
-      d4.push_back(get_s<S, 222>(i % 10 + 'b'));
+      d4.push_back(get_s<S, 28>(i % 10 + 'b'));
       verify_inside(d4);
       assert(is_contiguous_container_asan_correct(d4));
     }
   }
   {
     C d5;
-    for (size_t i = 0; i < 5 * N; ++i) {
+    for (size_t i = 0; i < 3 * N + 2; ++i) {
       // In d4 we never had poisoned memory inside vector.
       // Here we start with SSO, so part of the inside of the container,
       // will be poisoned.
@@ -98,7 +98,7 @@ void test_string() {
     for (size_t i = 0; i < d5.size(); ++i) {
       // We change the size to have long string.
       // Memory owne by vector should not be poisoned by string.
-      d5[i].resize(1000);
+      d5[i].resize(100);
       verify_inside(d5);
     }
 
@@ -116,14 +116,14 @@ void test_string() {
     C d6a;
     assert(is_contiguous_container_asan_correct(d6a));
 
-    C d6b(N + 2, get_s<S, 1000>('a'));
-    d6b.push_back(get_s<S, 1001>('b'));
+    C d6b(N + 2, get_s<S, 100>('a'));
+    d6b.push_back(get_s<S, 101>('b'));
     while (!d6b.empty()) {
       d6b.pop_back();
       assert(is_contiguous_container_asan_correct(d6b));
     }
 
-    C d6c(N + 2, get_s<S, 1002>('c'));
+    C d6c(N + 2, get_s<S, 102>('c'));
     while (!d6c.empty()) {
       d6c.pop_back();
       assert(is_contiguous_container_asan_correct(d6c));

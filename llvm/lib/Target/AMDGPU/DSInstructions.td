@@ -1267,7 +1267,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
   multiclass DS_Real_gfx11<bits<8> op>  {
     def _gfx11 :
       Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, !cast<DS_Pseudo>(NAME),
-                                              SIEncodingFamily.GFX11>;
+                                               SIEncodingFamily.GFX11>;
   }
 
   multiclass DS_Real_Renamed_gfx11<bits<8> op, DS_Pseudo backing_pseudo, string real_name> {

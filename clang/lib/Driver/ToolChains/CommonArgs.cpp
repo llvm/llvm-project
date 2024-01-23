@@ -1194,6 +1194,18 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   }
 
   // 2. GNU and similar
+  const Driver &D = TC.getDriver();
+  const char *FortranMainLinkFlag = "-lFortran_main";
+
+  // Warn if the user added `-lFortran_main` - this library is an implementation
+  // detail of Flang and should be handled automaticaly by the driver.
+  for (const char *arg : CmdArgs) {
+    if (strncmp(arg, FortranMainLinkFlag, strlen(FortranMainLinkFlag)) == 0)
+      D.Diag(diag::warn_drv_deprecated_custom)
+          << FortranMainLinkFlag
+          << "see the Flang driver documentation for correct usage";
+  }
+
   // The --whole-archive option needs to be part of the link line to make
   // sure that the main() function from Fortran_main.a is pulled in by the
   // linker. However, it shouldn't be used if it's already active.
@@ -1201,12 +1213,12 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
       !TC.getTriple().isOSAIX()) {
     CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lFortran_main");
+    CmdArgs.push_back(FortranMainLinkFlag);
     CmdArgs.push_back("--no-whole-archive");
     return;
   }
 
-  CmdArgs.push_back("-lFortran_main");
+  CmdArgs.push_back(FortranMainLinkFlag);
 }
 
 /// Add Fortran runtime libs
