@@ -12,14 +12,13 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -6457,6 +6456,37 @@ TEST(TransferTest, DifferentReferenceLocInJoin) {
         // environment.
         const ValueDecl *VD = findValueDecl(ASTCtx, "range");
         ASSERT_EQ(Env.getStorageLocation(*VD), nullptr);
+      });
+}
+
+// This test verifies correct modeling of a relational dependency that goes
+// through unmodeled functions (the simple `cond()` in this case).
+TEST(TransferTest, ConditionalRelation) {
+  std::string Code = R"(
+    bool cond();
+    void target() {
+       bool a = true;
+       bool b = true;
+       if (cond()) {
+         a = false;
+         if (cond()) {
+           b = false;
+         }
+       }
+       (void)0;
+       // [[p]]
+    }
+ )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &A = Env.arena();
+        auto &VarA = getValueForDecl<BoolValue>(ASTCtx, Env, "a").formula();
+        auto &VarB = getValueForDecl<BoolValue>(ASTCtx, Env, "b").formula();
+
+        EXPECT_FALSE(Env.allows(A.makeAnd(VarA, A.makeNot(VarB))));
       });
 }
 
