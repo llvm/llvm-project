@@ -2733,7 +2733,7 @@ RenderComplexRangeOption(LangOptions::ComplexRangeKind Range) {
     ComplexRangeStr += "fortran";
     break;
   default:
-    assert("Unexpected range option");
+    assert(0 && "Unexpected range option");
   }
   return ComplexRangeStr;
 }
