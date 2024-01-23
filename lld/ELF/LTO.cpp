@@ -27,9 +27,9 @@
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cstddef>
 #include <memory>
@@ -258,10 +258,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
         // Symbol section is always null for bitcode symbols, hence the check
         // for isElf(). Skip linker script defined symbols as well: they have
         // no File defined.
-        !(dr->section == nullptr && (!sym->file || sym->file->isElf()));
+        !(dr->section == nullptr &&
+          (sym->file->isInternal() || sym->file->isElf()));
 
     if (r.Prevailing)
-      Undefined(nullptr, StringRef(), STB_GLOBAL, STV_DEFAULT, sym->type)
+      Undefined(ctx.internalFile, StringRef(), STB_GLOBAL, STV_DEFAULT,
+                sym->type)
           .overwrite(*sym);
 
     // We tell LTO to not apply interprocedural optimization for wrapped
@@ -369,9 +371,12 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     StringRef bitcodeFilePath;
     StringRef objBuf;
     if (files[i]) {
+      // Get the native relocatable file from the cache. filenames[i] contains
+      // the original bitcode filename.
       objBuf = files[i]->getBuffer();
       bitcodeFilePath = filenames[i];
     } else {
+      // Get the native relocatable file after in-process LTO compilation.
       objBuf = buf[i].second;
       bitcodeFilePath = buf[i].first;
     }

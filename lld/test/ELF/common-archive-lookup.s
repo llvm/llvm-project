@@ -64,6 +64,7 @@
 # RUN: ld.lld -o out main.o 4.a --fortran-common --lto-emit-asm
 # RUN: FileCheck --check-prefix=ASM %s < out.lto.s
 
+# RUN: rm out.lto.s
 # RUN: ld.lld -o out main.o --start-lib 1.bc 2.bc --end-lib --fortran-common --lto-emit-asm
 # RUN: FileCheck --check-prefix=ASM %s < out.lto.s
 
