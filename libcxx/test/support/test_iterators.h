@@ -826,7 +826,7 @@ public:
         It tmp(base_);
         base_ = base(tmp += n);
         ++*stride_count_;
-        ++*stride_displacement_;
+        *stride_displacement_ += n;
         return *this;
     }
 
@@ -836,7 +836,7 @@ public:
         It tmp(base_);
         base_ = base(tmp -= n);
         ++*stride_count_;
-        --*stride_displacement_;
+        *stride_displacement_ -= n;
         return *this;
     }
 
