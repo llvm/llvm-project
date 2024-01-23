@@ -291,9 +291,6 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FloatingComplexToReal:
     return this->emitComplexReal(SubExpr);
 
-  case CK_ToVoid:
-    return discard(SubExpr);
-
   case CK_IntegralRealToComplex:
   case CK_FloatingRealToComplex: {
     // We're creating a complex value here, so we need to
@@ -316,6 +313,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     return this->emitInitElem(T, 1, SubExpr);
   }
+
+  case CK_ToVoid:
+    return discard(SubExpr);
 
   default:
     assert(false && "Cast not implemented");
