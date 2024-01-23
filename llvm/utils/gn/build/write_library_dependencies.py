@@ -37,7 +37,6 @@ OUTPUT = """struct AvailableComponent {
 { "coverage", "LLVMCoverage", true, {"core", "object", "profiledata", "support"} },
 { "debuginfocodeview", "LLVMDebugInfoCodeView", true, {"support", "debuginfomsf"} },
 { "debuginfodwarf", "LLVMDebugInfoDWARF", true, {"binaryformat", "object", "mc", "support"} },
-{ "debuginfod", "LLVMDebuginfod", true, {} },
 { "debuginfogsym", "LLVMDebugInfoGSYM", true, {"mc", "object", "support", "debuginfodwarf"} },
 { "debuginfomsf", "LLVMDebugInfoMSF", true, {"support"} },
 { "debuginfopdb", "LLVMDebugInfoPDB", true, {"binaryformat", "object", "support", "debuginfocodeview", "debuginfomsf"} },

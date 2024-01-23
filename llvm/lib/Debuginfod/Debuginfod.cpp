@@ -158,11 +158,6 @@ Expected<std::string> getCachedOrDownloadDebuginfo(BuildIDRef ID) {
   std::string UrlPath = getDebuginfodDebuginfoUrlPath(ID);
   return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
 }
-
-Expected<std::string> getCachedOrDownloadDebuginfo(BuildIDRef ID) {
-  std::string UrlPath = getDebuginfodDebuginfoUrlPath(ID);
-  return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
-}
 // General fetching function.
 Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
                                                   StringRef UrlPath) {

@@ -374,7 +374,6 @@ def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
     return summary
 
 
-"""
 class DenseMapSynthetic:
     valobj: lldb.SBValue
 
@@ -433,4 +432,3 @@ class DenseMapSynthetic:
         for indexes in key_buckets.values():
             if len(indexes) == 1:
                 self.child_buckets.append(indexes[0])
-"""
