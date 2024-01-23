@@ -702,7 +702,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
             << "run-pass cannot be used with "
-            << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
+            << TPC.getLimitedCodeGenPipelineReason() << ".\n";
         delete PTPC;
         delete MMIWP;
         return 1;
