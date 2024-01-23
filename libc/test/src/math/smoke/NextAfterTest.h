@@ -38,12 +38,14 @@ class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::Test {
   const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T zero = T(FPBits::zero(Sign::POS));
   const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T nan = T(FPBits::build_quiet_nan(Sign::POS, 1));
 
-  const StorageType min_subnormal = FPBits::MIN_SUBNORMAL;
-  const StorageType max_subnormal = FPBits::MAX_SUBNORMAL;
-  const StorageType min_normal = FPBits::MIN_NORMAL;
-  const StorageType max_normal = FPBits::MAX_NORMAL;
+  static constexpr StorageType min_subnormal =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType max_subnormal =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType min_normal = FPBits::min_normal().uintval();
+  static constexpr StorageType max_normal = FPBits::max_normal().uintval();
 
 public:
   typedef T (*NextAfterFunc)(T, T);

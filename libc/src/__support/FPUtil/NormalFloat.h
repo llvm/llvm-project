@@ -215,7 +215,7 @@ template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
   // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
   constexpr int MAX_EXPONENT_VALUE = (1 << LDBits::EXP_LEN) - 2;
   if (biased_exponent > MAX_EXPONENT_VALUE) {
-    return LDBits::inf(sign);
+    return LDBits::inf(sign).get_val();
   }
 
   FPBits<long double> result(0.0l);
