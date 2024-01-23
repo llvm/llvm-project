@@ -740,7 +740,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   if (!DryRun) {
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
-                                  State.Column + Spaces + PPColumnCorrection);
+                                  State.Column + Spaces + PPColumnCorrection,
+                                  /*IsAligned=*/false, State.Line->InMacroBody);
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance

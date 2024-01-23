@@ -21215,6 +21215,13 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "});",
                Style);
 
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat("#define FOO \\\n"
+               "  int foo[][2] = { \\\n"
+               "      {0, 1} \\\n"
+               "  };",
+               Style);
+
   Style.Cpp11BracedListStyle = false;
   verifyFormat("struct test demo[] = {\n"
                "  { 56, 23,    \"hello\" },\n"
