@@ -73,8 +73,8 @@
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
-#include "llvm/Transforms/Instrumentation/MarkColdFunctions.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
@@ -214,10 +214,10 @@ static cl::opt<bool>
                            cl::init(false), cl::Hidden);
 
 // TODO: turn on and remove flag
-static cl::opt<bool>
-    EnableMarkColdFunctions("enable-mark-cold-functions",
-                            cl::desc("Enable pass to mark cold functions"),
-                            cl::init(false));
+static cl::opt<bool> EnablePGOForceFunctionAttrs(
+    "enable-pgo-force-function-attrs",
+    cl::desc("Enable pass to set function attributes based on PGO profiles"),
+    cl::init(false));
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -1144,10 +1144,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  if (EnableMarkColdFunctions && PGOOpt &&
+  if (EnablePGOForceFunctionAttrs && PGOOpt &&
       (PGOOpt->Action == PGOOptions::SampleUse ||
        PGOOpt->Action == PGOOptions::IRUse))
-    MPM.addPass(MarkColdFunctionsPass(PGOOpt->ColdType));
+    MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 

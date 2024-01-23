@@ -1,10 +1,10 @@
-; RUN: opt < %s -passes=mark-cold-functions -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-attr=none    | FileCheck %s --check-prefixes=NONE,CHECK
-; RUN: opt < %s -passes=mark-cold-functions -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-attr=optsize | FileCheck %s --check-prefixes=OPTSIZE,CHECK
-; RUN: opt < %s -passes=mark-cold-functions -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-attr=minsize | FileCheck %s --check-prefixes=MINSIZE,CHECK
-; RUN: opt < %s -passes=mark-cold-functions -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-attr=optnone | FileCheck %s --check-prefixes=OPTNONE,CHECK
+; RUN: opt < %s -passes=pgo-force-function-attrs -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-opt=default | FileCheck %s --check-prefixes=NONE,CHECK
+; RUN: opt < %s -passes=pgo-force-function-attrs -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-opt=optsize | FileCheck %s --check-prefixes=OPTSIZE,CHECK
+; RUN: opt < %s -passes=pgo-force-function-attrs -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=MINSIZE,CHECK
+; RUN: opt < %s -passes=pgo-force-function-attrs -pgo-kind=pgo-instr-use-pipeline -S -pgo-cold-func-opt=optnone | FileCheck %s --check-prefixes=OPTNONE,CHECK
 
 ; Should be no changes without profile data
-; RUN: opt < %s -passes=mark-cold-functions                                  -S -pgo-cold-func-attr=minsize | FileCheck %s --check-prefixes=NONE,CHECK
+; RUN: opt < %s -passes=pgo-force-function-attrs                                  -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=NONE,CHECK
 
 ; NONE-NOT: Function Attrs:
 ; OPTSIZE: Function Attrs: optsize{{$}}

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/MarkColdFunctions.h"
+#include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/PassManager.h"
 
 using namespace llvm;
 
-PreservedAnalyses MarkColdFunctionsPass::run(Module &M,
-                                             ModuleAnalysisManager &AM) {
-  if (ColdType == PGOOptions::ColdFuncAttr::None)
+PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
+  if (ColdType == PGOOptions::ColdFuncOpt::Default)
     return PreservedAnalyses::all();
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
   if (!PSI.hasProfileSummary())
@@ -31,10 +31,10 @@ PreservedAnalyses MarkColdFunctionsPass::run(Module &M,
       continue;
     // Add optsize/minsize/optnone if requested.
     switch (ColdType) {
-    case PGOOptions::ColdFuncAttr::None:
+    case PGOOptions::ColdFuncOpt::Default:
       assert(false);
       break;
-    case PGOOptions::ColdFuncAttr::OptSize:
+    case PGOOptions::ColdFuncOpt::OptSize:
       if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
           !F.hasFnAttribute(Attribute::OptimizeForSize) &&
           !F.hasFnAttribute(Attribute::MinSize)) {
@@ -42,7 +42,7 @@ PreservedAnalyses MarkColdFunctionsPass::run(Module &M,
         MadeChange = true;
       }
       break;
-    case PGOOptions::ColdFuncAttr::MinSize:
+    case PGOOptions::ColdFuncOpt::MinSize:
       // Change optsize to minsize.
       if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
           !F.hasFnAttribute(Attribute::MinSize)) {
@@ -51,7 +51,7 @@ PreservedAnalyses MarkColdFunctionsPass::run(Module &M,
         MadeChange = true;
       }
       break;
-    case PGOOptions::ColdFuncAttr::OptNone:
+    case PGOOptions::ColdFuncOpt::OptNone:
       // Strip optsize/minsize.
       F.removeFnAttr(Attribute::OptimizeForSize);
       F.removeFnAttr(Attribute::MinSize);

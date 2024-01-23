@@ -202,16 +202,17 @@ static cl::opt<std::string>
                          cl::desc("Path to the profile remapping file."),
                          cl::Hidden);
 
-static cl::opt<PGOOptions::ColdFuncAttr> PGOColdFuncAttr(
-    "pgo-cold-func-attr", cl::init(PGOOptions::ColdFuncAttr::None), cl::Hidden,
+static cl::opt<PGOOptions::ColdFuncOpt> PGOColdFuncAttr(
+    "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
     cl::desc(
         "Function attribute to apply to cold functions as determined by PGO"),
-    cl::values(clEnumValN(PGOOptions::ColdFuncAttr::None, "none", "None"),
-               clEnumValN(PGOOptions::ColdFuncAttr::OptSize, "optsize",
+    cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
+                          "Default (no attribute)"),
+               clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
                           "Mark cold functions with optsize."),
-               clEnumValN(PGOOptions::ColdFuncAttr::MinSize, "minsize",
+               clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
                           "Mark cold functions with minsize."),
-               clEnumValN(PGOOptions::ColdFuncAttr::OptNone, "optnone",
+               clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
                           "Mark cold functions with optnone.")));
 
 static cl::opt<bool> DebugInfoForProfiling(

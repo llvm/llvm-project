@@ -6,7 +6,7 @@ add_llvm_component_library(LLVMInstrumentation
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
   BlockCoverageInference.cpp
-  MarkColdFunctions.cpp
+  PGOForceFunctionAttrs.cpp
   MemProfiler.cpp
   MemorySanitizer.cpp
   IndirectCallPromotion.cpp
