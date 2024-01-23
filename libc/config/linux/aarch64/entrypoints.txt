@@ -350,7 +350,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
-    libc.src.math.sqrtf128
     libc.src.math.tanf
     libc.src.math.tanhf
     libc.src.math.trunc
@@ -363,7 +362,6 @@ if(LIBC_COMPILER_HAS_FLOAT128)
     # math.h C23 _Float128 entrypoints
     # Temporarily disabled since float128 isn't working on the aarch64 buildbot
     # libc.src.math.fabsf128
-    #libc.src.math.sqrtf128
   )
 endif()
 
