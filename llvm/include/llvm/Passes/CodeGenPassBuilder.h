@@ -1155,6 +1155,8 @@ void CodeGenPassBuilder<Derived>::addOptimizedRegAlloc(
     AddMachinePass &addPass) const {
   addPass(DetectDeadLanesPass());
 
+  addPass(InitUndefPass());
+
   addPass(ProcessImplicitDefsPass());
 
   // Edge splitting is smarter with machine loop info.

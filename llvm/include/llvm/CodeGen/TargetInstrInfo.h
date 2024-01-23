@@ -2223,6 +2223,15 @@ public:
     llvm_unreachable("unknown number of operands necessary");
   }
 
+  /// Gets the opcode for the Pseudo Instruction used to initialize
+  /// the undef value. If no Instruction is available, this will
+  /// fail compilation.
+  virtual unsigned getUndefInitOpcode(unsigned RegClassID) const {
+    (void)RegClassID;
+
+    llvm_unreachable("Unexpected register class.");
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

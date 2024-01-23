@@ -327,6 +327,14 @@ public:
 
   /// Get the list of MacroFusion predicates.
   virtual std::vector<MacroFusionPredTy> getMacroFusions() const { return {}; };
+
+  // supportsInitUndef is used to determine if an architecture supports
+  // the Init Undef Pass. By default, it is assumed that it will not support the
+  // pass, with architecture specific overrides providing the information where
+  // they are implemented. This was originally used in RISC-V's Init Undef pass
+  // but has been moved to be a virtual function when the pass was refactored to
+  // support multiple architectures.
+  virtual bool supportsInitUndef() const { return false; }
 };
 
 } // end namespace llvm

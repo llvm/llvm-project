@@ -1172,6 +1172,14 @@ public:
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
   }
+
+  /// Returns the Register Class that is being initialized. There
+  /// should be a Pseudo Instruction for the different register
+  /// classes for the different register types that are introduced.
+  virtual const TargetRegisterClass *
+  getTargetRegisterClass(const TargetRegisterClass *RC) const {
+    llvm_unreachable("Unexpected target register class.");
+  }
 };
 
 //===----------------------------------------------------------------------===//
