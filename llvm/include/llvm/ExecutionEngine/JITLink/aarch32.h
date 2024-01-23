@@ -341,64 +341,31 @@ private:
   Section *GOTSection = nullptr;
 };
 
-/// Stubs builder for v7 emits non-position-independent Thumb stubs.
-///
-/// Right now we only have one default stub kind, but we want to extend this
-/// and allow creation of specific kinds in the future (e.g. branch range
-/// extension or interworking).
-///
-/// Let's keep it simple for the moment and not wire this through a GOT.
-///
-class StubsManager_v7 : public TableManager<StubsManager_v7> {
+/// Stubs builder for v7 emits non-position-independent Arm and Thumb stubs.
+class StubsManager_v7 {
 public:
   StubsManager_v7() = default;
 
   /// Name of the object file section that will contain all our stubs.
   static StringRef getSectionName() {
-    return "__llvm_jitlink_aarch32_STUBS_Thumbv7";
+    return "__llvm_jitlink_aarch32_STUBS_v7";
   }
 
   /// Implements link-graph traversal via visitExistingEdges().
-  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getTarget().isDefined())
-      return false;
-
-    switch (E.getKind()) {
-    case Thumb_Call:
-    case Thumb_Jump24: {
-      DEBUG_WITH_TYPE("jitlink", {
-        dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
-               << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
-               << formatv("{0:x}", E.getOffset()) << ")\n";
-      });
-      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
-      return true;
-    }
-    }
-    return false;
-  }
-
-  /// Create a branch range extension stub with Thumb encoding for v7 CPUs.
-  Symbol &createEntry(LinkGraph &G, Symbol &Target);
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
 
 private:
-  /// Create a new node in the link-graph for the given stub template.
-  template <size_t Size>
-  Block &addStub(LinkGraph &G, const uint8_t (&Code)[Size],
-                 uint64_t Alignment) {
-    ArrayRef<char> Template(reinterpret_cast<const char *>(Code), Size);
-    return G.createContentBlock(getStubsSection(G), Template,
-                                orc::ExecutorAddr(), Alignment, 0);
+  // Two slots per external: Arm and Thumb
+  using StubMapEntry = std::tuple<Symbol *, Symbol *>;
+
+  Symbol *&getStubSymbolSlot(StringRef Name, bool Thumb) {
+    StubMapEntry &Stubs = StubMap.try_emplace(Name).first->second;
+    if (Thumb)
+      return std::get<1>(Stubs);
+    return std::get<0>(Stubs);
   }
 
-  /// Get or create the object file section that will contain all our stubs.
-  Section &getStubsSection(LinkGraph &G) {
-    if (!StubsSection)
-      StubsSection = &G.createSection(getSectionName(),
-                                      orc::MemProt::Read | orc::MemProt::Exec);
-    return *StubsSection;
-  }
-
+  DenseMap<StringRef, StubMapEntry> StubMap;
   Section *StubsSection = nullptr;
 };
 
