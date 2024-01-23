@@ -256,7 +256,8 @@ static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
   // cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
 
   // The lifetime of the temporary is extended by the clang::Value.
-  cantFail(Interp.ParseAndExecute(Name + "()", &Addr));
+  cantFail(Interp.ParseAndExecute(Name + "();", &Addr));
+  Addr.setKind(Value::Kind::K_PtrOrObj);
   return Addr;
 }
 
