@@ -973,14 +973,17 @@ bool mlir::trailingNDimsContiguous(MemRefType type, int64_t n) {
     return false;
 
   auto memrefShape = type.getShape().take_back(n);
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
+
+  if (type.getLayout().isIdentity())
+    return true;
+
   int64_t offset;
   SmallVector<int64_t> stridesFull;
   if (!succeeded(getStridesAndOffset(type, stridesFull, offset)))
     return false;
   auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
-
-  if (ShapedType::isDynamicShape(memrefShape))
-    return false;
 
   if (strides.empty())
     return true;
