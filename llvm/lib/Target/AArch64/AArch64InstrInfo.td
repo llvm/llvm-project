@@ -642,6 +642,11 @@ def AArch64call_rvmarker: SDNode<"AArch64ISD::CALL_RVMARKER",
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
 
+def AArch64call_arm64ec_to_x64 : SDNode<"AArch64ISD::CALL_ARM64EC_TO_X64",
+                                      SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+                                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                       SDNPVariadic]>;
+
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
@@ -2801,6 +2806,10 @@ let isCall = 1, Defs = [LR], Uses = [SP] in {
                      Sched<[WriteBrReg]>;
   def BLR_BTI : Pseudo<(outs), (ins variable_ops), []>,
                 Sched<[WriteBrReg]>;
+  let Uses = [X16, SP] in
+  def BLR_X16 : Pseudo<(outs), (ins), [(AArch64call_arm64ec_to_x64 X16)]>,
+                Sched<[WriteBrReg]>,
+                PseudoInstExpansion<(BLR X16)>;
 } // isCall
 
 def : Pat<(AArch64call GPR64:$Rn),
@@ -4831,6 +4840,8 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
 }
 
 // Pseudo instructions for Windows EH
