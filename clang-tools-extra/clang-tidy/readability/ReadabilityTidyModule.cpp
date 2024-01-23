@@ -58,6 +58,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseBuiltinLiteralsCheck.h"
 
 namespace clang::tidy {
 namespace readability {
@@ -163,6 +164,8 @@ public:
         "readability-uppercase-literal-suffix");
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
+    CheckFactories.registerCheck<UseBuiltinLiteralsCheck>(
+        "readability-use-builtin-literals");
   }
 };
 
