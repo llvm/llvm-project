@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -724,27 +725,127 @@ bool GOTBuilder::visitEdge(LinkGraph &G, Block *B, Edge &E) {
   return true;
 }
 
+const uint8_t Armv7ABS[] = {
+    0x00, 0xc0, 0x00, 0xe3, // movw r12, #0x0000     ; lower 16-bit
+    0x00, 0xc0, 0x40, 0xe3, // movt r12, #0x0000     ; upper 16-bit
+    0x1c, 0xff, 0x2f, 0xe1  // bx   r12
+};
+
 const uint8_t Thumbv7ABS[] = {
     0x40, 0xf2, 0x00, 0x0c, // movw r12, #0x0000    ; lower 16-bit
     0xc0, 0xf2, 0x00, 0x0c, // movt r12, #0x0000    ; upper 16-bit
     0x60, 0x47              // bx   r12
 };
 
-Symbol &StubsManager_v7::createEntry(LinkGraph &G, Symbol &Target) {
+/// Create a new node in the link-graph for the given stub template.
+template <size_t Size>
+static Block &allocStub(LinkGraph &G, Section &S, const uint8_t (&Code)[Size]) {
   constexpr uint64_t Alignment = 4;
-  Block &B = addStub(G, Thumbv7ABS, Alignment);
-  LLVM_DEBUG({
-    const char *StubPtr = B.getContent().data();
-    HalfWords Reg12 = encodeRegMovtT1MovwT3(12);
-    assert(checkRegister<Thumb_MovwAbsNC>(StubPtr, Reg12) &&
-           checkRegister<Thumb_MovtAbs>(StubPtr + 4, Reg12) &&
-           "Linker generated stubs may only corrupt register r12 (IP)");
-  });
+  ArrayRef<char> Template(reinterpret_cast<const char *>(Code), Size);
+  return G.createContentBlock(S, Template, orc::ExecutorAddr(), Alignment, 0);
+}
+
+static Block &createStubThumbv7(LinkGraph &G, Section &S, Symbol &Target) {
+  Block &B = allocStub(G, S, Thumbv7ABS);
   B.addEdge(Thumb_MovwAbsNC, 0, Target, 0);
   B.addEdge(Thumb_MovtAbs, 4, Target, 0);
-  Symbol &Stub = G.addAnonymousSymbol(B, 0, B.getSize(), true, false);
-  Stub.setTargetFlags(ThumbSymbol);
-  return Stub;
+
+  [[maybe_unused]] const char *StubPtr = B.getContent().data();
+  [[maybe_unused]] HalfWords Reg12 = encodeRegMovtT1MovwT3(12);
+  assert(checkRegister<Thumb_MovwAbsNC>(StubPtr, Reg12) &&
+         checkRegister<Thumb_MovtAbs>(StubPtr + 4, Reg12) &&
+         "Linker generated stubs may only corrupt register r12 (IP)");
+  return B;
+}
+
+static Block &createStubArmv7(LinkGraph &G, Section &S, Symbol &Target) {
+  Block &B = allocStub(G, S, Armv7ABS);
+  B.addEdge(Arm_MovwAbsNC, 0, Target, 0);
+  B.addEdge(Arm_MovtAbs, 4, Target, 0);
+
+  [[maybe_unused]] const char *StubPtr = B.getContent().data();
+  [[maybe_unused]] uint32_t Reg12 = encodeRegMovtA1MovwA2(12);
+  assert(checkRegister<Arm_MovwAbsNC>(StubPtr, Reg12) &&
+         checkRegister<Arm_MovtAbs>(StubPtr + 4, Reg12) &&
+         "Linker generated stubs may only corrupt register r12 (IP)");
+  return B;
+}
+
+static bool needsStub(const Edge &E) {
+  Symbol &Target = E.getTarget();
+
+  // Create stubs for external branch targets.
+  if (!Target.isDefined()) {
+    switch (E.getKind()) {
+    case Arm_Call:
+    case Arm_Jump24:
+    case Thumb_Call:
+    case Thumb_Jump24:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  // For local targets, create interworking stubs if we switch Arm/Thumb with an
+  // instruction that cannot switch the instruction set state natively.
+  bool TargetIsThumb = Target.getTargetFlags() & ThumbSymbol;
+  switch (E.getKind()) {
+  case Arm_Jump24:
+    return TargetIsThumb; // Branch to Thumb needs interworking stub
+  case Thumb_Jump24:
+    return !TargetIsThumb; // Branch to Arm needs interworking stub
+  default:
+    break;
+  }
+
+  return false;
+}
+
+bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
+  if (!needsStub(E))
+    return false;
+
+  // Stub Arm/Thumb follows instruction set state at relocation site.
+  // TODO: We may reduce them at relaxation time and reuse freed slots.
+  bool MakeThumb = (E.getKind() > LastArmRelocation);
+  LLVM_DEBUG(dbgs() << "  Preparing " << (MakeThumb ? "Thumb" : "Arm")
+                    << " stub for " << G.getEdgeKindName(E.getKind())
+                    << " edge at " << B->getFixupAddress(E) << " ("
+                    << B->getAddress() << " + "
+                    << formatv("{0:x}", E.getOffset()) << ")\n");
+
+  Symbol &Target = E.getTarget();
+  assert(Target.hasName() && "Edge cannot point to anonymous target");
+  Symbol *&StubSymbol = getStubSymbolSlot(Target.getName(), MakeThumb);
+
+  if (!StubSymbol) {
+    if (!StubsSection)
+      StubsSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
+    Block &B = MakeThumb ? createStubThumbv7(G, *StubsSection, Target)
+                         : createStubArmv7(G, *StubsSection, Target);
+    StubSymbol = &G.addAnonymousSymbol(B, 0, B.getSize(), true, false);
+    if (MakeThumb)
+      StubSymbol->setTargetFlags(ThumbSymbol);
+
+    LLVM_DEBUG({
+      dbgs() << "    Created " << (MakeThumb ? "Thumb" : "Arm") << " entry for "
+             << Target.getName() << " in " << StubsSection->getName() << ": "
+             << *StubSymbol << "\n";
+    });
+  }
+
+  assert(MakeThumb == (StubSymbol->getTargetFlags() & ThumbSymbol) &&
+         "Instruction set states of stub and relocation site should be equal");
+  LLVM_DEBUG({
+    dbgs() << "    Using " << (MakeThumb ? "Thumb" : "Arm") << " entry "
+           << *StubSymbol << " in "
+           << StubSymbol->getBlock().getSection().getName() << "\n";
+  });
+
+  E.setTarget(*StubSymbol);
+  return true;
 }
 
 const char *getEdgeKindName(Edge::Kind K) {
