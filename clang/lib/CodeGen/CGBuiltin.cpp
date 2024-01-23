@@ -1203,10 +1203,24 @@ static llvm::Value *EmitX86BitTestIntrinsic(CodeGenFunction &CGF,
   AsmOS << "bt";
   if (Action)
     AsmOS << Action;
-  AsmOS << SizeSuffix << " $2, ($1)";
 
-  // Build the constraints. FIXME: We should support immediates when possible.
-  std::string Constraints = "={@ccc},r,r,~{cc},~{memory}";
+  // Check if BitPos is a ConstantInt (immediate value)
+  if (llvm::ConstantInt *CI = llvm::dyn_cast<llvm::ConstantInt>(BitPos)) {
+    // If it is, use the immediate value in the assembly string
+    AsmOS << SizeSuffix << " $" << CI->getZExtValue() << ", ($1)";
+  } else {
+    // Otherwise, fall back to the existing behavior
+    AsmOS << SizeSuffix << " $2, ($1)";
+  }
+
+  // Build the constraints.
+  std::string Constraints;
+  if (llvm::isa<llvm::ConstantInt>(BitPos)) {
+    Constraints = "={@ccc},r,~{cc},~{memory}";
+  } else {
+    Constraints = "={@ccc},r,r,~{cc},~{memory}";
+  }
+
   std::string_view MachineClobbers = CGF.getTarget().getClobbers();
   if (!MachineClobbers.empty()) {
     Constraints += ',';
