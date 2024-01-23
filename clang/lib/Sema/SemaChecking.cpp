@@ -7548,6 +7548,28 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       if (!CallerHasZAState)
         Diag(Loc, diag::err_sme_za_call_no_za_state);
     }
+
+    // If the callee uses AArch64 SME ZT0 state but the caller doesn't define
+    // any, then this is an error.
+    FunctionType::ArmStateValue ArmZT0State =
+        FunctionType::getArmZT0State(ExtInfo.AArch64SMEAttributes);
+    if (ArmZT0State != FunctionType::ARM_None) {
+      bool CallerHasZT0State = false;
+      if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
+        auto *Attr = CallerFD->getAttr<ArmNewAttr>();
+        if (Attr && Attr->isNewZT0())
+          CallerHasZT0State = true;
+        else if (const auto *FPT =
+                     CallerFD->getType()->getAs<FunctionProtoType>())
+          CallerHasZT0State =
+              FunctionType::getArmZT0State(
+                  FPT->getExtProtoInfo().AArch64SMEAttributes) !=
+              FunctionType::ARM_None;
+      }
+
+      if (!CallerHasZT0State)
+        Diag(Loc, diag::err_sme_zt0_call_no_zt0_state);
+    }
   }
 
   if (FDecl && FDecl->hasAttr<AllocAlignAttr>()) {

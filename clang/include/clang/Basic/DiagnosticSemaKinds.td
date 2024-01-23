@@ -3706,10 +3706,14 @@ def err_sme_call_in_non_sme_target : Error<
   "call to a streaming function requires 'sme'">;
 def err_sme_za_call_no_za_state : Error<
   "call to a shared ZA function requires the caller to have ZA state">;
+def err_sme_zt0_call_no_zt0_state : Error<
+  "call to a shared ZT0 function requires the caller to have ZT0 state">;
 def err_sme_definition_using_sm_in_non_sme_target : Error<
   "function executed in streaming-SVE mode requires 'sme'">;
 def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
+def err_sme_definition_using_zt0_in_non_sme2_target : Error<
+  "function using ZT0 state requires 'sme2'">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_unknown_arm_state : Error<
