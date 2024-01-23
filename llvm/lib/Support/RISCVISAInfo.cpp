@@ -192,9 +192,9 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 // NOTE: This table should be sorted alphabetically by extension name.
 // clang-format off
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
-    {"zaamo", {0, 1}},
+    {"zaamo", {0, 2}},
     {"zacas", {1, 0}},
-    {"zalrsc", {0, 1}},
+    {"zalrsc", {0, 2}},
 
     {"zcmop", {0, 2}},
 
