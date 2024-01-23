@@ -2915,11 +2915,14 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                                                   mlir::omp::DataBoundsType>(
                   converter.getFirOpBuilder(), converter.getCurrentLocation(),
                   converter, dataExv, info);
-        if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>())
+        if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>()) {
+          bool dataExvIsAssumedSize =
+              Fortran::semantics::IsAssumedSizeArray(sym.GetUltimate());
           bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::DataBoundsOp,
                                                     mlir::omp::DataBoundsType>(
               converter.getFirOpBuilder(), converter.getCurrentLocation(),
-              converter, dataExv);
+              converter, dataExv, dataExvIsAssumedSize);
+        }
 
         llvm::omp::OpenMPOffloadMappingFlags mapFlag =
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
