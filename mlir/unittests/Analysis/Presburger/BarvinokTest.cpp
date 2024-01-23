@@ -280,9 +280,17 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
   poly = defineHRep(2, 1);
   for (unsigned i = 0; i < 3; i++)
     poly.addInequality(ineqs.getRow(i));
-  
+
   count = polytopeGeneratingFunction(poly);
   // There is only one chamber: p ≥ 0
   EXPECT_EQ(count.size(), 1u);
 
+  gf = count[0].second;
+  EXPECT_EQ_REPR_GENERATINGFUNCTION(
+      gf, GeneratingFunction(
+              1, {1, 1, 1},
+              {makeFracMatrix(2, 2, {{0, 1}, {0, 0}}),
+               makeFracMatrix(2, 2, {{0, 1}, {0, 0}}),
+               makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
+              {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}}));
 }
