@@ -35,6 +35,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <cstring>
@@ -317,7 +318,7 @@ protected:
     // Clear the old callback and inline flag to get back to as-if-null.
     RHS.CallbackAndInlineFlag = {};
 
-#if !defined(NDEBUG) && !defined(LLVM_ADDRESS_SANITIZER_BUILD)
+#if !defined(NDEBUG) && !LLVM_ADDRESS_SANITIZER_BUILD
     // In debug builds without ASan, we also scribble across the rest of the
     // storage. AddressSanitizer (ASAN) disables scribbling to prevent
     // overwriting poisoned objects (e.g., annotated short strings).
