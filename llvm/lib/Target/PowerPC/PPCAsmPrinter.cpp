@@ -474,6 +474,63 @@ static void collectTOCStats(PPCAsmPrinter::TOCEntryType Type) {
   }
 }
 
+static CodeModel::Model getCodeModel(const PPCSubtarget &S,
+                                     const TargetMachine &TM,
+                                     const MachineOperand &MO) {
+  assert(S.isAIXABI() && "ELF per global code model not supported yet");
+
+  CodeModel::Model ModuleModel = TM.getCodeModel();
+
+  // If the operand is not a global address then there is no
+  // global variable to carry an attribute.
+  if (!(MO.getType() == MachineOperand::MO_GlobalAddress))
+    return ModuleModel;
+
+  const GlobalValue *GV = MO.getGlobal();
+  assert(GV && "expected global for MO_GlobalAddress");
+
+  if (!isa<GlobalVariable>(GV))
+    return ModuleModel;
+
+  std::optional<CodeModel::Model> MaybeCodeModel =
+      dyn_cast<GlobalVariable>(GV)->getCodeModel();
+  if (MaybeCodeModel)
+    return *MaybeCodeModel;
+
+  return ModuleModel;
+}
+
+static void checkPerGlobalCodeModel(const GlobalValue *GV, MCSymbol *Sym) {
+  // ELF per global code model not supported yet.
+  if (!isa<MCSymbolXCOFF>(Sym))
+    return;
+
+  // Symbols that aren't global variables cannot have the attribute.
+  if (!isa<GlobalVariable>(GV))
+    return;
+
+  const GlobalVariable *GVar = cast<GlobalVariable>(GV);
+  std::optional<CodeModel::Model> MaybeCM = GVar->getCodeModel();
+
+  // No overriding atribute.
+  if (!MaybeCM)
+    return;
+
+  CodeModel::Model CM = *MaybeCM;
+
+  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(Sym);
+  switch (CM) {
+  case CodeModel::Large:
+    XSym->setPerSymbolCodeModel(MCSymbolXCOFF::CM_Large);
+    return;
+  case CodeModel::Small:
+    XSym->setPerSymbolCodeModel(MCSymbolXCOFF::CM_Small);
+    return;
+  default:
+    report_fatal_error("Invlaid code model for AIX");
+  }
+}
+
 /// lookUpOrCreateTOCEntry -- Given a symbol, look up whether a TOC entry
 /// exists for it.  If not, create one.  Then return a symbol that references
 /// the TOC entry.
@@ -723,8 +780,12 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
 static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
                                            AsmPrinter &AP) {
   switch (MO.getType()) {
-  case MachineOperand::MO_GlobalAddress:
-    return AP.getSymbol(MO.getGlobal());
+  case MachineOperand::MO_GlobalAddress: {
+    const GlobalValue *GV = MO.getGlobal();
+    MCSymbol *Sym = AP.getSymbol(GV);
+    checkPerGlobalCodeModel(GV, Sym);
+    return Sym;
+  }
   case MachineOperand::MO_ConstantPoolIndex:
     return AP.GetCPISymbol(MO.getIndex());
   case MachineOperand::MO_JumpTableIndex:
@@ -1014,7 +1075,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // relative to the toc-base.
     if (IsAIX) {
       assert(
-          TM.getCodeModel() == CodeModel::Small &&
+          getCodeModel(*Subtarget, TM, MO) == CodeModel::Small &&
           "This pseudo should only be selected for 32-bit small code model.");
       Exp = getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp, VK);
       TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
@@ -1098,7 +1159,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDIStocHA: {
-    assert((IsAIX && !IsPPC64 && TM.getCodeModel() == CodeModel::Large) &&
+    const MachineOperand &MO = MI->getOperand(2);
+
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+           "Invalid operand for ADDIStocHA.");
+    assert((IsAIX && !IsPPC64 &&
+            getCodeModel(*Subtarget, TM, MO) == CodeModel::Large) &&
            "This pseudo should only be selected for 32-bit large code model on"
            " AIX.");
 
@@ -1107,10 +1173,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Change the opcode to ADDIS.
     TmpInst.setOpcode(PPC::ADDIS);
-
-    const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
-           "Invalid operand for ADDIStocHA.");
 
     // Map the machine operand to its corresponding MCSymbol.
     MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
@@ -1131,7 +1193,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::LWZtocL: {
-    assert(IsAIX && !IsPPC64 && TM.getCodeModel() == CodeModel::Large &&
+    const MachineOperand &MO = MI->getOperand(1);
+
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+           "Invalid operand for LWZtocL.");
+    assert(IsAIX && !IsPPC64 &&
+           getCodeModel(*Subtarget, TM, MO) == CodeModel::Large &&
            "This pseudo should only be selected for 32-bit large code model on"
            " AIX.");
 
@@ -1140,10 +1207,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Change the opcode to lwz.
     TmpInst.setOpcode(PPC::LWZ);
-
-    const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
-           "Invalid operand for LWZtocL.");
 
     // Map the machine operand to its corresponding MCSymbol.
     MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
@@ -1183,8 +1246,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     const bool GlobalToc =
         MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal());
+
+    const CodeModel::Model CM =
+        IsAIX ? getCodeModel(*Subtarget, TM, MO) : TM.getCodeModel();
+
     if (GlobalToc || MO.isJTI() || MO.isBlockAddress() ||
-        (MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
+        (MO.isCPI() && CM == CodeModel::Large))
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
     VK = IsAIX ? MCSymbolRefExpr::VK_PPC_U : MCSymbolRefExpr::VK_PPC_TOC_HA;
@@ -1225,8 +1292,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
-
-    if (!MO.isCPI() || TM.getCodeModel() == CodeModel::Large)
+    CodeModel::Model CM =
+        IsAIX ? getCodeModel(*Subtarget, TM, MO) : TM.getCodeModel();
+    if (!MO.isCPI() || CM == CodeModel::Large)
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
     VK = IsAIX ? MCSymbolRefExpr::VK_PPC_L : MCSymbolRefExpr::VK_PPC_TOC_LO;

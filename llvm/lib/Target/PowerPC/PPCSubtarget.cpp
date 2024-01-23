@@ -189,6 +189,15 @@ bool PPCSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   // Large code model always uses the TOC even for local symbols.
   if (TM.getCodeModel() == CodeModel::Large)
     return true;
+
+  // AIX may have a per global code model attribute.
+  if (isAIXABI() && isa<GlobalVariable>(GV)) {
+    const GlobalVariable *GVar = cast<GlobalVariable>(GV);
+    std::optional<CodeModel::Model> OptionalCM = GVar->getCodeModel();
+    if (OptionalCM && *OptionalCM == CodeModel::Large)
+      return true;
+  }
+
   if (TM.shouldAssumeDSOLocal(GV))
     return false;
   return true;

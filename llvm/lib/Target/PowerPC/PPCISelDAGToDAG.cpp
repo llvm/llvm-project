@@ -524,6 +524,43 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
   return true;
 }
 
+static CodeModel::Model getCodeModel(const PPCSubtarget &Subtarget,
+                                     const TargetMachine &TM,
+                                     const SDNode *Node) {
+  // If there isn't an attribute to override the module code model
+  // this will be the effective code model.
+  CodeModel::Model ModuleModel = TM.getCodeModel();
+
+  // Initially support per global code model for AIX only.
+  if (!Subtarget.isAIXABI())
+    return ModuleModel;
+
+  // If the operand is not a global address there is no
+  // GlobalVariable to query for an attribute.
+  SDValue Operand = Node->getOperand(0);
+  if (!isa<GlobalAddressSDNode>(Operand))
+    return ModuleModel;
+
+  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Operand);
+  if (!GA)
+    return ModuleModel;
+
+  const GlobalValue *GV = GA->getGlobal();
+  if (!GV || !isa<GlobalVariable>(GV))
+    return ModuleModel;
+
+  std::optional<CodeModel::Model> MaybeCodeModel =
+      dyn_cast<GlobalVariable>(GV)->getCodeModel();
+  if (MaybeCodeModel) {
+    CodeModel::Model CM = *MaybeCodeModel;
+    assert((CM == CodeModel::Small || CM == CodeModel::Large) &&
+           "invalid code model for AIX");
+    return CM;
+  }
+
+  return ModuleModel;
+}
+
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.
 static bool isInt32Immediate(SDNode *N, unsigned &Imm) {
@@ -6059,7 +6096,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     const bool isAIXABI = Subtarget->isAIXABI();
 
     // PowerPC only support small, medium and large code model.
-    const CodeModel::Model CModel = TM.getCodeModel();
+    const CodeModel::Model CModel = getCodeModel(*Subtarget, TM, N);
+
     assert(!(CModel == CodeModel::Tiny || CModel == CodeModel::Kernel) &&
            "PowerPC doesn't support tiny or kernel code models.");
 
