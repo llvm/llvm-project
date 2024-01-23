@@ -173,6 +173,10 @@ static cl::opt<unsigned>
                            cl::desc("Default threshold (max size of unrolled "
                                     "loop), used in all but O3 optimizations"));
 
+static cl::opt<unsigned> UnrollInteriorControlFlowPenalty(
+    "unroll-interior-control-flow-penalty", cl::init(2), cl::Hidden,
+    cl::desc("Penalty for non-exiting branches in the loop"));
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -675,6 +679,16 @@ UnrollCostEstimator::UnrollCostEstimator(
   NotDuplicatable = Metrics.notDuplicatable;
   Convergent = Metrics.convergent;
   LoopSize = Metrics.NumInsts;
+
+  // Add a penalty for interior control flow (excluding exits and latches).
+  // Unrolling such loops is less profitable, as it does not result in
+  // straight-line code (or extended basic blocks if multiple exits). This
+  // also disincentivizes unrolling outer loops, which may result in large
+  // size increases if the inner loop is also unrolled later.
+  for (BasicBlock *BB : L->blocks())
+    if (!BB->getSingleSuccessor() && !L->isLoopExiting(BB) &&
+        !L->isLoopLatch(BB))
+      LoopSize += UnrollInteriorControlFlowPenalty;
 
   // Don't allow an estimate of size zero.  This would allows unrolling of loops
   // with huge iteration counts, which is a compile time problem even if it's
