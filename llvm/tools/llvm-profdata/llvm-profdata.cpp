@@ -777,11 +777,21 @@ getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
-template <typename T> static void filterFunctions(T &ProfileMap) {
+template <typename T>
+static void filterFunctions(T &ProfileMap) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
   if (!hasFilter && !hasNegativeFilter)
     return;
+
+  // If filter starts with '?' it is MSVC mangled name, not a regex.
+  llvm::Regex ProbablyMSVCMangledName("[?@$_0-9A-Za-z]+");
+  if (hasFilter && FuncNameFilter[0] == '?' &&
+      ProbablyMSVCMangledName.match(FuncNameFilter))
+    FuncNameFilter = llvm::Regex::escape(FuncNameFilter);
+  if (hasNegativeFilter && FuncNameNegativeFilter[0] == '?' &&
+      ProbablyMSVCMangledName.match(FuncNameNegativeFilter))
+    FuncNameNegativeFilter = llvm::Regex::escape(FuncNameNegativeFilter);
 
   size_t Count = ProfileMap.size();
   llvm::Regex Pattern(FuncNameFilter);
@@ -792,12 +802,20 @@ template <typename T> static void filterFunctions(T &ProfileMap) {
   if (hasNegativeFilter && !NegativePattern.isValid(Error))
     exitWithError(Error);
 
+  // Handle MD5 profile, so it is still able to match using the original name.
+  std::string MD5Name = std::to_string(llvm::MD5Hash(FuncNameFilter));
+  std::string NegativeMD5Name =
+      std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
+
   for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
     auto Tmp = I++;
     const auto &FuncName = getFuncName(*Tmp);
     // Negative filter has higher precedence than positive filter.
-    if ((hasNegativeFilter && NegativePattern.match(FuncName)) ||
-        (hasFilter && !Pattern.match(FuncName)))
+    if ((hasNegativeFilter &&
+         (NegativePattern.match(FuncName) ||
+          (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
+        (hasFilter && !(Pattern.match(FuncName) ||
+                        (FunctionSamples::UseMD5 && MD5Name == FuncName))))
       ProfileMap.erase(Tmp);
   }
 
