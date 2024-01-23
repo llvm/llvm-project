@@ -37,9 +37,9 @@ struct ARM64 : ARM64Common {
                             uint64_t entryAddr) const override;
 
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                            uint64_t stubOffset, uint64_t selrefsVA,
-                            uint64_t selectorIndex, uint64_t gotAddr,
-                            uint64_t msgSendIndex) const override;
+                            uint64_t &stubOffset, uint64_t selrefsVA,
+                            uint64_t selectorIndex,
+                            Symbol *objcMsgSend) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
   void applyOptimizationHints(uint8_t *, const ObjFile &) const override;
 };
@@ -124,17 +124,35 @@ static constexpr uint32_t objcStubsSmallCode[] = {
 };
 
 void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                                 uint64_t stubOffset, uint64_t selrefsVA,
-                                 uint64_t selectorIndex, uint64_t msgSendAddr,
-                                 uint64_t msgSendIndex) const {
-  if (config->objcStubsMode == ObjCStubsMode::fast)
+                                 uint64_t &stubOffset, uint64_t selrefsVA,
+                                 uint64_t selectorIndex,
+                                 Symbol *objcMsgSend) const {
+  uint64_t objcMsgSendAddr;
+  uint64_t objcStubSize;
+  uint64_t objcMsgSendIndex;
+
+  if (config->objcStubsMode == ObjCStubsMode::fast) {
+    objcStubSize = target->objcStubsFastSize;
+    objcMsgSendAddr = in.got->addr;
+    objcMsgSendIndex = objcMsgSend->gotIndex;
     ::writeObjCMsgSendFastStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
                                      stubOffset, selrefsVA, selectorIndex,
-                                     msgSendAddr, msgSendIndex);
-  else
+                                     objcMsgSendAddr, objcMsgSendIndex);
+  } else {
+    assert(config->objcStubsMode == ObjCStubsMode::small);
+    objcStubSize = target->objcStubsSmallSize;
+    if (auto *d = dyn_cast<Defined>(objcMsgSend)) {
+      objcMsgSendAddr = d->getVA();
+      objcMsgSendIndex = 0;
+    } else {
+      objcMsgSendAddr = in.stubs->addr;
+      objcMsgSendIndex = objcMsgSend->stubsIndex;
+    }
     ::writeObjCMsgSendSmallStub<LP64>(buf, objcStubsSmallCode, sym, stubsAddr,
                                       stubOffset, selrefsVA, selectorIndex,
-                                      msgSendAddr, msgSendIndex);
+                                      objcMsgSendAddr, objcMsgSendIndex);
+  }
+  stubOffset += objcStubSize;
 }
 
 // A thunk is the relaxed variation of stubCode. We don't need the

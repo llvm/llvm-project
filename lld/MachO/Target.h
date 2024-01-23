@@ -70,10 +70,9 @@ public:
                                     uint64_t entryAddr) const = 0;
 
   virtual void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym,
-                                    uint64_t stubsAddr, uint64_t stubOffset,
+                                    uint64_t stubsAddr, uint64_t &stubOffset,
                                     uint64_t selrefsVA, uint64_t selectorIndex,
-                                    uint64_t gotAddr,
-                                    uint64_t msgSendIndex) const = 0;
+                                    Symbol *objcMsgSend) const = 0;
 
   // Symbols may be referenced via either the GOT or the stubs section,
   // depending on the relocation type. prepareSymbolRelocation() will set up the

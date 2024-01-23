@@ -892,31 +892,11 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
   assert(in.objcSelrefs->isFinal);
 
   uint64_t stubOffset = 0;
-  uint64_t objcMsgSendAddr;
-  uint64_t objcStubSize;
-  uint64_t objcMsgSendIndex;
-  if (config->objcStubsMode == ObjCStubsMode::fast) {
-    objcStubSize = target->objcStubsFastSize;
-    objcMsgSendAddr = in.got->addr;
-    objcMsgSendIndex = objcMsgSend->gotIndex;
-  } else {
-    assert(config->objcStubsMode == ObjCStubsMode::small);
-    objcStubSize = target->objcStubsSmallSize;
-    if (auto *d = dyn_cast<Defined>(objcMsgSend)) {
-      objcMsgSendAddr = d->getVA();
-      objcMsgSendIndex = 0;
-    } else {
-      objcMsgSendAddr = in.stubs->addr;
-      objcMsgSendIndex = objcMsgSend->stubsIndex;
-    }
-  }
-
   for (size_t i = 0, n = symbols.size(); i < n; ++i) {
     Defined *sym = symbols[i];
     target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
                                  stubOffset, in.objcSelrefs->getVA(), i,
-                                 objcMsgSendAddr, objcMsgSendIndex);
-    stubOffset += objcStubSize;
+                                 objcMsgSend);
   }
 }
 
