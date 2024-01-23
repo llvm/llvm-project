@@ -4187,13 +4187,13 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     case FCmpInst::FCMP_OLE:
     case FCmpInst::FCMP_UGT: {
       if (ConstRHS->isNegative()) {
-        Mask = fcNone;
+        Mask = IsFabs ? fcNone : fcNegInf;
         break;
       }
 
       // fcmp ole x, +inf -> fcmp ord x, x
       // fcmp ole fabs(x), +inf -> fcmp ord x, x
-      // fcmp ole x, -inf -> false
+      // fcmp ole x, -inf -> fcmp oeq x, -inf
       // fcmp ole fabs(x), -inf -> false
       Mask = ~fcNan;
       break;

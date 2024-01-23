@@ -2412,9 +2412,10 @@ define float @assume_ole_pinf(float %arg) {
 }
 
 define float @assume_ole_ninf(float %arg) {
-; CHECK-LABEL: define nofpclass(all) float @assume_ole_ninf(
-; CHECK-SAME: float returned nofpclass(all) [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR5]]
+; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) float @assume_ole_ninf(
+; CHECK-SAME: float returned nofpclass(nan pinf zero sub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ole float [[ARG]], 0xFFF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp ole float %arg, 0xFFF0000000000000
@@ -2435,9 +2436,10 @@ define float @assume_ugt_pinf(float %arg) {
 }
 
 define float @assume_ugt_ninf(float %arg) {
-; CHECK-LABEL: define float @assume_ugt_ninf(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR5]]
+; CHECK-LABEL: define nofpclass(ninf) float @assume_ugt_ninf(
+; CHECK-SAME: float returned nofpclass(ninf) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp ugt float [[ARG]], 0xFFF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[FCMP]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp ugt float %arg, 0xFFF0000000000000
