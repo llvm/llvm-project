@@ -26021,6 +26021,7 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
   // Try to convert a scalar binop with an extracted vector element to a vector
   // binop. This is intended to reduce potentially expensive register moves.
   // TODO: Check if both operands are extracted.
+  // TODO: How to prefer scalar/vector ops with multiple uses of the extact?
   // TODO: Generalize this, so it can be called from visitINSERT_VECTOR_ELT().
   SDValue Scalar = N->getOperand(0);
   unsigned Opcode = Scalar.getOpcode();
@@ -26029,6 +26030,8 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
       TLI.isBinOp(Opcode) && Scalar.getValueType() == VecEltVT &&
       Scalar.getOperand(0).getValueType() == VecEltVT &&
       Scalar.getOperand(1).getValueType() == VecEltVT &&
+      Scalar->isOnlyUserOf(Scalar.getOperand(0).getNode()) &&
+      Scalar->isOnlyUserOf(Scalar.getOperand(1).getNode()) &&
       DAG.isSafeToSpeculativelyExecute(Opcode) && hasOperation(Opcode, VT)) {
     // Match an extract element and get a shuffle mask equivalent.
     SmallVector<int, 8> ShufMask(VT.getVectorNumElements(), -1);

@@ -229,6 +229,9 @@ def IsStreamingOrSVE2p1             : FlagType<0x40000000000>; // Use for intrin
 def IsInZA                          : FlagType<0x80000000000>;
 def IsOutZA                         : FlagType<0x100000000000>;
 def IsInOutZA                       : FlagType<0x200000000000>;
+def IsInZT0                         : FlagType<0x400000000000>;
+def IsOutZT0                        : FlagType<0x800000000000>;
+def IsInOutZT0                      : FlagType<0x1000000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
