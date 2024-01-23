@@ -199,7 +199,7 @@ Code Generation
 
 :doc:`Mdl <Mdl/index>`
    Describes the Machine Description Language compiler that can be optionally
-   used to describe a targets's microarchitecture.
+   used to describe a target's microarchitecture.
 
 ==========
 GlobalISel
