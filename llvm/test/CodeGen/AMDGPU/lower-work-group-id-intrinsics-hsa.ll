@@ -145,7 +145,6 @@ define amdgpu_kernel void @caller() {
 ; GFX9ARCH-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX9ARCH-SDAG-NEXT:    s_mov_b32 s12, ttmp9
 ; GFX9ARCH-SDAG-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9ARCH-SDAG-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9ARCH-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
@@ -173,7 +172,6 @@ define amdgpu_kernel void @caller() {
 ; GFX9ARCH-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9ARCH-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
-; GFX9ARCH-GISEL-NEXT:    s_mov_b32 s12, ttmp9
 ; GFX9ARCH-GISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9ARCH-GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
@@ -185,7 +183,6 @@ define amdgpu_kernel void @caller() {
 ; GFX12-SDAG-LABEL: caller:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, ttmp9
-; GFX12-SDAG-NEXT:    s_mov_b32 s12, ttmp9
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[10:11], s[4:5]
 ; GFX12-SDAG-NEXT:    s_mov_b32 s7, callee@abs32@hi
 ; GFX12-SDAG-NEXT:    s_mov_b32 s6, callee@abs32@lo
@@ -198,7 +195,6 @@ define amdgpu_kernel void @caller() {
 ; GFX12-GISEL-LABEL: caller:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, ttmp9
-; GFX12-GISEL-NEXT:    s_mov_b32 s12, ttmp9
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[10:11], s[4:5]
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, callee@abs32@lo
 ; GFX12-GISEL-NEXT:    s_mov_b32 s7, callee@abs32@hi
