@@ -102,18 +102,12 @@ define i8 @extract_aligned_byte(ptr %0) {
 }
 
 define i8 @extract_unaligned_byte(ptr %0) {
-; NOBMI-LABEL: extract_unaligned_byte:
-; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    movq (%rdi), %rax
-; NOBMI-NEXT:    shrq $52, %rax
-; NOBMI-NEXT:    # kill: def $al killed $al killed $rax
-; NOBMI-NEXT:    retq
-;
-; BMI-LABEL: extract_unaligned_byte:
-; BMI:       # %bb.0:
-; BMI-NEXT:    rorxq $52, (%rdi), %rax
-; BMI-NEXT:    # kill: def $al killed $al killed $rax
-; BMI-NEXT:    retq
+; CHECK-LABEL: extract_unaligned_byte:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    shrq $52, %rax
+; CHECK-NEXT:    # kill: def $al killed $al killed $rax
+; CHECK-NEXT:    retq
   %2 = load i64, ptr %0
   %3 = lshr i64 %2, 52
   %4 = trunc i64 %3 to i8

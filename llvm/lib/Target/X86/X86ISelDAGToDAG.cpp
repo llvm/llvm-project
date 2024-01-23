@@ -4213,32 +4213,24 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
   return CNode;
 }
 
-// When the consumer of a right shift (arithmetic or logical) wouldn't
-// notice the difference if the instruction was a rotate right instead
-// (because the bits shifted in are truncated away), the shift can be
-// replaced by the RORX instruction from BMI2. This doesn't set flags and
-// can output to a different register. This increases code size in most
-// cases, can have a false dependency when promoting the operand size,
-// and doesn't leave the high bits in a useful state. There may be other
-// situations where this transformation is profitable given those
-// conditions, but currently the transformation is only made when it
-// avoids spilling flags.
+// When the consumer of a right shift (arithmetic or logical) wouldn't notice
+// the difference if the instruction was a rotate right instead (because the
+// bits shifted in are truncated away), the shift can be replaced by the RORX
+// instruction from BMI2. This doesn't set flags and can output to a different
+// register. However, this increases code size in most cases, and doesn't leave
+// the high bits in a useful state. There may be other situations where this
+// transformation is profitable given those conditions, but currently the
+// transformation is only made when it likely avoids spilling flags.
 bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   EVT VT = N->getValueType(0);
-
-  printf("Evaluating\n");
 
   // Target has to have BMI2 for RORX
   if (!Subtarget->hasBMI2())
     return false;
 
-  printf("Has BMI2\n");
-
   // Only handle scalar shifts.
   if (VT.isVector())
     return false;
-
-  printf("Not vector\n");
 
   unsigned OpSize;
   if (VT == MVT::i64)
@@ -4251,8 +4243,6 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
     return false; // i8 shift can't be truncated.
   else
     llvm_unreachable("Unexpected shift size");
-
-  printf("Good OpSize\n");
 
   unsigned TruncateSize = 0;
   // This only works when the result is truncated.
@@ -4279,9 +4269,25 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   if (!ShiftAmount || ShiftAmount->getZExtValue() > OpSize - TruncateSize)
     return false;
 
-  // Only make the replacement when it avoids clobbering used flags. If it is
-  // determined to be profitable in other situations in the future, add those
-  // checks here.
+  // Only make the replacement when it avoids clobbering used flags. This is a
+  // similar heuristic as used in the conversion to LEA, namely looking at the
+  // operand for an instruction that creates flags where those flags are used.
+  // This will have both false positives and false negatives. Ideally, both of
+  // these happen later on. Perhaps in copy to flags lowering or in register
+  // allocation.
+  bool MightClobberFlags = false;
+  SDNode *Input = N->getOperand(0).getNode();
+  for (auto Use : Input->uses()) {
+    if (Use->getOpcode() == ISD::CopyToReg) {
+      auto RegisterNode = dyn_cast<RegisterSDNode>(Use->getOperand(1).getNode());
+      if (RegisterNode && RegisterNode->getReg() == X86::EFLAGS) {
+        MightClobberFlags = true;
+        break;
+      }
+    }
+  }
+  if (!MightClobberFlags)
+    return false;
 
   // Make the replacement.
   SDLoc DL(N);

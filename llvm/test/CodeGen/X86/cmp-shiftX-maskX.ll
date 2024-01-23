@@ -153,23 +153,14 @@ define i1 @shr_to_shl_eq_i16_s1(i16 %x) {
 }
 
 define i1 @shr_to_shl_eq_i16_s1_fail(i16 %x) {
-; CHECK-NOBMI-LABEL: shr_to_shl_eq_i16_s1_fail:
-; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movzwl %di, %eax
-; CHECK-NOBMI-NEXT:    andl $32766, %edi # imm = 0x7FFE
-; CHECK-NOBMI-NEXT:    shrl %eax
-; CHECK-NOBMI-NEXT:    cmpw %ax, %di
-; CHECK-NOBMI-NEXT:    sete %al
-; CHECK-NOBMI-NEXT:    retq
-;
-; CHECK-BMI2-LABEL: shr_to_shl_eq_i16_s1_fail:
-; CHECK-BMI2:       # %bb.0:
-; CHECK-BMI2-NEXT:    movzwl %di, %eax
-; CHECK-BMI2-NEXT:    andl $32766, %edi # imm = 0x7FFE
-; CHECK-BMI2-NEXT:    rorxl $1, %eax, %eax
-; CHECK-BMI2-NEXT:    cmpw %ax, %di
-; CHECK-BMI2-NEXT:    sete %al
-; CHECK-BMI2-NEXT:    retq
+; CHECK-LABEL: shr_to_shl_eq_i16_s1_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl %di, %eax
+; CHECK-NEXT:    andl $32766, %edi # imm = 0x7FFE
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    cmpw %ax, %di
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
   %and = and i16 %x, 32766
   %shr = lshr i16 %x, 1
   %r = icmp eq i16 %and, %shr
