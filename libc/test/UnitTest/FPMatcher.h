@@ -97,7 +97,7 @@ template <typename T> struct FPTest : public Test {
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
   const T zero = T(FPBits::zero(Sign::POS));                                   \
   const T neg_zero = T(FPBits::zero(Sign::NEG));                               \
-  const T aNaN = T(FPBits::build_quiet_nan());                     \
+  const T aNaN = T(FPBits::build_quiet_nan());                                 \
   const T sNaN = T(FPBits::build_nan(Sign::POS, 1));                           \
   const T inf = T(FPBits::inf(Sign::POS));                                     \
   const T neg_inf = T(FPBits::inf(Sign::NEG));                                 \
