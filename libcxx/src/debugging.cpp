@@ -27,8 +27,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-namespace __impl {
-
 // breakpoint()
 
 #if defined(_LIBCPP_WIN32API)
@@ -38,23 +36,21 @@ void __breakpoint() noexcept { void DebugBreak(); }
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__)
 
 void __breakpoint() {
-#  ifdef _LIBCPP_HARDENING_MODE_DEBUG
-#    if __has_builtin(__builtin_debugtrap)
+#  if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
-#    else
+#  else
   raise(SIGTRAP);
-#    endif
 #  endif
 }
 
 #else
 
 void __breakpoint() noexcept {
-  _LIBCPP_ASSERT_INTERNAL(false, "'std::breakpoint()' is not implemented on this platform.");
+  static_assert(false, "'std::breakpoint()' is not implemented on this platform.");
   return false;
 }
 
-#endif
+#endif // defined(_LIBCPP_WIN32API)
 
 // is_debugger_present()
 
@@ -63,8 +59,6 @@ void __breakpoint() noexcept {
 bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
 
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-
-// TODO
 
 bool __is_debugger_present() noexcept {
   // Technical Q&A QA1361: Detecting the Debugger
@@ -109,19 +103,20 @@ bool __is_debugger_present() noexcept {
     // Get the status information of a process by reading the file /proc/PID/status.
     // The link 'self' points to the process reading the file system.
     ifstream status_file{"/proc/self/status"};
-    if (!status_file.is_open())
+    if (!status_file.is_open()) {
+      _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/self/status' for reading.");
       return false;
+    }
 
-    std::string token;
-    while (status_file >> token) {
-      if (token == "TracerPid:") {
-        int pid;
-        status_file >> pid;
-        return pid != 0;
+    const string tracerPid{"TracerPid"};
+    for (string line; getline(status_file, line);) {
+      if (line.starts_with(tracerPid)) {
+        string value = line.substr(tracerPid.size() + 1);
+        return stoll(value) != 0;
       }
-      std::getline(status_file, token);
     }
   } catch (...) {
+    _LIBCPP_ASSERT_INTERNAL(false, "Failed to read '/proc/self/status'.");
     return false;
   }
 
@@ -131,21 +126,19 @@ bool __is_debugger_present() noexcept {
 #else
 
 bool __is_debugger_present() noexcept {
-  _LIBCPP_ASSERT_INTERNAL(false, "'std::is_debugger_present()' is not implemented on this platform.");
+  static_assert(false, "'std::is_debugger_present()' is not implemented on this platform.");
   return false;
 }
 
-#endif
+#endif // defined(_LIBCPP_WIN32API)
 
-} // namespace __impl
-
-_LIBCPP_EXPORTED_FROM_ABI void breakpoint() noexcept { __impl::__breakpoint(); }
+_LIBCPP_EXPORTED_FROM_ABI void breakpoint() noexcept { __breakpoint(); }
 
 _LIBCPP_EXPORTED_FROM_ABI void breakpoint_if_debugging() noexcept {
-  if (__impl::__is_debugger_present())
-    __impl::__breakpoint();
+  if (__is_debugger_present())
+    __breakpoint();
 }
 
-_LIBCPP_EXPORTED_FROM_ABI bool is_debugger_present() noexcept { return __impl::__is_debugger_present(); }
+_LIBCPP_EXPORTED_FROM_ABI bool is_debugger_present() noexcept { return __is_debugger_present(); }
 
 _LIBCPP_END_NAMESPACE_STD
