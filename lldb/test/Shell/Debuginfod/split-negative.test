@@ -1,0 +1,25 @@
+# REQUIRES: system-linux && native && target-x86_64
+
+# We set up a file-system 'hosted' Debuginfod server
+
+# RUN: mkdir -p %t/output
+
+# Scenario 3: No locator
+#  A split binary, with a *missing* .dwp file
+
+# RUN: yaml2obj %p/Inputs/bin-split.yaml -o %t/output/bin-split
+# RUN: chmod a+x %t/output/bin-split
+
+# Negative test (We don't find symbols without the Debuginfod service)
+
+# RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
+# RUN:       -o "target create %t/output/bin-split" \
+# RUN:       -o "target modules dump separate-debug-info" \
+# RUN:       -o "quit" \
+# RUN:        2>&1 | FileCheck %s
+
+# CHECK: Symbol file: {{.*}}/bin-split
+# CHECK-NEXT: Type: "dwo"
+# CHECK-NEXT: Dwo ID{{.*}}
+# CHECK-NEXT: {{^[- ]+$}}
+# CHECK-NEXT: 0x{{[0-9a-f]+.*}} unable to locate .dwo debug file {{.*}}bin-split.dwo{{.*}} for skeleton DIE 0x{{[0-9a-f]+}}

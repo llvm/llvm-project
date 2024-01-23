@@ -1,0 +1,20 @@
+# REQUIRES: system-linux && native && target-x86_64
+
+# We set up a file-system 'hosted' Debuginfod server
+
+# RUN: mkdir -p %t/output
+
+# Scenario 4: Negative
+#  A stripped, split binary, symbols manually added and a .dwp file right next to the binary
+
+# RUN: yaml2obj %p/Inputs/bin-split-stripped.yaml -o %t/output/bin-split-stripped
+# RUN: chmod a+x %t/output/bin-split-stripped
+
+# RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
+# RUN:       -o "target create %t/output/bin-split-stripped" \
+# RUN:       -o "target modules dump separate-debug-info" \
+# RUN:       -o "quit" \
+# RUN:        2>&1 | FileCheck %s
+
+# CHECK: Current executable set to '{{.*}}/output/bin-split-stripped'
+# CHECK: error: no matching executable images found

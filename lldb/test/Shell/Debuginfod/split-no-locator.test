@@ -1,0 +1,26 @@
+# REQUIRES: system-linux && native && target-x86_64
+
+# We set up a file-system 'hosted' Debuginfod server
+
+# RUN: rm -rf %t || echo ok
+# RUN: mkdir -p %t/output
+# RUN: mkdir -p %t/cache
+# RUN: mkdir -p %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094
+
+# Scenario 3: No locator
+#  A split binary, with a .dwp file right next to the binary
+
+# RUN: yaml2obj %p/Inputs/bin-split.yaml -o %t/output/bin-split
+# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/output/bin-split.dwp
+# RUN: chmod a+x %t/output/bin-split
+
+# RUN: %lldb -o "settings set symbols.enable-external-lookup false" \
+# RUN:       -o "target create %t/output/bin-split" \
+# RUN:       -o "target modules dump separate-debug-info" \
+# RUN:       -o "quit" \
+# RUN:        2>&1 | FileCheck %s
+
+# CHECK: Symbol file: {{.*}}/bin-split
+# CHECK-NEXT: Type: "dwo"
+# CHECK-NEXT: Dwo ID{{.*}}
+# CHECK-NEXT: {{^[- ]+$}}

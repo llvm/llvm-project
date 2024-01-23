@@ -1,0 +1,31 @@
+# REQUIRES: system-linux && native && target-x86_64
+
+# We set up a file-system 'hosted' Debuginfod server
+
+# RUN: mkdir -p %t/output
+# RUN: mkdir -p %t/cache
+# RUN: mkdir -p %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094
+
+# Scenario 4:
+#  A stripped, split binary, symbols manually added and a .dwp file
+#  The unstripped binary should be picked up from /82...94/executable
+#  The .dwp file should be picke dup from /82...94/debuginfo
+
+# RUN: yaml2obj %p/Inputs/bin-split-stripped.yaml -o %t/output/bin-split-stripped
+# RUN: yaml2obj %p/Inputs/bin-split.yaml -o %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094/executable
+# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094/debuginfo
+# RUN: chmod a+x %t/output/bin-split-stripped
+
+# RUN: %lldb -o "settings set symbols.enable-external-lookup true" \
+# RUN:       -o "settings set plugin.symbol-locator.debuginfod.cache-path %t/cache" \
+# RUN:       -o "settings clear plugin.symbol-locator.debuginfod.server-urls" \
+# RUN:       -o "settings insert-before plugin.symbol-locator.debuginfod.server-urls 0 file://%t" \
+# RUN:       -o "target create %t/output/bin-split-stripped" \
+# RUN:       -o "target modules dump separate-debug-info" \
+# RUN:       -o "quit" \
+# RUN:        2>&1 | FileCheck %s
+
+# CHECK: Symbol file: {{.*}}/bin-split
+# CHECK-NEXT: Type: "dwo"
+# CHECK-NEXT: Dwo ID{{.*}}
+# CHECK: {{0x[0-9a-f]+.* +.*}}.tmp/cache/llvmcache-6559017670391320133{{ *$}}

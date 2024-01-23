@@ -32,10 +32,10 @@ There are 5 variations of symbol data where Debuginfod can provide value:
    that produces `.dwo` which are subsequently linked together (using
    `llvm-dwp`) into a single `.dwp` file. The Debuginfod service should host the
    `.dwp` file as `debuginfo`.
-4. The 'stripped-split' build variation is a binary built with `-gsplit-dwarf`,
+4. **The 'stripped-split' build variation is a binary built with `-gsplit-dwarf`,
    then stripped in the same manner as variation #1. For this variation,
    Debuginfod should host the unstripped binary as `executable` and the `.dwp`
-   file as `debuginfo`.
+   file as `debuginfo`.**
 5. The 'okd-stripped-split' build variation is the combination of variations 2
    and 3, where Debuginfod hosts the `.gnu.debuglink`'ed file as `executable`
    and the `.dwp` again as `debuginfo`.
