@@ -1948,8 +1948,8 @@ private:
     if (__s < __min_cap) {
       return static_cast<size_type>(__min_cap) - 1;
     }
-    size_type __guess =
-        __align_it < sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : 1 > (__s + 1) - 1;
+    const size_type __boundary = sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : 1;
+    size_type __guess          = __align_it<__boundary>(__s + 1) - 1;
     if (__guess == __min_cap)
       ++__guess;
     return __guess;
