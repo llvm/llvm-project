@@ -279,23 +279,19 @@ entry:
 define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
 ; CHECK-LABEL: store_trunc_add_from_64bits:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    add x9, x0, #4
 ; CHECK-NEXT:  Lloh0:
 ; CHECK-NEXT:    adrp x8, lCPI7_0@PAGE
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr d1, [x8, lCPI7_0@PAGEOFF]
+; CHECK-NEXT:    add x8, x1, #1
 ; CHECK-NEXT:    ld1.h { v0 }[2], [x9]
+; CHECK-NEXT:    add x9, x1, #2
 ; CHECK-NEXT:    add.4h v0, v0, v1
-; CHECK-NEXT:    xtn.8b v1, v0
-; CHECK-NEXT:    umov.h w8, v0[2]
-; CHECK-NEXT:    str s1, [sp, #12]
-; CHECK-NEXT:    ldrh w9, [sp, #12]
-; CHECK-NEXT:    strb w8, [x1, #2]
-; CHECK-NEXT:    strh w9, [x1]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    st1.b { v0 }[2], [x8]
+; CHECK-NEXT:    st1.b { v0 }[4], [x9]
+; CHECK-NEXT:    st1.b { v0 }[0], [x1]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 ;
