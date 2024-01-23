@@ -804,7 +804,7 @@ public:
     return ArgInfo.WorkGroupInfo.getRegister();
   }
 
-  // Supported for gfx12+
+  // Supported for GFX12+.
   Register addWaveID() {
     ArgInfo.WaveID = ArgDescriptor::createRegister(AMDGPU::TTMP8, 0x1f << 25);
     return ArgInfo.WaveID.getRegister();

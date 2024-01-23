@@ -134,7 +134,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       LDSKernelId = true;
   }
 
-  // For gfx12+
+  // For GFX12+.
   if (HasArchitectedSGPRs)
     WaveID = true;
 

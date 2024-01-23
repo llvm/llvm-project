@@ -1496,16 +1496,6 @@ multiclass GlobalFLATAtomicIntrPats<string inst, string node, ValueType vt,
   defm : GlobalFLATAtomicPats<inst, node, vt, data_vt, /* isIntr */ 1>;
 }
 
-multiclass GlobalFLATAtomicIntrPatsNoRtn<string inst, string node, ValueType vt,
-                                      ValueType data_vt = vt> {
-  defm : GlobalFLATAtomicPatsNoRtn<inst, node, vt, data_vt, /* isIntr */ 1>;
-}
-
-multiclass GlobalFLATAtomicIntrPatsRtn<string inst, string node, ValueType vt,
-                                      ValueType data_vt = vt> {
-  defm : GlobalFLATAtomicPatsRtn<inst, node, vt, data_vt, /* isIntr */ 1>;
-}
-
 multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
   def : ScratchLoadSignedPat <inst, node, vt> {
     let AddedComplexity = 25;

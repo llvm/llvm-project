@@ -147,5 +147,5 @@ body:             |
     $vcc = IMPLICIT_DEF
     SI_SPILL_S64_SAVE killed $vcc, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
-    $vcc = SI_SPILL_S64_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    $vcc = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 ...

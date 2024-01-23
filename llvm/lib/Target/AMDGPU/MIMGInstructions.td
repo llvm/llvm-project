@@ -1271,7 +1271,7 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16,
                                   !listconcat(lhs, [MIMGAddrSize<dw, !empty(lhs)>]),
                                   lhs))));
 
-  // In NSA format if there is a requirement for more VGPRs then the format
+  // In NSA format if there is a requirement for more VGPRs than the format
   // supports, then the rest are sequential after the last one. Generate
   // machine instructions for all possible number of words. The disassembler
   // defaults to the largest number of arguments but no larger than max nsa

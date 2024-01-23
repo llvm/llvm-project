@@ -27,8 +27,8 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.1, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
-  ; GFX908-SPILLED-NEXT:   $agpr1 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr1 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0, implicit killed renamable $agpr1
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr32
   ; GFX908-EXPANDED: bb.0:
@@ -69,8 +69,8 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.1, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
-  ; GFX90A-SPILLED-NEXT:   $agpr1 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr1 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0, implicit killed renamable $agpr1
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr32
   ; GFX90A-EXPANDED: bb.0:
@@ -128,7 +128,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1 = SI_SPILL_A64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1 = SI_SPILL_A64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr64
   ; GFX908-EXPANDED: bb.0:
@@ -166,7 +166,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1 = SI_SPILL_A64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1 = SI_SPILL_A64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr64
   ; GFX90A-EXPANDED: bb.0:
@@ -222,7 +222,7 @@ body: |
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit undef $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit undef $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
@@ -288,7 +288,7 @@ body: |
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0 = SI_SPILL_A32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit undef $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit undef $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
@@ -387,7 +387,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2 = SI_SPILL_A96_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2 = SI_SPILL_A96_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr96
   ; GFX908-EXPANDED: bb.0:
@@ -427,7 +427,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2 = SI_SPILL_A96_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2 = SI_SPILL_A96_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr96
   ; GFX90A-EXPANDED: bb.0:
@@ -485,7 +485,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr128
   ; GFX908-EXPANDED: bb.0:
@@ -527,7 +527,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr128
   ; GFX90A-EXPANDED: bb.0:
@@ -587,7 +587,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4 = SI_SPILL_A160_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4 = SI_SPILL_A160_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr160
   ; GFX908-EXPANDED: bb.0:
@@ -631,7 +631,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4 = SI_SPILL_A160_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4 = SI_SPILL_A160_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr160
   ; GFX90A-EXPANDED: bb.0:
@@ -693,7 +693,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = SI_SPILL_A192_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = SI_SPILL_A192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr192
   ; GFX908-EXPANDED: bb.0:
@@ -739,7 +739,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = SI_SPILL_A192_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = SI_SPILL_A192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr192
   ; GFX90A-EXPANDED: bb.0:
@@ -803,7 +803,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = SI_SPILL_A256_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = SI_SPILL_A256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr256
   ; GFX908-EXPANDED: bb.0:
@@ -853,7 +853,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = SI_SPILL_A256_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = SI_SPILL_A256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr256
   ; GFX90A-EXPANDED: bb.0:
@@ -921,7 +921,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = SI_SPILL_A288_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s288) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = SI_SPILL_A288_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s288) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr288
   ; GFX908-EXPANDED: bb.0:
@@ -973,7 +973,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = SI_SPILL_A288_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s288) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8 = SI_SPILL_A288_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s288) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr288
   ; GFX90A-EXPANDED: bb.0:
@@ -1043,7 +1043,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = SI_SPILL_A320_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s320) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = SI_SPILL_A320_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s320) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr320
   ; GFX908-EXPANDED: bb.0:
@@ -1097,7 +1097,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = SI_SPILL_A320_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s320) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = SI_SPILL_A320_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s320) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr320
   ; GFX90A-EXPANDED: bb.0:
@@ -1169,7 +1169,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = SI_SPILL_A352_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s352) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = SI_SPILL_A352_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s352) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr352
   ; GFX908-EXPANDED: bb.0:
@@ -1225,7 +1225,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = SI_SPILL_A352_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s352) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10 = SI_SPILL_A352_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s352) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr352
   ; GFX90A-EXPANDED: bb.0:
@@ -1299,7 +1299,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = SI_SPILL_A384_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s384) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = SI_SPILL_A384_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s384) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr384
   ; GFX908-EXPANDED: bb.0:
@@ -1357,7 +1357,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = SI_SPILL_A384_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s384) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11 = SI_SPILL_A384_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s384) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr384
   ; GFX90A-EXPANDED: bb.0:
@@ -1433,7 +1433,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = SI_SPILL_A512_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = SI_SPILL_A512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr512
   ; GFX908-EXPANDED: bb.0:
@@ -1499,7 +1499,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = SI_SPILL_A512_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = SI_SPILL_A512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr512
   ; GFX90A-EXPANDED: bb.0:
@@ -1583,7 +1583,7 @@ body: |
   ; GFX908-SPILLED-NEXT:   S_NOP 1
   ; GFX908-SPILLED-NEXT: {{  $}}
   ; GFX908-SPILLED-NEXT: bb.2:
-  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = SI_SPILL_A1024_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
+  ; GFX908-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = SI_SPILL_A1024_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
   ; GFX908-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
   ; GFX908-EXPANDED-LABEL: name: spill_restore_agpr1024
   ; GFX908-EXPANDED: bb.0:
@@ -1681,7 +1681,7 @@ body: |
   ; GFX90A-SPILLED-NEXT:   S_NOP 1
   ; GFX90A-SPILLED-NEXT: {{  $}}
   ; GFX90A-SPILLED-NEXT: bb.2:
-  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = SI_SPILL_A1024_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
+  ; GFX90A-SPILLED-NEXT:   $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = SI_SPILL_A1024_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
   ; GFX90A-SPILLED-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
   ; GFX90A-EXPANDED-LABEL: name: spill_restore_agpr1024
   ; GFX90A-EXPANDED: bb.0:

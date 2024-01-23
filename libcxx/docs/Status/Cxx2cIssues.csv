@@ -15,7 +15,7 @@
 "`3927 <https://wg21.link/LWG3927>`__","Unclear preconditions for ``operator[]`` for sequence containers","Varna June 2023","|Nothing To Do|","",""
 "`3935 <https://wg21.link/LWG3935>`__","``template<class X> constexpr complex& operator=(const complex<X>&)`` has no specification","Varna June 2023","|Complete|","3.4",""
 "`3938 <https://wg21.link/LWG3938>`__","Cannot use ``std::expected`` monadic ops with move-only ``error_type``","Varna June 2023","|Complete|","18.0",""
-"`3940 <https://wg21.link/LWG3940>`__","``std::expected<void, E>::value()`` also needs ``E`` to be copy constructible","Varna June 2023","","",""
+"`3940 <https://wg21.link/LWG3940>`__","``std::expected<void, E>::value()`` also needs ``E`` to be copy constructible","Varna June 2023","|Complete|","18.0",""
 "","","","","",""
 "`2392 <https://wg21.link/LWG2392>`__","""character type"" is used but not defined","Kona November 2023","","",""
 "`3203 <https://wg21.link/LWG3203>`__","``span`` element access invalidation","Kona November 2023","","",""

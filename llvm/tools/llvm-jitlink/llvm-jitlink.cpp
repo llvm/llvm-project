@@ -1183,6 +1183,36 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   return Error::success();
 }
 
+Error Session::FileInfo::registerGOTEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+  GOTEntryInfos[TS->getName()] = {Sym.getSymbolContent(),
+                                  Sym.getAddress().getValue(),
+                                  Sym.getTargetFlags()};
+  return Error::success();
+}
+
+Error Session::FileInfo::registerStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+  StubInfos[TS->getName()] = {Sym.getSymbolContent(),
+                              Sym.getAddress().getValue(),
+                              Sym.getTargetFlags()};
+  return Error::success();
+}
+
 Expected<Session::FileInfo &> Session::findFileInfo(StringRef FileName) {
   auto FileInfoItr = FileInfos.find(FileName);
   if (FileInfoItr == FileInfos.end())

@@ -3589,7 +3589,7 @@ void EmitClangRegularKeywordAttributeInfo(RecordKeeper &Records,
 
       OS << "KEYWORD_ATTRIBUTE("
          << S.getSpellingRecord().getValueAsString("Name") << ", "
-         << (HasArgs ? "true" : "false") << ")\n";
+         << (HasArgs ? "true" : "false") << ", )\n";
     }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
 }

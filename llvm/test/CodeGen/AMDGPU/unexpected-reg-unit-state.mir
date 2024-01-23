@@ -19,7 +19,7 @@ body:             |
     ; CHECK-NEXT: renamable $sgpr4_sgpr5 = COPY $vcc
     ; CHECK-NEXT: SI_SPILL_S64_SAVE $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: renamable $sgpr4_sgpr5 = COPY $vcc
-    ; CHECK-NEXT: $vcc = SI_SPILL_S64_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: $vcc = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, 3, killed $sgpr4_sgpr5, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit killed $vgpr0, implicit killed renamable $vcc
     %0:vgpr_32 = COPY $vgpr0

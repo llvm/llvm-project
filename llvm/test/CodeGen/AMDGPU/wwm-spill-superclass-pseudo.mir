@@ -74,7 +74,7 @@ body:             |
   bb.7:
     liveins: $sgpr60_sgpr61
     $exec = S_OR_B64 $exec, killed $sgpr60_sgpr61, implicit-def $scc
-    $sgpr2_sgpr3 = SI_SPILL_S64_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr32
+    $sgpr2_sgpr3 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32
     S_BRANCH %bb.5
 
   bb.8:

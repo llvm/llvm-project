@@ -27,7 +27,7 @@ body: |
   ; SPILLED-NEXT:   S_NOP 1
   ; SPILLED-NEXT: {{  $}}
   ; SPILLED-NEXT: bb.2:
-  ; SPILLED-NEXT:   $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9 = SI_SPILL_S192_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; SPILLED-NEXT:   $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; SPILLED-NEXT:   S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9
   ;
   ; EXPANDED-LABEL: name: spill_restore_sgpr192
@@ -89,7 +89,7 @@ body: |
   ; SPILLED-NEXT:   S_NOP 1
   ; SPILLED-NEXT: {{  $}}
   ; SPILLED-NEXT: bb.2:
-  ; SPILLED-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_V192_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; SPILLED-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_V192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; SPILLED-NEXT:   S_NOP 0, implicit killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
   ;
   ; EXPANDED-LABEL: name: spill_restore_vgpr192
@@ -106,7 +106,7 @@ body: |
   ; EXPANDED-NEXT:   S_NOP 1
   ; EXPANDED-NEXT: {{  $}}
   ; EXPANDED-NEXT: bb.2:
-  ; EXPANDED-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_V192_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; EXPANDED-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 = SI_SPILL_V192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; EXPANDED-NEXT:   S_NOP 0, implicit killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
   bb.0:
     S_NOP 0, implicit-def %0:vreg_192
