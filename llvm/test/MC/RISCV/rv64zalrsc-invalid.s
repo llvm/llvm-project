@@ -1,3 +1,4 @@
+# RUN: not llvm-mc -triple riscv64 -mattr=+a < %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zalrsc < %s 2>&1 | FileCheck %s
 
 # Final operand must have parentheses
