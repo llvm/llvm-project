@@ -159,6 +159,10 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
   __builtin_unreachable();
 }
 
+/// Returns a unique identifier for the process cluster the current warp is
+/// executing on. Here we use the identifier for the symmetric multiprocessor.
+LIBC_INLINE uint32_t get_cluster_id() { return __nvvm_read_ptx_sreg_smid(); }
+
 } // namespace gpu
 } // namespace LIBC_NAMESPACE
 
