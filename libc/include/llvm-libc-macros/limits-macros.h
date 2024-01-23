@@ -19,8 +19,9 @@
 #pragma GCC system_header
 #endif // __clang__, __GNUC__
 
-#if defined(__GNUC__) && !defined(_GCC_LIMITS_H_)
-// The system's limits.h may, in turn, try to #include_next GCC's limits.h.
+#if defined(__GNUC__) && !defined(__clang__) && !defined(_GCC_LIMITS_H_)
+// The system's limits.h may, in turn, try to #include_next GCC's limits.h when
+// building with GCC.
 // Define the macro _GCC_LIMITS_H_ to stop its chains of #include_next.
 #define _GCC_LIMITS_H_
 #endif
