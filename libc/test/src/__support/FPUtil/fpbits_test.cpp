@@ -506,7 +506,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan(1);
+  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan(Sign::POS, 1);
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 #endif
 }
