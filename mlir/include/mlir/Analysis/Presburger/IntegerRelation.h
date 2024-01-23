@@ -716,6 +716,8 @@ public:
 
   // Verify whether the relation is full-dimensional, i.e.,
   // no equality holds for the relation.
+  // If there are no variables, it always returns true.
+  // If there is at least one variable and the space is empty, it returns false.
   bool isFullDim();
 
   void print(raw_ostream &os) const;

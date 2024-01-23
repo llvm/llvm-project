@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2499,22 +2500,17 @@ void IntegerRelation::printSpace(raw_ostream &os) const {
 }
 
 void IntegerRelation::removeTrivialEqualities() {
-  std::vector<bool> isTrivialEquality;
-  for (int i = 0, e = getNumEqualities(); i < e; ++i) {
-    bool currentIsTrivial =
-        llvm::all_of(getEquality(i), [&](MPInt n) -> bool { return (n == 0); });
-    isTrivialEquality.push_back(currentIsTrivial);
-  }
-
-  unsigned pos = 0;
-  for (unsigned r = 0, e = getNumEqualities(); r < e; r++)
-    if (!isTrivialEquality[r])
-      equalities.copyRow(r, pos++);
-
-  equalities.resizeVertically(pos);
+  for (int i = getNumEqualities() - 1; i >= 0; --i)
+    if (rangeIsZero(getEquality(i)))
+      removeEquality(i);
 }
 
 bool IntegerRelation::isFullDim() {
+  if (getNumVars() == 0)
+    return true;
+  if (isEmpty())
+    return false;
+
   // If there is a non-trivial equality, the space cannot be full-dimensional.
   removeTrivialEqualities();
   if (getNumEqualities() > 0)
@@ -2523,24 +2519,11 @@ bool IntegerRelation::isFullDim() {
   // If along the direction of any of the inequalities, the upper and lower
   // optima are the same, then the region is not full-dimensional.
   Simplex simplex(*this);
-  for (unsigned i = 0, e = getNumInequalities(); i < e; i++) {
-    auto ineq = inequalities.getRow(i);
-    auto upOpt = simplex.computeOptimum(Simplex::Direction::Up, ineq);
-    auto downOpt = simplex.computeOptimum(Simplex::Direction::Down, ineq);
-
-    if (upOpt.getKind() == OptimumKind::Unbounded ||
-        downOpt.getKind() == OptimumKind::Unbounded)
-      continue;
-
-    // Check if the upper and lower optima are equal.
-    if (upOpt.getKind() == OptimumKind::Bounded &&
-        downOpt.getKind() == OptimumKind::Bounded && *upOpt == *downOpt)
-      return false;
-  }
-  // If none of the inequalities were such that the upper and lower optima
-  // along their direction were equal, then we conclude that the region is full
-  // dimensional.
-  return true;
+  bool fullDim = llvm::none_of(llvm::seq<int>(0, getNumInequalities()),
+                               [&](unsigned i) -> bool {
+                                 return simplex.isFlatAlong(getInequality(i));
+                               });
+  return fullDim;
 }
 
 void IntegerRelation::print(raw_ostream &os) const {

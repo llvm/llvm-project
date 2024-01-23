@@ -104,8 +104,8 @@ std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 /// Note that here, by disjoint, we mean that the intersection is not
 /// full-dimensional.
 std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>>
-chamberDecomposition(std::vector<PresburgerRelation> activeRegions,
-                     std::vector<ParamPoint> vertices);
+computeChamberDecomposition(std::vector<PresburgerRelation> activeRegions,
+                            std::vector<ParamPoint> vertices);
 
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.

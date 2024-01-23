@@ -2104,12 +2104,20 @@ Simplex::computeIntegerBounds(ArrayRef<MPInt> coeffs) {
   return {minRoundedUp, maxRoundedDown};
 }
 
-bool Simplex::isValidEquality(ArrayRef<MPInt> coeffs) {
-  auto [downOpt, upOpt] = Simplex::computeIntegerBounds(coeffs);
-  if (upOpt.getKind() == OptimumKind::Bounded &&
-      downOpt.getKind() == OptimumKind::Bounded && *upOpt == *downOpt)
+bool Simplex::isFlatAlong(ArrayRef<MPInt> coeffs) {
+  assert(!isEmpty() && "cannot check for flatness of empty simplex!");
+  auto upOpt = computeOptimum(Simplex::Direction::Up, coeffs);
+  auto downOpt = computeOptimum(Simplex::Direction::Down, coeffs);
+
+  if (upOpt.getKind() != OptimumKind::Bounded)
     return false;
-  return true;
+  if (downOpt.getKind() != OptimumKind::Bounded)
+    return false;
+
+  // Check if the upper and lower optima are equal.
+  if (*upOpt == *downOpt)
+    return true;
+  return false;
 }
 
 void SimplexBase::print(raw_ostream &os) const {

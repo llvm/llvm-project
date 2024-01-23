@@ -161,33 +161,33 @@ std::optional<ParamPoint>
 mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   // equations is a d x (d + p + 1) matrix.
   // Each row represents an equation.
-  unsigned numEqs = equations.getNumRows();
+  unsigned d = equations.getNumRows();
   unsigned numCols = equations.getNumColumns();
 
   // If the determinant is zero, there is no unique solution.
   // Thus we return null.
-  if (FracMatrix(equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/numEqs - 1,
+  if (FracMatrix(equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
                                         /*fromColumn=*/0,
-                                        /*toColumn=*/numEqs - 1))
+                                        /*toColumn=*/d - 1))
           .determinant() == 0)
     return std::nullopt;
 
-  for (unsigned i = 0; i < numEqs; ++i) {
+  for (unsigned i = 0; i < d; ++i) {
     // First ensure that the diagonal element is nonzero, by swapping
     // it with a row that is non-zero at column i.
-    if (equations(i, i) == 0) {
-      for (unsigned j = i + 1; j < numEqs; ++j) {
-        if (equations(j, i) == 0)
-          continue;
-        equations.swapRows(j, i);
-        break;
-      }
+    if (equations(i, i) != 0)
+      continue;
+    for (unsigned j = i + 1; j < d; ++j) {
+      if (equations(j, i) == 0)
+        continue;
+      equations.swapRows(j, i);
+      break;
     }
 
     Fraction diagElement = equations(i, i);
 
     // Apply row operations to make all elements except the diagonal to zero.
-    for (unsigned j = 0; j < numEqs; ++j) {
+    for (unsigned j = 0; j < d; ++j) {
       if (i == j)
         continue;
       if (equations(j, i) == 0)
@@ -195,12 +195,13 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
       // Apply row operations to make element (j, i) zero by subtracting the
       // ith row, appropriately scaled.
       Fraction currentElement = equations(j, i);
-      equations.addToRow(j, equations.getRow(i), -currentElement / diagElement);
+      equations.addToRow(/*sourceRow=*/i, /*targetRow=*/j,
+                         -currentElement / diagElement);
     }
   }
 
   // Rescale diagonal elements to 1.
-  for (unsigned i = 0; i < numEqs; ++i) {
+  for (unsigned i = 0; i < d; ++i) {
     Fraction diagElement = equations(i, i);
     for (unsigned j = 0; j < numCols; ++j)
       equations(i, j) = equations(i, j) / diagElement;
@@ -215,9 +216,9 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   // and so we return the negation of the last p + 1 columns of the matrix.
   // We copy these columns and return them.
   ParamPoint vertex =
-      equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/numEqs - 1,
-                             /*fromColumn=*/numEqs, /*toColumn=*/numCols - 1);
-  for (unsigned i = 0; i < numEqs; ++i)
+      equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
+                             /*fromColumn=*/d, /*toColumn=*/numCols - 1);
+  for (unsigned i = 0; i < d; ++i)
     vertex.negateRow(i);
 
   return vertex;
@@ -229,7 +230,7 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 /// we iterate over the vertex list, each time appending the vertex to the
 /// chambers where it is active and creating a new chamber if necessary.
 std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>>
-mlir::presburger::detail::chamberDecomposition(
+mlir::presburger::detail::computeChamberDecomposition(
     std::vector<PresburgerRelation> activeRegions,
     std::vector<ParamPoint> vertices) {
   // We maintain a list of regions and their associated vertex sets,
@@ -428,7 +429,7 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   // they may share "faces" or "edges", but their intersection can only have
   // up to numVars-1 dimensions.
   std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> chambers =
-      chamberDecomposition(activeRegions, vertices);
+      computeChamberDecomposition(activeRegions, vertices);
 
   // Now, we compute the generating function. For each chamber, we iterate over
   // the vertices active in it, and compute the generating function for each
