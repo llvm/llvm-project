@@ -361,8 +361,8 @@ Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
   assert(fromRow <= toRow && "end of row range must be after beginning!");
   assert(fromColumn <= toColumn && "end of row range must be after beginning!");
   Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
-  for (unsigned i = fromRow; i <= toRow; i++)
-    for (unsigned j = fromColumn; j <= toColumn; j++)
+  for (unsigned i = fromRow; i <= toRow; ++i)
+    for (unsigned j = fromColumn; j <= toColumn; ++j)
       subMatrix(i - fromRow, j - fromColumn) = at(i, j);
   return subMatrix;
 }
@@ -388,7 +388,7 @@ Matrix<T>::splitByBitset(std::bitset<16> indicator) {
     else
       rowsForZero.appendExtraRow(getRow(i));
   }
-  return std::make_pair(rowsForOne, rowsForZero);
+  return {rowsForOne, rowsForZero};
 }
 
 template <typename T>
