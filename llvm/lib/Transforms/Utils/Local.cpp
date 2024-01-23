@@ -2340,7 +2340,7 @@ void llvm::salvageDebugInfoForDbgValues(
       // currently only valid for stack value expressions.
       // Also do not salvage if the resulting DIArgList would contain an
       // unreasonably large number of values.
-      Value *Undef = UndefValue::get(I.getOperand(0)->getType());
+      Value *Undef = PoisonValue::get(I.getOperand(0)->getType());
       DPV->replaceVariableLocationOp(I.getOperand(0), Undef);
     }
     LLVM_DEBUG(dbgs() << "SALVAGE: " << DPV << '\n');
