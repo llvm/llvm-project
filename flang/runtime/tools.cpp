@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <stdio.h>
 
 namespace Fortran::runtime {
 
@@ -191,12 +192,13 @@ RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value) {
       value->rank() == 0;
 }
 
-RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal) {
+RT_API_ATTRS bool IsValidIntDescriptor(
+    const Descriptor *intVal, const int minIntKind) {
   // Check that our descriptor is allocated and is a scalar integer with
   // kind != 1 (i.e. with a large enough decimal exponent range).
   return intVal && intVal->IsAllocated() && intVal->rank() == 0 &&
       intVal->type().IsInteger() && intVal->type().GetCategoryAndKind() &&
-      intVal->type().GetCategoryAndKind()->second != 1;
+      intVal->type().GetCategoryAndKind()->second > minIntKind;
 }
 
 RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
