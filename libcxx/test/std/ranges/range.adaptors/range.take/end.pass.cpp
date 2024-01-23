@@ -69,6 +69,27 @@ constexpr bool test() {
     assert(tv.end() == std::ranges::next(tv.begin(), 8));
   }
 
+  // Check that (non-)simple, non-sized views have different types for their end() member function.
+  {
+    // These assertions must be true in order to trigger the different paths through the end member function
+    // that will return values with different types:
+    static_assert(!simple_view<NonSimpleViewNonSized>);
+    static_assert(!std::ranges::sized_range<NonSimpleViewNonSized>);
+    static_assert(simple_view<SimpleViewNonSized>);
+    static_assert(std::ranges::range<const SimpleViewNonSized>);
+    static_assert(!std::ranges::sized_range<const SimpleViewNonSized>);
+
+    std::ranges::take_view<NonSimpleViewNonSized> tvns(NonSimpleViewNonSized{buffer, buffer + 8}, 0);
+    std::ranges::take_view<SimpleViewNonSized> tvs(SimpleViewNonSized{buffer, buffer + 8}, 0);
+
+    // __iterator<false> has base with type std::ranges::sentinel_t<NonSimpleViewNonSized>; adding a const qualifier
+    // would change the equality.
+    static_assert(!std::is_same_v<decltype(tvns.end().base()), std::ranges::sentinel_t<const NonSimpleViewNonSized>>);
+    // __iterator<true> has base with type std::ranges::sentinel_t<const NonSimpleViewNonSized>; adding a const qualifier
+    // would not change the equality.
+    static_assert(std::is_same_v<decltype(tvs.end().base()), std::ranges::sentinel_t<const SimpleViewNonSized>>);
+  }
+
   return true;
 }
 

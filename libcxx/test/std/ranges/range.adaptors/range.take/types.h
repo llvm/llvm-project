@@ -65,4 +65,37 @@ private:
   int* end_;
 };
 
+template <bool Simple>
+struct InputView : std::ranges::view_base {
+  constexpr explicit InputView(int* b, int* e) : begin_(b), end_(e) {}
+
+  constexpr common_input_iterator<int*> begin() const { return common_input_iterator<int*>(begin_); }
+  constexpr common_input_iterator<int*> end() const { return common_input_iterator<int*>(end_); }
+
+  constexpr common_input_iterator<const int*> begin()
+    requires(!Simple)
+  {
+    return common_input_iterator<const int*>(begin_);
+  }
+  constexpr common_input_iterator<const int*> end()
+    requires(!Simple)
+  {
+    return common_input_iterator<const int*>(end_);
+  }
+
+private:
+  int* begin_;
+  int* end_;
+};
+
+using NonSimpleViewNonSized = InputView<false>;
+static_assert(std::ranges::view<NonSimpleViewNonSized>);
+static_assert(!simple_view<NonSimpleViewNonSized>);
+static_assert(!std::ranges::sized_range<NonSimpleViewNonSized>);
+
+using SimpleViewNonSized = InputView<true>;
+static_assert(!std::ranges::sized_range<SimpleViewNonSized>);
+static_assert(std::ranges::view<SimpleViewNonSized>);
+static_assert(simple_view<SimpleViewNonSized>);
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TAKE_TYPES_H
