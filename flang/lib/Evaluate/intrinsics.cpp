@@ -1416,8 +1416,8 @@ static DynamicType GetBuiltinDerivedType(
   auto iter{
       builtinsScope->find(semantics::SourceName{which, std::strlen(which)})};
   if (iter == builtinsScope->cend()) {
-    common::die("INTERNAL: The __fortran_builtins module does not define the "
-                "type '%s'",
+    common::die(
+        "INTERNAL: The __fortran_builtins module does not define the type '%s'",
         which);
   }
   const semantics::Symbol &symbol{*iter->second};
