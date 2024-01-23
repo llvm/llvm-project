@@ -15,5 +15,5 @@ add_entrypoint_object(
     libc.src.fcntl.open
     libc.src.unistd.read
     libc.src.unistd.close
-    libc.include.sys.auxv
+    libc.include.sys_auxv
 )
