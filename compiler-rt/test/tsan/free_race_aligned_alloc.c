@@ -5,14 +5,18 @@
 
 #include <stdlib.h>
 
-#if defined(__cplusplus) && (__cplusplus >= 201703L)
-#  define HAVE_ALIGNED_ALLOC 1
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
+    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500
+#  define MACOS_VERSION_AT_LEAST_10_15 1
+#else
+#  define MACOS_VERSION_AT_LEAST_10_15 0
 #endif
 
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
-    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500
-#  define HAVE_ALIGNED_ALLOC 0
+#if defined(__cplusplus) && (__cplusplus >= 201703L) &&                        \
+    (!defined(__apple__) || MACOS_VERSION_AT_LEAST_10_15)
+#  define HAVE_ALIGNED_ALLOC 1
 #else
+#  define HAVE_ALIGNED_ALLOC 0
 #endif
 
 int *mem;
