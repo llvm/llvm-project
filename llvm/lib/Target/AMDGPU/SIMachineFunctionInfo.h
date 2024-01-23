@@ -1041,22 +1041,6 @@ public:
     return WavesPerEU.second;
   }
 
-  /// \returns SGPR used for \p Dim's work group ID.
-  Register getWorkGroupIDSGPR(unsigned Dim) const {
-    switch (Dim) {
-    case 0:
-      assert(hasWorkGroupIDX());
-      return ArgInfo.WorkGroupIDX.getRegister();
-    case 1:
-      assert(hasWorkGroupIDY());
-      return ArgInfo.WorkGroupIDY.getRegister();
-    case 2:
-      assert(hasWorkGroupIDZ());
-      return ArgInfo.WorkGroupIDZ.getRegister();
-    }
-    llvm_unreachable("unexpected dimension");
-  }
-
   const AMDGPUGWSResourcePseudoSourceValue *
   getGWSPSV(const AMDGPUTargetMachine &TM) {
     return &GWSResourcePSV;
