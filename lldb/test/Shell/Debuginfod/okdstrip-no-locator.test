@@ -19,4 +19,4 @@
 # RUN:        2>&1 | FileCheck %s
 
 # Should have source file and line information:
-# CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}
+# CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:4:11, address = 0x{{[0-9a-f]+}}

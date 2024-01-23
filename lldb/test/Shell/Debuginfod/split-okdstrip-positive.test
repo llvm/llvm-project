@@ -7,13 +7,13 @@
 # Set up a file-system 'hosted' Debuginfod server
 # RUN: rm -rf %t
 # RUN: mkdir -p %t/cache
-# RUN: mkdir -p %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094
+# RUN: mkdir -p %t/buildid/14fe1776c0055ea25efd58d934bb305fbbacdac3
 
 # RUN: yaml2obj %p/Inputs/bin-split-stripped.yaml -o %t/bin-split-stripped.tmp
 # RUN: yaml2obj %p/Inputs/sym-split.yaml -o %t/sym-split
 # RUN: llvm-objcopy %t/bin-split-stripped.tmp --add-gnu-debuglink=%t/sym-split %t/bin-split-stripped
-# RUN: mv %t/sym-split %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094/executable
-# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/buildid/82b2c35129dab19ad58f3dd0f426bdb0cc8aa094/debuginfo
+# RUN: mv %t/sym-split %t/buildid/14fe1776c0055ea25efd58d934bb305fbbacdac3/executable
+# RUN: yaml2obj %p/Inputs/bin-split-dwp.yaml -o %t/buildid/14fe1776c0055ea25efd58d934bb305fbbacdac3/debuginfo
 # RUN: chmod a+x %t/bin-split-stripped
 
 # RUN: %lldb -o "settings set symbols.enable-external-lookup true" \
@@ -29,4 +29,4 @@
 # CHECK-NEXT: Type: "dwo"
 # CHECK-NEXT: Dwo ID{{.*}}
 # CHECK-NEXT: {{[- ]+}}
-# CHECK-NEXT: {{0x[0-9a-f]+.* +.*}}.tmp/cache/llvmcache-6559017670391320133{{ *$}}
+# CHECK-NEXT: {{0x[0-9a-f]+.* +.*}}.tmp/cache/llvmcache-14969591668314937758{{ *$}}

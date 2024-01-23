@@ -248,54 +248,27 @@ static SmallVector<std::string, 0> getHeaders() {
   return Headers;
 }
 
-static SmallString<64> getCachedArtifactPath(StringRef UniqueKey,
-                                             StringRef CacheDirectoryPath) {
+Expected<std::string> getCachedOrDownloadArtifact(
+    StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
+    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
   SmallString<64> AbsCachedArtifactPath;
   sys::path::append(AbsCachedArtifactPath, CacheDirectoryPath,
                     "llvmcache-" + UniqueKey);
-  return AbsCachedArtifactPath;
-}
-
-static Expected<AddStreamFn>
-getCachedArtifactHelper(StringRef UniqueKey, StringRef CacheDirectoryPath,
-                        unsigned &Task) {
-  SmallString<64> AbsCachedArtifactPath =
-      getCachedArtifactPath(UniqueKey, CacheDirectoryPath);
 
   Expected<FileCache> CacheOrErr =
       localCache("Debuginfod-client", ".debuginfod-client", CacheDirectoryPath);
   if (!CacheOrErr)
     return CacheOrErr.takeError();
-  return (*CacheOrErr)(Task, UniqueKey, "");
-}
 
-Expected<std::string> getCachedArtifact(StringRef UniqueKey,
-                                        StringRef CacheDirectoryPath) {
+  FileCache Cache = *CacheOrErr;
   // We choose an arbitrary Task parameter as we do not make use of it.
   unsigned Task = 0;
-  Expected<AddStreamFn> CacheAddStreamOrErr =
-      getCachedArtifactHelper(UniqueKey, CacheDirectoryPath, Task);
-  if (!CacheAddStreamOrErr)
-    return CacheAddStreamOrErr.takeError();
-  if (!*CacheAddStreamOrErr)
-    return std::string(getCachedArtifactPath(UniqueKey, CacheDirectoryPath));
-  return createStringError(errc::argument_out_of_domain,
-                           "build id not found in cache");
-}
-
-Expected<std::string> getCachedOrDownloadArtifact(
-    StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
-    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
-  // We choose an arbitrary Task parameter as we do not make use of it.
-  unsigned Task = 0;
-  Expected<AddStreamFn> CacheAddStreamOrErr =
-      getCachedArtifactHelper(UniqueKey, CacheDirectoryPath, Task);
+  Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, UniqueKey, "");
   if (!CacheAddStreamOrErr)
     return CacheAddStreamOrErr.takeError();
   AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
   if (!CacheAddStream)
-    return std::string(getCachedArtifactPath(UniqueKey, CacheDirectoryPath));
-
+    return std::string(AbsCachedArtifactPath);
   // The artifact was not found in the local cache, query the debuginfod
   // servers.
   if (!HTTPClient::isAvailable())
@@ -338,7 +311,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
     pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
 
     // Return the path to the artifact on disk.
-    return std::string(getCachedArtifactPath(UniqueKey, CacheDirectoryPath));
+    return std::string(AbsCachedArtifactPath);
   }
 
   return createStringError(errc::argument_out_of_domain, "build id not found");

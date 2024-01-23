@@ -7,9 +7,9 @@
 # Set up a file-system 'hosted' Debuginfod server:
 # RUN: rm -rf %t
 # RUN: mkdir -p %t/cache
-# RUN: mkdir -p %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d
+# RUN: mkdir -p %t/buildid/6e10cf17a4d84d5622c67a2fd38282bf121c67d5
 
-# RUN: yaml2obj %p/Inputs/bin-normal.yaml -o %t/buildid/725d47b7ee964f615c841a04712d6f43175f9d8d/executable
+# RUN: yaml2obj %p/Inputs/bin-normal.yaml -o %t/buildid/6e10cf17a4d84d5622c67a2fd38282bf121c67d5/executable
 # RUN: yaml2obj %p/Inputs/bin-stripped.yaml -o %t/bin-stripped
 # RUN: chmod a+x %t/bin-stripped
 
@@ -23,4 +23,4 @@
 # RUN:        2>&1 | FileCheck %s
 
 # Should have source file and line info:
-# CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:69:11, address = 0x{{[0-9a-f]+}}
+# CHECK: Breakpoint 1: where = bin-stripped`func + 11 at main.c:4:11, address = 0x{{[0-9a-f]+}}

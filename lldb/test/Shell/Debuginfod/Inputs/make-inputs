@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# I need 5 different scenarios:
+# Testing 5 different scenarios:
 # 1 - A stripped binary with it's corresponding unstripped binary:
 # 2 - A stripped binary with a corresponding --only-keep-debug symbols file
 # 3 - A split binary with it's corresponding DWP file
