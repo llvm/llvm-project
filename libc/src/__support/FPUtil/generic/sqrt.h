@@ -71,19 +71,15 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
     return x86::sqrt(x);
   } else {
     // IEEE floating points formats.
-    using Sign = fputil::Sign;
-    using FPBits_t = typename fputil::FPBits<T>;
-    using StorageType = typename FPBits_t::StorageType;
-    constexpr StorageType ONE = StorageType(1) << FPBits_t::FRACTION_LEN;
-    constexpr auto FLT_NAN =
-        FPBits_t::build_quiet_nan(Sign::POS, ONE >> 1).get_val();
+    using StorageType = typename FPBits<T>::StorageType;
+    constexpr StorageType ONE = StorageType(1) << FPBits<T>::FRACTION_LEN;
 
-    FPBits_t bits(x);
+    FPBits<T> bits(x);
 
     if (bits.is_inf_or_nan()) {
       if (bits.is_neg() && (bits.get_mantissa() == 0)) {
         // sqrt(-Inf) = NaN
-        return FLT_NAN;
+        return FPBits<T>::build_quiet_nan(ONE >> 1);
       } else {
         // sqrt(NaN) = NaN
         // sqrt(+Inf) = +Inf
@@ -95,7 +91,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       return x;
     } else if (bits.is_neg()) {
       // sqrt( negative numbers ) = NaN
-      return FLT_NAN;
+      return FPBits<T>::build_quiet_nan(ONE >> 1);
     } else {
       int x_exp = bits.get_exponent();
       StorageType x_mant = bits.get_mantissa();
@@ -149,10 +145,10 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       }
 
       // Remove hidden bit and append the exponent field.
-      x_exp = ((x_exp >> 1) + FPBits_t::EXP_BIAS);
+      x_exp = ((x_exp >> 1) + FPBits<T>::EXP_BIAS);
 
       y = (y - ONE) |
-          (static_cast<StorageType>(x_exp) << FPBits_t::FRACTION_LEN);
+          (static_cast<StorageType>(x_exp) << FPBits<T>::FRACTION_LEN);
 
       switch (quick_get_round()) {
       case FE_TONEAREST:
