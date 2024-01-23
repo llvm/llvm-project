@@ -236,6 +236,12 @@ inline SmallVector<DPValue *> getDPVAssignmentMarkers(const Instruction *Inst) {
   return {};
 }
 
+inline SmallVector<DPValue *> getDPVAssignmentMarkers(const Instruction *Inst) {
+  if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
+    return cast<DIAssignID>(ID)->getAllDPValueUsers();
+  return {};
+}
+
 /// Delete the llvm.dbg.assign intrinsics linked to \p Inst.
 void deleteAssignmentMarkers(const Instruction *Inst);
 
