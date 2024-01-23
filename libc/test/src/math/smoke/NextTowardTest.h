@@ -46,8 +46,10 @@ class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
   const long double to_neg_zero = ToFPBits::zero(Sign::NEG).get_val();
   const long double to_nan = ToFPBits::build_quiet_nan(Sign::POS, 1).get_val();
 
-  static constexpr StorageType min_subnormal = FPBits::min_subnormal().uintval();
-  static constexpr StorageType max_subnormal = FPBits::max_subnormal().uintval();
+  static constexpr StorageType min_subnormal =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType max_subnormal =
+      FPBits::max_subnormal().uintval();
   static constexpr StorageType min_normal = FPBits::min_normal().uintval();
   static constexpr StorageType max_normal = FPBits::max_normal().uintval();
 
