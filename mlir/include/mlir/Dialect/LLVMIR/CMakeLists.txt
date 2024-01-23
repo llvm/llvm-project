@@ -73,9 +73,9 @@ mlir_tablegen(ROCDLOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=roc
 add_public_tablegen_target(MLIRROCDLConversionsIncGen)
 
 add_mlir_dialect(VCIXOps vcix)
-add_mlir_doc(VCIXOps RVCIXDialect Dialects/ -gen-dialect-doc -dialect=rocdl)
+add_mlir_doc(VCIXOps VCIXDialect Dialects/ -gen-dialect-doc -dialect=vcix)
 set(LLVM_TARGET_DEFINITIONS VCIXOps.td)
 mlir_tablegen(VCIXConversions.inc -gen-llvmir-conversions)
-mlir_tablegen(VCIXOpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=rocdl)
-mlir_tablegen(VCIXOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=rocdl)
+mlir_tablegen(VCIXOpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=vcix)
+mlir_tablegen(VCIXOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=vcix)
 add_public_tablegen_target(MLIRVCIXConversionsIncGen)

@@ -71,3 +71,77 @@ llvm.func @binary_fixed_iv(%arg0: vector<4xf32>, %rd: i32) -> vector<4xf32> {
   %0 = "vcix.v.iv"(%arg0, %rd) <{opcode = 3 : i32, imm = 5 : i32}> : (vector<4xf32>, i32) -> vector<4xf32>
   llvm.return %0 : vector<4xf32>
 }
+
+// Test integer type
+
+// CHECK-LABEL: define <vscale x 4 x i32> @binary_i_fv(<vscale x 4 x i32> %0, float %1, i32 %2) {
+// CHECK-NEXT:   %4 = call <vscale x 4 x i32> @llvm.riscv.sf.vc.v.fv.se.nxv4i32.i32.nxv4i32.f32.i32(i32 1, <vscale x 4 x i32> %0, float %1, i32 %2)
+// CHECK-NEXT:   ret <vscale x 4 x i32> %4
+// CHECK-NEXT: }
+llvm.func @binary_i_fv(%arg0: vector<[4]xi32>, %arg1: f32, %vl: i32) -> vector<[4]xi32> {
+  %0 = "vcix.v.sv"(%arg0, %arg1, %vl) <{opcode = 1 : i32}> : (vector<[4]xi32>, f32, i32) -> vector<[4]xi32>
+  llvm.return %0 : vector<[4]xi32>
+}
+
+// CHECK-LABEL: define <vscale x 4 x i32> @binary_i_xv(<vscale x 4 x i32> %0, i32 %1, i32 %2) {
+// CHECK-NEXT:   %4 = call <vscale x 4 x i32> @llvm.riscv.sf.vc.v.xv.se.nxv4i32.i32.nxv4i32.i32.i32(i32 3, <vscale x 4 x i32> %0, i32 %1, i32 %2)
+// CHECK-NEXT:   ret <vscale x 4 x i32> %4
+// CHECK-NEXT: }
+llvm.func @binary_i_xv(%arg0: vector<[4]xi32>, %arg1: i32, %vl: i32) -> vector<[4]xi32> {
+  %0 = "vcix.v.sv"(%arg0, %arg1, %vl) <{opcode = 3 : i32}> : (vector<[4]xi32>, i32, i32) -> vector<[4]xi32>
+  llvm.return %0 : vector<[4]xi32>
+}
+
+// CHECK-LABEL: define <vscale x 4 x i32> @binary_i_vv(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, i32 %2) {
+// CHECK-NEXT:   %4 = call <vscale x 4 x i32> @llvm.riscv.sf.vc.v.vv.se.nxv4i32.i32.nxv4i32.nxv4i32.i32(i32 3, <vscale x 4 x i32> %0, <vscale x 4 x i32> %1, i32 %2)
+// CHECK-NEXT:   ret <vscale x 4 x i32> %4
+// CHECK-NEXT: }
+llvm.func @binary_i_vv(%arg0: vector<[4]xi32>, %arg1: vector<[4]xi32>, %vl: i32) -> vector<[4]xi32> {
+  %0 = "vcix.v.sv"(%arg0, %arg1, %vl) <{opcode = 3 : i32}> : (vector<[4]xi32>, vector<[4]xi32>, i32) -> vector<[4]xi32>
+  llvm.return %0 : vector<[4]xi32>
+}
+
+// CHECK-LABEL: define <vscale x 4 x i32> @binary_i_iv(<vscale x 4 x i32> %0, i32 %1, i32 %2) {
+// CHECK-NEXT:   %4 = call <vscale x 4 x i32> @llvm.riscv.sf.vc.v.iv.se.nxv4i32.i32.nxv4i32.i32.i32(i32 3, <vscale x 4 x i32> %0, i32 5, i32 %2)
+// CHECK-NEXT:   ret <vscale x 4 x i32> %4
+// CHECK-NEXT: }
+llvm.func @binary_i_iv(%arg0: vector<[4]xi32>, %rd: i32, %vl: i32) -> vector<[4]xi32> {
+  %0 = "vcix.v.iv"(%arg0, %rd, %vl) <{opcode = 3 : i32, imm = 5 : i32}> : (vector<[4]xi32>, i32, i32) -> vector<[4]xi32>
+  llvm.return %0 : vector<[4]xi32>
+}
+
+// CHECK-LABEL: define <4 x i32> @binary_i_fixed_fv(<4 x i32> %0, float %1) {
+// CHECK-NEXT:   %3 = call <4 x i32> @llvm.riscv.sf.vc.v.fv.se.v4i32.i32.v4i32.f32.i32(i32 1, <4 x i32> %0, float %1, i32 4)
+// CHECK-NEXT:   ret <4 x i32> %3
+// CHECK-NEXT: }
+llvm.func @binary_i_fixed_fv(%arg0: vector<4xi32>, %arg1: f32) -> vector<4xi32> {
+  %0 = "vcix.v.sv"(%arg0, %arg1) <{opcode = 1 : i32}> : (vector<4xi32>, f32) -> vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: define <4 x i32> @binary_i_fixed_xv(<4 x i32> %0, i32 %1) {
+// CHECK-NEXT:   %3 = call <4 x i32> @llvm.riscv.sf.vc.v.xv.se.v4i32.i32.v4i32.i32.i32(i32 3, <4 x i32> %0, i32 %1, i32 4)
+// CHECK-NEXT:   ret <4 x i32> %3
+// CHECK-NEXT: }
+llvm.func @binary_i_fixed_xv(%arg0: vector<4xi32>, %arg1: i32) -> vector<4xi32> {
+  %0 = "vcix.v.sv"(%arg0, %arg1) <{opcode = 3 : i32}> : (vector<4xi32>, i32) -> vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: define <4 x i32> @binary_i_fixed_vv(<4 x i32> %0, <4 x i32> %1) {
+// CHECK-NEXT:   %3 = call <4 x i32> @llvm.riscv.sf.vc.v.vv.se.v4i32.i32.v4i32.v4i32.i32(i32 3, <4 x i32> %0, <4 x i32> %1, i32 4)
+// CHECK-NEXT:   ret <4 x i32> %3
+// CHECK-NEXT: }
+llvm.func @binary_i_fixed_vv(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi32> {
+  %0 = "vcix.v.sv"(%arg0, %arg1) <{opcode = 3 : i32}> : (vector<4xi32>, vector<4xi32>) -> vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: define <4 x i32> @binary_i_fixed_iv(<4 x i32> %0, i32 %1) {
+// CHECK-NEXT:   %3 = call <4 x i32> @llvm.riscv.sf.vc.v.iv.se.v4i32.i32.v4i32.i32.i32(i32 3, <4 x i32> %0, i32 5, i32 4)
+// CHECK-NEXT:   ret <4 x i32> %3
+// CHECK-NEXT: }
+llvm.func @binary_i_fixed_iv(%arg0: vector<4xi32>, %rd: i32) -> vector<4xi32> {
+  %0 = "vcix.v.iv"(%arg0, %rd) <{opcode = 3 : i32, imm = 5 : i32}> : (vector<4xi32>, i32) -> vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
