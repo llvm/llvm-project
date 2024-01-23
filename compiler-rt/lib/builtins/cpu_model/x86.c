@@ -772,7 +772,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 #define hasFeature(F) ((Features[F / 32] >> (F % 32)) & 1)
 #define setFeature(F) Features[F / 32] |= 1U << (F % 32)
 
-  if ((EDX >>  8) & 1)
+  if ((EDX >> 8) & 1)
     setFeature(FEATURE_CMPXCHG8B);
   if ((EDX >> 15) & 1)
     setFeature(FEATURE_CMOV);
@@ -974,8 +974,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_USERMSR);
 
   unsigned MaxLevel;
-  if (getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX) || MaxLevel < 1)
-    return false;
+  getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
   if (HasLeafD && ((EAX >> 0) & 1) && HasAVXSave)
@@ -997,7 +996,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
       setFeature(FEATURE_LZCNT);
     if (((ECX >> 6) & 1))
       setFeature(FEATURE_SSE4_A);
-    if (((ECX >>  8) & 1))
+    if (((ECX >> 8) & 1))
       setFeature(FEATURE_PRFCHW);
     if (((ECX >> 11) & 1))
       setFeature(FEATURE_XOP);
@@ -1022,14 +1021,14 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_WBNOINVD);
 
   bool HasLeaf14 = MaxLevel >= 0x14 &&
-                  !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
+                   !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf14 && ((EBX >> 4) & 1))
-      setFeature(FEATURE_PTWRITE);
+    setFeature(FEATURE_PTWRITE);
 
   bool HasLeaf19 =
       MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1))
-      setFeature(FEATURE_WIDEKL);
+    setFeature(FEATURE_WIDEKL);
 
   if (hasFeature(FEATURE_LM) && hasFeature(FEATURE_SSE2)) {
     setFeature(FEATURE_X86_64_BASELINE);
