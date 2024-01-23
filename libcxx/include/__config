@@ -349,8 +349,8 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
 // vulnerability.
 #    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(expression, message)   _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_PEDANTIC(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
