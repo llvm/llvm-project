@@ -21,7 +21,6 @@
 #elif defined(__linux__)
 #  include <csignal>
 #  include <fstream>
-#  include <sstream>
 #  include <string>
 #endif
 
@@ -108,15 +107,17 @@ bool __is_debugger_present() noexcept {
       return false;
     }
 
-    const string tracerPid{"TracerPid"};
-    for (string line; getline(status_file, line);) {
-      if (line.starts_with(tracerPid)) {
-        string value = line.substr(tracerPid.size() + 1);
-        return stoll(value) != 0;
+    std::string token;
+    while (status_file >> token) {
+      if (token == "TracerPid:") {
+        int pid;
+        status_file >> pid;
+        return pid != 0;
       }
+      std::getline(status_file, token);
     }
   } catch (...) {
-    _LIBCPP_ASSERT_INTERNAL(false, "Failed to read '/proc/self/status'.");
+    _LIBCPP_ASSERT_INTERNAL(false, "Failed to parse '/proc/self/status'.");
     return false;
   }
 
