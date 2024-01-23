@@ -272,8 +272,7 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", NoSchedModel,
                                       [TuneNoDefaultUnroll,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
-                                       TuneAUIPCADDIFusion,
-                                       TuneDontSinkSplatOperands]>;
+                                       TuneAUIPCADDIFusion]>;
 
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
