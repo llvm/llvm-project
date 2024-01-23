@@ -1049,6 +1049,11 @@ Bug Fixes to C++ Support
 
 - Set the ``__cpp_auto_cast`` feature test macro in C++23 mode.
 
+- Fix crash for inconsistent deducing state of function return types
+  in importing modules.
+  Fixes (`#78830 <https://github.com/llvm/llvm-project/issues/78830>`_)
+  Fixes (`#60085 <https://github.com/llvm/llvm-project/issues/60085>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -1113,6 +1118,9 @@ AMDGPU Support
   arguments in C ABI. Callee is responsible for allocating stack memory and
   copying the value of the struct if modified. Note that AMDGPU backend still
   supports byval for struct arguments.
+- The default value for ``-mcode-object-version`` is now 5.
+  See `AMDHSA Code Object V5 Metadata <https://llvm.org/docs/AMDGPUUsage.html#code-object-v5-metadata>`_
+  for more details.
 
 X86 Support
 ^^^^^^^^^^^
@@ -1189,8 +1197,14 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
-- The ``model`` attribute is now supported for overriding the default code
-  model used to access global variables. The following values are supported:
+- Added builtins support for all LSX (128-bits SIMD) and LASX (256-bits SIMD)
+  instructions.
+- Added builtins support for approximate calculation instructions that were
+  introduced in LoongArch Reference Manual V1.10.
+- Made ``-mcmodel=`` compatible with LoongArch gcc that accepted ``normal``,
+  ``medium`` and ``extreme``.
+- The ``model`` attribute was now supported for overriding the default code
+  model used to access global variables. The following values were supported:
   ``normal``, ``medium`` and ``extreme``.
 
   *Example Code*:
@@ -1198,6 +1212,10 @@ LoongArch Support
   .. code-block:: c
 
      int var __attribute((model("extreme")));
+
+- Default to ``-fno-direct-access-external-data`` for non-PIC.
+- An ABI mismatch with gcc/g++ about empty structs/unions passing was fixed.
+- ``_mcount`` was generated instead of ``mcount``.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -1400,9 +1418,11 @@ Improvements
   `0954dc3fb921 <https://github.com/llvm/llvm-project/commit/0954dc3fb9214b994623f5306473de075f8e3593>`_)
 
 - Improved the ``alpha.unix.Stream`` checker by modeling more functions
-  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``
-  and no not recognize alternative ``fopen`` and ``tmpfile`` implementations.
-  (`#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
+  ``fputs``, ``fputc``, ``fgets``, ``fgetc``, ``fdopen``, ``ungetc``, ``fflush``,
+  ``getdelim``, ``getline`` and no not recognize alternative
+  ``fopen`` and ``tmpfile`` implementations.
+  (`#78693 <https://github.com/llvm/llvm-project/pull/78693>`_,
+  `#76776 <https://github.com/llvm/llvm-project/pull/76776>`_,
   `#74296 <https://github.com/llvm/llvm-project/pull/74296>`_,
   `#73335 <https://github.com/llvm/llvm-project/pull/73335>`_,
   `#72627 <https://github.com/llvm/llvm-project/pull/72627>`_,

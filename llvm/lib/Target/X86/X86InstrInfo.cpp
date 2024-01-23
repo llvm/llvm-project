@@ -2260,23 +2260,30 @@ static unsigned getCommutedVPERMV3Opcode(unsigned Opcode) {
 MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                    unsigned OpIdx1,
                                                    unsigned OpIdx2) const {
-  auto cloneIfNew = [NewMI](MachineInstr &MI) -> MachineInstr & {
-    if (NewMI)
-      return *MI.getParent()->getParent()->CloneMachineInstr(&MI);
-    return MI;
+  auto CloneIfNew = [&](MachineInstr &MI) {
+    return std::exchange(NewMI, false)
+               ? MI.getParent()->getParent()->CloneMachineInstr(&MI)
+               : &MI;
   };
+  MachineInstr *WorkingMI = nullptr;
+  unsigned Opc = MI.getOpcode();
 
-  switch (MI.getOpcode()) {
-  case X86::SHRD16rri8: // A = SHRD16rri8 B, C, I -> A = SHLD16rri8 C, B, (16-I)
-  case X86::SHLD16rri8: // A = SHLD16rri8 B, C, I -> A = SHRD16rri8 C, B, (16-I)
-  case X86::SHRD32rri8: // A = SHRD32rri8 B, C, I -> A = SHLD32rri8 C, B, (32-I)
-  case X86::SHLD32rri8: // A = SHLD32rri8 B, C, I -> A = SHRD32rri8 C, B, (32-I)
-  case X86::SHRD64rri8: // A = SHRD64rri8 B, C, I -> A = SHLD64rri8 C, B, (64-I)
-  case X86::SHLD64rri8: { // A = SHLD64rri8 B, C, I -> A = SHRD64rri8 C, B,
-                          // (64-I)
-    unsigned Opc;
+  switch (Opc) {
+  // SHLD B, C, I <-> SHRD C, B, (BitWidth - I)
+  case X86::SHRD16rri8:
+  case X86::SHLD16rri8:
+  case X86::SHRD32rri8:
+  case X86::SHLD32rri8:
+  case X86::SHRD64rri8:
+  case X86::SHLD64rri8:
+  case X86::SHRD16rri8_ND:
+  case X86::SHLD16rri8_ND:
+  case X86::SHRD32rri8_ND:
+  case X86::SHLD32rri8_ND:
+  case X86::SHRD64rri8_ND:
+  case X86::SHLD64rri8_ND: {
     unsigned Size;
-    switch (MI.getOpcode()) {
+    switch (Opc) {
     default:
       llvm_unreachable("Unreachable!");
     case X86::SHRD16rri8:
@@ -2303,33 +2310,52 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       Size = 64;
       Opc = X86::SHRD64rri8;
       break;
+    case X86::SHRD16rri8_ND:
+      Size = 16;
+      Opc = X86::SHLD16rri8_ND;
+      break;
+    case X86::SHLD16rri8_ND:
+      Size = 16;
+      Opc = X86::SHRD16rri8_ND;
+      break;
+    case X86::SHRD32rri8_ND:
+      Size = 32;
+      Opc = X86::SHLD32rri8_ND;
+      break;
+    case X86::SHLD32rri8_ND:
+      Size = 32;
+      Opc = X86::SHRD32rri8_ND;
+      break;
+    case X86::SHRD64rri8_ND:
+      Size = 64;
+      Opc = X86::SHLD64rri8_ND;
+      break;
+    case X86::SHLD64rri8_ND:
+      Size = 64;
+      Opc = X86::SHRD64rri8_ND;
+      break;
     }
-    unsigned Amt = MI.getOperand(3).getImm();
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(Opc));
-    WorkingMI.getOperand(3).setImm(Size - Amt);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->setDesc(get(Opc));
+    WorkingMI->getOperand(3).setImm(Size - MI.getOperand(3).getImm());
+    break;
   }
   case X86::PFSUBrr:
-  case X86::PFSUBRrr: {
+  case X86::PFSUBRrr:
     // PFSUB  x, y: x = x - y
     // PFSUBR x, y: x = y - x
-    unsigned Opc =
-        (X86::PFSUBRrr == MI.getOpcode() ? X86::PFSUBrr : X86::PFSUBRrr);
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(Opc));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
-  }
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->setDesc(
+        get(X86::PFSUBRrr == Opc ? X86::PFSUBrr : X86::PFSUBRrr));
+    break;
   case X86::BLENDPDrri:
   case X86::BLENDPSrri:
   case X86::VBLENDPDrri:
   case X86::VBLENDPSrri:
     // If we're optimizing for size, try to use MOVSD/MOVSS.
     if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
-      unsigned Mask, Opc;
-      switch (MI.getOpcode()) {
+      unsigned Mask;
+      switch (Opc) {
       default:
         llvm_unreachable("Unreachable!");
       case X86::BLENDPDrri:
@@ -2350,12 +2376,10 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
         break;
       }
       if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
-        auto &WorkingMI = cloneIfNew(MI);
-        WorkingMI.setDesc(get(Opc));
-        WorkingMI.removeOperand(3);
-        return TargetInstrInfo::commuteInstructionImpl(WorkingMI,
-                                                       /*NewMI=*/false, OpIdx1,
-                                                       OpIdx2);
+        WorkingMI = CloneIfNew(MI);
+        WorkingMI->setDesc(get(Opc));
+        WorkingMI->removeOperand(3);
+        break;
       }
     }
     [[fallthrough]];
@@ -2367,7 +2391,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPBLENDDYrri:
   case X86::VPBLENDWYrri: {
     int8_t Mask;
-    switch (MI.getOpcode()) {
+    switch (Opc) {
     default:
       llvm_unreachable("Unreachable!");
     case X86::BLENDPDrri:
@@ -2408,10 +2432,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     // Using int8_t to ensure it will be sign extended to the int64_t that
     // setImm takes in order to match isel behavior.
     int8_t Imm = MI.getOperand(3).getImm() & Mask;
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm(Mask ^ Imm);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->getOperand(3).setImm(Mask ^ Imm);
+    break;
   }
   case X86::INSERTPSrr:
   case X86::VINSERTPSrr:
@@ -2428,10 +2451,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       unsigned AltIdx = llvm::countr_zero((ZMask | (1 << DstIdx)) ^ 15);
       assert(AltIdx < 4 && "Illegal insertion index");
       unsigned AltImm = (AltIdx << 6) | (AltIdx << 4) | ZMask;
-      auto &WorkingMI = cloneIfNew(MI);
-      WorkingMI.getOperand(MI.getNumOperands() - 1).setImm(AltImm);
-      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                     OpIdx1, OpIdx2);
+      WorkingMI = CloneIfNew(MI);
+      WorkingMI->getOperand(MI.getNumOperands() - 1).setImm(AltImm);
+      break;
     }
     return nullptr;
   }
@@ -2441,8 +2463,8 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VMOVSSrr: {
     // On SSE41 or later we can commute a MOVSS/MOVSD to a BLENDPS/BLENDPD.
     if (Subtarget.hasSSE41()) {
-      unsigned Mask, Opc;
-      switch (MI.getOpcode()) {
+      unsigned Mask;
+      switch (Opc) {
       default:
         llvm_unreachable("Unreachable!");
       case X86::MOVSDrr:
@@ -2463,31 +2485,24 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
         break;
       }
 
-      auto &WorkingMI = cloneIfNew(MI);
-      WorkingMI.setDesc(get(Opc));
-      WorkingMI.addOperand(MachineOperand::CreateImm(Mask));
-      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                     OpIdx1, OpIdx2);
+      WorkingMI = CloneIfNew(MI);
+      WorkingMI->setDesc(get(Opc));
+      WorkingMI->addOperand(MachineOperand::CreateImm(Mask));
+      break;
     }
 
-    // Convert to SHUFPD.
-    assert(MI.getOpcode() == X86::MOVSDrr &&
-           "Can only commute MOVSDrr without SSE4.1");
-
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(X86::SHUFPDrri));
-    WorkingMI.addOperand(MachineOperand::CreateImm(0x02));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->setDesc(get(X86::SHUFPDrri));
+    WorkingMI->addOperand(MachineOperand::CreateImm(0x02));
+    break;
   }
   case X86::SHUFPDrri: {
     // Commute to MOVSD.
     assert(MI.getOperand(3).getImm() == 0x02 && "Unexpected immediate!");
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(X86::MOVSDrr));
-    WorkingMI.removeOperand(3);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->setDesc(get(X86::MOVSDrr));
+    WorkingMI->removeOperand(3);
+    break;
   }
   case X86::PCLMULQDQrr:
   case X86::VPCLMULQDQrr:
@@ -2500,10 +2515,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     unsigned Imm = MI.getOperand(3).getImm();
     unsigned Src1Hi = Imm & 0x01;
     unsigned Src2Hi = Imm & 0x10;
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm((Src1Hi << 4) | (Src2Hi >> 4));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->getOperand(3).setImm((Src1Hi << 4) | (Src2Hi >> 4));
+    break;
   }
   case X86::VPCMPBZ128rri:
   case X86::VPCMPUBZ128rri:
@@ -2552,15 +2566,13 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPCMPWZ256rrik:
   case X86::VPCMPUWZ256rrik:
   case X86::VPCMPWZrrik:
-  case X86::VPCMPUWZrrik: {
+  case X86::VPCMPUWZrrik:
+    WorkingMI = CloneIfNew(MI);
     // Flip comparison mode immediate (if necessary).
-    unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm() & 0x7;
-    Imm = X86::getSwappedVPCMPImm(Imm);
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(MI.getNumOperands() - 1).setImm(Imm);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
-  }
+    WorkingMI->getOperand(MI.getNumOperands() - 1)
+        .setImm(X86::getSwappedVPCMPImm(
+            MI.getOperand(MI.getNumOperands() - 1).getImm() & 0x7));
+    break;
   case X86::VPCOMBri:
   case X86::VPCOMUBri:
   case X86::VPCOMDri:
@@ -2568,15 +2580,12 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPCOMQri:
   case X86::VPCOMUQri:
   case X86::VPCOMWri:
-  case X86::VPCOMUWri: {
+  case X86::VPCOMUWri:
+    WorkingMI = CloneIfNew(MI);
     // Flip comparison mode immediate (if necessary).
-    unsigned Imm = MI.getOperand(3).getImm() & 0x7;
-    Imm = X86::getSwappedVPCOMImm(Imm);
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm(Imm);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
-  }
+    WorkingMI->getOperand(3).setImm(
+        X86::getSwappedVPCOMImm(MI.getOperand(3).getImm() & 0x7));
+    break;
   case X86::VCMPSDZrr:
   case X86::VCMPSSZrr:
   case X86::VCMPPDZrri:
@@ -2594,35 +2603,28 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VCMPPDZ128rrik:
   case X86::VCMPPSZ128rrik:
   case X86::VCMPPDZ256rrik:
-  case X86::VCMPPSZ256rrik: {
-    unsigned Imm =
-        MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 0x1f;
-    Imm = X86::getSwappedVCMPImm(Imm);
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(MI.getNumExplicitOperands() - 1).setImm(Imm);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
-  }
+  case X86::VCMPPSZ256rrik:
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->getOperand(MI.getNumExplicitOperands() - 1)
+        .setImm(X86::getSwappedVCMPImm(
+            MI.getOperand(MI.getNumExplicitOperands() - 1).getImm() & 0x1f));
+    break;
   case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr: {
+  case X86::VPERM2I128rr:
     // Flip permute source immediate.
     // Imm & 0x02: lo = if set, select Op1.lo/hi else Op0.lo/hi.
     // Imm & 0x20: hi = if set, select Op1.lo/hi else Op0.lo/hi.
-    int8_t Imm = MI.getOperand(3).getImm() & 0xFF;
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm(Imm ^ 0x22);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
-  }
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->getOperand(3).setImm((MI.getOperand(3).getImm() & 0xFF) ^ 0x22);
+    break;
   case X86::MOVHLPSrr:
   case X86::UNPCKHPDrr:
   case X86::VMOVHLPSrr:
   case X86::VUNPCKHPDrr:
   case X86::VMOVHLPSZrr:
-  case X86::VUNPCKHPDZ128rr: {
+  case X86::VUNPCKHPDZ128rr:
     assert(Subtarget.hasSSE2() && "Commuting MOVHLP/UNPCKHPD requires SSE2!");
 
-    unsigned Opc = MI.getOpcode();
     switch (Opc) {
     default:
       llvm_unreachable("Unreachable!");
@@ -2645,20 +2647,17 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       Opc = X86::VMOVHLPSZrr;
       break;
     }
-    auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(Opc));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
-  }
+    WorkingMI = CloneIfNew(MI);
+    WorkingMI->setDesc(get(Opc));
+    break;
   case X86::CMOV16rr:
   case X86::CMOV32rr:
   case X86::CMOV64rr: {
-    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI = CloneIfNew(MI);
     unsigned OpNo = MI.getDesc().getNumOperands() - 1;
     X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(OpNo).getImm());
-    WorkingMI.getOperand(OpNo).setImm(X86::GetOppositeBranchCondition(CC));
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
+    WorkingMI->getOperand(OpNo).setImm(X86::GetOppositeBranchCondition(CC));
+    break;
   }
   case X86::VPTERNLOGDZrri:
   case X86::VPTERNLOGDZrmi:
@@ -2702,34 +2701,25 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPTERNLOGQZ128rmbikz:
   case X86::VPTERNLOGQZ256rmbikz:
   case X86::VPTERNLOGQZrmbikz: {
-    auto &WorkingMI = cloneIfNew(MI);
-    commuteVPTERNLOG(WorkingMI, OpIdx1, OpIdx2);
-    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                   OpIdx1, OpIdx2);
+    WorkingMI = CloneIfNew(MI);
+    commuteVPTERNLOG(*WorkingMI, OpIdx1, OpIdx2);
+    break;
   }
-  default: {
-    if (isCommutableVPERMV3Instruction(MI.getOpcode())) {
-      unsigned Opc = getCommutedVPERMV3Opcode(MI.getOpcode());
-      auto &WorkingMI = cloneIfNew(MI);
-      WorkingMI.setDesc(get(Opc));
-      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                     OpIdx1, OpIdx2);
+  default:
+    if (isCommutableVPERMV3Instruction(Opc)) {
+      WorkingMI = CloneIfNew(MI);
+      WorkingMI->setDesc(get(getCommutedVPERMV3Opcode(Opc)));
+      break;
     }
 
-    const X86InstrFMA3Group *FMA3Group =
-        getFMA3Group(MI.getOpcode(), MI.getDesc().TSFlags);
-    if (FMA3Group) {
-      unsigned Opc =
-          getFMA3OpcodeToCommuteOperands(MI, OpIdx1, OpIdx2, *FMA3Group);
-      auto &WorkingMI = cloneIfNew(MI);
-      WorkingMI.setDesc(get(Opc));
-      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
-                                                     OpIdx1, OpIdx2);
+    if (auto *FMA3Group = getFMA3Group(Opc, MI.getDesc().TSFlags)) {
+      WorkingMI = CloneIfNew(MI);
+      WorkingMI->setDesc(
+          get(getFMA3OpcodeToCommuteOperands(MI, OpIdx1, OpIdx2, *FMA3Group)));
+      break;
     }
-
-    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   }
-  }
+  return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
 }
 
 bool X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
@@ -10397,23 +10387,20 @@ enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 std::optional<outliner::OutlinedFunction>
 X86InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  unsigned SequenceSize =
-      std::accumulate(RepeatedSequenceLocs[0].front(),
-                      std::next(RepeatedSequenceLocs[0].back()), 0,
-                      [](unsigned Sum, const MachineInstr &MI) {
-                        // FIXME: x86 doesn't implement getInstSizeInBytes, so
-                        // we can't tell the cost.  Just assume each instruction
-                        // is one byte.
-                        if (MI.isDebugInstr() || MI.isKill())
-                          return Sum;
-                        return Sum + 1;
-                      });
+  unsigned SequenceSize = 0;
+  for (auto &MI : RepeatedSequenceLocs[0]) {
+    // FIXME: x86 doesn't implement getInstSizeInBytes, so
+    // we can't tell the cost.  Just assume each instruction
+    // is one byte.
+    if (MI.isDebugInstr() || MI.isKill())
+      continue;
+    SequenceSize += 1;
+  }
 
   // We check to see if CFI Instructions are present, and if they are
   // we find the number of CFI Instructions in the candidates.
   unsigned CFICount = 0;
-  for (auto &I : make_range(RepeatedSequenceLocs[0].front(),
-                            std::next(RepeatedSequenceLocs[0].back()))) {
+  for (auto &I : RepeatedSequenceLocs[0]) {
     if (I.isCFIInstruction())
       CFICount++;
   }
@@ -10432,7 +10419,7 @@ X86InstrInfo::getOutliningCandidateInfo(
   }
 
   // FIXME: Use real size in bytes for call and ret instructions.
-  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+  if (RepeatedSequenceLocs[0].back().isTerminator()) {
     for (outliner::Candidate &C : RepeatedSequenceLocs)
       C.setCallInfo(MachineOutlinerTailCall, 1);
 

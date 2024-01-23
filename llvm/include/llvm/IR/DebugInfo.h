@@ -230,6 +230,7 @@ inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
   else
     return make_range(Value::user_iterator(), Value::user_iterator());
 }
+
 inline SmallVector<DPValue *> getDPVAssignmentMarkers(const Instruction *Inst) {
   if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
     return cast<DIAssignID>(ID)->getAllDPValueUsers();

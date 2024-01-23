@@ -1,5 +1,7 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
 
 ;; Hand-written to test untagged store handling on a simple case. Here's what
 ;; we're looking at in the IR:

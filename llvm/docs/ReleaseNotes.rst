@@ -115,6 +115,8 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
+* The default :ref:`AMDHSA code object version <amdgpu-amdhsa-code-object-metadata-v5>` is now 5.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -132,8 +134,21 @@ Changes to the Hexagon Backend
 
 Changes to the LoongArch Backend
 --------------------------------
-* The code model of global variables can now be overridden by means of
-  the newly added LLVM IR attribute, ``code_model``.
+
+* Added intrinsics support for all LSX (128-bits SIMD) and LASX (256-bits SIMD)
+  instructions.
+* Added definition and intrinsics support for new instructions that were
+  introduced in LoongArch Reference Manual V1.10.
+* Emitted adjacent ``pcaddu18i+jirl`` instrunction sequence with one relocation
+  ``R_LARCH_CALL36`` instead of ``pcalau12i+jirl`` with two relocations
+  ``R_LARCH_PCALA_{HI20,LO12}`` for function call in medium code model.
+* The code model of global variables can now be overridden by means of the newly
+  added LLVM IR attribute, ``code_model``.
+* Added support for the ``llvm.is.fpclass`` intrinsic.
+* ``mulodi4`` and ``muloti4`` libcalls were disabled due to absence in libgcc.
+* Added initial support for auto vectorization.
+* Added initial support for linker relaxation.
+* Assorted codegen improvements.
 
 Changes to the MIPS Backend
 ---------------------------

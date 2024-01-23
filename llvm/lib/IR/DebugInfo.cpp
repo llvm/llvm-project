@@ -1816,8 +1816,12 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
 
 void at::deleteAll(Function *F) {
   SmallVector<DbgAssignIntrinsic *, 12> ToDelete;
+  SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
+      for (auto &DPV : I.getDbgValueRange())
+        if (DPV.isDbgAssign())
+          DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
         ToDelete.push_back(DAI);
       else
@@ -1826,6 +1830,8 @@ void at::deleteAll(Function *F) {
   }
   for (auto *DAI : ToDelete)
     DAI->eraseFromParent();
+  for (auto *DPV : DPToDelete)
+    DPV->eraseFromParent();
 }
 
 /// Get the FragmentInfo for the variable if it exists, otherwise return a
@@ -2056,9 +2062,9 @@ std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
 }
 
 /// Returns nullptr if the assignment shouldn't be attributed to this variable.
-static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
-                               Instruction &StoreLikeInst,
-                               const VarRecord &VarRec, DIBuilder &DIB) {
+static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
+                          Instruction &StoreLikeInst, const VarRecord &VarRec,
+                          DIBuilder &DIB) {
   auto *ID = StoreLikeInst.getMetadata(LLVMContext::MD_DIAssignID);
   assert(ID && "Store instruction must have DIAssignID metadata");
   (void)ID;
@@ -2082,7 +2088,7 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
 
     // Discard stores to bits outside this variable.
     if (FragStartBit >= FragEndBit)
-      return nullptr;
+      return;
 
     StoreToWholeVariable = FragStartBit <= VarStartBit && FragEndBit >= *Size;
   }
@@ -2097,8 +2103,17 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
   }
   DIExpression *AddrExpr =
       DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
-  return DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
-                             AddrExpr, VarRec.DL);
+  if (StoreLikeInst.getParent()->IsNewDbgInfoFormat) {
+    auto *Assign = DPValue::createLinkedDPVAssign(
+        &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
+    (void)Assign;
+    LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
+    return;
+  }
+  auto *Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr,
+                                     Dest, AddrExpr, VarRec.DL);
+  (void)Assign;
+  LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
@@ -2185,12 +2200,8 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
         I.setMetadata(LLVMContext::MD_DIAssignID, ID);
       }
 
-      for (const VarRecord &R : LocalIt->second) {
-        auto *Assign =
-            emitDbgAssign(*Info, ValueComponent, DestComponent, I, R, DIB);
-        (void)Assign;
-        LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
-      }
+      for (const VarRecord &R : LocalIt->second)
+        emitDbgAssign(*Info, ValueComponent, DestComponent, I, R, DIB);
     }
   }
 }
@@ -2200,42 +2211,44 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   if (F.hasFnAttribute(Attribute::OptimizeNone))
     return /*Changed*/ false;
 
-  // FIXME: https://github.com/llvm/llvm-project/issues/76545
-  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
-    return /*Changed*/ false;
-
   bool Changed = false;
   auto *DL = &F.getParent()->getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to
   // delete after running `trackAssignments`.
   DenseMap<const AllocaInst *, SmallPtrSet<DbgDeclareInst *, 2>> DbgDeclares;
+  DenseMap<const AllocaInst *, SmallPtrSet<DPValue *, 2>> DPVDeclares;
   // Create another similar map of {storage : variables} that we'll pass to
   // trackAssignments.
   StorageToVarsMap Vars;
+  auto ProcessDeclare = [&](auto *Declare, auto &DeclareList) {
+    // FIXME: trackAssignments doesn't let you specify any modifiers to the
+    // variable (e.g. fragment) or location (e.g. offset), so we have to
+    // leave dbg.declares with non-empty expressions in place.
+    if (Declare->getExpression()->getNumElements() != 0)
+      return;
+    if (!Declare->getAddress())
+      return;
+    if (AllocaInst *Alloca =
+            dyn_cast<AllocaInst>(Declare->getAddress()->stripPointerCasts())) {
+      // FIXME: Skip VLAs for now (let these variables use dbg.declares).
+      if (!Alloca->isStaticAlloca())
+        return;
+      // Similarly, skip scalable vectors (use dbg.declares instead).
+      if (auto Sz = Alloca->getAllocationSize(*DL); Sz && Sz->isScalable())
+        return;
+      DeclareList[Alloca].insert(Declare);
+      Vars[Alloca].insert(VarRecord(Declare));
+    }
+  };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I);
-      if (!DDI)
-        continue;
-      // FIXME: trackAssignments doesn't let you specify any modifiers to the
-      // variable (e.g. fragment) or location (e.g. offset), so we have to
-      // leave dbg.declares with non-empty expressions in place.
-      if (DDI->getExpression()->getNumElements() != 0)
-        continue;
-      if (!DDI->getAddress())
-        continue;
-      if (AllocaInst *Alloca =
-              dyn_cast<AllocaInst>(DDI->getAddress()->stripPointerCasts())) {
-        // FIXME: Skip VLAs for now (let these variables use dbg.declares).
-        if (!Alloca->isStaticAlloca())
-          continue;
-        // Similarly, skip scalable vectors (use dbg.declares instead).
-        if (auto Sz = Alloca->getAllocationSize(*DL); Sz && Sz->isScalable())
-          continue;
-        DbgDeclares[Alloca].insert(DDI);
-        Vars[Alloca].insert(VarRecord(DDI));
+      for (auto &DPV : I.getDbgValueRange()) {
+        if (DPV.isDbgDeclare())
+          ProcessDeclare(&DPV, DPVDeclares);
       }
+      if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I))
+        ProcessDeclare(DDI, DbgDeclares);
     }
   }
 
@@ -2251,35 +2264,30 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   trackAssignments(F.begin(), F.end(), Vars, *DL);
 
   // Delete dbg.declares for variables now tracked with assignment tracking.
-  for (auto &P : DbgDeclares) {
-    const AllocaInst *Alloca = P.first;
-    auto Markers = at::getAssignmentMarkers(Alloca);
-    SmallVector<DPValue *> DPMarkers = at::getDPVAssignmentMarkers(Alloca);
+  auto DeleteSubsumedDeclare = [&](const auto &Markers, auto &Declares) {
     (void)Markers;
-    (void)DPMarkers;
-    for (DbgDeclareInst *DDI : P.second) {
-      // Assert that the alloca that DDI uses is now linked to a dbg.assign
+    for (auto *Declare : Declares) {
+      // Assert that the alloca that Declare uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare has
       // been replaced by a dbg.assign). Use DebugVariableAggregate to Discard
       // the fragment part because trackAssignments may alter the
       // fragment. e.g. if the alloca is smaller than the variable, then
       // trackAssignments will create an alloca-sized fragment for the
       // dbg.assign.
-      assert(llvm::any_of(Markers,
-                          [DDI](DbgAssignIntrinsic *DAI) {
-                            return DebugVariableAggregate(DAI) ==
-                                   DebugVariableAggregate(DDI);
-                          }) ||
-             llvm::any_of(DPMarkers, [DDI](DPValue *DPV) {
-               return DebugVariableAggregate(DPV) ==
-                      DebugVariableAggregate(DDI);
-             }));
-      // Delete DDI because the variable location is now tracked using
+      assert(llvm::any_of(Markers, [Declare](auto *Assign) {
+        return DebugVariableAggregate(Assign) ==
+               DebugVariableAggregate(Declare);
+      }));
+      // Delete Declare because the variable location is now tracked using
       // assignment tracking.
-      DDI->eraseFromParent();
+      Declare->eraseFromParent();
       Changed = true;
     }
-  }
+  };
+  for (auto &P : DbgDeclares)
+    DeleteSubsumedDeclare(at::getAssignmentMarkers(P.first), P.second);
+  for (auto &P : DPVDeclares)
+    DeleteSubsumedDeclare(at::getDPVAssignmentMarkers(P.first), P.second);
   return Changed;
 }
 

@@ -6,6 +6,8 @@
 // RUN: env HSA_XNACK=1 LIBOMPTARGET_INFO=32 \
 // RUN:       %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=FORCE-USM
 //
+// REQUIRES: unified_shared_memory
+//
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // clang-format on

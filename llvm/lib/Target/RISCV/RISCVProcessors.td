@@ -238,8 +238,10 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                        FeatureStdExtZba,
                                        FeatureStdExtZbb,
                                        FeatureStdExtZbs,
-                                       FeatureStdExtZfhmin],
-                                      [TuneConditionalCompressedMoveFusion,
+                                       FeatureStdExtZfhmin,
+                                       FeatureFastUnalignedAccess],
+                                      [TuneNoDefaultUnroll,
+                                       TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
                                        TuneAUIPCADDIFusion]>;
 
