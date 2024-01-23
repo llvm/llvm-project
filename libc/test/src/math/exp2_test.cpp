@@ -54,7 +54,7 @@ TEST_F(LlvmLibcExp2Test, TrickyInputs) {
       0xbc971547652b82fe, // x=-0x1.71547652b82fep-54
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
                                    LIBC_NAMESPACE::exp2(x), 0.5);
   }

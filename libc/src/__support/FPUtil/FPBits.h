@@ -390,7 +390,7 @@ public:
     return exp_bits() == encode(BiasedExp::BITS_ALL_ZEROES());
   }
   LIBC_INLINE constexpr bool is_normal() const {
-    return is_finite() && !UP::is_subnormal();
+    return is_finite() && !is_subnormal();
   }
   // Returns the mantissa with the implicit bit set iff the current
   // value is a valid normal number.
@@ -556,6 +556,14 @@ public:
   using UP::FRACTION_MASK;
   using UP::SIGN_MASK;
 
+  // Comparison
+  LIBC_INLINE constexpr friend bool operator==(FPRep a, FPRep b) {
+    return a.uintval() == b.uintval();
+  }
+  LIBC_INLINE constexpr friend bool operator!=(FPRep a, FPRep b) {
+    return a.uintval() != b.uintval();
+  }
+
   // Representation
   LIBC_INLINE constexpr StorageType uintval() const { return bits & FP_MASK; }
   LIBC_INLINE constexpr void set_uintval(StorageType value) {
@@ -698,16 +706,6 @@ struct FPBits final : public internal::FPRep<get_fp_type<T>(), FPBits<T>> {
   using UP::bits;
 
   // Constants.
-  LIBC_INLINE_VAR static constexpr uint32_t MANTISSA_PRECISION =
-      UP::FRACTION_LEN + 1;
-  LIBC_INLINE_VAR static constexpr StorageType MIN_NORMAL =
-      UP::min_normal(Sign::POS).uintval();
-  LIBC_INLINE_VAR static constexpr StorageType MAX_NORMAL =
-      UP::max_normal(Sign::POS).uintval();
-  LIBC_INLINE_VAR static constexpr StorageType MIN_SUBNORMAL =
-      UP::min_subnormal(Sign::POS).uintval();
-  LIBC_INLINE_VAR static constexpr StorageType MAX_SUBNORMAL =
-      UP::max_subnormal(Sign::POS).uintval();
   LIBC_INLINE_VAR static constexpr int MAX_BIASED_EXPONENT =
       (1 << UP::EXP_LEN) - 1;
 
@@ -728,39 +726,6 @@ struct FPBits final : public internal::FPRep<get_fp_type<T>(), FPBits<T>> {
   }
   // Floating-point conversions.
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
-
-  LIBC_INLINE constexpr explicit operator T() const { return get_val(); }
-
-  // Methods below this are used by tests.
-  // TODO: inline and remove.
-  LIBC_INLINE static constexpr T one(Sign sign = Sign::POS) {
-    return T(UP::one(sign));
-  }
-  LIBC_INLINE static constexpr T zero(Sign sign = Sign::POS) {
-    return T(UP::zero(sign));
-  }
-  LIBC_INLINE static constexpr T inf(Sign sign = Sign::POS) {
-    return T(UP::inf(sign));
-  }
-  LIBC_INLINE static constexpr T min_normal() {
-    return T(UP::min_normal(Sign::POS));
-  }
-  LIBC_INLINE static constexpr T max_normal() {
-    return T(UP::max_normal(Sign::POS));
-  }
-  LIBC_INLINE static constexpr T min_denormal() {
-    return T(UP::min_subnormal(Sign::POS));
-  }
-  LIBC_INLINE static constexpr T max_denormal() {
-    return T(UP::max_subnormal(Sign::POS));
-  }
-  LIBC_INLINE static constexpr T build_nan(StorageType v) {
-    return T(UP::build_nan(Sign::POS, v));
-  }
-  LIBC_INLINE static constexpr T build_quiet_nan(StorageType v,
-                                                 Sign sign = Sign::POS) {
-    return T(UP::build_quiet_nan(sign, v));
-  }
 
   // TODO: Use an uint32_t for 'biased_exp'.
   LIBC_INLINE static constexpr FPBits<T>

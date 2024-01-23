@@ -41,7 +41,7 @@ public:
     for (StorageType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
       FPBits denormal(T(0.0));
       denormal.set_mantissa(mant);
-      T x = T(denormal);
+      T x = denormal.get_val();
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
 

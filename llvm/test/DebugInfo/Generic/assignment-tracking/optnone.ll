@@ -1,5 +1,7 @@
 ; RUN: opt -S %s -o - --passes=declare-to-assign \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -o - --passes=declare-to-assign \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Assignment tracking doesn't add any value when optimisations are disabled.
 ;; Check it doesn't get applied to functions marked optnone.

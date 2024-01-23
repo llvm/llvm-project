@@ -7,7 +7,7 @@
 ; RUN: llvm-readelf --dyn-syms %t.so | FileCheck %s
 
 ; TRACE:      {{.*}}/b.a(b.o): lazy definition of __divti3
-; TRACE-NEXT: lto.tmp: reference to __divti3
+; TRACE-NEXT: {{.*}}.lto.o: reference to __divti3
 ; TRACE-NEXT: {{.*}}/b.a(b.o): definition of __divti3
 
 ; CHECK:     Symbol table '.dynsym' contains 2 entries:

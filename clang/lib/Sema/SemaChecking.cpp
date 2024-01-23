@@ -3013,6 +3013,11 @@ enum ArmSMEState : unsigned {
   ArmOutZA = 0b10,
   ArmInOutZA = 0b11,
   ArmZAMask = 0b11,
+
+  ArmInZT0 = 0b01 << 2,
+  ArmOutZT0 = 0b10 << 2,
+  ArmInOutZT0 = 0b11 << 2,
+  ArmZT0Mask = 0b11 << 2
 };
 
 bool Sema::ParseSVEImmChecks(
@@ -3206,6 +3211,13 @@ static bool hasArmZAState(const FunctionDecl *FD) {
          (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
 }
 
+static bool hasArmZT0State(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
+}
+
 static ArmSMEState getSMEState(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
@@ -3232,6 +3244,11 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
            diag::warn_attribute_arm_za_builtin_no_za_state)
+          << TheCall->getSourceRange();
+
+    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD))
+      Diag(TheCall->getBeginLoc(),
+           diag::warn_attribute_arm_zt0_builtin_no_zt0_state)
           << TheCall->getSourceRange();
   }
 
@@ -7547,6 +7564,28 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 
       if (!CallerHasZAState)
         Diag(Loc, diag::err_sme_za_call_no_za_state);
+    }
+
+    // If the callee uses AArch64 SME ZT0 state but the caller doesn't define
+    // any, then this is an error.
+    FunctionType::ArmStateValue ArmZT0State =
+        FunctionType::getArmZT0State(ExtInfo.AArch64SMEAttributes);
+    if (ArmZT0State != FunctionType::ARM_None) {
+      bool CallerHasZT0State = false;
+      if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
+        auto *Attr = CallerFD->getAttr<ArmNewAttr>();
+        if (Attr && Attr->isNewZT0())
+          CallerHasZT0State = true;
+        else if (const auto *FPT =
+                     CallerFD->getType()->getAs<FunctionProtoType>())
+          CallerHasZT0State =
+              FunctionType::getArmZT0State(
+                  FPT->getExtProtoInfo().AArch64SMEAttributes) !=
+              FunctionType::ARM_None;
+      }
+
+      if (!CallerHasZT0State)
+        Diag(Loc, diag::err_sme_zt0_call_no_zt0_state);
     }
   }
 

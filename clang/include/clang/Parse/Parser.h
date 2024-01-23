@@ -3587,6 +3587,9 @@ private:
   /// Parses the clause kind of 'int-expr', which can be any integral
   /// expression.
   ExprResult ParseOpenACCIntExpr();
+  /// Parses the 'device-type-list', which is a list of identifiers.
+  bool ParseOpenACCDeviceTypeList();
+
 private:
   //===--------------------------------------------------------------------===//
   // C++ 14: Templates [temp]
