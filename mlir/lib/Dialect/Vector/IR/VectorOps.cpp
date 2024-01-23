@@ -2857,6 +2857,27 @@ LogicalResult InsertStridedSliceOp::verify() {
           /*halfOpen=*/false, /*min=*/1)))
     return failure();
 
+  unsigned idx = 0;
+  unsigned rankDiff = destShape.size() - sourceShape.size();
+  for (unsigned ub = sourceShape.size(); idx < ub; ++idx) {
+    if (sourceVectorType.getScalableDims()[idx] !=
+        destVectorType.getScalableDims()[idx + rankDiff]) {
+      return emitOpError("mismatching scalable flags (at source vector idx=")
+             << idx << ")";
+    }
+    if (sourceVectorType.getScalableDims()[idx]) {
+      auto sourceSize = sourceShape[idx];
+      auto destSize = destShape[idx + rankDiff];
+      if (sourceSize != destSize) {
+        return emitOpError("expected size at idx=")
+               << idx
+               << (" to match the corresponding base size from the input "
+                   "vector (")
+               << sourceSize << (" vs ") << destSize << (")");
+      }
+    }
+  }
+
   return success();
 }
 
