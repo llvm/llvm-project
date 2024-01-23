@@ -84,6 +84,10 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
       Cost += VL;
       break;
     }
+    case RISCV::VMV_X_S:
+    case RISCV::VMV_S_X:
+      Cost += 1;
+      break;
     default:
       Cost += LMULCost;
     }
@@ -446,7 +450,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // should be a very small constant for the constant pool load.  As such,
     // we may bias towards large selects slightly more than truely warranted.
     return LT.first *
-           (2 + getRISCVInstructionCost({RISCV::VMERGE_VVM},
+           (1 + getRISCVInstructionCost({RISCV::VMV_S_X, RISCV::VMERGE_VVM},
                                         LT.second, CostKind));
   }
   case TTI::SK_Broadcast: {
@@ -475,10 +479,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
       return LT.first *
              (TLI->getLMULCost(LT.second) + // FIXME: this should be 1 for andi
-              TLI->getLMULCost(
-                  LT.second) + // FIXME: vmv.x.s is the same as extractelement
               getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM,
-                                       RISCV::VMV_V_X, RISCV::VMSNE_VI},
+                                       RISCV::VMV_X_S, RISCV::VMV_V_X,
+                                       RISCV::VMSNE_VI},
                                       LT.second, CostKind));
     }
 
