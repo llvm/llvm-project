@@ -1,17 +1,20 @@
-// RUN: %clang_tsan -O1 %s -o %t -undefined dynamic_lookup 
+// RUN: %clang_tsan -O1 %s -o %t -undefined dynamic_lookup
 // RUN: %deflake %run %t | FileCheck %s 
 
 #include "test.h"
 
-#ifdef __APPLE__
-#include <os/availability.h>
-
-// Allow compilation with pre-aligned-alloc SDKs
-API_AVAILABLE(macos(10.15), ios(13.0), tvos(13.0), watchos(6.0))
-void *aligned_alloc(size_t alignment, size_t size);
-#else
 #include <stdlib.h>
+
+#if defined(__cplusplus) && (__cplusplus >= 201703L)
+#define HAVE_ALIGNED_ALLOC 1
 #endif
+
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
+    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500
+#define HAVE_ALIGNED_ALLOC 0 
+#else
+#endif
+
 
 int *mem;
 pthread_mutex_t mtx;
@@ -33,13 +36,13 @@ __attribute__((noinline)) void *Thread2(void *x) {
 }
 
 int main() {
-  if (aligned_alloc == NULL) {
-    fprintf(stderr, "Done.\n");
-    return 0;
-  }
 
   barrier_init(&barrier, 2);
+#if HAVE_ALIGNED_ALLOC
   mem = (int*)aligned_alloc(8, 8);
+#else
+  mem = (int*)malloc(8);
+#endif
   pthread_mutex_init(&mtx, 0);
   pthread_t t;
   pthread_create(&t, NULL, Thread1, NULL);
