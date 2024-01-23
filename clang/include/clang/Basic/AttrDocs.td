@@ -5557,6 +5557,21 @@ See :doc:`LTOVisibility`.
   }];
 }
 
+def TypeVisibilityDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``type_visibility`` attribute allows the ELF visibility of a type and its vague
+linkage objects (vtable, typeinfo, typeinfo name) to be controlled separately from
+the visibility of functions and data members of the type.
+
+For example, this can be used to give default visibility to the typeinfo and the vtable
+of a type while still keeping hidden visibility on its member functions and static data
+members.
+
+This attribute can only be applied to types and namespaces.
+  }]
+}
+
 def RenderScriptKernelAttributeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
