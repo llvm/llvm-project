@@ -32,9 +32,9 @@
 
 #Sparse1 = #sparse_tensor.encoding<{
   map = (i, j, k) -> (
-    i : compressed,
     j : compressed,
-    k : compressed
+    k : compressed,
+    i : dense
   )
 }>
 
