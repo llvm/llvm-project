@@ -785,6 +785,8 @@ Error CoverageMapping::loadFunctionRecord(
   branch_found:;
   }
 
+  assert(Decisions.empty() && "All Decisions have not been resolved");
+
   // Don't create records for (filenames, function) pairs we've already seen.
   auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
                                           Record.Filenames.end());
