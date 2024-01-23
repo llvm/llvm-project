@@ -31,7 +31,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
   if (ybits.is_nan())
     return y;
   if (xbits.is_inf() || ybits.is_zero())
-    return FPBits<T>::build_quiet_nan(1);
+    return FPBits<T>::build_quiet_nan().get_val();
 
   if (xbits.is_zero()) {
     q = 0;
@@ -86,7 +86,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
   // then the conversion to native remainder value should be updated
   // appropriately and some directed tests added.
   T native_remainder(remainder);
-  T absy = T(ybits);
+  T absy = ybits.get_val();
   int cmp = remainder.mul2(1).cmp(normaly);
   if (cmp > 0) {
     q = q + 1;

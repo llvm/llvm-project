@@ -79,7 +79,7 @@ define <4 x i8> @vsel_4xi8(<4 x i8> %v1, <4 x i8> %v2) {
 ; SSE41-LABEL: vsel_4xi8:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = <255,255,0,255,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [255,255,0,255,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq

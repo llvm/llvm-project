@@ -1757,7 +1757,7 @@ void elf::postScanRelocations() {
 
   GotSection *got = in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    static Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
+    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (config->shared)
       mainPart->relaDyn->addReloc(
           {target->tlsModuleIndexRel, got, got->getTlsIndexOff()});

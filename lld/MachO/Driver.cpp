@@ -827,9 +827,13 @@ static ObjCStubsMode getObjCStubsMode(const ArgList &args) {
   if (!arg)
     return ObjCStubsMode::fast;
 
-  if (arg->getOption().getID() == OPT_objc_stubs_small)
-    warn("-objc_stubs_small is not yet implemented, defaulting to "
-         "-objc_stubs_fast");
+  if (arg->getOption().getID() == OPT_objc_stubs_small) {
+    if (is_contained({AK_arm64e, AK_arm64}, config->arch()))
+      return ObjCStubsMode::small;
+    else
+      warn("-objc_stubs_small is not yet implemented, defaulting to "
+           "-objc_stubs_fast");
+  }
   return ObjCStubsMode::fast;
 }
 

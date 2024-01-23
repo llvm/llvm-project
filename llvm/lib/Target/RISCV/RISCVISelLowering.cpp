@@ -687,7 +687,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
         ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO,
         ISD::VP_FRINT,       ISD::VP_FNEARBYINT,  ISD::VP_IS_FPCLASS,
-        ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE};
+        ISD::VP_FMINIMUM,    ISD::VP_FMAXIMUM,    ISD::EXPERIMENTAL_VP_REVERSE,
+        ISD::EXPERIMENTAL_VP_SPLICE};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -927,7 +928,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,      ISD::VP_FCEIL,
         ISD::VP_FFLOOR,      ISD::VP_FROUND,       ISD::VP_FROUNDEVEN,
         ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO, ISD::VP_FRINT,
-        ISD::VP_FNEARBYINT,  ISD::VP_SETCC};
+        ISD::VP_FNEARBYINT,  ISD::VP_SETCC,        ISD::VP_FMINIMUM,
+        ISD::VP_FMAXIMUM};
 
     // Sets common operation actions on RVV floating-point vector types.
     const auto SetCommonVFPActions = [&](MVT VT) {
@@ -4850,54 +4852,28 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   assert(!V1.isUndef() && "Unexpected shuffle canonicalization");
 
-  SmallVector<SDValue> MaskVals;
-  // As a backup, shuffles can be lowered via a vrgather instruction, possibly
-  // merged with a second vrgather.
-  SmallVector<SDValue> GatherIndicesLHS, GatherIndicesRHS;
-
   // By default we preserve the original operand order, and use a mask to
   // select LHS as true and RHS as false. However, since RVV vector selects may
   // feature splats but only on the LHS, we may choose to invert our mask and
   // instead select between RHS and LHS.
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
-  bool InvertMask = IsSelect == SwapOps;
 
-  // Keep a track of which non-undef indices are used by each LHS/RHS shuffle
-  // half.
-  DenseMap<int, unsigned> LHSIndexCounts, RHSIndexCounts;
-
-  // Now construct the mask that will be used by the vselect or blended
-  // vrgather operation. For vrgathers, construct the appropriate indices into
-  // each vector.
-  for (int MaskIndex : Mask) {
-    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ InvertMask;
-    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
-    if (!IsSelect) {
-      bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
-      GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
-                                     ? DAG.getConstant(MaskIndex, DL, XLenVT)
-                                     : DAG.getUNDEF(XLenVT));
-      GatherIndicesRHS.push_back(
-          IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
-                            : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
-      if (IsLHSOrUndefIndex && MaskIndex >= 0)
-        ++LHSIndexCounts[MaskIndex];
-      if (!IsLHSOrUndefIndex)
-        ++RHSIndexCounts[MaskIndex - NumElts];
+  if (IsSelect) {
+    // Now construct the mask that will be used by the vselect operation.
+    SmallVector<SDValue> MaskVals;
+    for (int MaskIndex : Mask) {
+      bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ SwapOps;
+      MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     }
-  }
 
-  if (SwapOps) {
-    std::swap(V1, V2);
-    std::swap(GatherIndicesLHS, GatherIndicesRHS);
-  }
+    if (SwapOps)
+      std::swap(V1, V2);
 
-  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
-  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
-
-  if (IsSelect)
+    assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
+  }
 
   // We might be able to express the shuffle as a bitrotate. But even if we
   // don't have Zvkb and have to expand, the expanded sequence of approx. 2
@@ -4912,6 +4888,43 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // user-supplied maximum fixed-length LMUL.
     return SDValue();
   }
+
+  // As a backup, shuffles can be lowered via a vrgather instruction, possibly
+  // merged with a second vrgather.
+  SmallVector<SDValue> GatherIndicesLHS, GatherIndicesRHS;
+
+  // Keep a track of which non-undef indices are used by each LHS/RHS shuffle
+  // half.
+  DenseMap<int, unsigned> LHSIndexCounts, RHSIndexCounts;
+
+  SmallVector<SDValue> MaskVals;
+
+  // Now construct the mask that will be used by the blended vrgather operation.
+  // Cconstruct the appropriate indices into each vector.
+  for (int MaskIndex : Mask) {
+    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ !SwapOps;
+    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+    bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
+    GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
+                               ? DAG.getConstant(MaskIndex, DL, XLenVT)
+                               : DAG.getUNDEF(XLenVT));
+    GatherIndicesRHS.push_back(
+                               IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
+                               : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
+    if (IsLHSOrUndefIndex && MaskIndex >= 0)
+      ++LHSIndexCounts[MaskIndex];
+    if (!IsLHSOrUndefIndex)
+      ++RHSIndexCounts[MaskIndex - NumElts];
+  }
+
+  if (SwapOps) {
+    std::swap(V1, V2);
+    std::swap(GatherIndicesLHS, GatherIndicesRHS);
+  }
+
+  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
 
   unsigned GatherVXOpc = RISCVISD::VRGATHER_VX_VL;
   unsigned GatherVVOpc = RISCVISD::VRGATHER_VV_VL;
@@ -5405,7 +5418,16 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
     Y = convertToScalableVector(ContainerVT, Y, DAG, Subtarget);
   }
 
-  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Mask, VL;
+  if (Op->isVPOpcode()) {
+    Mask = Op.getOperand(2);
+    if (VT.isFixedLengthVector())
+      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
+                                     Subtarget);
+    VL = Op.getOperand(3);
+  } else {
+    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  }
 
   SDValue NewY = Y;
   if (!XIsNeverNan) {
@@ -5426,7 +5448,9 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   }
 
   unsigned Opc =
-      Op.getOpcode() == ISD::FMAXIMUM ? RISCVISD::VFMAX_VL : RISCVISD::VFMIN_VL;
+      Op.getOpcode() == ISD::FMAXIMUM || Op->getOpcode() == ISD::VP_FMAXIMUM
+          ? RISCVISD::VFMAX_VL
+          : RISCVISD::VFMIN_VL;
   SDValue Res = DAG.getNode(Opc, DL, ContainerVT, NewX, NewY,
                             DAG.getUNDEF(ContainerVT), Mask, VL);
   if (VT.isFixedLengthVector())
@@ -6655,6 +6679,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
          !Subtarget.hasVInstructionsF16()))
       return SplitVPOp(Op, DAG);
     return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
+  case ISD::VP_FMAXIMUM:
+  case ISD::VP_FMINIMUM:
+    if (Op.getValueType() == MVT::nxv32f16 &&
+        (Subtarget.hasVInstructionsF16Minimal() &&
+         !Subtarget.hasVInstructionsF16()))
+      return SplitVPOp(Op, DAG);
+    return lowerFMAXIMUM_FMINIMUM(Op, DAG, Subtarget);
   case ISD::EXPERIMENTAL_VP_SPLICE:
     return lowerVPSpliceExperimental(Op, DAG);
   case ISD::EXPERIMENTAL_VP_REVERSE:
@@ -12769,14 +12800,14 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   SDValue N0 = N.getOperand(0);
   if (N0.getOpcode() != ISD::ZERO_EXTEND &&
       N0.getOpcode() != RISCVISD::VZEXT_VL)
-    return false;;
+    return false;
   if (!N0->hasOneUse())
-    return false;;
+    return false;
 
   APInt ShAmt;
   SDValue N1 = N.getOperand(1);
   if (!ISD::isConstantSplatVector(N1.getNode(), ShAmt))
-    return false;;
+    return false;
 
   SDValue Src = N0.getOperand(0);
   EVT SrcVT = Src.getValueType();

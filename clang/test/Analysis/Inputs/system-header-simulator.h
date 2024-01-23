@@ -14,6 +14,7 @@ typedef long long __int64_t;
 typedef __int64_t __darwin_off_t;
 typedef __darwin_off_t fpos_t;
 typedef int off_t;
+typedef long ssize_t;
 
 typedef struct _FILE FILE;
 #define SEEK_SET 0 /* Seek from beginning of file. */
@@ -55,6 +56,8 @@ char *fgets(char *restrict str, int count, FILE *restrict stream);
 int fputc(int ch, FILE *stream);
 int fputs(const char *restrict s, FILE *restrict stream);
 int ungetc(int c, FILE *stream);
+ssize_t getdelim(char **restrict lineptr, size_t *restrict n, int delimiter, FILE *restrict stream);
+ssize_t getline(char **restrict lineptr, size_t *restrict n, FILE *restrict stream);
 int fseek(FILE *__stream, long int __off, int __whence);
 int fseeko(FILE *__stream, off_t __off, int __whence);
 long int ftell(FILE *__stream);
