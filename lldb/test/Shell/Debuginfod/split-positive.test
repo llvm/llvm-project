@@ -1,4 +1,4 @@
-# REQUIRES: system-linux && native && target-x86_64
+# REQUIRES: curl && system-linux && native && target-x86_64
 
 # Scenario 3:
 # * A split-dwarf binary with a Debuginfod-hosted .dwp file.
@@ -25,6 +25,6 @@
 # CHECK-NEXT: Type: "dwo"
 # CHECK-NEXT: Dwo ID{{.*}}
 # CHECK-NEXT: {{[- ]+}}
-# The cache key is stable, so mandating it's location verifies it was cached
-# The '.tmp' (sort of) ensures the cache is our private cache, not the system cache
+# The cache key is stable, so mandating it's location verifies it was cached.
+# The '.tmp' (sort of) ensures the cache is our private cache, not the system cache.
 # CHECK-NEXT: {{0x[0-9a-f]+.* +}}/{{.*}}.tmp/cache/llvmcache-6559017670391320133{{ *$}}

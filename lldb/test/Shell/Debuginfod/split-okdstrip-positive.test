@@ -1,4 +1,4 @@
-# REQUIRES: system-linux && native && target-x86_64
+# REQUIRES: curl && system-linux && native && target-x86_64
 
 # Scenario 5:
 # * A stripped, split binary, with --add-gnu-debuglink symbol file where

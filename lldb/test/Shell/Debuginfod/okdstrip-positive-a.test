@@ -1,4 +1,4 @@
-# REQUIRES: system-linux && native && target-x86_64
+# REQUIRES: curl && system-linux && native && target-x86_64
 
 # Scenario 2a:
 #  A stripped binary, with an "-only-keep-debug" symbols file.

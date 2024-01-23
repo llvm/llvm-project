@@ -144,6 +144,9 @@ if shutil.which("xz") != None:
 if config.lldb_system_debugserver:
     config.available_features.add("system-debugserver")
 
+if config.llvm_enable_curl:
+    config.available_features.add("curl")
+
 if config.have_lldb_server:
     config.available_features.add("lldb-server")
 
