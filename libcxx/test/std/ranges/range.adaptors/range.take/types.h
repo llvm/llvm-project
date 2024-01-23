@@ -94,8 +94,8 @@ static_assert(!simple_view<NonSimpleViewNonSized>);
 static_assert(!std::ranges::sized_range<NonSimpleViewNonSized>);
 
 using SimpleViewNonSized = CommonInputView<true>;
-static_assert(!std::ranges::sized_range<SimpleViewNonSized>);
 static_assert(std::ranges::view<SimpleViewNonSized>);
 static_assert(simple_view<SimpleViewNonSized>);
+static_assert(!std::ranges::sized_range<SimpleViewNonSized>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TAKE_TYPES_H
