@@ -596,56 +596,49 @@ struct DecisionRow {
       : DecisionRegion(&Decision), DecisionStartLoc(Decision.startLoc()),
         DecisionEndLoc(Decision.endLoc()) {}
 
-  bool insert(const CounterMappingRegion &Branch) {
-    auto ID = Branch.MCDCParams.ID;
-    if (ID == 1)
-      Branches.insert(Branches.begin(), &Branch);
-    else
-      Branches.push_back(&Branch);
-    IDs.insert(ID);
-    return (Branches.size() == DecisionRegion->MCDCParams.NumConditions);
+  bool inDecisionRegion(const CounterMappingRegion &R) {
+    return (R.FileID == DecisionRegion->FileID &&
+            R.startLoc() >= DecisionStartLoc && R.endLoc() <= DecisionEndLoc);
+  }
+
+  bool inExpansions(const CounterMappingRegion &R) {
+    return any_of(Expansions, [&](const auto &Expansion) {
+      return (Expansion->ExpandedFileID == R.FileID);
+    });
   }
 
   enum class UpdateResult {
     NotFound = 0,
     Updated,
-    Committed,
+    Completed,
   };
 
   UpdateResult updateBranch(const CounterMappingRegion &Branch) {
-    if (IDs.contains(Branch.MCDCParams.ID))
+    auto ID = Branch.MCDCParams.ID;
+
+    if (!IDs.contains(ID) &&
+        (inDecisionRegion(Branch) || inExpansions(Branch))) {
+      assert(Branches.size() < DecisionRegion->MCDCParams.NumConditions);
+
+      if (ID == 1)
+        Branches.insert(Branches.begin(), &Branch);
+      else
+        Branches.push_back(&Branch);
+
+      IDs.insert(ID);
+      return (Branches.size() == DecisionRegion->MCDCParams.NumConditions
+                  ? UpdateResult::Completed
+                  : UpdateResult::Updated);
+    } else
       return UpdateResult::NotFound;
-
-    if (Branch.FileID == DecisionRegion->FileID &&
-        Branch.startLoc() >= DecisionStartLoc &&
-        Branch.endLoc() <= DecisionEndLoc)
-      return (insert(Branch) ? UpdateResult::Committed : UpdateResult::Updated);
-
-    for (const auto *R : Expansions) {
-      if (Branch.FileID == R->ExpandedFileID)
-        return (insert(Branch) ? UpdateResult::Committed
-                               : UpdateResult::Updated);
-    }
-
-    return UpdateResult::NotFound;
   }
 
   bool updateExpansion(const CounterMappingRegion &Expansion) {
-    if (Expansion.FileID == DecisionRegion->FileID &&
-        Expansion.startLoc() >= DecisionStartLoc &&
-        Expansion.endLoc() <= DecisionEndLoc) {
+    if (inDecisionRegion(Expansion) || inExpansions(Expansion)) {
       Expansions.push_back(&Expansion);
       return true;
-    }
-
-    for (const auto *R : Expansions) {
-      if (Expansion.FileID == R->ExpandedFileID) {
-        Expansions.push_back(&Expansion);
-        return true;
-      }
-    }
-
-    return false;
+    } else
+      return false;
   }
 };
 
@@ -749,7 +742,7 @@ Error CoverageMapping::loadFunctionRecord(
         continue;
       case DecisionRow::UpdateResult::Updated:
         goto branch_found;
-      case DecisionRow::UpdateResult::Committed:
+      case DecisionRow::UpdateResult::Completed:
         // Evaluating the test vector bitmap for the decision region entails
         // calculating precisely what bits are pertinent to this region alone.
         // This is calculated based on the recorded offset into the global
