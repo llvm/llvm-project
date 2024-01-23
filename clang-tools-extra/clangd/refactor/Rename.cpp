@@ -1028,22 +1028,19 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 
   std::vector<OccurrenceOffset> OccurrencesOffsets;
   for (const auto &SR : Occurrences) {
-    for (auto It = SR.Ranges.begin(); It != SR.Ranges.end(); ++It) {
-      const auto &R = *It;
-      auto StartOffset = Offset(R.start);
+    for (auto [Range, NewName] : llvm::zip(SR.Ranges, NewNames)) {
+      auto StartOffset = Offset(Range.start);
       if (!StartOffset)
         return StartOffset.takeError();
-      auto EndOffset = Offset(R.end);
+      auto EndOffset = Offset(Range.end);
       if (!EndOffset)
         return EndOffset.takeError();
-      auto Index = It - SR.Ranges.begin();
       // Nothing to do if the token/name hasn't changed.
       auto CurName =
           InitialCode.substr(*StartOffset, *EndOffset - *StartOffset);
-      if (CurName == NewNames[Index])
+      if (CurName == NewName)
         continue;
-      OccurrencesOffsets.emplace_back(*StartOffset, *EndOffset,
-                                      NewNames[Index]);
+      OccurrencesOffsets.emplace_back(*StartOffset, *EndOffset, NewName);
     }
   }
 
