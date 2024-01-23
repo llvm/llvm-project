@@ -85,7 +85,7 @@ GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
   //                                       [-1 -1/2 1]
 
   // `cone` must be unimodular.
-  assert(getIndex(getDual(cone)) == 1 && "input cone is not unimodular!");
+  assert(abs(getIndex(getDual(cone))) == 1 && "input cone is not unimodular!");
 
   unsigned numVar = cone.getNumVars();
   unsigned numIneq = cone.getNumInequalities();
@@ -443,11 +443,12 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
       // We collect the inequalities corresponding to each vertex.
       // We only need the coefficients of the variables (NOT the parameters)
       // as the generating function only depends on these.
+      // We translate the cones to be pointed at the origin by making the
+      // constant terms zero.
       ConeH tgtCone = defineHRep(numVars);
       for (unsigned j = 0; j < numVars; j++) {
         for (unsigned k = 0; k < numVars; k++)
           ineq[k] = subsets[i](j, k);
-        ineq[numVars] = subsets[i](j, numVars + numSymbols);
         tgtCone.addInequality(ineq);
       }
       // We assume that the tangent cone is unimodular.
