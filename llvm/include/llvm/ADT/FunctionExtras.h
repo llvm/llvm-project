@@ -320,7 +320,7 @@ protected:
 
 #if !defined(NDEBUG) && !LLVM_ADDRESS_SANITIZER_BUILD
     // In debug builds without ASan, we also scribble across the rest of the
-    // storage. AddressSanitizer (ASAN) disables scribbling to prevent
+    // storage. Scribbling under AddressSanitizer (ASan) is disabled to prevent
     // overwriting poisoned objects (e.g., annotated short strings).
     memset(RHS.getInlineStorage(), 0xAD, InlineStorageSize);
 #endif
