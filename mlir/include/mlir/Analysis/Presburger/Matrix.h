@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <bitset>
 #include <cassert>
 
 namespace mlir {
@@ -190,6 +191,12 @@ public:
   Matrix<T> getSubMatrix(unsigned fromRow, unsigned toRow, unsigned fromColumn,
                          unsigned toColumn) const;
 
+  /// Split the rows of a matrix into two matrices according to which bits are
+  /// 1 and which are 0 in a given bitset.
+  /// The first matrix returned has the rows corresponding to 1 and the second
+  /// corresponding to 2.
+  std::pair<Matrix<T>, Matrix<T>> splitByBitset(std::bitset<16> indicator);
+
   /// Print the matrix.
   void print(raw_ostream &os) const;
   void dump() const;
@@ -303,6 +310,10 @@ public:
   // paper](https://www.cs.cmu.edu/~avrim/451f11/lectures/lect1129_LLL.pdf)
   // calls `y`, usually 3/4.
   void LLL(Fraction delta);
+
+  // Multiply each row of the matrix by the LCD of the denominators, thereby
+  // converting it to an integer matrix.
+  IntMatrix normalizeRows();
 };
 
 } // namespace presburger

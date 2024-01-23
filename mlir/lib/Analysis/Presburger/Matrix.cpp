@@ -376,6 +376,21 @@ void Matrix<T>::print(raw_ostream &os) const {
   }
 }
 
+/// We iterate over the `indicator` bitset, checking each bit. If a bit is 1,
+/// we append it to one matrix, and if it is zero, we append it to the other.
+template <typename T>
+std::pair<Matrix<T>, Matrix<T>>
+Matrix<T>::splitByBitset(std::bitset<16> indicator) {
+  Matrix<T> rowsForOne(0, nColumns), rowsForZero(0, nColumns);
+  for (unsigned i = 0; i < nRows; i++) {
+    if (indicator.test(i))
+      rowsForOne.appendExtraRow(getRow(i));
+    else
+      rowsForZero.appendExtraRow(getRow(i));
+  }
+  return std::make_pair(rowsForOne, rowsForZero);
+}
+
 template <typename T>
 void Matrix<T>::dump() const {
   print(llvm::errs());
@@ -709,4 +724,21 @@ void FracMatrix::LLL(Fraction delta) {
       k = k > 1 ? k - 1 : 1;
     }
   }
+}
+
+IntMatrix FracMatrix::normalizeRows() {
+  unsigned numRows = getNumRows();
+  unsigned numColumns = getNumColumns();
+  IntMatrix normalized(numRows, numColumns);
+
+  MPInt lcmDenoms = MPInt(1);
+  for (unsigned i = 0; i < numRows; i++) {
+    // For a row, first compute the LCM of the denominators.
+    for (unsigned j = 0; j < numColumns; j++)
+      lcmDenoms = lcm(lcmDenoms, at(i, j).den);
+    // Then, multiply by it throughout and convert to integers.
+    for (unsigned j = 0; j < numColumns; j++)
+      normalized(i, j) = (at(i, j) * lcmDenoms).getAsInteger();
+  }
+  return normalized;
 }

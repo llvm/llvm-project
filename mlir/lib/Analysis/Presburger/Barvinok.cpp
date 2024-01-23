@@ -223,6 +223,92 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   return vertex;
 }
 
+/// This is an implementation of the Clauss-Loechner algorithm for chamber
+/// decomposition.
+/// We maintain a list of pairwise disjoint chambers and their vertex-sets;
+/// we iterate over the vertex list, each time appending the vertex to the
+/// chambers where it is active and creating a new chamber if necessary.
+std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>>
+mlir::presburger::detail::chamberDecomposition(
+    std::vector<PresburgerRelation> activeRegions,
+    std::vector<ParamPoint> vertices) {
+  // We maintain a list of regions and their associated vertex sets,
+  // initialized with the first vertex and its corresponding activity region.
+  std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> chambers = {
+      std::make_pair(activeRegions[0], std::vector({0u}))};
+  // Note that instead of storing lists of actual vertices, we store lists
+  // of indices. Thus the set {2, 3, 4} represents the vertex set
+  // {vertices[2], vertices[3], vertices[4]}.
+
+  std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> newChambers;
+
+  // We iterate over the vertex set.
+  // For each vertex v_j and its activity region R_j,
+  // we examine all the current chambers R_i.
+  // If R_j has a full-dimensional intersection with an existing chamber R_i,
+  // then that chamber is replaced by two new ones:
+  // 1. the intersection R_i \cap R_j, where v_j is active;
+  // 2. the difference R_i - R_j, where v_j is inactive.
+  // Once we have examined all R_i, we add a final chamber
+  // R_j - (union of all existing chambers),
+  // in which only v_j is active.
+  for (unsigned j = 1, e = vertices.size(); j < e; j++) {
+    newChambers.clear();
+
+    PresburgerRelation newRegion = activeRegions[j];
+    ParamPoint newVertex = vertices[j];
+
+    for (unsigned i = 0, f = chambers.size(); i < f; i++) {
+      auto [currentRegion, currentVertices] = chambers[i];
+
+      // First, we check if the intersection of R_j and R_i.
+      // It is a disjoint union of convex regions in the parameter space,
+      // and so we know that it is full-dimensional if any of the disjuncts
+      // is full-dimensional.
+      PresburgerRelation intersection = currentRegion.intersect(newRegion);
+      bool isFullDim = intersection.getNumRangeVars() == 0 ||
+                       llvm::any_of(intersection.getAllDisjuncts(),
+                                    [&](IntegerRelation disjunct) -> bool {
+                                      return disjunct.isFullDim();
+                                    });
+
+      // If the intersection is not full-dimensional, we do not modify
+      // the chamber list.
+      if (!isFullDim)
+        newChambers.push_back(chambers[i]);
+      else {
+        // If it is, we add the intersection and the difference as new chambers.
+        PresburgerRelation subtraction = currentRegion.subtract(newRegion);
+        newChambers.push_back(std::make_pair(subtraction, currentVertices));
+
+        currentVertices.push_back(j);
+        newChambers.push_back(std::make_pair(intersection, currentVertices));
+      }
+    }
+
+    // Finally we compute the chamber where only v_j is active by subtracting
+    // all existing chambers from R_j.
+    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
+         newChambers)
+      newRegion = newRegion.subtract(chamber.first);
+    newChambers.push_back(std::make_pair(newRegion, std::vector({j})));
+
+    // We filter `chambers` to remove empty regions.
+    chambers.clear();
+    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
+         newChambers) {
+      auto [r, v] = chamber;
+      bool isEmpty = llvm::all_of(
+          r.getAllDisjuncts(),
+          [&](IntegerRelation disjunct) -> bool { return disjunct.isEmpty(); });
+      if (!isEmpty)
+        chambers.push_back(chamber);
+    }
+  }
+
+  return chambers;
+}
+
 /// For a polytope expressed as a set of inequalities, compute the generating
 /// function corresponding to the number of lattice points present. This
 /// algorithm has three main steps:
@@ -282,25 +368,16 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
     if (indicator.count() != numVars)
       continue;
 
-    // Collect the inequalities corresponding to the bits which are set.
-    IntMatrix subset(numVars, numVars + numSymbols + 1);
-    unsigned j1 = 0, j2 = 0;
-    for (unsigned i = 0; i < numIneqs; i++) {
-      if (indicator.test(i))
-        subset.setRow(j1++, poly.getInequality(i));
-
-      else {
-        // All other inequalities are stored in a2 and b2c2.
-        // These are column-wise splits of the inequalities;
-        // a2 stores the coefficients of the variables, and
-        // b2c2 stores the coefficients of the parameters and the constant term.
-        for (unsigned k = 0; k < numVars; k++)
-          a2(j2, k) = poly.atIneq(i, k);
-        for (unsigned k = numVars; k < numVars + numSymbols + 1; k++)
-          b2c2(j2, k - numVars) = poly.atIneq(i, k);
-        j2++;
-      }
-    }
+    // Collect the inequalities corresponding to the bits which are set
+    // and the remaining ones.
+    auto [subset, remainder] = poly.getInequalities().splitByBitset(indicator);
+    // All other inequalities are stored in a2 and b2c2.
+    // These are column-wise splits of the inequalities;
+    // a2 stores the coefficients of the variables, and
+    // b2c2 stores the coefficients of the parameters and the constant term.
+    a2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - 1, 0, numVars - 1));
+    b2c2 = FracMatrix(
+        remainder.getSubMatrix(0, numIneqs - 1, numVars, numVars + numSymbols));
 
     // Find the vertex, if any, corresponding to the current subset of
     // inequalities.
@@ -337,22 +414,11 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
 
     // We convert the representation of the active region to an integers-only
     // form so as to store it as an PresburgerRelation.
-    // We do this by taking the LCM of the denominators of all the coefficients
-    // and multiplying by it throughout.
-    IntMatrix activeRegionNorm = IntMatrix(numIneqs - numVars, numSymbols + 1);
+    IntMatrix activeRegionNorm = activeRegion.normalizeRows();
     IntegerRelation activeRegionRel =
         IntegerRelation(PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0));
-    MPInt lcmDenoms = MPInt(1);
-    for (unsigned i = 0; i < numIneqs - numVars; i++) {
-      for (unsigned j = 0; j < numSymbols + 1; j++)
-        lcmDenoms = lcm(lcmDenoms, activeRegion(i, j).den);
-      for (unsigned j = 0; j < numSymbols + 1; j++)
-        activeRegionNorm(i, j) =
-            (activeRegion(i, j) * lcmDenoms).getAsInteger();
-
+    for (unsigned i = 0, e = activeRegion.getNumRows(); i < e; ++i)
       activeRegionRel.addInequality(activeRegionNorm.getRow(i));
-    }
-
     activeRegions.push_back(PresburgerRelation(activeRegionRel));
   }
 
@@ -361,80 +427,8 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
   // property that no two of them have a full-dimensional intersection, i.e.,
   // they may share "faces" or "edges", but their intersection can only have
   // up to numVars-1 dimensions.
-
-  // We maintain a list of regions and their associated vertex sets,
-  // initialized with the first vertex and its corresponding activity region.
-  std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> chambers = {
-      std::make_pair(activeRegions[0], std::vector({0u}))};
-  // Note that instead of storing lists of actual vertices, we store lists
-  // of indices. Thus the set {2, 3, 4} represents the vertex set
-  // {vertices[2], vertices[3], vertices[4]}.
-
-  std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> newChambers;
-
-  // We iterate over the vertex set.
-  // For each vertex v_j and its activity region R_j,
-  // we examine all the current chambers R_i.
-  // If R_j has a full-dimensional intersection with an existing chamber R_i,
-  // then that chamber is replaced by two new ones:
-  // 1. the intersection R_i \cap R_j, where v_j is active;
-  // 2. the difference R_i - R_j, where v_j is inactive.
-  // Once we have examined all R_i, we add a final chamber
-  // R_j - (union of all existing chambers),
-  // in which only v_j is active.
-  for (unsigned j = 1, e = vertices.size(); j < e; j++) {
-    newChambers.clear();
-
-    PresburgerRelation newRegion = activeRegions[j];
-    ParamPoint newVertex = vertices[j];
-
-    for (unsigned i = 0, f = chambers.size(); i < f; i++) {
-      auto [currentRegion, currentVertices] = chambers[i];
-
-      // First, we check if the intersection of R_j and R_i.
-      // It is a disjoint union of convex regions in the parameter space,
-      // and so we know that it is full-dimensional if any of the disjuncts
-      // is full-dimensional.
-      PresburgerRelation intersection = currentRegion.intersect(newRegion);
-      bool isFullDim = numSymbols == 0 ||
-                       llvm::any_of(intersection.getAllDisjuncts(),
-                                    [&](IntegerRelation disjunct) -> bool {
-                                      return disjunct.isFullDim();
-                                    });
-
-      // If the intersection is not full-dimensional, we do not modify
-      // the chamber list.
-      if (!isFullDim)
-        newChambers.push_back(chambers[i]);
-      else {
-        // If it is, we add the intersection and the difference as new chambers.
-        PresburgerRelation subtraction = currentRegion.subtract(newRegion);
-        newChambers.push_back(std::make_pair(subtraction, currentVertices));
-
-        currentVertices.push_back(j);
-        newChambers.push_back(std::make_pair(intersection, currentVertices));
-      }
-    }
-
-    // Finally we compute the chamber where only v_j is active by subtracting
-    // all existing chambers from R_j.
-    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
-         newChambers)
-      newRegion = newRegion.subtract(chamber.first);
-    newChambers.push_back(std::make_pair(newRegion, std::vector({j})));
-
-    // We filter `chambers` to remove empty regions.
-    chambers.clear();
-    for (const std::pair<PresburgerRelation, std::vector<unsigned>> &chamber :
-         newChambers) {
-      auto [r, v] = chamber;
-      bool isEmpty = llvm::all_of(
-          r.getAllDisjuncts(),
-          [&](IntegerRelation disjunct) -> bool { return disjunct.isEmpty(); });
-      if (!isEmpty)
-        chambers.push_back(chamber);
-    }
-  }
+  std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> chambers =
+      chamberDecomposition(activeRegions, vertices);
 
   // Now, we compute the generating function. For each chamber, we iterate over
   // the vertices active in it, and compute the generating function for each

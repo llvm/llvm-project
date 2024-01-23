@@ -29,6 +29,7 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
+#include <bitset>
 #include <optional>
 
 namespace mlir {
@@ -90,6 +91,19 @@ GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
 /// each variable as an affine function of the parameters.
 /// If there is no solution, return null.
 std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
+
+/// Given a list of possibly intersecting regions (PresburgerRelations) and
+/// the vertices active in each region, produce a pairwise disjoint list of
+/// regions (chambers) and identify the vertices active in each of these new
+/// regions.
+/// In the return type, the vertices are stored by their index in the
+/// `vertices` argument, i.e., the set {2, 3, 4} represents the vertex set
+/// {vertices[2], vertices[3], vertices[4]}.
+/// Note that here, by disjoint, we mean that the intersection is not
+/// full-dimensional.
+std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>>
+chamberDecomposition(std::vector<PresburgerRelation> activeRegions,
+                     std::vector<ParamPoint> vertices);
 
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.
