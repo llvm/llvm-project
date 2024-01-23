@@ -9837,6 +9837,13 @@ Expected<SourceRange> ASTImporter::Import(SourceRange FromRange) {
   return SourceRange(ToBegin, ToEnd);
 }
 
+static bool isBufferSizeOverflow(SourceManager &SM, size_t BufferSize) {
+  unsigned Offset = SM.getNextLocalOffset();
+  unsigned FullSize = Offset + BufferSize + 1;
+  SourceLocation L = SourceLocation().getFromRawEncoding(FullSize);
+  return !L.isFileID() || FullSize <= Offset;
+}
+
 Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
   llvm::DenseMap<FileID, FileID>::iterator Pos = ImportedFileIDs.find(FromID);
   if (Pos != ImportedFileIDs.end())
@@ -9896,9 +9903,13 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
         // FIXME: The filename may be a virtual name that does probably not
         // point to a valid file and we get no Entry here. In this case try with
         // the memory buffer below.
-        if (Entry)
+        if (Entry) {
+          if (isBufferSizeOverflow(ToSM, Entry->getSize()))
+            return llvm::make_error<ASTImportError>(
+                ASTImportError::UnsupportedConstruct);
           ToID = ToSM.createFileID(*Entry, ToIncludeLocOrFakeLoc,
                                    FromSLoc.getFile().getFileCharacteristic());
+        }
       }
     }
 
@@ -9913,6 +9924,9 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
       std::unique_ptr<llvm::MemoryBuffer> ToBuf =
           llvm::MemoryBuffer::getMemBufferCopy(FromBuf->getBuffer(),
                                                FromBuf->getBufferIdentifier());
+      if (isBufferSizeOverflow(ToSM, ToBuf->getBufferSize()))
+        return llvm::make_error<ASTImportError>(
+            ASTImportError::UnsupportedConstruct);
       ToID = ToSM.createFileID(std::move(ToBuf),
                                FromSLoc.getFile().getFileCharacteristic());
     }
