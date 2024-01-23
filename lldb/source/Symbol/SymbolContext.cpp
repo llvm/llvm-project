@@ -489,8 +489,9 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
         next_frame_sc.line_entry.range.GetBaseAddress() = next_frame_pc;
         next_frame_sc.line_entry.file =
             curr_inlined_block_inlined_info->GetCallSite().GetFile();
-        next_frame_sc.line_entry.original_file =
-            curr_inlined_block_inlined_info->GetCallSite().GetFile();
+        next_frame_sc.line_entry.original_file_sp =
+            std::make_shared<SupportFile>(
+                curr_inlined_block_inlined_info->GetCallSite().GetFile());
         next_frame_sc.line_entry.line =
             curr_inlined_block_inlined_info->GetCallSite().GetLine();
         next_frame_sc.line_entry.column =

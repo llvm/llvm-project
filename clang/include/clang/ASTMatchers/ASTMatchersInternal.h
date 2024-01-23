@@ -2195,6 +2195,9 @@ inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
   }
   return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
 }
+inline StringRef getOpName(const CXXFoldExpr &Node) {
+  return BinaryOperator::getOpcodeStr(Node.getOperator());
+}
 
 /// Matches overloaded operators with a specific name.
 ///

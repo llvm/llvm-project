@@ -359,7 +359,7 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
     if (!matchPattern(ifCond, m_Constant(&constAttr)))
       return failure();
     if (constAttr.getInt())
-      rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
+      rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       rewriter.eraseOp(op);
 
@@ -398,7 +398,7 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
     if (!matchPattern(ifCond, m_Constant(&constAttr)))
       return failure();
     if (constAttr.getInt())
-      rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
+      rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       replaceOpWithRegion(rewriter, op, op.getRegion());
 

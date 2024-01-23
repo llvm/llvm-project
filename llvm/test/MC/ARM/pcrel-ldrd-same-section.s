@@ -10,7 +10,7 @@
 @ RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=RELOC
 @ RUN: llvm-objdump -d --triple=thumbv7  %t | FileCheck %s --check-prefix=THUMB_OFFSET
 
-@ RUN: llvm-mc -filetype=obj -o %y %s -triple=thumbebv7
+@ RUN: llvm-mc -filetype=obj -o %t %s -triple=thumbebv7
 @ RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=RELOC
 @ RUN: llvm-objdump -d --triple=thumbebv7 %t | FileCheck %s --check-prefix=THUMB_OFFSET
 

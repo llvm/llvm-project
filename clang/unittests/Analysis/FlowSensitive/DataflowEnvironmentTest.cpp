@@ -58,6 +58,52 @@ TEST_F(EnvironmentTest, FlowCondition) {
   EXPECT_FALSE(Env.allows(NotX));
 }
 
+TEST_F(EnvironmentTest, SetAndGetValueOnCfgOmittedNodes) {
+  // Check that we can set a value on an expression that is omitted from the CFG
+  // (see `ignoreCFGOmittedNodes()`), then retrieve that same value from the
+  // expression. This is a regression test; `setValue()` and `getValue()`
+  // previously did not use `ignoreCFGOmittedNodes()` consistently.
+
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+    struct S {
+      int f();
+    };
+    void target() {
+      // Method call on a temporary produces an `ExprWithCleanups`.
+      S().f();
+      (1);
+    }
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const ExprWithCleanups *WithCleanups = selectFirst<ExprWithCleanups>(
+      "cleanups",
+      match(exprWithCleanups(hasType(isInteger())).bind("cleanups"), Context));
+  ASSERT_NE(WithCleanups, nullptr);
+
+  const ParenExpr *Paren = selectFirst<ParenExpr>(
+      "paren", match(parenExpr(hasType(isInteger())).bind("paren"), Context));
+  ASSERT_NE(Paren, nullptr);
+
+  Environment Env(DAContext);
+  IntegerValue *Val1 =
+      cast<IntegerValue>(Env.createValue(Unit->getASTContext().IntTy));
+  Env.setValue(*WithCleanups, *Val1);
+  EXPECT_EQ(Env.getValue(*WithCleanups), Val1);
+
+  IntegerValue *Val2 =
+      cast<IntegerValue>(Env.createValue(Unit->getASTContext().IntTy));
+  Env.setValue(*Paren, *Val2);
+  EXPECT_EQ(Env.getValue(*Paren), Val2);
+}
+
 TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   using namespace ast_matchers;
 

@@ -1154,6 +1154,8 @@ static Triple::OSType getOSTypeFromPlatform(MachO::PlatformType Type) {
   case MachO::PLATFORM_IOSSIMULATOR:     /* silence warning */ break;
   case MachO::PLATFORM_TVOSSIMULATOR:    /* silence warning */ break;
   case MachO::PLATFORM_WATCHOSSIMULATOR: /* silence warning */ break;
+  case MachO::PLATFORM_XROS:             /* silence warning */ break;
+  case MachO::PLATFORM_XROS_SIMULATOR:   /* silence warning */ break;
   }
   llvm_unreachable("Invalid mach-o platform type");
 }

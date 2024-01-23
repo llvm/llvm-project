@@ -34,17 +34,11 @@ namespace std {
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__format/buffer.h>
-#include <__format/format_arg_store.h>
-#include <__format/format_args.h>
-#include <__format/format_context.h>
-#include <__format/format_error.h>
-#include <__format/format_functions.h>
-#include <__format/unicode.h>
 #include <__system_error/system_error.h>
 #include <__utility/forward.h>
 #include <cerrno>
 #include <cstdio>
+#include <format>
 #include <string>
 #include <string_view>
 #include <version>
@@ -192,13 +186,13 @@ namespace __print {
 //
 
 #  ifdef _LIBCPP_HAS_NO_UNICODE
-inline constexpr bool __use_unicode = false;
+inline constexpr bool __use_unicode_execution_charset = false;
 #  elif defined(_MSVC_EXECUTION_CHARACTER_SET)
 // This is the same test MSVC STL uses in their implementation of <print>
 // See: https://learn.microsoft.com/en-us/windows/win32/intl/code-page-identifiers
-inline constexpr bool __use_unicode = _MSVC_EXECUTION_CHARACTER_SET == 65001;
+inline constexpr bool __use_unicode_execution_charset = _MSVC_EXECUTION_CHARACTER_SET == 65001;
 #  else
-inline constexpr bool __use_unicode = true;
+inline constexpr bool __use_unicode_execution_charset = true;
 #  endif
 
 _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal(FILE* __stream) {
@@ -333,7 +327,7 @@ __vprint_unicode([[maybe_unused]] FILE* __stream,
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void print(FILE* __stream, format_string<_Args...> __fmt, _Args&&... __args) {
 #  ifndef _LIBCPP_HAS_NO_UNICODE
-  if constexpr (__print::__use_unicode)
+  if constexpr (__print::__use_unicode_execution_charset)
     __print::__vprint_unicode(__stream, __fmt.get(), std::make_format_args(__args...), false);
   else
     __print::__vprint_nonunicode(__stream, __fmt.get(), std::make_format_args(__args...), false);
@@ -353,7 +347,7 @@ _LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt
   // Note the wording in the Standard is inefficient. The output of
   // std::format is a std::string which is then copied. This solution
   // just appends a newline at the end of the output.
-  if constexpr (__print::__use_unicode)
+  if constexpr (__print::__use_unicode_execution_charset)
     __print::__vprint_unicode(__stream, __fmt.get(), std::make_format_args(__args...), true);
   else
     __print::__vprint_nonunicode(__stream, __fmt.get(), std::make_format_args(__args...), true);

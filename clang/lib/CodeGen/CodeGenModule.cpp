@@ -229,7 +229,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
       ABIFLen = 32;
     else if (ABIStr.ends_with("d"))
       ABIFLen = 64;
-    return createRISCVTargetCodeGenInfo(CGM, XLen, ABIFLen);
+    bool EABI = ABIStr.ends_with("e");
+    return createRISCVTargetCodeGenInfo(CGM, XLen, ABIFLen, EABI);
   }
 
   case llvm::Triple::systemz: {

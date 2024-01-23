@@ -4416,7 +4416,7 @@ public:
         writeOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     while (defWrite) {
       if (checkSameValueWAW(writeOp, defWrite)) {
-        rewriter.updateRootInPlace(writeToModify, [&]() {
+        rewriter.modifyOpInPlace(writeToModify, [&]() {
           writeToModify.getSourceMutable().assign(defWrite.getSource());
         });
         return success();
@@ -4533,7 +4533,7 @@ public:
         transferOp.getLoc(), transferOp.getVector(), newExtractOp.getResult(),
         transferOp.getIndices(), transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
-    rewriter.updateRootInPlace(insertOp, [&]() {
+    rewriter.modifyOpInPlace(insertOp, [&]() {
       insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
     });
     return success();

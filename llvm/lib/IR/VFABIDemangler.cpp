@@ -1,4 +1,4 @@
-//===- VFABIDemangling.cpp - Vector Function ABI demangling utilities. ---===//
+//===- VFABIDemangler.cpp - Vector Function ABI demangler -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/VFABIDemangler.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "vfabi-demangling"
+#define DEBUG_TYPE "vfabi-demangler"
 
 namespace {
 /// Utilities for the Vector Function ABI name parser.
@@ -518,4 +522,124 @@ VFParamKind VFABI::getVFParamKindFromString(const StringRef Token) {
   llvm_unreachable("This fuction should be invoken only on parameters"
                    " that have a textual representation in the mangled name"
                    " of the Vector Function ABI");
+}
+
+void VFABI::getVectorVariantNames(
+    const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
+  const StringRef S = CI.getFnAttr(VFABI::MappingsAttrName).getValueAsString();
+  if (S.empty())
+    return;
+
+  SmallVector<StringRef, 8> ListAttr;
+  S.split(ListAttr, ",");
+
+  for (const auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
+    std::optional<VFInfo> Info =
+        VFABI::tryDemangleForVFABI(S, CI.getFunctionType());
+    if (Info && CI.getModule()->getFunction(Info->VectorName)) {
+      LLVM_DEBUG(dbgs() << "VFABI: Adding mapping '" << S << "' for " << CI
+                        << "\n");
+      VariantMappings.push_back(std::string(S));
+    } else
+      LLVM_DEBUG(dbgs() << "VFABI: Invalid mapping '" << S << "'\n");
+  }
+}
+
+FunctionType *VFABI::createFunctionType(const VFInfo &Info,
+                                        const FunctionType *ScalarFTy) {
+  // Create vector parameter types
+  SmallVector<Type *, 8> VecTypes;
+  ElementCount VF = Info.Shape.VF;
+  int ScalarParamIndex = 0;
+  for (auto VFParam : Info.Shape.Parameters) {
+    if (VFParam.ParamKind == VFParamKind::GlobalPredicate) {
+      VectorType *MaskTy =
+          VectorType::get(Type::getInt1Ty(ScalarFTy->getContext()), VF);
+      VecTypes.push_back(MaskTy);
+      continue;
+    }
+
+    Type *OperandTy = ScalarFTy->getParamType(ScalarParamIndex++);
+    if (VFParam.ParamKind == VFParamKind::Vector)
+      OperandTy = VectorType::get(OperandTy, VF);
+    VecTypes.push_back(OperandTy);
+  }
+
+  auto *RetTy = ScalarFTy->getReturnType();
+  if (!RetTy->isVoidTy())
+    RetTy = VectorType::get(RetTy, VF);
+  return FunctionType::get(RetTy, VecTypes, false);
+}
+
+void VFABI::setVectorVariantNames(CallInst *CI,
+                                  ArrayRef<std::string> VariantMappings) {
+  if (VariantMappings.empty())
+    return;
+
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  for (const std::string &VariantMapping : VariantMappings)
+    Out << VariantMapping << ",";
+  // Get rid of the trailing ','.
+  assert(!Buffer.str().empty() && "Must have at least one char.");
+  Buffer.pop_back();
+
+  Module *M = CI->getModule();
+#ifndef NDEBUG
+  for (const std::string &VariantMapping : VariantMappings) {
+    LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
+    std::optional<VFInfo> VI =
+        VFABI::tryDemangleForVFABI(VariantMapping, CI->getFunctionType());
+    assert(VI && "Cannot add an invalid VFABI name.");
+    assert(M->getNamedValue(VI->VectorName) &&
+           "Cannot add variant to attribute: "
+           "vector function declaration is missing.");
+  }
+#endif
+  CI->addFnAttr(
+      Attribute::get(M->getContext(), MappingsAttrName, Buffer.str()));
+}
+
+bool VFShape::hasValidParameterList() const {
+  for (unsigned Pos = 0, NumParams = Parameters.size(); Pos < NumParams;
+       ++Pos) {
+    assert(Parameters[Pos].ParamPos == Pos && "Broken parameter list.");
+
+    switch (Parameters[Pos].ParamKind) {
+    default: // Nothing to check.
+      break;
+    case VFParamKind::OMP_Linear:
+    case VFParamKind::OMP_LinearRef:
+    case VFParamKind::OMP_LinearVal:
+    case VFParamKind::OMP_LinearUVal:
+      // Compile time linear steps must be non-zero.
+      if (Parameters[Pos].LinearStepOrPos == 0)
+        return false;
+      break;
+    case VFParamKind::OMP_LinearPos:
+    case VFParamKind::OMP_LinearRefPos:
+    case VFParamKind::OMP_LinearValPos:
+    case VFParamKind::OMP_LinearUValPos:
+      // The runtime linear step must be referring to some other
+      // parameters in the signature.
+      if (Parameters[Pos].LinearStepOrPos >= int(NumParams))
+        return false;
+      // The linear step parameter must be marked as uniform.
+      if (Parameters[Parameters[Pos].LinearStepOrPos].ParamKind !=
+          VFParamKind::OMP_Uniform)
+        return false;
+      // The linear step parameter can't point at itself.
+      if (Parameters[Pos].LinearStepOrPos == int(Pos))
+        return false;
+      break;
+    case VFParamKind::GlobalPredicate:
+      // The global predicate must be the unique. Can be placed anywhere in the
+      // signature.
+      for (unsigned NextPos = Pos + 1; NextPos < NumParams; ++NextPos)
+        if (Parameters[NextPos].ParamKind == VFParamKind::GlobalPredicate)
+          return false;
+      break;
+    }
+  }
+  return true;
 }

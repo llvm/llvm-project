@@ -536,7 +536,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       SmallVector<Value *, 4> Values(DVI->getValues());
       if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DVI->getExpression()) {
-        // Use a sentinal value (nullptr) for the DIExpression when we see a
+        // Use a sentinel value (nullptr) for the DIExpression when we see a
         // linked dbg.assign so that the next debug intrinsic will never match
         // it (i.e. always treat linked dbg.assigns as if they're unique).
         if (IsDbgValueKind)

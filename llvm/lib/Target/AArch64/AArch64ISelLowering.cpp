@@ -25430,7 +25430,7 @@ bool AArch64TargetLowering::shouldLocalize(
     RematCost += AdditionalCost;
     Register Reg = MI.getOperand(0).getReg();
     unsigned MaxUses = maxUses(RematCost);
-    // Don't pass UINT_MAX sentinal value to hasAtMostUserInstrs().
+    // Don't pass UINT_MAX sentinel value to hasAtMostUserInstrs().
     if (MaxUses == std::numeric_limits<unsigned>::max())
       --MaxUses;
     return MRI.hasAtMostUserInstrs(Reg, MaxUses);

@@ -1,4 +1,4 @@
-//===------- VectorFunctionABITest.cpp - VFABI unit tests  ---------===//
+//===------- VFABIDemanglerTest.cpp - VFABI unit tests  -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 #include <optional>
 
@@ -38,8 +41,8 @@ private:
   /// Reset the data needed for the test.
   void reset(const StringRef ScalarFTyStr) {
     M = parseAssemblyString("declare void @dummy()", Err, Ctx);
-    EXPECT_NE(M.get(), nullptr) << "Loading an invalid module.\n "
-                                << Err.getMessage() << "\n";
+    EXPECT_NE(M.get(), nullptr)
+        << "Loading an invalid module.\n " << Err.getMessage() << "\n";
     Type *Ty = parseType(ScalarFTyStr, Err, *(M.get()));
     ScalarFTy = dyn_cast<FunctionType>(Ty);
     EXPECT_NE(ScalarFTy, nullptr)
@@ -792,6 +795,15 @@ TEST_F(VFABIAttrTest, Read) {
   Exp.push_back("_ZGVnN2v_g(custom_vg)");
   Exp.push_back("_ZGVnN4v_g");
   EXPECT_EQ(Mappings, Exp);
+}
+
+TEST_F(VFABIAttrTest, Write) {
+  Mappings.push_back("_ZGVnN8v_g");
+  Mappings.push_back("_ZGVnN2v_g(custom_vg)");
+  VFABI::setVectorVariantNames(CI, Mappings);
+  const StringRef S =
+      CI->getFnAttr("vector-function-abi-variant").getValueAsString();
+  EXPECT_EQ(S, "_ZGVnN8v_g,_ZGVnN2v_g(custom_vg)");
 }
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {

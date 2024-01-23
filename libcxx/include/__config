@@ -16,6 +16,17 @@
 #  pragma GCC system_header
 #endif
 
+#if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  pragma clang deprecated(                                                                                            \
+      _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES,                                                                           \
+      "_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
+#endif
+#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#  pragma clang deprecated(                                                                                            \
+      _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES,                                                                           \
+      "_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
+#endif
+
 #if defined(__apple_build_version__)
 // Given AppleClang XX.Y.Z, _LIBCPP_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
 #  define _LIBCPP_COMPILER_CLANG_BASED

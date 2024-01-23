@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <chrono>
 #include <map>
+#include <unordered_set>
 
 #include <TargetConditionals.h>
 #import <Foundation/Foundation.h>
@@ -1053,9 +1054,16 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
     dyld_process_info info =
         m_dyld_process_info_create(m_task.TaskPort(), 0, &kern_ret);
     if (info) {
+      // There's a bug in the interaction between dyld and older dyld_sim's
+      // (e.g. from the iOS 15 simulator) that causes dyld to report the same
+      // binary twice.  We use this set to eliminate the duplicates.
+      __block std::unordered_set<uint64_t> seen_header_addrs;
       m_dyld_process_info_for_each_image(
           info,
           ^(uint64_t mach_header_addr, const uuid_t uuid, const char *path) {
+            auto res_pair = seen_header_addrs.insert(mach_header_addr);
+            if (!res_pair.second)
+              return;
             struct binary_image_information image;
             image.filename = path;
             uuid_copy(image.macho_info.uuid, uuid);

@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=none -o - %s | FileCheck -check-prefix=MCPU %s
-# RUN: llc -march=amdgcn -mattr=+unaligned-access-mode -run-pass=none -o - %s | FileCheck -check-prefix=MATTR %s
+# RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass=none -o - %s | FileCheck -check-prefix=MCPU %s
+# RUN: llc -mtriple=amdgcn -mattr=+unaligned-access-mode -run-pass=none -o - %s | FileCheck -check-prefix=MATTR %s
 
 # The command line arguments for -mcpu and -mattr should manifest themselves by adding the corresponding attributes to the stub IR function.
 

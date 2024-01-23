@@ -739,17 +739,17 @@ public:
   /// PatternRewriter hook for inserting a new operation.
   void notifyOperationInserted(Operation *op) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  /// Note: These methods only track updates to the top-level operation itself,
+  /// PatternRewriter hook for updating the given operation in-place.
+  /// Note: These methods only track updates to the given operation itself,
   /// and not nested regions. Updates to regions will still require notification
   /// through other more specific hooks above.
-  void startRootUpdate(Operation *op) override;
+  void startOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  void finalizeRootUpdate(Operation *op) override;
+  /// PatternRewriter hook for updating the given operation in-place.
+  void finalizeOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  void cancelRootUpdate(Operation *op) override;
+  /// PatternRewriter hook for updating the given operation in-place.
+  void cancelOpModification(Operation *op) override;
 
   /// PatternRewriter hook for notifying match failure reasons.
   LogicalResult

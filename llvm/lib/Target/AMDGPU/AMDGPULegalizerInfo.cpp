@@ -6503,13 +6503,15 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
                                               MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
+
   Register OrigDst = MI.getOperand(0).getReg();
   Register Dst;
   LLT Ty = B.getMRI()->getType(OrigDst);
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
   unsigned Opc = 0;
-  if ((Size == 8 || Size == 16) && ST.hasScalarSubwordLoads()) {
+  if (Size < 32 && ST.hasScalarSubwordLoads()) {
+    assert(Size == 8 || Size == 16);
     Opc = Size == 8 ? AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE
                     : AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT;
     // The 8-bit and 16-bit scalar buffer load instructions have 32-bit
@@ -6519,27 +6521,6 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
     Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD;
     Dst = OrigDst;
   }
-
-  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
-  // TODO: Should this use datalayout alignment?
-  const unsigned MemSize = (Size + 7) / 8;
-  int AlignNum = 0;
-  switch (Size) {
-  case 8:
-    AlignNum = 1;
-    break;
-  case 16:
-    AlignNum = 2;
-    break;
-  default:
-    AlignNum = 4;
-  }
-  const Align MemAlign(AlignNum);
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-          MachineMemOperand::MOInvariant,
-      MemSize, MemAlign);
 
   Observer.changingInstr(MI);
 
@@ -6559,8 +6540,18 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   // allowed to add one.
   MI.setDesc(B.getTII().get(Opc));
   MI.removeOperand(1); // Remove intrinsic ID
+
+  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
+  // TODO: Should this use datalayout alignment?
+  const unsigned MemSize = (Size + 7) / 8;
+  const Align MemAlign(std::min(MemSize, 4u));
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      MemSize, MemAlign);
   MI.addMemOperand(MF, MMO);
-  if ((Size == 8 || Size == 16) && ST.hasScalarSubwordLoads()) {
+  if (Dst != OrigDst) {
     MI.getOperand(0).setReg(Dst);
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
     B.buildTrunc(OrigDst, Dst);

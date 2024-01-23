@@ -46,7 +46,14 @@ char *basename(const char* path)
     else if (base2)
         return(base2 + 1);
 
-    return((char*)path);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
+#endif
+    return ((char *)path);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 char *dirname(char* path)
 {
@@ -235,11 +242,16 @@ void free_remapped_files(struct CXUnsavedFile *unsaved_files,
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
     free((char *)unsaved_files[i].Filename);
     free((char *)unsaved_files[i].Contents);
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif
   }
   free(unsaved_files);

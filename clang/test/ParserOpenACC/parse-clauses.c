@@ -306,6 +306,11 @@ void SyncClause() {
 #pragma acc serial self(i > j, seq
   for(;;){}
 
+  // expected-warning@+2{{left operand of comma operator has no effect}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial self(i, j)
+  for(;;){}
+
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial self(i > j)
   for(;;){}
@@ -322,6 +327,25 @@ struct Members {
 struct HasMembersArray {
   struct Members MemArr[4];
 };
+
+// On 'update', self behaves differently and requires parens, plus takes a var-list instead.
+void SelfUpdate() {
+  struct Members s;
+
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc update self
+  for(;;){}
+
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc update self(zero : s.array[s.value : 5], s.value), seq
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc update self(s.array[s.value : 5], s.value), seq
+  for(;;){}
+}
 
 void VarListClauses() {
   // expected-error@+2{{expected '('}}
@@ -497,6 +521,144 @@ void VarListClauses() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial device(s.array[s.value : 5], s.value), seq
 
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(s.array[s.value : 5], s.value), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(zero:s.array[s.value : 5], s.value), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(zero : s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(zero s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'readonly' on 'copyout' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(readonly:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'invalid' on 'copyout' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'invalid' on 'copyout' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyout(invalid s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(s.array[s.value : 5], s.value), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(zero:s.array[s.value : 5], s.value), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(zero : s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(zero s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'readonly' on 'create' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(readonly:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'invalid' on 'create' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(invalid:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'invalid' on 'create' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(invalid:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial create(invalid s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{expected ','}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(s.array[s.value] s.array[s.value :5] ), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(s.array[s.value : 5], s.value), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(readonly:s.array[s.value : 5], s.value), seq
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(readonly : s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{use of undeclared identifier 'readonly'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(readonly s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'zero' on 'copyin' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(zero :s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'invalid' on 'copyin' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{invalid tag 'invalid' on 'copyin' clause}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), seq
+
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial copyin(invalid s.array[s.value : 5], s.value), seq
+}
+
+void ReductionClauseParsing() {
+  char *Begin, *End;
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction
+  // expected-error@+3{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction()
+  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(Begin)
+  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(Begin, End)
+  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(+:Begin)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(+:Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(*: Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(max : Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(min: Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(&: Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(|: Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(^: Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial seq, reduction(&&: Begin, End)
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc serial reduction(||: Begin, End), seq
 }
 
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}

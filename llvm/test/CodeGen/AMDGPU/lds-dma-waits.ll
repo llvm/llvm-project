@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 < %s | FileCheck %s --check-prefixes=GCN,GFX9
-; RUN: llc -march=amdgcn -mcpu=gfx1030 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s --check-prefixes=GCN,GFX9
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck %s --check-prefixes=GCN,GFX10
 
 @lds.0 = internal addrspace(3) global [64 x float] poison, align 16
 @lds.1 = internal addrspace(3) global [64 x float] poison, align 16

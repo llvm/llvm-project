@@ -223,62 +223,68 @@ def ROT64L2R_imm8  : SDNodeXForm<imm, [{
 
 // NOTE: We use WriteShift for these rotates as they avoid the stalls
 // of many of the older x86 rotate instructions.
-multiclass bmi_rotate<string asm, RegisterClass RC, X86MemOperand x86memop,
-                      string Suffix = ""> {
-let hasSideEffects = 0 in {
-  def ri#Suffix : Ii8<0xF0, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, u8imm:$src2),
-                      !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                  TA, XD, VEX, Sched<[WriteShift]>;
-  let mayLoad = 1 in
-  def mi#Suffix : Ii8<0xF0, MRMSrcMem, (outs RC:$dst),
-                      (ins x86memop:$src1, u8imm:$src2),
-                      !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                  TA, XD, VEX, Sched<[WriteShiftLd]>;
+class RorXri<X86TypeInfo t>
+  : ITy<0xF0, MRMSrcReg, t, (outs t.RegClass:$dst), (ins t.RegClass:$src1, u8imm:$src2),
+        "rorx", binop_ndd_args, []>, TA, XD, Sched<[WriteShift]> {
+  let ImmT = Imm8;
 }
+class RorXmi<X86TypeInfo t>
+  : ITy<0xF0, MRMSrcMem, t, (outs t.RegClass:$dst), (ins t.MemOperand:$src1, u8imm:$src2),
+        "rorx", binop_ndd_args, []>, TA, XD, Sched<[WriteShiftLd]> {
+  let ImmT = Imm8;
+  let mayLoad = 1;
 }
 
-multiclass bmi_shift<string asm, RegisterClass RC, X86MemOperand x86memop,
-                     string Suffix = ""> {
-let hasSideEffects = 0 in {
-  def rr#Suffix : I<0xF7, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
-                    !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                    VEX, Sched<[WriteShift]>;
-  let mayLoad = 1 in
-  def rm#Suffix : I<0xF7, MRMSrcMem4VOp3,
-                    (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
-                    !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-                  VEX, Sched<[WriteShift.Folded,
-                              // x86memop:$src1
-                              ReadDefault, ReadDefault, ReadDefault, ReadDefault,
-                              ReadDefault,
-                              // RC:$src2
-                              WriteShift.ReadAfterFold]>;
-}
+multiclass RorX<X86TypeInfo t> {
+  let Predicates = [HasBMI2, NoEGPR] in {
+    def ri : RorXri<t>, VEX;
+    def mi : RorXmi<t>, VEX;
+  }
+  let Predicates = [HasBMI2, HasEGPR, In64BitMode] in {
+    def ri_EVEX : RorXri<t>, EVEX;
+    def mi_EVEX : RorXmi<t>, EVEX;
+  }
 }
 
-let Predicates = [HasBMI2, NoEGPR] in {
-  defm RORX32 : bmi_rotate<"rorx{l}", GR32, i32mem>;
-  defm RORX64 : bmi_rotate<"rorx{q}", GR64, i64mem>, REX_W;
-  defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem>, T8, XS;
-  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem>, T8, XS, REX_W;
-  defm SHRX32 : bmi_shift<"shrx{l}", GR32, i32mem>, T8, XD;
-  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem>, T8, XD, REX_W;
-  defm SHLX32 : bmi_shift<"shlx{l}", GR32, i32mem>, T8, PD;
-  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem>, T8, PD, REX_W;
+defm RORX32: RorX<Xi32>;
+defm RORX64: RorX<Xi64>;
+
+class ShiftXrr<string m, X86TypeInfo t>
+  : ITy<0xF7, MRMSrcReg4VOp3, t, (outs t.RegClass:$dst), (ins t.RegClass:$src1, t.RegClass:$src2),
+        m, binop_ndd_args, []>, T8, Sched<[WriteShift]>;
+
+class ShiftXrm<string m, X86TypeInfo t>
+  : ITy<0xF7, MRMSrcMem4VOp3, t, (outs t.RegClass:$dst), (ins t.MemOperand:$src1, t.RegClass:$src2),
+        m, binop_ndd_args, []>, T8,
+    Sched<[WriteShift.Folded,
+           // x86memop:$src1
+           ReadDefault, ReadDefault, ReadDefault, ReadDefault,
+           ReadDefault,
+           // RC:$src2
+           WriteShift.ReadAfterFold]> {
+  let mayLoad = 1;
 }
 
-let Predicates = [HasBMI2, HasEGPR, In64BitMode] in {
-  defm RORX32 : bmi_rotate<"rorx{l}", GR32, i32mem, "_EVEX">, EVEX;
-  defm RORX64 : bmi_rotate<"rorx{q}", GR64, i64mem, "_EVEX">, REX_W, EVEX;
-  defm SARX32 : bmi_shift<"sarx{l}", GR32, i32mem, "_EVEX">, T8, XS, EVEX;
-  defm SARX64 : bmi_shift<"sarx{q}", GR64, i64mem, "_EVEX">, T8, XS, REX_W, EVEX;
-  defm SHRX32 : bmi_shift<"shrx{l}", GR32, i32mem, "_EVEX">, T8, XD, EVEX;
-  defm SHRX64 : bmi_shift<"shrx{q}", GR64, i64mem, "_EVEX">, T8, XD, REX_W, EVEX;
-  defm SHLX32 : bmi_shift<"shlx{l}", GR32, i32mem, "_EVEX">, T8, PD, EVEX;
-  defm SHLX64 : bmi_shift<"shlx{q}", GR64, i64mem, "_EVEX">, T8, PD, REX_W, EVEX;
+
+multiclass ShiftX<string m, X86TypeInfo t> {
+  let Predicates = [HasBMI2, NoEGPR] in {
+    def rr : ShiftXrr<m, t>, VEX;
+    def rm : ShiftXrm<m, t>, VEX;
+  }
+  let Predicates = [HasBMI2, HasEGPR, In64BitMode] in {
+    def rr_EVEX : ShiftXrr<m, t>, EVEX;
+    def rm_EVEX : ShiftXrm<m, t>, EVEX;
+  }
 }
 
-let Predicates = [HasBMI2] in {
+defm SARX32: ShiftX<"sarx", Xi32>, XS;
+defm SARX64: ShiftX<"sarx", Xi64>, XS;
+defm SHRX32: ShiftX<"shrx", Xi32>, XD;
+defm SHRX64: ShiftX<"shrx", Xi64>, XD;
+defm SHLX32: ShiftX<"shlx", Xi32>, PD;
+defm SHLX64: ShiftX<"shlx", Xi64>, PD;
+
+multiclass RORX_Pats {
   // Prefer RORX which is non-destructive and doesn't update EFLAGS.
   let AddedComplexity = 10 in {
     def : Pat<(rotr GR32:$src, (i8 imm:$shamt)),
@@ -301,7 +307,9 @@ let Predicates = [HasBMI2] in {
             (RORX32mi addr:$src, (ROT32L2R_imm8 imm:$shamt))>;
   def : Pat<(rotl (loadi64 addr:$src), (i8 imm:$shamt)),
             (RORX64mi addr:$src, (ROT64L2R_imm8 imm:$shamt))>;
+}
 
+multiclass ShiftX_Pats<SDNode op> {
   // Prefer SARX/SHRX/SHLX over SAR/SHR/SHL with variable shift BUT not
   // immediate shift, i.e. the following code is considered better
   //
@@ -316,34 +324,19 @@ let Predicates = [HasBMI2] in {
   //  ... %edi, ...
   //
   let AddedComplexity = 1 in {
-    def : Pat<(sra GR32:$src1, GR8:$src2),
-              (SARX32rr GR32:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(sra GR64:$src1, GR8:$src2),
-              (SARX64rr GR64:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-
-    def : Pat<(srl GR32:$src1, GR8:$src2),
-              (SHRX32rr GR32:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(srl GR64:$src1, GR8:$src2),
-              (SHRX64rr GR64:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-
-    def : Pat<(shl GR32:$src1, GR8:$src2),
-              (SHLX32rr GR32:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(shl GR64:$src1, GR8:$src2),
-              (SHLX64rr GR64:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+   def : Pat<(op GR32:$src1, GR8:$src2),
+              (!cast<Instruction>(NAME#"32rr") GR32:$src1,
+               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+   def : Pat<(op GR64:$src1, GR8:$src2),
+              (!cast<Instruction>(NAME#"64rr") GR64:$src1,
+               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+   def : Pat<(op GR32:$src1, (shiftMask32 GR8:$src2)),
+              (!cast<Instruction>(NAME#"32rr") GR32:$src1,
+               (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+   def : Pat<(op GR64:$src1, (shiftMask64 GR8:$src2)),
+              (!cast<Instruction>(NAME#"64rr") GR64:$src1,
+               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   }
-
   // We prefer to use
   //  mov (%ecx), %esi
   //  shl $imm, $esi
@@ -354,30 +347,23 @@ let Predicates = [HasBMI2] in {
   //  shlx %al, (%ecx), %esi
   //
   // This priority is enforced by IsProfitableToFoldLoad.
-  def : Pat<(sra (loadi32 addr:$src1), GR8:$src2),
-            (SARX32rm addr:$src1,
-                      (INSERT_SUBREG
-                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(sra (loadi64 addr:$src1), GR8:$src2),
-            (SARX64rm addr:$src1,
-                      (INSERT_SUBREG
-                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi32 addr:$src1), GR8:$src2),
+             (!cast<Instruction>(NAME#"32rm") addr:$src1,
+              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi64 addr:$src1), GR8:$src2),
+             (!cast<Instruction>(NAME#"64rm") addr:$src1,
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi32 addr:$src1), (shiftMask32 GR8:$src2)),
+             (!cast<Instruction>(NAME#"32rm") addr:$src1,
+              (INSERT_SUBREG (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(op (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
+             (!cast<Instruction>(NAME#"64rm") addr:$src1,
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+}
 
-  def : Pat<(srl (loadi32 addr:$src1), GR8:$src2),
-            (SHRX32rm addr:$src1,
-                      (INSERT_SUBREG
-                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(srl (loadi64 addr:$src1), GR8:$src2),
-            (SHRX64rm addr:$src1,
-                      (INSERT_SUBREG
-                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-
-  def : Pat<(shl (loadi32 addr:$src1), GR8:$src2),
-            (SHLX32rm addr:$src1,
-                      (INSERT_SUBREG
-                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(shl (loadi64 addr:$src1), GR8:$src2),
-            (SHLX64rm addr:$src1,
-                      (INSERT_SUBREG
-                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+let Predicates = [HasBMI2] in {
+  defm : RORX_Pats;
+  defm SARX : ShiftX_Pats<sra>;
+  defm SHRX : ShiftX_Pats<srl>;
+  defm SHLX : ShiftX_Pats<shl>;
 }

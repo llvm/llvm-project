@@ -2387,8 +2387,10 @@ SDValue NVPTXTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
   SDValue V2 = Op.getOperand(1);
   uint32_t Selector = 0;
-  for (auto I : llvm::enumerate(SVN->getMask()))
-    Selector |= (I.value() << (I.index() * 4));
+  for (auto I : llvm::enumerate(SVN->getMask())) {
+    if (I.value() != -1) // -1 is a placeholder for undef.
+      Selector |= (I.value() << (I.index() * 4));
+  }
 
   SDLoc DL(Op);
   return DAG.getNode(NVPTXISD::PRMT, DL, MVT::v4i8, V1, V2,

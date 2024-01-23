@@ -200,8 +200,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
       // Given (and (shl y, c2), mask) in which mask has no leading zeros and
       // c3 trailing zeros. We can use an SRLI by c3 - c2 followed by a SHXADD.
       if (*LeftShift && Leading == 0 && C2.ult(Trailing) && Trailing == ShAmt) {
-        Register DstReg =
-            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
@@ -213,8 +212,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
       // Given (and (lshr y, c2), mask) in which mask has c2 leading zeros and
       // c3 trailing zeros. We can use an SRLI by c2 + c3 followed by a SHXADD.
       if (!*LeftShift && Leading == C2 && Trailing == ShAmt) {
-        Register DstReg =
-            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
@@ -253,7 +251,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
              (Trailing - C2.getLimitedValue()) == ShAmt;
 
     if (Cond) {
-      Register DstReg = MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+      Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
       return {{[=](MachineInstrBuilder &MIB) {
         MachineIRBuilder(*MIB.getInstr())
             .buildInstr(RISCV::SRLIW, {DstReg}, {RegY})
@@ -292,8 +290,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
       unsigned Leading = Mask.countl_zero();
       unsigned Trailing = Mask.countr_zero();
       if (Leading == 32 - ShAmt && C2 == Trailing && Trailing > ShAmt) {
-        Register DstReg =
-            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        Register DstReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SLLI, {DstReg}, {RegX})

@@ -90,11 +90,11 @@ declare float @acoshf(float)
 define void @acosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @acosh_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @acosh(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_acosh(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @acosh_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @acosh(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_acosh(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @acosh_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -125,11 +125,11 @@ define void @acosh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @acosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @acosh_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @acoshf(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_acoshf(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @acosh_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @acoshf(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_acoshf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @acosh_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -236,11 +236,11 @@ declare float @asinhf(float)
 define void @asinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @asinh_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @asinh(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_asinh(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @asinh_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @asinh(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_asinh(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @asinh_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -271,11 +271,11 @@ define void @asinh_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @asinh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @asinh_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @asinhf(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_asinhf(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @asinh_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @asinhf(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_asinhf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @asinh_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -528,11 +528,11 @@ declare float @cbrtf(float)
 define void @cbrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @cbrt_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @cbrt(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_cbrt(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @cbrt_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @cbrt(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_cbrt(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @cbrt_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -563,11 +563,11 @@ define void @cbrt_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @cbrt_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @cbrt_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @cbrtf(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_cbrtf(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @cbrt_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @cbrtf(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_cbrtf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @cbrt_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -601,11 +601,11 @@ declare float @copysignf(float, float)
 define void @copysign_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @copysign_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @copysign(double [[IN:%.*]], double [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2vv_copysign(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @copysign_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @copysign(double [[IN:%.*]], double [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_copysign(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @copysign_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -636,11 +636,11 @@ define void @copysign_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @copysign_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @copysign_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @copysignf(float [[IN:%.*]], float [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vv_copysignf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @copysign_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @copysignf(float [[IN:%.*]], float [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_copysignf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @copysign_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -814,17 +814,90 @@ define void @cosh_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
+declare double @cospi(double)
+declare float @cospif(float)
+
+define void @cospi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @cospi_f64
+; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_cospi(<2 x double> [[WIDE_LOAD:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @cospi_f64
+; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_cospi(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @cospi_f64
+; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call double @cospi(double [[IN:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @cospi_f64
+; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call double @cospi(double [[IN:%.*]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds double, ptr %in.ptr, i64 %iv
+  %in = load double, ptr %in.gep, align 8
+  %call = tail call double @cospi(double %in)
+  %out.gep = getelementptr inbounds double, ptr %out.ptr, i64 %iv
+  store double %call, ptr %out.gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
+define void @cospi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @cospi_f32
+; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_cospif(<4 x float> [[WIDE_LOAD:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @cospi_f32
+; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_cospif(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @cospi_f32
+; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call float @cospif(float [[IN:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @cospi_f32
+; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call float @cospif(float [[IN:%.*]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds float, ptr %in.ptr, i64 %iv
+  %in = load float, ptr %in.gep, align 8
+  %call = tail call float @cospif(float %in)
+  %out.gep = getelementptr inbounds float, ptr %out.ptr, i64 %iv
+  store float %call, ptr %out.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
 declare double @erf(double)
 declare float @erff(float)
 
 define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @erf_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @erf(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_erf(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @erf_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @erf(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_erf(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @erf_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -855,11 +928,11 @@ define void @erf_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @erf_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @erf_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @erff(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_erff(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @erf_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @erff(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_erff(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @erf_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -893,11 +966,11 @@ declare float @erfcf(float)
 define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @erfc_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @erfc(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_erfc(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @erfc_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @erfc(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_erfc(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @erfc_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -928,11 +1001,11 @@ define void @erfc_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @erfc_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @erfc_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @erfcf(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_erfcf(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @erfc_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @erfcf(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_erfcf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @erfc_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1185,11 +1258,11 @@ declare float @expm1f(float)
 define void @expm1_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @expm1_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @expm1(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_expm1(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @expm1_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @expm1(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_expm1(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @expm1_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1220,11 +1293,11 @@ define void @expm1_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @expm1_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @expm1_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @expm1f(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_expm1f(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @expm1_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @expm1f(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_expm1f(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @expm1_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1258,11 +1331,11 @@ declare float @fdimf(float, float)
 define void @fdim_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @fdim_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @fdim(double [[IN:%.*]], double [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2vv_fdim(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @fdim_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @fdim(double [[IN:%.*]], double [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_fdim(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @fdim_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1293,11 +1366,11 @@ define void @fdim_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @fdim_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @fdim_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @fdimf(float [[IN:%.*]], float [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vv_fdimf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @fdim_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @fdimf(float [[IN:%.*]], float [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_fdimf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @fdim_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1331,11 +1404,11 @@ declare float @fmaf(float, float, float)
 define void @fma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @fma_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @fma(double [[IN:%.*]], double [[IN]], double [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2vvv_fma(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]], <2 x double> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @fma_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @fma(double [[IN:%.*]], double [[IN]], double [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxvvv_fma(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @fma_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1366,11 +1439,11 @@ define void @fma_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @fma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @fma_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @fmaf(float [[IN:%.*]], float [[IN]], float [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vvv_fmaf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @fma_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @fmaf(float [[IN:%.*]], float [[IN]], float [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxvvv_fmaf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @fma_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1398,17 +1471,90 @@ define void @fma_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
+declare double @fmax(double, double)
+declare float @fmaxf(float, float)
+
+define void @fmax_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @fmax_f64
+; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2vv_fmax(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
+;
+; SLEEF-SVE-LABEL: define void @fmax_f64
+; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_fmax(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @fmax_f64
+; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call double @fmax(double [[IN:%.*]], double [[IN]])
+;
+; ARMPL-SVE-LABEL: define void @fmax_f64
+; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call double @fmax(double [[IN:%.*]], double [[IN]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds double, ptr %in.ptr, i64 %iv
+  %in = load double, ptr %in.gep, align 8
+  %call = tail call double @fmax(double %in, double %in)
+  %out.gep = getelementptr inbounds double, ptr %out.ptr, i64 %iv
+  store double %call, ptr %out.gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
+define void @fmax_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @fmax_f32
+; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vv_fmaxf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
+;
+; SLEEF-SVE-LABEL: define void @fmax_f32
+; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_fmaxf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @fmax_f32
+; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call float @fmaxf(float [[IN:%.*]], float [[IN]])
+;
+; ARMPL-SVE-LABEL: define void @fmax_f32
+; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call float @fmaxf(float [[IN:%.*]], float [[IN]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds float, ptr %in.ptr, i64 %iv
+  %in = load float, ptr %in.gep, align 8
+  %call = tail call float @fmaxf(float %in, float %in)
+  %out.gep = getelementptr inbounds float, ptr %out.ptr, i64 %iv
+  store float %call, ptr %out.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
 declare double @fmin(double, double)
 declare float @fminf(float, float)
 
 define void @fmin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @fmin_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @fmin(double [[IN:%.*]], double [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2vv_fmin(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @fmin_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @fmin(double [[IN:%.*]], double [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_fmin(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @fmin_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1439,11 +1585,11 @@ define void @fmin_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @fmin_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @fmin_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @fminf(float [[IN:%.*]], float [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vv_fminf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @fmin_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @fminf(float [[IN:%.*]], float [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_fminf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @fmin_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1550,11 +1696,11 @@ declare float @hypotf(float, float)
 define void @hypot_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @hypot_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @hypot(double [[IN:%.*]], double [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2vv_hypot(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @hypot_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @hypot(double [[IN:%.*]], double [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_hypot(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @hypot_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1585,11 +1731,11 @@ define void @hypot_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @hypot_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @hypot_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @hypotf(float [[IN:%.*]], float [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vv_hypotf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @hypot_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @hypotf(float [[IN:%.*]], float [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_hypotf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @hypot_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1607,6 +1753,156 @@ define void @hypot_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   %in.gep = getelementptr inbounds float, ptr %in.ptr, i64 %iv
   %in = load float, ptr %in.gep, align 8
   %call = tail call float @hypotf(float %in, float %in)
+  %out.gep = getelementptr inbounds float, ptr %out.ptr, i64 %iv
+  store float %call, ptr %out.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
+declare i32 @ilogb(double)
+declare i32 @ilogbf(float)
+
+define void @ilogb_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @ilogb_f64
+; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x i32> @_ZGVnN2v_ilogb(<2 x double> [[WIDE_LOAD:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @ilogb_f64
+; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x i32> @_ZGVsMxv_ilogb(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @ilogb_f64
+; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call i32 @ilogb(double [[IN:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @ilogb_f64
+; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call i32 @ilogb(double [[IN:%.*]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds double, ptr %in.ptr, i64 %iv
+  %in = load double, ptr %in.gep, align 8
+  %call = tail call i32 @ilogb(double %in)
+  %out.gep = getelementptr inbounds i32, ptr %out.ptr, i64 %iv
+  store i32 %call, ptr %out.gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
+define void @ilogb_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @ilogb_f32
+; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x i32> @_ZGVnN4v_ilogbf(<4 x float> [[WIDE_LOAD:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @ilogb_f32
+; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x i32> @_ZGVsMxv_ilogbf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @ilogb_f32
+; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @ilogb_f32
+; ARMPL-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call i32 @ilogbf(float [[IN:%.*]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds float, ptr %in.ptr, i64 %iv
+  %in = load float, ptr %in.gep, align 8
+  %call = tail call i32 @ilogbf(float %in)
+  %out.gep = getelementptr inbounds i32, ptr %out.ptr, i64 %iv
+  store i32 %call, ptr %out.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
+declare double @ldexp(double, i32)
+declare float @ldexpf(float, i32)
+
+define void @ldexp_f64(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @ldexp_f64
+; SLEEF-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP5:%.*]] = call <2 x double> @_ZGVnN2vv_ldexp(<2 x double> [[WIDE_LOAD:%.*]], <2 x i32> [[WIDE_LOAD1:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @ldexp_f64
+; SLEEF-SVE-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP17:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_ldexp(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i32> [[WIDE_MASKED_LOAD1:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @ldexp_f64
+; ARMPL-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call double @ldexp(double [[IN1:%.*]], i32 [[IN2:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @ldexp_f64
+; ARMPL-SVE-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call double @ldexp(double [[IN1:%.*]], i32 [[IN2:%.*]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in1.gep = getelementptr inbounds double, ptr %in1.ptr, i64 %iv
+  %in1 = load double, ptr %in1.gep, align 8
+  %in2.gep = getelementptr inbounds i32, ptr %in2.ptr, i64 %iv
+  %in2 = load i32, ptr %in2.gep, align 8
+  %call = tail call double @ldexp(double %in1, i32 %in2)
+  %out.gep = getelementptr inbounds double, ptr %out.ptr, i64 %iv
+  store double %call, ptr %out.gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
+define void @ldexp_f32(ptr noalias %in1.ptr, ptr noalias %in2.ptr, ptr noalias %out.ptr) {
+; SLEEF-NEON-LABEL: define void @ldexp_f32
+; SLEEF-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    [[TMP5:%.*]] = call <4 x float> @_ZGVnN4vv_ldexpf(<4 x float> [[WIDE_LOAD:%.*]], <4 x i32> [[WIDE_LOAD1:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @ldexp_f32
+; SLEEF-SVE-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    [[TMP17:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_ldexpf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @ldexp_f32
+; ARMPL-NEON-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @ldexp_f32
+; ARMPL-SVE-SAME: (ptr noalias [[IN1_PTR:%.*]], ptr noalias [[IN2_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    [[CALL:%.*]] = tail call float @ldexpf(float [[IN1:%.*]], i32 [[IN2:%.*]])
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in1.gep = getelementptr inbounds float, ptr %in1.ptr, i64 %iv
+  %in1 = load float, ptr %in1.gep, align 8
+  %in2.gep = getelementptr inbounds i32, ptr %in2.ptr, i64 %iv
+  %in2 = load i32, ptr %in2.gep, align 8
+  %call = tail call float @ldexpf(float %in1, i32 %in2)
   %out.gep = getelementptr inbounds float, ptr %out.ptr, i64 %iv
   store float %call, ptr %out.gep, align 4
   %iv.next = add nuw nsw i64 %iv, 1
@@ -1842,11 +2138,11 @@ declare float @log1pf(float)
 define void @log1p_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @log1p_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @log1p(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_log1p(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @log1p_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @log1p(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log1p(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @log1p_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -1877,11 +2173,11 @@ define void @log1p_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @log1p_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @log1p_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @log1pf(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_log1pf(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @log1p_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @log1pf(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_log1pf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @log1p_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -2063,11 +2359,11 @@ declare float @nextafterf(float, float)
 define void @nextafter_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @nextafter_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @nextafter(double [[IN:%.*]], double [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2vv_nextafter(<2 x double> [[WIDE_LOAD:%.*]], <2 x double> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @nextafter_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @nextafter(double [[IN:%.*]], double [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_nextafter(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x double> [[WIDE_MASKED_LOAD]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @nextafter_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -2098,11 +2394,11 @@ define void @nextafter_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @nextafter_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @nextafter_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @nextafterf(float [[IN:%.*]], float [[IN]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vv_nextafterf(<4 x float> [[WIDE_LOAD:%.*]], <4 x float> [[WIDE_LOAD]])
 ;
 ; SLEEF-SVE-LABEL: define void @nextafter_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @nextafterf(float [[IN:%.*]], float [[IN]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_nextafterf(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @nextafter_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -2349,6 +2645,79 @@ for.cond.cleanup:
   ret void
 }
 
+declare void @sincospi(double, ptr, ptr)
+declare void @sincospif(float, ptr, ptr)
+
+define void @sincospi_f64(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+; SLEEF-NEON-LABEL: define void @sincospi_f64
+; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    call void @_ZGVnN2vl8l8_sincospi(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @sincospi_f64
+; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    call void @_ZGVsMxvl8l8_sincospi(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @sincospi_f64
+; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    call void @armpl_vsincospiq_f64(<2 x double> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @sincospi_f64
+; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    call void @armpl_svsincospi_f64_x(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %gepa = getelementptr double, ptr %a, i64 %indvars.iv
+  %num = load double, ptr %gepa, align 8
+  %gepb = getelementptr double, ptr %b, i64 %indvars.iv
+  %gepc = getelementptr double, ptr %c, i64 %indvars.iv
+  call void @sincospi(double %num, ptr %gepb, ptr %gepc)
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @sincospi_f32(ptr noalias %a, ptr noalias %b, ptr noalias %c) {
+; SLEEF-NEON-LABEL: define void @sincospi_f32
+; SLEEF-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; SLEEF-NEON:    call void @_ZGVnN4vl4l4_sincospif(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+;
+; SLEEF-SVE-LABEL: define void @sincospi_f32
+; SLEEF-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; SLEEF-SVE:    call void @_ZGVsMxvl4l4_sincospif(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+; ARMPL-NEON-LABEL: define void @sincospi_f32
+; ARMPL-NEON-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; ARMPL-NEON:    call void @armpl_vsincospiq_f32(<4 x float> [[WIDE_LOAD:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]])
+;
+; ARMPL-SVE-LABEL: define void @sincospi_f32
+; ARMPL-SVE-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; ARMPL-SVE:    call void @armpl_svsincospi_f32_x(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], ptr [[TMP23:%.*]], ptr [[TMP24:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %gepa = getelementptr float, ptr %a, i64 %indvars.iv
+  %num = load float, ptr %gepa, align 8
+  %gepb = getelementptr float, ptr %b, i64 %indvars.iv
+  %gepc = getelementptr float, ptr %c, i64 %indvars.iv
+  call void @sincospif(float %num, ptr %gepb, ptr %gepc)
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+}
+
 declare double @sinh(double)
 declare float @sinhf(float)
 
@@ -2428,11 +2797,11 @@ declare float @sinpif(float)
 define void @sinpi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @sinpi_f64
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call double @sinpi(double [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <2 x double> @_ZGVnN2v_sinpi(<2 x double> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @sinpi_f64
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call double @sinpi(double [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_sinpi(<vscale x 2 x double> [[WIDE_MASKED_LOAD:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @sinpi_f64
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
@@ -2463,11 +2832,11 @@ define void @sinpi_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 define void @sinpi_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; SLEEF-NEON-LABEL: define void @sinpi_f32
 ; SLEEF-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-NEON:    [[CALL:%.*]] = tail call float @sinpif(float [[IN:%.*]])
+; SLEEF-NEON:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4v_sinpif(<4 x float> [[WIDE_LOAD:%.*]])
 ;
 ; SLEEF-SVE-LABEL: define void @sinpi_f32
 ; SLEEF-SVE-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {
-; SLEEF-SVE:    [[CALL:%.*]] = tail call float @sinpif(float [[IN:%.*]])
+; SLEEF-SVE:    [[TMP15:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_sinpif(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
 ;
 ; ARMPL-NEON-LABEL: define void @sinpi_f32
 ; ARMPL-NEON-SAME: (ptr noalias [[IN_PTR:%.*]], ptr noalias [[OUT_PTR:%.*]]) #[[ATTR0]] {

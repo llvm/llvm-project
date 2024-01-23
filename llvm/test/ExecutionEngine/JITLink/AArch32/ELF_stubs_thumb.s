@@ -1,6 +1,6 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=thumbv7-linux-gnueabi -arm-add-build-attributes \
-# RUN:         -filetype=obj -filetype=obj -o %t/elf_stubs.o %s
+# RUN:         -filetype=obj -o %t/elf_stubs.o %s
 # RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 \
 # RUN:              -slab-allocate 10Kb -slab-page-size 4096 \
 # RUN:              -abs external_func=0x76bbe880 \
@@ -26,7 +26,7 @@ test_external_call:
 	.size test_external_call, .-test_external_call
 
 	.globl  test_external_jump
-	.type	test_external_call,%function
+	.type	test_external_jump,%function
 	.p2align	1
 	.code	16
 	.thumb_func

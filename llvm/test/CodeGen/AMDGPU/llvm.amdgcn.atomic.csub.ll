@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,PREGFX12
-; RUN: llc < %s -march=amdgcn -mcpu=gfx1031 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,PREGFX12
-; RUN: llc < %s -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,GFX12PLUS
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,PREGFX12
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1031 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,PREGFX12
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN,GFX12PLUS
 
 declare i32 @llvm.amdgcn.buffer.atomic.csub(i32, <4 x i32>, i32, i32, i1)
 declare i32 @llvm.amdgcn.global.atomic.csub(ptr addrspace(1), i32)

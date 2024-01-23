@@ -263,7 +263,7 @@ void RewriterBase::eraseBlock(Block *block) {
   block->erase();
 }
 
-void RewriterBase::finalizeRootUpdate(Operation *op) {
+void RewriterBase::finalizeOpModification(Operation *op) {
   // Notify the listener that the operation was modified.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
     rewriteListener->notifyOperationModified(op);
@@ -276,7 +276,7 @@ void RewriterBase::replaceUsesWithIf(Value from, Value to,
                                      function_ref<bool(OpOperand &)> functor) {
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
     if (functor(operand))
-      updateRootInPlace(operand.getOwner(), [&]() { operand.set(to); });
+      modifyOpInPlace(operand.getOwner(), [&]() { operand.set(to); });
   }
 }
 

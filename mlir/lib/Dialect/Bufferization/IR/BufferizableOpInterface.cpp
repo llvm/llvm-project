@@ -253,7 +253,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
         copiedOpOperands.contains(opOperand));
     if (failed(copy))
       return failure();
-    rewriter.updateRootInPlace(op, [&]() { opOperand->set(*copy); });
+    rewriter.modifyOpInPlace(op, [&]() { opOperand->set(*copy); });
   }
 
   // Insert copies of Values.
@@ -274,7 +274,7 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
       // dynamic extents. Do not update these either.
       if (isa<tensor::DimOp>(use->getOwner()))
         continue;
-      rewriter.updateRootInPlace(use->getOwner(), [&]() { use->set(*copy); });
+      rewriter.modifyOpInPlace(use->getOwner(), [&]() { use->set(*copy); });
     }
   }
 

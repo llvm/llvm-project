@@ -2,7 +2,7 @@
 ; Note update_mir_test_checks does not support generating checks for
 ; the frame info, so some functions have manually added stack object
 ; checks.
-; RUN: llc -march=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
 ; FIXME: pre-VI should have same ABI without legal i16 operations.
 
 define void @void_func_empty_arg({} %arg0, i32 %arg1) #0 {

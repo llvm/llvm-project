@@ -264,6 +264,10 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 0
 #  define _LIBCPP_AVAILABILITY_TZDB __attribute__((unavailable))
 
+// Warning: This availability macro works differently than the other macros.
+// The dylib part of print is not needed on Apple platforms. Therefore when
+// the macro is not available the code calling the dylib is commented out.
+// The macro _LIBCPP_AVAILABILITY_PRINT is not used.
 #  define _LIBCPP_AVAILABILITY_HAS_PRINT 0
 #  define _LIBCPP_AVAILABILITY_PRINT __attribute__((unavailable))
 
