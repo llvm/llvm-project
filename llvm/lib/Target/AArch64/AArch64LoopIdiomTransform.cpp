@@ -180,7 +180,7 @@ AArch64LoopIdiomTransformPass::run(Loop &L, LoopAnalysisManager &AM,
 //
 //===----------------------------------------------------------------------===//
 
-struct MemCompareIdiom {
+class MemCompareIdiom {
 private:
   const TargetTransformInfo *TTI;
   DominatorTree *DT;
@@ -199,7 +199,7 @@ public:
                   LoopInfo *LI, Loop *L)
       : TTI(TTI), DT(DT), LI(LI), CurLoop(L) {}
 
-  bool recognize();
+  bool recognizeMemCompare();
   void transform();
 
 private:
@@ -228,7 +228,7 @@ bool AArch64LoopIdiomTransform::run(Loop *L) {
                     << "] Loop %" << CurLoop->getHeader()->getName() << "\n");
 
   MemCompareIdiom BCI(TTI, DT, LI, L);
-  if (BCI.recognize()) {
+  if (BCI.recognizeMemCompare()) {
     BCI.transform();
     return true;
   }
@@ -346,8 +346,7 @@ bool MemCompareIdiom::checkEndAndFoundBlockPhis(Value *IndVal) {
       // same as the end value (MaxLen) so we permit either. Otherwise for any
       // other value defined outside the loop we only allow values that are the
       // same as the exit value for while.body.
-      if (V1 != V2 &&
-          ((V1 != IndVal && V1 != MaxLen) || (V2 != IndVal)))
+      if (V1 != V2 && ((V1 != IndVal && V1 != MaxLen) || (V2 != IndVal)))
         return false;
     }
   }
@@ -399,7 +398,7 @@ bool MemCompareIdiom::recognizePostIncMemCompare() {
   return true;
 }
 
-bool MemCompareIdiom::recognize() {
+bool MemCompareIdiom::recognizeMemCompare() {
   // Currently the transformation only works on scalable vector types, although
   // there is no fundamental reason why it cannot be made to work for fixed
   // width too.
@@ -437,12 +436,12 @@ bool MemCompareIdiom::recognize() {
       !match(Index, m_c_Add(m_Specific(IndPhi), m_One())))
     return false;
 
-  // If we match the pattern, IndPhi and Index will be replaced with the result
-  // of the mismatch. If any other instructions are used outside of the loop, we
-  // cannot replace it.
+  // If we match the pattern, for the post-inc loop Index will be replaced
+  // with the value returned from generateMemCompare. If any other
+  // instructions are used outside of the loop, we cannot replace it.
   for (BasicBlock *BB : CurLoop->getBlocks())
     for (Instruction &I : *BB)
-      if (&I != IndPhi && &I != Index)
+      if (&I != Index)
         for (User *U : I.users())
           if (!CurLoop->contains(cast<Instruction>(U)))
             return false;
