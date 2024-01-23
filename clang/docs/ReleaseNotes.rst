@@ -596,6 +596,11 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses narrowing conversions involving const references.
   (`#63151: <https://github.com/llvm/llvm-project/issues/63151>`_).
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
+- The warning `-Wnan-infinity-disabled` is now emitted when ``INFINITY``
+  or ``NAN`` are used in arithmetic operations or function arguments in
+  floating-point mode where ``INFINITY`` or ``NAN`` don't have the expected
+  values.
+
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
 - Clang now diagnoses ``auto`` and ``decltype(auto)`` in declarations of conversion function template
