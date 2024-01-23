@@ -214,6 +214,7 @@ def FeatureStdExtZfhmin
                        [FeatureStdExtF]>;
 def HasStdExtZfhmin : Predicate<"Subtarget->hasStdExtZfhmin()">,
                              AssemblerPredicate<(all_of FeatureStdExtZfhmin),
+                             "'Zfh' (Half-Precision Floating-Point) or "
                              "'Zfhmin' (Half-Precision Floating-Point Minimal)">;
 
 def FeatureStdExtZfh
@@ -224,13 +225,6 @@ def HasStdExtZfh : Predicate<"Subtarget->hasStdExtZfh()">,
                              AssemblerPredicate<(all_of FeatureStdExtZfh),
                              "'Zfh' (Half-Precision Floating-Point)">;
 def NoStdExtZfh : Predicate<"!Subtarget->hasStdExtZfh()">;
-
-// FIXME: Remove this.
-def HasStdExtZfhOrZfhmin
-    : Predicate<"Subtarget->hasStdExtZfhmin()">,
-                AssemblerPredicate<(all_of FeatureStdExtZfhmin),
-                                   "'Zfh' (Half-Precision Floating-Point) or "
-                                   "'Zfhmin' (Half-Precision Floating-Point Minimal)">;
 
 def FeatureStdExtZfbfmin
     : SubtargetFeature<"experimental-zfbfmin", "HasStdExtZfbfmin", "true",
@@ -278,6 +272,7 @@ def FeatureStdExtZhinxmin
                        [FeatureStdExtZfinx]>;
 def HasStdExtZhinxmin : Predicate<"Subtarget->hasStdExtZhinxmin()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZhinxmin),
+                                  "'Zhinx' (Half Float in Integer) or "
                                   "'Zhinxmin' (Half Float in Integer Minimal)">;
 
 def FeatureStdExtZhinx
@@ -288,12 +283,6 @@ def HasStdExtZhinx : Predicate<"Subtarget->hasStdExtZhinx()">,
                                AssemblerPredicate<(all_of FeatureStdExtZhinx),
                                "'Zhinx' (Half Float in Integer)">;
 def NoStdExtZhinx : Predicate<"!Subtarget->hasStdExtZhinx()">;
-
-def HasStdExtZhinxOrZhinxmin
-    : Predicate<"Subtarget->hasStdExtZhinxmin()">,
-                AssemblerPredicate<(all_of FeatureStdExtZhinxmin),
-                                   "'Zhinx' (Half Float in Integer) or "
-                                   "'Zhinxmin' (Half Float in Integer Minimal)">;
 
 // Compressed Extensions
 

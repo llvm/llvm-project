@@ -328,7 +328,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   }
 
   bool MadeChange = false;
-  bool NewReservedRegs = false;
   bool SpilledToVirtVGPRLanes = false;
 
   // TODO: CSR VGPRs will never be spilled to AGPRs. These can probably be
@@ -366,7 +365,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
           // intermediate spills is implemented. There is no such support
           // currently exist in the LLVM compiler.
           if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI, true)) {
-            NewReservedRegs = true;
             bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
                 MI, FI, nullptr, Indexes, LIS, true);
             if (!Spilled)
@@ -444,13 +442,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
   SaveBlocks.clear();
   RestoreBlocks.clear();
-
-  // Updated the reserved registers with any physical VGPRs added for SGPR
-  // spills.
-  if (NewReservedRegs) {
-    for (Register Reg : FuncInfo->getWWMReservedRegs())
-      MRI.reserveReg(Reg, TRI);
-  }
 
   return MadeChange;
 }

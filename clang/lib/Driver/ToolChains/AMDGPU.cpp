@@ -552,9 +552,9 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     if (!hasHIPStdParLibrary())
       if (!HIPStdParPathArg.empty() ||
           !FS.exists(Inc + "/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
-      D.Diag(diag::err_drv_no_hipstdpar_lib);
-      return;
-    }
+        D.Diag(diag::err_drv_no_hipstdpar_lib);
+        return;
+      }
     if (!HasRocThrustLibrary && !FS.exists(Inc + "/thrust")) {
       D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
       return;
@@ -583,8 +583,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
       PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
 
     CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
-                    "-idirafter", HIPStdParPath,
-                    "-include", "hipstdpar_lib.hpp"});
+                    "-idirafter", HIPStdParPath, "-include",
+                    "hipstdpar_lib.hpp"});
   };
 
   if (DriverArgs.hasArg(options::OPT_nogpuinc)) {

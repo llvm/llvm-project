@@ -381,6 +381,9 @@ Changes in existing checks
   <clang-tidy/checks/google/readability-casting>` check to ignore constructor
   calls disguised as functional casts.
 
+- Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
+  check to ignore false positives on user defined-literals.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
@@ -404,7 +407,8 @@ Changes in existing checks
   using pointer to member function. Additionally, the check no longer emits
   a diagnostic when a variable that is not type-dependent is an operand of a
   type-dependent binary operator. Improved performance of the check through
-  optimizations.
+  optimizations. The check no longer emits a diagnostic for non-parameter-pack
+  variables in C++17 fold expressions.
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
