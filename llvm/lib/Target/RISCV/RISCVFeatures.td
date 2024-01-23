@@ -1129,7 +1129,7 @@ def FeatureForcedAtomics : SubtargetFeature<
     "forced-atomics", "HasForcedAtomics", "true",
     "Assume that lock-free native-width atomics are available">;
 def HasAtomicLdSt
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",

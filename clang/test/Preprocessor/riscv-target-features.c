@@ -1315,7 +1315,6 @@
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
 // RUN: -march=rv64i_zaamo0p1 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZAAMO-EXT %s
-// CHECK-ZAAMO-EXT: __riscv_atomic 1
 // CHECK-ZAAMO-EXT: __riscv_zaamo 1000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \

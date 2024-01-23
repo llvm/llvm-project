@@ -100,8 +100,8 @@ on support follow.
      ``V``            Supported
      ``Za128rs``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
-     ``Zaamo``        Supported
-     ``Zalrsc``       Supported
+     ``Zaamo``        Assembly Support
+     ``Zalrsc``       Assembly Support
      ``Zawrs``        Assembly Support
      ``Zba``          Supported
      ``Zbb``          Supported

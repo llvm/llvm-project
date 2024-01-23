@@ -175,7 +175,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_muldiv");
   }
 
-  if (ISAInfo->hasExtension("a") || ISAInfo->hasExtension("zaamo")) {
+  if (ISAInfo->hasExtension("a")) {
     Builder.defineMacro("__riscv_atomic");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
