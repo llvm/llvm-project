@@ -5050,8 +5050,9 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // is only cosmetic, and this functionality is only of use to lldb
     // developers who can live with not pretty...
     thread->Flush();
-    BroadcastEvent(eBroadcastBitStateChanged,
-                   new ProcessEventData(shared_from_this(), eStateStopped));
+    auto data_sp =
+        std::make_shared<ProcessEventData>(shared_from_this(), eStateStopped);
+    BroadcastEvent(eBroadcastBitStateChanged, data_sp);
     return eExpressionStoppedForDebug;
   }
 
