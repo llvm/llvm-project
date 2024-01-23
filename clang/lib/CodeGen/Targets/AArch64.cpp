@@ -821,32 +821,80 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*allowHigherAlign*/ false);
 }
 
+class SMEAttributes {
+public:
+  bool IsStreaming = false;
+  bool IsStreamingBody = false;
+  bool IsStreamingCompatible = false;
+  bool HasNewZA = false;
+
+  SMEAttributes(const FunctionDecl *F) {
+    if (F->hasAttr<ArmLocallyStreamingAttr>())
+      IsStreamingBody = true;
+    if (auto *NewAttr = F->getAttr<ArmNewAttr>()) {
+      if (NewAttr->isNewZA())
+        HasNewZA = true;
+    }
+    if (const auto *T = F->getType()->getAs<FunctionProtoType>()) {
+      if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+        IsStreaming = true;
+      if (T->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMCompatibleMask)
+        IsStreamingCompatible = true;
+    }
+  }
+
+  bool hasStreamingBody() const { return IsStreamingBody; }
+  bool hasStreamingInterface() const { return IsStreaming; }
+  bool hasStreamingCompatibleInterface() const { return IsStreamingCompatible; }
+  bool hasStreamingInterfaceOrBody() const {
+    return hasStreamingBody() || hasStreamingInterface();
+  }
+  bool hasNonStreamingInterface() const {
+    return !hasStreamingInterface() && !hasStreamingCompatibleInterface();
+  }
+  bool hasNonStreamingInterfaceAndBody() const {
+    return hasNonStreamingInterface() && !hasStreamingBody();
+  }
+
+  bool requiresSMChange(const SMEAttributes Callee,
+                        bool BodyOverridesInterface = false) {
+    // If the transition is not through a call (e.g. when considering inlining)
+    // and Callee has a streaming body, then we can ignore the interface of
+    // Callee.
+    if (BodyOverridesInterface && Callee.hasStreamingBody()) {
+      return !hasStreamingInterfaceOrBody();
+    }
+
+    if (Callee.hasStreamingCompatibleInterface())
+      return false;
+
+    if (hasStreamingCompatibleInterface())
+      return true;
+
+    // Both non-streaming
+    if (hasNonStreamingInterfaceAndBody() && Callee.hasNonStreamingInterface())
+      return false;
+
+    // Both streaming
+    if (hasStreamingInterfaceOrBody() && Callee.hasStreamingInterface())
+      return false;
+
+    return Callee.hasStreamingInterface();
+  }
+
+  bool hasNewZABody() { return HasNewZA; }
+  bool requiresLazySave() const { return HasNewZA; }
+};
+
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
     const FunctionDecl *Callee, const CallArgList &Args) const {
   if (!Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  auto GetSMEAttrs = [](const FunctionDecl *F) {
-    llvm::SMEAttrs FAttrs;
-    if (F->hasAttr<ArmLocallyStreamingAttr>())
-      FAttrs.set(llvm::SMEAttrs::Mask::SM_Enabled);
-    if (auto *NewAttr = F->getAttr<ArmNewAttr>()) {
-      if (NewAttr->isNewZA())
-        FAttrs.set(llvm::SMEAttrs::Mask::ZA_New);
-    }
-    if (const auto *T = F->getType()->getAs<FunctionProtoType>()) {
-      if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
-        FAttrs.set(llvm::SMEAttrs::Mask::SM_Enabled);
-      if (T->getAArch64SMEAttributes() &
-          FunctionType::SME_PStateSMCompatibleMask)
-        FAttrs.set(llvm::SMEAttrs::Mask::SM_Compatible);
-    }
-    return FAttrs;
-  };
-
-  auto CalleeAttrs = GetSMEAttrs(Callee);
-  auto CallerAttrs = GetSMEAttrs(Caller);
+  SMEAttributes CalleeAttrs(Callee);
+  SMEAttributes CallerAttrs(Caller);
 
   if (CallerAttrs.requiresSMChange(CalleeAttrs, true))
     CGM.getDiags().Report(CallLoc,
@@ -855,6 +903,9 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
   if (CalleeAttrs.hasNewZABody())
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
         << Callee->getDeclName();
+  if (CallerAttrs.requiresLazySave())
+    CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_lazy_save)
+        << Callee->getDeclName() << Caller->getDeclName();
 }
 
 std::unique_ptr<TargetCodeGenInfo>

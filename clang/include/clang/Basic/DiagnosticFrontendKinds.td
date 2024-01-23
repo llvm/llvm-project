@@ -283,6 +283,8 @@ def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatched %2 attributes">;
 def err_function_always_inline_new_za : Error<
   "always_inline function %0 has new za state">;
+def err_function_always_inline_lazy_save : Error<
+  "inlining always_inline function %0 into %1 would require a lazy za save">;
 
 def warn_avx_calling_convention
     : Warning<"AVX vector %select{return|argument}0 of type %1 without '%2' "
