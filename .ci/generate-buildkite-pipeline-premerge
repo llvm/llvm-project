@@ -197,17 +197,6 @@ function check-targets() {
 
 # Project specific pipelines.
 
-# If libc++ or one of the runtimes directories changed.
-if echo "$modified_dirs" | grep -q -E "^(libcxx|libcxxabi|libunwind|runtimes|cmake)$"; then
-  cat <<EOF
-- trigger: "libcxx-ci"
-  build:
-    message: "${buildMessage}"
-    commit: "${BUILDKITE_COMMIT}"
-    branch: "${BUILDKITE_BRANCH}"
-EOF
-fi
-
 # If clang changed.
 if echo "$modified_dirs" | grep -q -E "^(clang)$"; then
   cat <<EOF

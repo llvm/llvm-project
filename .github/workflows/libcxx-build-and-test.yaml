@@ -207,3 +207,14 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+  buildkite-stage:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - name: Trigger Buildkite Pipeline
+        uses: buildkite/trigger-pipeline-action@v2.0.0
+        with:
+          buildkite-token: ${{ secrets.TRIGGER_BK_BUILD_TOKEN }}
+          pipeline: "llvm-project/libcxx-ci"
+          ignore_pipeline_branch_filter: true
