@@ -348,24 +348,20 @@ entry:
 define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_ext_add_to_64bits:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:    ldrb w9, [x0, #2]
+; CHECK-NEXT:    ldrh w10, [x0]
 ; CHECK-NEXT:  Lloh2:
 ; CHECK-NEXT:    adrp x8, lCPI9_0@PAGE
 ; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    ldr d1, [x8, lCPI9_0@PAGEOFF]
 ; CHECK-NEXT:    add x8, x1, #4
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    add x9, x0, #2
-; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ld1.b { v0 }[4], [x9]
+; CHECK-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    bic.4h v0, #255, lsl #8
 ; CHECK-NEXT:    add.4h v0, v0, v1
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 ;
