@@ -50,8 +50,8 @@ def merge(args):
         )
         return 1
     cmd = [args[0], "merge", "-o", args[1]]
-    for i in range(2, len(args)):
-        cmd.extend(findFilesWithExtension(args[i], "profraw"))
+    for path in args[2:]:
+        cmd.extend(findFilesWithExtension(path, "profraw"))
     subprocess.check_call(cmd)
     return 0
 
