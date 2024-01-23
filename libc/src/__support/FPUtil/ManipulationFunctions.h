@@ -108,7 +108,7 @@ LIBC_INLINE T logb(T x) {
     return x;
   } else if (bits.is_inf()) {
     // Return positive infinity.
-    return T(FPBits<T>::inf(Sign::POS));
+    return T(FPBits<T>::inf());
   }
 
   NormalFloat<T> normal(bits);
@@ -127,7 +127,7 @@ LIBC_INLINE T ldexp(T x, int exp) {
   // that adding |exp| to it does not lead to integer rollover. But, if |exp|
   // value is larger the exponent range for type T, then we can return infinity
   // early. Because the result of the ldexp operation can be a subnormal number,
-  // we need to accommodate the (mantissaWidht + 1) worth of shift in
+  // we need to accommodate the (mantissaWidth + 1) worth of shift in
   // calculating the limit.
   int exp_limit = FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   if (exp > exp_limit)
@@ -164,26 +164,22 @@ LIBC_INLINE T nextafter(T from, U to) {
     return static_cast<T>(to);
 
   using StorageType = typename FPBits<T>::StorageType;
-  StorageType int_val = from_bits.uintval();
-  if (from != FPBits<T>::zero()) {
-    if ((static_cast<U>(from) < to) == (from > FPBits<T>::zero())) {
-      ++int_val;
+  if (from != T(0)) {
+    if ((static_cast<U>(from) < to) == (from > T(0))) {
+      from_bits = FPBits<T>(StorageType(from_bits.uintval() + 1));
     } else {
-      --int_val;
+      from_bits = FPBits<T>(StorageType(from_bits.uintval() - 1));
     }
   } else {
-    int_val = FPBits<T>::MIN_SUBNORMAL;
-    if (to_bits.is_neg())
-      int_val |= FPBits<T>::SIGN_MASK;
+    from_bits = FPBits<T>::min_subnormal(to_bits.sign());
   }
 
-  StorageType exponent_bits = int_val & FPBits<T>::EXP_MASK;
-  if (exponent_bits == StorageType(0))
+  if (from_bits.is_subnormal())
     raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
-  else if (exponent_bits == FPBits<T>::EXP_MASK)
+  else if (from_bits.is_inf())
     raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
 
-  return cpp::bit_cast<T>(int_val);
+  return from_bits.get_val();
 }
 
 } // namespace fputil
