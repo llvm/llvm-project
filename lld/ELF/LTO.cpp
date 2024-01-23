@@ -256,10 +256,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
         // Symbol section is always null for bitcode symbols, hence the check
         // for isElf(). Skip linker script defined symbols as well: they have
         // no File defined.
-        !(dr->section == nullptr && (!sym->file || sym->file->isElf()));
+        !(dr->section == nullptr &&
+          (sym->file->isInternal() || sym->file->isElf()));
 
     if (r.Prevailing)
-      Undefined(nullptr, StringRef(), STB_GLOBAL, STV_DEFAULT, sym->type)
+      Undefined(ctx.internalFile, StringRef(), STB_GLOBAL, STV_DEFAULT,
+                sym->type)
           .overwrite(*sym);
 
     // We tell LTO to not apply interprocedural optimization for wrapped

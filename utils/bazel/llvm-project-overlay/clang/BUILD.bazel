@@ -1681,14 +1681,14 @@ gentbl(
 )
 
 gentbl(
-    name = "headers_arm_sme_draft_spec_subject_to_change_gen",
+    name = "headers_arm_sme_gen",
     copts = [
         "-Wno-implicit-fallthrough",
         "-Wno-error=frame-larger-than=",
     ],
     tbl_outs = [(
         "-gen-arm-sme-header",
-        "lib/Headers/arm_sme_draft_spec_subject_to_change.h",
+        "lib/Headers/arm_sme.h",
     )],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/arm_sme.td",
@@ -1743,7 +1743,7 @@ builtin_headers = glob(
     "lib/Headers/arm_mve.h",
     "lib/Headers/arm_neon.h",
     "lib/Headers/arm_sve.h",
-    "lib/Headers/arm_sme_draft_spec_subject_to_change.h",
+    "lib/Headers/arm_sme.h",
     "lib/Headers/arm_vector_types.h",
     "lib/Headers/arm_bf16.h",
     "lib/Headers/module.modulemap",
