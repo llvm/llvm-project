@@ -87,7 +87,7 @@ private:
     // Compute liveness from the end of the block up to the beginning of the
     // outlining candidate.
     for (auto &MI : make_range(MBB->rbegin(),
-                               (MachineBasicBlock::reverse_iterator)front()))
+                               (MachineBasicBlock::reverse_iterator)begin()))
       FromEndOfBlockToStartOfSeq.stepBackward(MI);
   }
 
@@ -100,7 +100,7 @@ private:
       return;
     InSeqWasSet = true;
     InSeq.init(TRI);
-    for (auto &MI : make_range(front(), std::next(back())))
+    for (auto &MI : *this)
       InSeq.accumulate(MI);
   }
 
@@ -135,8 +135,11 @@ public:
   /// Returns the call overhead of this candidate if it is in the list.
   unsigned getCallOverhead() const { return CallOverhead; }
 
-  MachineBasicBlock::iterator &front() { return FirstInst; }
-  MachineBasicBlock::iterator &back() { return LastInst; }
+  MachineBasicBlock::iterator begin() { return FirstInst; }
+  MachineBasicBlock::iterator end() { return std::next(LastInst); }
+
+  MachineInstr &front() { return *FirstInst; }
+  MachineInstr &back() { return *LastInst; }
   MachineFunction *getMF() const { return MBB->getParent(); }
   MachineBasicBlock *getMBB() const { return MBB; }
 

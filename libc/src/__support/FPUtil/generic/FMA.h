@@ -130,9 +130,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     return x * y + z;
 
   // Extract mantissa and append hidden leading bits.
-  UInt128 x_mant = x_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  UInt128 y_mant = y_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  UInt128 z_mant = z_bits.get_mantissa() | FPBits::MIN_NORMAL;
+  UInt128 x_mant = x_bits.get_explicit_mantissa();
+  UInt128 y_mant = y_bits.get_explicit_mantissa();
+  UInt128 z_mant = z_bits.get_explicit_mantissa();
 
   // If the exponent of the product x*y > the exponent of z, then no extra
   // precision beside the entire product x*y is needed.  On the other hand, when
@@ -255,9 +255,7 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     if ((round_mode == FE_TOWARDZERO) ||
         (round_mode == FE_UPWARD && prod_sign.is_neg()) ||
         (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
-      result = FPBits::MAX_NORMAL;
-      return prod_sign.is_neg() ? -cpp::bit_cast<double>(result)
-                                : cpp::bit_cast<double>(result);
+      return FPBits::max_normal(prod_sign).get_val();
     }
     return static_cast<double>(FPBits::inf(prod_sign));
   }

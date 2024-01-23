@@ -1907,7 +1907,7 @@ define <2 x i64> @fptosi_2f64_to_2i64_const() {
 define <4 x i32> @fptosi_2f64_to_2i32_const() {
 ; SSE-LABEL: fptosi_2f64_to_2i32_const:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = <4294967295,1,u,u>
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967295,1,u,u]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fptosi_2f64_to_2i32_const:
@@ -1966,7 +1966,7 @@ define <2 x i64> @fptoui_2f64_to_2i64_const() {
 define <4 x i32> @fptoui_2f64_to_2i32_const(<2 x double> %a) {
 ; SSE-LABEL: fptoui_2f64_to_2i32_const:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = <2,4,u,u>
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2,4,u,u]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fptoui_2f64_to_2i32_const:

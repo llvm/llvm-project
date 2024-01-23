@@ -23,7 +23,7 @@ if(CLANG_PLUGIN_SUPPORT)
   export_executable_symbols_for_plugins(clang-repl)
 endif()
 
-string(TOUPPER ${CMAKE_SYSTEM_PROCESSOR} system_processor)
+string(TOUPPER "${CMAKE_SYSTEM_PROCESSOR}" system_processor)
 if(system_processor MATCHES "ARM")
   set(FLAG_LONG_PLT "-Wl,--long-plt")
   llvm_check_linker_flag(CXX ${FLAG_LONG_PLT} LINKER_HAS_FLAG_LONG_PLT)

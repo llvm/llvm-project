@@ -598,7 +598,7 @@ define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocap
 define fastcc void @test17() nounwind {
 ; X86-SSE-LABEL: test17:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [u,u,32768,32768]
 ; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -610,7 +610,7 @@ define fastcc void @test17() nounwind {
 ;
 ; X64-SSE-LABEL: test17:
 ; X64-SSE:       # %bb.0: # %entry
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = [u,u,32768,32768]
 ; X64-SSE-NEXT:    movaps %xmm0, (%rax)
 ; X64-SSE-NEXT:    retq
 ;
