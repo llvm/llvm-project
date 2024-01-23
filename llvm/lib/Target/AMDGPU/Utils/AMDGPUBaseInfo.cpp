@@ -31,10 +31,11 @@
 #define GET_INSTRMAP_INFO
 #include "AMDGPUGenInstrInfo.inc"
 
-static llvm::cl::opt<unsigned>
-    AmdhsaCodeObjectVersion("amdhsa-code-object-version", llvm::cl::Hidden,
-                            llvm::cl::desc("AMDHSA Code Object Version"),
-                            llvm::cl::init(4));
+static llvm::cl::opt<unsigned> DefaultAMDHSACodeObjectVersion(
+    "amdhsa-code-object-version", llvm::cl::Hidden,
+    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV4),
+    llvm::cl::desc("Set default AMDHSA Code Object Version (module flag "
+                   "or asm directive still take priority if present)"));
 
 namespace {
 
@@ -161,45 +162,32 @@ bool isHsaAbi(const MCSubtargetInfo &STI) {
   return STI.getTargetTriple().getOS() == Triple::AMDHSA;
 }
 
-std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
-  if (STI && STI->getTargetTriple().getOS() != Triple::AMDHSA)
-    return std::nullopt;
+unsigned getAMDHSACodeObjectVersion(const Module &M) {
+  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("amdgpu_code_object_version"))) {
+    return (unsigned)Ver->getZExtValue() / 100;
+  }
 
-  switch (AmdhsaCodeObjectVersion) {
+  return getDefaultAMDHSACodeObjectVersion();
+}
+
+unsigned getDefaultAMDHSACodeObjectVersion() {
+  return DefaultAMDHSACodeObjectVersion;
+}
+
+uint8_t getELFABIVersion(const Triple &T, unsigned CodeObjectVersion) {
+  if (T.getOS() != Triple::AMDHSA)
+    return 0;
+
+  switch (CodeObjectVersion) {
   case 4:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   case 5:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V5;
   default:
-    report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
-                       Twine(AmdhsaCodeObjectVersion));
+    report_fatal_error("Unsupported AMDHSA Code Object Version " +
+                       Twine(CodeObjectVersion));
   }
-}
-
-bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
-  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
-    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V4;
-  return false;
-}
-
-bool isHsaAbiVersion5(const MCSubtargetInfo *STI) {
-  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
-    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V5;
-  return false;
-}
-
-unsigned getAmdhsaCodeObjectVersion() {
-  return AmdhsaCodeObjectVersion;
-}
-
-unsigned getCodeObjectVersion(const Module &M) {
-  if (auto Ver = mdconst::extract_or_null<ConstantInt>(
-      M.getModuleFlag("amdgpu_code_object_version"))) {
-    return (unsigned)Ver->getZExtValue() / 100;
-  }
-
-  // Default code object version.
-  return AMDHSA_COV4;
 }
 
 unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
@@ -705,7 +693,7 @@ namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
     : STI(STI), XnackSetting(TargetIDSetting::Any),
-      SramEccSetting(TargetIDSetting::Any), CodeObjectVersion(0) {
+      SramEccSetting(TargetIDSetting::Any) {
   if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
     XnackSetting = TargetIDSetting::Unsupported;
   if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
@@ -817,23 +805,16 @@ std::string AMDGPUTargetID::toString() const {
 
   std::string Features;
   if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
-    switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV4:
-    case AMDGPU::AMDHSA_COV5:
-      // sramecc.
-      if (getSramEccSetting() == TargetIDSetting::Off)
-        Features += ":sramecc-";
-      else if (getSramEccSetting() == TargetIDSetting::On)
-        Features += ":sramecc+";
-      // xnack.
-      if (getXnackSetting() == TargetIDSetting::Off)
-        Features += ":xnack-";
-      else if (getXnackSetting() == TargetIDSetting::On)
-        Features += ":xnack+";
-      break;
-    default:
-      break;
-    }
+    // sramecc.
+    if (getSramEccSetting() == TargetIDSetting::Off)
+      Features += ":sramecc-";
+    else if (getSramEccSetting() == TargetIDSetting::On)
+      Features += ":sramecc+";
+    // xnack.
+    if (getXnackSetting() == TargetIDSetting::Off)
+      Features += ":xnack-";
+    else if (getXnackSetting() == TargetIDSetting::On)
+      Features += ":xnack+";
   }
 
   StreamRep << Processor << Features;
