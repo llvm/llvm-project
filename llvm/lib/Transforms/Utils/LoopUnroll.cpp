@@ -109,11 +109,6 @@ UnrollVerifyLoopInfo("unroll-verify-loopinfo", cl::Hidden,
 #endif
                     );
 
-static cl::opt<unsigned>
-    UnrollMaxIterations("unroll-max-iterations", cl::init(1'000'000),
-                        cl::Hidden,
-                        cl::desc("Maximum allowed iterations to unroll."));
-
 /// Check if unrolling created a situation where we need to insert phi nodes to
 /// preserve LCSSA form.
 /// \param Blocks is a vector of basic blocks representing unrolled loop.
@@ -455,14 +450,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                            "generated when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;
     }
-  }
-
-  // Certain cases with UBSAN can cause trip count to be calculated as INT_MAX,
-  // Block unrolling at a reasonable limit so that the compiler doesn't hang
-  // trying to unroll the loop. See PR77842
-  if (ULO.Count > UnrollMaxIterations) {
-    LLVM_DEBUG(dbgs() << "Won't unroll; trip count is too large\n");
-    return LoopUnrollResult::Unmodified;
   }
 
   using namespace ore;
