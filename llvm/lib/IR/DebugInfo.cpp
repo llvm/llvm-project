@@ -2247,10 +2247,8 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
         if (DPV.isDbgDeclare())
           ProcessDeclare(&DPV, DPVDeclares);
       }
-      DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I);
-      if (!DDI)
-        continue;
-      ProcessDeclare(DDI, DbgDeclares);
+      if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I))
+        ProcessDeclare(DDI, DbgDeclares);
     }
   }
 
