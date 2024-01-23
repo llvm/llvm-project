@@ -1021,6 +1021,16 @@ defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_d
 
 } // End SubtargetPredicate = HasFlatScratchInsts
 
+let SubtargetPredicate = isGFX12_10Plus in {
+def FLAT_LOAD_MONITOR_B32    : FLAT_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
+def FLAT_LOAD_MONITOR_B64    : FLAT_Load_Pseudo <"flat_load_monitor_b64",  VReg_64>;
+def FLAT_LOAD_MONITOR_B128   : FLAT_Load_Pseudo <"flat_load_monitor_b128", VReg_128>;
+
+defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
+defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
+defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
+}
+
 let SubtargetPredicate = isGFX12Plus in {
   let Uses = [EXEC, M0] in {
     defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
@@ -2977,6 +2987,14 @@ multiclass VGLOBAL_Real_AllAddr_gfx1210<bits<8> op, string ps = NAME, string opN
                                         int renamed = false, string alias = ""> :
   VFLAT_Real_Base_gfx1210<op, ps, opName, renamed, alias>,
   VFLAT_Real_SADDR_gfx1210<op, ps, opName>;
+
+defm FLAT_LOAD_MONITOR_B32     : VFLAT_Real_Base_gfx1210<0x070>;
+defm FLAT_LOAD_MONITOR_B64     : VFLAT_Real_Base_gfx1210<0x071>;
+defm FLAT_LOAD_MONITOR_B128    : VFLAT_Real_Base_gfx1210<0x072>;
+
+defm GLOBAL_LOAD_MONITOR_B32   : VGLOBAL_Real_AllAddr_gfx1210<0x070>;
+defm GLOBAL_LOAD_MONITOR_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x071>;
+defm GLOBAL_LOAD_MONITOR_B128  : VGLOBAL_Real_AllAddr_gfx1210<0x072>;
 
 let WaveSizePredicate = isWave32 in {
   defm GLOBAL_LOAD_B128_TR_B16 : VGLOBAL_Real_AllAddr_gfx1210<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_b128_tr_b16", true>;
