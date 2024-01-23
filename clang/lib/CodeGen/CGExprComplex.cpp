@@ -892,6 +892,9 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
                                                         llvm::Value *LHSi,
                                                         llvm::Value *RHSr,
                                                         llvm::Value *RHSi) {
+  // FIXME: This could eventually be replaced by an LLVM intrinsic to
+  // avoid this long IR sequence.
+
   // (a + ib) / (c + id) = (e + if)
   llvm::Value *FAbsRHSr = EmitllvmFAbs(CGF, RHSr); // |c|
   llvm::Value *FAbsRHSi = EmitllvmFAbs(CGF, RHSi); // |d|
@@ -936,7 +939,7 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
   llvm::Value *RC = Builder.CreateFMul(CdD, RHSr);  // rc
   llvm::Value *DpRC = Builder.CreateFAdd(RHSi, RC); // tmp=d+rc
 
-  llvm::Value *T7 = Builder.CreateFMul(LHSr, RC);    // ar
+  llvm::Value *T7 = Builder.CreateFMul(LHSr, CdD);   // ar
   llvm::Value *T8 = Builder.CreateFAdd(T7, LHSi);    // ar+b
   llvm::Value *DSTFr = Builder.CreateFDiv(T8, DpRC); // (ar+b)/tmp
 
@@ -978,7 +981,10 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited)
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
-    else if (!CGF.getLangOpts().FastMath) {
+    else if (!CGF.getLangOpts().FastMath ||
+             // '-ffast-math' is used in the command line but followed by an
+             // '-fno-cx-limited-range'.
+             Op.FPFeatures.getComplexRange() == LangOptions::CX_Full) {
       LHSi = OrigLHSi;
       // If we have a complex operand on the RHS and FastMath is not allowed, we
       // delegate to a libcall to handle all of the complexities and minimize
