@@ -340,7 +340,7 @@ private:
 /// These architectures have no MovT/MovW instructions and don't support Thumb2.
 /// BL is the only Thumb instruction that can generate stubs and they can always
 /// be transformed into BLX.
-class StubsManager_prev7 : public TableManager<StubsManager_prev7> {
+class StubsManager_prev7 {
 public:
   StubsManager_prev7() = default;
 
@@ -352,18 +352,24 @@ public:
   /// Implements link-graph traversal via visitExistingEdges()
   bool visitEdge(LinkGraph &G, Block *B, Edge &E);
 
-  /// Create a Arm stub for pre-v7 CPUs
-  Symbol &createEntry(LinkGraph &G, Symbol &Target);
-
 private:
-  /// Get or create the object file section that will contain all our stubs
-  Section &getStubsSection(LinkGraph &G) {
-    if (!StubsSection)
-      StubsSection = &G.createSection(getSectionName(),
-                                      orc::MemProt::Read | orc::MemProt::Exec);
-    return *StubsSection;
+  // Each stub uses a single block that can have 2 entryponts, one for Arm and
+  // one for Thumb
+  struct StubMapEntry {
+    Block *B = nullptr;
+    Symbol *ArmEntry = nullptr;
+    Symbol *ThumbEntry = nullptr;
+  };
+
+  std::pair<StubMapEntry *, bool> getStubMapSlot(StringRef Name) {
+    auto &&[Stubs, NewStub] = StubMap.try_emplace(Name);
+    return std::make_pair(&Stubs->second, NewStub);
   }
 
+  Symbol *getOrCreateSlotEntrypoint(LinkGraph &G, StubMapEntry &Slot,
+                                    bool Thumb);
+
+  DenseMap<StringRef, StubMapEntry> StubMap;
   Section *StubsSection = nullptr;
 };
 
