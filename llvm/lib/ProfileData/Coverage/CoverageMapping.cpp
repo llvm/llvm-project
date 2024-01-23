@@ -583,24 +583,37 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
   return MaxBitmapID + (SizeInBits / CHAR_BIT);
 }
 
+/// This holds the DecisionRegion and MCDCBranch(es) under it.
+/// Also traverses Expansion(s).
 struct DecisionRow {
+  /// The subject
   const CounterMappingRegion *DecisionRegion;
+
+  /// They are reflected from `DecisionRegion` for convenience.
   LineColPair DecisionStartLoc;
   LineColPair DecisionEndLoc;
 
+  /// This is passed to `MCDCRecordProcessor`, so this should be compatible to
+  /// `ArrayRef<const CounterMappingRegion *>`.
   SmallVector<const CounterMappingRegion *, 6> Branches;
+
+  /// Each `ID` in `Branches` should be unique.
   DenseSet<CounterMappingRegion::MCDCConditionID> IDs;
+
+  /// Relevant `Expansion`(s) should be caught to find expanded Branches.
   SmallVector<const CounterMappingRegion *> Expansions;
 
   DecisionRow(const CounterMappingRegion &Decision)
       : DecisionRegion(&Decision), DecisionStartLoc(Decision.startLoc()),
         DecisionEndLoc(Decision.endLoc()) {}
 
+  /// Determine whether `R` is included in `DecisionRegion`.
   bool inDecisionRegion(const CounterMappingRegion &R) {
     return (R.FileID == DecisionRegion->FileID &&
             R.startLoc() >= DecisionStartLoc && R.endLoc() <= DecisionEndLoc);
   }
 
+  /// Determin whether `R` is pointed by any of Expansions.
   bool inExpansions(const CounterMappingRegion &R) {
     return any_of(Expansions, [&](const auto &Expansion) {
       return (Expansion->ExpandedFileID == R.FileID);
@@ -613,19 +626,26 @@ struct DecisionRow {
     Completed,
   };
 
+  /// Add `Branch` into the Decision
   UpdateResult updateBranch(const CounterMappingRegion &Branch) {
     auto ID = Branch.MCDCParams.ID;
+    assert(ID > 0 && "MCDCBranch.ID should begin with 1");
 
     if (!IDs.contains(ID) &&
         (inDecisionRegion(Branch) || inExpansions(Branch))) {
       assert(Branches.size() < DecisionRegion->MCDCParams.NumConditions);
 
+      // Put `ID=1` in front of `Branches` for convenience
+      // even if `Branches` is not topological.
       if (ID == 1)
         Branches.insert(Branches.begin(), &Branch);
       else
         Branches.push_back(&Branch);
 
+      // Mark `ID` as `assigned`.
       IDs.insert(ID);
+
+      // `Completed` when `Branches` is full
       return (Branches.size() == DecisionRegion->MCDCParams.NumConditions
                   ? UpdateResult::Completed
                   : UpdateResult::Updated);
@@ -633,6 +653,8 @@ struct DecisionRow {
       return UpdateResult::NotFound;
   }
 
+  /// Record `Expansion` if it is dominated to the Decision.
+  /// Each `Expansion` may nest.
   bool updateExpansion(const CounterMappingRegion &Expansion) {
     if (inDecisionRegion(Expansion) || inExpansions(Expansion)) {
       Expansions.push_back(&Expansion);
@@ -702,6 +724,7 @@ Error CoverageMapping::loadFunctionRecord(
   FunctionRecord Function(OrigFuncName, Record.Filenames);
   for (const auto &Region : Record.MappingRegions) {
     if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
+      // Start recording `Region` as the `Decision`
       Decisions.emplace_back(Region);
       continue;
     }
