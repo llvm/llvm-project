@@ -355,7 +355,6 @@ Clang-Tidy Checks
    :doc:`readability-identifier-length <readability/identifier-length>`,
    :doc:`readability-identifier-naming <readability/identifier-naming>`, "Yes"
    :doc:`readability-implicit-bool-conversion <readability/implicit-bool-conversion>`, "Yes"
-   :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>`, "Yes"
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
@@ -371,6 +370,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-control-flow <readability/redundant-control-flow>`, "Yes"
    :doc:`readability-redundant-declaration <readability/redundant-declaration>`, "Yes"
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
+   :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
