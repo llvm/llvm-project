@@ -46,6 +46,7 @@ public:
 
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;
+  // An array of (module name, native relocatable file content) pairs.
   SmallVector<std::pair<std::string, SmallString<0>>, 0> buf;
   std::vector<std::unique_ptr<MemoryBuffer>> files;
   SmallVector<std::string, 0> filenames;

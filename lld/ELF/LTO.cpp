@@ -371,8 +371,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     StringRef bitcodeFilePath;
     StringRef objBuf;
     if (files[i]) {
-      // Get the native relocatable file from the cache. filenames[i] contains
-      // the original bitcode filename.
+      // When files[i] is not null, we get the native relocatable file from the
+      // cache. filenames[i] contains the original bitcode file path.
       objBuf = files[i]->getBuffer();
       bitcodeFilePath = filenames[i];
     } else {
@@ -383,9 +383,9 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
     if (objBuf.empty())
       continue;
 
-    // If the input bitcode file is path/to/a.o and -o specifies a.out, then the
-    // corresponding lto object file name will look something like:
-    // path/to/a.out.lto.a.o.
+    // If the input bitcode file is path/to/x.o and -o specifies a.out, the
+    // corresponding native relocatable file path will look like:
+    // path/to/a.out.lto.x.o.
     StringRef ltoObjName;
     if (bitcodeFilePath == "ld-temp.o") {
       ltoObjName =

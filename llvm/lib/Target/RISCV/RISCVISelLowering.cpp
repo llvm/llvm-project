@@ -4852,54 +4852,28 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   assert(!V1.isUndef() && "Unexpected shuffle canonicalization");
 
-  SmallVector<SDValue> MaskVals;
-  // As a backup, shuffles can be lowered via a vrgather instruction, possibly
-  // merged with a second vrgather.
-  SmallVector<SDValue> GatherIndicesLHS, GatherIndicesRHS;
-
   // By default we preserve the original operand order, and use a mask to
   // select LHS as true and RHS as false. However, since RVV vector selects may
   // feature splats but only on the LHS, we may choose to invert our mask and
   // instead select between RHS and LHS.
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
-  bool InvertMask = IsSelect == SwapOps;
 
-  // Keep a track of which non-undef indices are used by each LHS/RHS shuffle
-  // half.
-  DenseMap<int, unsigned> LHSIndexCounts, RHSIndexCounts;
-
-  // Now construct the mask that will be used by the vselect or blended
-  // vrgather operation. For vrgathers, construct the appropriate indices into
-  // each vector.
-  for (int MaskIndex : Mask) {
-    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ InvertMask;
-    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
-    if (!IsSelect) {
-      bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
-      GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
-                                     ? DAG.getConstant(MaskIndex, DL, XLenVT)
-                                     : DAG.getUNDEF(XLenVT));
-      GatherIndicesRHS.push_back(
-          IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
-                            : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
-      if (IsLHSOrUndefIndex && MaskIndex >= 0)
-        ++LHSIndexCounts[MaskIndex];
-      if (!IsLHSOrUndefIndex)
-        ++RHSIndexCounts[MaskIndex - NumElts];
+  if (IsSelect) {
+    // Now construct the mask that will be used by the vselect operation.
+    SmallVector<SDValue> MaskVals;
+    for (int MaskIndex : Mask) {
+      bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ SwapOps;
+      MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     }
-  }
 
-  if (SwapOps) {
-    std::swap(V1, V2);
-    std::swap(GatherIndicesLHS, GatherIndicesRHS);
-  }
+    if (SwapOps)
+      std::swap(V1, V2);
 
-  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
-  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
-
-  if (IsSelect)
+    assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
+  }
 
   // We might be able to express the shuffle as a bitrotate. But even if we
   // don't have Zvkb and have to expand, the expanded sequence of approx. 2
@@ -4914,6 +4888,43 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // user-supplied maximum fixed-length LMUL.
     return SDValue();
   }
+
+  // As a backup, shuffles can be lowered via a vrgather instruction, possibly
+  // merged with a second vrgather.
+  SmallVector<SDValue> GatherIndicesLHS, GatherIndicesRHS;
+
+  // Keep a track of which non-undef indices are used by each LHS/RHS shuffle
+  // half.
+  DenseMap<int, unsigned> LHSIndexCounts, RHSIndexCounts;
+
+  SmallVector<SDValue> MaskVals;
+
+  // Now construct the mask that will be used by the blended vrgather operation.
+  // Cconstruct the appropriate indices into each vector.
+  for (int MaskIndex : Mask) {
+    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ !SwapOps;
+    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+    bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
+    GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
+                               ? DAG.getConstant(MaskIndex, DL, XLenVT)
+                               : DAG.getUNDEF(XLenVT));
+    GatherIndicesRHS.push_back(
+                               IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
+                               : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
+    if (IsLHSOrUndefIndex && MaskIndex >= 0)
+      ++LHSIndexCounts[MaskIndex];
+    if (!IsLHSOrUndefIndex)
+      ++RHSIndexCounts[MaskIndex - NumElts];
+  }
+
+  if (SwapOps) {
+    std::swap(V1, V2);
+    std::swap(GatherIndicesLHS, GatherIndicesRHS);
+  }
+
+  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
 
   unsigned GatherVXOpc = RISCVISD::VRGATHER_VX_VL;
   unsigned GatherVVOpc = RISCVISD::VRGATHER_VV_VL;

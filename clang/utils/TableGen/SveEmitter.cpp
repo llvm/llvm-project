@@ -1722,12 +1722,27 @@ void SVEEmitter::createBuiltinZAState(raw_ostream &OS) {
 
   std::map<std::string, std::set<std::string>> IntrinsicsPerState;
   for (auto &Def : Defs) {
+    std::string Key;
+    auto AddToKey = [&Key](const std::string &S) -> void {
+      Key = Key.empty() ? S : (Key + " | " + S);
+    };
+
     if (Def->isFlagSet(getEnumValueForFlag("IsInZA")))
-      IntrinsicsPerState["ArmInZA"].insert(Def->getMangledName());
+      AddToKey("ArmInZA");
     else if (Def->isFlagSet(getEnumValueForFlag("IsOutZA")))
-      IntrinsicsPerState["ArmOutZA"].insert(Def->getMangledName());
+      AddToKey("ArmOutZA");
     else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZA")))
-      IntrinsicsPerState["ArmInOutZA"].insert(Def->getMangledName());
+      AddToKey("ArmInOutZA");
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZT0")))
+      AddToKey("ArmInZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsOutZT0")))
+      AddToKey("ArmOutZT0");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsInOutZT0")))
+      AddToKey("ArmInOutZT0");
+
+    if (!Key.empty())
+      IntrinsicsPerState[Key].insert(Def->getMangledName());
   }
 
   OS << "#ifdef GET_SME_BUILTIN_GET_STATE\n";
