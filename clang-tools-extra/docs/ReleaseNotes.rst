@@ -381,6 +381,9 @@ Changes in existing checks
   <clang-tidy/checks/google/readability-casting>` check to ignore constructor
   calls disguised as functional casts.
 
+- Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
+  check to ignore false positives on user defined-literals.
+
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
