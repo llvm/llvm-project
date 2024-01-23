@@ -2499,30 +2499,31 @@ void IntegerRelation::printSpace(raw_ostream &os) const {
 }
 
 void IntegerRelation::removeTrivialEqualities() {
-  bool flag;
-  for (unsigned i = 0, e = getNumInequalities(); i < e; i++) {
-    flag = true;
-    for (unsigned j = 0, f = getNumVars(); j < f + 1; j++)
-      if (atEq(i, j) != 0)
-        flag = false;
-    if (flag)
-      removeEquality(i);
+  std::vector<bool> isTrivialEquality;
+  for (int i = 0, e = getNumEqualities(); i < e; ++i) {
+    bool currentIsTrivial =
+        llvm::all_of(getEquality(i), [&](MPInt n) -> bool { return (n == 0); });
+    isTrivialEquality.push_back(currentIsTrivial);
   }
+
+  unsigned pos = 0;
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++)
+    if (!isTrivialEquality[r])
+      equalities.copyRow(r, pos++);
+
+  equalities.resizeVertically(pos);
 }
 
 bool IntegerRelation::isFullDim() {
-  removeTrivialEqualities();
-
-  unsigned e = getNumInequalities();
-
   // If there is a non-trivial equality, the space cannot be full-dimensional.
-  if (e > 0)
+  removeTrivialEqualities();
+  if (getNumEqualities() > 0)
     return false;
 
   // If along the direction of any of the inequalities, the upper and lower
   // optima are the same, then the region is not full-dimensional.
   Simplex simplex(*this);
-  for (unsigned i = 0; i < e; i++) {
+  for (unsigned i = 0, e = getNumInequalities(); i < e; i++) {
     auto ineq = inequalities.getRow(i);
     auto upOpt = simplex.computeOptimum(Simplex::Direction::Up, ineq);
     auto downOpt = simplex.computeOptimum(Simplex::Direction::Down, ineq);
