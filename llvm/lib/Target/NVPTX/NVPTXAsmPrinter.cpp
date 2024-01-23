@@ -1294,7 +1294,8 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI->getCodePointerSize();
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
-  // memory use by ptxas.
+  // memory use by ptxas. (See:
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
   unsigned int InitializerCount = size;
   // TODO: symbols make this harder, but it would still be good to trim trailing
   // 0s for aggs with symbols as well.
