@@ -14,11 +14,11 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ;
 ; GFX9ARCH-SDAG-LABEL: _amdgpu_cs_main:
 ; GFX9ARCH-SDAG:       ; %bb.0: ; %.entry
-; GFX9ARCH-SDAG-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX9ARCH-SDAG-NEXT:    s_lshr_b32 s0, ttmp7, 16
 ; GFX9ARCH-SDAG-NEXT:    s_and_b32 s1, ttmp7, 0xffff
 ; GFX9ARCH-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
 ; GFX9ARCH-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9ARCH-SDAG-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9ARCH-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9ARCH-SDAG-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
 ; GFX9ARCH-SDAG-NEXT:    s_endpgm
 ;
@@ -35,11 +35,10 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ;
 ; GFX12-SDAG-LABEL: _amdgpu_cs_main:
 ; GFX12-SDAG:       ; %bb.0: ; %.entry
-; GFX12-SDAG-NEXT:    s_lshr_b32 s2, ttmp7, 16
-; GFX12-SDAG-NEXT:    s_and_b32 s1, ttmp7, 0xffff
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s1
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GFX12-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX12-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
