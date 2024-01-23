@@ -164,14 +164,17 @@ for header in public_headers:
 
 #include <{header}>
 
-#define STRINGIFY_IMPL(x) #x
-#define STRINGIFY(x) STRINGIFY_IMPL(x)
+// Note: We can't include test_macros.h in this test so we use the libc++ version macro.
+#ifndef _LIBCPP_CXX03_LANG
+
+#  define STRINGIFY_IMPL(x) #x
+#  define STRINGIFY(x) STRINGIFY_IMPL(x)
 
 // This is written to work in C++11 constexpr rules
 static constexpr bool is_equal(char const* s1, char const* s2) {{
-  return s1[0] == 0 && s2[0] == 0 ? true :        // Either both are at the end, or
-          s1[0] != 0 && s2[0] != 0 &&             // neither is at the end, and
-          s1[0] == s2[0] && is_equal(s1+1, s2+1); // their contents are equal
+  return s1[0] == 0 && s2[0] == 0 ? true :                   // Either both are at the end, or
+              s1[0] != 0 && s2[0] != 0 &&                     // neither is at the end, and
+                  s1[0] == s2[0] && is_equal(s1 + 1, s2 + 1); // their contents are equal
 }}
 
 // Make sure we don't swallow the definition of the macros we push/pop
@@ -180,4 +183,5 @@ static_assert(is_equal(STRINGIFY(max), STRINGIFY(SYSTEM_RESERVED_NAME)), "");
 static_assert(is_equal(STRINGIFY(move), STRINGIFY(SYSTEM_RESERVED_NAME)), "");
 static_assert(is_equal(STRINGIFY(erase), STRINGIFY(SYSTEM_RESERVED_NAME)), "");
 static_assert(is_equal(STRINGIFY(refresh), STRINGIFY(SYSTEM_RESERVED_NAME)), "");
+#endif // _LIBCPP_CXX03_LANG
 """)
