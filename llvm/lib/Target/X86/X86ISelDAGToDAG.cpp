@@ -4279,7 +4279,7 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   SDNode *Input = N->getOperand(0).getNode();
   for (auto Use : Input->uses()) {
     if (Use->getOpcode() == ISD::CopyToReg) {
-      auto RegisterNode =
+      auto *RegisterNode =
           dyn_cast<RegisterSDNode>(Use->getOperand(1).getNode());
       if (RegisterNode && RegisterNode->getReg() == X86::EFLAGS) {
         MightClobberFlags = true;
