@@ -8,7 +8,8 @@
 ; RUN: llc < %s -mtriple=i686--   -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X86-AVX512
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64-AVX512
 
-; FIXME: PR78897 - Don't vectorize a mul if we still need the extract
+; PR78897 - Don't vectorize a mul of extracted values if we'd still need the extract.
+; TODO: We should vectorize on 32-bit targets.
 define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X86-SSE2-LABEL: produceShuffleVectorForByte:
 ; X86-SSE2:       # %bb.0: # %entry
@@ -70,21 +71,13 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
 ; X64-SSE2-NEXT:    pand %xmm0, %xmm1
 ; X64-SSE2-NEXT:    movq %xmm1, %rax
-; X64-SSE2-NEXT:    movdqa %xmm1, %xmm2
-; X64-SSE2-NEXT:    psrlq $32, %xmm2
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1229782938247303440,1229782938247303440]
-; X64-SSE2-NEXT:    pmuludq %xmm3, %xmm2
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [286331153,286331153]
-; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm4
-; X64-SSE2-NEXT:    paddq %xmm2, %xmm4
-; X64-SSE2-NEXT:    psllq $32, %xmm4
-; X64-SSE2-NEXT:    pmuludq %xmm3, %xmm1
-; X64-SSE2-NEXT:    paddq %xmm4, %xmm1
-; X64-SSE2-NEXT:    movabsq $76861433640456465, %rcx # imm = 0x111111111111111
-; X64-SSE2-NEXT:    xorq %rax, %rcx
-; X64-SSE2-NEXT:    movabsq $1229782938247303440, %rax # imm = 0x1111111111111110
+; X64-SSE2-NEXT:    movabsq $1229782938247303440, %rcx # imm = 0x1111111111111110
+; X64-SSE2-NEXT:    movabsq $76861433640456465, %rdx # imm = 0x111111111111111
+; X64-SSE2-NEXT:    xorq %rax, %rdx
 ; X64-SSE2-NEXT:    imulq %rcx, %rax
-; X64-SSE2-NEXT:    movq %rax, %xmm2
+; X64-SSE2-NEXT:    movq %rax, %xmm1
+; X64-SSE2-NEXT:    imulq %rcx, %rdx
+; X64-SSE2-NEXT:    movq %rdx, %xmm2
 ; X64-SSE2-NEXT:    pand %xmm0, %xmm1
 ; X64-SSE2-NEXT:    pandn %xmm2, %xmm0
 ; X64-SSE2-NEXT:    por %xmm1, %xmm0
@@ -147,24 +140,16 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X64-SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE42-NEXT:    pxor %xmm0, %xmm0
 ; X64-SSE42-NEXT:    pcmpeqb %xmm1, %xmm0
-; X64-SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
-; X64-SSE42-NEXT:    pand %xmm0, %xmm2
-; X64-SSE42-NEXT:    movq %xmm2, %rax
-; X64-SSE42-NEXT:    movdqa %xmm2, %xmm1
-; X64-SSE42-NEXT:    psrlq $32, %xmm1
-; X64-SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [1229782938247303440,1229782938247303440]
-; X64-SSE42-NEXT:    pmuludq %xmm3, %xmm1
-; X64-SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [286331153,286331153]
-; X64-SSE42-NEXT:    pmuludq %xmm2, %xmm4
-; X64-SSE42-NEXT:    paddq %xmm1, %xmm4
-; X64-SSE42-NEXT:    psllq $32, %xmm4
-; X64-SSE42-NEXT:    pmuludq %xmm3, %xmm2
-; X64-SSE42-NEXT:    paddq %xmm4, %xmm2
-; X64-SSE42-NEXT:    movabsq $76861433640456465, %rcx # imm = 0x111111111111111
-; X64-SSE42-NEXT:    xorq %rax, %rcx
-; X64-SSE42-NEXT:    movabsq $1229782938247303440, %rax # imm = 0x1111111111111110
+; X64-SSE42-NEXT:    movdqa {{.*#+}} xmm1 = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
+; X64-SSE42-NEXT:    pand %xmm0, %xmm1
+; X64-SSE42-NEXT:    movq %xmm1, %rax
+; X64-SSE42-NEXT:    movabsq $1229782938247303440, %rcx # imm = 0x1111111111111110
+; X64-SSE42-NEXT:    movabsq $76861433640456465, %rdx # imm = 0x111111111111111
+; X64-SSE42-NEXT:    xorq %rax, %rdx
 ; X64-SSE42-NEXT:    imulq %rcx, %rax
-; X64-SSE42-NEXT:    movq %rax, %xmm1
+; X64-SSE42-NEXT:    movq %rax, %xmm2
+; X64-SSE42-NEXT:    imulq %rcx, %rdx
+; X64-SSE42-NEXT:    movq %rdx, %xmm1
 ; X64-SSE42-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; X64-SSE42-NEXT:    movdqa %xmm1, %xmm0
 ; X64-SSE42-NEXT:    psrlw $4, %xmm0
@@ -220,19 +205,13 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X64-AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vmovq %xmm1, %rax
-; X64-AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm2
-; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1229782938247303440,1229782938247303440]
-; X64-AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm4
-; X64-AVX2-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
-; X64-AVX2-NEXT:    vpsllq $32, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    movabsq $76861433640456465, %rcx # imm = 0x111111111111111
-; X64-AVX2-NEXT:    xorq %rax, %rcx
-; X64-AVX2-NEXT:    movabsq $1229782938247303440, %rax # imm = 0x1111111111111110
+; X64-AVX2-NEXT:    movabsq $1229782938247303440, %rcx # imm = 0x1111111111111110
+; X64-AVX2-NEXT:    movabsq $76861433640456465, %rdx # imm = 0x111111111111111
+; X64-AVX2-NEXT:    xorq %rax, %rdx
 ; X64-AVX2-NEXT:    imulq %rcx, %rax
-; X64-AVX2-NEXT:    vmovq %rax, %xmm2
+; X64-AVX2-NEXT:    vmovq %rax, %xmm1
+; X64-AVX2-NEXT:    imulq %rcx, %rdx
+; X64-AVX2-NEXT:    vmovq %rdx, %xmm2
 ; X64-AVX2-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm0
 ; X64-AVX2-NEXT:    vpsrlw $4, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
@@ -280,16 +259,17 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X64-AVX512-NEXT:    vpbroadcastb %edi, %xmm0
 ; X64-AVX512-NEXT:    vptestnmb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
 ; X64-AVX512-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
-; X64-AVX512-NEXT:    vpmullq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vmovq %xmm0, %rax
-; X64-AVX512-NEXT:    movabsq $76861433640456465, %rcx # imm = 0x111111111111111
-; X64-AVX512-NEXT:    xorq %rax, %rcx
-; X64-AVX512-NEXT:    movabsq $1229782938247303440, %rax # imm = 0x1111111111111110
+; X64-AVX512-NEXT:    movabsq $1229782938247303440, %rcx # imm = 0x1111111111111110
+; X64-AVX512-NEXT:    movabsq $76861433640456465, %rdx # imm = 0x111111111111111
+; X64-AVX512-NEXT:    xorq %rax, %rdx
 ; X64-AVX512-NEXT:    imulq %rcx, %rax
 ; X64-AVX512-NEXT:    vmovq %rax, %xmm0
-; X64-AVX512-NEXT:    vmovdqu8 %xmm1, %xmm0 {%k1}
-; X64-AVX512-NEXT:    vpsrlw $4, %xmm0, %xmm1
-; X64-AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; X64-AVX512-NEXT:    imulq %rcx, %rdx
+; X64-AVX512-NEXT:    vmovq %rdx, %xmm1
+; X64-AVX512-NEXT:    vmovdqu8 %xmm0, %xmm1 {%k1}
+; X64-AVX512-NEXT:    vpsrlw $4, %xmm1, %xmm0
+; X64-AVX512-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; X64-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    retq
 entry:
