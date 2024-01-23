@@ -35,24 +35,22 @@ define amdgpu_kernel void @workgroup_id_xy(ptr addrspace(1) %ptrx, ptr addrspace
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, ttmp9
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-NEXT:    s_and_b32 s4, ttmp7, 0xffff
-; GFX9-NEXT:    v_mov_b32_e32 v2, s4
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, ttmp7
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
-; GFX9-NEXT:    global_store_dword v1, v2, s[2:3]
+; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    global_store_dword v2, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: workgroup_id_xy:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX12-NEXT:    s_and_b32 s4, ttmp7, 0xffff
-; GFX12-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, 0
-; GFX12-NEXT:    v_mov_b32_e32 v2, s4
+; GFX12-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, ttmp7
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX12-NEXT:    global_store_b32 v1, v2, s[2:3]
+; GFX12-NEXT:    global_store_b32 v2, v0, s[0:1]
+; GFX12-NEXT:    global_store_b32 v2, v1, s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm

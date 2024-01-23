@@ -4182,15 +4182,16 @@ bool AMDGPULegalizerInfo::loadInputValue(
   const TargetRegisterClass *ArgRC;
   LLT ArgTy;
 
+  CallingConv::ID CC = B.getMF().getFunction().getCallingConv();
   const ArgDescriptor WorkGroupIDX =
       ArgDescriptor::createRegister(AMDGPU::TTMP9);
   // TODO: No need to mask GridY if GridZ is not valid.
-  const ArgDescriptor WorkGroupIDY =
-      ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFFu);
+  const ArgDescriptor WorkGroupIDY = ArgDescriptor::createRegister(
+      AMDGPU::TTMP7,
+      AMDGPU::isEntryFunctionCC(CC) && !MFI->hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
-  if (ST.hasArchitectedSGPRs() &&
-      AMDGPU::isCompute(B.getMF().getFunction().getCallingConv())) {
+  if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Arg = &WorkGroupIDX;

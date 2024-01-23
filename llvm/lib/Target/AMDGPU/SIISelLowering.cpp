@@ -2067,16 +2067,16 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
   const TargetRegisterClass *RC;
   LLT Ty;
 
+  CallingConv::ID CC = DAG.getMachineFunction().getFunction().getCallingConv();
   const ArgDescriptor WorkGroupIDX =
       ArgDescriptor::createRegister(AMDGPU::TTMP9);
   // TODO: No need to mask GridY if GridZ is not valid.
-  const ArgDescriptor WorkGroupIDY =
-      ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFFu);
+  const ArgDescriptor WorkGroupIDY = ArgDescriptor::createRegister(
+      AMDGPU::TTMP7,
+      AMDGPU::isEntryFunctionCC(CC) && !MFI.hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
-  if (Subtarget->hasArchitectedSGPRs() &&
-      AMDGPU::isCompute(
-          DAG.getMachineFunction().getFunction().getCallingConv())) {
+  if (Subtarget->hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
