@@ -418,15 +418,11 @@ def VOP_MADMK_F16_t16 : VOP_MADMK <f16> {
 }
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
 
-class getRegisterOperandForVT<ValueType VT> {
-  RegisterOperand ret = RegisterOperand<getVregSrcForVT<VT>.ret>;
-}
-
 // FIXME: Remove src2_modifiers. It isn't used, so is wasting memory
 // and processing time but it makes it easier to convert to mad.
 class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, vt0]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT>.ret:$src2);
-  let Ins64 = getIns64<Src0RC64, Src1RC64, getRegisterOperandForVT<Src2VT>.ret, 3,
+  let Ins64 = getIns64<Src0RC64, Src1RC64, getVregSrcForVT<Src2VT>.ret, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
   let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
@@ -489,21 +485,21 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let DstRC = VOPDstOperand<VGPR_32_Lo128>;
   let DstRC64 = VOPDstOperand<VGPR_32>;
   let Src1RC32 = VGPRSrc_32_Lo128;
-  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT_t16<Src2VT>.ret:$src2);
-  let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
-  let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
-  let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2);
+  let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+  let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+  let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
   let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
   let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
   let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
-                    getVregSrcForVT_t16<Src2VT>.ret:$src2, // stub argument
+                    getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2, // stub argument
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
-                     getVregSrcForVT_t16<Src2VT>.ret:$src2, // stub argument
+                     getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2, // stub argument
                      dpp8:$dpp8, FI:$fi);
   let Src2Mod = FP32InputMods; // dummy unused modifiers
   let Src2RC64 = VGPRSrc_32;   // stub argument
@@ -535,7 +531,7 @@ def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
 
   let Src0Mod = Int32InputMods;
   let Src1Mod = Int32InputMods;
-  let Ins64 = getIns64<Src0RC64, Src1RC64, getRegisterOperandForVT<Src2VT>.ret,
+  let Ins64 = getIns64<Src0RC64, Src1RC64, getVregSrcForVT<Src2VT>.ret,
                        3 /*NumSrcArgs*/, HasClamp, 1 /*HasModifiers*/,
                        1 /*HasSrc2Mods*/, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
@@ -898,8 +894,8 @@ def LDEXP_F16_VOPProfile : VOPProfile <[f16, f16, f16, untyped]> {
 }
 def LDEXP_F16_VOPProfile_True16 : VOPProfile_Fake16<VOP_F16_F16_F16> {
   let Src1RC32 = RegisterOperand<VGPR_32_Lo128>;
-  let Src1DPP = VGPR_32_Lo128;
-  let Src1ModDPP = IntT16VRegInputMods;
+  let Src1DPP = RegisterOperand<VGPR_32_Lo128>;
+  let Src1ModDPP = IntT16VRegInputMods</* IsFake16= */ 1>;
 }
 
 let isReMaterializable = 1 in {

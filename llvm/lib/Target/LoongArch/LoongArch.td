@@ -111,6 +111,13 @@ def FeatureAutoVec
     : SubtargetFeature<"auto-vec", "HasExpAutoVec", "true",
                        "Experimental auto vectorization">;
 
+// Floating point approximation operation
+def FeatureFrecipe
+    : SubtargetFeature<"frecipe", "HasFrecipe", "true",
+                       "Support frecipe.{s/d} and frsqrte.{s/d} instructions.">;
+def HasFrecipe : Predicate<"Subtarget->hasFrecipe()">;
+
+
 //===----------------------------------------------------------------------===//
 // Registers, instruction descriptions ...
 //===----------------------------------------------------------------------===//

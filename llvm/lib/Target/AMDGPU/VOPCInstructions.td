@@ -61,13 +61,13 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
   let AsmDPP16 = AsmDPP#"$fi";
   // VOPC DPP Instructions do not need an old operand
   let TieRegDPP = "";
-  let InsDPP = getInsDPP<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
+  let InsDPP = getInsDPP<VOPDstOperand<Src0DPP.RegClass>, Src0DPP, Src1DPP, Src2DPP,
                          NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
                          Src2ModDPP, 0/*HasOld*/>.ret;
-  let InsDPP16 = getInsDPP16<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
+  let InsDPP16 = getInsDPP16<VOPDstOperand<Src0DPP.RegClass>, Src0DPP, Src1DPP, Src2DPP,
                              NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
                              Src2ModDPP, 0/*HasOld*/>.ret;
-  let InsDPP8 = getInsDPP8<VOPDstOperand<Src0DPP>, Src0DPP, Src1DPP, Src2DPP,
+  let InsDPP8 = getInsDPP8<VOPDstOperand<Src0DPP.RegClass>, Src0DPP, Src1DPP, Src2DPP,
                            NumSrcArgs, HasModifiers, Src0ModDPP, Src1ModDPP,
                            Src2ModDPP, 0/*HasOld*/>.ret;
 
@@ -88,10 +88,10 @@ multiclass VOPC_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, ValueType
   def NAME : VOPC_Profile<sched, vt0, vt1>;
   def _t16 : VOPC_Profile<sched, vt0, vt1> {
     let IsTrue16 = 1;
-    let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
-    let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
-    let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
-    let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+    let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
     let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
     let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
@@ -118,10 +118,10 @@ multiclass VOPC_NoSdst_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, Va
   def NAME : VOPC_NoSdst_Profile<sched, vt0, vt1>;
   def _t16 : VOPC_NoSdst_Profile<sched, vt0, vt1> {
     let IsTrue16 = 1;
-    let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
-    let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
-    let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
-    let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+    let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
     let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
     let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
@@ -789,11 +789,11 @@ multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
   def NAME : VOPC_Class_Profile<sched, f16>;
   def _t16 : VOPC_Class_Profile<sched, f16, i16> {
     let IsTrue16 = 1;
-    let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
+    let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1RC64 = VSrc_b32;
-    let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
-    let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
-    let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+    let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
     let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
     let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
@@ -816,11 +816,11 @@ multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {
   def NAME : VOPC_Class_NoSdst_Profile<sched, f16>;
   def _t16 : VOPC_Class_NoSdst_Profile<sched, f16, i16> {
     let IsTrue16 = 1;
-    let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
+    let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1RC64 = VSrc_b32;
-    let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
-    let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
-    let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+    let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
     let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
     let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
