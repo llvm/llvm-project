@@ -1146,7 +1146,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   if (EnablePGOForceFunctionAttrs && PGOOpt &&
       (PGOOpt->Action == PGOOptions::SampleUse ||
-       PGOOpt->Action == PGOOptions::IRUse))
+       PGOOpt->Action == PGOOptions::IRUse ||
+       PGOOpt->CSAction == PGOOptions::CSIRUse))
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
