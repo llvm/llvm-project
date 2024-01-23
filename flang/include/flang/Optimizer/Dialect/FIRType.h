@@ -46,6 +46,13 @@ public:
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
 
+  /// Is this the box for an assumed rank?
+  bool isAssumedRank() const;
+
+  /// Return the same type, except for the shape, that is taken the shape
+  /// of shapeMold.
+  BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(mlir::Type type);
 };

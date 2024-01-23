@@ -650,6 +650,13 @@ struct CallContext {
     return false;
   }
 
+  /// Is this a call to a BIND(C) procedure?
+  bool isBindcCall() const {
+    if (const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol())
+      return Fortran::semantics::IsBindCProcedure(*symbol);
+    return false;
+  }
+
   const Fortran::evaluate::ProcedureRef &procRef;
   Fortran::lower::AbstractConverter &converter;
   Fortran::lower::SymMap &symMap;
@@ -859,6 +866,22 @@ static hlfir::Entity fixProcedureDummyMismatch(mlir::Location loc,
   return hlfir::Entity{boxProc};
 }
 
+mlir::Value static getZeroLowerBounds(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::Entity entity) {
+  // Assumed rank should not fall here, but better safe than sorry until
+  // implemented.
+  if (entity.isAssumedRank())
+    TODO(loc, "setting lower bounds of assumed rank to zero before passing it "
+              "to BIND(C) procedure");
+  if (entity.getRank() < 1)
+    return {};
+  mlir::Value zero =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+  llvm::SmallVector<mlir::Value> lowerBounds(entity.getRank(), zero);
+  return builder.genShift(loc, lowerBounds);
+}
+
 /// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
 /// prepare the actual argument according to the interface. Do as needed:
 /// - address element if this is an array argument in an elemental call.
@@ -874,11 +897,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     const Fortran::lower::PreparedActualArgument &preparedActual,
     mlir::Type dummyType,
     const Fortran::lower::CallerInterface::PassedEntity &arg,
-    const Fortran::lower::SomeExpr &expr,
-    Fortran::lower::AbstractConverter &converter) {
+    const Fortran::lower::SomeExpr &expr, CallContext &callContext) {
 
   Fortran::evaluate::FoldingContext &foldingContext =
-      converter.getFoldingContext();
+      callContext.converter.getFoldingContext();
 
   // Step 1: get the actual argument, which includes addressing the
   // element if this is an array in an elemental call.
@@ -942,6 +964,18 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       (passingPolymorphicToNonPolymorphic ||
        !Fortran::evaluate::IsSimplyContiguous(expr, foldingContext));
 
+  // Create dummy type with actual argument rank when the dummy is an assumed
+  // rank. That way, all the operation to create dummy descriptors are ranked if
+  // the dummy is ranked, which allows simple code generation.
+  bool actualIsAssumedRank = actual.isAssumedRank();
+
+  mlir::Type dummyTypeWithActualRank = dummyType;
+  if (auto baseBoxDummy = mlir::dyn_cast<fir::BaseBoxType>(dummyType))
+    if (baseBoxDummy.isAssumedRank() ||
+        arg.testTKR(Fortran::common::IgnoreTKR::Rank))
+      dummyTypeWithActualRank =
+          baseBoxDummy.getBoxTypeWithNewShape(actual.getType());
+
   // Step 2: prepare the storage for the dummy arguments, ensuring that it
   // matches the dummy requirements (e.g., must be contiguous or must be
   // a temporary).
@@ -952,8 +986,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     if (mustSetDynamicTypeToDummyType) {
       // Note: this is important to do this before any copy-in or copy so
       // that the dummy is contiguous according to the dummy type.
-      mlir::Type boxType =
-          fir::BoxType::get(hlfir::getFortranElementOrSequenceType(dummyType));
+      if (actualIsAssumedRank)
+        TODO(loc, "passing polymorphic assumed-rank to non polymorphic dummy "
+                  "argument");
+      mlir::Type boxType = fir::BoxType::get(
+          hlfir::getFortranElementOrSequenceType(dummyTypeWithActualRank));
       entity = hlfir::Entity{builder.create<fir::ReboxOp>(
           loc, boxType, entity, /*shape=*/mlir::Value{},
           /*slice=*/mlir::Value{})};
@@ -978,6 +1015,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // Copy-in non contiguous variables.
       assert(entity.getType().isa<fir::BaseBoxType>() &&
              "expect non simply contiguous variables to be boxes");
+      if (actualIsAssumedRank)
+        TODO(loc, "copy-in and copy-out of assumed-rank arguments");
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
@@ -996,7 +1035,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   } else {
     // The actual is an expression value, place it into a temporary
     // and register the temporary destruction after the call.
-    mlir::Type storageType = converter.genType(expr);
+    mlir::Type storageType = callContext.converter.genType(expr);
     mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, storageType, "", byRefAttr);
@@ -1010,8 +1049,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // TODO: this can probably be optimized by associating the expression
       // with properly typed temporary, but this needs either a new operation
       // or making the hlfir.associate more complex.
-      mlir::Type boxType =
-          fir::BoxType::get(hlfir::getFortranElementOrSequenceType(dummyType));
+      assert(!actualIsAssumedRank && "only variables are assumed-rank");
+      mlir::Type boxType = fir::BoxType::get(
+          hlfir::getFortranElementOrSequenceType(dummyTypeWithActualRank));
       entity = hlfir::Entity{builder.create<fir::ReboxOp>(
           loc, boxType, entity, /*shape=*/mlir::Value{},
           /*slice=*/mlir::Value{})};
@@ -1029,9 +1069,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Step 3: now that the dummy argument storage has been prepared, package
   // it according to the interface.
   mlir::Value addr;
-  if (dummyType.isa<fir::BoxCharType>()) {
+  if (dummyTypeWithActualRank.isa<fir::BoxCharType>()) {
     addr = hlfir::genVariableBoxChar(loc, builder, entity);
-  } else if (dummyType.isa<fir::BaseBoxType>()) {
+  } else if (dummyTypeWithActualRank.isa<fir::BaseBoxType>()) {
     entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
     // addendum if needed.
@@ -1043,39 +1083,55 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // has the dummy attributes in BIND(C) contexts.
     const bool actualBoxHasAllocatableOrPointerFlag =
         fir::isa_ref_type(boxEleType);
+    // Fortran 2018 18.5.3, pp3: BIND(C) non pointer allocatable descriptors
+    // must have zero lower bounds.
+    bool needsZeroLowerBounds = callContext.isBindcCall() && entity.isArray();
     // On the callee side, the current code generated for unlimited
     // polymorphic might unconditionally read the addendum. Intrinsic type
     // descriptors may not have an addendum, the rebox below will create a
     // descriptor with an addendum in such case.
     const bool actualBoxHasAddendum = fir::boxHasAddendum(actualBoxType);
     const bool needToAddAddendum =
-        fir::isUnlimitedPolymorphicType(dummyType) && !actualBoxHasAddendum;
-    mlir::Type reboxType = dummyType;
-    if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag) {
-      if (fir::getBoxRank(dummyType) != fir::getBoxRank(actualBoxType)) {
-        // This may happen only with IGNORE_TKR(R).
-        if (!arg.testTKR(Fortran::common::IgnoreTKR::Rank))
-          DIE("actual and dummy arguments must have equal ranks");
-        // Only allow it for unlimited polymorphic dummy arguments
-        // for now.
-        if (!fir::isUnlimitedPolymorphicType(dummyType))
-          TODO(loc, "actual/dummy rank mismatch for not unlimited polymorphic "
-                    "dummy.");
-        auto elementType = fir::updateTypeForUnlimitedPolymorphic(boxEleType);
-        if (fir::isAssumedType(dummyType))
-          reboxType = fir::BoxType::get(elementType);
+        fir::isUnlimitedPolymorphicType(dummyTypeWithActualRank) &&
+        !actualBoxHasAddendum;
+    if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
+        needsZeroLowerBounds) {
+      if (actualIsAssumedRank) {
+        if (needToAddAddendum)
+          TODO(loc, "passing intrinsic assumed-rank to unlimited polymorphic "
+                    "assumed-rank");
         else
-          reboxType = fir::ClassType::get(elementType);
+          TODO(loc, "passing pointer or allocatable assumed-rank to non "
+                    "pointer non allocatable assumed-rank");
       }
+      mlir::Value shift{};
+      if (needsZeroLowerBounds)
+        shift = getZeroLowerBounds(loc, builder, entity);
       entity = hlfir::Entity{builder.create<fir::ReboxOp>(
-          loc, reboxType, entity, /*shape=*/mlir::Value{},
+          loc, dummyTypeWithActualRank, entity, /*shape=*/shift,
           /*slice=*/mlir::Value{})};
     }
     addr = entity;
   } else {
     addr = hlfir::genVariableRawAddress(loc, builder, entity);
   }
-  preparedDummy.dummy = builder.createConvert(loc, dummyType, addr);
+  // The last extent created for assumed-rank descriptors must be -1 (18.5.3
+  // point 5.). This should be done when creating the assumed-size shape for
+  // consistency.
+  if (auto baseBoxDummy = mlir::dyn_cast<fir::BaseBoxType>(dummyType))
+    if (baseBoxDummy.isAssumedRank())
+      if (const Fortran::semantics::Symbol *sym =
+              Fortran::evaluate::UnwrapWholeSymbolDataRef(expr))
+        if (Fortran::semantics::IsAssumedSizeArray(sym->GetUltimate()))
+          TODO(loc, "passing assumed-size to assumed-rank array");
+
+  // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
+  // box is inserted when building the fir.call op. Inserting it here would
+  // cause the fir.if results to be assumed-rank in case of OPTIONAL dummy,
+  // causing extra runtime costs due to the unknwon runtime size of assumed-rank
+  // descriptors.
+  preparedDummy.dummy =
+      builder.createConvert(loc, dummyTypeWithActualRank, addr);
   return preparedDummy;
 }
 
@@ -1087,11 +1143,10 @@ static PreparedDummyArgument prepareUserCallActualArgument(
     const Fortran::lower::PreparedActualArgument &preparedActual,
     mlir::Type dummyType,
     const Fortran::lower::CallerInterface::PassedEntity &arg,
-    const Fortran::lower::SomeExpr &expr,
-    Fortran::lower::AbstractConverter &converter) {
+    const Fortran::lower::SomeExpr &expr, CallContext &callContext) {
   if (!preparedActual.handleDynamicOptional())
     return preparePresentUserCallActualArgument(
-        loc, builder, preparedActual, dummyType, arg, expr, converter);
+        loc, builder, preparedActual, dummyType, arg, expr, callContext);
 
   // Conditional dummy argument preparation. The actual may be absent
   // at runtime, causing any addressing, copy, and packaging to have
@@ -1113,7 +1168,7 @@ static PreparedDummyArgument prepareUserCallActualArgument(
   builder.setInsertionPointToStart(preparationBlock);
   PreparedDummyArgument unconditionalDummy =
       preparePresentUserCallActualArgument(loc, builder, preparedActual,
-                                           dummyType, arg, expr, converter);
+                                           dummyType, arg, expr, callContext);
   builder.restoreInsertionPoint(insertPt);
 
   // TODO: when forwarding an optional to an optional of the same kind
@@ -1216,9 +1271,8 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     case PassBy::BaseAddress:
     case PassBy::BoxProcRef:
     case PassBy::BoxChar: {
-      PreparedDummyArgument preparedDummy =
-          prepareUserCallActualArgument(loc, builder, *preparedActual, argTy,
-                                        arg, *expr, callContext.converter);
+      PreparedDummyArgument preparedDummy = prepareUserCallActualArgument(
+          loc, builder, *preparedActual, argTy, arg, *expr, callContext);
       callCleanUps.append(preparedDummy.cleanups.rbegin(),
                           preparedDummy.cleanups.rend());
       caller.placeInput(arg, preparedDummy.dummy);
@@ -1277,8 +1331,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       // Passing a POINTER to a POINTER, or an ALLOCATABLE to an ALLOCATABLE.
       assert(actual.isMutableBox() && "actual must be a mutable box");
       if (fir::isAllocatableType(argTy) && arg.isIntentOut() &&
-          Fortran::semantics::IsBindCProcedure(
-              *callContext.procRef.proc().GetSymbol())) {
+          callContext.isBindcCall()) {
         // INTENT(OUT) allocatables are deallocated on the callee side,
         // but BIND(C) procedures may be implemented in C, so deallocation is
         // also done on the caller side (if the procedure is implemented in
@@ -2186,8 +2239,7 @@ genProcedureRef(CallContext &callContext) {
   // intrinsic unless it is bind(c) (since implementation is external from
   // module).
   if (Fortran::lower::isIntrinsicModuleProcRef(callContext.procRef) &&
-      !Fortran::semantics::IsBindCProcedure(
-          *callContext.procRef.proc().GetSymbol()))
+      !callContext.isBindcCall())
     return genIntrinsicRef(nullptr, callContext);
 
   if (callContext.isStatementFunctionCall())

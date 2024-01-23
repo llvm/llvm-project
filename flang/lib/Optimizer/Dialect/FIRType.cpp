@@ -1242,6 +1242,46 @@ mlir::Type BaseBoxType::unwrapInnerType() const {
   return fir::unwrapInnerType(getEleTy());
 }
 
+static mlir::Type
+changeTypeShape(mlir::Type type,
+                std::optional<fir::SequenceType::ShapeRef> newShape) {
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
+        if (newShape)
+          return fir::SequenceType::get(*newShape, seqTy.getEleTy());
+        return seqTy.getEleTy();
+      })
+      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+            fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
+      })
+      .Default([&](mlir::Type t) -> mlir::Type {
+        assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType> ||
+                llvm::isa<mlir::NoneType>(t)) &&
+               "unexpected FIR leaf type");
+        if (newShape)
+          return fir::SequenceType::get(*newShape, t);
+        return t;
+      });
+}
+
+fir::BaseBoxType
+fir::BaseBoxType::getBoxTypeWithNewShape(mlir::Type shapeMold) const {
+  fir::SequenceType seqTy = fir::unwrapUntilSeqType(shapeMold);
+  std::optional<fir::SequenceType::ShapeRef> newShape;
+  if (seqTy)
+    newShape = seqTy.getShape();
+  return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
+}
+
+bool fir::BaseBoxType::isAssumedRank() const {
+  if (auto seqTy =
+          mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(getEleTy())))
+    return seqTy.hasUnknownShape();
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
