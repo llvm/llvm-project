@@ -32,7 +32,10 @@ int main(int, char**) {
   const std::size_t maxSize = Traits::max_size(a);
 
   a.deallocate(nullptr, maxSize); // no assertion
-  TEST_LIBCPP_ASSERT_FAILURE(a.deallocate(nullptr, maxSize + 1), "deallocate called for size which exceeds max_size()");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      a.deallocate(nullptr, maxSize + 1),
+      "deallocate() called for a size which exceeds max_size(), leading to a memory leak "
+      "(the argument will overflow and result in too few objects being deleted)");
 
   return 0;
 }
