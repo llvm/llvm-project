@@ -2829,17 +2829,18 @@ public:
   }
 
   void emitMacroExpansionWarnings(const Token &Identifier) const {
-    if (Identifier.getIdentifierInfo()->isDeprecatedMacro())
+    IdentifierInfo *Info = Identifier.getIdentifierInfo();
+    if (Info->isDeprecatedMacro())
       emitMacroDeprecationWarning(Identifier);
 
-    if (Identifier.getIdentifierInfo()->isRestrictExpansion() &&
+    if (Info->isRestrictExpansion() &&
         !SourceMgr.isInMainFile(Identifier.getLocation()))
       emitRestrictExpansionWarning(Identifier);
 
-    if (Identifier.getIdentifierInfo()->getName() == "INFINITY")
+    if (Info->getName() == "INFINITY")
       if (getLangOpts().NoHonorInfs)
         emitRestrictInfNaNWarning(Identifier, 0);
-    if (Identifier.getIdentifierInfo()->getName() == "NAN")
+    if (Info->getName() == "NAN")
       if (getLangOpts().NoHonorNaNs)
         emitRestrictInfNaNWarning(Identifier, 1);
   }
