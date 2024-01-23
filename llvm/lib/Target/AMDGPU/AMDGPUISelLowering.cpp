@@ -4246,12 +4246,14 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
   // operands, so we have to place the mul in the LHS
   if (SDValue MulOper = IsFoldableAdd(N0)) {
     SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N1, MulOper);
-    return DAG.getNode(ISD::ADD, DL, VT, MulVal, DAG.getZExtOrTrunc(N1, DL, VT));
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal,
+                       DAG.getZExtOrTrunc(N1, DL, VT));
   }
 
   if (SDValue MulOper = IsFoldableAdd(N1)) {
     SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N0, MulOper);
-    return DAG.getNode(ISD::ADD, DL, VT, MulVal, DAG.getZExtOrTrunc(N0, DL, VT));
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal,
+                       DAG.getZExtOrTrunc(N0, DL, VT));
   }
 
   // Skip if already mul24.
