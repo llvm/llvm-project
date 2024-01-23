@@ -11,7 +11,6 @@
 #include <cstring>
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -43,6 +42,24 @@ void SymbolVendorELF::Terminate() {
 llvm::StringRef SymbolVendorELF::GetPluginDescriptionStatic() {
   return "Symbol vendor for ELF that looks for dSYM files that match "
          "executables.";
+}
+
+// If this is needed elsewhere, it can be exported/moved.
+static bool IsDwpSymbolFile(const lldb::ModuleSP &module_sp,
+                            const FileSpec &file_spec) {
+  DataBufferSP dwp_file_data_sp;
+  lldb::offset_t dwp_file_data_offset = 0;
+  // Try to create an ObjectFileELF frorm the filespace
+  ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
+      module_sp, &file_spec, 0, FileSystem::Instance().GetByteSize(file_spec),
+      dwp_file_data_sp, dwp_file_data_offset);
+  if (!ObjectFileELF::classof(dwp_obj_file.get()))
+    return false;
+  static ConstString sect_name_debug_cu_index(".debug_cu_index");
+  if (!dwp_obj_file || !dwp_obj_file->GetSectionList()->FindSectionByName(
+                           sect_name_debug_cu_index))
+    return false;
+  return true;
 }
 
 // CreateInstance
@@ -88,8 +105,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec dsym_fspec =
       PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
-  if (!dsym_fspec ||
-      plugin::dwarf::SymbolFileDWARF::IsDwpSymbolFile(module_sp, dsym_fspec)) {
+  if (!dsym_fspec || IsDwpSymbolFile(module_sp, dsym_fspec)) {
     // If we have a stripped binary or if we got a DWP file, we should prefer
     // symbols in the executable acquired through a plugin.
     ModuleSpec unstripped_spec =

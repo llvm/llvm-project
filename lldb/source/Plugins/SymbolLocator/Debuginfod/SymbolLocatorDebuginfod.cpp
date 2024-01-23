@@ -96,12 +96,12 @@ private:
   Args m_server_urls;
 };
 
-PluginProperties &GetGlobalPluginProperties() {
+} // namespace
+
+static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
 }
-
-} // namespace
 
 SymbolLocatorDebuginfod::SymbolLocatorDebuginfod() : SymbolLocator() {}
 
