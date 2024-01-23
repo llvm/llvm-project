@@ -560,6 +560,7 @@ static void checkZOptions(opt::InputArgList &args) {
   // initialized yet. Claim them here.
   args::getZOptionValue(args, OPT_z, "max-page-size", 0);
   args::getZOptionValue(args, OPT_z, "common-page-size", 0);
+  getZFlag(args, "rel", "rela", false);
   for (auto *arg : args.filtered(OPT_z))
     if (!arg->isClaimed())
       warn("unknown -z value: " + StringRef(arg->getValue()));
