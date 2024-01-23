@@ -485,8 +485,8 @@ class MUBUF_Load_Pseudo <string opName,
                          list<dag> pattern=[],
                          // Workaround bug bz30254
                          int addrKindCopy = addrKind,
-                         RegisterOperand vdata_rc = getVregSrcForVT<vdata_vt>.ret,
-                         RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdata_rc.RegClass, isTFE>.ret>
+                         RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret.RegClass,
+                         RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdata_rc, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
                  !con(getMUBUFIns<addrKindCopy, [], isTFE, hasGFX12Enc>.ret,
