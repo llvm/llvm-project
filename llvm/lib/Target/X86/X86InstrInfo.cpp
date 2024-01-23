@@ -10387,23 +10387,20 @@ enum MachineOutlinerClass { MachineOutlinerDefault, MachineOutlinerTailCall };
 std::optional<outliner::OutlinedFunction>
 X86InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  unsigned SequenceSize =
-      std::accumulate(RepeatedSequenceLocs[0].front(),
-                      std::next(RepeatedSequenceLocs[0].back()), 0,
-                      [](unsigned Sum, const MachineInstr &MI) {
-                        // FIXME: x86 doesn't implement getInstSizeInBytes, so
-                        // we can't tell the cost.  Just assume each instruction
-                        // is one byte.
-                        if (MI.isDebugInstr() || MI.isKill())
-                          return Sum;
-                        return Sum + 1;
-                      });
+  unsigned SequenceSize = 0;
+  for (auto &MI : RepeatedSequenceLocs[0]) {
+    // FIXME: x86 doesn't implement getInstSizeInBytes, so
+    // we can't tell the cost.  Just assume each instruction
+    // is one byte.
+    if (MI.isDebugInstr() || MI.isKill())
+      continue;
+    SequenceSize += 1;
+  }
 
   // We check to see if CFI Instructions are present, and if they are
   // we find the number of CFI Instructions in the candidates.
   unsigned CFICount = 0;
-  for (auto &I : make_range(RepeatedSequenceLocs[0].front(),
-                            std::next(RepeatedSequenceLocs[0].back()))) {
+  for (auto &I : RepeatedSequenceLocs[0]) {
     if (I.isCFIInstruction())
       CFICount++;
   }
@@ -10422,7 +10419,7 @@ X86InstrInfo::getOutliningCandidateInfo(
   }
 
   // FIXME: Use real size in bytes for call and ret instructions.
-  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+  if (RepeatedSequenceLocs[0].back().isTerminator()) {
     for (outliner::Candidate &C : RepeatedSequenceLocs)
       C.setCallInfo(MachineOutlinerTailCall, 1);
 
