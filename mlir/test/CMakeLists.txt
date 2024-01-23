@@ -215,7 +215,8 @@ add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
 
-# Convenience targets to group related tests.
+# Convenience targets to group related tests. To find targets use
+# 'ninja -t targets'.
 
 # Run all ArmSME unit tests.
 add_custom_target(check-mlir-unit-armsme DEPENDS
