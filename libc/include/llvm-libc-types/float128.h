@@ -9,7 +9,7 @@
 #ifndef __LLVM_LIBC_TYPES_FLOAT128_H__
 #define __LLVM_LIBC_TYPES_FLOAT128_H__
 
-#include <llvm-libc-macros/float-macros.h> // LDBL_MANT_DIG
+#include <include/llvm-libc-macros/float-macros.h> // LDBL_MANT_DIG
 
 // Define temporary compiler and its version
 #if defined(__clang__)
