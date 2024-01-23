@@ -171,9 +171,9 @@ public:
   /// set.
   static bool willCompleteCodeGenPipeline();
 
-  /// If hasLimitedCodeGenPipeline is true, this method
-  /// returns a string with the name of the options, separated
-  /// by \p Separator that caused this pipeline to be limited.
+  /// If hasLimitedCodeGenPipeline is true, this method returns
+  /// a string with the name of the options that caused this
+  /// pipeline to be limited.
   static std::string getLimitedCodeGenPipelineReason();
 
   struct StartStopInfo {
