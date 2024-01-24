@@ -402,14 +402,17 @@ For your first patches, this means:
    opinion.
 
 
-Accepting a revision
-~~~~~~~~~~~~~~~~~~~~
+Accepting a pull request
+------------------------
 
 When the reviewer is happy with the change, they will **Approve** the
 pull request. They may leave some more minor comments that you should
 address before it is merged, but at this point the review is complete.
 It's time to get it merged!
 
+
+Commit access
+=============
 
 Commit by proxy
 ---------------
@@ -423,8 +426,8 @@ them! Leave a comment on the review like:
 
 The pull-request will be closed and you will be notified by GitHub.
 
-Commit access
-=============
+Getting commit access
+---------------------
 
 Once you've contributed a handful of patches to LLVM, start to think
 about getting commit access yourself. It's probably a good idea if:
@@ -436,12 +439,7 @@ about getting commit access yourself. It's probably a good idea if:
 -  you'd like to keep contributing to LLVM.
 
 
-Getting commit access
----------------------
-
-LLVM uses Git for committing changes. The details are in the
-:ref:`developer policy document <obtaining_commit_access>`.
-
+The process is described in the :ref:`developer policy document <obtaining_commit_access>`.
 
 With great power
 ----------------
@@ -451,7 +449,7 @@ policy <developer_policy>` too.
 
 
 Post-commit errors
-------------------
+==================
 
 Once your change is submitted it will be picked up by automated build
 bots that will build and test your patch in a variety of configurations.
