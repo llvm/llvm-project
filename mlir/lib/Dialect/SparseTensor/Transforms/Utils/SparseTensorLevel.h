@@ -14,6 +14,9 @@
 namespace mlir {
 namespace sparse_tensor {
 
+/// The base class for all types of sparse tensor levels. It provides interface
+/// to query the loop range (see `peekRangeAt`) and look up the coordinates (see
+/// `peekCrdAt`).
 class SparseTensorLevel {
   SparseTensorLevel(SparseTensorLevel &&) = delete;
   SparseTensorLevel(const SparseTensorLevel &) = delete;
@@ -89,8 +92,9 @@ public:
   virtual ~SparseIterator() = default;
 
   Value getCrd() const { return crd; }
-
   ValueRange getItVals() const { return itVals; };
+
+  // Sets the iterate to the specified position.
   void seek(ValueRange vals) {
     assert(vals.size() == itVals.size());
     std::copy(vals.begin(), vals.end(), itVals.begin());
