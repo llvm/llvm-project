@@ -175,23 +175,24 @@ static uint8_t readOpcode(WasmObjectFile::ReadContext &Ctx) {
   return readUint8(Ctx);
 }
 
-static wasm::ValType parseValType(WasmObjectFile::ReadContext &Ctx, uint32_t Code) {
-    // only directly encoded FUNCREF/EXTERNREF are supported (not ref null func/ref null extern)
-    llvm::errs() << llvm::format(" val type %x ", Code);
-    switch(Code) {
-      case wasm::WASM_TYPE_I32:
-      case wasm::WASM_TYPE_I64:
-      case wasm::WASM_TYPE_F32:
-      case wasm::WASM_TYPE_F64:
-      case wasm::WASM_TYPE_V128:
-      case wasm::WASM_TYPE_FUNCREF:
-      case wasm::WASM_TYPE_EXTERNREF:
-        return wasm::ValType(Code);
-    }
-    if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
-      /* Discard HeapType */ readVarint64(Ctx);
-    }
-    return wasm::ValType(wasm::ValType::OTHERREF);
+static wasm::ValType parseValType(WasmObjectFile::ReadContext &Ctx,
+                                  uint32_t Code) {
+  // only directly encoded FUNCREF/EXTERNREF are supported
+  // (not ref null func or ref null extern)
+  switch (Code) {
+  case wasm::WASM_TYPE_I32:
+  case wasm::WASM_TYPE_I64:
+  case wasm::WASM_TYPE_F32:
+  case wasm::WASM_TYPE_F64:
+  case wasm::WASM_TYPE_V128:
+  case wasm::WASM_TYPE_FUNCREF:
+  case wasm::WASM_TYPE_EXTERNREF:
+    return wasm::ValType(Code);
+  }
+  if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
+    /* Discard HeapType */ readVarint64(Ctx);
+  }
+  return wasm::ValType(wasm::ValType::OTHERREF);
 }
 
 static Error readInitExpr(wasm::WasmInitExpr &Expr,
@@ -217,11 +218,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
     Expr.Inst.Value.Global = readULEB128(Ctx);
     break;
   case wasm::WASM_OPCODE_REF_NULL: {
-    wasm::ValType Ty = parseValType(Ctx, readVaruint32(Ctx));
-    if (Ty != wasm::ValType::EXTERNREF) { // maybe something special if the type isn't one we understand?
-      //return make_error<GenericBinaryError>("invalid type for ref.null",
-      //                                      object_error::parse_failed);
-    }
+    /* Discard type */ parseValType(Ctx, readVaruint32(Ctx));
     break;
   }
   default:
@@ -238,7 +235,6 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
     Ctx.Ptr = Start;
     while (true) {
       uint8_t Opcode = readOpcode(Ctx);
-      llvm::errs() << llvm::format(" opcode %x", Opcode);
       switch (Opcode) {
       case wasm::WASM_OPCODE_I32_CONST:
       case wasm::WASM_OPCODE_GLOBAL_GET:
@@ -279,7 +275,6 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
         break;
       case wasm::WASM_OPCODE_END:
         Expr.Body = ArrayRef<uint8_t>(Start, Ctx.Ptr - Start);
-        llvm::errs() << "\n";
         return Error::success();
       default:
         return make_error<GenericBinaryError>(
@@ -1153,8 +1148,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
   auto parseFieldDef = [&]() {
     uint32_t TypeCode = readVaruint32((Ctx));
     /* Discard StorageType */ parseValType(Ctx, TypeCode);
-    uint32_t Mutability = readVaruint32(Ctx);
-    llvm::errs() << llvm:: format(" mut %d ", Mutability);
+    /* Discard Mutability */ readVaruint32(Ctx);
   };
 
   uint32_t Count = readVaruint32(Ctx);
@@ -1162,7 +1156,6 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
   while (Count--) {
     wasm::WasmSignature Sig;
     uint8_t Form = readUint8(Ctx);
-    llvm::errs() << llvm::format("Top Count %d form %x", Count, Form) << '\n';
     if (Form == wasm::WASM_TYPE_REC) {
       // Rec groups expand the type index space (beyond what was declared at
       // the top of the section, and also consume one element in that space.
@@ -1172,7 +1165,6 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
                                               object_error::parse_failed);
       Signatures.reserve(Signatures.size() + RecSize);
       Count += RecSize;
-      llvm::errs() << llvm::format(" Rec size %d\n", RecSize);
       Sig.Kind = wasm::WasmSignature::Placeholder;
       Signatures.push_back(std::move(Sig));
       continue;
@@ -1190,20 +1182,17 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
           /* Discard SuperIndex */ readVaruint32(Ctx);
         }
         Form = readVaruint32(Ctx);
-        llvm::errs() << llvm::format(" Sub Supers %d form %x", Supers, Form) << '\n';
       }
       if (Form == wasm::WASM_TYPE_STRUCT) {
         uint32_t FieldCount = readVaruint32(Ctx);
         while (FieldCount--) {
           parseFieldDef();
         }
-        llvm::errs() << llvm::format(" Struct size %d", FieldCount) << '\n';
       } else if (Form == wasm::WASM_TYPE_ARRAY) {
         parseFieldDef();
-        llvm::errs() << llvm::format("arr form %x", Form) << '\n';
       } else {
-        llvm::errs() << llvm::format(" bad form %x", Form) << '\n';
-        return make_error<GenericBinaryError>("bad form", object_error::parse_failed);
+        return make_error<GenericBinaryError>("bad form",
+                                              object_error::parse_failed);
       }
       Sig.Kind = wasm::WasmSignature::Placeholder;
       Signatures.push_back(std::move(Sig));
@@ -1212,21 +1201,18 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
 
     uint32_t ParamCount = readVaruint32(Ctx);
     Sig.Params.reserve(ParamCount);
-    llvm::errs() << llvm::format("param ct %d ", ParamCount);
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
       Sig.Params.push_back(parseValType(Ctx, ParamType));
       continue;
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
-    llvm::errs() << llvm::format("\nreturn ct %d ", ReturnCount);
     while (ReturnCount--) {
       uint32_t ReturnType = readUint8(Ctx);
       Sig.Returns.push_back(parseValType(Ctx, ReturnType));
     }
-    
+
     Signatures.push_back(std::move(Sig));
-    llvm::errs() << '\n';
   }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("type section ended prematurely",
@@ -1386,10 +1372,9 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
     Global.Index = NumImportedGlobals + Globals.size();
     auto GlobalOpcode = readVaruint32(Ctx);
     auto GlobalType = parseValType(Ctx, GlobalOpcode);
-    //assert(GlobalType <= std::numeric_limits<wasm::ValType>::max());
+    // assert(GlobalType <= std::numeric_limits<wasm::ValType>::max());
     Global.Type.Type = (uint8_t)GlobalType;
     Global.Type.Mutable = readVaruint1(Ctx);
-    llvm::errs() << llvm::format("Read global %d index %d, type %x mut %d\n", Globals.capacity() -Count-1, Global.Index, GlobalOpcode, Global.Type.Mutable);
     if (Error Err = readInitExpr(Global.InitExpr, Ctx))
       return Err;
     Globals.push_back(Global);
@@ -1626,32 +1611,26 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
           "Unsupported flags for element segment", object_error::parse_failed);
 
     bool IsPassive = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) != 0;
-    bool IsDeclarative = IsPassive && (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_DECLARATIVE);
-    bool HasTableNumber = !IsPassive && (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER);
-    bool HasInitExprs = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
-    bool HasElemKind = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) && !HasInitExprs;
+    bool IsDeclarative =
+        IsPassive && (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_DECLARATIVE);
+    bool HasTableNumber =
+        !IsPassive &&
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER);
+    bool HasInitExprs =
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
+    bool HasElemKind =
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) &&
+        !HasInitExprs;
 
-    llvm::errs() << llvm::format("\nsegment %d flags %x, InitExprs %d HasKind %d\n",
-      ElemSegments.capacity() - Count-1, Segment.Flags, HasInitExprs,HasElemKind);
-    if (HasTableNumber) {
+    if (HasTableNumber)
       Segment.TableNumber = readVaruint32(Ctx);
-      llvm::errs() << " table " << Segment.TableNumber << "\n"; }
     else
       Segment.TableNumber = 0;
+
     if (!isValidTableNumber(Segment.TableNumber))
       return make_error<GenericBinaryError>("invalid TableNumber",
                                             object_error::parse_failed);
 
-    if (IsDeclarative && false) {
-      // Declarative segments are not used or understood by LLVM
-      /* Discard type/kind */ readVaruint32(Ctx);
-      auto DeclCount = readVaruint32(Ctx);
-      while(DeclCount--) {
-        readVaruint32(Ctx);
-      }
-      // Dummy element?
-
-    }
     if (IsPassive || IsDeclarative) {
       Segment.Offset.Extended = false;
       Segment.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
@@ -1659,7 +1638,6 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     } else {
       if (Error Err = readInitExpr(Segment.Offset, Ctx))
         return Err;
-      llvm::errs() << llvm::format( " active seg, read initexpr opcode %x\n", Segment.Offset.Inst.Opcode);
     }
 
     if (HasElemKind) {
@@ -1686,12 +1664,11 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     }
 
     uint32_t NumElems = readVaruint32(Ctx);
-    llvm::errs() << llvm::format(" num elems %d\n", NumElems);
 
     if (HasInitExprs) {
-      while(NumElems--) {
+      while (NumElems--) {
         wasm::WasmInitExpr Expr;
-        if(Error Err = readInitExpr(Expr, Ctx))
+        if (Error Err = readInitExpr(Expr, Ctx))
           return Err;
       }
     } else {

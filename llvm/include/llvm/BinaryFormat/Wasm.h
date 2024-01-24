@@ -70,7 +70,7 @@ enum : unsigned {
   WASM_TYPE_NONNULLABLE = 0x64,
   WASM_TYPE_NULLABLE = 0x63,
   WASM_TYPE_FUNC = 0x60,
-  WASM_TYPE_ARRAY = 0x5E, // Composite types, not used for codegen
+  WASM_TYPE_ARRAY = 0x5E,
   WASM_TYPE_STRUCT = 0x5F,
   WASM_TYPE_SUB = 0x50,
   WASM_TYPE_SUB_FINAL = 0x4F,
@@ -121,7 +121,8 @@ enum : unsigned {
   WASM_OPCODE_ARRAY_NEW_DEFAULT = 0x07,
   WASM_OPCODE_ARRAY_NEW_FIXED = 0x08,
   WASM_OPCODE_REF_I31 = 0x1c,
-  // any.convert_extern and extern.convert_any don't seem to be supported by Binaryen.
+  // any.convert_extern and extern.convert_any don't seem to be supported by
+  // Binaryen.
 };
 
 // Opcodes used in synthetic functions.
@@ -156,7 +157,7 @@ enum : unsigned {
 
 enum : unsigned {
   WASM_ELEM_SEGMENT_IS_PASSIVE = 0x01,
-  WASM_ELEM_SEGMENT_IS_DECLARATIVE = 0x02, // if passive == 1
+  WASM_ELEM_SEGMENT_IS_DECLARATIVE = 0x02,   // if passive == 1
   WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02, // if passive == 0
   WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
 };
@@ -260,7 +261,7 @@ enum class ValType {
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
   // Unmodeled value types include ref types with heap types other than
-  // funcr or extern, and type-specialized funcrefs
+  // func or extern, and type-specialized funcrefs
   OTHERREF = 0xff,
 };
 
@@ -330,6 +331,8 @@ struct WasmInitExprMVP {
   } Value;
 };
 
+// Extended-const init exprs and exprs with GC types are not explicitly
+// modeled, but the raw body of the expr is attached.
 struct WasmInitExpr {
   uint8_t Extended; // Set to non-zero if extended const is used (i.e. more than
                     // one instruction)
