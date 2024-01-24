@@ -60,8 +60,7 @@ public:
 
     if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
                       LocInfo, Flags, State, Info.IsFixed, IsRet, Info.Ty,
-                      *Subtarget.getTargetLowering(),
-                      FirstMaskArgument))
+                      *Subtarget.getTargetLowering(), FirstMaskArgument))
       return true;
 
     StackSize = State.getStackSize();
