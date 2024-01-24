@@ -1522,25 +1522,33 @@ private:
       return;
     u32 AllocationRingBufferSize =
         static_cast<u32>(getFlags()->allocation_ring_buffer_size);
+
     // We store alloc and free stacks for each entry.
     constexpr auto kStacksPerRingBufferEntry = 2;
     constexpr auto kMaxU32Pow2 = ~(UINT32_MAX >> 1);
     static_assert(isPowerOfTwo(kMaxU32Pow2));
+    constexpr auto kFramesPerStack = 8;
+    static_assert(isPowerOfTwo(kFramesPerStack));
+
+    // We need StackDepot to be aligned to 8-bytes so the ring we st ore after
+    // is correctly assigned.
+    static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
+
+    // Make sure the maximum sized StackDepot fits withint a uintptr_t to
+    // simplify the overflow checking.
+    static_assert(sizeof(StackDepot) + UINT32_MAX * sizeof(atomic_u64) *
+                                           UINT32_MAX * sizeof(atomic_u32) <
+                  UINTPTR_MAX);
+
     if (AllocationRingBufferSize > kMaxU32Pow2 / kStacksPerRingBufferEntry)
       return;
     u32 TabSize = static_cast<u32>(roundUpPowerOfTwo(kStacksPerRingBufferEntry *
                                                      AllocationRingBufferSize));
-    constexpr auto kFramesPerStack = 8;
-    static_assert(isPowerOfTwo(kFramesPerStack));
     if (TabSize > UINT32_MAX / kFramesPerStack)
       return;
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
     DCHECK(isPowerOfTwo(RingSize));
-    static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
 
-    static_assert(sizeof(StackDepot) + UINT32_MAX * sizeof(atomic_u64) *
-                                           UINT32_MAX * sizeof(atomic_u32) <
-                  UINTPTR_MAX);
     StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
                      sizeof(atomic_u32) * TabSize;
     MemMapT DepotMap;
