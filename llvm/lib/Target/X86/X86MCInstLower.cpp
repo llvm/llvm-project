@@ -1564,68 +1564,18 @@ static void printZeroUpperMove(const MachineInstr *MI, MCStreamer &OutStreamer,
   OutStreamer.AddComment(CS.str());
 }
 
-static void printLaneBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
-                               int NumLanes, int BitWidth) {
-  if (auto *C = X86::getConstantFromPool(*MI, 1)) {
-    int CstEltSize = C->getType()->getScalarSizeInBits();
-
-    std::string Comment;
-    raw_string_ostream CS(Comment);
-    const MachineOperand &DstOp = MI->getOperand(0);
-    CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
-    if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
-      int NumElements = CDS->getNumElements();
-      if ((BitWidth % CstEltSize) == 0)
-        NumElements = std::min<int>(NumElements, BitWidth / CstEltSize);
-      CS << "[";
-      for (int l = 0; l != NumLanes; ++l) {
-        for (int i = 0; i < NumElements; ++i) {
-          if (i != 0 || l != 0)
-            CS << ",";
-          if (CDS->getElementType()->isIntegerTy())
-            printConstant(CDS->getElementAsAPInt(i), CS);
-          else if (CDS->getElementType()->isHalfTy() ||
-                   CDS->getElementType()->isFloatTy() ||
-                   CDS->getElementType()->isDoubleTy())
-            printConstant(CDS->getElementAsAPFloat(i), CS);
-          else
-            CS << "?";
-        }
-      }
-      CS << "]";
-      OutStreamer.AddComment(CS.str());
-    } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
-      int NumOperands = CV->getNumOperands();
-      if ((BitWidth % CstEltSize) == 0)
-        NumOperands = std::min<int>(NumOperands, BitWidth / CstEltSize);
-      CS << "<";
-      for (int l = 0; l != NumLanes; ++l) {
-        for (int i = 0; i < NumOperands; ++i) {
-          if (i != 0 || l != 0)
-            CS << ",";
-          printConstant(CV->getOperand(i),
-                        CV->getType()->getPrimitiveSizeInBits(), CS);
-        }
-      }
-      CS << ">";
-      OutStreamer.AddComment(CS.str());
-    }
-  }
-}
-
-static void printElementBroadcast(const MachineInstr *MI,
-                                  MCStreamer &OutStreamer, int NumElts,
-                                  int EltBits) {
+static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
+                           int Repeats, int BitWidth) {
   if (auto *C = X86::getConstantFromPool(*MI, 1)) {
     std::string Comment;
     raw_string_ostream CS(Comment);
     const MachineOperand &DstOp = MI->getOperand(0);
     CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
     CS << "[";
-    for (int i = 0; i != NumElts; ++i) {
-      if (i != 0)
+    for (int l = 0; l != Repeats; ++l) {
+      if (l != 0)
         CS << ",";
-      printConstant(C, EltBits, CS);
+      printConstant(C, BitWidth, CS);
     }
     CS << "]";
     OutStreamer.AddComment(CS.str());
@@ -1943,13 +1893,13 @@ static void addConstantComments(const MachineInstr *MI,
     // For loads from a constant pool to a vector register, print the constant
     // loaded.
     CASE_128_MOV_RM()
-    printLaneBroadcast(MI, OutStreamer, 1, 128);
+    printBroadcast(MI, OutStreamer, 1, 128);
     break;
     CASE_256_MOV_RM()
-    printLaneBroadcast(MI, OutStreamer, 1, 256);
+    printBroadcast(MI, OutStreamer, 1, 256);
     break;
     CASE_512_MOV_RM()
-    printLaneBroadcast(MI, OutStreamer, 1, 512);
+    printBroadcast(MI, OutStreamer, 1, 512);
     break;
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
@@ -1957,19 +1907,19 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VBROADCASTF64X2Z128rm:
   case X86::VBROADCASTI32X4Z256rm:
   case X86::VBROADCASTI64X2Z128rm:
-    printLaneBroadcast(MI, OutStreamer, 2, 128);
+    printBroadcast(MI, OutStreamer, 2, 128);
     break;
   case X86::VBROADCASTF32X4rm:
   case X86::VBROADCASTF64X2rm:
   case X86::VBROADCASTI32X4rm:
   case X86::VBROADCASTI64X2rm:
-    printLaneBroadcast(MI, OutStreamer, 4, 128);
+    printBroadcast(MI, OutStreamer, 4, 128);
     break;
   case X86::VBROADCASTF32X8rm:
   case X86::VBROADCASTF64X4rm:
   case X86::VBROADCASTI32X8rm:
   case X86::VBROADCASTI64X4rm:
-    printLaneBroadcast(MI, OutStreamer, 2, 256);
+    printBroadcast(MI, OutStreamer, 2, 256);
     break;
 
   // For broadcast loads from a constant pool to a vector register, repeatedly
@@ -1979,55 +1929,55 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VMOVDDUPZ128rm:
   case X86::VPBROADCASTQrm:
   case X86::VPBROADCASTQZ128rm:
-    printElementBroadcast(MI, OutStreamer, 2, 64);
+    printBroadcast(MI, OutStreamer, 2, 64);
     break;
   case X86::VBROADCASTSDYrm:
   case X86::VBROADCASTSDZ256rm:
   case X86::VPBROADCASTQYrm:
   case X86::VPBROADCASTQZ256rm:
-    printElementBroadcast(MI, OutStreamer, 4, 64);
+    printBroadcast(MI, OutStreamer, 4, 64);
     break;
   case X86::VBROADCASTSDZrm:
   case X86::VPBROADCASTQZrm:
-    printElementBroadcast(MI, OutStreamer, 8, 64);
+    printBroadcast(MI, OutStreamer, 8, 64);
     break;
   case X86::VBROADCASTSSrm:
   case X86::VBROADCASTSSZ128rm:
   case X86::VPBROADCASTDrm:
   case X86::VPBROADCASTDZ128rm:
-    printElementBroadcast(MI, OutStreamer, 4, 32);
+    printBroadcast(MI, OutStreamer, 4, 32);
     break;
   case X86::VBROADCASTSSYrm:
   case X86::VBROADCASTSSZ256rm:
   case X86::VPBROADCASTDYrm:
   case X86::VPBROADCASTDZ256rm:
-    printElementBroadcast(MI, OutStreamer, 8, 32);
+    printBroadcast(MI, OutStreamer, 8, 32);
     break;
   case X86::VBROADCASTSSZrm:
   case X86::VPBROADCASTDZrm:
-    printElementBroadcast(MI, OutStreamer, 16, 32);
+    printBroadcast(MI, OutStreamer, 16, 32);
     break;
   case X86::VPBROADCASTWrm:
   case X86::VPBROADCASTWZ128rm:
-    printElementBroadcast(MI, OutStreamer, 8, 16);
+    printBroadcast(MI, OutStreamer, 8, 16);
     break;
   case X86::VPBROADCASTWYrm:
   case X86::VPBROADCASTWZ256rm:
-    printElementBroadcast(MI, OutStreamer, 16, 16);
+    printBroadcast(MI, OutStreamer, 16, 16);
     break;
   case X86::VPBROADCASTWZrm:
-    printElementBroadcast(MI, OutStreamer, 32, 16);
+    printBroadcast(MI, OutStreamer, 32, 16);
     break;
   case X86::VPBROADCASTBrm:
   case X86::VPBROADCASTBZ128rm:
-    printElementBroadcast(MI, OutStreamer, 16, 8);
+    printBroadcast(MI, OutStreamer, 16, 8);
     break;
   case X86::VPBROADCASTBYrm:
   case X86::VPBROADCASTBZ256rm:
-    printElementBroadcast(MI, OutStreamer, 32, 8);
+    printBroadcast(MI, OutStreamer, 32, 8);
     break;
   case X86::VPBROADCASTBZrm:
-    printElementBroadcast(MI, OutStreamer, 64, 8);
+    printBroadcast(MI, OutStreamer, 64, 8);
     break;
   }
 }
