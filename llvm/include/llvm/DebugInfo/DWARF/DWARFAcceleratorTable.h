@@ -620,8 +620,8 @@ public:
 
     Expected<Entry> getEntry(uint64_t *Offset) const;
 
-    // Returns the Entry at the relative `Offset` from the start of the Entry
-    // pool.
+    /// Returns the Entry at the relative `Offset` from the start of the Entry
+    /// pool.
     Expected<Entry> getEntryAtRelativeOffset(uint64_t Offset) const {
       auto OffsetFromSection = Offset + this->EntriesBase;
       return getEntry(&OffsetFromSection);
