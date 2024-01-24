@@ -520,8 +520,26 @@ def VOP3_CVT_PK_F8_F32_Profile : VOP3_Profile<VOP_I32_F32_F32, VOP3_OPSEL> {
   let InsVOP3OpSel = (ins FP32InputMods:$src0_modifiers, Src0RC64:$src0,
                           FP32InputMods:$src1_modifiers, Src1RC64:$src1,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
+  let InsVOP3DPP = (ins VGPR_32:$old,
+                        FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                        FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                        VGPR_32:$vdst_in, op_sel0:$op_sel,
+                        dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                        bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+
+  let InsVOP3DPP16 = (ins VGPR_32:$old,
+                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                          VGPR_32:$vdst_in, op_sel0:$op_sel,
+                          dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                          bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+  let InsVOP3DPP8 = (ins VGPR_32:$old,
+                         FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                         FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, FI:$fi);
+
   let HasClamp = 0;
-  let HasExtVOP3DPP = 0;
+  let HasExtVOP3DPP = 1;
 }
 
 def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
@@ -530,14 +548,36 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
                           FP32InputMods:$src1_modifiers, Src1RC64:$src1,
                           FP32InputMods:$src2_modifiers, VGPR_32:$src2,
                           op_sel0:$op_sel);
+  let InsVOP3DPP16 = (ins VGPR_32:$old,
+                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                          FP32InputMods:$src2_modifiers, VGPR_32:$src2,
+                          op_sel0:$op_sel, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                          bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+  let InsVOP3DPP8 = (ins VGPR_32:$old,
+                         FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
+                         FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
+                         FP32InputMods:$src2_modifiers, VGPR_32:$src2,
+                         op_sel0:$op_sel, dpp8:$dpp8, FI:$fi);
   let HasClamp = 0;
   let HasSrc2 = 0;
   let HasSrc2Mods = 1;
+  let HasExtVOP3DPP = 1;
+  let HasOpSel = 1;
   let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
                             getAsmVOP3OpSel<3, HasClamp, HasOMod,
                                             HasSrc0FloatMods, HasSrc1FloatMods,
                                             HasSrc2FloatMods>.ret);
-  let HasExtVOP3DPP = 0;
+  let AsmVOP3DPP16 = !subst(", $src2_modifiers", "",
+                            getAsmVOP3DPP16<getAsmVOP3Base<3, 1, HasClamp, 1,
+                                            HasOMod, 0, 1, HasSrc0FloatMods,
+                                            HasSrc1FloatMods,
+                                            HasSrc2FloatMods>.ret>.ret);
+  let AsmVOP3DPP8 = !subst(", $src2_modifiers", "",
+                           getAsmVOP3DPP8<getAsmVOP3Base<3, 1, HasClamp, 1,
+                                          HasOMod, 0, 1, HasSrc0FloatMods,
+                                          HasSrc1FloatMods,
+                                          HasSrc2FloatMods>.ret>.ret);
 }
 
 def IsPow2Plus1: PatLeaf<(i32 imm), [{
@@ -618,13 +658,13 @@ let SubtargetPredicate = HasFP8ConversionInsts, mayRaiseFPException = 0,
 
 class Cvt_PK_F8_F32_Pat<SDPatternOperator node, int index, VOP3_Pseudo inst> : GCNPat<
     (i32 (node f32:$src0, f32:$src1, i32:$old, index)),
-    (inst !if(index, SRCMODS.DST_OP_SEL, 0), $src0, 0, $src1, $old, !if(index, SRCMODS.OP_SEL_0, 0))
+    (inst !if(index, SRCMODS.DST_OP_SEL, 0), $src0, 0, $src1, $old, 0)
 >;
 
 class Cvt_SR_F8_F32_Pat<SDPatternOperator node, bits<2> index, VOP3_Pseudo inst> : GCNPat<
     (i32 (node f32:$src0, i32:$src1, i32:$old, index)),
     (inst !if(index{1}, SRCMODS.DST_OP_SEL, 0), $src0, 0, $src1,
-          !if(index{0}, SRCMODS.OP_SEL_0, 0), $old, !if(index{1}, SRCMODS.OP_SEL_0, 0))
+          !if(index{0}, SRCMODS.OP_SEL_0, 0), $old, 0)
 >;
 
 foreach Index = [0, -1] in {
@@ -997,6 +1037,11 @@ defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x368>;
 
 defm V_PERMLANE16_VAR_B32  : VOP3Only_Real_Base_gfx12<0x30f>;
 defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
+
+defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_gfx12<0x369>;
+defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36a>;
+defm V_CVT_SR_FP8_F32  : VOP3Only_Realtriple_gfx12<0x36b>;
+defm V_CVT_SR_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36c>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12
