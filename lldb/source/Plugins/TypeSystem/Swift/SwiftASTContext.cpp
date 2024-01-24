@@ -1160,6 +1160,14 @@ static std::string GetPluginServerForSDK(llvm::StringRef sdk_path) {
   return server_or_err->str();
 }
 
+namespace {
+  constexpr std::array<std::string_view, 4> g_known_eplicit_module_prefixes =
+       {"-fmodule-map-file=",
+        "-fmodule-file=",
+        "-fno-implicit-modules",
+        "-fno-implicit-module-maps"};
+}
+
 /// Retrieve the serialized AST data blobs and initialize the compiler
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
@@ -1483,8 +1491,8 @@ bool ConsumeIncludeOption(StringRef &arg, StringRef &prefix) {
 }
 
 std::array<StringRef, 2> macro_flags = { "-D", "-U" };
-std::array<StringRef, 5> multi_arg_flags =
-    { "-D", "-U", "-I", "-F", "-working-directory" };
+std::array<StringRef, 6> multi_arg_flags = {
+    "-D", "-U", "-I", "-F", "-working-directory", "-triple"};
 std::array<StringRef, 6> args_to_unique = {
     "-D", "-U", "-I", "-F", "-fmodule-file=", "-fmodule-map-file="};
 
@@ -1519,7 +1527,25 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
 
   llvm::SmallString<128> cur_working_dir;
   llvm::SmallString<128> clang_argument;
+
+  auto match_explicit_build_option = [](StringRef arg) {
+    for (const auto &option : g_known_eplicit_module_prefixes)
+      if (arg.starts_with(option))
+        return true;
+    return false;
+  };
+  bool has_explicit_builds_enabled =
+      llvm::find(source, "-fno-implicit-modules") != source.end();
+
   for (const std::string &arg : source) {
+    // Ignore the `-triple` flag. First, this is not a driver flag, and second,
+    // lldb has its own logic to determine the target. Ignore now, before
+    // appending the argument.
+    if (clang_argument == "-triple") {
+      clang_argument.clear();
+      continue;
+    }
+
     // Join multi-arg options for uniquing.
     clang_argument += arg;
     if (IsMultiArgClangFlag(clang_argument))
@@ -1547,6 +1573,14 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
       continue;
 
     if (clang_argument.empty())
+      continue;
+
+    // In case of explicit modules, for now fallback to implicit
+    // module loading.
+    // TODO: Incorporate loading explicit module dependencies to
+    // speedup dependency resolution.
+    if (has_explicit_builds_enabled &&
+        match_explicit_build_option(clang_argument))
       continue;
 
     // Otherwise add the argument to the list.
