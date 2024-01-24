@@ -40,11 +40,11 @@ class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
   const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T zero = T(FPBits::zero(Sign::POS));
   const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(Sign::POS, 1));
+  const T nan = T(FPBits::build_quiet_nan());
 
   const long double to_zero = ToFPBits::zero().get_val();
   const long double to_neg_zero = ToFPBits::zero(Sign::NEG).get_val();
-  const long double to_nan = ToFPBits::build_quiet_nan(Sign::POS, 1).get_val();
+  const long double to_nan = ToFPBits::build_quiet_nan().get_val();
 
   static constexpr StorageType min_subnormal =
       FPBits::min_subnormal().uintval();

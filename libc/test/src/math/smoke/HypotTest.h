@@ -22,7 +22,7 @@ private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
   using Sign = LIBC_NAMESPACE::fputil::Sign;
-  const T nan = T(FPBits::build_quiet_nan(Sign::POS, 1));
+  const T nan = T(FPBits::build_quiet_nan());
   const T inf = T(FPBits::inf(Sign::POS));
   const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T zero = T(FPBits::zero(Sign::POS));
