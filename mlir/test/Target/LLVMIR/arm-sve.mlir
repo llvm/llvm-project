@@ -314,3 +314,10 @@ llvm.func @arm_sve_convert_to_svbool(
     : (vector<[1]xi1>) -> vector<[16]xi1>
   llvm.return
 }
+
+// CHECK-LABEL: @arm_sve_zip1
+// CHECK-NEXT: call <vscale x 8 x half> @llvm.aarch64.sve.zip1.nxv8f16(<vscale x 8 x half> %{{.*}}, <vscale x 8 x half> {{.*}})
+llvm.func @arm_sve_zip1(%arg0 : vector<[8]xf16>) -> vector<[8]xf16> {
+  %0 = "arm_sve.intr.zip1"(%arg0, %arg0) : (vector<[8]xf16>, vector<[8]xf16>) -> vector<[8]xf16>
+  llvm.return %0 : vector<[8]xf16>
+}
