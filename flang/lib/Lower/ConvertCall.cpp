@@ -966,7 +966,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 
   // Create dummy type with actual argument rank when the dummy is an assumed
   // rank. That way, all the operation to create dummy descriptors are ranked if
-  // the dummy is ranked, which allows simple code generation.
+  // the actual argument is ranked, which allows simple code generation.
   bool actualIsAssumedRank = actual.isAssumedRank();
 
   mlir::Type dummyTypeWithActualRank = dummyType;
@@ -1128,7 +1128,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
   // box is inserted when building the fir.call op. Inserting it here would
   // cause the fir.if results to be assumed-rank in case of OPTIONAL dummy,
-  // causing extra runtime costs due to the unknwon runtime size of assumed-rank
+  // causing extra runtime costs due to the unknown runtime size of assumed-rank
   // descriptors.
   preparedDummy.dummy =
       builder.createConvert(loc, dummyTypeWithActualRank, addr);
