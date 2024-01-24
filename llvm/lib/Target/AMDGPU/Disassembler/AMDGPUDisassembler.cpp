@@ -535,14 +535,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           convertVOPCDPPInst(MI); // Special VOP3 case
         } else {
           assert(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3);
-
-          if (AMDGPU::isVOP1Cvt_F32_Fp8_Bf8_e64(MI.getOpcode())) {
-            // Add omod and clamp modifiers.
-            insertNamedMCOperand(MI, MCOperand::createImm(0),
-                                 AMDGPU::OpName::omod);
-            insertNamedMCOperand(MI, MCOperand::createImm(0),
-                                 AMDGPU::OpName::clamp);
-          }
           convertVOP3DPPInst(MI); // Regular VOP3 case
         }
       };
@@ -717,15 +709,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     Res = tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
                         Address, CS);
-    if (Res) {
-      if (AMDGPU::isVOP1Cvt_F32_Fp8_Bf8_e64(MI.getOpcode())) {
-        // Add omod and clamp modifiers.
-        insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::omod);
-        insertNamedMCOperand(MI, MCOperand::createImm(0),
-                             AMDGPU::OpName::clamp);
-      }
+    if (Res)
       break;
-    }
 
     Res = tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
                         Address, CS);
@@ -982,12 +967,6 @@ void AMDGPUDisassembler::convertMacDPPInst(MCInst &MI) const {
 // first add optional MI operands to check FI
 DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
   unsigned Opc = MI.getOpcode();
-
-  if (AMDGPU::isVOP1Cvt_F32_Fp8_Bf8_e64(Opc)) {
-    // Add omod and clamp modifiers.
-    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::omod);
-    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::clamp);
-  }
 
   if (MCII->get(Opc).TSFlags & SIInstrFlags::VOP3P) {
     convertVOP3PDPPInst(MI);

@@ -25,11 +25,11 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using StorageType = typename FPBits::StorageType;
   using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T inf = T(FPBits::inf(Sign::POS));
-  const T neg_inf = T(FPBits::inf(Sign::NEG));
-  const T zero = T(FPBits::zero(Sign::POS));
-  const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::build_quiet_nan().get_val();
 
   // A normalized mantissa to be used with tests.
   static constexpr StorageType MANTISSA = NormalFloat::ONE + 0x1234;
