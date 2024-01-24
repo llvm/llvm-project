@@ -95,8 +95,8 @@ _LIBCPP_END_NAMESPACE_STD
 // variables with those names corresponding to the start and the end of the section.
 //
 // See https://stackoverflow.com/questions/16552710/how-do-you-get-the-start-and-end-addresses-of-a-custom-elf-section
-extern char __start___lcxx_override;
-extern char __stop___lcxx_override;
+_LIBCPP_WEAK extern char __start___lcxx_override;
+_LIBCPP_WEAK extern char __stop___lcxx_override;
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Ret, class... _Args>
