@@ -245,4 +245,3 @@ void fir::runtime::genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::runtime::getRuntimeFunc<mkRTKey(Sleep)>(loc, builder)};
   builder.create<fir::CallOp>(loc, func, seconds);
 }
-
