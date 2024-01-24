@@ -2577,7 +2577,10 @@ cc_library(
         "lib/Passes/*.cpp",
         "lib/Passes/*.h",
     ]),
-    hdrs = glob(["include/llvm/Passes/*.h"]) + ["include/llvm-c/Transforms/PassBuilder.h"],
+    hdrs = glob([
+        "include/llvm/Passes/*.h",
+        "include/llvm/Passes/*.def",
+    ]) + ["include/llvm-c/Transforms/PassBuilder.h"],
     copts = llvm_copts,
     deps = [
         ":AggressiveInstCombine",
@@ -2591,6 +2594,7 @@ cc_library(
         ":IRPrinter",
         ":InstCombine",
         ":Instrumentation",
+        ":MC",
         ":MLPolicies",
         ":ObjCARC",
         ":Scalar",
