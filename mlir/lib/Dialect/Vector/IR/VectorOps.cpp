@@ -4079,10 +4079,15 @@ struct TransferReadAfterWriteToBroadcast
     // final shape we want.
     ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
     SmallVector<int64_t> broadcastShape(destShape.size());
-    for (const auto &pos : llvm::enumerate(permutation))
+    SmallVector<bool> broadcastScalableFlags(destShape.size());
+    for (const auto &pos : llvm::enumerate(permutation)) {
       broadcastShape[pos.value()] = destShape[pos.index()];
+      broadcastScalableFlags[pos.value()] =
+          readOp.getVectorType().getScalableDims()[pos.index()];
+    }
     VectorType broadcastedType = VectorType::get(
-        broadcastShape, defWrite.getVectorType().getElementType());
+        broadcastShape, defWrite.getVectorType().getElementType(),
+        broadcastScalableFlags);
     vec = rewriter.create<vector::BroadcastOp>(loc, broadcastedType, vec);
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec,
