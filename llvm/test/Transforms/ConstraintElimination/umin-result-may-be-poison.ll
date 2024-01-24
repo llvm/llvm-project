@@ -6,10 +6,11 @@
 define i1 @umin_not_used(i32 %arg) {
 ; CHECK-LABEL: define i1 @umin_not_used(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp slt i32 [[ARG]], 0
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[ARG]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL]], i32 80)
 ; CHECK-NEXT:    [[CMP2:%.*]] = shl nuw nsw i32 [[ARG]], 3
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
   %icmp = icmp slt i32 %arg, 0
   %shl = shl nuw nsw i32 %arg, 3
@@ -38,12 +39,13 @@ define i1 @umin_poison_is_UB_via_call(i32 %arg) {
 define i1 @umin_poison_call_before_UB(i32 %arg) {
 ; CHECK-LABEL: define i1 @umin_poison_call_before_UB(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp slt i32 [[ARG]], 0
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[ARG]], 3
 ; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL]], i32 80)
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    call void @noundef(i32 noundef [[MIN]])
 ; CHECK-NEXT:    [[CMP2:%.*]] = shl nuw nsw i32 [[ARG]], 3
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
   %icmp = icmp slt i32 %arg, 0
   %shl = shl nuw nsw i32 %arg, 3
