@@ -313,7 +313,7 @@ public:
 
   // Multiply each row of the matrix by the LCM of the denominators, thereby
   // converting it to an integer matrix.
-  IntMatrix normalizeRows();
+  IntMatrix normalizeRows() const;
 };
 
 } // namespace presburger

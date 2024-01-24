@@ -729,7 +729,7 @@ void FracMatrix::LLL(Fraction delta) {
   }
 }
 
-IntMatrix FracMatrix::normalizeRows() {
+IntMatrix FracMatrix::normalizeRows() const {
   unsigned numRows = getNumRows();
   unsigned numColumns = getNumColumns();
   IntMatrix normalized(numRows, numColumns);
