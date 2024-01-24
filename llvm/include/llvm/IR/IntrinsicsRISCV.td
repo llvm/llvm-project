@@ -147,7 +147,8 @@ let TargetPrefix = "riscv" in {
   class RISCVUSMLoad
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                     [llvm_ptr_ty, llvm_anyint_ty],
-                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic {
+                    [NoCapture<ArgIndex<0>>, IntrReadMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = 1;
   }
   // For unit stride load
@@ -155,7 +156,8 @@ let TargetPrefix = "riscv" in {
   class RISCVUSLoad
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_ptr_ty, llvm_anyint_ty],
-                    [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic {
+                    [NoCapture<ArgIndex<1>>, IntrReadMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = 2;
   }
   // For unit stride fault-only-first load
@@ -177,7 +179,8 @@ let TargetPrefix = "riscv" in {
                     [LLVMMatchType<0>, llvm_ptr_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty, LLVMMatchType<1>],
-                    [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<4>>, IntrReadMem]>,
+                    [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<4>>, IntrReadMem,
+                     IntrArgMemOnly]>,
                     RISCVVIntrinsic {
     let VLOperand = 3;
   }
@@ -239,7 +242,8 @@ let TargetPrefix = "riscv" in {
   class RISCVUSStore
         : DefaultAttrsIntrinsic<[],
                     [llvm_anyvector_ty, llvm_ptr_ty, llvm_anyint_ty],
-                    [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic {
+                    [NoCapture<ArgIndex<1>>, IntrWriteMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = 2;
   }
   // For unit stride store with mask
@@ -249,7 +253,8 @@ let TargetPrefix = "riscv" in {
                     [llvm_anyvector_ty, llvm_ptr_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
-                    [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic {
+                    [NoCapture<ArgIndex<1>>, IntrWriteMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = 3;
   }
   // For strided store
@@ -992,7 +997,8 @@ let TargetPrefix = "riscv" in {
                                 !add(nf, -1))),
                     !listconcat(!listsplat(LLVMMatchType<0>, nf),
                                 [llvm_ptr_ty, llvm_anyint_ty]),
-                    [NoCapture<ArgIndex<nf>>, IntrReadMem]>, RISCVVIntrinsic {
+                    [NoCapture<ArgIndex<nf>>, IntrReadMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = !add(nf, 1);
   }
   // For unit stride segment load with mask
@@ -1004,8 +1010,9 @@ let TargetPrefix = "riscv" in {
                                 [llvm_ptr_ty,
                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                  llvm_anyint_ty, LLVMMatchType<1>]),
-                    [ImmArg<ArgIndex<!add(nf, 3)>>, NoCapture<ArgIndex<nf>>, IntrReadMem]>,
-                    RISCVVIntrinsic {
+                    [ImmArg<ArgIndex<!add(nf, 3)>>, NoCapture<ArgIndex<nf>>,
+                     IntrReadMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = !add(nf, 2);
   }
 
@@ -1096,7 +1103,8 @@ let TargetPrefix = "riscv" in {
                     !listconcat([llvm_anyvector_ty],
                                 !listsplat(LLVMMatchType<0>, !add(nf, -1)),
                                 [llvm_ptr_ty, llvm_anyint_ty]),
-                    [NoCapture<ArgIndex<nf>>, IntrWriteMem]>, RISCVVIntrinsic {
+                    [NoCapture<ArgIndex<nf>>, IntrWriteMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = !add(nf, 1);
   }
   // For unit stride segment store with mask
@@ -1108,7 +1116,8 @@ let TargetPrefix = "riscv" in {
                                 [llvm_ptr_ty,
                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                  llvm_anyint_ty]),
-                    [NoCapture<ArgIndex<nf>>, IntrWriteMem]>, RISCVVIntrinsic {
+                    [NoCapture<ArgIndex<nf>>, IntrWriteMem, IntrArgMemOnly]>,
+          RISCVVIntrinsic {
     let VLOperand = !add(nf, 2);
   }
 

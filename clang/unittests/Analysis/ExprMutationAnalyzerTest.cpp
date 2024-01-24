@@ -359,6 +359,37 @@ TEST(ExprMutationAnalyzerTest, DependentOperatorWithNonDependentOperand) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x << t"));
 }
 
+TEST(ExprMutationAnalyzerTest, FoldExpression) {
+  // gh70323
+  // A fold expression may contain `Exp` as it's initializer.
+  // We don't know if the operator modifies `Exp` because the
+  // operator is type dependent due to the parameter pack.
+  auto AST = buildASTFromCodeWithArgs(
+      "struct Stream {};"
+      "template <typename... Args> void concatenate(Args... args) "
+      "{ Stream x; (x << ... << args); }",
+      {"-fno-delayed-template-parsing"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(x << ... << args)"));
+
+  AST = buildASTFromCodeWithArgs(
+      "struct Stream {};"
+      "template <typename... Args> void concatenate(Args... args) "
+      "{ Stream x; (args << ... << x); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(args << ... << x)"));
+
+  AST = buildASTFromCodeWithArgs(
+      "struct Stream {};"
+      "template <typename... Args> void concatenate(Args... args) "
+      "{ Stream x; (..., (x << args)); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x << args"));
+}
+
 // Section: expression as call argument
 
 TEST(ExprMutationAnalyzerTest, ByValueArgument) {

@@ -2577,7 +2577,10 @@ cc_library(
         "lib/Passes/*.cpp",
         "lib/Passes/*.h",
     ]),
-    hdrs = glob(["include/llvm/Passes/*.h"]) + ["include/llvm-c/Transforms/PassBuilder.h"],
+    hdrs = glob([
+        "include/llvm/Passes/*.h",
+        "include/llvm/Passes/*.def",
+    ]) + ["include/llvm-c/Transforms/PassBuilder.h"],
     copts = llvm_copts,
     deps = [
         ":AggressiveInstCombine",
@@ -2591,6 +2594,7 @@ cc_library(
         ":IRPrinter",
         ":InstCombine",
         ":Instrumentation",
+        ":MC",
         ":MLPolicies",
         ":ObjCARC",
         ":Scalar",
@@ -3253,7 +3257,9 @@ cc_binary(
         ":IRPrinter",
         ":IRReader",
         ":MC",
+        ":Passes",
         ":Remarks",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -4808,8 +4814,8 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "opt",
+cc_library(
+    name = "opt-driver",
     srcs = glob([
         "tools/opt/*.cpp",
         "tools/opt/*.h",
@@ -4820,7 +4826,6 @@ cc_binary(
         "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -4845,6 +4850,12 @@ cc_binary(
         ":common_transforms",
         ":config",
     ],
+)
+
+cc_binary(
+    name = "opt",
+    stamp = 0,
+    deps = [":opt-driver"]
 )
 
 gentbl(

@@ -151,6 +151,8 @@ public:
     ImmTyOpSelHi,
     ImmTyNegLo,
     ImmTyNegHi,
+    ImmTyIndexKey8bit,
+    ImmTyIndexKey16bit,
     ImmTyDPP8,
     ImmTyDppCtrl,
     ImmTyDppRowMask,
@@ -346,7 +348,7 @@ public:
   }
 
   bool isVRegWithInputMods() const;
-  bool isT16VRegWithInputMods() const;
+  template <bool IsFake16> bool isT16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
   bool isSDWAFP16Operand() const;
@@ -383,6 +385,8 @@ public:
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isCPol() const { return isImmTy(ImmTyCPol); }
+  bool isIndexKey8bit() const { return isImmTy(ImmTyIndexKey8bit); }
+  bool isIndexKey16bit() const { return isImmTy(ImmTyIndexKey16bit); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
   bool isDppBankMask() const { return isImmTy(ImmTyDppBankMask); }
@@ -656,6 +660,14 @@ public:
     return isVISrcF16() || isVISrcB32();
   }
 
+  bool isVISrc_64F16() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::f16);
+  }
+
+  bool isVISrc_64B32() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::i32);
+  }
+
   bool isVISrc_64B64() const {
     return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::i64);
   }
@@ -670,6 +682,14 @@ public:
 
   bool isVISrc_64V2INT32() const {
     return isRegOrInlineNoMods(AMDGPU::VReg_64RegClassID, MVT::i32);
+  }
+
+  bool isVISrc_256B32() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::i32);
+  }
+
+  bool isVISrc_256F32() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::f32);
   }
 
   bool isVISrc_256B64() const {
@@ -1047,6 +1067,8 @@ public:
     case ImmTyOffset1: OS << "Offset1"; break;
     case ImmTySMEMOffsetMod: OS << "SMEMOffsetMod"; break;
     case ImmTyCPol: OS << "CPol"; break;
+    case ImmTyIndexKey8bit: OS << "index_key"; break;
+    case ImmTyIndexKey16bit: OS << "index_key"; break;
     case ImmTyTFE: OS << "TFE"; break;
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
@@ -1303,10 +1325,8 @@ private:
                           unsigned NextFreeSGPR, SMRange SGPRRange,
                           unsigned &VGPRBlocks, unsigned &SGPRBlocks);
   bool ParseDirectiveAMDGCNTarget();
+  bool ParseDirectiveAMDHSACodeObjectVersion();
   bool ParseDirectiveAMDHSAKernel();
-  bool ParseDirectiveMajorMinor(uint32_t &Major, uint32_t &Minor);
-  bool ParseDirectiveHSACodeObjectVersion();
-  bool ParseDirectiveHSACodeObjectISA();
   bool ParseAMDKernelCodeTValue(StringRef ID, amd_kernel_code_t &Header);
   bool ParseDirectiveAMDKernelCodeT();
   // TODO: Possibly make subtargetHasRegister const.
@@ -1606,6 +1626,11 @@ public:
   ParseStatus parseRegWithFPInputMods(OperandVector &Operands);
   ParseStatus parseRegWithIntInputMods(OperandVector &Operands);
   ParseStatus parseVReg32OrOff(OperandVector &Operands);
+  ParseStatus tryParseIndexKey(OperandVector &Operands,
+                               AMDGPUOperand::ImmTy ImmTy);
+  ParseStatus parseIndexKey8bit(OperandVector &Operands);
+  ParseStatus parseIndexKey16bit(OperandVector &Operands);
+
   ParseStatus parseDfmtNfmt(int64_t &Format);
   ParseStatus parseUfmt(int64_t &Format);
   ParseStatus parseSymbolicSplitFormat(StringRef FormatStr, SMLoc Loc,
@@ -1786,6 +1811,8 @@ public:
   void cvtVOP3OpSel(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3P(MCInst &Inst, const OperandVector &Operands);
+  void cvtSWMMAC(MCInst &Inst, const OperandVector &Operands);
+
   void cvtVOPD(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3OpSel(MCInst &Inst, const OperandVector &Operands,
                     OptionalImmIndexMap &OptionalIdx);
@@ -2056,8 +2083,9 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
           AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
 }
 
-bool AMDGPUOperand::isT16VRegWithInputMods() const {
-  return isRegClass(AMDGPU::VGPR_32_Lo128RegClassID);
+template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+  return isRegClass(IsFake16 ? AMDGPU::VGPR_32_Lo128RegClassID
+                             : AMDGPU::VGPR_16_Lo128RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
@@ -3501,6 +3529,9 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
     return !isInlineConstant(Inst, OpIdx);
   } else if (MO.isReg()) {
     auto Reg = MO.getReg();
+    if (!Reg) {
+      return false;
+    }
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);
     return isSGPR(PReg, TRI) && PReg != SGPR_NULL;
@@ -4365,7 +4396,11 @@ bool AMDGPUAsmParser::validateNeg(const MCInst &Inst, int OpName) {
   uint64_t TSFlags = MII.get(Opc).TSFlags;
 
   // v_dot4 fp8/bf8 neg_lo/neg_hi not allowed on src0 and src1 (allowed on src2)
-  if (!(TSFlags & SIInstrFlags::IsDOT))
+  // v_wmma iu4/iu8 neg_lo not allowed on src2 (allowed on src0, src1)
+  // v_swmmac f16/bf16 neg_lo/neg_hi not allowed on src2 (allowed on src0, src1)
+  // other wmma/swmmac instructions don't have neg_lo/neg_hi operand.
+  if (!(TSFlags & SIInstrFlags::IsDOT) && !(TSFlags & SIInstrFlags::IsWMMA) &&
+      !(TSFlags & SIInstrFlags::IsSWMMAC))
     return true;
 
   int NegIdx = AMDGPU::getNamedOperandIdx(Opc, OpName);
@@ -5133,20 +5168,6 @@ bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
   return false;
 }
 
-bool AMDGPUAsmParser::ParseDirectiveMajorMinor(uint32_t &Major,
-                                               uint32_t &Minor) {
-  if (ParseAsAbsoluteExpression(Major))
-    return TokError("invalid major version");
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("minor version number required, comma expected");
-
-  if (ParseAsAbsoluteExpression(Minor))
-    return TokError("invalid minor version");
-
-  return false;
-}
-
 bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
     return TokError("directive only supported for amdgcn architecture");
@@ -5612,63 +5633,18 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     }
   }
 
-  getTargetStreamer().EmitAmdhsaKernelDescriptor(
-      getSTI(), KernelName, KD, NextFreeVGPR, NextFreeSGPR, ReserveVCC,
-      ReserveFlatScr, AMDGPU::getAmdhsaCodeObjectVersion());
+  getTargetStreamer().EmitAmdhsaKernelDescriptor(getSTI(), KernelName, KD,
+                                                 NextFreeVGPR, NextFreeSGPR,
+                                                 ReserveVCC, ReserveFlatScr);
   return false;
 }
 
-bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectVersion() {
-  uint32_t Major;
-  uint32_t Minor;
-
-  if (ParseDirectiveMajorMinor(Major, Minor))
+bool AMDGPUAsmParser::ParseDirectiveAMDHSACodeObjectVersion() {
+  uint32_t Version;
+  if (ParseAsAbsoluteExpression(Version))
     return true;
 
-  getTargetStreamer().EmitDirectiveHSACodeObjectVersion(Major, Minor);
-  return false;
-}
-
-bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
-  uint32_t Major;
-  uint32_t Minor;
-  uint32_t Stepping;
-  StringRef VendorName;
-  StringRef ArchName;
-
-  // If this directive has no arguments, then use the ISA version for the
-  // targeted GPU.
-  if (isToken(AsmToken::EndOfStatement)) {
-    AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
-    getTargetStreamer().EmitDirectiveHSACodeObjectISAV2(ISA.Major, ISA.Minor,
-                                                        ISA.Stepping,
-                                                        "AMD", "AMDGPU");
-    return false;
-  }
-
-  if (ParseDirectiveMajorMinor(Major, Minor))
-    return true;
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("stepping version number required, comma expected");
-
-  if (ParseAsAbsoluteExpression(Stepping))
-    return TokError("invalid stepping version");
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("vendor name required, comma expected");
-
-  if (!parseString(VendorName, "invalid vendor name"))
-    return true;
-
-  if (!trySkipToken(AsmToken::Comma))
-    return TokError("arch name required, comma expected");
-
-  if (!parseString(ArchName, "invalid arch name"))
-    return true;
-
-  getTargetStreamer().EmitDirectiveHSACodeObjectISAV2(Major, Minor, Stepping,
-                                                      VendorName, ArchName);
+  getTargetStreamer().EmitDirectiveAMDHSACodeObjectVersion(Version);
   return false;
 }
 
@@ -5955,16 +5931,13 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
     if (IDVal == ".amdhsa_kernel")
      return ParseDirectiveAMDHSAKernel();
 
+    if (IDVal == ".amdhsa_code_object_version")
+      return ParseDirectiveAMDHSACodeObjectVersion();
+
     // TODO: Restructure/combine with PAL metadata directive.
     if (IDVal == AMDGPU::HSAMD::V3::AssemblerDirectiveBegin)
       return ParseDirectiveHSAMetadata();
   } else {
-    if (IDVal == ".hsa_code_object_version")
-      return ParseDirectiveHSACodeObjectVersion();
-
-    if (IDVal == ".hsa_code_object_isa")
-      return ParseDirectiveHSACodeObjectISA();
-
     if (IDVal == ".amd_kernel_code_t")
       return ParseDirectiveAMDKernelCodeT();
 
@@ -6526,6 +6499,33 @@ bool AMDGPUAsmParser::tryParseFmt(const char *Pref,
 
   Fmt = Val;
   return true;
+}
+
+ParseStatus AMDGPUAsmParser::tryParseIndexKey(OperandVector &Operands,
+                                              AMDGPUOperand::ImmTy ImmTy) {
+  const char *Pref = "index_key";
+  int64_t ImmVal = 0;
+  SMLoc Loc = getLoc();
+  auto Res = parseIntWithPrefix(Pref, ImmVal);
+  if (!Res.isSuccess())
+    return Res;
+
+  if (ImmTy == AMDGPUOperand::ImmTyIndexKey16bit && (ImmVal < 0 || ImmVal > 1))
+    return Error(Loc, Twine("out of range ", StringRef(Pref)));
+
+  if (ImmTy == AMDGPUOperand::ImmTyIndexKey8bit && (ImmVal < 0 || ImmVal > 3))
+    return Error(Loc, Twine("out of range ", StringRef(Pref)));
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, ImmVal, Loc, ImmTy));
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseIndexKey8bit(OperandVector &Operands) {
+  return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey8bit);
+}
+
+ParseStatus AMDGPUAsmParser::parseIndexKey16bit(OperandVector &Operands) {
+  return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey16bit);
 }
 
 // dfmt and nfmt (in a tbuffer instruction) are parsed as one to allow their
@@ -8137,9 +8137,8 @@ void AMDGPUAsmParser::onBeginOfFile() {
     return;
 
   if (!getTargetStreamer().getTargetID())
-    getTargetStreamer().initializeTargetID(getSTI(), getSTI().getFeatureString(),
-        // TODO: Should try to check code object version from directive???
-        AMDGPU::getAmdhsaCodeObjectVersion());
+    getTargetStreamer().initializeTargetID(getSTI(),
+                                           getSTI().getFeatureString());
 
   if (isHsaAbi(getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();
@@ -8367,12 +8366,20 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   const bool IsPacked = (Desc.TSFlags & SIInstrFlags::IsPacked) != 0;
 
   if (Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
-      Opc == AMDGPU::V_CVT_SR_FP8_F32_vi) {
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
+      Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_gfx12 ||
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_gfx12) {
     Inst.addOperand(MCOperand::createImm(0)); // Placeholder for src2_mods
     Inst.addOperand(Inst.getOperand(0));
   }
 
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in)) {
+  // Adding vdst_in operand is already covered for these DPP instructions in
+  // cvtVOP3DPP.
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in) &&
+      !(Opc == AMDGPU::V_CVT_PK_BF8_F32_e64_dpp_gfx12 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp_gfx12 ||
+        Opc == AMDGPU::V_CVT_PK_BF8_F32_e64_dpp8_gfx12 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp8_gfx12)) {
     assert(!IsPacked);
     Inst.addOperand(Inst.getOperand(0));
   }
@@ -8393,10 +8400,12 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   }
 
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);
-  if (NegLoIdx != -1) {
+  if (NegLoIdx != -1)
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyNegLo);
+
+  int NegHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_hi);
+  if (NegHiIdx != -1)
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyNegHi);
-  }
 
   const int Ops[] = { AMDGPU::OpName::src0,
                       AMDGPU::OpName::src1,
@@ -8416,11 +8425,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   if (OpSelHiIdx != -1)
     OpSelHi = Inst.getOperand(OpSelHiIdx).getImm();
 
-  if (NegLoIdx != -1) {
-    int NegHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_hi);
+  if (NegLoIdx != -1)
     NegLo = Inst.getOperand(NegLoIdx).getImm();
+
+  if (NegHiIdx != -1)
     NegHi = Inst.getOperand(NegHiIdx).getImm();
-  }
 
   for (int J = 0; J < 3; ++J) {
     int OpIdx = AMDGPU::getNamedOperandIdx(Opc, Ops[J]);
@@ -8453,6 +8462,43 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands) {
   OptionalImmIndexMap OptIdx;
   cvtVOP3(Inst, Operands, OptIdx);
+  cvtVOP3P(Inst, Operands, OptIdx);
+}
+
+static void addSrcModifiersAndSrc(MCInst &Inst, const OperandVector &Operands,
+                                  unsigned i, unsigned Opc, unsigned OpName) {
+  if (AMDGPU::getNamedOperandIdx(Opc, OpName) != -1)
+    ((AMDGPUOperand &)*Operands[i]).addRegOrImmWithFPInputModsOperands(Inst, 2);
+  else
+    ((AMDGPUOperand &)*Operands[i]).addRegOperands(Inst, 1);
+}
+
+void AMDGPUAsmParser::cvtSWMMAC(MCInst &Inst, const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+
+  ((AMDGPUOperand &)*Operands[1]).addRegOperands(Inst, 1);
+  addSrcModifiersAndSrc(Inst, Operands, 2, Opc, AMDGPU::OpName::src0_modifiers);
+  addSrcModifiersAndSrc(Inst, Operands, 3, Opc, AMDGPU::OpName::src1_modifiers);
+  ((AMDGPUOperand &)*Operands[1]).addRegOperands(Inst, 1); // srcTiedDef
+  ((AMDGPUOperand &)*Operands[4]).addRegOperands(Inst, 1); // src2
+
+  OptionalImmIndexMap OptIdx;
+  for (unsigned i = 5; i < Operands.size(); ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+    OptIdx[Op.getImmTy()] = i;
+  }
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::index_key_8bit))
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyIndexKey8bit);
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::index_key_16bit))
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyIndexKey16bit);
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
+    addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyClampSI);
+
   cvtVOP3P(Inst, Operands, OptIdx);
 }
 
@@ -8831,6 +8877,22 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       } else if (Src2ModIdx == NumOperands) {
         // Add unused dummy src2_modifiers
         Inst.addOperand(MCOperand::createImm(0));
+      }
+    }
+
+    int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+    if (VdstInIdx == static_cast<int>(Inst.getNumOperands())) {
+      Inst.addOperand(Inst.getOperand(0));
+    }
+
+    bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12;
+    if (IsVOP3CvtSrDpp) {
+      if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
+        Inst.addOperand(MCOperand::createImm(0));
+        Inst.addOperand(MCOperand::createReg(0));
       }
     }
 

@@ -73,6 +73,12 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
     return __generate_init(std::forward<_Generator>(__g), std::make_index_sequence<_Np>());
   }
+
+  template <class _Up>
+  static _LIBCPP_HIDE_FROM_ABI void __load(_SimdStorage& __s, const _Up* __mem) noexcept {
+    for (size_t __i = 0; __i < _Np; __i++)
+      __s.__data[__i] = static_cast<_Tp>(__mem[__i]);
+  }
 };
 
 template <class _Tp, int _Np>
@@ -86,6 +92,11 @@ struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
       __result.__set(__i, __all_bits_v);
     }
     return __result;
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI void __load(_MaskStorage& __s, const bool* __mem) noexcept {
+    for (size_t __i = 0; __i < _Np; __i++)
+      __s.__data[__i] = experimental::__set_all_bits<_Tp>(__mem[__i]);
   }
 };
 

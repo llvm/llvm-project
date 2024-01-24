@@ -2789,9 +2789,11 @@ isIntegerArrayAttrConfinedToShape(OpType op, ArrayAttr arrayAttr,
   return success();
 }
 
-// Returns true if all integers in `arrayAttr` are in the interval [min, max}.
-// interval. If `halfOpen` is true then the admissible interval is [min, max).
-// Otherwise, the admissible interval is [min, max].
+// Returns true if, for all indices i = 0..shape.size()-1, val is in the
+// [min, max} interval:
+//   val = `arrayAttr1[i]` + `arrayAttr2[i]`,
+// If `halfOpen` is true then the admissible interval is [min, max). Otherwise,
+// the admissible interval is [min, max].
 template <typename OpType>
 static LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
     OpType op, ArrayAttr arrayAttr1, ArrayAttr arrayAttr2,
@@ -2845,8 +2847,8 @@ LogicalResult InsertStridedSliceOp::verify() {
   auto stridesName = InsertStridedSliceOp::getStridesAttrName();
   if (failed(isIntegerArrayAttrConfinedToShape(*this, offsets, destShape,
                                                offName)) ||
-      failed(isIntegerArrayAttrConfinedToRange(*this, strides, 1, 1,
-                                               stridesName,
+      failed(isIntegerArrayAttrConfinedToRange(*this, strides, /*min=*/1,
+                                               /*max=*/1, stridesName,
                                                /*halfOpen=*/false)) ||
       failed(isSumOfIntegerArrayAttrConfinedToShape(
           *this, offsets,
@@ -3250,8 +3252,8 @@ LogicalResult ExtractStridedSliceOp::verify() {
       failed(isIntegerArrayAttrConfinedToShape(*this, sizes, shape, sizesName,
                                                /*halfOpen=*/false,
                                                /*min=*/1)) ||
-      failed(isIntegerArrayAttrConfinedToRange(*this, strides, 1, 1,
-                                               stridesName,
+      failed(isIntegerArrayAttrConfinedToRange(*this, strides, /*min=*/1,
+                                               /*max=*/1, stridesName,
                                                /*halfOpen=*/false)) ||
       failed(isSumOfIntegerArrayAttrConfinedToShape(*this, offsets, sizes,
                                                     shape, offName, sizesName,
@@ -4077,10 +4079,15 @@ struct TransferReadAfterWriteToBroadcast
     // final shape we want.
     ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
     SmallVector<int64_t> broadcastShape(destShape.size());
-    for (const auto &pos : llvm::enumerate(permutation))
+    SmallVector<bool> broadcastScalableFlags(destShape.size());
+    for (const auto &pos : llvm::enumerate(permutation)) {
       broadcastShape[pos.value()] = destShape[pos.index()];
+      broadcastScalableFlags[pos.value()] =
+          readOp.getVectorType().getScalableDims()[pos.index()];
+    }
     VectorType broadcastedType = VectorType::get(
-        broadcastShape, defWrite.getVectorType().getElementType());
+        broadcastShape, defWrite.getVectorType().getElementType(),
+        broadcastScalableFlags);
     vec = rewriter.create<vector::BroadcastOp>(loc, broadcastedType, vec);
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec,

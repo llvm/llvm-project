@@ -5,7 +5,6 @@
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
-  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
   project(CompilerRTBuiltins C ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
@@ -56,6 +55,8 @@ if (COMPILER_RT_STANDALONE_BUILD)
     "Turns on or off -fPIC for the builtin library source"
     ON)
 endif()
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 include(builtin-config-ix)
 include(CMakeDependentOption)
@@ -560,9 +561,10 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
-if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+if(COMPILER_RT_HAS_AARCH64_SME AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-libc-routines.c)
   message(STATUS "AArch64 SME ABI routines enabled")
+  set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
 else()
   message(STATUS "AArch64 SME ABI routines disabled")
 endif()

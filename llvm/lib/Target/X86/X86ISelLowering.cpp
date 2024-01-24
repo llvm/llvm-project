@@ -36374,14 +36374,22 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned Opc;
     switch (MI.getOpcode()) {
     default: llvm_unreachable("illegal opcode!");
-    case X86::PTILELOADD:   Opc = X86::TILELOADD;   break;
-    case X86::PTILELOADDT1: Opc = X86::TILELOADDT1; break;
-    case X86::PTILESTORED:  Opc = X86::TILESTORED;  break;
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget.hasEGPR() ? OPC##_EVEX : OPC)
+    case X86::PTILELOADD:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADD);
+      break;
+    case X86::PTILELOADDT1:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
+      break;
+    case X86::PTILESTORED:
+      Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
+      break;
+#undef GET_EGPR_IF_ENABLED
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
     unsigned CurOp = 0;
-    if (Opc != X86::TILESTORED)
+    if (Opc != X86::TILESTORED && Opc != X86::TILESTORED_EVEX)
       MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
                  RegState::Define);
 
@@ -36391,7 +36399,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.add(MI.getOperand(CurOp++)); // displacement
     MIB.add(MI.getOperand(CurOp++)); // segment
 
-    if (Opc == X86::TILESTORED)
+    if (Opc == X86::TILESTORED || Opc == X86::TILESTORED_EVEX)
       MIB.addReg(TMMImmToTMMReg(MI.getOperand(CurOp++).getImm()),
                  RegState::Undef);
 
@@ -39630,6 +39638,7 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            ISD::isBuildVectorAllZeros(Op.getNode()) ||
            ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
            ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()) ||
+           getTargetConstantFromNode(dyn_cast<LoadSDNode>(Op)) ||
            (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op->hasOneUse()) ||
            (isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
            (FoldLoad && isShuffleFoldableLoad(Op)) ||
@@ -49319,6 +49328,26 @@ static SDValue combineOrXorWithSETCC(SDNode *N, SDValue N0, SDValue N1,
     }
   }
 
+  // not(pcmpeq(and(X,CstPow2),0)) -> pcmpeq(and(X,CstPow2),CstPow2)
+  if (N->getOpcode() == ISD::XOR && N0.getOpcode() == X86ISD::PCMPEQ &&
+      N0.getOperand(0).getOpcode() == ISD::AND &&
+      ISD::isBuildVectorAllOnes(N1.getNode())) {
+    MVT VT = N->getSimpleValueType(0);
+    APInt UndefElts;
+    SmallVector<APInt> EltBits;
+    if (getTargetConstantBitsFromNode(N0.getOperand(0).getOperand(1),
+                                      VT.getScalarSizeInBits(), UndefElts,
+                                      EltBits)) {
+      bool IsPow2OrUndef = true;
+      for (unsigned I = 0, E = EltBits.size(); I != E; ++I)
+        IsPow2OrUndef &= UndefElts[I] || EltBits[I].isPowerOf2();
+
+      if (IsPow2OrUndef)
+        return DAG.getNode(X86ISD::PCMPEQ, SDLoc(N), VT, N0.getOperand(0),
+                           N0.getOperand(0).getOperand(1));
+    }
+  }
+
   return SDValue();
 }
 
@@ -52184,7 +52213,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = IsNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
 
-  // Fold for better commutatvity:
+  // Fold for better commutativity:
   // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
   if (N1->hasOneUse())
     if (SDValue Not = IsNOT(N1, DAG))

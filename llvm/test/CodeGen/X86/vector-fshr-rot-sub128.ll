@@ -338,7 +338,7 @@ define <2 x i32> @constant_funnnel_v2i32(<2 x i32> %x) nounwind {
 ; AVX512F-LABEL: constant_funnnel_v2i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,5,4,5]
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = [4,5,0,0]
 ; AVX512F-NEXT:    vprorvd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -352,7 +352,7 @@ define <2 x i32> @constant_funnnel_v2i32(<2 x i32> %x) nounwind {
 ; AVX512BW-LABEL: constant_funnnel_v2i32:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,5,4,5]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm1 = [4,5,0,0]
 ; AVX512BW-NEXT:    vprorvd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -366,7 +366,7 @@ define <2 x i32> @constant_funnnel_v2i32(<2 x i32> %x) nounwind {
 ; AVX512VBMI2-LABEL: constant_funnnel_v2i32:
 ; AVX512VBMI2:       # %bb.0:
 ; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512VBMI2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,5,4,5]
+; AVX512VBMI2-NEXT:    vmovq {{.*#+}} xmm1 = [4,5,0,0]
 ; AVX512VBMI2-NEXT:    vprorvd %zmm1, %zmm0, %zmm0
 ; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    vzeroupper
