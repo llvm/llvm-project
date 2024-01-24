@@ -183,6 +183,8 @@ void PrintAttributes(const Record *Builtin, BuiltinType BT,
 
 void EmitBuiltinDef(llvm::raw_ostream &OS, StringRef Substitution,
                     const Record *Builtin, Twine Spelling, BuiltinType BT) {
+  if (Builtin->getValueAsBit("RequiresUndef"))
+    OS << "#undef " << Spelling << '\n';
   switch (BT) {
   case BuiltinType::LibBuiltin:
     OS << "LIBBUILTIN";
