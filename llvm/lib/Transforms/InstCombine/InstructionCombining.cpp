@@ -4488,8 +4488,8 @@ void InstCombinerImpl::tryToSinkInstructionDPValues(
     if (!SunkVariables.insert(DbgUserVariable).second)
       continue;
 
-    // FIXME: dbg.assign equivalence. dbg.assigns here enter the SunkVariables
-    // map, but don't actually get sunk.
+    if (DPV->isDbgAssign())
+      continue;
 
     DPVClones.emplace_back(DPV->clone());
     LLVM_DEBUG(dbgs() << "CLONE: " << *DPVClones.back() << '\n');

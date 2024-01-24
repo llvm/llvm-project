@@ -54,18 +54,18 @@ declare i64 @_ZNK4llvm25SmallVectorTemplateCommonINS_9MCOperandEvE4sizeEv()
 !llvm.module.flags = !{!3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "/fast/fs/llvm34/lib/MC/MCObjectStreamer.cpp", directory: "/fast/fs/build34llvmstage", checksumkind: CSK_MD5, checksum: "43f3adff5ece50116e446307bd92824d")
+!1 = !DIFile(filename: "foo.cpp", directory: ".")
 !2 = !{}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !DILocation(line: 197, column: 26, scope: !5)
 !5 = distinct !DILexicalBlock(scope: !7, file: !6, line: 197, column: 3)
-!6 = !DIFile(filename: "llvm34/lib/MC/MCObjectStreamer.cpp", directory: "/fast/fs", checksumkind: CSK_MD5, checksum: "43f3adff5ece50116e446307bd92824d")
+!6 = !DIFile(filename: "foo.cpp", directory: ".")
 !7 = distinct !DISubprogram(name: "EmitInstruction", linkageName: "_ZN4llvm16MCObjectStreamer15EmitInstructionERKNS_6MCInstE", scope: !8, file: !6, line: 195, type: !13, scopeLine: 195, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, declaration: !15, retainedNodes: !2)
 !8 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "MCObjectStreamer", scope: !10, file: !9, line: 33, size: 2432, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !2, vtableHolder: !11)
-!9 = !DIFile(filename: "llvm34/include/llvm/MC/MCObjectStreamer.h", directory: "/fast/fs", checksumkind: CSK_MD5, checksum: "364947c58883b0a72d98313c0775422d")
+!9 = !DIFile(filename: "bar.h", directory: ".")
 !10 = !DINamespace(name: "llvm", scope: null)
 !11 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "MCStreamer", scope: !10, file: !12, line: 108, size: 2240, flags: DIFlagFwdDecl | DIFlagNonTrivial, identifier: "_ZTSN4llvm10MCStreamerE")
-!12 = !DIFile(filename: "llvm34/include/llvm/MC/MCStreamer.h", directory: "/fast/fs", checksumkind: CSK_MD5, checksum: "1fdd4f3a9a6a2340c2ba553eefe0e90b")
+!12 = !DIFile(filename: "baz.h", directory: ".")
 !13 = distinct !DISubroutineType(types: !14)
 !14 = !{null}
 !15 = !DISubprogram(name: "EmitInstruction", linkageName: "_ZN4llvm16MCObjectStreamer15EmitInstructionERKNS_6MCInstE", scope: !8, file: !9, line: 88, type: !13, scopeLine: 88, containingType: !8, virtualIndex: 86, flags: DIFlagPublic | DIFlagPrototyped, spFlags: DISPFlagVirtual | DISPFlagOptimized)
