@@ -45,11 +45,16 @@ namespace std
 
 */
 
+#include <__config>
+
+#ifdef _LIBCPP_HAS_NO_THREADS
+#  error "<barrier> is not supported since libc++ has been configured without support for threads."
+#endif
+
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__atomic/atomic_base.h>
 #include <__atomic/memory_order.h>
 #include <__availability>
-#include <__config>
 #include <__memory/unique_ptr.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
@@ -61,10 +66,6 @@ namespace std
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#endif
-
-#ifdef _LIBCPP_HAS_NO_THREADS
-#  error "<barrier> is not supported since libc++ has been configured without support for threads."
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -128,7 +129,7 @@ public:
         __completion_(std::move(__completion)),
         __phase_(0) {}
   [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= __expected_, "update is greater than the expected count for the current barrier phase");
 
     auto const __old_phase = __phase_.load(memory_order_relaxed);
@@ -186,7 +187,7 @@ public:
     auto const __result     = __arrived.fetch_sub(update, memory_order_acq_rel) - update;
     auto const new_expected = __expected.load(memory_order_relaxed);
 
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         update <= new_expected, "update is greater than the expected count for the current barrier phase");
 
     if (0 == __result) {
@@ -231,7 +232,7 @@ public:
     auto const __inc = __arrived_unit * update;
     auto const __old = __phase_arrived_expected.fetch_add(__inc, memory_order_acq_rel);
 
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         update <= __old, "update is greater than the expected count for the current barrier phase");
 
     if ((__old ^ (__old + __inc)) & __phase_bit) {
@@ -267,10 +268,10 @@ public:
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI explicit barrier(
       ptrdiff_t __count, _CompletionF __completion = _CompletionF())
       : __b_(__count, std::move(__completion)) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count >= 0,
         "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with a negative value");
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count <= max(),
         "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with "
         "a value greater than max()");
@@ -280,7 +281,7 @@ public:
   barrier& operator=(barrier const&) = delete;
 
   [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__update > 0, "barrier:arrive must be called with a value greater than 0");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update > 0, "barrier:arrive must be called with a value greater than 0");
     return __b_.arrive(__update);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __phase) const {

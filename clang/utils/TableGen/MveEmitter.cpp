@@ -896,7 +896,7 @@ public:
     llvm::APInt i = iOrig.trunc(64);
     SmallString<40> s;
     i.toString(s, 16, true, true);
-    return std::string(s.str());
+    return std::string(s);
   }
 
   std::string genSema() const {

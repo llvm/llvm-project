@@ -2566,7 +2566,7 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
     if (LeadingZero) {
       if (!UniquedVals[Multiple-1].getNode())
         return DAG.getTargetConstant(0, SDLoc(N), MVT::i32);  // 0,0,0,undef
-      int Val = cast<ConstantSDNode>(UniquedVals[Multiple-1])->getZExtValue();
+      int Val = UniquedVals[Multiple - 1]->getAsZExtVal();
       if (Val < 16)                                   // 0,0,0,4 -> vspltisw(4)
         return DAG.getTargetConstant(Val, SDLoc(N), MVT::i32);
     }
@@ -2635,11 +2635,11 @@ bool llvm::isIntS16Immediate(SDNode *N, int16_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int16_t)cast<ConstantSDNode>(N)->getZExtValue();
+  Imm = (int16_t)N->getAsZExtVal();
   if (N->getValueType(0) == MVT::i32)
-    return Imm == (int32_t)cast<ConstantSDNode>(N)->getZExtValue();
+    return Imm == (int32_t)N->getAsZExtVal();
   else
-    return Imm == (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
+    return Imm == (int64_t)N->getAsZExtVal();
 }
 bool llvm::isIntS16Immediate(SDValue Op, int16_t &Imm) {
   return isIntS16Immediate(Op.getNode(), Imm);
@@ -2684,7 +2684,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
+  Imm = (int64_t)N->getAsZExtVal();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -15430,7 +15430,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 1, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = (ShuffV[i - 1] + NumElts);
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = (ShuffV[i - 1] >= 0 ? ShuffV[i - 1] : 0) + NumElts;
       }
     // Example (odd elements from first vector):
     // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> t1, <zero>
@@ -15438,7 +15439,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 0, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = (ShuffV[i + 1] + NumElts);
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = (ShuffV[i + 1] >= 0 ? ShuffV[i + 1] : 0) + NumElts;
       }
   } else {
     // Example (even elements from first vector):
@@ -15447,7 +15449,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 0, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = ShuffV[i + 1] - NumElts;
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = ShuffV[i + 1] >= 0 ? ShuffV[i + 1] - NumElts : 0;
       }
     // Example (odd elements from first vector):
     // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> <zero>, t1
@@ -15455,7 +15458,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 1, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = ShuffV[i - 1] - NumElts;
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = ShuffV[i - 1] >= 0 ? ShuffV[i - 1] - NumElts : 0;
       }
   }
 
@@ -15580,7 +15584,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         NarrowOp.getOpcode() != ISD::ROTL && NarrowOp.getOpcode() != ISD::ROTR)
       break;
 
-    uint64_t Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    uint64_t Imm = Op2->getAsZExtVal();
     // Make sure that the constant is narrow enough to fit in the narrow type.
     if (!isUInt<32>(Imm))
       break;
@@ -16241,7 +16245,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     // Since we are doing this pre-legalize, the RHS can be a constant of
     // arbitrary bitwidth which may cause issues when trying to get the value
     // from the underlying APInt.
-    auto RHSAPInt = cast<ConstantSDNode>(RHS)->getAPIntValue();
+    auto RHSAPInt = RHS->getAsAPIntVal();
     if (!RHSAPInt.isIntN(64))
       break;
 
@@ -16795,7 +16799,7 @@ void PPCTargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
     return;
   if (!isa<ConstantSDNode>(Ops[1].getNode()))
     return;
-  auto IntrinsicID = cast<ConstantSDNode>(Ops[1].getNode())->getZExtValue();
+  auto IntrinsicID = Ops[1].getNode()->getAsZExtVal();
   if (IntrinsicID != Intrinsic::ppc_tdw && IntrinsicID != Intrinsic::ppc_tw &&
       IntrinsicID != Intrinsic::ppc_trapd && IntrinsicID != Intrinsic::ppc_trap)
     return;
@@ -18430,7 +18434,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
     if (Flags & PPC::MOF_RPlusSImm16) {
       SDValue Op0 = N.getOperand(0);
       SDValue Op1 = N.getOperand(1);
-      int16_t Imm = cast<ConstantSDNode>(Op1)->getZExtValue();
+      int16_t Imm = Op1->getAsZExtVal();
       if (!Align || isAligned(*Align, Imm)) {
         Disp = DAG.getTargetConstant(Imm, DL, N.getValueType());
         Base = Op0;

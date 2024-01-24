@@ -188,7 +188,7 @@ static void buildGitPtr(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         .addImm(MFI->getGITPtrHigh())
         .addReg(TargetReg, RegState::ImplicitDefine);
   } else {
-    const MCInstrDesc &GetPC64 = TII->get(AMDGPU::S_GETPC_B64);
+    const MCInstrDesc &GetPC64 = TII->get(AMDGPU::S_GETPC_B64_pseudo);
     BuildMI(MBB, I, DL, GetPC64, TargetReg);
   }
   Register GitPtrLo = MFI->getGITPtrLoReg(*MF);

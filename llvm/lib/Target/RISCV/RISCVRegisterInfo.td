@@ -63,7 +63,10 @@ def sub_vrm1_5 : ComposedSubRegIndex<sub_vrm2_2, sub_vrm1_1>;
 def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
-def sub_32_hi  : SubRegIndex<32, 32>;
+// GPR sizes change with HwMode.
+// FIXME: Support HwMode in SubRegIndex?
+def sub_gpr_even : SubRegIndex<-1>;
+def sub_gpr_odd  : SubRegIndex<-1, -1>;
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -118,6 +121,8 @@ def XLenVT : ValueTypeByHwMode<[RV32, RV64],
 // Allow f64 in GPR for ZDINX on RV64.
 def XLenFVT : ValueTypeByHwMode<[RV64],
                                 [f64]>;
+def XLenPairFVT : ValueTypeByHwMode<[RV32],
+                                    [f64]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -546,33 +551,37 @@ def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
 def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
 
 let RegAltNameIndices = [ABIRegAltName] in {
-  def X0_PD : RISCVRegWithSubRegs<0, X0.AsmName,
-                                     [X0, DUMMY_REG_PAIR_WITH_X0],
-                                     X0.AltNames> {
-    let SubRegIndices = [sub_32, sub_32_hi];
+  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
+                                    [X0, DUMMY_REG_PAIR_WITH_X0],
+                                    X0.AltNames> {
+    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
     let CoveredBySubRegs = 1;
   }
   foreach I = 1-15 in {
     defvar Index = !shl(I, 1);
+    defvar IndexP1 = !add(Index, 1);
     defvar Reg = !cast<Register>("X"#Index);
-    defvar RegP1 = !cast<Register>("X"#!add(Index,1));
-    def X#Index#_PD : RISCVRegWithSubRegs<Index, Reg.AsmName,
-                                          [Reg, RegP1],
-                                          Reg.AltNames> {
-      let SubRegIndices = [sub_32, sub_32_hi];
+    defvar RegP1 = !cast<Register>("X"#IndexP1);
+    def "X" # Index #"_X" # IndexP1 : RISCVRegWithSubRegs<Index,
+                                                          Reg.AsmName,
+                                                          [Reg, RegP1],
+                                                          Reg.AltNames> {
+      let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
       let CoveredBySubRegs = 1;
     }
   }
 }
 
-let RegInfos = RegInfoByHwMode<[RV64], [RegInfo<64, 64, 64>]> in
-def GPRPF64 : RegisterClass<"RISCV", [f64], 64, (add
-    X10_PD, X12_PD, X14_PD, X16_PD,
-    X6_PD,
-    X28_PD, X30_PD,
-    X8_PD,
-    X18_PD, X20_PD, X22_PD, X24_PD, X26_PD,
-    X0_PD, X2_PD, X4_PD
+let RegInfos = RegInfoByHwMode<[RV32, RV64],
+                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
+    DecoderMethod = "DecodeGPRPairRegisterClass" in
+def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
+    X10_X11, X12_X13, X14_X15, X16_X17,
+    X6_X7,
+    X28_X29, X30_X31,
+    X8_X9,
+    X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
+    X0_Pair, X2_X3, X4_X5
 )>;
 
 // The register class is added for inline assembly for vector mask types.

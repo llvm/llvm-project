@@ -32,13 +32,13 @@ bufferizeDestinationStyleOpInterface(RewriterBase &rewriter,
   rewriter.setInsertionPoint(op);
 
   // Nothing to do. This op is already bufferized.
-  if (op.hasBufferSemantics())
+  if (op.hasPureBufferSemantics())
     return success();
 
   // Ensure op has only tensors. Allow mixed tensor-buffer mode on a per-need
   // basis.
-  if (!op.hasTensorSemantics())
-    return op->emitError() << "op does not have tensor semantics";
+  if (!op.hasPureTensorSemantics())
+    return op->emitError() << "op does not have pure tensor semantics";
 
   // New input operands for the cloned op.
   SmallVector<Value> newInputBuffers;
@@ -125,7 +125,7 @@ struct LinalgOpInterface
       if (!isa<RankedTensorType, MemRefType>(operand.get().getType()))
         continue;
       // Only consider operands in `opOperands`.
-      if (llvm::find(opOperands, &operand) == opOperands.end())
+      if (!llvm::is_contained(opOperands, &operand))
         continue;
       // TODO: This could be generalized to other indexing maps. (All indexing
       // must be the same.)

@@ -18,6 +18,7 @@
 #include "PluginManager.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/Utils.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -29,6 +30,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Object/ObjectFile.h"
 
 #include <cassert>
 #include <cstdint>
@@ -166,19 +168,57 @@ static int initLibrary(DeviceTy &Device) {
         Rc = OFFLOAD_FAIL;
         break;
       }
-      // 2) load image into the target table.
-      __tgt_target_table *TargetTable = TransTable->TargetsTable[DeviceId] =
-          Device.loadBinary(Img);
-      // Unable to get table for this image: invalidate image and fail.
-      if (!TargetTable) {
-        REPORT("Unable to generate entries table for device id %d.\n",
-               DeviceId);
-        TransTable->TargetsImages[DeviceId] = 0;
+
+      // 2) Load the image onto the given device.
+      auto BinaryOrErr = Device.loadBinary(Img);
+      if (llvm::Error Err = BinaryOrErr.takeError()) {
+        REPORT("Failed to load image %s\n",
+               llvm::toString(std::move(Err)).c_str());
         Rc = OFFLOAD_FAIL;
         break;
       }
 
-      // Verify whether the two table sizes match.
+      // 3) Create the translation table.
+      llvm::SmallVector<__tgt_offload_entry> &DeviceEntries =
+          TransTable->TargetsEntries[DeviceId];
+      for (__tgt_offload_entry &Entry :
+           llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
+        __tgt_device_binary &Binary = *BinaryOrErr;
+
+        __tgt_offload_entry DeviceEntry = Entry;
+        if (Entry.size) {
+          if (Device.RTL->get_global(Binary, Entry.size, Entry.name,
+                                     &DeviceEntry.addr) != OFFLOAD_SUCCESS)
+            REPORT("Failed to load symbol %s\n", Entry.name);
+
+          // If unified memory is active, the corresponding global is a device
+          // reference to the host global. We need to initialize the pointer on
+          // the deive to point to the memory on the host.
+          if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+            if (Device.RTL->data_submit(DeviceId, DeviceEntry.addr, Entry.addr,
+                                        Entry.size) != OFFLOAD_SUCCESS)
+              REPORT("Failed to write symbol for USM %s\n", Entry.name);
+          }
+        } else {
+          if (Device.RTL->get_function(Binary, Entry.name, &DeviceEntry.addr) !=
+              OFFLOAD_SUCCESS)
+            REPORT("Failed to load kernel %s\n", Entry.name);
+        }
+        DP("Entry point " DPxMOD " maps to%s %s (" DPxMOD ")\n",
+           DPxPTR(Entry.addr), (Entry.size) ? " global" : "", Entry.name,
+           DPxPTR(DeviceEntry.addr));
+
+        DeviceEntries.emplace_back(DeviceEntry);
+      }
+
+      // Set the storage for the table and get a pointer to it.
+      __tgt_target_table DeviceTable{&DeviceEntries[0],
+                                     &DeviceEntries[0] + DeviceEntries.size()};
+      TransTable->DeviceTables[DeviceId] = DeviceTable;
+      __tgt_target_table *TargetTable = TransTable->TargetsTable[DeviceId] =
+          &TransTable->DeviceTables[DeviceId];
+
+      // 4) Verify whether the two table sizes match.
       size_t Hsize =
           TransTable->HostTable.EntriesEnd - TransTable->HostTable.EntriesBegin;
       size_t Tsize = TargetTable->EntriesEnd - TargetTable->EntriesBegin;
@@ -225,7 +265,7 @@ static int initLibrary(DeviceTy &Device) {
           AsyncInfoTy AsyncInfo(Device);
           void *DevPtr;
           Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
-                              AsyncInfo, /* Entry */ nullptr, &HDTTMap);
+                              AsyncInfo, /*Entry=*/nullptr, &HDTTMap);
           if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
           CurrDeviceEntryAddr = DevPtr;
@@ -308,9 +348,31 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (!PM->getNumUsedPlugins())
+      if (!PM->getNumUsedPlugins()) {
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
+
+        llvm::SmallVector<llvm::StringRef> Archs;
+        for (auto &Image : PM->deviceImages()) {
+          const char *Start = reinterpret_cast<const char *>(
+              Image.getExecutableImage().ImageStart);
+          uint64_t Length = llvm::omp::target::getPtrDiff(
+              Start, Image.getExecutableImage().ImageEnd);
+          llvm::MemoryBufferRef Buffer(llvm::StringRef(Start, Length),
+                                       /*Identifier=*/"");
+
+          auto ObjectOrErr = llvm::object::ObjectFile::createObjectFile(Buffer);
+          if (auto Err = ObjectOrErr.takeError()) {
+            llvm::consumeError(std::move(Err));
+            continue;
+          }
+
+          if (auto CPU = (*ObjectOrErr)->tryGetCPUName())
+            Archs.push_back(*CPU);
+        }
+        fprintf(stderr, "Found %zu image(s): (%s)\n", Archs.size(),
+                llvm::join(Archs, ",").c_str());
+      }
 
       SourceInfo Info(Loc);
       if (Info.isAvailible())
@@ -617,7 +679,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           /*HstPtrName=*/nullptr,
           /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
           HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
-          /* OwnedTPR */ nullptr, /* ReleaseHDTTMap */ false);
+          /*OwnedTPR=*/nullptr, /*ReleaseHDTTMap=*/false);
       PointerTgtPtrBegin = PointerTpr.TargetPointer;
       IsHostPtr = PointerTpr.Flags.IsHostPointer;
       if (!PointerTgtPtrBegin) {
@@ -1723,7 +1785,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
-  void *TgtPtr = Device.allocData(DeviceMemorySize, /* HstPtr */ nullptr,
+  void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
                                   TARGET_ALLOC_DEFAULT);
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 

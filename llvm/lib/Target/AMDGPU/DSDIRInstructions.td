@@ -73,6 +73,7 @@ class DSDIR_Common<string opName, string asm = "", dag ins, bit direct> :
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
+  let maybeAtomic = 0;
 
   string Mnemonic = opName;
   let UseNamedOperandTable = 1;

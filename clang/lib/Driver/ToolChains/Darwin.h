@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
 #include "Cuda.h"
+#include "LazyDetector.h"
 #include "ROCm.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/LangOptions.h"
@@ -65,7 +66,7 @@ class LLVM_LIBRARY_VISIBILITY Linker : public MachOTool {
   void AddLinkArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs,
                    const InputInfoList &Inputs, VersionTuple Version,
-                   bool LinkerIsLLD) const;
+                   bool LinkerIsLLD, bool UsePlatformVersion) const;
 
 public:
   Linker(const ToolChain &TC) : MachOTool("darwin::Linker", "linker", TC) {}
@@ -298,6 +299,7 @@ public:
     TvOS,
     WatchOS,
     DriverKit,
+    XROS,
     LastDarwinPlatform = DriverKit
   };
   enum DarwinEnvironmentKind {
@@ -320,8 +322,8 @@ public:
   /// The target variant triple that was specified (if any).
   mutable std::optional<llvm::Triple> TargetVariantTriple;
 
-  CudaInstallationDetector CudaInstallation;
-  RocmInstallationDetector RocmInstallation;
+  LazyDetector<CudaInstallationDetector> CudaInstallation;
+  LazyDetector<RocmInstallationDetector> RocmInstallation;
 
 private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
@@ -403,6 +405,16 @@ public:
     assert(TargetInitialized && "Target not initialized!");
     return isTargetIPhoneOS() || isTargetIOSSimulator();
   }
+
+  bool isTargetXROSDevice() const {
+    return TargetPlatform == XROS && TargetEnvironment == NativeEnvironment;
+  }
+
+  bool isTargetXROSSimulator() const {
+    return TargetPlatform == XROS && TargetEnvironment == Simulator;
+  }
+
+  bool isTargetXROS() const { return TargetPlatform == XROS; }
 
   bool isTargetTvOS() const {
     assert(TargetInitialized && "Target not initialized!");
@@ -546,7 +558,8 @@ public:
   GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     // Stack protectors default to on for user code on 10.5,
     // and for everything in 10.6 and beyond
-    if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetDriverKit())
+    if (isTargetIOSBased() || isTargetWatchOSBased() || isTargetDriverKit() ||
+        isTargetXROS())
       return LangOptions::SSPOn;
     else if (isTargetMacOSBased() && !isMacosxVersionLT(10, 6))
       return LangOptions::SSPOn;

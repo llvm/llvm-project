@@ -1358,11 +1358,11 @@ struct AggDtor getAggDtor(void);
 // CHECK-LABEL: define{{.*}} void @test71
 void test71(void) {
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T]])
   // CHECK: call void @llvm.lifetime.start.p0({{[^,]+}}, ptr %[[T2:.*]])
-  // CHECK: call void @getAggDtor(ptr sret(%struct.AggDtor) align 8 %[[T2]])
+  // CHECK: call void @getAggDtor(ptr dead_on_unwind writable sret(%struct.AggDtor) align 8 %[[T2]])
   // CHECK: call void @__destructor_8_s40(ptr %[[T2]])
   // CHECK: call void @llvm.lifetime.end.p0({{[^,]+}}, ptr %[[T2]])
   getAggDtor();

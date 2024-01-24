@@ -105,6 +105,7 @@ void Ctx::reset() {
   whyExtractRecords.clear();
   backwardReferences.clear();
   auxiliaryFiles.clear();
+  internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
   needsTlsLd.store(false, std::memory_order_relaxed);
@@ -473,126 +474,95 @@ static const char *getReproduceOption(opt::InputArgList &args) {
 }
 
 static bool hasZOption(opt::InputArgList &args, StringRef key) {
+  bool ret = false;
   for (auto *arg : args.filtered(OPT_z))
-    if (key == arg->getValue())
-      return true;
-  return false;
+    if (key == arg->getValue()) {
+      ret = true;
+      arg->claim();
+    }
+  return ret;
 }
 
 static bool getZFlag(opt::InputArgList &args, StringRef k1, StringRef k2,
-                     bool Default) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
-    if (k1 == arg->getValue())
-      return true;
-    if (k2 == arg->getValue())
-      return false;
+                     bool defaultValue) {
+  for (auto *arg : args.filtered(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (k1 == v)
+      defaultValue = true;
+    else if (k2 == v)
+      defaultValue = false;
+    else
+      continue;
+    arg->claim();
   }
-  return Default;
+  return defaultValue;
 }
 
 static SeparateSegmentKind getZSeparate(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  auto ret = SeparateSegmentKind::None;
+  for (auto *arg : args.filtered(OPT_z)) {
     StringRef v = arg->getValue();
     if (v == "noseparate-code")
-      return SeparateSegmentKind::None;
-    if (v == "separate-code")
-      return SeparateSegmentKind::Code;
-    if (v == "separate-loadable-segments")
-      return SeparateSegmentKind::Loadable;
+      ret = SeparateSegmentKind::None;
+    else if (v == "separate-code")
+      ret = SeparateSegmentKind::Code;
+    else if (v == "separate-loadable-segments")
+      ret = SeparateSegmentKind::Loadable;
+    else
+      continue;
+    arg->claim();
   }
-  return SeparateSegmentKind::None;
+  return ret;
 }
 
 static GnuStackKind getZGnuStack(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
-    if (StringRef("execstack") == arg->getValue())
-      return GnuStackKind::Exec;
-    if (StringRef("noexecstack") == arg->getValue())
-      return GnuStackKind::NoExec;
-    if (StringRef("nognustack") == arg->getValue())
-      return GnuStackKind::None;
+  auto ret = GnuStackKind::NoExec;
+  for (auto *arg : args.filtered(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (v == "execstack")
+      ret = GnuStackKind::Exec;
+    else if (v == "noexecstack")
+      ret = GnuStackKind::NoExec;
+    else if (v == "nognustack")
+      ret = GnuStackKind::None;
+    else
+      continue;
+    arg->claim();
   }
-
-  return GnuStackKind::NoExec;
+  return ret;
 }
 
 static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  uint8_t ret = STV_PROTECTED;
+  for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
     if (kv.first == "start-stop-visibility") {
+      arg->claim();
       if (kv.second == "default")
-        return STV_DEFAULT;
+        ret = STV_DEFAULT;
       else if (kv.second == "internal")
-        return STV_INTERNAL;
+        ret = STV_INTERNAL;
       else if (kv.second == "hidden")
-        return STV_HIDDEN;
+        ret = STV_HIDDEN;
       else if (kv.second == "protected")
-        return STV_PROTECTED;
-      error("unknown -z start-stop-visibility= value: " + StringRef(kv.second));
+        ret = STV_PROTECTED;
+      else
+        error("unknown -z start-stop-visibility= value: " +
+              StringRef(kv.second));
     }
   }
-  return STV_PROTECTED;
-}
-
-constexpr const char *knownZFlags[] = {
-    "combreloc",
-    "copyreloc",
-    "defs",
-    "execstack",
-    "force-bti",
-    "force-ibt",
-    "global",
-    "hazardplt",
-    "ifunc-noplt",
-    "initfirst",
-    "interpose",
-    "keep-text-section-prefix",
-    "lazy",
-    "muldefs",
-    "nocombreloc",
-    "nocopyreloc",
-    "nodefaultlib",
-    "nodelete",
-    "nodlopen",
-    "noexecstack",
-    "nognustack",
-    "nokeep-text-section-prefix",
-    "nopack-relative-relocs",
-    "norelro",
-    "noseparate-code",
-    "nostart-stop-gc",
-    "notext",
-    "now",
-    "origin",
-    "pac-plt",
-    "pack-relative-relocs",
-    "rel",
-    "rela",
-    "relro",
-    "retpolineplt",
-    "rodynamic",
-    "separate-code",
-    "separate-loadable-segments",
-    "shstk",
-    "start-stop-gc",
-    "text",
-    "undefs",
-    "wxneeded",
-};
-
-static bool isKnownZFlag(StringRef s) {
-  return llvm::is_contained(knownZFlags, s) ||
-         s.starts_with("common-page-size=") || s.starts_with("bti-report=") ||
-         s.starts_with("cet-report=") ||
-         s.starts_with("dead-reloc-in-nonalloc=") ||
-         s.starts_with("max-page-size=") || s.starts_with("stack-size=") ||
-         s.starts_with("start-stop-visibility=");
+  return ret;
 }
 
 // Report a warning for an unknown -z option.
 static void checkZOptions(opt::InputArgList &args) {
+  // This function is called before getTarget(), when certain options are not
+  // initialized yet. Claim them here.
+  args::getZOptionValue(args, OPT_z, "max-page-size", 0);
+  args::getZOptionValue(args, OPT_z, "common-page-size", 0);
+  getZFlag(args, "rel", "rela", false);
   for (auto *arg : args.filtered(OPT_z))
-    if (!isKnownZFlag(arg->getValue()))
+    if (!arg->isClaimed())
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
@@ -610,7 +580,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
   errorHandler().suppressWarnings = args.hasArg(OPT_no_warnings);
-  checkZOptions(args);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -653,6 +622,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   readConfigs(args);
+  checkZOptions(args);
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
@@ -734,6 +704,9 @@ static void setUnresolvedSymbolPolicy(opt::InputArgList &args) {
         diagRegular = true;
       else if (StringRef(arg->getValue()) == "undefs")
         diagRegular = false;
+      else
+        break;
+      arg->claim();
       break;
     case OPT_allow_shlib_undefined:
       diagShlib = false;
@@ -1081,7 +1054,11 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
       error("--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
             "but got " +
             knownSafeName);
-    vtableSymbolsWithNoRTTI.remove(knownSafeName);
+    Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
+    if (!pat)
+      error("--lto-known-safe-vtables=: " + toString(pat.takeError()));
+    vtableSymbolsWithNoRTTI.remove_if(
+        [&](StringRef s) { return pat->match(s); });
   }
 
   ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
@@ -1158,20 +1135,22 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(MemoryBufferRef mb) {
 }
 
 static bool getIsRela(opt::InputArgList &args) {
+  // The psABI specifies the default relocation entry format.
+  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
+                            EM_PPC, EM_PPC64, EM_RISCV, EM_X86_64},
+                           config->emachine);
   // If -z rel or -z rela is specified, use the last option.
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
     if (s == "rel")
-      return false;
-    if (s == "rela")
-      return true;
+      rela = false;
+    else if (s == "rela")
+      rela = true;
+    else
+      continue;
+    arg->claim();
   }
-
-  // Otherwise use the psABI defined relocation entry format.
-  uint16_t m = config->emachine;
-  return m == EM_AARCH64 || m == EM_AMDGPU || m == EM_HEXAGON ||
-         m == EM_LOONGARCH || m == EM_PPC || m == EM_PPC64 || m == EM_RISCV ||
-         m == EM_X86_64;
+  return rela;
 }
 
 static void parseClangOption(StringRef opt, const Twine &msg) {
@@ -1216,9 +1195,9 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
   config->allowMultipleDefinition =
+      hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
-                   OPT_no_allow_multiple_definition, false) ||
-      hasZOption(args, "muldefs");
+                   OPT_no_allow_multiple_definition, false);
   config->androidMemtagHeap =
       args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
   config->androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
@@ -1521,6 +1500,7 @@ static void readConfigs(opt::InputArgList &args) {
     for (auto reportArg : reports) {
       if (option.first != reportArg.first)
         continue;
+      arg->claim();
       if (!isValidReportString(option.second)) {
         error(Twine("-z ") + reportArg.first + "= parameter " + option.second +
               " is not recognized");
@@ -1535,6 +1515,7 @@ static void readConfigs(opt::InputArgList &args) {
         StringRef(arg->getValue()).split('=');
     if (option.first != "dead-reloc-in-nonalloc")
       continue;
+    arg->claim();
     constexpr StringRef errPrefix = "-z dead-reloc-in-nonalloc=: ";
     std::pair<StringRef, StringRef> kv = option.second.split('=');
     if (kv.first.empty() || kv.second.empty()) {
@@ -2077,13 +2058,7 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (!sym || !sym->isLazy())
-    return;
-
-  MemoryBufferRef mb;
-  mb = cast<LazyObject>(sym)->file->mb;
-
-  if (isBitcode(mb))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
     sym->extract();
 }
 
@@ -2364,7 +2339,8 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
 
 static Symbol *addUnusedUndefined(StringRef name,
                                   uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
+  return symtab.addSymbol(
+      Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2722,6 +2698,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
     symtab.insert(arg->getValue())->traced = true;
+
+  ctx.internalFile = createInternalFile("<internal>");
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.

@@ -91,7 +91,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit VOP3_OPSEL = 0;
 
   // Is it possible for this instruction to be atomic?
-  field bit maybeAtomic = 0;
+  field bit maybeAtomic = 1;
 
   // This bit indicates that this is a VI instruction which is renamed
   // in GFX9. Required for correct mapping from pseudo to MC.

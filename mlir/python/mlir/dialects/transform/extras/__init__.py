@@ -6,9 +6,13 @@ from typing import Callable, Optional, Sequence, Union
 
 from ....extras.meta import region_op
 from .... import ir
+from ... import transform
 from .. import (
     AnyOpType,
+    AnyParamType,
+    AnyValueType,
     OperationType,
+    ParamType,
     NamedSequenceOp,
     YieldOp,
     SequenceOp,
@@ -39,7 +43,6 @@ class Handle(ir.Value):
         self.parent = parent
         self.children = children if children is not None else []
 
-
 @ir.register_value_caster(AnyOpType.get_static_typeid())
 @ir.register_value_caster(OperationType.get_static_typeid())
 class OpHandle(Handle):
@@ -56,6 +59,19 @@ class OpHandle(Handle):
         children: Optional[Sequence[Handle]] = None,
     ):
         super().__init__(v, parent=parent, children=children)
+
+    def get_result(self, indices: Sequence[int] = [0]) -> "ValueHandle":
+        """
+        Emits a `transform.GetResultOp`.
+        Returns a handle to the result of the payload operation at the given
+        indices.
+        """
+        get_result_op = transform.GetResultOp(
+            AnyValueType.get(),
+            self,
+            indices,
+        )
+        return get_result_op.result
 
     def match_ops(
         self,
@@ -106,6 +122,74 @@ class OpHandle(Handle):
         handle = OpHandle(match_op.results_, parent=self)
         self.children.append(handle)
         return handle
+
+    def print(self, name: Optional[str] = None) -> "OpHandle":
+        """
+        Emits a `transform.PrintOp` to print this handle and an optional message.
+        Returns the existing handle to facilitate further chaining.
+        """
+        transform.PrintOp(target=self, name=name)
+        return self
+
+
+@ir.register_value_caster(AnyParamType.get_static_typeid())
+@ir.register_value_caster(ParamType.get_static_typeid())
+class ParamHandle(Handle):
+    """Wrapper around a transform param handle."""
+
+    def __init__(
+        self,
+        v: ir.Value,
+        *,
+        parent: Optional[Handle] = None,
+        children: Optional[Sequence[Handle]] = None,
+    ):
+        super().__init__(v, parent=parent, children=children)
+
+
+@ir.register_value_caster(AnyValueType.get_static_typeid())
+class ValueHandle(Handle):
+    """
+    Wrapper around a transform value handle with methods to chain further
+    transforms.
+    """
+
+    def __init__(
+        self,
+        v: ir.Value,
+        *,
+        parent: Optional[Handle] = None,
+        children: Optional[Sequence[Handle]] = None,
+    ):
+        super().__init__(v, parent=parent, children=children)
+
+    def get_defining_op(self) -> OpHandle:
+        """
+        Emits a `transform.GetDefiningOpOp`.
+        Returns a handle to the defining op of the wrapped value.
+        """
+        get_defining_op = transform.GetDefiningOp(
+            AnyOpType.get(),
+            self,
+        )
+        return get_defining_op.result
+
+
+def constant_param(value: Union[ir.Attribute, int]) -> ParamHandle:
+    """
+    Emits a `transform.ParamConstantOp`.
+    Returns a handle to the newly created parameter. The type of the parameter
+    is `transfrom.any_param` if the value is not an integer, otherwise the type
+    is `transform.param` parametrized with the according integer type.
+    """
+    if isinstance(value, int):
+        value = ir.IntegerAttr.get(ir.IntegerType.get_signless(64), value)
+    if isinstance(value.type, ir.IntegerType):
+        param_type = ParamType.get(value.type)
+    else:
+        param_type = AnyParamType.get()
+    op = transform.ParamConstantOp(param_type, value)
+    return op.param
 
 
 def insert_transform_script(
