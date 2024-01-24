@@ -37,16 +37,16 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
 
     ASTContext *Context;
     Location targetLoc;
-    bool found = false;
+    std::string found;
 
   public:
     FindVarVisitor() {}
 
-    bool findVarInStmt(ASTContext *Context, const Stmt *S, //
-                       std::string file, int line, int column) {
+    const std::string &findVarInStmt(ASTContext *Context, const Stmt *S, //
+                                     std::string file, int line, int column) {
         this->Context = Context;
         this->targetLoc = Location{file, line, column};
-        this->found = false;
+        this->found.clear();
         TraverseStmt(const_cast<Stmt *>(S));
         return found;
     }
@@ -57,7 +57,7 @@ class FindVarVisitor : public RecursiveASTVisitor<FindVarVisitor> {
         Location varLoc = Location(FullLocation);
         bool match = varLoc == targetLoc;
         if (match)
-            found = true;
+            found = decl->getNameAsString();
 
         return match;
     }

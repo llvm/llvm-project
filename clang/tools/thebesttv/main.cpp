@@ -61,11 +61,13 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
 
         ASTContext *Context = &fi->D->getASTContext();
         for (const auto &[stmt, block] : fi->stmtBlockPairs) {
-            if (visitor.findVarInStmt(Context, stmt, file, line, column)) {
+            const std::string var =
+                visitor.findVarInStmt(Context, stmt, file, line, column);
+            if (!var.empty()) {
                 int id = block->getBlockID();
                 llvm::errs()
-                    << "Found variable in " << fi->name << "() at " << fi->line
-                    << ":" << fi->column << " in block " << id << "\n";
+                    << "Found var '" << var << "' in " << fi->name << "() at "
+                    << line << ":" << column << " in block " << id << "\n";
                 return VarLocResult(fi, block);
             }
         }
