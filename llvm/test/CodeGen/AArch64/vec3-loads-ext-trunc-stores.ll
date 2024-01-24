@@ -278,6 +278,58 @@ entry:
   ret void
 }
 
+define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
+; CHECK-LABEL: store_trunc_add_from_64bits:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    add x9, x0, #4
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, lCPI7_0@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr d1, [x8, lCPI7_0@PAGEOFF]
+; CHECK-NEXT:    ld1.h { v0 }[2], [x9]
+; CHECK-NEXT:    add.4h v0, v0, v1
+; CHECK-NEXT:    xtn.8b v1, v0
+; CHECK-NEXT:    umov.h w8, v0[2]
+; CHECK-NEXT:    str s1, [sp, #12]
+; CHECK-NEXT:    ldrh w9, [sp, #12]
+; CHECK-NEXT:    strb w8, [x1, #2]
+; CHECK-NEXT:    strh w9, [x1]
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
+;
+; BE-LABEL: store_trunc_add_from_64bits:
+; BE:       // %bb.0: // %entry
+; BE-NEXT:    sub sp, sp, #16
+; BE-NEXT:    .cfi_def_cfa_offset 16
+; BE-NEXT:    ldr s0, [x0]
+; BE-NEXT:    add x8, x0, #4
+; BE-NEXT:    rev32 v0.4h, v0.4h
+; BE-NEXT:    ld1 { v0.h }[2], [x8]
+; BE-NEXT:    adrp x8, .LCPI7_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI7_0
+; BE-NEXT:    ld1 { v1.4h }, [x8]
+; BE-NEXT:    add v0.4h, v0.4h, v1.4h
+; BE-NEXT:    xtn v1.8b, v0.8h
+; BE-NEXT:    umov w8, v0.h[2]
+; BE-NEXT:    rev32 v1.16b, v1.16b
+; BE-NEXT:    str s1, [sp, #12]
+; BE-NEXT:    ldrh w9, [sp, #12]
+; BE-NEXT:    strb w8, [x1, #2]
+; BE-NEXT:    strh w9, [x1]
+; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    ret
+entry:
+  %l = load <3 x i16>, ptr %src, align 1
+  %a = add <3 x i16> %l, <i16 3, i16 4, i16 5>
+  %t = trunc <3 x i16> %a to <3 x i8>
+  store <3 x i8> %t, ptr %dst, align 1
+  ret void
+}
+
 define void @load_ext_to_64bits(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_ext_to_64bits:
 ; CHECK:       ; %bb.0: ; %entry
@@ -318,6 +370,60 @@ entry:
   %l = load <3 x i8>, ptr %src, align 1
   %e = zext <3 x i8> %l to <3 x i16>
   store <3 x i16> %e, ptr %dst, align 1
+  ret void
+}
+
+define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
+; CHECK-LABEL: load_ext_add_to_64bits:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x8, lCPI9_0@PAGE
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    ldr d1, [x8, lCPI9_0@PAGEOFF]
+; CHECK-NEXT:    add x8, x1, #4
+; CHECK-NEXT:    strh w9, [sp, #12]
+; CHECK-NEXT:    add x9, x0, #2
+; CHECK-NEXT:    ldr s0, [sp, #12]
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ld1.b { v0 }[4], [x9]
+; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    add.4h v0, v0, v1
+; CHECK-NEXT:    st1.h { v0 }[2], [x8]
+; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
+;
+; BE-LABEL: load_ext_add_to_64bits:
+; BE:       // %bb.0: // %entry
+; BE-NEXT:    sub sp, sp, #16
+; BE-NEXT:    .cfi_def_cfa_offset 16
+; BE-NEXT:    ldrh w8, [x0]
+; BE-NEXT:    strh w8, [sp, #12]
+; BE-NEXT:    add x8, x0, #2
+; BE-NEXT:    ldr s0, [sp, #12]
+; BE-NEXT:    rev32 v0.8b, v0.8b
+; BE-NEXT:    ushll v0.8h, v0.8b, #0
+; BE-NEXT:    ld1 { v0.b }[4], [x8]
+; BE-NEXT:    adrp x8, .LCPI9_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI9_0
+; BE-NEXT:    ld1 { v1.4h }, [x8]
+; BE-NEXT:    add x8, x1, #4
+; BE-NEXT:    bic v0.4h, #255, lsl #8
+; BE-NEXT:    add v0.4h, v0.4h, v1.4h
+; BE-NEXT:    rev32 v1.8h, v0.8h
+; BE-NEXT:    st1 { v0.h }[2], [x8]
+; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    add sp, sp, #16
+; BE-NEXT:    ret
+entry:
+  %l = load <3 x i8>, ptr %src, align 1
+  %e = zext <3 x i8> %l to <3 x i16>
+  %a = add <3 x i16> %e, <i16 3, i16 4, i16 5>
+  store <3 x i16> %a, ptr %dst, align 1
   ret void
 }
 

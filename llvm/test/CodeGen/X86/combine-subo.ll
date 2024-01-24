@@ -217,7 +217,7 @@ define { <4 x i8>, <4 x i1> } @always_usub_const_vector() nounwind {
 define { <4 x i8>, <4 x i1> } @never_usub_const_vector() nounwind {
 ; SSE-LABEL: never_usub_const_vector:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = <127,255,0,254,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [127,255,0,254,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;

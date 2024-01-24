@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=sroa -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=sroa -o - | FileCheck %s
 
 ;; Ensure that only the value-expression gets fragment info; that the
 ;; address-expression remains untouched.

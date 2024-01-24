@@ -12988,8 +12988,8 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     for (ScheduleData *BundleMember = Picked; BundleMember;
          BundleMember = BundleMember->NextInBundle) {
       Instruction *PickedInst = BundleMember->Inst;
-      if (PickedInst->getNextNode() != LastScheduledInst)
-        PickedInst->moveBefore(LastScheduledInst);
+      if (PickedInst->getNextNonDebugInstruction() != LastScheduledInst)
+        PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
     }
 
@@ -13183,7 +13183,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
   auto &TreeRoot = VectorizableTree[0]->Scalars;
   auto *TreeRootIT = dyn_cast<IntegerType>(TreeRoot[0]->getType());
-  if (!TreeRootIT)
+  if (!TreeRootIT || VectorizableTree.front()->State == TreeEntry::NeedToGather)
     return;
 
   // Ensure the roots of the vectorizable tree don't form a cycle.

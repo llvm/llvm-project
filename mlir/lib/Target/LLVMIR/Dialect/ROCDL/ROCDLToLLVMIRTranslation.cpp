@@ -99,6 +99,7 @@ public:
       if (!llvmFunc->hasFnAttribute("amdgpu-flat-work-group-size")) {
         llvmFunc->addFnAttr("amdgpu-flat-work-group-size", "1,256");
       }
+
     }
     // Override flat-work-group-size
     // TODO: update clients to rocdl.flat_work_group_size instead,

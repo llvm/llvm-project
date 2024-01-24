@@ -16,14 +16,10 @@ define <4 x i64> @m2_splat_0(<4 x i64> %v1) vscale_range(2,2) {
 define <4 x i64> @m2_splat_in_chunks(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_in_chunks:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8224
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v10, v8, 0
+; CHECK-NEXT:    vrgather.vi v11, v9, 0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   ret <4 x i64> %res
@@ -32,12 +28,12 @@ define <4 x i64> @m2_splat_in_chunks(<4 x i64> %v1) vscale_range(2,2) {
 define <8 x i64> @m4_splat_in_chunks(<8 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m4_splat_in_chunks:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI2_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI2_0)
-; CHECK-NEXT:    vl1re16.v v16, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v12, v8, 0
+; CHECK-NEXT:    vrgather.vi v13, v9, 0
+; CHECK-NEXT:    vrgather.vi v14, v10, 0
+; CHECK-NEXT:    vrgather.vi v15, v11, 1
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i64> %v1, <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 7, i32 7>
   ret <8 x i64> %res
@@ -47,14 +43,10 @@ define <8 x i64> @m4_splat_in_chunks(<8 x i64> %v1) vscale_range(2,2) {
 define <4 x i64> @m2_splat_with_tail(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_with_tail:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 12320
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v10, v8, 0
+; CHECK-NEXT:    vmv1r.v v11, v9
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x i64> %res
@@ -63,15 +55,12 @@ define <4 x i64> @m2_splat_with_tail(<4 x i64> %v1) vscale_range(2,2) {
 define <4 x i64> @m2_pair_swap_vl4(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_pair_swap_vl4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 8240
-; CHECK-NEXT:    addi a0, a0, 1
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v11, v9, 1
+; CHECK-NEXT:    vslideup.vi v11, v9, 1
+; CHECK-NEXT:    vslidedown.vi v10, v8, 1
+; CHECK-NEXT:    vslideup.vi v10, v8, 1
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   ret <4 x i64> %res
@@ -107,14 +96,10 @@ define <8 x i32> @m2_pair_swap_vl8(<8 x i32> %v1) vscale_range(2,2) {
 define <4 x i64> @m2_splat_into_identity(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_into_identity:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 12320
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v10, v8, 0
+; CHECK-NEXT:    vmv1r.v v11, v9
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x i64> %res
@@ -123,12 +108,7 @@ define <4 x i64> @m2_splat_into_identity(<4 x i64> %v1) vscale_range(2,2) {
 define <4 x i64> @m2_broadcast_i128(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_broadcast_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 16
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vmv1r.v v9, v8
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x i64> %res
@@ -137,12 +117,9 @@ define <4 x i64> @m2_broadcast_i128(<4 x i64> %v1) vscale_range(2,2) {
 define <8 x i64> @m4_broadcast_i128(<8 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m4_broadcast_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 16
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v16, a0
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i64> %v1, <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   ret <8 x i64> %res
@@ -152,13 +129,10 @@ define <8 x i64> @m4_broadcast_i128(<8 x i64> %v1) vscale_range(2,2) {
 define <4 x i64> @m2_splat_two_source(<4 x i64> %v1, <4 x i64> %v2) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_two_source:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v12, v8, 0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 12
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; CHECK-NEXT:    vrgather.vi v12, v10, 3, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vrgather.vi v13, v11, 1
+; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> %v2, <4 x i32> <i32 0, i32 0, i32 7, i32 7>
   ret <4 x i64> %res
@@ -167,15 +141,9 @@ define <4 x i64> @m2_splat_two_source(<4 x i64> %v1, <4 x i64> %v2) vscale_range
 define <4 x i64> @m2_splat_into_identity_two_source(<4 x i64> %v1, <4 x i64> %v2) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_into_identity_two_source:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vrgather.vi v12, v8, 0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 12
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vrgatherei16.vv v12, v10, v8, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v10, v8, 0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> %v2, <4 x i32> <i32 0, i32 0, i32 6, i32 7>
   ret <4 x i64> %res
