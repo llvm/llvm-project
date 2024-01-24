@@ -14,89 +14,25 @@ entry:
 }
 
 ; This loop should not get vectorized.
-; FIXME: This is a miscompile.
 define void @accsum(ptr noundef %vals, i64 noundef %num) #0 {
 ; CHECK-LABEL: define void @accsum(
 ; CHECK-SAME: ptr nocapture noundef [[VALS:%.*]], i64 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[NUM]], 1
-; CHECK-NEXT:    br i1 [[CMP1]], label [[ITER_CHECK:%.*]], label [[FOR_END:%.*]]
-; CHECK:       iter.check:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[NUM]], -1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUM]], 9
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
-; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp ult i64 [[NUM]], 33
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -32
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[VALS]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -1
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 15
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1, !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1, !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i8> [[WIDE_LOAD5]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add <16 x i8> [[WIDE_LOAD6]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    store <16 x i8> [[TMP5]], ptr [[TMP1]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    store <16 x i8> [[TMP6]], ptr [[TMP4]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
-; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END9:%.*]] = or disjoint i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 24
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[FOR_BODY_PREHEADER]], label [[VEC_EPILOG_PH]]
-; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_VEC8:%.*]] = and i64 [[TMP0]], -8
-; CHECK-NEXT:    [[IND_END:%.*]] = or disjoint i64 [[N_VEC8]], 1
-; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
-; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX12:%.*]] = or disjoint i64 [[INDEX11]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[VALS]], i64 [[OFFSET_IDX12]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -1
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0]])
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3]])
-; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <8 x i8>, ptr [[TMP9]], align 1, !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <8 x i8>, ptr [[TMP8]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i8> [[WIDE_LOAD14]], [[WIDE_LOAD13]]
-; CHECK-NEXT:    store <8 x i8> [[TMP10]], ptr [[TMP8]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX11]], 8
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC8]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC8]]
-; CHECK-NEXT:    br i1 [[CMP_N10]], label [[FOR_END]], label [[FOR_BODY_PREHEADER]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[I_02_PH:%.*]] = phi i64 [ 1, [[ITER_CHECK]] ], [ [[IND_END9]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load i8, ptr [[VALS]], align 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[I_02_PH]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi i8 [ [[LOAD_INITIAL]], [[FOR_BODY_PREHEADER]] ], [ [[ADD_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 1, [[FOR_BODY_PREHEADER]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[VALS]], i64 [[I_02]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 -1
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0]])
-; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3]])
-; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1, !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    [[ADD_I:%.*]] = add i8 [[TMP13]], [[TMP12]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[ADD_I]] = add i8 [[TMP0]], [[STORE_FORWARDED]]
 ; CHECK-NEXT:    store i8 [[ADD_I]], ptr [[ARRAYIDX]], align 1, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_02]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUM]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -139,9 +75,4 @@ attributes #0 = { "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87"}
 ; CHECK: [[META2]] = distinct !{[[META2]], !"acc"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]], !"acc: %prev"}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
-; CHECK: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META6]], [[META7]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META7]], [[META6]]}
 ;.
