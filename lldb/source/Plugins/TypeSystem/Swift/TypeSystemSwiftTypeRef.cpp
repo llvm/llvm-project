@@ -3265,6 +3265,34 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
           clang_child_type = clang_child_type.GetTypedefedType();
       }
       if (clang_child_type) {
+        // TypeSystemSwiftTypeRef can't properly handle C anonymous types, as
+        // the only identifier CompilerTypes backed by this type system carry is
+        // the type's mangled name. This is problematic for anonymous types, as
+        // sibling anonymous types will share the exact same mangled name,
+        // making it impossible to diferentiate between them. For example, the
+        // following two anonymous structs in "MyStruct" share the same name
+        // (which is MyStruct::(anonymous struct)):
+        //
+        // struct MyStruct {
+        //         struct {
+        //             float x;
+        //             float y;
+        //             float z;
+        //         };
+        //         struct {
+        //           int a;
+        //         };
+        // };
+        //
+        // For this reason, forward any lookups of anonymous types to
+        // TypeSystemClang instead, as that type system carries enough
+        // information to handle anonymous types properly.
+        auto ts_clang = clang_child_type.GetTypeSystem()
+                            .dyn_cast_or_null<TypeSystemClang>();
+        if (ts_clang &&
+            ts_clang->IsAnonymousType(clang_child_type.GetOpaqueQualType()))
+          return clang_child_type;
+
         std::string prefix;
         swift::Demangle::Demangler dem;
         swift::Demangle::NodePointer node =
@@ -3307,6 +3335,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (!runtime)
     return impl();
 #ifndef NDEBUG
+  auto result = impl();
   // FIXME:
   // No point comparing the results if the reflection data has more
   // information.  There's a nasty chicken & egg problem buried here:
@@ -3316,9 +3345,18 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (get_ast_num_children() <
       runtime->GetNumChildren({weak_from_this(), type}, exe_scope)
           .value_or(0))
-    return impl();
+    return result;
   if (ShouldSkipValidation(type))
-    return impl();
+    return result;
+  // When the child compiler type is an anonymous clang type,
+  // GetChildCompilerTypeAtIndex will return the clang type directly. In this
+  // case validation will fail as it can't correctly compare the mangled 
+  // clang and Swift names, so return early.
+  if (auto ts_clang =
+          result.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>()) {
+    if (ts_clang->IsAnonymousType(result.GetOpaqueQualType()))
+      return result;
+  }
   std::string ast_child_name;
   uint32_t ast_child_byte_size = 0;
   int32_t ast_child_byte_offset = 0;
