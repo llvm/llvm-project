@@ -1433,6 +1433,23 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
 }
 
+// IMAGE_INDEX (F'2023 16.9.107)
+static void CheckImage_Index(evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (arguments[1] && arguments[0]) {
+    if (auto subArrShape{evaluate::GetShape(arguments[1]->UnwrapExpr())}) {
+      if (const auto *coarrayArgSymbol{UnwrapWholeSymbolOrComponentDataRef(
+              arguments[0]->UnwrapExpr())}) {
+        if (evaluate::ToInt64(*subArrShape->front()) !=
+            coarrayArgSymbol->Corank()) {
+          messages.Say(arguments[1]->sourceLocation(),
+              "The size of the 'sub=' argument for intrinsic 'image_index' must be equal to the corank of the 'coarray=' argument"_err_en_US);
+        }
+      }
+    }
+  }
+}
+
 // MOVE_ALLOC (F'2023 16.9.147)
 static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -1678,6 +1695,8 @@ static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
     const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "image_index") {
+    CheckImage_Index(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "move_alloc") {
     CheckMove_Alloc(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "reduce") {
