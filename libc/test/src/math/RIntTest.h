@@ -38,14 +38,7 @@ private:
   const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T zero = T(FPBits::zero(Sign::POS));
   const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(Sign::POS, 1));
-
-  static constexpr StorageType MIN_SUBNORMAL =
-      FPBits::min_subnormal().uintval();
-  static constexpr StorageType MAX_SUBNORMAL =
-      FPBits::max_subnormal().uintval();
-  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
-  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
+  const T nan = T(FPBits::build_quiet_nan(1));
 
   static inline mpfr::RoundingMode to_mpfr_rounding_mode(int mode) {
     switch (mode) {
@@ -102,8 +95,10 @@ public:
 
   void testSubnormalRange(RIntFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
-    for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
+    constexpr StorageType STEP =
+        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
+    for (StorageType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
+         i += STEP) {
       T x = T(FPBits(i));
       for (int mode : ROUNDING_MODES) {
         LIBC_NAMESPACE::fputil::set_round(mode);
@@ -115,8 +110,10 @@ public:
 
   void testNormalRange(RIntFunc func) {
     constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
-    for (StorageType i = MIN_NORMAL; i <= MAX_NORMAL; i += STEP) {
+    constexpr StorageType STEP =
+        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
+    for (StorageType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL;
+         i += STEP) {
       T x = T(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.

@@ -56,16 +56,16 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     int rounding = fputil::quick_get_round();
     if (xbits.is_neg()) {
       if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
-        return -FPBits::max_normal().get_val();
+        return -FPBits::max_normal();
     } else {
       if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-        return FPBits::max_normal().get_val();
+        return FPBits::max_normal();
     }
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
 
-    return x + FPBits::inf(xbits.sign()).get_val();
+    return x + FPBits::inf(xbits.sign());
   }
 
   // sinh(x) = (e^x - e^(-x)) / 2.

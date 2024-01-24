@@ -68,12 +68,12 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
         if (xbits.uintval() < 0x7f80'0000U) {
           int rounding = fputil::quick_get_round();
           if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-            return FPBits::max_normal().get_val();
+            return FPBits::max_normal();
 
           fputil::set_errno_if_required(ERANGE);
           fputil::raise_except_if_required(FE_OVERFLOW);
         }
-        return x + FPBits::inf().get_val();
+        return x + static_cast<float>(FPBits::inf());
       }
     }
   }
