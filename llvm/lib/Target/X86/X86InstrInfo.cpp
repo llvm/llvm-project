@@ -2327,29 +2327,30 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     // If we're optimizing for size, try to use MOVSD/MOVSS.
     if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
       unsigned Mask;
+      unsigned NewOpc;
       switch (Opc) {
       default:
         llvm_unreachable("Unreachable!");
       case X86::BLENDPDrri:
-        Opc = X86::MOVSDrr;
+        NewOpc = X86::MOVSDrr;
         Mask = 0x03;
         break;
       case X86::BLENDPSrri:
-        Opc = X86::MOVSSrr;
+        NewOpc = X86::MOVSSrr;
         Mask = 0x0F;
         break;
       case X86::VBLENDPDrri:
-        Opc = X86::VMOVSDrr;
+        NewOpc = X86::VMOVSDrr;
         Mask = 0x03;
         break;
       case X86::VBLENDPSrri:
-        Opc = X86::VMOVSSrr;
+        NewOpc = X86::VMOVSSrr;
         Mask = 0x0F;
         break;
       }
       if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
         WorkingMI = CloneIfNew(MI);
-        WorkingMI->setDesc(get(Opc));
+        WorkingMI->setDesc(get(NewOpc));
         WorkingMI->removeOperand(3);
         break;
       }
