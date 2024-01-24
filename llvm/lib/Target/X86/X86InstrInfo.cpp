@@ -2328,9 +2328,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
       unsigned Mask = (Opc == X86::BLENDPDrri || Opc == X86::VBLENDPDrri) ? 0x03: 0x0F;
       if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
-#define FROM_TO(A, B)                                                          \
-  case X86::A:                                                                 \
-    Opc = X86::B;                                                              \
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    Opc = X86::TO;                                                             \
     break;
         switch (Opc) {
         default:
