@@ -21262,17 +21262,18 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(LD);
+  MachineFunction &MF = DAG.getMachineFunction();
   SDValue Chain = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
+  MachineMemOperand *MMO = LD->getMemOperand();
   assert(LD->getOffset().isUndef() && "undef offset expected");
 
   // Load 2 x i8, then 1 x i8.
-  SDValue L16 = DAG.getLoad(MVT::i16, DL, Chain, BasePtr, LD->getPointerInfo(),
-                            LD->getOriginalAlign());
+  SDValue L16 = DAG.getLoad(MVT::i16, DL, Chain, BasePtr, MMO);
   TypeSize Offset2 = TypeSize::getFixed(2);
-  SDValue L8 = DAG.getLoad(
-      MVT::i8, DL, Chain, DAG.getMemBasePlusOffset(BasePtr, Offset2, DL),
-      LD->getPointerInfo(), commonAlignment(LD->getOriginalAlign(), Offset2));
+  SDValue L8 = DAG.getLoad(MVT::i8, DL, Chain,
+                           DAG.getMemBasePlusOffset(BasePtr, Offset2, DL),
+                           MF.getMachineMemOperand(MMO, 2, 1));
 
   // Extend to i32.
   SDValue Ext16 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L16);
