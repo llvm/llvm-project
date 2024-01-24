@@ -961,12 +961,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // vector. The computed value is st_value plus a non-negative offset.
       // Negative values are invalid, so -1 can be used as the tombstone value.
       //
-      // If the referenced symbol is discarded (made Undefined), or the
-      // section defining the referenced symbol is garbage collected,
-      // sym.getOutputSection() is nullptr. `ds->folded` catches the ICF folded
-      // case. However, resolving a relocation in .debug_line to -1 would stop
-      // debugger users from setting breakpoints on the folded-in function, so
-      // exclude .debug_line.
+      // If the referenced symbol is relative to a discarded section (due to
+      // --gc-sections, COMDAT, etc), it has been converted to a Undefined.
+      // `ds->folded` catches the ICF folded case. However, resolving a
+      // relocation in .debug_line to -1 would stop debugger users from setting
+      // breakpoints on the folded-in function, so exclude .debug_line.
       //
       // For pre-DWARF-v5 .debug_loc and .debug_ranges, -1 is a reserved value
       // (base address selection entry), use 1 (which is used by GNU ld for
@@ -974,7 +973,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       //
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
-      if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
+      if (!ds || (ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
         uint64_t value = SignExtend64<bits>(*tombstone);
         // For a 32-bit local TU reference in .debug_names, X86_64::relocate
