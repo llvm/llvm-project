@@ -12,6 +12,8 @@
 
 #include <format>
 
+#include "test_macros.h"
+
 int j;
 
 auto test_format() {
@@ -20,8 +22,10 @@ auto test_format() {
       j, i); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
 }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 auto test_wformat() {
   int i = 0;
   return std::make_wformat_args(
       i, j); // expected-warning {{address of stack memory associated with local variable 'i' returned}}
 }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
