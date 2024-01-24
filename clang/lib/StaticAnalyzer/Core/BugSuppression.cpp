@@ -138,8 +138,16 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
 bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
                                   const Decl *DeclWithIssue,
                                   DiagnosticIdentifierList Hashtags) {
-  if (!Location.isValid() || DeclWithIssue == nullptr)
+  if (!Location.isValid())
     return false;
+
+  if (!DeclWithIssue) {
+    // FIXME: This defeats the purpose of passing DeclWithIssue to begin with.
+    // If this branch is ever hit, we're re-doing all the work we've already
+    // done as well as perform a lot of work we'll never need.
+    // Gladly, none of our on-by-default checkers currently need it.
+    DeclWithIssue = ACtx.getTranslationUnitDecl();
+  }
 
   // While some warnings are attached to AST nodes (mostly path-sensitive
   // checks), others are simply associated with a plain source location

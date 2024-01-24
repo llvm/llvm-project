@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
+class ASTContext;
 class Decl;
 
 namespace ento {
@@ -27,6 +28,8 @@ class PathDiagnosticLocation;
 
 class BugSuppression {
 public:
+  BugSuppression(ASTContext &ACtx): ACtx(ACtx) {}
+
   using DiagnosticIdentifierList = llvm::ArrayRef<llvm::StringRef>;
 
   /// Return true if the given bug report was explicitly suppressed by the user.
@@ -44,7 +47,9 @@ private:
   using CachedRanges =
       llvm::SmallVector<SourceRange, EXPECTED_NUMBER_OF_SUPPRESSIONS>;
 
-  llvm::DenseMap<const Decl *, CachedRanges> CachedSuppressionLocations;
+  llvm::DenseMap<const Decl *, CachedRanges> CachedSuppressionLocations{};
+
+  ASTContext &ACtx;
 };
 
 } // end namespace ento
