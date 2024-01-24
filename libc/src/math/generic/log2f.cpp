@@ -94,7 +94,7 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   // Set bits to 1.m
   xbits.set_biased_exponent(0x7F);
 
-  float u = static_cast<float>(xbits);
+  float u = xbits.get_val();
   double v;
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.

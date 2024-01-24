@@ -500,8 +500,8 @@ declare void @f()
 define void @sub64ri_reloc(i64 %val) {
 ; CHECK-LABEL: sub64ri_reloc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $val, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xef,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 6, value: val, kind: reloc_signed_4byte
+; CHECK-NEXT:    cmpq $val, %rdi # encoding: [0x48,0x81,0xff,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: val, kind: reloc_signed_4byte
 ; CHECK-NEXT:    jbe .LBB41_2 # encoding: [0x76,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB41_2-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %t

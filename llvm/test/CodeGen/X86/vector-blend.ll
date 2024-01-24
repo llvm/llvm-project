@@ -79,22 +79,16 @@ define <4 x i8> @vsel_4xi8(<4 x i8> %v1, <4 x i8> %v2) {
 ; SSE41-LABEL: vsel_4xi8:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [255,255,0,255,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = [255,255,0,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: vsel_4xi8:
-; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,0,255,255,255,0,255,255,255,0,255,255,255,0,255]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: vsel_4xi8:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [255,255,0,255,255,255,0,255,255,255,0,255,255,255,0,255]
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: vsel_4xi8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vmovd {{.*#+}} xmm2 = [255,255,0,255,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 entry:
   %vsel = select <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i8> %v1, <4 x i8> %v2
   ret <4 x i8> %vsel

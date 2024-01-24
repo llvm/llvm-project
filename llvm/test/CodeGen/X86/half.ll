@@ -2116,7 +2116,7 @@ define void @pr63114() {
 ; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
 ; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
 ; CHECK-LIBCALL-NEXT:    pand %xmm1, %xmm0
-; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
+; CHECK-LIBCALL-NEXT:    movq {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
 ; CHECK-LIBCALL-NEXT:    por %xmm2, %xmm0
 ; CHECK-LIBCALL-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
 ; CHECK-LIBCALL-NEXT:    pand %xmm3, %xmm0
@@ -2181,7 +2181,7 @@ define void @pr63114() {
 ; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,1]
 ; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
 ; CHECK-I686-NEXT:    pand %xmm1, %xmm0
-; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
+; CHECK-I686-NEXT:    movq {{.*#+}} xmm2 = [0,0,0,15360,0,0,0,0]
 ; CHECK-I686-NEXT:    por %xmm2, %xmm0
 ; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,65535,65535,0]
 ; CHECK-I686-NEXT:    pand %xmm3, %xmm0

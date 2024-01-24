@@ -275,11 +275,10 @@ ABI Affecting Changes
   results in an ABI break, however in practice we expect uses of ``std::projected`` in ABI-sensitive places to be
   extremely rare. Any error resulting from this change should result in a link-time error.
 
-- Under the unstable ABI, the internal alignment requirements for heap allocations
-  inside ``std::string`` has decreased from 16 to 8. This saves memory since string requests fewer additional
-  bytes than it did previously. However, this also changes the return value of ``std::string::max_size``
-  and can cause code compiled against older libc++ versions but linked at runtime to a new version
-  to throw a different exception when attempting allocations that are too large
+- The internal alignment requirements for heap allocations inside ``std::string`` has decreased from 16 to 8. This
+  saves memory since string requests fewer additional bytes than it did previously. However, this also changes the
+  return value of ``std::string::max_size`` and can cause code compiled against older libc++ versions but linked at
+  runtime to a new version to throw a different exception when attempting allocations that are too large
   (``std::bad_alloc`` vs ``std::length_error``).
 
 - The layout of some range adaptors that use the ``movable-box`` exposition-only type as an implementation

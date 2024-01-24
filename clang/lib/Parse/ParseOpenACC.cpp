@@ -104,7 +104,9 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("device", OpenACCClauseKind::Device)
       .Case("device_num", OpenACCClauseKind::DeviceNum)
       .Case("device_resident", OpenACCClauseKind::DeviceResident)
+      .Case("device_type", OpenACCClauseKind::DeviceType)
       .Case("deviceptr", OpenACCClauseKind::DevicePtr)
+      .Case("dtype", OpenACCClauseKind::DType)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("firstprivate", OpenACCClauseKind::FirstPrivate)
       .Case("host", OpenACCClauseKind::Host)
@@ -488,6 +490,8 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::NumWorkers:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -580,6 +584,38 @@ bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
   }
   return false;
 }
+
+/// OpenACC 3.3 Section 2.4:
+/// The argument to the device_type clause is a comma-separated list of one or
+/// more device architecture name identifiers, or an asterisk.
+///
+/// The syntax of the device_type clause is
+/// device_type( * )
+/// device_type( device-type-list )
+///
+/// The device_type clause may be abbreviated to dtype.
+bool Parser::ParseOpenACCDeviceTypeList() {
+
+  if (expectIdentifierOrKeyword(*this)) {
+    SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return false;
+  }
+  ConsumeToken();
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    if (expectIdentifierOrKeyword(*this)) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
+      return false;
+    }
+    ConsumeToken();
+  }
+  return false;
+}
+
 // The OpenACC Clause List is a comma or space-delimited list of clauses (see
 // the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
 // really have its owner grammar and each individual one has its own definition.
@@ -709,6 +745,16 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         return true;
       break;
     }
+    case OpenACCClauseKind::DType:
+    case OpenACCClauseKind::DeviceType:
+      if (getCurToken().is(tok::star)) {
+        // FIXME: We want to mark that this is an 'everything else' type of
+        // device_type in Sema.
+        ConsumeToken();
+      } else if (ParseOpenACCDeviceTypeList()) {
+        return true;
+      }
+      break;
     default:
       llvm_unreachable("Not a required parens type?");
     }

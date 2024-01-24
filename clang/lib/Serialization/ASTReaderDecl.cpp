@@ -3286,10 +3286,10 @@ DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
   if (auto *OID = dyn_cast<ObjCInterfaceDecl>(DC))
     return OID->getDefinition();
 
-  // We can see the TU here only if we have no Sema object. In that case,
-  // there's no TU scope to look in, so using the DC alone is sufficient.
+  // We can see the TU here only if we have no Sema object. It is possible
+  // we're in clang-repl so we still need to get the primary context.
   if (auto *TU = dyn_cast<TranslationUnitDecl>(DC))
-    return TU;
+    return TU->getPrimaryContext();
 
   return nullptr;
 }

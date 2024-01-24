@@ -2601,6 +2601,11 @@ def int_amdgcn_ds_bvh_stack_rtn :
     [ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
+def int_amdgcn_s_wait_event_export_ready :
+  ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]
+>;
+
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
 //
 // These operations perform a matrix multiplication and accumulation of
@@ -2608,10 +2613,10 @@ def int_amdgcn_ds_bvh_stack_rtn :
 
 class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [CD],               // %D
+    [CD], // %D
     [
       AB,               // %A
-      AB,               // %B
+      LLVMMatchType<1>, // %B
       LLVMMatchType<0>, // %C
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
@@ -2619,49 +2624,50 @@ class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
 
 class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [CD],               // %D
+    [CD], // %D
     [
       AB,               // %A
-      AB,               // %B
+      LLVMMatchType<1>, // %B
       LLVMMatchType<0>, // %C
-      llvm_i1_ty,       // %high
+      llvm_i1_ty,       // %high (op_sel) for GFX11, 0 for GFX12
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [CD],               // %D
+    [CD], // %D
     [
       llvm_i1_ty,       // %A_sign
       AB,               // %A
       llvm_i1_ty,       // %B_sign
-      AB,               // %B
+      LLVMMatchType<1>, // %B
       LLVMMatchType<0>, // %C
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
-def int_amdgcn_wmma_f32_16x16x16_f16   : AMDGPUWmmaIntrinsic<llvm_v16f16_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x16_bf16  : AMDGPUWmmaIntrinsic<llvm_v16i16_ty, llvm_anyfloat_ty>;
-// The regular, untied f16/bf16 wmma intrinsics only write to one half
-// of the registers (set via the op_sel bit).
-// The content of the other 16-bit of the registers is undefined.
-def int_amdgcn_wmma_f16_16x16x16_f16   : AMDGPUWmmaIntrinsicOPSEL<llvm_v16f16_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_v16i16_ty, llvm_anyint_ty>;
-// The tied versions of the f16/bf16 wmma intrinsics tie the destination matrix
-// registers to the input accumulator registers.
-// Essentially, the content of the other 16-bit is preserved from the input.
-def int_amdgcn_wmma_f16_16x16x16_f16_tied   : AMDGPUWmmaIntrinsicOPSEL<llvm_v16f16_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_bf16_16x16x16_bf16_tied : AMDGPUWmmaIntrinsicOPSEL<llvm_v16i16_ty, llvm_anyint_ty>;
-def int_amdgcn_wmma_i32_16x16x16_iu8   : AMDGPUWmmaIntrinsicIU<llvm_v4i32_ty, llvm_anyint_ty>;
-def int_amdgcn_wmma_i32_16x16x16_iu4   : AMDGPUWmmaIntrinsicIU<llvm_v2i32_ty, llvm_anyint_ty>;
+// WMMA GFX11Only
 
-def int_amdgcn_s_wait_event_export_ready :
-  ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]
->;
+// The OPSEL intrinsics read from and write to one half of the registers, selected by the op_sel bit.
+// The tied versions of the f16/bf16 wmma intrinsics tie the destination matrix registers to the input accumulator registers.
+// The content of the other 16-bit half is preserved from the input.
+def int_amdgcn_wmma_f16_16x16x16_f16_tied   : AMDGPUWmmaIntrinsicOPSEL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x16_bf16_tied : AMDGPUWmmaIntrinsicOPSEL<llvm_anyint_ty, llvm_anyint_ty>;
+
+// WMMA GFX11Plus
+
+def int_amdgcn_wmma_f32_16x16x16_f16   : AMDGPUWmmaIntrinsic<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x16_bf16  : AMDGPUWmmaIntrinsic<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu8   : AMDGPUWmmaIntrinsicIU<llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu4   : AMDGPUWmmaIntrinsicIU<llvm_anyint_ty, llvm_anyint_ty>;
+
+// GFX11: The OPSEL intrinsics read from and write to one half of the registers, selected by the op_sel bit.
+//        The content of the other 16-bit half is undefined.
+// GFX12: The op_sel bit must be 0.
+def int_amdgcn_wmma_f16_16x16x16_f16   : AMDGPUWmmaIntrinsicOPSEL<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_anyint_ty, llvm_anyint_ty>;
 
 //===----------------------------------------------------------------------===//
 // GFX12 Intrinsics
@@ -2680,6 +2686,65 @@ def int_amdgcn_permlanex16_var : ClangBuiltin<"__builtin_amdgcn_permlanex16_var"
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]>;
+
+
+// WMMA (Wave Matrix Multiply-Accumulate) intrinsics
+//
+// These operations perform a matrix multiplication and accumulation of
+// the form: D = A * B + C .
+
+// A and B are <8 x fp8> or <8 x bf8>, but since fp8 and bf8 are not supported by llvm we use <2 x i32>.
+def int_amdgcn_wmma_f32_16x16x16_fp8_fp8 : AMDGPUWmmaIntrinsic<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x16_fp8_bf8 : AMDGPUWmmaIntrinsic<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x16_bf8_fp8 : AMDGPUWmmaIntrinsic<llvm_anyint_ty, llvm_anyfloat_ty>;
+def int_amdgcn_wmma_f32_16x16x16_bf8_bf8 : AMDGPUWmmaIntrinsic<llvm_anyint_ty, llvm_anyfloat_ty>;
+// A and B are <16 x iu4>.
+def int_amdgcn_wmma_i32_16x16x32_iu4     : AMDGPUWmmaIntrinsicIU<llvm_anyint_ty, llvm_anyint_ty>;
+
+// SWMMAC (Wave Matrix(sparse) Multiply-Accumulate) intrinsics
+//
+// These operations perform a sparse matrix multiplication and accumulation of
+// the form: D = A * B + C.
+// A is sparse matrix, half the size of B, and is expanded using sparsity index.
+
+class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      A,                // %A
+      B,                // %B
+      LLVMMatchType<0>, // %C
+      Index             // %Sparsity index for A
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn]
+>;
+
+class AMDGPUSWmmacIntrinsicIUIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
+  Intrinsic<
+    [CD],               // %D
+    [
+      llvm_i1_ty,       // %A_sign
+      A,                // %A
+      llvm_i1_ty,       // %B_sign
+      B,                // %B
+      LLVMMatchType<0>, // %C
+      Index,            // %Sparsity index for A
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>]
+>;
+
+def int_amdgcn_swmmac_f32_16x16x32_f16     : AMDGPUSWmmacIntrinsicIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_f32_16x16x32_bf16    : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_f16_16x16x32_f16     : AMDGPUSWmmacIntrinsicIdx<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_bf16_16x16x32_bf16   : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_i32_16x16x32_iu8     : AMDGPUSWmmacIntrinsicIUIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_i32_16x16x32_iu4     : AMDGPUSWmmacIntrinsicIUIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_i32_16x16x64_iu4     : AMDGPUSWmmacIntrinsicIUIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_f32_16x16x32_fp8_fp8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_f32_16x16x32_fp8_bf8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_f32_16x16x32_bf8_fp8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
+def int_amdgcn_swmmac_f32_16x16x32_bf8_bf8 : AMDGPUSWmmacIntrinsicIdx<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty, llvm_anyint_ty>;
 
 def int_amdgcn_global_atomic_ordered_add_b64 : AMDGPUAtomicRtn<llvm_i64_ty, global_ptr_ty>;
 
