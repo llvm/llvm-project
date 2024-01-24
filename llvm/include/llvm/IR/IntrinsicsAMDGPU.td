@@ -2651,22 +2651,22 @@ def int_amdgcn_s_wait_event_export_ready :
 
 class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       AB,               // %A
-      LLVMMatchType<0>, // %B
-      CD,               // %C
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       AB,               // %A
-      LLVMMatchType<0>, // %B
-      CD,               // %C
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
       llvm_i1_ty,       // %high (op_sel) for GFX11, 0 for GFX12
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
@@ -2674,13 +2674,13 @@ class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
 
 class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       llvm_i1_ty,       // %A_sign
       AB,               // %A
       llvm_i1_ty,       // %B_sign
-      LLVMMatchType<0>, // %B
-      CD,               // %C
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
@@ -2795,11 +2795,11 @@ def int_amdgcn_wmma_i32_16x16x32_iu4     : AMDGPUWmmaIntrinsicIU<llvm_anyint_ty,
 
 class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<
-    [LLVMMatchType<2>], // %D
+    [CD],               // %D
     [
       A,                // %A
       B,                // %B
-      CD,               // %C
+      LLVMMatchType<0>, // %C
       Index             // %Sparsity index for A
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn]
@@ -2807,13 +2807,13 @@ class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Ind
 
 class AMDGPUSWmmacIntrinsicIUIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<
-    [LLVMMatchType<2>], // %D
+    [CD],               // %D
     [
       llvm_i1_ty,       // %A_sign
       A,                // %A
       llvm_i1_ty,       // %B_sign
       B,                // %B
-      CD,               // %C
+      LLVMMatchType<0>, // %C
       Index,            // %Sparsity index for A
       llvm_i1_ty,       // %clamp
     ],

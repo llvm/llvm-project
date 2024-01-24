@@ -7,8 +7,17 @@
 define void @test_scope_in_loop(ptr %arg, i64 %num) {
 ; CHECK-LABEL: 'test_scope_in_loop'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Backward:
+; CHECK-NEXT:            %load.prev = load i8, ptr %prev.ptr, align 1, !alias.scope !0, !noalias !3 ->
+; CHECK-NEXT:            store i8 %add, ptr %cur.ptr, align 1, !alias.scope !3
+; CHECK-EMPTY:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %load.cur = load i8, ptr %cur.ptr, align 1, !alias.scope !3 ->
+; CHECK-NEXT:            store i8 %add, ptr %cur.ptr, align 1, !alias.scope !3
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

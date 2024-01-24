@@ -15,7 +15,7 @@ typedef int    v4i   __attribute__((ext_vector_type(4)));
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_f32_16x16x16_f16_w64(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f16.v4f32(<4 x half> [[A:%.*]], <4 x half> [[B:%.*]], <4 x float> [[C:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16(<4 x half> [[A:%.*]], <4 x half> [[B:%.*]], <4 x float> [[C:%.*]])
 // CHECK-GFX1200-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -30,7 +30,7 @@ void test_amdgcn_wmma_f32_16x16x16_f16_w64(global v4f* out, v4h a, v4h b, v4f c)
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_f32_16x16x16_bf16_w64(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4i16.v4f32(<4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]], <4 x float> [[C:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4i16(<4 x i16> [[A:%.*]], <4 x i16> [[B:%.*]], <4 x float> [[C:%.*]])
 // CHECK-GFX1200-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -75,7 +75,7 @@ void test_amdgcn_wmma_bf16_16x16x16_bf16_w64(global v4s* out, v4s a, v4s b, v4s 
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_i32_16x16x16_iu8_w64(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8.i32.v4i32(i1 true, i32 [[A:%.*]], i1 true, i32 [[B:%.*]], <4 x i32> [[C:%.*]], i1 false)
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8.v4i32.i32(i1 true, i32 [[A:%.*]], i1 true, i32 [[B:%.*]], <4 x i32> [[C:%.*]], i1 false)
 // CHECK-GFX1200-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -90,7 +90,7 @@ void test_amdgcn_wmma_i32_16x16x16_iu8_w64(global v4i* out, int a, int b, v4i c)
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_i32_16x16x16_iu4_w64(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4.i32.v4i32(i1 true, i32 [[A:%.*]], i1 true, i32 [[B:%.*]], <4 x i32> [[C:%.*]], i1 false)
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4.v4i32.i32(i1 true, i32 [[A:%.*]], i1 true, i32 [[B:%.*]], <4 x i32> [[C:%.*]], i1 false)
 // CHECK-GFX1200-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -101,7 +101,7 @@ void test_amdgcn_wmma_i32_16x16x16_iu4_w64(global v4i* out, int a, int b, v4i c)
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.i32.v4f32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v4f32.i32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
 // CHECK-GFX1200-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -112,7 +112,7 @@ void test_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32(global v4f* out, int a, int b, v4
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_f32_16x16x16_fp8_bf8_w32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.i32.v4f32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.bf8.v4f32.i32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
 // CHECK-GFX1200-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -123,7 +123,7 @@ void test_amdgcn_wmma_f32_16x16x16_fp8_bf8_w32(global v4f* out, int a, int b, v4
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_f32_16x16x16_bf8_fp8_w32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.i32.v4f32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.fp8.v4f32.i32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
 // CHECK-GFX1200-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -134,7 +134,7 @@ void test_amdgcn_wmma_f32_16x16x16_bf8_fp8_w32(global v4f* out, int a, int b, v4
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.i32.v4f32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.v4f32.i32(i32 [[A:%.*]], i32 [[B:%.*]], <4 x float> [[C:%.*]])
 // CHECK-GFX1200-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
@@ -145,7 +145,7 @@ void test_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32(global v4f* out, int a, int b, v4
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_i32_16x16x32_iu4_w32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x32.iu4.i32.v4i32(i1 true, i32 [[A:%.*]], i1 true, i32 [[B:%.*]], <4 x i32> [[C:%.*]], i1 false)
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x32.iu4.v4i32.i32(i1 true, i32 [[A:%.*]], i1 true, i32 [[B:%.*]], <4 x i32> [[C:%.*]], i1 false)
 // CHECK-GFX1200-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //

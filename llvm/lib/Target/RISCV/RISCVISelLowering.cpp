@@ -6982,6 +6982,23 @@ SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   return LowerCallTo(CLI).first;
 }
 
+SDValue RISCVTargetLowering::getTLSDescAddr(GlobalAddressSDNode *N,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  const GlobalValue *GV = N->getGlobal();
+
+  // Use a PC-relative addressing mode to access the global dynamic GOT address.
+  // This generates the pattern (PseudoLA_TLSDESC sym), which expands to
+  //
+  // auipc tX, %tlsdesc_hi(symbol)         // R_RISCV_TLSDESC_HI20(symbol)
+  // lw    tY, tX, %tlsdesc_lo_load(label) // R_RISCV_TLSDESC_LOAD_LO12_I(label)
+  // addi  a0, tX, %tlsdesc_lo_add(label)  // R_RISCV_TLSDESC_ADD_LO12_I(label)
+  // jalr  t0, tY                          // R_RISCV_TLSDESC_CALL(label)
+  SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
+  return SDValue(DAG.getMachineNode(RISCV::PseudoLA_TLSDESC, DL, Ty, Addr), 0);
+}
+
 SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                    SelectionDAG &DAG) const {
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
@@ -7006,7 +7023,8 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     break;
   case TLSModel::LocalDynamic:
   case TLSModel::GeneralDynamic:
-    Addr = getDynamicTLSAddr(N, DAG);
+    Addr = DAG.getTarget().useTLSDESC() ? getTLSDescAddr(N, DAG)
+                                        : getDynamicTLSAddr(N, DAG);
     break;
   }
 
@@ -8432,25 +8450,63 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res);
 }
 
-static void getVCIXOperands(SDValue &Op, SelectionDAG &DAG,
-                            SmallVector<SDValue> &Ops) {
-  SDLoc DL(Op);
-
+static inline void promoteVCIXScalar(const SDValue &Op,
+                                     SmallVectorImpl<SDValue> &Operands,
+                                     SelectionDAG &DAG) {
   const RISCVSubtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
-  for (const SDValue &V : Op->op_values()) {
+
+  bool HasChain = Op.getOpcode() == ISD::INTRINSIC_VOID ||
+                  Op.getOpcode() == ISD::INTRINSIC_W_CHAIN;
+  unsigned IntNo = Op.getConstantOperandVal(HasChain ? 1 : 0);
+  SDLoc DL(Op);
+
+  const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+      RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
+  if (!II || !II->hasScalarOperand())
+    return;
+
+  unsigned SplatOp = II->ScalarOperand + 1;
+  assert(SplatOp < Op.getNumOperands());
+
+  SDValue &ScalarOp = Operands[SplatOp];
+  MVT OpVT = ScalarOp.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // The code below is partially copied from lowerVectorIntrinsicScalars.
+  // If this isn't a scalar, or its type is XLenVT we're done.
+  if (!OpVT.isScalarInteger() || OpVT == XLenVT)
+    return;
+
+  // Manually emit promote operation for scalar operation.
+  if (OpVT.bitsLT(XLenVT)) {
+    unsigned ExtOpc =
+        isa<ConstantSDNode>(ScalarOp) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
+    ScalarOp = DAG.getNode(ExtOpc, DL, XLenVT, ScalarOp);
+  }
+
+  return;
+}
+
+static void processVCIXOperands(SDValue &OrigOp,
+                                SmallVectorImpl<SDValue> &Operands,
+                                SelectionDAG &DAG) {
+  promoteVCIXScalar(OrigOp, Operands, DAG);
+  const RISCVSubtarget &Subtarget =
+      DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
+  for (SDValue &V : Operands) {
     EVT ValType = V.getValueType();
-    if (ValType.isScalableVector() && ValType.isFloatingPoint()) {
+    if (ValType.isVector() && ValType.isFloatingPoint()) {
       MVT InterimIVT =
           MVT::getVectorVT(MVT::getIntegerVT(ValType.getScalarSizeInBits()),
                            ValType.getVectorElementCount());
-      Ops.push_back(DAG.getBitcast(InterimIVT, V));
-    } else if (ValType.isFixedLengthVector()) {
+      V = DAG.getBitcast(InterimIVT, V);
+    }
+    if (ValType.isFixedLengthVector()) {
       MVT OpContainerVT = getContainerForFixedLengthVector(
           DAG, V.getSimpleValueType(), Subtarget);
-      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
-    } else
-      Ops.push_back(V);
+      V = convertToScalableVector(OpContainerVT, V, DAG, Subtarget);
+    }
   }
 }
 
@@ -8684,8 +8740,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_sf_vc_v_fvw: {
     MVT VT = Op.getSimpleValueType();
 
-    SmallVector<SDValue> Ops;
-    getVCIXOperands(Op, DAG, Ops);
+    SmallVector<SDValue> Operands{Op->op_values()};
+    processVCIXOperands(Op, Operands, DAG);
 
     MVT RetVT = VT;
     if (VT.isFixedLengthVector())
@@ -8694,7 +8750,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       RetVT = MVT::getVectorVT(MVT::getIntegerVT(VT.getScalarSizeInBits()),
                                VT.getVectorElementCount());
 
-    SDValue NewNode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, RetVT, Ops);
+    SDValue NewNode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, RetVT, Operands);
 
     if (VT.isFixedLengthVector())
       NewNode = convertFromScalableVector(VT, NewNode, DAG, Subtarget);
@@ -8709,6 +8765,52 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
+}
+
+static inline SDValue getVCIXISDNodeWCHAIN(SDValue &Op, SelectionDAG &DAG,
+                                           unsigned Type) {
+  SDLoc DL(Op);
+  SmallVector<SDValue> Operands{Op->op_values()};
+  Operands.erase(Operands.begin() + 1);
+
+  const RISCVSubtarget &Subtarget =
+      DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
+  MVT VT = Op.getSimpleValueType();
+  MVT RetVT = VT;
+  MVT FloatVT = VT;
+
+  if (VT.isFloatingPoint()) {
+    RetVT = MVT::getVectorVT(MVT::getIntegerVT(VT.getScalarSizeInBits()),
+                             VT.getVectorElementCount());
+    FloatVT = RetVT;
+  }
+  if (VT.isFixedLengthVector())
+    RetVT = getContainerForFixedLengthVector(DAG.getTargetLoweringInfo(), RetVT,
+                                             Subtarget);
+
+  processVCIXOperands(Op, Operands, DAG);
+
+  SDVTList VTs = DAG.getVTList({RetVT, MVT::Other});
+  SDValue NewNode = DAG.getNode(Type, DL, VTs, Operands);
+  SDValue Chain = NewNode.getValue(1);
+
+  if (VT.isFixedLengthVector())
+    NewNode = convertFromScalableVector(FloatVT, NewNode, DAG, Subtarget);
+  if (VT.isFloatingPoint())
+    NewNode = DAG.getBitcast(VT, NewNode);
+
+  NewNode = DAG.getMergeValues({NewNode, Chain}, DL);
+
+  return NewNode;
+}
+
+static inline SDValue getVCIXISDNodeVOID(SDValue &Op, SelectionDAG &DAG,
+                                         unsigned Type) {
+  SmallVector<SDValue> Operands{Op->op_values()};
+  Operands.erase(Operands.begin() + 1);
+  processVCIXOperands(Op, Operands, DAG);
+
+  return DAG.getNode(Type, SDLoc(Op), Op.getValueType(), Operands);
 }
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
@@ -8828,48 +8930,33 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMergeValues(Results, DL);
   }
   case Intrinsic::riscv_sf_vc_v_x_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_X_SE);
   case Intrinsic::riscv_sf_vc_v_i_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_I_SE);
   case Intrinsic::riscv_sf_vc_v_xv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_XV_SE);
   case Intrinsic::riscv_sf_vc_v_iv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_IV_SE);
   case Intrinsic::riscv_sf_vc_v_vv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_VV_SE);
   case Intrinsic::riscv_sf_vc_v_fv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_FV_SE);
   case Intrinsic::riscv_sf_vc_v_xvv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_XVV_SE);
   case Intrinsic::riscv_sf_vc_v_ivv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_IVV_SE);
   case Intrinsic::riscv_sf_vc_v_vvv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_VVV_SE);
   case Intrinsic::riscv_sf_vc_v_fvv_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_FVV_SE);
   case Intrinsic::riscv_sf_vc_v_xvw_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_XVW_SE);
   case Intrinsic::riscv_sf_vc_v_ivw_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_IVW_SE);
   case Intrinsic::riscv_sf_vc_v_vvw_se:
-  case Intrinsic::riscv_sf_vc_v_fvw_se: {
-    MVT VT = Op.getSimpleValueType();
-    SDLoc DL(Op);
-    SmallVector<SDValue> Ops;
-    getVCIXOperands(Op, DAG, Ops);
-
-    MVT RetVT = VT;
-    if (VT.isFixedLengthVector())
-      RetVT = getContainerForFixedLengthVector(VT);
-    else if (VT.isFloatingPoint())
-      RetVT = MVT::getVectorVT(MVT::getIntegerVT(RetVT.getScalarSizeInBits()),
-                               RetVT.getVectorElementCount());
-
-    SDVTList VTs = DAG.getVTList({RetVT, MVT::Other});
-    SDValue NewNode = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops);
-
-    if (VT.isFixedLengthVector()) {
-      SDValue FixedVector =
-          convertFromScalableVector(VT, NewNode, DAG, Subtarget);
-      NewNode = DAG.getMergeValues({FixedVector, NewNode.getValue(1)}, DL);
-    } else if (VT.isFloatingPoint()) {
-      SDValue BitCast = DAG.getBitcast(VT, NewNode.getValue(0));
-      NewNode = DAG.getMergeValues({BitCast, NewNode.getValue(1)}, DL);
-    }
-
-    if (Op == NewNode)
-      break;
-
-    return NewNode;
-  }
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_VVW_SE);
+  case Intrinsic::riscv_sf_vc_v_fvw_se:
+    return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_FVW_SE);
   }
 
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
@@ -8959,72 +9046,117 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         FixedIntrinsic->getMemoryVT(), FixedIntrinsic->getMemOperand());
   }
   case Intrinsic::riscv_sf_vc_x_se_e8mf8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF8);
   case Intrinsic::riscv_sf_vc_x_se_e8mf4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF4);
   case Intrinsic::riscv_sf_vc_x_se_e8mf2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF2);
   case Intrinsic::riscv_sf_vc_x_se_e8m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M1);
   case Intrinsic::riscv_sf_vc_x_se_e8m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M2);
   case Intrinsic::riscv_sf_vc_x_se_e8m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M4);
   case Intrinsic::riscv_sf_vc_x_se_e8m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M8);
   case Intrinsic::riscv_sf_vc_x_se_e16mf4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF4);
   case Intrinsic::riscv_sf_vc_x_se_e16mf2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF2);
   case Intrinsic::riscv_sf_vc_x_se_e16m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M1);
   case Intrinsic::riscv_sf_vc_x_se_e16m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M2);
   case Intrinsic::riscv_sf_vc_x_se_e16m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M4);
   case Intrinsic::riscv_sf_vc_x_se_e16m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M8);
   case Intrinsic::riscv_sf_vc_x_se_e32mf2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32MF2);
   case Intrinsic::riscv_sf_vc_x_se_e32m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M1);
   case Intrinsic::riscv_sf_vc_x_se_e32m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M2);
   case Intrinsic::riscv_sf_vc_x_se_e32m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M4);
   case Intrinsic::riscv_sf_vc_x_se_e32m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M8);
   case Intrinsic::riscv_sf_vc_x_se_e64m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M1);
   case Intrinsic::riscv_sf_vc_x_se_e64m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M2);
   case Intrinsic::riscv_sf_vc_x_se_e64m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M4);
   case Intrinsic::riscv_sf_vc_x_se_e64m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M8);
   case Intrinsic::riscv_sf_vc_i_se_e8mf8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF8);
   case Intrinsic::riscv_sf_vc_i_se_e8mf4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF4);
   case Intrinsic::riscv_sf_vc_i_se_e8mf2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF2);
   case Intrinsic::riscv_sf_vc_i_se_e8m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M1);
   case Intrinsic::riscv_sf_vc_i_se_e8m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M2);
   case Intrinsic::riscv_sf_vc_i_se_e8m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M4);
   case Intrinsic::riscv_sf_vc_i_se_e8m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M8);
   case Intrinsic::riscv_sf_vc_i_se_e16mf4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF4);
   case Intrinsic::riscv_sf_vc_i_se_e16mf2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF2);
   case Intrinsic::riscv_sf_vc_i_se_e16m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M1);
   case Intrinsic::riscv_sf_vc_i_se_e16m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M2);
   case Intrinsic::riscv_sf_vc_i_se_e16m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M4);
   case Intrinsic::riscv_sf_vc_i_se_e16m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M8);
   case Intrinsic::riscv_sf_vc_i_se_e32mf2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32MF2);
   case Intrinsic::riscv_sf_vc_i_se_e32m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M1);
   case Intrinsic::riscv_sf_vc_i_se_e32m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M2);
   case Intrinsic::riscv_sf_vc_i_se_e32m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M4);
   case Intrinsic::riscv_sf_vc_i_se_e32m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M8);
   case Intrinsic::riscv_sf_vc_i_se_e64m1:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M1);
   case Intrinsic::riscv_sf_vc_i_se_e64m2:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M2);
   case Intrinsic::riscv_sf_vc_i_se_e64m4:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M4);
   case Intrinsic::riscv_sf_vc_i_se_e64m8:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M8);
   case Intrinsic::riscv_sf_vc_xv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_XV_SE);
   case Intrinsic::riscv_sf_vc_iv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_IV_SE);
   case Intrinsic::riscv_sf_vc_vv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_VV_SE);
   case Intrinsic::riscv_sf_vc_fv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_FV_SE);
   case Intrinsic::riscv_sf_vc_xvv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_XVV_SE);
   case Intrinsic::riscv_sf_vc_ivv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_IVV_SE);
   case Intrinsic::riscv_sf_vc_vvv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_VVV_SE);
   case Intrinsic::riscv_sf_vc_fvv_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_FVV_SE);
   case Intrinsic::riscv_sf_vc_xvw_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_XVW_SE);
   case Intrinsic::riscv_sf_vc_ivw_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_IVW_SE);
   case Intrinsic::riscv_sf_vc_vvw_se:
-  case Intrinsic::riscv_sf_vc_fvw_se: {
-    SmallVector<SDValue> Ops;
-    getVCIXOperands(Op, DAG, Ops);
-
-    SDValue NewNode =
-        DAG.getNode(ISD::INTRINSIC_VOID, SDLoc(Op), Op->getVTList(), Ops);
-
-    if (Op == NewNode)
-      break;
-
-    return NewNode;
-  }
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_VVW_SE);
+  case Intrinsic::riscv_sf_vc_fvw_se:
+    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_FVW_SE);
   }
 
   return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
@@ -18995,6 +19127,76 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SWAP_CSR)
   NODE_NAME_CASE(CZERO_EQZ)
   NODE_NAME_CASE(CZERO_NEZ)
+  NODE_NAME_CASE(SF_VC_X_SE_E8MF8)
+  NODE_NAME_CASE(SF_VC_X_SE_E8MF4)
+  NODE_NAME_CASE(SF_VC_X_SE_E8MF2)
+  NODE_NAME_CASE(SF_VC_X_SE_E8M1)
+  NODE_NAME_CASE(SF_VC_X_SE_E8M2)
+  NODE_NAME_CASE(SF_VC_X_SE_E8M4)
+  NODE_NAME_CASE(SF_VC_X_SE_E8M8)
+  NODE_NAME_CASE(SF_VC_X_SE_E16MF4)
+  NODE_NAME_CASE(SF_VC_X_SE_E16MF2)
+  NODE_NAME_CASE(SF_VC_X_SE_E16M1)
+  NODE_NAME_CASE(SF_VC_X_SE_E16M2)
+  NODE_NAME_CASE(SF_VC_X_SE_E16M4)
+  NODE_NAME_CASE(SF_VC_X_SE_E16M8)
+  NODE_NAME_CASE(SF_VC_X_SE_E32MF2)
+  NODE_NAME_CASE(SF_VC_X_SE_E32M1)
+  NODE_NAME_CASE(SF_VC_X_SE_E32M2)
+  NODE_NAME_CASE(SF_VC_X_SE_E32M4)
+  NODE_NAME_CASE(SF_VC_X_SE_E32M8)
+  NODE_NAME_CASE(SF_VC_X_SE_E64M1)
+  NODE_NAME_CASE(SF_VC_X_SE_E64M2)
+  NODE_NAME_CASE(SF_VC_X_SE_E64M4)
+  NODE_NAME_CASE(SF_VC_X_SE_E64M8)
+  NODE_NAME_CASE(SF_VC_I_SE_E8MF8)
+  NODE_NAME_CASE(SF_VC_I_SE_E8MF4)
+  NODE_NAME_CASE(SF_VC_I_SE_E8MF2)
+  NODE_NAME_CASE(SF_VC_I_SE_E8M1)
+  NODE_NAME_CASE(SF_VC_I_SE_E8M2)
+  NODE_NAME_CASE(SF_VC_I_SE_E8M4)
+  NODE_NAME_CASE(SF_VC_I_SE_E8M8)
+  NODE_NAME_CASE(SF_VC_I_SE_E16MF4)
+  NODE_NAME_CASE(SF_VC_I_SE_E16MF2)
+  NODE_NAME_CASE(SF_VC_I_SE_E16M1)
+  NODE_NAME_CASE(SF_VC_I_SE_E16M2)
+  NODE_NAME_CASE(SF_VC_I_SE_E16M4)
+  NODE_NAME_CASE(SF_VC_I_SE_E16M8)
+  NODE_NAME_CASE(SF_VC_I_SE_E32MF2)
+  NODE_NAME_CASE(SF_VC_I_SE_E32M1)
+  NODE_NAME_CASE(SF_VC_I_SE_E32M2)
+  NODE_NAME_CASE(SF_VC_I_SE_E32M4)
+  NODE_NAME_CASE(SF_VC_I_SE_E32M8)
+  NODE_NAME_CASE(SF_VC_I_SE_E64M1)
+  NODE_NAME_CASE(SF_VC_I_SE_E64M2)
+  NODE_NAME_CASE(SF_VC_I_SE_E64M4)
+  NODE_NAME_CASE(SF_VC_I_SE_E64M8)
+  NODE_NAME_CASE(SF_VC_XV_SE)
+  NODE_NAME_CASE(SF_VC_IV_SE)
+  NODE_NAME_CASE(SF_VC_VV_SE)
+  NODE_NAME_CASE(SF_VC_FV_SE)
+  NODE_NAME_CASE(SF_VC_XVV_SE)
+  NODE_NAME_CASE(SF_VC_IVV_SE)
+  NODE_NAME_CASE(SF_VC_VVV_SE)
+  NODE_NAME_CASE(SF_VC_FVV_SE)
+  NODE_NAME_CASE(SF_VC_XVW_SE)
+  NODE_NAME_CASE(SF_VC_IVW_SE)
+  NODE_NAME_CASE(SF_VC_VVW_SE)
+  NODE_NAME_CASE(SF_VC_FVW_SE)
+  NODE_NAME_CASE(SF_VC_V_X_SE)
+  NODE_NAME_CASE(SF_VC_V_I_SE)
+  NODE_NAME_CASE(SF_VC_V_XV_SE)
+  NODE_NAME_CASE(SF_VC_V_IV_SE)
+  NODE_NAME_CASE(SF_VC_V_VV_SE)
+  NODE_NAME_CASE(SF_VC_V_FV_SE)
+  NODE_NAME_CASE(SF_VC_V_XVV_SE)
+  NODE_NAME_CASE(SF_VC_V_IVV_SE)
+  NODE_NAME_CASE(SF_VC_V_VVV_SE)
+  NODE_NAME_CASE(SF_VC_V_FVV_SE)
+  NODE_NAME_CASE(SF_VC_V_XVW_SE)
+  NODE_NAME_CASE(SF_VC_V_IVW_SE)
+  NODE_NAME_CASE(SF_VC_V_VVW_SE)
+  NODE_NAME_CASE(SF_VC_V_FVW_SE)
   }
   // clang-format on
   return nullptr;
