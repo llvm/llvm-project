@@ -739,6 +739,13 @@ bool GOTBuilder::visitEdge(LinkGraph &G, Block *B, Edge &E) {
   return true;
 }
 
+const uint8_t ArmThumbv5LdrPc[] = {
+    0x78, 0x47,             // bx pc
+    0xfd, 0xe7,             // b #-6 ; Arm recommended sequence to follow bx pc
+    0x04, 0xf0, 0x1f, 0xe5, // ldr pc, [pc,#-4] ; L1
+    0x00, 0x00, 0x00, 0x00, // L1: .word S
+};
+
 const uint8_t Armv7ABS[] = {
     0x00, 0xc0, 0x00, 0xe3, // movw r12, #0x0000     ; lower 16-bit
     0x00, 0xc0, 0x40, 0xe3, // movt r12, #0x0000     ; upper 16-bit
@@ -757,6 +764,12 @@ static Block &allocStub(LinkGraph &G, Section &S, const uint8_t (&Code)[Size]) {
   constexpr uint64_t Alignment = 4;
   ArrayRef<char> Template(reinterpret_cast<const char *>(Code), Size);
   return G.createContentBlock(S, Template, orc::ExecutorAddr(), Alignment, 0);
+}
+
+static Block &createStubPrev7(LinkGraph &G, Section &S, Symbol &Target) {
+  Block &B = allocStub(G, S, ArmThumbv5LdrPc);
+  B.addEdge(Data_Pointer32, 8, Target, 0);
+  return B;
 }
 
 static Block &createStubThumbv7(LinkGraph &G, Section &S, Symbol &Target) {
@@ -814,6 +827,60 @@ static bool needsStub(const Edge &E) {
   }
 
   return false;
+}
+
+// The ArmThumbv5LdrPc stub has 2 entrypoints: Thumb at offset 0 is taken only
+// for Thumb B instructions. Thumb BL is rewritten to BLX and takes the Arm
+// entrypoint at offset 4. Arm branches always use that one.
+Symbol *StubsManager_prev7::getOrCreateSlotEntrypoint(LinkGraph &G,
+                                                      StubMapEntry &Slot,
+                                                      bool Thumb) {
+  constexpr orc::ExecutorAddrDiff ThumbEntrypointOffset = 0;
+  constexpr orc::ExecutorAddrDiff ArmEntrypointOffset = 4;
+  if (Thumb && !Slot.ThumbEntry) {
+    Slot.ThumbEntry =
+        &G.addAnonymousSymbol(*Slot.B, ThumbEntrypointOffset, 4, true, false);
+    Slot.ThumbEntry->setTargetFlags(ThumbSymbol);
+  }
+  if (!Thumb && !Slot.ArmEntry)
+    Slot.ArmEntry =
+        &G.addAnonymousSymbol(*Slot.B, ArmEntrypointOffset, 8, true, false);
+  return Thumb ? Slot.ThumbEntry : Slot.ArmEntry;
+}
+
+bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
+  if (!needsStub(E))
+    return false;
+
+  Symbol &Target = E.getTarget();
+  assert(Target.hasName() && "Edge cannot point to anonymous target");
+  auto [Slot, NewStub] = getStubMapSlot(Target.getName());
+
+  if (NewStub) {
+    if (!StubsSection)
+      StubsSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
+    LLVM_DEBUG({
+      dbgs() << "    Created stub entry for " << Target.getName() << " in "
+             << StubsSection->getName() << "\n";
+    });
+    Slot->B = &createStubPrev7(G, *StubsSection, Target);
+  }
+
+  // The ArmThumbv5LdrPc stub has 2 entrypoints: Thumb at offset 0 is taken only
+  // for Thumb B instructions. Thumb BL is rewritten to BLX and takes the Arm
+  // entrypoint at offset 4. Arm branches always use that one.
+  bool UseThumb = E.getKind() == Thumb_Jump24;
+  Symbol *StubEntrypoint = getOrCreateSlotEntrypoint(G, *Slot, UseThumb);
+
+  LLVM_DEBUG({
+    dbgs() << "    Using " << (UseThumb ? "Thumb" : "Arm") << " entrypoint "
+           << *StubEntrypoint << " in "
+           << StubEntrypoint->getBlock().getSection().getName() << "\n";
+  });
+
+  E.setTarget(*StubEntrypoint);
+  return true;
 }
 
 bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
