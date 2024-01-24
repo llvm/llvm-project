@@ -4969,6 +4969,36 @@ py_binary(
     srcs = ["utils/lit/lit.py"] + glob(["utils/lit/lit/**/*.py"]),
 )
 
+py_binary(
+    name = "extract_ir",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
+        "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
+)
+
+py_binary(
+    name = "combine_training_corpus",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
+)
+
+py_binary(
+    name = "make_corpus",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
+        "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
+)
+
 cc_library(
     name = "TestingADT",
     testonly = True,
