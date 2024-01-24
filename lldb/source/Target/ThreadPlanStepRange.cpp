@@ -220,7 +220,7 @@ lldb::FrameComparison ThreadPlanStepRange::CompareCurrentFrameToStartFrame() {
 
   if (cur_frame_id == m_stack_id) {
     frame_order = eFrameCompareEqual;
-  } else if (cur_frame_id < m_stack_id) {
+  } else if (IsYounger(cur_frame_id, m_stack_id)) {
     frame_order = eFrameCompareYounger;
   } else {
     StackFrameSP cur_parent_frame = thread.GetStackFrameAtIndex(1);
