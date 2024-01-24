@@ -10216,7 +10216,16 @@ public:
       // If the only one use is vectorized - can delete the extractelement
       // itself.
       if (!EI->hasOneUse() || any_of(EI->users(), [&](User *U) {
-            return !R.ScalarToTreeEntry.count(U);
+            const TreeEntry *UTE = R.getTreeEntry(U);
+            return !UTE || R.MultiNodeScalars.contains(U) ||
+                   count_if(R.VectorizableTree,
+                            [&](const std::unique_ptr<TreeEntry> &TE) {
+                              return any_of(TE->UserTreeIndices,
+                                            [&](const EdgeInfo &Edge) {
+                                              return Edge.UserTE == UTE;
+                                            }) &&
+                                     is_contained(TE->Scalars, EI);
+                            }) != 1;
           }))
         continue;
       R.eraseInstruction(EI);
