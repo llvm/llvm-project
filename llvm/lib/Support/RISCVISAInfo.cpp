@@ -46,6 +46,7 @@ static const char *RISCVGImplications[] = {
 // NOTE: This table should be sorted alphabetically by extension name.
 static const RISCVSupportedExtension SupportedExtensions[] = {
     {"a", {2, 1}},
+    {"b", {1, 0}},
     {"c", {2, 0}},
     {"d", {2, 2}},
     {"e", {2, 0}},
@@ -849,7 +850,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     }
 
     // The order is OK, then push it into features.
-    // Currently LLVM supports only "mafdcvh".
+    // Currently LLVM supports only "mafdcbvh".
     if (!isSupportedExtension(StringRef(&C, 1))) {
       if (IgnoreUnknown) {
         GoToNextExt(I, ConsumeLength, Exts.end());
@@ -999,6 +1000,7 @@ Error RISCVISAInfo::checkDependency() {
   return Error::success();
 }
 
+static const char *ImpliedExtsB[] = {"zba", "zbb", "zbs"};
 static const char *ImpliedExtsD[] = {"f"};
 static const char *ImpliedExtsF[] = {"zicsr"};
 static const char *ImpliedExtsV[] = {"zvl128b", "zve64d"};
@@ -1073,6 +1075,7 @@ struct ImpliedExtsEntry {
 
 // Note: The table needs to be sorted by name.
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
+    {{"b"}, {ImpliedExtsB}},
     {{"d"}, {ImpliedExtsD}},
     {{"f"}, {ImpliedExtsF}},
     {{"v"}, {ImpliedExtsV}},

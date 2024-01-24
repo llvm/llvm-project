@@ -398,6 +398,14 @@ def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
 
 // Bitmanip Extensions for Cryptography Extensions
 
+def FeatureStdExtB
+    : SubtargetFeature<"b", "HasStdExtB", "true",
+                       "'B' (the collection of the Zba, Zbb, Zbs extensions)",
+                       [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
+def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
+                           AssemblerPredicate<(all_of FeatureStdExtB),
+                           "'B' (the collection of the Zba, Zbb, Zbs extensions)">;
+
 def FeatureStdExtZbkb
     : SubtargetFeature<"zbkb", "HasStdExtZbkb", "true",
                        "'Zbkb' (Bitmanip instructions for Cryptography)">;

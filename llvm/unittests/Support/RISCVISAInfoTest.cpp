@@ -222,8 +222,6 @@ TEST(ParseArchString, RequiresCanonicalOrderForSingleLetterExtensions) {
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
-  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ib", true).takeError()),
-            "unsupported standard user-level extension 'b'");
   EXPECT_EQ(
       toString(
           RISCVISAInfo::parseArchString("rv32i_zmadeup", true).takeError()),
@@ -239,8 +237,7 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
 }
 
 TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32ib", "rv32i_zmadeup",
-                          "rv64i_smadeup", "rv64i_xmadeup"}) {
+  for (StringRef Input : {"rv32i_zmadeup", "rv64i_smadeup", "rv64i_xmadeup"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo &Info = **MaybeISAInfo;
@@ -673,6 +670,7 @@ R"(All available -march extensions for RISC-V
     f                   2.2
     d                   2.2
     c                   2.0
+    b                   1.0
     v                   1.0
     h                   1.0
     zic64b              1.0
