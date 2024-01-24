@@ -18,8 +18,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <queue>
+#include <sstream>
 
 using namespace llvm;
 using namespace clang;
