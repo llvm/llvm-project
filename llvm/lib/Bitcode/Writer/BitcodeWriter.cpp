@@ -355,7 +355,7 @@ private:
   void writeDILabel(const DILabel *N,
                     SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpression(const DIExpression *N,
-                         SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+                         SmallVectorImpl<uint64_t> &Record);
   void writeDIGlobalVariableExpression(const DIGlobalVariableExpression *N,
                                        SmallVectorImpl<uint64_t> &Record,
                                        unsigned Abbrev);
@@ -2138,14 +2138,13 @@ void ModuleBitcodeWriter::writeDILabel(
 }
 
 void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
-                                            SmallVectorImpl<uint64_t> &Record,
-                                            unsigned Abbrev) {
+                                            SmallVectorImpl<uint64_t> &Record) {
   Record.reserve(N->getElements().size() + 1);
   const uint64_t Version = 3 << 1;
-  Record.push_back((uint64_t)N->isDistinct() | Version);
+  Record.push_back(Version);
   Record.append(N->elements_begin(), N->elements_end());
 
-  Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record, Abbrev);
+  Stream.EmitRecord(bitc::METADATA_EXPRESSION, Record);
   Record.clear();
 }
 
@@ -2303,6 +2302,10 @@ void ModuleBitcodeWriter::writeMetadataRecords(
     }
     if (auto *AL = dyn_cast<DIArgList>(MD)) {
       writeDIArgList(AL, Record);
+      continue;
+    }
+    if (auto *AL = dyn_cast<DIExpression>(MD)) {
+      writeDIExpression(AL, Record);
       continue;
     }
     writeValueAsMetadata(cast<ValueAsMetadata>(MD), Record);

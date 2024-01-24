@@ -614,7 +614,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       MachineInstr *Def = RegInfo->getVRegDef(LDI->second);
       MachineBasicBlock::iterator InsertPos = Def;
       const MDNode *Variable = MI->getDebugVariable();
-      const MDNode *Expr = MI->getDebugExpression();
+      const DIExpression *Expr = MI->getDebugExpression();
       DebugLoc DL = MI->getDebugLoc();
       bool IsIndirect = MI->isIndirectDebugValue();
       if (IsIndirect)

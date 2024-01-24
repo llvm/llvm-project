@@ -48,7 +48,7 @@ MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
 
 MachineInstrBuilder
 MachineIRBuilder::buildDirectDbgValue(Register Reg, const MDNode *Variable,
-                                      const MDNode *Expr) {
+                                      const Metadata *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(
@@ -61,7 +61,7 @@ MachineIRBuilder::buildDirectDbgValue(Register Reg, const MDNode *Variable,
 
 MachineInstrBuilder
 MachineIRBuilder::buildIndirectDbgValue(Register Reg, const MDNode *Variable,
-                                        const MDNode *Expr) {
+                                        const Metadata *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(
@@ -74,7 +74,7 @@ MachineIRBuilder::buildIndirectDbgValue(Register Reg, const MDNode *Variable,
 
 MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
                                                       const MDNode *Variable,
-                                                      const MDNode *Expr) {
+                                                      const Metadata *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(
@@ -89,7 +89,7 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
                                                          const MDNode *Variable,
-                                                         const MDNode *Expr) {
+                                                         const Metadata *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(

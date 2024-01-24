@@ -892,16 +892,7 @@ bool LLParser::parseNamedMetadata() {
   if (Lex.getKind() != lltok::rbrace)
     do {
       MDNode *N = nullptr;
-      // parse DIExpressions inline as a special case. They are still MDNodes,
-      // so they can still appear in named metadata. Remove this logic if they
-      // become plain Metadata.
-      if (Lex.getKind() == lltok::MetadataVar &&
-          Lex.getStrVal() == "DIExpression") {
-        if (parseDIExpression(N, /*IsDistinct=*/false))
-          return true;
-        // DIArgLists should only appear inline in a function, as they may
-        // contain LocalAsMetadata arguments which require a function context.
-      } else if (Lex.getKind() == lltok::MetadataVar &&
+       if (Lex.getKind() == lltok::MetadataVar &&
                  Lex.getStrVal() == "DIArgList") {
         return tokError("found DIArgList outside of function");
       } else if (parseToken(lltok::exclaim, "Expected '!' here") ||
@@ -5569,7 +5560,7 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 
 /// parseDIExpression:
 ///   ::= !DIExpression(0, 7, -1)
-bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
+bool LLParser::parseDIExpression(Metadata *&Result) {
   assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
   Lex.Lex();
 
@@ -5611,7 +5602,7 @@ bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  Result = GET_OR_DISTINCT(DIExpression, (Context, Elements));
+  Result = DIExpression::get(Context, Elements);
   return false;
 }
 
@@ -5758,6 +5749,13 @@ bool LLParser::parseMetadata(Metadata *&MD, PerFunctionState *PFS) {
       if (parseDIArgList(AL, PFS))
         return true;
       MD = AL;
+      return false;
+    }
+    else if (Lex.getStrVal() == "DIExpression") {
+      Metadata *Expr;
+      if (parseDIExpression(Expr))
+        return true;
+      MD = Expr;
       return false;
     }
     MDNode *N;

@@ -1045,7 +1045,6 @@ Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
     DeclareFn = getDeclareIntrin(M);
 
   trackIfUnresolved(VarInfo);
-  trackIfUnresolved(Expr);
   Value *Args[] = {getDbgIntrinsicValueImpl(VMContext, Storage),
                    MetadataAsValue::get(VMContext, VarInfo),
                    MetadataAsValue::get(VMContext, Expr)};
@@ -1071,7 +1070,6 @@ Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,
          "Expected matching subprograms");
 
   trackIfUnresolved(VarInfo);
-  trackIfUnresolved(Expr);
   Value *Args[] = {getDbgIntrinsicValueImpl(VMContext, V),
                    MetadataAsValue::get(VMContext, VarInfo),
                    MetadataAsValue::get(VMContext, Expr)};
