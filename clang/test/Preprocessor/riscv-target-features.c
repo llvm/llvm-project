@@ -21,6 +21,7 @@
 // CHECK-NOT: __riscv_muldiv {{.*$}}
 // CHECK-NOT: __riscv_smaia {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
+// CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_svinval {{.*$}}
 // CHECK-NOT: __riscv_svnapot {{.*$}}
 // CHECK-NOT: __riscv_svpbmt {{.*$}}
@@ -111,6 +112,7 @@
 // CHECK-NOT: __riscv_zve64f {{.*$}}
 // CHECK-NOT: __riscv_zve64x {{.*$}}
 // CHECK-NOT: __riscv_zvfh {{.*$}}
+// CHECK-NOT: __riscv_zvkb {{.*$}}
 // CHECK-NOT: __riscv_zvkg {{.*$}}
 // CHECK-NOT: __riscv_zvkn {{.*$}}
 // CHECK-NOT: __riscv_zvknc {{.*$}}
@@ -1108,6 +1110,14 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-SSAIA-EXT %s
 // CHECK-SSAIA-EXT: __riscv_ssaia  1000000{{$}}
 
+// RUN: %clang --target=riscv32 \
+// RUN: -march=rv32ismepmp1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SMEPMP-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN: -march=rv64ismepmp1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SMEPMP-EXT %s
+// CHECK-SMEPMP-EXT: __riscv_smepmp  1000000{{$}}
+
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN: -march=rv32izfa -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFA-EXT %s
@@ -1133,6 +1143,14 @@
 // CHECK-ZVBC-EXT: __riscv_zvbc  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
+// RUN: -march=rv32i_zve64x_zvkb1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZVKB-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN: -march=rv64i_zve64x_zvkb1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZVKB-EXT %s
+// CHECK-ZVKB-EXT: __riscv_zvkb  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
 // RUN: -march=rv32i_zve32x_zvkg1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZVKG-EXT %s
 // RUN: %clang --target=riscv64 \
@@ -1149,10 +1167,10 @@
 // CHECK-ZVKN-EXT: __riscv_zvkn 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKN %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKN %s
 // CHECK-COMBINE-INTO-ZVKN: __riscv_zvkn 1000000{{$}}
 
@@ -1165,10 +1183,10 @@
 // CHECK-ZVKNC-EXT: __riscv_zvknc 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNC %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvbc1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNC %s
 // CHECK-COMBINE-INTO-ZVKNC: __riscv_zvkn 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKNC: __riscv_zvknc 1000000{{$}}
@@ -1190,10 +1208,10 @@
 // CHECK-ZVKNG-EXT: __riscv_zvkng 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNG %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvkg1p0_zvkned1p0_zvknhb1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNG %s
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkn 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkng 1000000{{$}}
@@ -1223,10 +1241,10 @@
 // CHECK-ZVKS-EXT: __riscv_zvks 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKS %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKS %s
 // CHECK-COMBINE-INTO-ZVKS: __riscv_zvks 1000000{{$}}
 
@@ -1239,10 +1257,10 @@
 // CHECK-ZVKSC-EXT: __riscv_zvksc 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSC %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvbc1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSC %s
 // CHECK-COMBINE-INTO-ZVKSC: __riscv_zvks 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKSC: __riscv_zvksc 1000000{{$}}
@@ -1264,10 +1282,10 @@
 // CHECK-ZVKSG-EXT: __riscv_zvksg 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
-// RUN: -march=rv32iv_zvbb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv32iv_zvkb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSG %s
 // RUN: %clang --target=riscv64 \
-// RUN: -march=rv64iv_zvbb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
+// RUN: -march=rv64iv_zvkb1p0_zvkg1p0_zvksed1p0_zvksh1p0_zvkt1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSG %s
 // CHECK-COMBINE-INTO-ZVKSG: __riscv_zvks 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKSG: __riscv_zvksg 1000000{{$}}
@@ -1382,4 +1400,6 @@
 // RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -E -dM %s \
 // RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
+// RUN: %clang --target=riscv64-unknown-linux-gnu -mcpu=sifive-p450 -E -dM %s \
+// RUN:  -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // CHECK-MISALIGNED-FAST: __riscv_misaligned_fast 1

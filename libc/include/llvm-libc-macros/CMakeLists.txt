@@ -68,6 +68,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  float_macros
+  HDR
+    float-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h

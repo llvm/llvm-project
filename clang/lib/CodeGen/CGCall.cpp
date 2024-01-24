@@ -1782,6 +1782,16 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute("aarch64_pstate_za_shared");
     FuncAttrs.addAttribute("aarch64_pstate_za_preserved");
   }
+
+  // ZT0
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Preserves)
+    FuncAttrs.addAttribute("aarch64_preserves_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_In)
+    FuncAttrs.addAttribute("aarch64_in_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Out)
+    FuncAttrs.addAttribute("aarch64_out_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
+    FuncAttrs.addAttribute("aarch64_inout_zt0");
 }
 
 static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,

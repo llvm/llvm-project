@@ -1,6 +1,10 @@
 ; RUN: llc -stop-after=finalize-isel %s -o - \
 ; RUN: | FileCheck %s
 
+
+; RUN: llc --try-experimental-debuginfo-iterators -stop-after=finalize-isel %s -o - \
+; RUN: | FileCheck %s
+
 ;; Check that a dbg.assign for a fully stack-homed variable causes the variable
 ;; location to appear in the Machine Function side table (variable 'local').
 ;;

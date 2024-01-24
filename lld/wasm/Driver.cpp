@@ -47,6 +47,20 @@ namespace lld::wasm {
 Configuration *config;
 Ctx ctx;
 
+void Ctx::reset() {
+  objectFiles.clear();
+  stubFiles.clear();
+  sharedFiles.clear();
+  bitcodeFiles.clear();
+  syntheticFunctions.clear();
+  syntheticGlobals.clear();
+  syntheticTables.clear();
+  whyExtractRecords.clear();
+  isPic = false;
+  legacyFunctionTable = false;
+  emitBssSegments = false;
+}
+
 namespace {
 
 // Create enum with OPT_xxx values for each option in Options.td
@@ -80,6 +94,9 @@ private:
   // True if we are in --whole-archive and --no-whole-archive.
   bool inWholeArchive = false;
 
+  // True if we are in --start-lib and --end-lib.
+  bool inLib = false;
+
   std::vector<InputFile *> files;
 };
 } // anonymous namespace
@@ -90,6 +107,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   auto *ctx = new CommonLinkerContext;
 
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() { wasm::ctx.reset(); };
   ctx->e.logName = args::getFilenameWithoutExe(args[0]);
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
                                  "-error-limit=0 to see all errors)";
@@ -218,19 +236,20 @@ static void readImportFile(StringRef filename) {
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
-std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef mb) {
+std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
+    MemoryBufferRef mb) {
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
 
-  std::vector<MemoryBufferRef> v;
+  std::vector<std::pair<MemoryBufferRef, uint64_t>> v;
   Error err = Error::success();
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
-    v.push_back(mbref);
+    v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
     fatal(mb.getBufferIdentifier() +
@@ -256,10 +275,12 @@ void LinkerDriver::addFile(StringRef path) {
     if (fs::exists(importFile))
       readImportFile(importFile.str());
 
+    auto members = getArchiveMembers(mbref);
+
     // Handle -whole-archive.
     if (inWholeArchive) {
-      for (MemoryBufferRef &m : getArchiveMembers(mbref)) {
-        auto *object = createObjectFile(m, path);
+      for (const auto &[m, offset] : members) {
+        auto *object = createObjectFile(m, path, offset);
         // Mark object as live; object members are normally not
         // live by default but -whole-archive is designed to treat
         // them as such.
@@ -273,17 +294,20 @@ void LinkerDriver::addFile(StringRef path) {
     std::unique_ptr<Archive> file =
         CHECK(Archive::create(mbref), path + ": failed to parse archive");
 
-    if (!file->isEmpty() && !file->hasSymbolTable()) {
-      error(mbref.getBufferIdentifier() +
-            ": archive has no index; run ranlib to add one");
+    for (const auto &[m, offset] : members) {
+      auto magic = identify_magic(m.getBuffer());
+      if (magic == file_magic::wasm_object || magic == file_magic::bitcode)
+        files.push_back(createObjectFile(m, path, offset, true));
+      else
+        warn(path + ": archive member '" + m.getBufferIdentifier() +
+             "' is neither Wasm object file nor LLVM bitcode");
     }
 
-    files.push_back(make<ArchiveFile>(mbref));
     return;
   }
   case file_magic::bitcode:
   case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref));
+    files.push_back(createObjectFile(mbref, "", 0, inLib));
     break;
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
@@ -353,6 +377,16 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     case OPT_no_whole_archive:
       inWholeArchive = false;
+      break;
+    case OPT_start_lib:
+      if (inLib)
+        error("nested --start-lib");
+      inLib = true;
+      break;
+    case OPT_end_lib:
+      if (!inLib)
+        error("stray --end-lib");
+      inLib = false;
       break;
     }
   }
@@ -716,16 +750,10 @@ static Symbol *handleUndefined(StringRef name, const char *option) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab->find(name);
-  if (!sym)
-    return;
-
-  if (auto *lazySym = dyn_cast<LazySymbol>(sym)) {
-    MemoryBufferRef mb = lazySym->getMemberBuffer();
-    if (isBitcode(mb)) {
-      if (!config->whyExtract.empty())
-        ctx.whyExtractRecords.emplace_back("<libcall>", sym->getFile(), *sym);
-      lazySym->extract();
-    }
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->getFile())) {
+    if (!config->whyExtract.empty())
+      ctx.whyExtractRecords.emplace_back("<libcall>", sym->getFile(), *sym);
+    cast<LazySymbol>(sym)->extract();
   }
 }
 
@@ -1004,7 +1032,7 @@ static std::string createResponseFile(const opt::InputArgList &args) {
       os << toString(*arg) << "\n";
     }
   }
-  return std::string(data.str());
+  return std::string(data);
 }
 
 // The --wrap option is a feature to rename symbols so that you can write
