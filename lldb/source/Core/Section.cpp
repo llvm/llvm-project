@@ -149,6 +149,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-gnu-debugaltlink";
   case eSectionTypeCTF:
     return "ctf";
+  case eSectionTypeLLDBTypeSummaries:
+    return "lldb-type-summaries";
   case eSectionTypeOther:
     return "regular";
   case eSectionTypeSwiftModules:
@@ -459,6 +461,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDWARFAppleObjC:
   case eSectionTypeDWARFGNUDebugAltLink:
   case eSectionTypeCTF:
+  case eSectionTypeLLDBTypeSummaries:
 #ifdef LLDB_ENABLE_SWIFT
   case eSectionTypeSwiftModules:
 #endif
