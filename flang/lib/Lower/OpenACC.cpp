@@ -1688,7 +1688,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
   if (isDoConcurrent) {
     locs.push_back(converter.genLocation(
-          Fortran::parser::FindSourceLocation(outerDoConstruct)));
+        Fortran::parser::FindSourceLocation(outerDoConstruct)));
     const Fortran::parser::LoopControl *loopControl =
         &*outerDoConstruct.GetLoopControl();
     const auto &concurrent =
