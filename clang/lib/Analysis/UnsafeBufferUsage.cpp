@@ -1442,6 +1442,7 @@ PointerAssignmentGadget::getFixits(const FixitStrategy &S) const {
     return std::nullopt;
   case FixitStrategy::Kind::Iterator:
   case FixitStrategy::Kind::Array:
+    return std::nullopt;
   case FixitStrategy::Kind::Vector:
     llvm_unreachable("unsupported strategies for FixableGadgets");
   }
@@ -1461,6 +1462,7 @@ PointerInitGadget::getFixits(const FixitStrategy &S) const {
     return std::nullopt;
   case FixitStrategy::Kind::Iterator:
   case FixitStrategy::Kind::Array:
+    return std::nullopt;
   case FixitStrategy::Kind::Vector:
     llvm_unreachable("unsupported strategies for FixableGadgets");
   }
@@ -1519,6 +1521,7 @@ UPCAddressofArraySubscriptGadget::getFixits(const FixitStrategy &S) const {
   case FixitStrategy::Kind::Wontfix:
   case FixitStrategy::Kind::Iterator:
   case FixitStrategy::Kind::Array:
+    return std::nullopt;
   case FixitStrategy::Kind::Vector:
     llvm_unreachable("unsupported strategies for FixableGadgets");
   }
@@ -1853,6 +1856,7 @@ PointerDereferenceGadget::getFixits(const FixitStrategy &S) const {
   }
   case FixitStrategy::Kind::Iterator:
   case FixitStrategy::Kind::Array:
+    return std::nullopt;
   case FixitStrategy::Kind::Vector:
     llvm_unreachable("FixitStrategy not implemented yet!");
   case FixitStrategy::Kind::Wontfix:
@@ -1883,6 +1887,7 @@ UPCStandalonePointerGadget::getFixits(const FixitStrategy &S) const {
     case FixitStrategy::Kind::Wontfix:
     case FixitStrategy::Kind::Iterator:
     case FixitStrategy::Kind::Array:
+      return std::nullopt;
     case FixitStrategy::Kind::Vector:
       llvm_unreachable("unsupported strategies for FixableGadgets");
   }
