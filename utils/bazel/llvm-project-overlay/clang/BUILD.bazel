@@ -610,6 +610,8 @@ cc_library(
     ]),
     hdrs = glob([
         "include/clang/Basic/*.h",
+        "include/clang/Basic/Builtins.inc",
+        "include/clang/Basic/BuiltinsBPF.inc",
     ]),
     copts = [
         "-DHAVE_VCS_VERSION_INC",
