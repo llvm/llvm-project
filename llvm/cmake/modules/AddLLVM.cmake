@@ -108,7 +108,7 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMAND "${Python3_EXECUTABLE}" "-c"
       "import sys; \
        lines = ['    ' + l.rstrip() for l in sys.stdin] + ['  local: *;']; \
-       print('LLVM_${LLVM_VERSION_MAJOR} {'); \
+       print('LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR} {'); \
        print('  global:') if len(lines) > 1 else None; \
        print(';\\n'.join(lines) + '\\n};')"
       < ${export_file} > ${native_export_file}
@@ -647,8 +647,8 @@ function(llvm_add_library name)
       set_target_properties(${name}
         PROPERTIES
         # Since 4.0.0, the ABI version is indicated by the major version
-        SOVERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}
-        VERSION ${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
+        SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
     endif()
   endif()
 
