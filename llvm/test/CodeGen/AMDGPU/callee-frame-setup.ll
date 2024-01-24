@@ -318,14 +318,14 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; MUBUF:   buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; FLATSCR: s_add_i32 s32, s32, 16
 ; FLATSCR: scratch_store_dword off, v41, s33 ; 4-byte Folded Spill
-; GCN-COUNT-62: v_writelane_b32 v0,
-; GCN: v_writelane_b32 v0,
+; GCN-COUNT-62: v_writelane_b32 v1,
+; GCN: v_writelane_b32 v1,
 ; MUBUF:   buffer_store_dword
 ; FLATSCR: scratch_store_dword
 ; GCN: ;;#ASMSTART
 ; MUBUF:   buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; FLATSCR: scratch_load_dword v41, off, s33 ; 4-byte Folded Reload
-; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v0
+; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v1
 ; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_load_dword [[CSR_VGPR]], off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; FLATSCR-NEXT: scratch_load_dword [[CSR_VGPR]], off, s33 offset:8 ; 4-byte Folded Reload

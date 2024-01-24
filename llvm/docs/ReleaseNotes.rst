@@ -180,6 +180,7 @@ Changes to the RISC-V Backend
   and Zic64b extensions which were introduced as a part of the RISC-V Profiles
   specification.
 * The Smepmp 1.0 extension is now supported.
+* ``-mcpu=sifive-p670`` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

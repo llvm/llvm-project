@@ -236,10 +236,6 @@ private:
   /// split stack prologue.
   bool HasNoSplitStack = false;
 
-  /// Raw FDOstream for outputting machine basic block frequncies if the
-  /// --mbb-profile-dump flag is set for downstream cost modelling applications
-  std::unique_ptr<raw_fd_ostream> MBBProfileDumpFileOutput;
-
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 

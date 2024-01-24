@@ -636,8 +636,7 @@ bool TargetPassConfig::hasLimitedCodeGenPipeline() {
          !willCompleteCodeGenPipeline();
 }
 
-std::string
-TargetPassConfig::getLimitedCodeGenPipelineReason(const char *Separator) {
+std::string TargetPassConfig::getLimitedCodeGenPipelineReason() {
   if (!hasLimitedCodeGenPipeline())
     return std::string();
   std::string Res;
@@ -649,7 +648,7 @@ TargetPassConfig::getLimitedCodeGenPipelineReason(const char *Separator) {
   for (int Idx = 0; Idx < 4; ++Idx)
     if (!PassNames[Idx]->empty()) {
       if (!IsFirst)
-        Res += Separator;
+        Res += " and ";
       IsFirst = false;
       Res += OptNames[Idx];
     }

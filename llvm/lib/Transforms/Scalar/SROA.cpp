@@ -2138,8 +2138,9 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
 
 /// Test whether a vector type is viable for promotion.
 ///
-/// This implements the necessary checking for \c isVectorPromotionViable over
-/// all slices of the alloca for the given VectorType.
+/// This implements the necessary checking for \c checkVectorTypesForPromotion
+/// (and thus isVectorPromotionViable) over all slices of the alloca for the
+/// given VectorType.
 static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
                                         const DataLayout &DL) {
   uint64_t ElementSize =
@@ -2164,12 +2165,16 @@ static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
   return true;
 }
 
+/// Test whether any vector type in \p CandidateTys is viable for promotion.
+///
+/// This implements the necessary checking for \c isVectorPromotionViable over
+/// all slices of the alloca for the given VectorType.
 static VectorType *
-testVectorTyForPromotion(Partition &P, const DataLayout &DL,
-                         SmallVectorImpl<VectorType *> &CandidateTys,
-                         bool HaveCommonEltTy, Type *CommonEltTy,
-                         bool HaveVecPtrTy, bool HaveCommonVecPtrTy,
-                         VectorType *CommonVecPtrTy) {
+checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
+                             SmallVectorImpl<VectorType *> &CandidateTys,
+                             bool HaveCommonEltTy, Type *CommonEltTy,
+                             bool HaveVecPtrTy, bool HaveCommonVecPtrTy,
+                             VectorType *CommonVecPtrTy) {
   // If we didn't find a vector type, nothing to do here.
   if (CandidateTys.empty())
     return nullptr;
@@ -2299,6 +2304,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       }
     }
   };
+
   // Put load and store types into a set for de-duplication.
   for (const Slice &S : P) {
     Type *Ty;
@@ -2314,7 +2320,7 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       CheckCandidateType(Ty);
   }
 
-  if (auto *VTy = testVectorTyForPromotion(
+  if (auto *VTy = checkVectorTypesForPromotion(
           P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
           HaveCommonVecPtrTy, CommonVecPtrTy))
     return VTy;
@@ -2341,9 +2347,9 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
     }
   }
 
-  return testVectorTyForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
-                                  CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
-                                  CommonVecPtrTy);
+  return checkVectorTypesForPromotion(P, DL, CandidateTys, HaveCommonEltTy,
+                                      CommonEltTy, HaveVecPtrTy,
+                                      HaveCommonVecPtrTy, CommonVecPtrTy);
 }
 
 /// Test whether a slice of an alloca is valid for integer widening.
