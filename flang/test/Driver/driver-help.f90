@@ -103,7 +103,7 @@
 ! HELP-NEXT: -L <dir>                Add directory to library search path
 ! HELP-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
 ! HELP-NEXT: -mcode-object-version=<value>
-! HELP-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
+! HELP-NEXT:                         Specify code object ABI version. Defaults to 5. (AMDGPU only)
 ! HELP-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! HELP-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! HELP-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
@@ -240,7 +240,7 @@
 ! HELP-FC1-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -load <dsopath>         Load the named plugin (dynamic shared object)
 ! HELP-FC1-NEXT: -mcode-object-version=<value>
-! HELP-FC1-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
+! HELP-FC1-NEXT:                         Specify code object ABI version. Defaults to 5. (AMDGPU only)
 ! HELP-FC1-NEXT: -menable-no-infs        Allow optimization to assume there are no infinities.
 ! HELP-FC1-NEXT: -menable-no-nans        Allow optimization to assume there are no NaNs.
 ! HELP-FC1-NEXT: -mframe-pointer=<value> Specify which frame pointers to retain.

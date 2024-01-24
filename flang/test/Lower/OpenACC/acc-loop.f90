@@ -303,6 +303,6 @@ program acc_loop
   DO i = 1, n
   END DO
 
-! CHECK: acc.loop gang([#acc.device_type<nvidia>, #acc.device_type<default>]) {
+! CHECK: acc.loop gang([#acc.device_type<nvidia>, #acc.device_type<default>])
 
 end program

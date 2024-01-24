@@ -402,7 +402,9 @@ add_entrypoint_object(
     ../sysconf.h
   DEPENDS
     libc.include.unistd
+    libc.include.sys_auxv
     libc.src.errno.errno
+    libc.src.sys.auxv.getauxval
 )
 
 add_entrypoint_object(

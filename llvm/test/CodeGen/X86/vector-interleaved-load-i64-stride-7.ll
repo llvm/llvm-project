@@ -302,10 +302,10 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-SLOW-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512-SLOW-NEXT:    vmovdqa64 (%rdi), %zmm5
 ; AVX512-SLOW-NEXT:    vinserti128 $1, 160(%rdi), %ymm0, %ymm0
-; AVX512-SLOW-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,7,14,u>
+; AVX512-SLOW-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,7,14,u]
 ; AVX512-SLOW-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512-SLOW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
-; AVX512-SLOW-NEXT:    vmovdqa {{.*#+}} ymm1 = <9,0,7,u>
+; AVX512-SLOW-NEXT:    vmovdqa {{.*#+}} ymm1 = [9,0,7,u]
 ; AVX512-SLOW-NEXT:    vpermi2q %zmm5, %zmm4, %zmm1
 ; AVX512-SLOW-NEXT:    vpbroadcastq 176(%rdi), %ymm2
 ; AVX512-SLOW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
@@ -356,10 +356,10 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FAST-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512-FAST-NEXT:    vmovdqa64 (%rdi), %zmm5
 ; AVX512-FAST-NEXT:    vinserti128 $1, 160(%rdi), %ymm0, %ymm0
-; AVX512-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,7,14,u>
+; AVX512-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,7,14,u]
 ; AVX512-FAST-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
-; AVX512-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <9,0,7,u>
+; AVX512-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = [9,0,7,u]
 ; AVX512-FAST-NEXT:    vpermi2q %zmm5, %zmm4, %zmm1
 ; AVX512-FAST-NEXT:    vpbroadcastq 176(%rdi), %ymm2
 ; AVX512-FAST-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]

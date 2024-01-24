@@ -50,6 +50,8 @@ getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &ArmCfg) {
     return aarch32::Arm_MovtAbs;
   case ELF::R_ARM_NONE:
     return aarch32::None;
+  case ELF::R_ARM_PREL31:
+    return aarch32::Data_PRel31;
   case ELF::R_ARM_TARGET1:
     return (ArmCfg.Target1Rel) ? aarch32::Data_Delta32
                                : aarch32::Data_Pointer32;
@@ -79,6 +81,8 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_REL32;
   case aarch32::Data_Pointer32:
     return ELF::R_ARM_ABS32;
+  case aarch32::Data_PRel31:
+    return ELF::R_ARM_PREL31;
   case aarch32::Data_RequestGOTAndTransformToDelta32:
     return ELF::R_ARM_GOT_PREL;
   case aarch32::Arm_Call:
@@ -139,16 +143,6 @@ class ELFLinkGraphBuilder_aarch32
 private:
   using ELFT = ELFType<DataEndianness, false>;
   using Base = ELFLinkGraphBuilder<ELFT>;
-
-  bool excludeSection(const typename ELFT::Shdr &Sect) const override {
-    // TODO: An .ARM.exidx (Exception Index table) entry is 8-bytes in size and
-    // consists of 2 words. It might be sufficient to process only relocations
-    // in the the second word (offset 4). Please find more details in: Exception
-    // Handling ABI for the Arm® Architecture -> Index table entries
-    if (Sect.sh_type == ELF::SHT_ARM_EXIDX)
-      return true;
-    return false;
-  }
 
   Error addRelocations() override {
     LLVM_DEBUG(dbgs() << "Processing relocations:\n");
@@ -265,21 +259,8 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   // Resolve our internal configuration for the target. If at some point the
   // CPUArch alone becomes too unprecise, we can find more details in the
   // Tag_CPU_arch_profile.
-  aarch32::ArmConfig ArmCfg;
-  using namespace ARMBuildAttrs;
-  auto Arch = static_cast<CPUArch>(ARM::getArchAttr(AK));
-  switch (Arch) {
-  case v7:
-  case v8_A:
-    ArmCfg = aarch32::getArmConfigForCPUArch(Arch);
-    assert(ArmCfg.Stubs != aarch32::StubsFlavor::Unsupported &&
-           "Provide a config for each supported CPU");
-    break;
-  default:
-    return make_error<JITLinkError>(
-        "Failed to build ELF link graph: Unsupported CPU arch " +
-        StringRef(aarch32::getCPUArchName(Arch)));
-  }
+  auto Arch = static_cast<ARMBuildAttrs::CPUArch>(ARM::getArchAttr(AK));
+  aarch32::ArmConfig ArmCfg = aarch32::getArmConfigForCPUArch(Arch);
 
   // Populate the link-graph.
   switch (TT.getArch()) {
@@ -324,11 +305,15 @@ void link_ELF_aarch32(std::unique_ptr<LinkGraph> G,
       PassCfg.PrePrunePasses.push_back(markAllSymbolsLive);
 
     switch (ArmCfg.Stubs) {
+    case aarch32::StubsFlavor::pre_v7:
+      PassCfg.PostPrunePasses.push_back(
+          buildTables_ELF_aarch32<aarch32::StubsManager_prev7>);
+      break;
     case aarch32::StubsFlavor::v7:
       PassCfg.PostPrunePasses.push_back(
           buildTables_ELF_aarch32<aarch32::StubsManager_v7>);
       break;
-    case aarch32::StubsFlavor::Unsupported:
+    case aarch32::StubsFlavor::Undefined:
       llvm_unreachable("Check before building graph");
     }
   }
