@@ -1,5 +1,5 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt-printplugin %s -load-pass-plugin="PrintPlugin" -passes="printpass" -disable-output 2>&1 | FileCheck %s
+; RUN: opt-printplugin %s -passes="printpass" -disable-output 2>&1 | FileCheck %s
 
 ; REQUIRES: plugins
 

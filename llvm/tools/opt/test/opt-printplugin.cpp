@@ -1,5 +1,5 @@
-//===- LLVMPrintFunctionNames.cpp
-//---------------------------------------------===//
+//===- opt-printplugin.cpp - The LLVM Modular Optimizer
+//-------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,17 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Example opt plugin which simply prints the names of all the functions
+// Example static opt plugin which simply prints the names of all the functions
 // within the generated LLVM code.
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/Registry.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <functional>
 
 using namespace llvm;
 
@@ -40,24 +43,25 @@ public:
   static bool isRequired() { return true; }
 };
 
-} // namespace
-
-llvm::PassPluginLibraryInfo getPrintPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "PrintPlugin", LLVM_VERSION_STRING,
-          [](PassBuilder &PB) {
-            PB.registerPipelineParsingCallback(
-                [](StringRef Name, llvm::ModulePassManager &PM,
-                   ArrayRef<llvm::PassBuilder::PipelineElement>) {
-                  if (Name == "printpass") {
-                    PM.addPass(PrintPass());
-                    return true;
-                  }
-                  return false;
-                });
-          }};
+void registerPlugin(PassBuilder &PB) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, llvm::ModulePassManager &PM,
+         ArrayRef<llvm::PassBuilder::PipelineElement>) {
+        if (Name == "printpass") {
+          PM.addPass(PrintPass());
+          return true;
+        }
+        return false;
+      });
 }
 
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfoPrintPlugin() {
-  return getPrintPluginInfo();
+} // namespace
+
+extern "C" int optMain(int argc, char **argv,
+                       llvm::ArrayRef<std::function<void(llvm::PassBuilder &)>>
+                           PassBuilderCallbacks);
+
+int main(int argc, char **argv) {
+  std::function<void(llvm::PassBuilder &)> plugins[] = {registerPlugin};
+  return optMain(argc, argv, plugins);
 }

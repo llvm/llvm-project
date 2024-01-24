@@ -138,6 +138,7 @@ set(LLVM_TEST_DEPENDS
           not
           obj2yaml
           opt
+          opt-printplugin
           sancov
           sanstats
           split-file
