@@ -23,6 +23,7 @@
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/MathExtras.h"
@@ -501,13 +502,20 @@ struct GlobalMemrefOpLowering
 
     Attribute initialValue = nullptr;
     if (!global.isExternal() && !global.isUninitialized()) {
-      auto elementsAttr = llvm::cast<ElementsAttr>(*global.getInitialValue());
-      initialValue = elementsAttr;
+      Attribute initialAttr = *global.getInitialValue();
+      if (auto resourceAttr = llvm::dyn_cast<DenseResourceElementsAttr>(initialAttr)) {
+        auto blob = resourceAttr.getRawHandle().getBlob();
+        initialAttr = DenseElementsAttr::get(resourceAttr.getType(), blob->getData());
+      } 
 
-      // For scalar memrefs, the global variable created is of the element type,
-      // so unpack the elements attribute to extract the value.
-      if (type.getRank() == 0)
-        initialValue = elementsAttr.getSplatValue<Attribute>();
+      if (auto elementsAttr = llvm::cast<ElementsAttr>(initialAttr)) {
+        initialValue = elementsAttr;
+
+        // For scalar memrefs, the global variable created is of the element type,
+        // so unpack the elements attribute to extract the value.
+        if (type.getRank() == 0)
+          initialValue = elementsAttr.getSplatValue<Attribute>();
+      }
     }
 
     uint64_t alignment = global.getAlignment().value_or(0);
