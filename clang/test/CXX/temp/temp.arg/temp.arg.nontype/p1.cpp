@@ -200,9 +200,7 @@ namespace bad_args {
   // cxx17-note@-3 {{reinterpret_cast}}
   X0<__builtin_constant_p(0) ? (int*)1 : (int*)1> x0d;
   // precxx17-error@-1 {{non-type template argument '(int *)1' is invalid}}
-#if __cplusplus == 201703L
-  // cxx17-error@-3 {{non-type template argument refers to subobject '(int *)1'}}
-#endif
+  // cxx17-error@-2 {{non-type template argument refers to subobject '(int *)1'}}
 }
 #endif // CPP11ONLY
 

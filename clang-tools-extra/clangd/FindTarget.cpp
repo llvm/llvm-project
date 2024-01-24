@@ -1039,7 +1039,6 @@ public:
     case TemplateArgument::Pack:
     case TemplateArgument::Type:
     case TemplateArgument::Expression:
-    case TemplateArgument::StructuralValue:
       break; // Handled by VisitType and VisitExpression.
     };
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(A);

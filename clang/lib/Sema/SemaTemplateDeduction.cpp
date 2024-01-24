@@ -268,16 +268,6 @@ checkDeducedTemplateArguments(ASTContext &Context,
     // All other combinations are incompatible.
     return DeducedTemplateArgument();
 
-  case TemplateArgument::StructuralValue:
-    // If we deduced a value and a dependent expression, keep the value.
-    if (Y.getKind() == TemplateArgument::Expression ||
-        (Y.getKind() == TemplateArgument::StructuralValue &&
-         X.structurallyEquals(Y)))
-      return X;
-
-    // All other combinations are incompatible.
-    return DeducedTemplateArgument();
-
   case TemplateArgument::Template:
     if (Y.getKind() == TemplateArgument::Template &&
         Context.hasSameTemplateName(X.getAsTemplate(), Y.getAsTemplate()))
@@ -2310,45 +2300,27 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     Info.SecondArg = A;
     return Sema::TDK_NonDeducedMismatch;
 
-  case TemplateArgument::StructuralValue:
-    if (A.getKind() == TemplateArgument::StructuralValue &&
-        A.structurallyEquals(P))
-      return Sema::TDK_Success;
-
-    Info.FirstArg = P;
-    Info.SecondArg = A;
-    return Sema::TDK_NonDeducedMismatch;
-
   case TemplateArgument::Expression:
     if (const NonTypeTemplateParmDecl *NTTP =
             getDeducedParameterFromExpr(Info, P.getAsExpr())) {
-      switch (A.getKind()) {
-      case TemplateArgument::Integral:
-      case TemplateArgument::Expression:
-      case TemplateArgument::StructuralValue:
+      if (A.getKind() == TemplateArgument::Integral)
         return DeduceNonTypeTemplateArgument(
-            S, TemplateParams, NTTP, DeducedTemplateArgument(A),
-            A.getNonTypeTemplateArgumentType(), Info, Deduced);
-
-      case TemplateArgument::NullPtr:
+            S, TemplateParams, NTTP, A.getAsIntegral(), A.getIntegralType(),
+            /*ArrayBound=*/false, Info, Deduced);
+      if (A.getKind() == TemplateArgument::NullPtr)
         return DeduceNullPtrTemplateArgument(S, TemplateParams, NTTP,
                                              A.getNullPtrType(), Info, Deduced);
-
-      case TemplateArgument::Declaration:
+      if (A.getKind() == TemplateArgument::Expression)
+        return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
+                                             A.getAsExpr(), Info, Deduced);
+      if (A.getKind() == TemplateArgument::Declaration)
         return DeduceNonTypeTemplateArgument(
             S, TemplateParams, NTTP, A.getAsDecl(), A.getParamTypeForDecl(),
             Info, Deduced);
 
-      case TemplateArgument::Null:
-      case TemplateArgument::Type:
-      case TemplateArgument::Template:
-      case TemplateArgument::TemplateExpansion:
-      case TemplateArgument::Pack:
-        Info.FirstArg = P;
-        Info.SecondArg = A;
-        return Sema::TDK_NonDeducedMismatch;
-      }
-      llvm_unreachable("Unknown template argument kind");
+      Info.FirstArg = P;
+      Info.SecondArg = A;
+      return Sema::TDK_NonDeducedMismatch;
     }
 
     // Can't deduce anything, but that's okay.
@@ -2533,9 +2505,6 @@ static bool isSameTemplateArg(ASTContext &Context,
     case TemplateArgument::Integral:
       return hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral());
 
-    case TemplateArgument::StructuralValue:
-      return X.structurallyEquals(Y);
-
     case TemplateArgument::Expression: {
       llvm::FoldingSetNodeID XID, YID;
       X.getAsExpr()->Profile(XID, Context, true);
@@ -2616,9 +2585,9 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
                                E);
   }
 
-  case TemplateArgument::Integral:
-  case TemplateArgument::StructuralValue: {
-    Expr *E = BuildExpressionFromNonTypeTemplateArgument(Arg, Loc).get();
+  case TemplateArgument::Integral: {
+    Expr *E =
+        BuildExpressionFromIntegralTemplateArgument(Arg, Loc).getAs<Expr>();
     return TemplateArgumentLoc(TemplateArgument(E), E);
   }
 
@@ -6480,8 +6449,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   case TemplateArgument::Null:
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
+    break;
+
   case TemplateArgument::NullPtr:
-  case TemplateArgument::StructuralValue:
+    MarkUsedTemplateParameters(Ctx, TemplateArg.getNullPtrType(), OnlyDeduced,
+                               Depth, Used);
     break;
 
   case TemplateArgument::Type:

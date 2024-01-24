@@ -1975,8 +1975,9 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     }
   } else if (arg.getKind() == TemplateArgument::Declaration ||
              arg.getKind() == TemplateArgument::NullPtr) {
+    ValueDecl *VD;
     if (arg.getKind() == TemplateArgument::Declaration) {
-      ValueDecl *VD = arg.getAsDecl();
+      VD = arg.getAsDecl();
 
       // Find the instantiation of the template argument.  This is
       // required for nested templates.
@@ -1984,20 +1985,21 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
              getSema().FindInstantiatedDecl(loc, VD, TemplateArgs));
       if (!VD)
         return ExprError();
+    } else {
+      // Propagate NULL template argument.
+      VD = nullptr;
     }
 
-    QualType paramType = arg.getNonTypeTemplateArgumentType();
+    QualType paramType = VD ? arg.getParamTypeForDecl() : arg.getNullPtrType();
     assert(!paramType.isNull() && "type substitution failed for param type");
     assert(!paramType->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, paramType, loc);
     refParam = paramType->isReferenceType();
   } else {
-    QualType paramType = arg.getNonTypeTemplateArgumentType();
-    result = SemaRef.BuildExpressionFromNonTypeTemplateArgument(arg, loc);
-    refParam = paramType->isReferenceType();
+    result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
     assert(result.isInvalid() ||
            SemaRef.Context.hasSameType(result.get()->getType(),
-                                       paramType.getNonReferenceType()));
+                                       arg.getIntegralType()));
   }
 
   if (result.isInvalid())

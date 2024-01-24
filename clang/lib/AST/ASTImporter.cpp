@@ -823,17 +823,6 @@ ASTNodeImporter::import(const TemplateArgument &From) {
                             From.getIsDefaulted());
   }
 
-  case TemplateArgument::StructuralValue: {
-    ExpectedType ToTypeOrErr = import(From.getStructuralValueType());
-    if (!ToTypeOrErr)
-      return ToTypeOrErr.takeError();
-    Expected<APValue> ToValueOrErr = import(From.getAsStructuralValue());
-    if (!ToValueOrErr)
-      return ToValueOrErr.takeError();
-    return TemplateArgument(Importer.getToContext(), *ToTypeOrErr,
-                            *ToValueOrErr);
-  }
-
   case TemplateArgument::Template: {
     Expected<TemplateName> ToTemplateOrErr = import(From.getAsTemplate());
     if (!ToTemplateOrErr)
@@ -3583,8 +3572,6 @@ private:
     case TemplateArgument::NullPtr:
       // FIXME: The type is not allowed to be in the function?
       return CheckType(Arg.getNullPtrType());
-    case TemplateArgument::StructuralValue:
-      return CheckType(Arg.getStructuralValueType());
     case TemplateArgument::Pack:
       for (const auto &PackArg : Arg.getPackAsArray())
         if (checkTemplateArgument(PackArg))

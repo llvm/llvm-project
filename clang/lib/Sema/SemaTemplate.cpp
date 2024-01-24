@@ -4427,7 +4427,6 @@ static bool isTemplateArgumentTemplateParameter(
   case TemplateArgument::NullPtr:
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
-  case TemplateArgument::StructuralValue:
   case TemplateArgument::Pack:
   case TemplateArgument::TemplateExpansion:
     return false;
@@ -5759,7 +5758,6 @@ bool Sema::CheckTemplateArgument(
 
     case TemplateArgument::Declaration:
     case TemplateArgument::Integral:
-    case TemplateArgument::StructuralValue:
     case TemplateArgument::NullPtr:
       // We've already checked this template argument, so just copy
       // it to the list of converted arguments.
@@ -5914,10 +5912,11 @@ bool Sema::CheckTemplateArgument(
     return true;
 
   case TemplateArgument::Declaration:
+    llvm_unreachable("Declaration argument with template template parameter");
   case TemplateArgument::Integral:
-  case TemplateArgument::StructuralValue:
+    llvm_unreachable("Integral argument with template template parameter");
   case TemplateArgument::NullPtr:
-    llvm_unreachable("non-type argument with template template parameter");
+    llvm_unreachable("Null pointer argument with template template parameter");
 
   case TemplateArgument::Pack:
     llvm_unreachable("Caller must expand template argument packs");
@@ -7412,9 +7411,44 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (ArgResult.isInvalid())
       return ExprError();
 
-    // Prior to C++20, enforce restrictions on possible template argument
-    // values.
-    if (!getLangOpts().CPlusPlus20 && Value.isLValue()) {
+    // Convert the APValue to a TemplateArgument.
+    switch (Value.getKind()) {
+    case APValue::None:
+      assert(ParamType->isNullPtrType());
+      SugaredConverted = TemplateArgument(ParamType, /*isNullPtr=*/true);
+      CanonicalConverted = TemplateArgument(CanonParamType, /*isNullPtr=*/true);
+      break;
+    case APValue::Indeterminate:
+      llvm_unreachable("result of constant evaluation should be initialized");
+      break;
+    case APValue::Int:
+      assert(ParamType->isIntegralOrEnumerationType());
+      SugaredConverted = TemplateArgument(Context, Value.getInt(), ParamType);
+      CanonicalConverted =
+          TemplateArgument(Context, Value.getInt(), CanonParamType);
+      break;
+    case APValue::MemberPointer: {
+      assert(ParamType->isMemberPointerType());
+
+      // FIXME: We need TemplateArgument representation and mangling for these.
+      if (!Value.getMemberPointerPath().empty()) {
+        Diag(Arg->getBeginLoc(),
+             diag::err_template_arg_member_ptr_base_derived_not_supported)
+            << Value.getMemberPointerDecl() << ParamType
+            << Arg->getSourceRange();
+        return ExprError();
+      }
+
+      auto *VD = const_cast<ValueDecl*>(Value.getMemberPointerDecl());
+      SugaredConverted = VD ? TemplateArgument(VD, ParamType)
+                            : TemplateArgument(ParamType, /*isNullPtr=*/true);
+      CanonicalConverted =
+          VD ? TemplateArgument(cast<ValueDecl>(VD->getCanonicalDecl()),
+                                CanonParamType)
+             : TemplateArgument(CanonParamType, /*isNullPtr=*/true);
+      break;
+    }
+    case APValue::LValue: {
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
       assert(ParamType->isPointerType() || ParamType->isReferenceType() ||
@@ -7432,7 +7466,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
             << Arg->getSourceRange();
         return ExprError();
       }
-      // -- a subobject [until C++20]
+      // -- a subobject
+      // FIXME: Until C++20
       if (Value.hasLValuePath() && Value.getLValuePath().size() == 1 &&
           VD && VD->getType()->isArrayType() &&
           Value.getLValuePath()[0].getAsArrayIndex() == 0 &&
@@ -7450,13 +7485,37 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
              "null reference should not be a constant expression");
       assert((!VD || !ParamType->isNullPtrType()) &&
              "non-null value of type nullptr_t?");
+
+      SugaredConverted = VD ? TemplateArgument(VD, ParamType)
+                            : TemplateArgument(ParamType, /*isNullPtr=*/true);
+      CanonicalConverted =
+          VD ? TemplateArgument(cast<ValueDecl>(VD->getCanonicalDecl()),
+                                CanonParamType)
+             : TemplateArgument(CanonParamType, /*isNullPtr=*/true);
+      break;
+    }
+    case APValue::Struct:
+    case APValue::Union: {
+      // Get or create the corresponding template parameter object.
+      TemplateParamObjectDecl *D =
+          Context.getTemplateParamObjectDecl(ParamType, Value);
+      SugaredConverted = TemplateArgument(D, ParamType);
+      CanonicalConverted =
+          TemplateArgument(D->getCanonicalDecl(), CanonParamType);
+      break;
+    }
+    case APValue::AddrLabelDiff:
+      return Diag(StartLoc, diag::err_non_type_template_arg_addr_label_diff);
+    case APValue::FixedPoint:
+    case APValue::Float:
+    case APValue::ComplexInt:
+    case APValue::ComplexFloat:
+    case APValue::Vector:
+    case APValue::Array:
+      return Diag(StartLoc, diag::err_non_type_template_arg_unsupported)
+             << ParamType;
     }
 
-    if (Value.isAddrLabelDiff())
-      return Diag(StartLoc, diag::err_non_type_template_arg_addr_label_diff);
-
-    SugaredConverted = TemplateArgument(Context, ParamType, Value);
-    CanonicalConverted = TemplateArgument(Context, CanonParamType, Value);
     return ArgResult.get();
   }
 
@@ -8040,9 +8099,12 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
 /// This routine takes care of the mapping from an integral template
 /// argument (which may have any integral type) to the appropriate
 /// literal value.
-static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
-    Sema &S, QualType OrigT, const llvm::APSInt &Int, SourceLocation Loc) {
-  assert(OrigT->isIntegralOrEnumerationType());
+ExprResult
+Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
+                                                  SourceLocation Loc) {
+  assert(Arg.getKind() == TemplateArgument::Integral &&
+         "Operation is only valid for integral template arguments");
+  QualType OrigT = Arg.getIntegralType();
 
   // If this is an enum type that we're instantiating, we need to use an integer
   // type the same size as the enumerator.  We don't want to build an
@@ -8058,7 +8120,7 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
     CharacterLiteralKind Kind;
     if (T->isWideCharType())
       Kind = CharacterLiteralKind::Wide;
-    else if (T->isChar8Type() && S.getLangOpts().Char8)
+    else if (T->isChar8Type() && getLangOpts().Char8)
       Kind = CharacterLiteralKind::UTF8;
     else if (T->isChar16Type())
       Kind = CharacterLiteralKind::UTF16;
@@ -8067,131 +8129,27 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
     else
       Kind = CharacterLiteralKind::Ascii;
 
-    E = new (S.Context) CharacterLiteral(Int.getZExtValue(), Kind, T, Loc);
+    E = new (Context) CharacterLiteral(Arg.getAsIntegral().getZExtValue(),
+                                       Kind, T, Loc);
   } else if (T->isBooleanType()) {
-    E = CXXBoolLiteralExpr::Create(S.Context, Int.getBoolValue(), T, Loc);
+    E = CXXBoolLiteralExpr::Create(Context, Arg.getAsIntegral().getBoolValue(),
+                                   T, Loc);
+  } else if (T->isNullPtrType()) {
+    E = new (Context) CXXNullPtrLiteralExpr(Context.NullPtrTy, Loc);
   } else {
-    E = IntegerLiteral::Create(S.Context, Int, T, Loc);
+    E = IntegerLiteral::Create(Context, Arg.getAsIntegral(), T, Loc);
   }
 
   if (OrigT->isEnumeralType()) {
     // FIXME: This is a hack. We need a better way to handle substituted
     // non-type template parameters.
-    E = CStyleCastExpr::Create(S.Context, OrigT, VK_PRValue, CK_IntegralCast, E,
-                               nullptr, S.CurFPFeatureOverrides(),
-                               S.Context.getTrivialTypeSourceInfo(OrigT, Loc),
+    E = CStyleCastExpr::Create(Context, OrigT, VK_PRValue, CK_IntegralCast, E,
+                               nullptr, CurFPFeatureOverrides(),
+                               Context.getTrivialTypeSourceInfo(OrigT, Loc),
                                Loc, Loc);
   }
 
   return E;
-}
-
-static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
-    Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
-  auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
-    auto *ILE = new (S.Context) InitListExpr(S.Context, Loc, Elts, Loc);
-    ILE->setType(T);
-    return ILE;
-  };
-
-  switch (Val.getKind()) {
-  case APValue::AddrLabelDiff:
-    // This cannot occur in a template argument at all.
-  case APValue::Array:
-  case APValue::Struct:
-  case APValue::Union:
-    // These can only occur within a template parameter object, which is
-    // represented as a TemplateArgument::Declaration.
-    llvm_unreachable("unexpected template argument value");
-
-  case APValue::Int:
-    return BuildExpressionFromIntegralTemplateArgumentValue(S, T, Val.getInt(),
-                                                            Loc);
-
-  case APValue::Float:
-    return FloatingLiteral::Create(S.Context, Val.getFloat(), /*IsExact=*/true,
-                                   T, Loc);
-
-  case APValue::FixedPoint:
-    return FixedPointLiteral::CreateFromRawInt(
-        S.Context, Val.getFixedPoint().getValue(), T, Loc,
-        Val.getFixedPoint().getScale());
-
-  case APValue::ComplexInt: {
-    QualType ElemT = T->castAs<ComplexType>()->getElementType();
-    return MakeInitList({BuildExpressionFromIntegralTemplateArgumentValue(
-                             S, ElemT, Val.getComplexIntReal(), Loc),
-                         BuildExpressionFromIntegralTemplateArgumentValue(
-                             S, ElemT, Val.getComplexIntImag(), Loc)});
-  }
-
-  case APValue::ComplexFloat: {
-    QualType ElemT = T->castAs<ComplexType>()->getElementType();
-    return MakeInitList(
-        {FloatingLiteral::Create(S.Context, Val.getComplexFloatReal(), true,
-                                 ElemT, Loc),
-         FloatingLiteral::Create(S.Context, Val.getComplexFloatImag(), true,
-                                 ElemT, Loc)});
-  }
-
-  case APValue::Vector: {
-    QualType ElemT = T->castAs<VectorType>()->getElementType();
-    llvm::SmallVector<Expr *, 8> Elts;
-    for (unsigned I = 0, N = Val.getVectorLength(); I != N; ++I)
-      Elts.push_back(BuildExpressionFromNonTypeTemplateArgumentValue(
-          S, ElemT, Val.getVectorElt(I), Loc));
-    return MakeInitList(Elts);
-  }
-
-  case APValue::None:
-  case APValue::Indeterminate:
-    llvm_unreachable("Unexpected APValue kind.");
-  case APValue::LValue:
-  case APValue::MemberPointer:
-    // There isn't necessarily a valid equivalent source-level syntax for
-    // these; in particular, a naive lowering might violate access control.
-    // So for now we lower to a ConstantExpr holding the value, wrapped around
-    // an OpaqueValueExpr.
-    // FIXME: We should have a better representation for this.
-    ExprValueKind VK = VK_PRValue;
-    if (T->isReferenceType()) {
-      T = T->getPointeeType();
-      VK = VK_LValue;
-    }
-    auto *OVE = new (S.Context) OpaqueValueExpr(Loc, T, VK);
-    return ConstantExpr::Create(S.Context, OVE, Val);
-  }
-  llvm_unreachable("Unhandled APValue::ValueKind enum");
-}
-
-ExprResult
-Sema::BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
-                                                 SourceLocation Loc) {
-  switch (Arg.getKind()) {
-  case TemplateArgument::Null:
-  case TemplateArgument::Type:
-  case TemplateArgument::Template:
-  case TemplateArgument::TemplateExpansion:
-  case TemplateArgument::Pack:
-    llvm_unreachable("not a non-type template argument");
-
-  case TemplateArgument::Expression:
-    return Arg.getAsExpr();
-
-  case TemplateArgument::NullPtr:
-  case TemplateArgument::Declaration:
-    return BuildExpressionFromDeclTemplateArgument(
-        Arg, Arg.getNonTypeTemplateArgumentType(), Loc);
-
-  case TemplateArgument::Integral:
-    return BuildExpressionFromIntegralTemplateArgumentValue(
-        *this, Arg.getIntegralType(), Arg.getAsIntegral(), Loc);
-
-  case TemplateArgument::StructuralValue:
-    return BuildExpressionFromNonTypeTemplateArgumentValue(
-        *this, Arg.getStructuralValueType(), Arg.getAsStructuralValue(), Loc);
-  }
-  llvm_unreachable("Unhandled TemplateArgument::ArgKind enum");
 }
 
 /// Match two template parameters within template parameter lists.

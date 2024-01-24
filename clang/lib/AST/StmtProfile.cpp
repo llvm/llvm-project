@@ -2416,12 +2416,6 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
     Arg.getAsIntegral().Profile(ID);
     break;
 
-  case TemplateArgument::StructuralValue:
-    VisitType(Arg.getStructuralValueType());
-    // FIXME: Do we need to recursively decompose this ourselves?
-    Arg.getAsStructuralValue().Profile(ID);
-    break;
-
   case TemplateArgument::Expression:
     Visit(Arg.getAsExpr());
     break;
