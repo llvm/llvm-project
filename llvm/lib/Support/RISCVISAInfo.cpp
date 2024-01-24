@@ -758,7 +758,7 @@ static Error processMultiLetterExtension(
   }
 
   // Check if duplicated extension.
-  if (!IgnoreUnknown && (SeenExtMap.find(Name.str()) != SeenExtMap.end()))
+  if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
     return createStringError(errc::invalid_argument, "duplicated %s '%s'",
                              Desc.str().c_str(), Name.str().c_str());
 
@@ -792,7 +792,7 @@ static Error processSingleLetterExtension(
   RawExt = RawExt.substr(ConsumeLength);
 
   // Check if duplicated extension.
-  if (!IgnoreUnknown && (SeenExtMap.find(Name.str()) != SeenExtMap.end()))
+  if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
     return createStringError(errc::invalid_argument,
                              "duplicated standard user-level extension '%s'",
                              Name.str().c_str());
