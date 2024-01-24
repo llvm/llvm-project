@@ -24,7 +24,7 @@ public:
   const T neg_inf = T(FPBits::inf(Sign::NEG));
   const T zero = T(FPBits::zero(Sign::POS));
   const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(Sign::POS, 1));
+  const T nan = T(FPBits::build_quiet_nan(1));
 
   void test_na_n_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));

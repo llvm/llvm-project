@@ -66,16 +66,16 @@ template <typename T> struct FPTest : public Test {
   using Sign = LIBC_NAMESPACE::fputil::Sign;
   static constexpr StorageType STORAGE_MAX =
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
-  static constexpr T zero = T(FPBits::zero(Sign::POS));
-  static constexpr T neg_zero = T(FPBits::zero(Sign::NEG));
-  static constexpr T aNaN = T(FPBits::build_quiet_nan(Sign::POS, 1));
-  static constexpr T sNaN = T(FPBits::build_nan(Sign::POS, 1));
-  static constexpr T inf = T(FPBits::inf(Sign::POS));
-  static constexpr T neg_inf = T(FPBits::inf(Sign::NEG));
-  static constexpr T min_normal = T(FPBits::min_normal());
-  static constexpr T max_normal = T(FPBits::max_normal());
-  static constexpr T min_denormal = T(FPBits::min_subnormal());
-  static constexpr T max_denormal = T(FPBits::max_subnormal());
+  static constexpr T zero = FPBits::zero(Sign::POS);
+  static constexpr T neg_zero = FPBits::zero(Sign::NEG);
+  static constexpr T aNaN = FPBits::build_quiet_nan(1);
+  static constexpr T sNaN = FPBits::build_nan(1);
+  static constexpr T inf = FPBits::inf(Sign::POS);
+  static constexpr T neg_inf = FPBits::inf(Sign::NEG);
+  static constexpr T min_normal = FPBits::min_normal();
+  static constexpr T max_normal = FPBits::max_normal();
+  static constexpr T min_denormal = FPBits::min_denormal();
+  static constexpr T max_denormal = FPBits::max_denormal();
 
   static constexpr int N_ROUNDING_MODES = 4;
   static constexpr fputil::testing::RoundingMode ROUNDING_MODES[4] = {
@@ -95,16 +95,16 @@ template <typename T> struct FPTest : public Test {
   using Sign = LIBC_NAMESPACE::fputil::Sign;                                   \
   static constexpr StorageType STORAGE_MAX =                                   \
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
-  const T zero = T(FPBits::zero(Sign::POS));                                   \
-  const T neg_zero = T(FPBits::zero(Sign::NEG));                               \
-  const T aNaN = T(FPBits::build_quiet_nan(Sign::POS, 1));                     \
-  const T sNaN = T(FPBits::build_nan(Sign::POS, 1));                           \
-  const T inf = T(FPBits::inf(Sign::POS));                                     \
-  const T neg_inf = T(FPBits::inf(Sign::NEG));                                 \
-  const T min_normal = T(FPBits::min_normal());                                \
-  const T max_normal = T(FPBits::max_normal());                                \
-  const T min_denormal = T(FPBits::min_subnormal());                           \
-  const T max_denormal = T(FPBits::max_subnormal());
+  const T zero = FPBits::zero(Sign::POS);                                      \
+  const T neg_zero = FPBits::zero(Sign::NEG);                                  \
+  const T aNaN = FPBits::build_quiet_nan(1);                                   \
+  const T sNaN = FPBits::build_nan(1);                                         \
+  const T inf = FPBits::inf(Sign::POS);                                        \
+  const T neg_inf = FPBits::inf(Sign::NEG);                                    \
+  const T min_normal = FPBits::min_normal();                                   \
+  const T max_normal = FPBits::max_normal();                                   \
+  const T min_denormal = FPBits::min_denormal();                               \
+  const T max_denormal = FPBits::max_denormal();
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \

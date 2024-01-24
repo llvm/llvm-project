@@ -54,7 +54,6 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
@@ -80,7 +79,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
 #endif // LIBC_TARGET_CPU_HAS_FMA
     }
     // Subnormal inputs.
-    if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval())) {
+    if (LIBC_UNLIKELY(x_u < FPBits::MIN_NORMAL)) {
       if (x_u == 0) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
@@ -113,18 +112,18 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
 #endif // LIBC_TARGET_CPU_HAS_FMA
     }
     // Exceptional inputs.
-    if (LIBC_UNLIKELY(x_u > FPBits::max_normal().uintval())) {
+    if (LIBC_UNLIKELY(x_u > FPBits::MAX_NORMAL)) {
       if (x_u == 0x8000'0000U) {
         // Return -inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FPBits::inf(Sign::NEG).get_val();
+        return static_cast<float>(FPBits::inf(fputil::Sign::NEG));
       }
       if (xbits.is_neg() && !xbits.is_nan()) {
         // Return NaN and raise FE_INVALID
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::build_quiet_nan().get_val();
+        return FPBits::build_quiet_nan(0);
       }
       // x is +inf or nan
       return x;
