@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_CODEGENPASSBUILDER_H
-#define LLVM_CODEGEN_CODEGENPASSBUILDER_H
+#ifndef LLVM_PASSES_CODEGENPASSBUILDER_H
+#define LLVM_PASSES_CODEGENPASSBUILDER_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -116,7 +116,7 @@ namespace llvm {
     }                                                                          \
     static AnalysisKey Key;                                                    \
   };
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
 /// This class provides access to building LLVM's passes.
 ///
@@ -676,7 +676,7 @@ CodeGenPassBuilder<Derived>::getPassNameFromLegacyName(StringRef Name) const {
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)              \
   if (Name == NAME)                                                            \
     Ret = {#PASS_NAME, true};
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
   if (Ret.first.empty())
     Ret = derived().getTargetPassNameFromLegacyName(Name);
@@ -1113,30 +1113,13 @@ void CodeGenPassBuilder<Derived>::addTargetRegisterAllocator(
 template <typename Derived>
 void CodeGenPassBuilder<Derived>::addRegAllocPass(AddMachinePass &addPass,
                                                   bool Optimized) const {
-  if (Opt.RegAlloc == RegAllocType::Default)
-    // With no -regalloc= override, ask the target for a regalloc pass.
-    derived().addTargetRegisterAllocator(addPass, Optimized);
-  else if (Opt.RegAlloc == RegAllocType::Basic)
-    addPass(RABasicPass());
-  else if (Opt.RegAlloc == RegAllocType::Fast)
-    addPass(RAFastPass());
-  else if (Opt.RegAlloc == RegAllocType::Greedy)
-    addPass(RAGreedyPass());
-  else if (Opt.RegAlloc == RegAllocType::PBQP)
-    addPass(RAPBQPPass());
-  else
-    llvm_unreachable("unknonwn register allocator type");
+  // TODO: Parse Opt.RegAlloc to add register allocator.
 }
 
 template <typename Derived>
 Error CodeGenPassBuilder<Derived>::addRegAssignmentFast(
     AddMachinePass &addPass) const {
-  if (Opt.RegAlloc != RegAllocType::Default &&
-      Opt.RegAlloc != RegAllocType::Fast)
-    return make_error<StringError>(
-        "Must use fast (default) register allocator for unoptimized regalloc.",
-        inconvertibleErrorCode());
-
+  // TODO: Ensure allocator is default or fast.
   addRegAllocPass(addPass, false);
   return Error::success();
 }
@@ -1252,4 +1235,4 @@ void CodeGenPassBuilder<Derived>::addBlockPlacement(
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_CODEGENPASSBUILDER_H
+#endif // LLVM_PASSES_CODEGENPASSBUILDER_H
