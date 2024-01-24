@@ -36,7 +36,7 @@
 
 // CHECK-GM-ARM: "-mllvm" "-arm-global-merge=true"
 // CHECK-GM-AARCH64: "-mllvm" "-aarch64-enable-global-merge=true"
-// CHECK-GM-RISCV: "-mllvm" "-riscv-enable-global-merge=true"
+// CHECK-GM-RISCV: "-mllvm" "-riscv-enable-global-merge"
 
 // RUN: %clang -target armv7-unknown-unknown -### -fsyntax-only %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NONE < %t %s

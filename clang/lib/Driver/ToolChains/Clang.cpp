@@ -2137,7 +2137,7 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
     if (A->getOption().matches(options::OPT_mno_global_merge))
       CmdArgs.push_back("-riscv-enable-global-merge=false");
     else
-      CmdArgs.push_back("-riscv-enable-global-merge=true");
+      CmdArgs.push_back("-riscv-enable-global-merge");
   }
 }
 
