@@ -1687,6 +1687,8 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::pft::Evaluation *crtEval = &eval.getFirstNestedEvaluation();
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
   if (isDoConcurrent) {
+    locs.push_back(converter.genLocation(
+          Fortran::parser::FindSourceLocation(outerDoConstruct)));
     const Fortran::parser::LoopControl *loopControl =
         &*outerDoConstruct.GetLoopControl();
     const auto &concurrent =
@@ -1701,8 +1703,6 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
         std::get<std::list<Fortran::parser::ConcurrentControl>>(
             concurrentHeader.t);
     for (const auto &control : controls) {
-      locs.push_back(converter.genLocation(
-          Fortran::parser::FindSourceLocation(outerDoConstruct)));
       lowerbounds.push_back(fir::getBase(converter.genExprValue(
           *Fortran::semantics::GetExpr(std::get<1>(control.t)), stmtCtx)));
       upperbounds.push_back(fir::getBase(converter.genExprValue(
