@@ -77,8 +77,23 @@ public:
   };
 
 private:
+  class ErrorAggregator {
+  private:
+    DWARFVerifier &Verifier;
+    std::map<std::string, int> UniqueErrors;
+    static std::string Clean(const char *s);
+
+  public:
+    ErrorAggregator(DWARFVerifier &v) : Verifier(v) {}
+    raw_ostream &operator<<(const char *s);
+    void Collect(const std::string &s);
+    void Dump();
+  };
+  friend class ErrorAggregator;
+
   raw_ostream &OS;
   DWARFContext &DCtx;
+  ErrorAggregator ErrAggregation;
   DIDumpOptions DumpOpts;
   uint32_t NumDebugLineErrors = 0;
   // Used to relax some checks that do not currently work portably
@@ -86,6 +101,8 @@ private:
   bool IsMachOObject;
   using ReferenceMap = std::map<uint64_t, std::set<uint64_t>>;
 
+  raw_ostream &aggregate(const char *);
+  ErrorAggregator &aggregate();
   raw_ostream &error() const;
   raw_ostream &warn() const;
   raw_ostream &note() const;
@@ -348,6 +365,9 @@ public:
   bool verifyDebugStrOffsets(
       StringRef SectionName, const DWARFSection &Section, StringRef StrData,
       void (DWARFObject::*)(function_ref<void(const DWARFSection &)>) const);
+
+  /// Emits any aggregate information collection, depending on the dump options
+  void finish();
 };
 
 static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,
