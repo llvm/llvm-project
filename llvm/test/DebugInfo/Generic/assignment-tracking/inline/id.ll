@@ -1,5 +1,5 @@
-; RUN: opt %s -S -passes=inline -o - \
-; RUN: | FileCheck %s
+; RUN: opt %s -S -passes=inline -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=inline -o - | FileCheck %s
 
 ;; Check that all DIAssignID metadata that are inlined are replaced with new
 ;; versions. Otherwise two inlined instances of an assignment will be considered
