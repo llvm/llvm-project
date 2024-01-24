@@ -20,15 +20,16 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: fmov0
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $s1, $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
-  ; CHECK:   [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
-  ; CHECK:   [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
-  ; CHECK:   [[FMOVS0_1:%[0-9]+]]:fpr32 = FMOVS0
-  ; CHECK:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[FMOVS0_]]
-  ; CHECK:   $s0 = COPY [[COPY2]]
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   liveins: $s1, $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
+  ; CHECK-NEXT:   [[FMOVS0_1:%[0-9]+]]:fpr32 = FMOVS0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[FMOVS0_]]
+  ; CHECK-NEXT:   $s0 = COPY [[COPY2]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $s1, $w0
@@ -75,22 +76,26 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: fmov0_extrapred
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   liveins: $s1, $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
-  ; CHECK:   [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
-  ; CHECK:   [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
-  ; CHECK:   [[FMOVS0_1:%[0-9]+]]:fpr32 = FMOVS0
-  ; CHECK:   B %bb.4
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   [[DEF:%[0-9]+]]:fpr32 = IMPLICIT_DEF
-  ; CHECK:   B %bb.4
-  ; CHECK: bb.4:
-  ; CHECK:   [[PHI:%[0-9]+]]:fpr32 = PHI [[FMOVS0_]], %bb.0, [[DEF]], %bb.1
-  ; CHECK:   $s0 = COPY [[PHI]]
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT:   liveins: $s1, $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
+  ; CHECK-NEXT:   [[FMOVS0_1:%[0-9]+]]:fpr32 = FMOVS0
+  ; CHECK-NEXT:   B %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   B %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr32 = PHI [[FMOVS0_]], %bb.0, [[DEF]], %bb.1
+  ; CHECK-NEXT:   $s0 = COPY [[PHI]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $s1, $w0
@@ -104,8 +109,6 @@ body:             |
   bb.4:
     successors: %bb.3
 
-    ; Make sure we also handle the case when there are extra predecessors on
-    ; the tail block.
     %3:fpr32 = IMPLICIT_DEF
     B %bb.3
 
@@ -147,17 +150,18 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: copy_physreg
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $s1, $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
-  ; CHECK:   [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
-  ; CHECK:   [[DEF:%[0-9]+]]:fpr32 = IMPLICIT_DEF implicit-def $s1
-  ; CHECK:   [[COPY2:%[0-9]+]]:fpr32 = COPY $s1
-  ; CHECK:   [[DEF1:%[0-9]+]]:fpr32 = IMPLICIT_DEF implicit-def $s1
-  ; CHECK:   [[COPY3:%[0-9]+]]:fpr32 = COPY $s1
-  ; CHECK:   [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY2]], [[COPY3]], 1, implicit $nzcv
-  ; CHECK:   $s0 = COPY [[FCSELSrrr]]
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   liveins: $s1, $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fpr32 = IMPLICIT_DEF implicit-def $s1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY $s1
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:fpr32 = IMPLICIT_DEF implicit-def $s1
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY $s1
+  ; CHECK-NEXT:   [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY2]], [[COPY3]], 1, implicit $nzcv
+  ; CHECK-NEXT:   $s0 = COPY [[FCSELSrrr]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $s1, $w0
@@ -210,15 +214,16 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: same_def_different_operand
   ; CHECK: bb.0.entry:
-  ; CHECK:   liveins: $s1, $w0, $x2
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
-  ; CHECK:   early-clobber %11:gpr64common, %10:gpr64 = LDRXpre [[COPY]], 16
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32common = COPY $w0
-  ; CHECK:   [[COPY2:%[0-9]+]]:fpr32 = COPY $s1
-  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY1]], 1, 0, implicit-def $nzcv
-  ; CHECK:   [[CSELXr:%[0-9]+]]:gpr64common = CSELXr %11, %10, 1, implicit $nzcv
-  ; CHECK:   $x2 = COPY [[CSELXr]]
-  ; CHECK:   RET_ReallyLR implicit $x2
+  ; CHECK-NEXT:   liveins: $s1, $w0, $x2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
+  ; CHECK-NEXT:   early-clobber %11:gpr64common, %10:gpr64 = LDRXpre [[COPY]], 16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32common = COPY $w0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY $s1
+  ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY1]], 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   [[CSELXr:%[0-9]+]]:gpr64common = CSELXr %11, %10, 1, implicit $nzcv
+  ; CHECK-NEXT:   $x2 = COPY [[CSELXr]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x2
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $s1, $w0, $x2

@@ -467,20 +467,23 @@ define void @predictor_4x4_neon(ptr nocapture noundef writeonly %0, i64 noundef 
 ; CHECK-NEXT:    ushll v3.8h, v2.8b, #1
 ; CHECK-NEXT:    mov v0.s[0], w8
 ; CHECK-NEXT:    lsr w8, w8, #24
+; CHECK-NEXT:    dup v4.8b, w8
+; CHECK-NEXT:    adrp x8, .LCPI42_0
 ; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    urhadd v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    mov v2.16b, v4.16b
 ; CHECK-NEXT:    str s1, [x0]
 ; CHECK-NEXT:    add v0.8h, v0.8h, v3.8h
-; CHECK-NEXT:    dup v3.8b, w8
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI42_0]
 ; CHECK-NEXT:    lsl x8, x1, #1
+; CHECK-NEXT:    mov v2.d[1], v1.d[0]
+; CHECK-NEXT:    rshrn2 v4.16b, v0.8h, #2
 ; CHECK-NEXT:    rshrn v0.8b, v0.8h, #2
-; CHECK-NEXT:    zip1 v2.2s, v1.2s, v3.2s
+; CHECK-NEXT:    tbl v2.8b, { v2.16b }, v3.8b
 ; CHECK-NEXT:    str s0, [x0, x1]
-; CHECK-NEXT:    zip1 v3.2s, v0.2s, v3.2s
-; CHECK-NEXT:    ext v2.8b, v2.8b, v0.8b, #1
+; CHECK-NEXT:    tbl v1.8b, { v4.16b }, v3.8b
 ; CHECK-NEXT:    str s2, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, x1
-; CHECK-NEXT:    ext v1.8b, v3.8b, v0.8b, #1
 ; CHECK-NEXT:    str s1, [x0, x8]
 ; CHECK-NEXT:    ret
   %5 = load i32, ptr %2, align 4

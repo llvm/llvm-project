@@ -4,7 +4,7 @@
 define i53 @PR59892 () {
 ; FISEL-LABEL: PR59892:
 ; FISEL:       // %bb.0:
-; FISEL-NEXT:    mov x8, #47668
+; FISEL-NEXT:    mov x8, #47668 // =0xba34
 ; FISEL-NEXT:    movk x8, #4645, lsl #16
 ; FISEL-NEXT:    movk x8, #58741, lsl #32
 ; FISEL-NEXT:    movk x8, #1, lsl #48

@@ -2093,8 +2093,12 @@ define <4 x i32> @neon.ushl8h_constant_shift_extend_not_2x(ptr %A) nounwind {
 ; CHECK-LABEL: neon.ushl8h_constant_shift_extend_not_2x:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    adrp x8, .LCPI156_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI156_0]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #1
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v1
+; CHECK-NEXT:    add.4s v0, v0, v0
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i8>, ptr %A
   %tmp2 = zext <4 x i8> %tmp1 to <4 x i32>

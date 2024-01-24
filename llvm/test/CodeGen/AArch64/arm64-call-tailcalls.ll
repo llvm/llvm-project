@@ -46,7 +46,6 @@ define float @t5(float %a) nounwind readonly ssp {
 }
 
 define void @t7() nounwind {
-
   br i1 undef, label %bb, label %bb1.lr.ph
 
 bb1.lr.ph:                                        ; preds = %entry

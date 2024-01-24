@@ -12,7 +12,7 @@ define i32 @test_asm_length(i32 %in) {
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %true
-; CHECK-NEXT:    mov w0, #4
+; CHECK-NEXT:    mov w0, #4 ; =0x4
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop

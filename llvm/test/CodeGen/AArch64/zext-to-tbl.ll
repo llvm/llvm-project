@@ -997,18 +997,24 @@ exit:
 define void @zext_v4i8_to_v4i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v4i8_to_v4i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh12:
+; CHECK-NEXT:    adrp x8, lCPI11_0@PAGE
+; CHECK-NEXT:  Lloh13:
+; CHECK-NEXT:    ldr q0, [x8, lCPI11_0@PAGEOFF]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB11_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr s0, [x0, x8]
+; CHECK-NEXT:    ldr s1, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    str q0, [x1], #64
+; CHECK-NEXT:    ushll.8h v1, v1, #0
+; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    tbl.16b v1, { v1 }, v0
+; CHECK-NEXT:    str q1, [x1], #64
 ; CHECK-NEXT:    b.ne LBB11_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh13
 ;
 ; CHECK-BE-LABEL: zext_v4i8_to_v4i32_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -1155,17 +1161,17 @@ exit:
 define void @zext_v12i8_to_v12i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v12i8_to_v12i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh12:
-; CHECK-NEXT:    adrp x8, lCPI12_0@PAGE
-; CHECK-NEXT:  Lloh13:
-; CHECK-NEXT:    adrp x9, lCPI12_1@PAGE
 ; CHECK-NEXT:  Lloh14:
-; CHECK-NEXT:    adrp x10, lCPI12_2@PAGE
+; CHECK-NEXT:    adrp x8, lCPI12_0@PAGE
 ; CHECK-NEXT:  Lloh15:
-; CHECK-NEXT:    ldr q0, [x8, lCPI12_0@PAGEOFF]
+; CHECK-NEXT:    adrp x9, lCPI12_1@PAGE
 ; CHECK-NEXT:  Lloh16:
-; CHECK-NEXT:    ldr q1, [x9, lCPI12_1@PAGEOFF]
+; CHECK-NEXT:    adrp x10, lCPI12_2@PAGE
 ; CHECK-NEXT:  Lloh17:
+; CHECK-NEXT:    ldr q0, [x8, lCPI12_0@PAGEOFF]
+; CHECK-NEXT:  Lloh18:
+; CHECK-NEXT:    ldr q1, [x9, lCPI12_1@PAGEOFF]
+; CHECK-NEXT:  Lloh19:
 ; CHECK-NEXT:    ldr q2, [x10, lCPI12_2@PAGEOFF]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB12_1: ; %loop
@@ -1181,9 +1187,9 @@ define void @zext_v12i8_to_v12i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.ne LBB12_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh16, Lloh19
+; CHECK-NEXT:    .loh AdrpLdr Lloh15, Lloh18
 ; CHECK-NEXT:    .loh AdrpLdr Lloh14, Lloh17
-; CHECK-NEXT:    .loh AdrpLdr Lloh13, Lloh16
-; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh15
 ;
 ; CHECK-BE-LABEL: zext_v12i8_to_v12i32_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -1668,14 +1674,14 @@ exit:
 define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i64_with_add_in_sequence_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh18:
+; CHECK-NEXT:  Lloh20:
 ; CHECK-NEXT:    adrp x9, lCPI17_0@PAGE
-; CHECK-NEXT:  Lloh19:
+; CHECK-NEXT:  Lloh21:
 ; CHECK-NEXT:    adrp x10, lCPI17_1@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh20:
+; CHECK-NEXT:  Lloh22:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI17_0@PAGEOFF]
-; CHECK-NEXT:  Lloh21:
+; CHECK-NEXT:  Lloh23:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI17_1@PAGEOFF]
 ; CHECK-NEXT:    add x9, x0, #8
 ; CHECK-NEXT:  LBB17_1: ; %loop
@@ -1708,8 +1714,8 @@ define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst)
 ; CHECK-NEXT:    b.ne LBB17_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh19, Lloh21
-; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh20
+; CHECK-NEXT:    .loh AdrpLdr Lloh21, Lloh23
+; CHECK-NEXT:    .loh AdrpLdr Lloh20, Lloh22
 ;
 ; CHECK-BE-LABEL: zext_v8i8_to_v8i64_with_add_in_sequence_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -2173,21 +2179,21 @@ exit:
 define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v20i8_to_v20i24_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh22:
-; CHECK-NEXT:    adrp x8, lCPI20_0@PAGE
-; CHECK-NEXT:  Lloh23:
-; CHECK-NEXT:    adrp x9, lCPI20_1@PAGE
 ; CHECK-NEXT:  Lloh24:
-; CHECK-NEXT:    adrp x10, lCPI20_2@PAGE
+; CHECK-NEXT:    adrp x8, lCPI20_0@PAGE
 ; CHECK-NEXT:  Lloh25:
-; CHECK-NEXT:    ldr q0, [x8, lCPI20_0@PAGEOFF]
+; CHECK-NEXT:    adrp x9, lCPI20_1@PAGE
 ; CHECK-NEXT:  Lloh26:
-; CHECK-NEXT:    adrp x8, lCPI20_3@PAGE
+; CHECK-NEXT:    adrp x10, lCPI20_2@PAGE
 ; CHECK-NEXT:  Lloh27:
-; CHECK-NEXT:    ldr q1, [x9, lCPI20_1@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI20_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh28:
-; CHECK-NEXT:    ldr q2, [x10, lCPI20_2@PAGEOFF]
+; CHECK-NEXT:    adrp x8, lCPI20_3@PAGE
 ; CHECK-NEXT:  Lloh29:
+; CHECK-NEXT:    ldr q1, [x9, lCPI20_1@PAGEOFF]
+; CHECK-NEXT:  Lloh30:
+; CHECK-NEXT:    ldr q2, [x10, lCPI20_2@PAGEOFF]
+; CHECK-NEXT:  Lloh31:
 ; CHECK-NEXT:    ldr q3, [x8, lCPI20_3@PAGEOFF]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB20_1: ; %loop
@@ -2209,11 +2215,11 @@ define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.ne LBB20_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh26, Lloh29
-; CHECK-NEXT:    .loh AdrpLdr Lloh24, Lloh28
-; CHECK-NEXT:    .loh AdrpLdr Lloh23, Lloh27
-; CHECK-NEXT:    .loh AdrpAdrp Lloh22, Lloh26
-; CHECK-NEXT:    .loh AdrpLdr Lloh22, Lloh25
+; CHECK-NEXT:    .loh AdrpLdr Lloh28, Lloh31
+; CHECK-NEXT:    .loh AdrpLdr Lloh26, Lloh30
+; CHECK-NEXT:    .loh AdrpLdr Lloh25, Lloh29
+; CHECK-NEXT:    .loh AdrpAdrp Lloh24, Lloh28
+; CHECK-NEXT:    .loh AdrpLdr Lloh24, Lloh27
 ;
 ; CHECK-BE-LABEL: zext_v20i8_to_v20i24_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -2501,29 +2507,29 @@ exit:
 define void @zext_v23i8_to_v23i48_in_loop(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v23i8_to_v23i48_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh30:
-; CHECK-NEXT:    adrp x8, lCPI21_0@PAGE
-; CHECK-NEXT:  Lloh31:
-; CHECK-NEXT:    adrp x9, lCPI21_1@PAGE
 ; CHECK-NEXT:  Lloh32:
-; CHECK-NEXT:    adrp x10, lCPI21_2@PAGE
+; CHECK-NEXT:    adrp x8, lCPI21_0@PAGE
 ; CHECK-NEXT:  Lloh33:
-; CHECK-NEXT:    ldr q0, [x8, lCPI21_0@PAGEOFF]
+; CHECK-NEXT:    adrp x9, lCPI21_1@PAGE
 ; CHECK-NEXT:  Lloh34:
-; CHECK-NEXT:    ldr q1, [x9, lCPI21_1@PAGEOFF]
+; CHECK-NEXT:    adrp x10, lCPI21_2@PAGE
 ; CHECK-NEXT:  Lloh35:
-; CHECK-NEXT:    ldr q2, [x10, lCPI21_2@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI21_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh36:
-; CHECK-NEXT:    adrp x8, lCPI21_3@PAGE
+; CHECK-NEXT:    ldr q1, [x9, lCPI21_1@PAGEOFF]
 ; CHECK-NEXT:  Lloh37:
-; CHECK-NEXT:    adrp x9, lCPI21_4@PAGE
+; CHECK-NEXT:    ldr q2, [x10, lCPI21_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh38:
-; CHECK-NEXT:    adrp x10, lCPI21_5@PAGE
+; CHECK-NEXT:    adrp x8, lCPI21_3@PAGE
 ; CHECK-NEXT:  Lloh39:
-; CHECK-NEXT:    ldr q3, [x8, lCPI21_3@PAGEOFF]
+; CHECK-NEXT:    adrp x9, lCPI21_4@PAGE
 ; CHECK-NEXT:  Lloh40:
-; CHECK-NEXT:    ldr q4, [x9, lCPI21_4@PAGEOFF]
+; CHECK-NEXT:    adrp x10, lCPI21_5@PAGE
 ; CHECK-NEXT:  Lloh41:
+; CHECK-NEXT:    ldr q3, [x8, lCPI21_3@PAGEOFF]
+; CHECK-NEXT:  Lloh42:
+; CHECK-NEXT:    ldr q4, [x9, lCPI21_4@PAGEOFF]
+; CHECK-NEXT:  Lloh43:
 ; CHECK-NEXT:    ldr q5, [x10, lCPI21_5@PAGEOFF]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB21_1: ; %loop
@@ -2552,15 +2558,15 @@ define void @zext_v23i8_to_v23i48_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.ne LBB21_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh40, Lloh43
+; CHECK-NEXT:    .loh AdrpLdr Lloh39, Lloh42
 ; CHECK-NEXT:    .loh AdrpLdr Lloh38, Lloh41
-; CHECK-NEXT:    .loh AdrpLdr Lloh37, Lloh40
-; CHECK-NEXT:    .loh AdrpLdr Lloh36, Lloh39
+; CHECK-NEXT:    .loh AdrpAdrp Lloh34, Lloh40
+; CHECK-NEXT:    .loh AdrpLdr Lloh34, Lloh37
+; CHECK-NEXT:    .loh AdrpAdrp Lloh33, Lloh39
+; CHECK-NEXT:    .loh AdrpLdr Lloh33, Lloh36
 ; CHECK-NEXT:    .loh AdrpAdrp Lloh32, Lloh38
 ; CHECK-NEXT:    .loh AdrpLdr Lloh32, Lloh35
-; CHECK-NEXT:    .loh AdrpAdrp Lloh31, Lloh37
-; CHECK-NEXT:    .loh AdrpLdr Lloh31, Lloh34
-; CHECK-NEXT:    .loh AdrpAdrp Lloh30, Lloh36
-; CHECK-NEXT:    .loh AdrpLdr Lloh30, Lloh33
 ;
 ; CHECK-BE-LABEL: zext_v23i8_to_v23i48_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -2894,21 +2900,21 @@ exit:
 define i32 @test_widening_instr_mull_64(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-LABEL: test_widening_instr_mull_64:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh42:
-; CHECK-NEXT:    adrp x8, lCPI25_0@PAGE
-; CHECK-NEXT:  Lloh43:
-; CHECK-NEXT:    adrp x9, lCPI25_1@PAGE
 ; CHECK-NEXT:  Lloh44:
-; CHECK-NEXT:    adrp x10, lCPI25_3@PAGE
+; CHECK-NEXT:    adrp x8, lCPI25_0@PAGE
 ; CHECK-NEXT:  Lloh45:
-; CHECK-NEXT:    ldr q0, [x8, lCPI25_0@PAGEOFF]
+; CHECK-NEXT:    adrp x9, lCPI25_1@PAGE
 ; CHECK-NEXT:  Lloh46:
-; CHECK-NEXT:    adrp x8, lCPI25_2@PAGE
+; CHECK-NEXT:    adrp x10, lCPI25_3@PAGE
 ; CHECK-NEXT:  Lloh47:
-; CHECK-NEXT:    ldr q1, [x9, lCPI25_1@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI25_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh48:
-; CHECK-NEXT:    ldr q2, [x8, lCPI25_2@PAGEOFF]
+; CHECK-NEXT:    adrp x8, lCPI25_2@PAGE
 ; CHECK-NEXT:  Lloh49:
+; CHECK-NEXT:    ldr q1, [x9, lCPI25_1@PAGEOFF]
+; CHECK-NEXT:  Lloh50:
+; CHECK-NEXT:    ldr q2, [x8, lCPI25_2@PAGEOFF]
+; CHECK-NEXT:  Lloh51:
 ; CHECK-NEXT:    ldr q3, [x10, lCPI25_3@PAGEOFF]
 ; CHECK-NEXT:    mov x8, x1
 ; CHECK-NEXT:  LBB25_1: ; %loop
@@ -2940,11 +2946,11 @@ define i32 @test_widening_instr_mull_64(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh46, Lloh48
-; CHECK-NEXT:    .loh AdrpLdr Lloh44, Lloh49
-; CHECK-NEXT:    .loh AdrpLdr Lloh43, Lloh47
-; CHECK-NEXT:    .loh AdrpAdrp Lloh42, Lloh46
-; CHECK-NEXT:    .loh AdrpLdr Lloh42, Lloh45
+; CHECK-NEXT:    .loh AdrpLdr Lloh48, Lloh50
+; CHECK-NEXT:    .loh AdrpLdr Lloh46, Lloh51
+; CHECK-NEXT:    .loh AdrpLdr Lloh45, Lloh49
+; CHECK-NEXT:    .loh AdrpAdrp Lloh44, Lloh48
+; CHECK-NEXT:    .loh AdrpLdr Lloh44, Lloh47
 ;
 ; CHECK-BE-LABEL: test_widening_instr_mull_64:
 ; CHECK-BE:       // %bb.0: // %entry
@@ -3043,21 +3049,21 @@ exit:
 define i32 @test_widening_instr_mull_2(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-LABEL: test_widening_instr_mull_2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh50:
-; CHECK-NEXT:    adrp x8, lCPI26_0@PAGE
-; CHECK-NEXT:  Lloh51:
-; CHECK-NEXT:    adrp x9, lCPI26_1@PAGE
 ; CHECK-NEXT:  Lloh52:
-; CHECK-NEXT:    adrp x10, lCPI26_3@PAGE
+; CHECK-NEXT:    adrp x8, lCPI26_0@PAGE
 ; CHECK-NEXT:  Lloh53:
-; CHECK-NEXT:    ldr q0, [x8, lCPI26_0@PAGEOFF]
+; CHECK-NEXT:    adrp x9, lCPI26_1@PAGE
 ; CHECK-NEXT:  Lloh54:
-; CHECK-NEXT:    adrp x8, lCPI26_2@PAGE
+; CHECK-NEXT:    adrp x10, lCPI26_3@PAGE
 ; CHECK-NEXT:  Lloh55:
-; CHECK-NEXT:    ldr q1, [x9, lCPI26_1@PAGEOFF]
+; CHECK-NEXT:    ldr q0, [x8, lCPI26_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh56:
-; CHECK-NEXT:    ldr q2, [x8, lCPI26_2@PAGEOFF]
+; CHECK-NEXT:    adrp x8, lCPI26_2@PAGE
 ; CHECK-NEXT:  Lloh57:
+; CHECK-NEXT:    ldr q1, [x9, lCPI26_1@PAGEOFF]
+; CHECK-NEXT:  Lloh58:
+; CHECK-NEXT:    ldr q2, [x8, lCPI26_2@PAGEOFF]
+; CHECK-NEXT:  Lloh59:
 ; CHECK-NEXT:    ldr q3, [x10, lCPI26_3@PAGEOFF]
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  LBB26_1: ; %loop
@@ -3083,11 +3089,11 @@ define i32 @test_widening_instr_mull_2(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh54, Lloh56
-; CHECK-NEXT:    .loh AdrpLdr Lloh52, Lloh57
-; CHECK-NEXT:    .loh AdrpLdr Lloh51, Lloh55
-; CHECK-NEXT:    .loh AdrpAdrp Lloh50, Lloh54
-; CHECK-NEXT:    .loh AdrpLdr Lloh50, Lloh53
+; CHECK-NEXT:    .loh AdrpLdr Lloh56, Lloh58
+; CHECK-NEXT:    .loh AdrpLdr Lloh54, Lloh59
+; CHECK-NEXT:    .loh AdrpLdr Lloh53, Lloh57
+; CHECK-NEXT:    .loh AdrpAdrp Lloh52, Lloh56
+; CHECK-NEXT:    .loh AdrpLdr Lloh52, Lloh55
 ;
 ; CHECK-BE-LABEL: test_widening_instr_mull_2:
 ; CHECK-BE:       // %bb.0: // %entry

@@ -134,10 +134,13 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 ; CHECK-SD-LABEL: test_v3i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    adrp x8, .LCPI8_0
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
 ; CHECK-SD-NEXT:    mov v0.h[0], w0
 ; CHECK-SD-NEXT:    mov v0.h[1], w1
 ; CHECK-SD-NEXT:    mov v0.h[2], w2
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    umaxv h0, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -160,7 +163,7 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    adrp x8, .LCPI9_0
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-SD-NEXT:    umaxv b0, v0.16b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -263,7 +266,9 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 define i24 @test_v4i24(<4 x i24> %a) nounwind {
 ; CHECK-SD-LABEL: test_v4i24:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255, lsl #24
+; CHECK-SD-NEXT:    adrp x8, .LCPI12_0
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI12_0]
+; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-SD-NEXT:    umaxv s0, v0.4s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret

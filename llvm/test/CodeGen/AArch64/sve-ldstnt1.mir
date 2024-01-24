@@ -7,26 +7,22 @@
   define void @testcase_positive_offset() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
-    ; Reads from %object at offset 7 * readsize
     ret void
   }
   define void @testcase_negative_offset() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
-    ; Reads from %object at offset -8 * readsize
     ret void
   }
 
   define void @testcase_positive_offset_out_of_range() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
-    ; Reads from %object at offset 8 * readsize
     ret void
   }
   define void @testcase_negative_offset_out_of_range() uwtable {
     %dummy = alloca <vscale x 2 x i64>, align 8
     %object = alloca <vscale x 2 x i64>, align 8
-    ; Reads from %object at offset -9 * readsize
     ret void
   }
 ...

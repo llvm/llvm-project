@@ -24,7 +24,7 @@ define i64 @test_blend_constant(i64 %arg) {
 define i64 @test_blend_constant_swapped(i64 %arg) {
 ; CHECK-LABEL: test_blend_constant_swapped:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #12345
+; CHECK-NEXT:    mov w8, #12345 ; =0x3039
 ; CHECK-NEXT:    bfi x8, x0, #48, #16
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
@@ -36,7 +36,7 @@ define i64 @test_blend_constant_swapped(i64 %arg) {
 define i64 @test_blend_constant_wide(i64 %arg) {
 ; CHECK-LABEL: test_blend_constant_wide:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #65536
+; CHECK-NEXT:    mov w8, #65536 ; =0x10000
 ; CHECK-NEXT:    bfi x0, x8, #48, #16
 ; CHECK-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.blend(i64 %arg, i64 65536)

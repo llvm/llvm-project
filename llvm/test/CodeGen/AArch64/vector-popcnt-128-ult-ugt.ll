@@ -1476,7 +1476,7 @@ define <2 x i64> @ugt_2_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_2_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #2
+; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1493,7 +1493,7 @@ define <2 x i64> @ult_3_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_3_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    mov w8, #3 // =0x3
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1510,7 +1510,7 @@ define <2 x i64> @ugt_3_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_3_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #3
+; CHECK-NEXT:    mov w8, #3 // =0x3
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1527,7 +1527,7 @@ define <2 x i64> @ult_4_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_4_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 // =0x4
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1544,7 +1544,7 @@ define <2 x i64> @ugt_4_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_4_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    mov w8, #4 // =0x4
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1561,7 +1561,7 @@ define <2 x i64> @ult_5_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_5_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1578,7 +1578,7 @@ define <2 x i64> @ugt_5_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_5_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1595,7 +1595,7 @@ define <2 x i64> @ult_6_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_6_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1612,7 +1612,7 @@ define <2 x i64> @ugt_6_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_6_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1629,7 +1629,7 @@ define <2 x i64> @ult_7_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_7_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    mov w8, #7 // =0x7
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1646,7 +1646,7 @@ define <2 x i64> @ugt_7_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_7_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #7
+; CHECK-NEXT:    mov w8, #7 // =0x7
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1663,7 +1663,7 @@ define <2 x i64> @ult_8_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_8_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1680,7 +1680,7 @@ define <2 x i64> @ugt_8_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_8_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #8
+; CHECK-NEXT:    mov w8, #8 // =0x8
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1697,7 +1697,7 @@ define <2 x i64> @ult_9_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_9_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    mov w8, #9 // =0x9
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1714,7 +1714,7 @@ define <2 x i64> @ugt_9_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_9_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    mov w8, #9 // =0x9
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1731,7 +1731,7 @@ define <2 x i64> @ult_10_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_10_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1748,7 +1748,7 @@ define <2 x i64> @ugt_10_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_10_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    mov w8, #10 // =0xa
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1765,7 +1765,7 @@ define <2 x i64> @ult_11_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_11_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #11
+; CHECK-NEXT:    mov w8, #11 // =0xb
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1782,7 +1782,7 @@ define <2 x i64> @ugt_11_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_11_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #11
+; CHECK-NEXT:    mov w8, #11 // =0xb
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1799,7 +1799,7 @@ define <2 x i64> @ult_12_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_12_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #12
+; CHECK-NEXT:    mov w8, #12 // =0xc
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1816,7 +1816,7 @@ define <2 x i64> @ugt_12_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_12_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #12
+; CHECK-NEXT:    mov w8, #12 // =0xc
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1833,7 +1833,7 @@ define <2 x i64> @ult_13_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_13_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #13
+; CHECK-NEXT:    mov w8, #13 // =0xd
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1850,7 +1850,7 @@ define <2 x i64> @ugt_13_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_13_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #13
+; CHECK-NEXT:    mov w8, #13 // =0xd
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1867,7 +1867,7 @@ define <2 x i64> @ult_14_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_14_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #14
+; CHECK-NEXT:    mov w8, #14 // =0xe
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1884,7 +1884,7 @@ define <2 x i64> @ugt_14_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_14_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #14
+; CHECK-NEXT:    mov w8, #14 // =0xe
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1901,7 +1901,7 @@ define <2 x i64> @ult_15_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_15_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    mov w8, #15 // =0xf
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1918,7 +1918,7 @@ define <2 x i64> @ugt_15_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_15_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    mov w8, #15 // =0xf
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1935,7 +1935,7 @@ define <2 x i64> @ult_16_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_16_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #16
+; CHECK-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1952,7 +1952,7 @@ define <2 x i64> @ugt_16_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_16_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #16
+; CHECK-NEXT:    mov w8, #16 // =0x10
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1969,7 +1969,7 @@ define <2 x i64> @ult_17_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_17_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    mov w8, #17 // =0x11
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -1986,7 +1986,7 @@ define <2 x i64> @ugt_17_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_17_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #17
+; CHECK-NEXT:    mov w8, #17 // =0x11
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2003,7 +2003,7 @@ define <2 x i64> @ult_18_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_18_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #18
+; CHECK-NEXT:    mov w8, #18 // =0x12
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2020,7 +2020,7 @@ define <2 x i64> @ugt_18_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_18_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #18
+; CHECK-NEXT:    mov w8, #18 // =0x12
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2037,7 +2037,7 @@ define <2 x i64> @ult_19_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_19_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #19
+; CHECK-NEXT:    mov w8, #19 // =0x13
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2054,7 +2054,7 @@ define <2 x i64> @ugt_19_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_19_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #19
+; CHECK-NEXT:    mov w8, #19 // =0x13
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2071,7 +2071,7 @@ define <2 x i64> @ult_20_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_20_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #20
+; CHECK-NEXT:    mov w8, #20 // =0x14
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2088,7 +2088,7 @@ define <2 x i64> @ugt_20_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_20_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #20
+; CHECK-NEXT:    mov w8, #20 // =0x14
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2105,7 +2105,7 @@ define <2 x i64> @ult_21_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_21_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #21
+; CHECK-NEXT:    mov w8, #21 // =0x15
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2122,7 +2122,7 @@ define <2 x i64> @ugt_21_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_21_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #21
+; CHECK-NEXT:    mov w8, #21 // =0x15
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2139,7 +2139,7 @@ define <2 x i64> @ult_22_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_22_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #22
+; CHECK-NEXT:    mov w8, #22 // =0x16
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2156,7 +2156,7 @@ define <2 x i64> @ugt_22_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_22_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #22
+; CHECK-NEXT:    mov w8, #22 // =0x16
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2173,7 +2173,7 @@ define <2 x i64> @ult_23_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_23_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #23
+; CHECK-NEXT:    mov w8, #23 // =0x17
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2190,7 +2190,7 @@ define <2 x i64> @ugt_23_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_23_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #23
+; CHECK-NEXT:    mov w8, #23 // =0x17
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2207,7 +2207,7 @@ define <2 x i64> @ult_24_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_24_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #24
+; CHECK-NEXT:    mov w8, #24 // =0x18
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2224,7 +2224,7 @@ define <2 x i64> @ugt_24_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_24_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #24
+; CHECK-NEXT:    mov w8, #24 // =0x18
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2241,7 +2241,7 @@ define <2 x i64> @ult_25_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_25_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #25
+; CHECK-NEXT:    mov w8, #25 // =0x19
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2258,7 +2258,7 @@ define <2 x i64> @ugt_25_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_25_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #25
+; CHECK-NEXT:    mov w8, #25 // =0x19
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2275,7 +2275,7 @@ define <2 x i64> @ult_26_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_26_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #26
+; CHECK-NEXT:    mov w8, #26 // =0x1a
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2292,7 +2292,7 @@ define <2 x i64> @ugt_26_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_26_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #26
+; CHECK-NEXT:    mov w8, #26 // =0x1a
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2309,7 +2309,7 @@ define <2 x i64> @ult_27_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_27_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #27
+; CHECK-NEXT:    mov w8, #27 // =0x1b
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2326,7 +2326,7 @@ define <2 x i64> @ugt_27_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_27_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #27
+; CHECK-NEXT:    mov w8, #27 // =0x1b
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2343,7 +2343,7 @@ define <2 x i64> @ult_28_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_28_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #28
+; CHECK-NEXT:    mov w8, #28 // =0x1c
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2360,7 +2360,7 @@ define <2 x i64> @ugt_28_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_28_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #28
+; CHECK-NEXT:    mov w8, #28 // =0x1c
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2377,7 +2377,7 @@ define <2 x i64> @ult_29_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_29_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #29
+; CHECK-NEXT:    mov w8, #29 // =0x1d
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2394,7 +2394,7 @@ define <2 x i64> @ugt_29_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_29_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #29
+; CHECK-NEXT:    mov w8, #29 // =0x1d
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2411,7 +2411,7 @@ define <2 x i64> @ult_30_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_30_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #30
+; CHECK-NEXT:    mov w8, #30 // =0x1e
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2428,7 +2428,7 @@ define <2 x i64> @ugt_30_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_30_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #30
+; CHECK-NEXT:    mov w8, #30 // =0x1e
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2445,7 +2445,7 @@ define <2 x i64> @ult_31_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_31_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2462,7 +2462,7 @@ define <2 x i64> @ugt_31_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_31_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2479,7 +2479,7 @@ define <2 x i64> @ult_32_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_32_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2496,7 +2496,7 @@ define <2 x i64> @ugt_32_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_32_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2513,7 +2513,7 @@ define <2 x i64> @ult_33_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_33_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2530,7 +2530,7 @@ define <2 x i64> @ugt_33_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_33_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2547,7 +2547,7 @@ define <2 x i64> @ult_34_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_34_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #34
+; CHECK-NEXT:    mov w8, #34 // =0x22
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2564,7 +2564,7 @@ define <2 x i64> @ugt_34_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_34_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #34
+; CHECK-NEXT:    mov w8, #34 // =0x22
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2581,7 +2581,7 @@ define <2 x i64> @ult_35_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_35_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #35
+; CHECK-NEXT:    mov w8, #35 // =0x23
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2598,7 +2598,7 @@ define <2 x i64> @ugt_35_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_35_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #35
+; CHECK-NEXT:    mov w8, #35 // =0x23
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2615,7 +2615,7 @@ define <2 x i64> @ult_36_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_36_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #36
+; CHECK-NEXT:    mov w8, #36 // =0x24
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2632,7 +2632,7 @@ define <2 x i64> @ugt_36_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_36_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #36
+; CHECK-NEXT:    mov w8, #36 // =0x24
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2649,7 +2649,7 @@ define <2 x i64> @ult_37_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_37_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #37
+; CHECK-NEXT:    mov w8, #37 // =0x25
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2666,7 +2666,7 @@ define <2 x i64> @ugt_37_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_37_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #37
+; CHECK-NEXT:    mov w8, #37 // =0x25
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2683,7 +2683,7 @@ define <2 x i64> @ult_38_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_38_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #38
+; CHECK-NEXT:    mov w8, #38 // =0x26
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2700,7 +2700,7 @@ define <2 x i64> @ugt_38_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_38_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #38
+; CHECK-NEXT:    mov w8, #38 // =0x26
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2717,7 +2717,7 @@ define <2 x i64> @ult_39_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_39_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #39
+; CHECK-NEXT:    mov w8, #39 // =0x27
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2734,7 +2734,7 @@ define <2 x i64> @ugt_39_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_39_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #39
+; CHECK-NEXT:    mov w8, #39 // =0x27
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2751,7 +2751,7 @@ define <2 x i64> @ult_40_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_40_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #40
+; CHECK-NEXT:    mov w8, #40 // =0x28
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2768,7 +2768,7 @@ define <2 x i64> @ugt_40_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_40_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #40
+; CHECK-NEXT:    mov w8, #40 // =0x28
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2785,7 +2785,7 @@ define <2 x i64> @ult_41_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_41_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    mov w8, #41 // =0x29
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2802,7 +2802,7 @@ define <2 x i64> @ugt_41_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_41_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    mov w8, #41 // =0x29
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2819,7 +2819,7 @@ define <2 x i64> @ult_42_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_42_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2836,7 +2836,7 @@ define <2 x i64> @ugt_42_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_42_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    mov w8, #42 // =0x2a
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2853,7 +2853,7 @@ define <2 x i64> @ult_43_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_43_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #43
+; CHECK-NEXT:    mov w8, #43 // =0x2b
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2870,7 +2870,7 @@ define <2 x i64> @ugt_43_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_43_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #43
+; CHECK-NEXT:    mov w8, #43 // =0x2b
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2887,7 +2887,7 @@ define <2 x i64> @ult_44_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_44_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #44
+; CHECK-NEXT:    mov w8, #44 // =0x2c
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2904,7 +2904,7 @@ define <2 x i64> @ugt_44_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_44_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #44
+; CHECK-NEXT:    mov w8, #44 // =0x2c
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2921,7 +2921,7 @@ define <2 x i64> @ult_45_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_45_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #45
+; CHECK-NEXT:    mov w8, #45 // =0x2d
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2938,7 +2938,7 @@ define <2 x i64> @ugt_45_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_45_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #45
+; CHECK-NEXT:    mov w8, #45 // =0x2d
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2955,7 +2955,7 @@ define <2 x i64> @ult_46_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_46_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #46
+; CHECK-NEXT:    mov w8, #46 // =0x2e
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2972,7 +2972,7 @@ define <2 x i64> @ugt_46_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_46_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #46
+; CHECK-NEXT:    mov w8, #46 // =0x2e
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -2989,7 +2989,7 @@ define <2 x i64> @ult_47_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_47_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #47
+; CHECK-NEXT:    mov w8, #47 // =0x2f
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3006,7 +3006,7 @@ define <2 x i64> @ugt_47_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_47_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #47
+; CHECK-NEXT:    mov w8, #47 // =0x2f
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3023,7 +3023,7 @@ define <2 x i64> @ult_48_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_48_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #48
+; CHECK-NEXT:    mov w8, #48 // =0x30
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3040,7 +3040,7 @@ define <2 x i64> @ugt_48_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_48_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #48
+; CHECK-NEXT:    mov w8, #48 // =0x30
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3057,7 +3057,7 @@ define <2 x i64> @ult_49_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_49_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #49
+; CHECK-NEXT:    mov w8, #49 // =0x31
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3074,7 +3074,7 @@ define <2 x i64> @ugt_49_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_49_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #49
+; CHECK-NEXT:    mov w8, #49 // =0x31
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3091,7 +3091,7 @@ define <2 x i64> @ult_50_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_50_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #50
+; CHECK-NEXT:    mov w8, #50 // =0x32
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3108,7 +3108,7 @@ define <2 x i64> @ugt_50_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_50_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #50
+; CHECK-NEXT:    mov w8, #50 // =0x32
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3125,7 +3125,7 @@ define <2 x i64> @ult_51_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_51_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #51
+; CHECK-NEXT:    mov w8, #51 // =0x33
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3142,7 +3142,7 @@ define <2 x i64> @ugt_51_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_51_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #51
+; CHECK-NEXT:    mov w8, #51 // =0x33
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3159,7 +3159,7 @@ define <2 x i64> @ult_52_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_52_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #52
+; CHECK-NEXT:    mov w8, #52 // =0x34
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3176,7 +3176,7 @@ define <2 x i64> @ugt_52_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_52_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #52
+; CHECK-NEXT:    mov w8, #52 // =0x34
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3193,7 +3193,7 @@ define <2 x i64> @ult_53_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_53_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #53
+; CHECK-NEXT:    mov w8, #53 // =0x35
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3210,7 +3210,7 @@ define <2 x i64> @ugt_53_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_53_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #53
+; CHECK-NEXT:    mov w8, #53 // =0x35
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3227,7 +3227,7 @@ define <2 x i64> @ult_54_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_54_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #54
+; CHECK-NEXT:    mov w8, #54 // =0x36
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3244,7 +3244,7 @@ define <2 x i64> @ugt_54_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_54_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #54
+; CHECK-NEXT:    mov w8, #54 // =0x36
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3261,7 +3261,7 @@ define <2 x i64> @ult_55_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_55_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #55
+; CHECK-NEXT:    mov w8, #55 // =0x37
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3278,7 +3278,7 @@ define <2 x i64> @ugt_55_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_55_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #55
+; CHECK-NEXT:    mov w8, #55 // =0x37
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3295,7 +3295,7 @@ define <2 x i64> @ult_56_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_56_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #56
+; CHECK-NEXT:    mov w8, #56 // =0x38
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3312,7 +3312,7 @@ define <2 x i64> @ugt_56_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_56_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #56
+; CHECK-NEXT:    mov w8, #56 // =0x38
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3329,7 +3329,7 @@ define <2 x i64> @ult_57_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_57_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #57
+; CHECK-NEXT:    mov w8, #57 // =0x39
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3346,7 +3346,7 @@ define <2 x i64> @ugt_57_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_57_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #57
+; CHECK-NEXT:    mov w8, #57 // =0x39
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3363,7 +3363,7 @@ define <2 x i64> @ult_58_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_58_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #58
+; CHECK-NEXT:    mov w8, #58 // =0x3a
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3380,7 +3380,7 @@ define <2 x i64> @ugt_58_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_58_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #58
+; CHECK-NEXT:    mov w8, #58 // =0x3a
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3397,7 +3397,7 @@ define <2 x i64> @ult_59_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_59_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #59
+; CHECK-NEXT:    mov w8, #59 // =0x3b
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3414,7 +3414,7 @@ define <2 x i64> @ugt_59_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_59_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #59
+; CHECK-NEXT:    mov w8, #59 // =0x3b
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3431,7 +3431,7 @@ define <2 x i64> @ult_60_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_60_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #60
+; CHECK-NEXT:    mov w8, #60 // =0x3c
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3448,7 +3448,7 @@ define <2 x i64> @ugt_60_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_60_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #60
+; CHECK-NEXT:    mov w8, #60 // =0x3c
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3465,7 +3465,7 @@ define <2 x i64> @ult_61_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_61_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #61
+; CHECK-NEXT:    mov w8, #61 // =0x3d
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3482,7 +3482,7 @@ define <2 x i64> @ugt_61_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_61_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #61
+; CHECK-NEXT:    mov w8, #61 // =0x3d
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3499,7 +3499,7 @@ define <2 x i64> @ult_62_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_62_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #62
+; CHECK-NEXT:    mov w8, #62 // =0x3e
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3516,7 +3516,7 @@ define <2 x i64> @ugt_62_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ugt_62_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #62
+; CHECK-NEXT:    mov w8, #62 // =0x3e
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h
@@ -3533,7 +3533,7 @@ define <2 x i64> @ult_63_v2i64(<2 x i64> %0) {
 ; CHECK-LABEL: ult_63_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    uaddlp v0.4s, v0.8h

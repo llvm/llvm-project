@@ -722,9 +722,12 @@ define void @zext_v64i8_v64i32(ptr %in, ptr %out) vscale_range(16,0) #0 {
 define void @zext_v4i8_v4i64(<4 x i8> %a, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: zext_v4i8_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI34_0
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI34_0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]

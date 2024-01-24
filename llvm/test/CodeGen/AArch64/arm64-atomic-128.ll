@@ -714,8 +714,8 @@ define i128 @atomic_load_seq_cst(ptr %p) {
 ;
 ; LSE-LABEL: atomic_load_seq_cst:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    mov x2, #0
-; LSE-NEXT:    mov x3, #0
+; LSE-NEXT:    mov x2, #0 // =0x0
+; LSE-NEXT:    mov x3, #0 // =0x0
 ; LSE-NEXT:    caspal x2, x3, x2, x3, [x0]
 ; LSE-NEXT:    mov x0, x2
 ; LSE-NEXT:    mov x1, x3
@@ -747,8 +747,8 @@ define i128 @atomic_load_relaxed(i64, i64, ptr %p) {
 ;
 ; LSE-LABEL: atomic_load_relaxed:
 ; LSE:       // %bb.0:
-; LSE-NEXT:    mov x0, #0
-; LSE-NEXT:    mov x1, #0
+; LSE-NEXT:    mov x0, #0 // =0x0
+; LSE-NEXT:    mov x1, #0 // =0x0
 ; LSE-NEXT:    casp x0, x1, x0, x1, [x2]
 ; LSE-NEXT:    ret
     %r = load atomic i128, ptr %p monotonic, align 16

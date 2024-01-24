@@ -103,7 +103,11 @@ define <8 x float> @sitofp_i64_float(<8 x i64> %a) {
 define <4 x float> @uitofp_v4i8_float(<4 x i8> %a) {
 ; CHECK-LABEL: uitofp_v4i8_float:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NEXT:    ret
@@ -116,8 +120,12 @@ define <8 x float> @uitofp_v8i8_float(<8 x i8> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip1 v1.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    zip2 v0.8b, v0.8b, v0.8b
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v2.8b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
 ; CHECK-NEXT:    ucvtf v0.4s, v1.4s
@@ -132,14 +140,20 @@ define <16 x float> @uitofp_v16i8_float(<16 x i8> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    zip1 v2.8b, v0.8b, v0.8b
+; CHECK-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-NEXT:    zip2 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    mov v2.d[1], v2.d[0]
 ; CHECK-NEXT:    zip1 v3.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    zip2 v1.8b, v1.8b, v0.8b
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    tbl v2.8b, { v2.16b }, v4.8b
+; CHECK-NEXT:    mov v3.d[1], v3.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v4.8b
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-NEXT:    bic v3.4h, #255, lsl #8
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-NEXT:    tbl v3.8b, { v3.16b }, v4.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v4.8b
 ; CHECK-NEXT:    ushll v4.4s, v0.4h, #0
 ; CHECK-NEXT:    ucvtf v0.4s, v2.4s
 ; CHECK-NEXT:    ushll v3.4s, v3.4h, #0
@@ -373,13 +387,16 @@ define <4 x double> @uitofp_v4i8_double(<4 x i8> %a) {
 ; CHECK-LABEL: uitofp_v4i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v2.8b, v1.8b
+; CHECK-NEXT:    adrp x8, .LCPI18_0
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v2.8b
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    ucvtf v1.2d, v1.2d
 ; CHECK-NEXT:    ret
   %1 = uitofp <4 x i8> %a to <4 x double>
@@ -390,35 +407,40 @@ define <8 x double> @uitofp_v8i8_double(<8 x i8> %a) {
 ; CHECK-LABEL: uitofp_v8i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w9, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[4]
-; CHECK-NEXT:    umov w12, v0.b[6]
-; CHECK-NEXT:    umov w10, v0.b[1]
-; CHECK-NEXT:    umov w13, v0.b[3]
-; CHECK-NEXT:    umov w14, v0.b[5]
-; CHECK-NEXT:    umov w15, v0.b[7]
-; CHECK-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    fmov s3, w11
-; CHECK-NEXT:    fmov s4, w12
-; CHECK-NEXT:    mov v0.s[1], w10
-; CHECK-NEXT:    mov v2.s[1], w13
-; CHECK-NEXT:    mov v3.s[1], w14
-; CHECK-NEXT:    mov v4.s[1], w15
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v2.8b, v2.8b, v1.8b
-; CHECK-NEXT:    and v3.8b, v3.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v4.8b, v1.8b
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    umov w10, v0.b[2]
+; CHECK-NEXT:    adrp x8, .LCPI19_0
+; CHECK-NEXT:    umov w12, v0.b[4]
+; CHECK-NEXT:    umov w13, v0.b[6]
+; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI19_0]
+; CHECK-NEXT:    umov w11, v0.b[1]
+; CHECK-NEXT:    umov w14, v0.b[3]
+; CHECK-NEXT:    umov w15, v0.b[5]
+; CHECK-NEXT:    umov w16, v0.b[7]
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    fmov s1, w10
+; CHECK-NEXT:    fmov s2, w12
+; CHECK-NEXT:    fmov s3, w13
+; CHECK-NEXT:    mov v0.s[1], w11
+; CHECK-NEXT:    mov v1.s[1], w14
+; CHECK-NEXT:    mov v2.s[1], w15
+; CHECK-NEXT:    mov v3.s[1], w16
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    mov v2.d[1], v2.d[0]
+; CHECK-NEXT:    mov v3.d[1], v3.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v4.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v4.8b
+; CHECK-NEXT:    tbl v2.8b, { v2.16b }, v4.8b
+; CHECK-NEXT:    tbl v3.8b, { v3.16b }, v4.8b
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
 ; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-NEXT:    ushll v4.2d, v1.2s, #0
 ; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v2.2d
-; CHECK-NEXT:    ucvtf v2.2d, v3.2d
-; CHECK-NEXT:    ucvtf v3.2d, v4.2d
+; CHECK-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-NEXT:    ret
   %1 = uitofp <8 x i8> %a to <8 x double>
   ret <8 x double> %1
@@ -427,64 +449,73 @@ define <8 x double> @uitofp_v8i8_double(<8 x i8> %a) {
 define <16 x double> @uitofp_v16i8_double(<16 x i8> %a) {
 ; CHECK-LABEL: uitofp_v16i8_double:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w12, v0.b[4]
-; CHECK-NEXT:    umov w11, v0.b[3]
-; CHECK-NEXT:    umov w13, v0.b[5]
-; CHECK-NEXT:    umov w18, v0.b[6]
-; CHECK-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-NEXT:    umov w14, v2.b[0]
-; CHECK-NEXT:    umov w16, v2.b[2]
-; CHECK-NEXT:    umov w0, v2.b[4]
-; CHECK-NEXT:    fmov s3, w8
-; CHECK-NEXT:    umov w8, v0.b[7]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    umov w10, v2.b[6]
-; CHECK-NEXT:    umov w15, v2.b[1]
-; CHECK-NEXT:    umov w17, v2.b[3]
-; CHECK-NEXT:    fmov s4, w12
-; CHECK-NEXT:    umov w12, v2.b[5]
-; CHECK-NEXT:    fmov s7, w18
-; CHECK-NEXT:    mov v3.s[1], w9
-; CHECK-NEXT:    umov w9, v2.b[7]
-; CHECK-NEXT:    fmov s2, w14
-; CHECK-NEXT:    fmov s5, w16
-; CHECK-NEXT:    fmov s6, w0
-; CHECK-NEXT:    mov v0.s[1], w11
-; CHECK-NEXT:    fmov s16, w10
-; CHECK-NEXT:    mov v4.s[1], w13
-; CHECK-NEXT:    mov v7.s[1], w8
-; CHECK-NEXT:    mov v2.s[1], w15
-; CHECK-NEXT:    mov v5.s[1], w17
-; CHECK-NEXT:    mov v6.s[1], w12
-; CHECK-NEXT:    and v3.8b, v3.8b, v1.8b
-; CHECK-NEXT:    mov v16.s[1], w9
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v4.8b, v4.8b, v1.8b
-; CHECK-NEXT:    and v7.8b, v7.8b, v1.8b
-; CHECK-NEXT:    and v2.8b, v2.8b, v1.8b
-; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-NEXT:    and v5.8b, v5.8b, v1.8b
-; CHECK-NEXT:    and v6.8b, v6.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v16.8b, v1.8b
-; CHECK-NEXT:    ushll v16.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v17.2d, v4.2s, #0
+; CHECK-NEXT:    umov w9, v0.b[0]
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    adrp x8, .LCPI20_0
+; CHECK-NEXT:    umov w10, v0.b[1]
+; CHECK-NEXT:    umov w11, v0.b[2]
+; CHECK-NEXT:    ldr d16, [x8, :lo12:.LCPI20_0]
+; CHECK-NEXT:    umov w13, v0.b[4]
+; CHECK-NEXT:    umov w15, v0.b[6]
+; CHECK-NEXT:    umov w12, v0.b[3]
+; CHECK-NEXT:    umov w14, v0.b[5]
+; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    umov w16, v1.b[0]
+; CHECK-NEXT:    umov w18, v1.b[2]
+; CHECK-NEXT:    umov w1, v1.b[4]
+; CHECK-NEXT:    umov w17, v1.b[1]
+; CHECK-NEXT:    umov w0, v1.b[3]
+; CHECK-NEXT:    umov w9, v0.b[7]
+; CHECK-NEXT:    fmov s0, w11
+; CHECK-NEXT:    umov w11, v1.b[5]
+; CHECK-NEXT:    mov v2.s[1], w10
+; CHECK-NEXT:    umov w10, v1.b[6]
+; CHECK-NEXT:    fmov s3, w13
+; CHECK-NEXT:    umov w13, v1.b[7]
+; CHECK-NEXT:    fmov s1, w15
+; CHECK-NEXT:    fmov s4, w16
+; CHECK-NEXT:    fmov s5, w18
+; CHECK-NEXT:    fmov s6, w1
+; CHECK-NEXT:    mov v0.s[1], w12
+; CHECK-NEXT:    mov v3.s[1], w14
+; CHECK-NEXT:    fmov s7, w10
+; CHECK-NEXT:    mov v1.s[1], w9
+; CHECK-NEXT:    mov v4.s[1], w17
+; CHECK-NEXT:    mov v5.s[1], w0
+; CHECK-NEXT:    mov v6.s[1], w11
+; CHECK-NEXT:    mov v2.d[1], v2.d[0]
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    mov v7.s[1], w13
+; CHECK-NEXT:    mov v3.d[1], v3.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    mov v4.d[1], v4.d[0]
+; CHECK-NEXT:    mov v5.d[1], v5.d[0]
+; CHECK-NEXT:    mov v6.d[1], v6.d[0]
+; CHECK-NEXT:    tbl v2.8b, { v2.16b }, v16.8b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v16.8b
+; CHECK-NEXT:    mov v7.d[1], v7.d[0]
+; CHECK-NEXT:    tbl v3.8b, { v3.16b }, v16.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v16.8b
+; CHECK-NEXT:    tbl v4.8b, { v4.16b }, v16.8b
+; CHECK-NEXT:    tbl v5.8b, { v5.16b }, v16.8b
+; CHECK-NEXT:    tbl v6.8b, { v6.16b }, v16.8b
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-NEXT:    ucvtf v0.2d, v3.2d
+; CHECK-NEXT:    tbl v7.8b, { v7.16b }, v16.8b
+; CHECK-NEXT:    ushll v16.2d, v0.2s, #0
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    ushll v17.2d, v1.2s, #0
+; CHECK-NEXT:    ushll v4.2d, v4.2s, #0
+; CHECK-NEXT:    ucvtf v0.2d, v2.2d
 ; CHECK-NEXT:    ushll v5.2d, v5.2s, #0
 ; CHECK-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-NEXT:    ushll v18.2d, v1.2s, #0
 ; CHECK-NEXT:    ucvtf v1.2d, v16.2d
-; CHECK-NEXT:    ucvtf v4.2d, v2.2d
-; CHECK-NEXT:    ucvtf v2.2d, v17.2d
-; CHECK-NEXT:    ucvtf v3.2d, v7.2d
+; CHECK-NEXT:    ucvtf v2.2d, v3.2d
+; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-NEXT:    ucvtf v3.2d, v17.2d
 ; CHECK-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v7.2d, v18.2d
+; CHECK-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-NEXT:    ret
   %1 = uitofp <16 x i8> %a to <16 x double>
   ret <16 x double> %1
@@ -493,16 +524,27 @@ define <16 x double> @uitofp_v16i8_double(<16 x i8> %a) {
 define <8 x double> @uitofp_i16_double(<8 x i16> %a) {
 ; CHECK-LABEL: uitofp_i16_double:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v2.2d, v1.2s, #0
-; CHECK-NEXT:    ushll2 v3.2d, v0.4s, #0
-; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-NEXT:    ushll v4.2d, v0.2s, #0
-; CHECK-NEXT:    ucvtf v0.2d, v2.2d
+; CHECK-NEXT:    ushll2 v2.4s, v0.8h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ext v3.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-NEXT:    rev32 v2.4h, v2.4h
+; CHECK-NEXT:    rev32 v3.4h, v3.4h
+; CHECK-NEXT:    rev32 v4.4h, v4.4h
+; CHECK-NEXT:    trn2 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    trn2 v2.4h, v2.4h, v1.4h
+; CHECK-NEXT:    trn2 v3.4h, v3.4h, v1.4h
+; CHECK-NEXT:    trn2 v1.4h, v4.4h, v1.4h
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    ucvtf v2.2d, v4.2d
 ; CHECK-NEXT:    ret
   %1 = uitofp <8 x i16> %a to <8 x double>
   ret <8 x double> %1

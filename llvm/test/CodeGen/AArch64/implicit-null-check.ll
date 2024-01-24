@@ -14,7 +14,7 @@ define i32 @imp_null_check_load_fallthrough(ptr %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -37,7 +37,7 @@ define i32 @imp_null_check_load_reorder(ptr %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -59,7 +59,7 @@ define i32 @imp_null_check_unordered_load(ptr %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -84,7 +84,7 @@ define i32 @imp_null_check_seq_cst_load(ptr %x) {
 ; CHECK-NEXT:    ldar w0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -107,7 +107,7 @@ define i32 @imp_null_check_volatile_load(ptr %x) {
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -130,7 +130,7 @@ define i8 @imp_null_check_load_i8(ptr %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -156,7 +156,7 @@ define i256 @imp_null_check_load_i256(ptr %x) {
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov x2, xzr
 ; CHECK-NEXT:    mov x3, xzr
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -180,7 +180,7 @@ define i32 @imp_null_check_gep_load(ptr %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -204,7 +204,7 @@ define i32 @imp_null_check_add_result(ptr %x, i32 %p) {
 ; CHECK-NEXT:    add w0, w8, w1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -231,7 +231,7 @@ define i32 @imp_null_check_hoist_over_udiv(ptr %x, i32 %a, i32 %b) {
 ; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -260,7 +260,7 @@ define i32 @imp_null_check_hoist_over_unrelated_load(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB10_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -287,7 +287,7 @@ define i32 @imp_null_check_gep_load_with_use_dep(ptr %x, i32 %a) {
 ; CHECK-NEXT:    add w0, w8, #4
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null
@@ -316,7 +316,7 @@ define i32 @imp_null_check_load_fence1(ptr %x) {
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB12_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq ptr %x, null
@@ -342,7 +342,7 @@ define i32 @imp_null_check_load_fence2(ptr %x) {
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB13_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp eq ptr %x, null
@@ -363,7 +363,7 @@ define void @imp_null_check_store(ptr %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x0, .LBB14_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:  .LBB14_2: // %common.ret
 ; CHECK-NEXT:    ret
@@ -385,7 +385,7 @@ define void @imp_null_check_unordered_store(ptr %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x0, .LBB15_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:  .LBB15_2: // %common.ret
 ; CHECK-NEXT:    ret
@@ -409,7 +409,7 @@ define i32 @imp_null_check_neg_gep_load(ptr %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB16_2:
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq ptr %x, null

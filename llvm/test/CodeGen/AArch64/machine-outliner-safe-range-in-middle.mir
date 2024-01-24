@@ -10,7 +10,6 @@ machineFunctionInfo:
 body:             |
   bb.0:
     liveins: $x0
-    ; Begin safe range of 3 instructions
     ; CHECK-LABEL: name: unsafe_range_in_middle
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -26,7 +25,6 @@ body:             |
     $x2 = ADDXri $x0, 2, 0
     $x3 = ADDXri $x0, 3, 0
 
-    ; End safe range
     $x16 = ADDXri $x0, 16, 0
     $x9 = ADDXri $x16, 16, 0
     $x16 = ADDXri killed $x16, 16, 0
@@ -35,7 +33,6 @@ body:             |
     $x1 = ADDXri $x0, 1, 0
     $x2 = ADDXri $x0, 2, 0
     $x3 = ADDXri $x0, 3, 0
-    ; End safe range
     $x16 = ADDXri $x0, 16, 0
     $x9 = ADDXri $x9, 16, 0
     $x16 = ADDXri killed $x16, 16, 0

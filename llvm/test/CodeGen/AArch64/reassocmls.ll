@@ -79,7 +79,7 @@ define i64 @mls_i64_C(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 ; CHECK-LABEL: mls_i64_C:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul x8, x2, x1
-; CHECK-NEXT:    mov w9, #10
+; CHECK-NEXT:    mov w9, #10 // =0xa
 ; CHECK-NEXT:    madd x8, x4, x3, x8
 ; CHECK-NEXT:    sub x0, x9, x8
 ; CHECK-NEXT:    ret

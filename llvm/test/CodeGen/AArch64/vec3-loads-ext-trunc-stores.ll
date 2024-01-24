@@ -49,25 +49,28 @@ define <4 x i32> @load_v3i8_to_4xi32(ptr %src) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
-; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, lCPI1_0@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr q1, [x8, lCPI1_0@PAGEOFF]
+; CHECK-NEXT:    strh w9, [sp, #12]
 ; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ldrsb w8, [x0, #2]
+; CHECK-NEXT:    ldrsb w9, [x0, #2]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    mov.h v0[1], v0[1]
-; CHECK-NEXT:    mov.h v0[2], w8
+; CHECK-NEXT:    mov.h v0[2], w9
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 ;
 ; BE-LABEL: load_v3i8_to_4xi32:
 ; BE:       // %bb.0:
 ; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    .cfi_def_cfa_offset 16
 ; BE-NEXT:    ldrh w8, [x0]
-; BE-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; BE-NEXT:    strh w8, [sp, #12]
 ; BE-NEXT:    ldr s0, [sp, #12]
 ; BE-NEXT:    ldrsb w8, [x0, #2]
@@ -75,9 +78,13 @@ define <4 x i32> @load_v3i8_to_4xi32(ptr %src) {
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    mov v0.h[1], v0.h[1]
 ; BE-NEXT:    mov v0.h[2], w8
+; BE-NEXT:    adrp x8, .LCPI1_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI1_0
+; BE-NEXT:    ld1 { v1.16b }, [x8]
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
-; BE-NEXT:    and v0.16b, v0.16b, v1.16b
-; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
@@ -92,25 +99,28 @@ define <4 x i32> @load_v3i8_to_4xi32_align_2(ptr %src) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
-; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x8, lCPI2_0@PAGE
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    ldr q1, [x8, lCPI2_0@PAGEOFF]
+; CHECK-NEXT:    strh w9, [sp, #12]
 ; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ldrsb w8, [x0, #2]
+; CHECK-NEXT:    ldrsb w9, [x0, #2]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    mov.h v0[1], v0[1]
-; CHECK-NEXT:    mov.h v0[2], w8
+; CHECK-NEXT:    mov.h v0[2], w9
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 ;
 ; BE-LABEL: load_v3i8_to_4xi32_align_2:
 ; BE:       // %bb.0:
 ; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    .cfi_def_cfa_offset 16
 ; BE-NEXT:    ldrh w8, [x0]
-; BE-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; BE-NEXT:    strh w8, [sp, #12]
 ; BE-NEXT:    ldr s0, [sp, #12]
 ; BE-NEXT:    ldrsb w8, [x0, #2]
@@ -118,9 +128,13 @@ define <4 x i32> @load_v3i8_to_4xi32_align_2(ptr %src) {
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    mov v0.h[1], v0.h[1]
 ; BE-NEXT:    mov v0.h[2], w8
+; BE-NEXT:    adrp x8, .LCPI2_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI2_0
+; BE-NEXT:    ld1 { v1.16b }, [x8]
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
-; BE-NEXT:    and v0.16b, v0.16b, v1.16b
-; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
@@ -134,21 +148,28 @@ define <4 x i32> @load_v3i8_to_4xi32_align_4(ptr %src) {
 ; CHECK-LABEL: load_v3i8_to_4xi32_align_4:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
+; CHECK-NEXT:  Lloh4:
+; CHECK-NEXT:    adrp x8, lCPI3_0@PAGE
+; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:    ldr q1, [x8, lCPI3_0@PAGEOFF]
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh5
 ;
 ; BE-LABEL: load_v3i8_to_4xi32_align_4:
 ; BE:       // %bb.0:
 ; BE-NEXT:    ldr s0, [x0]
-; BE-NEXT:    movi v1.2d, #0x0000ff000000ff
+; BE-NEXT:    adrp x8, .LCPI3_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI3_0
+; BE-NEXT:    ld1 { v1.16b }, [x8]
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
-; BE-NEXT:    and v0.16b, v0.16b, v1.16b
-; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    ret
   %l = load <3 x i8>, ptr %src, align 4
@@ -162,25 +183,28 @@ define <4 x i32> @load_v3i8_to_4xi32_const_offset_1(ptr %src) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldurh w8, [x0, #1]
-; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
-; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    ldurh w9, [x0, #1]
+; CHECK-NEXT:  Lloh6:
+; CHECK-NEXT:    adrp x8, lCPI4_0@PAGE
+; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:    ldr q1, [x8, lCPI4_0@PAGEOFF]
+; CHECK-NEXT:    strh w9, [sp, #12]
 ; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ldrsb w8, [x0, #3]
+; CHECK-NEXT:    ldrsb w9, [x0, #3]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    mov.h v0[1], v0[1]
-; CHECK-NEXT:    mov.h v0[2], w8
+; CHECK-NEXT:    mov.h v0[2], w9
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh7
 ;
 ; BE-LABEL: load_v3i8_to_4xi32_const_offset_1:
 ; BE:       // %bb.0:
 ; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    .cfi_def_cfa_offset 16
 ; BE-NEXT:    ldurh w8, [x0, #1]
-; BE-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; BE-NEXT:    strh w8, [sp, #12]
 ; BE-NEXT:    ldr s0, [sp, #12]
 ; BE-NEXT:    ldrsb w8, [x0, #3]
@@ -188,9 +212,13 @@ define <4 x i32> @load_v3i8_to_4xi32_const_offset_1(ptr %src) {
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    mov v0.h[1], v0.h[1]
 ; BE-NEXT:    mov v0.h[2], w8
+; BE-NEXT:    adrp x8, .LCPI4_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI4_0
+; BE-NEXT:    ld1 { v1.16b }, [x8]
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
-; BE-NEXT:    and v0.16b, v0.16b, v1.16b
-; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
@@ -206,25 +234,28 @@ define <4 x i32> @load_v3i8_to_4xi32_const_offset_3(ptr %src) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldurh w8, [x0, #3]
-; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
-; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    ldurh w9, [x0, #3]
+; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:    adrp x8, lCPI5_0@PAGE
+; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:    ldr q1, [x8, lCPI5_0@PAGEOFF]
+; CHECK-NEXT:    strh w9, [sp, #12]
 ; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ldrsb w8, [x0, #5]
+; CHECK-NEXT:    ldrsb w9, [x0, #5]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    mov.h v0[1], v0[1]
-; CHECK-NEXT:    mov.h v0[2], w8
+; CHECK-NEXT:    mov.h v0[2], w9
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh9
 ;
 ; BE-LABEL: load_v3i8_to_4xi32_const_offset_3:
 ; BE:       // %bb.0:
 ; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    .cfi_def_cfa_offset 16
 ; BE-NEXT:    ldurh w8, [x0, #3]
-; BE-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; BE-NEXT:    strh w8, [sp, #12]
 ; BE-NEXT:    ldr s0, [sp, #12]
 ; BE-NEXT:    ldrsb w8, [x0, #5]
@@ -232,9 +263,13 @@ define <4 x i32> @load_v3i8_to_4xi32_const_offset_3(ptr %src) {
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    mov v0.h[1], v0.h[1]
 ; BE-NEXT:    mov v0.h[2], w8
+; BE-NEXT:    adrp x8, .LCPI5_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI5_0
+; BE-NEXT:    ld1 { v1.16b }, [x8]
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
-; BE-NEXT:    and v0.16b, v0.16b, v1.16b
-; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
@@ -286,25 +321,28 @@ define <4 x i32> @volatile_load_v3i8_to_4xi32(ptr %src) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
-; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:  Lloh10:
+; CHECK-NEXT:    adrp x8, lCPI6_0@PAGE
+; CHECK-NEXT:  Lloh11:
+; CHECK-NEXT:    ldr q1, [x8, lCPI6_0@PAGEOFF]
+; CHECK-NEXT:    strh w9, [sp, #12]
 ; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ldrsb w8, [x0, #2]
+; CHECK-NEXT:    ldrsb w9, [x0, #2]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    mov.h v0[1], v0[1]
-; CHECK-NEXT:    mov.h v0[2], w8
+; CHECK-NEXT:    mov.h v0[2], w9
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh10, Lloh11
 ;
 ; BE-LABEL: volatile_load_v3i8_to_4xi32:
 ; BE:       // %bb.0:
 ; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    .cfi_def_cfa_offset 16
 ; BE-NEXT:    ldrh w8, [x0]
-; BE-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; BE-NEXT:    strh w8, [sp, #12]
 ; BE-NEXT:    ldr s0, [sp, #12]
 ; BE-NEXT:    ldrsb w8, [x0, #2]
@@ -312,9 +350,13 @@ define <4 x i32> @volatile_load_v3i8_to_4xi32(ptr %src) {
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    mov v0.h[1], v0.h[1]
 ; BE-NEXT:    mov v0.h[2], w8
+; BE-NEXT:    adrp x8, .LCPI6_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI6_0
+; BE-NEXT:    ld1 { v1.16b }, [x8]
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
-; BE-NEXT:    and v0.16b, v0.16b, v1.16b
-; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
@@ -391,9 +433,9 @@ define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    add x9, x0, #4
-; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:  Lloh12:
 ; CHECK-NEXT:    adrp x8, lCPI9_0@PAGE
-; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:  Lloh13:
 ; CHECK-NEXT:    ldr d1, [x8, lCPI9_0@PAGEOFF]
 ; CHECK-NEXT:    ld1.h { v0 }[2], [x9]
 ; CHECK-NEXT:    add.4h v0, v0, v1
@@ -405,7 +447,7 @@ define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    strh w9, [x1]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
+; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh13
 ;
 ; BE-LABEL: store_trunc_add_from_64bits:
 ; BE:       // %bb.0: // %entry
@@ -441,18 +483,24 @@ define void @load_ext_to_64bits(ptr %src, ptr %dst) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    add x8, x0, #2
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:  Lloh14:
+; CHECK-NEXT:    adrp x8, lCPI10_0@PAGE
+; CHECK-NEXT:  Lloh15:
+; CHECK-NEXT:    ldr d1, [x8, lCPI10_0@PAGEOFF]
+; CHECK-NEXT:    add x8, x1, #4
+; CHECK-NEXT:    strh w9, [sp, #12]
+; CHECK-NEXT:    add x9, x0, #2
 ; CHECK-NEXT:    ldr s0, [sp, #12]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ld1.b { v0 }[4], [x8]
-; CHECK-NEXT:    add x8, x1, #4
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    ld1.b { v0 }[4], [x9]
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v1
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh14, Lloh15
 ;
 ; BE-LABEL: load_ext_to_64bits:
 ; BE:       // %bb.0: // %entry
@@ -465,11 +513,17 @@ define void @load_ext_to_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    ld1 { v0.b }[4], [x8]
+; BE-NEXT:    adrp x8, .LCPI10_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI10_0
+; BE-NEXT:    ld1 { v1.8b }, [x8]
 ; BE-NEXT:    add x8, x1, #4
-; BE-NEXT:    bic v0.4h, #255, lsl #8
-; BE-NEXT:    rev32 v1.8h, v0.8h
-; BE-NEXT:    st1 { v0.h }[2], [x8]
-; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    mov v0.d[1], v0.d[0]
+; BE-NEXT:    rev16 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; BE-NEXT:    rev16 v1.16b, v0.16b
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    st1 { v1.h }[2], [x8]
+; BE-NEXT:    str s0, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
 entry:
@@ -483,23 +537,35 @@ define void @load_ext_to_64bits_default_align(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_ext_to_64bits_default_align:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:  Lloh16:
+; CHECK-NEXT:    adrp x8, lCPI11_0@PAGE
+; CHECK-NEXT:  Lloh17:
+; CHECK-NEXT:    ldr d1, [x8, lCPI11_0@PAGEOFF]
 ; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v1
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh16, Lloh17
 ;
 ; BE-LABEL: load_ext_to_64bits_default_align:
 ; BE:       // %bb.0: // %entry
 ; BE-NEXT:    ldr s0, [x0]
+; BE-NEXT:    adrp x8, .LCPI11_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI11_0
+; BE-NEXT:    ld1 { v1.8b }, [x8]
 ; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; BE-NEXT:    bic v0.4h, #255, lsl #8
-; BE-NEXT:    rev32 v1.8h, v0.8h
-; BE-NEXT:    st1 { v0.h }[2], [x8]
-; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    mov v0.d[1], v0.d[0]
+; BE-NEXT:    rev16 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; BE-NEXT:    rev16 v1.16b, v0.16b
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    st1 { v1.h }[2], [x8]
+; BE-NEXT:    str s0, [x1]
 ; BE-NEXT:    ret
 entry:
   %l = load <3 x i8>, ptr %src
@@ -512,23 +578,35 @@ define void @load_ext_to_64bits_align_4(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_ext_to_64bits_align_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:  Lloh18:
+; CHECK-NEXT:    adrp x8, lCPI12_0@PAGE
+; CHECK-NEXT:  Lloh19:
+; CHECK-NEXT:    ldr d1, [x8, lCPI12_0@PAGEOFF]
 ; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v1
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh19
 ;
 ; BE-LABEL: load_ext_to_64bits_align_4:
 ; BE:       // %bb.0: // %entry
 ; BE-NEXT:    ldr s0, [x0]
+; BE-NEXT:    adrp x8, .LCPI12_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI12_0
+; BE-NEXT:    ld1 { v1.8b }, [x8]
 ; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; BE-NEXT:    bic v0.4h, #255, lsl #8
-; BE-NEXT:    rev32 v1.8h, v0.8h
-; BE-NEXT:    st1 { v0.h }[2], [x8]
-; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    mov v0.d[1], v0.d[0]
+; BE-NEXT:    rev16 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; BE-NEXT:    rev16 v1.16b, v0.16b
+; BE-NEXT:    rev32 v0.16b, v0.16b
+; BE-NEXT:    st1 { v1.h }[2], [x8]
+; BE-NEXT:    str s0, [x1]
 ; BE-NEXT:    ret
 entry:
   %l = load <3 x i8>, ptr %src, align 4
@@ -542,24 +620,31 @@ define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w9, [x0]
-; CHECK-NEXT:  Lloh2:
-; CHECK-NEXT:    adrp x8, lCPI13_0@PAGE
-; CHECK-NEXT:  Lloh3:
-; CHECK-NEXT:    ldr d1, [x8, lCPI13_0@PAGEOFF]
-; CHECK-NEXT:    add x8, x1, #4
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    add x9, x0, #2
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    add x8, x0, #2
 ; CHECK-NEXT:    ldr s0, [sp, #12]
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ld1.b { v0 }[4], [x9]
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    ld1.b { v0 }[4], [x8]
+; CHECK-NEXT:  Lloh20:
+; CHECK-NEXT:    adrp x8, lCPI13_0@PAGE
+; CHECK-NEXT:  Lloh21:
+; CHECK-NEXT:    ldr d1, [x8, lCPI13_0@PAGEOFF]
+; CHECK-NEXT:  Lloh22:
+; CHECK-NEXT:    adrp x8, lCPI13_1@PAGE
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v1
+; CHECK-NEXT:  Lloh23:
+; CHECK-NEXT:    ldr d1, [x8, lCPI13_1@PAGEOFF]
+; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    add.4h v0, v0, v1
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
+; CHECK-NEXT:    .loh AdrpLdr Lloh22, Lloh23
+; CHECK-NEXT:    .loh AdrpAdrp Lloh20, Lloh22
+; CHECK-NEXT:    .loh AdrpLdr Lloh20, Lloh21
 ;
 ; BE-LABEL: load_ext_add_to_64bits:
 ; BE:       // %bb.0: // %entry
@@ -574,9 +659,15 @@ define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    ld1 { v0.b }[4], [x8]
 ; BE-NEXT:    adrp x8, .LCPI13_0
 ; BE-NEXT:    add x8, x8, :lo12:.LCPI13_0
+; BE-NEXT:    ld1 { v1.8b }, [x8]
+; BE-NEXT:    adrp x8, .LCPI13_1
+; BE-NEXT:    add x8, x8, :lo12:.LCPI13_1
+; BE-NEXT:    mov v0.d[1], v0.d[0]
+; BE-NEXT:    rev16 v0.16b, v0.16b
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; BE-NEXT:    ld1 { v1.4h }, [x8]
 ; BE-NEXT:    add x8, x1, #4
-; BE-NEXT:    bic v0.4h, #255, lsl #8
+; BE-NEXT:    rev16 v0.8b, v0.8b
 ; BE-NEXT:    add v0.4h, v0.4h, v1.4h
 ; BE-NEXT:    rev32 v1.8h, v0.8h
 ; BE-NEXT:    st1 { v0.h }[2], [x8]

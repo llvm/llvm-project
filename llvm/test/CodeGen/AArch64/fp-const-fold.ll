@@ -6,7 +6,7 @@
 define double @constant_fold_fdiv_by_zero(ptr %p) {
 ; CHECK-LABEL: constant_fold_fdiv_by_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9218868437227405312
+; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fdiv double 4.940660e-324, 0.0
@@ -18,7 +18,7 @@ define double @constant_fold_fdiv_by_zero(ptr %p) {
 define double @constant_fold_frem_by_zero(ptr %p) {
 ; CHECK-LABEL: constant_fold_frem_by_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = frem double 4.940660e-324, 0.0
@@ -30,7 +30,7 @@ define double @constant_fold_frem_by_zero(ptr %p) {
 define double @constant_fold_fmul_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fmul_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fmul double 0x7ff0000000000000, 0.0
@@ -42,7 +42,7 @@ define double @constant_fold_fmul_nan(ptr %p) {
 define double @constant_fold_fadd_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fadd_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fadd double 0x7ff0000000000000, 0xfff0000000000000
@@ -54,7 +54,7 @@ define double @constant_fold_fadd_nan(ptr %p) {
 define double @constant_fold_fsub_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fsub_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r = fsub double 0x7ff0000000000000, 0x7ff0000000000000
@@ -66,7 +66,7 @@ define double @constant_fold_fsub_nan(ptr %p) {
 define double @constant_fold_fma_nan(ptr %p) {
 ; CHECK-LABEL: constant_fold_fma_nan:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %r =  call double @llvm.fma.f64(double 0x7ff0000000000000, double 0.0, double 42.0)
@@ -95,7 +95,7 @@ define double @fmul_nnan_nan_op1(double %x) {
 define double @fdiv_ninf_nan_op0(double %x) {
 ; CHECK-LABEL: fdiv_ninf_nan_op0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-2251799813685248
+; CHECK-NEXT:    mov x8, #-2251799813685248 // =0xfff8000000000000
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fdiv d0, d1, d0
 ; CHECK-NEXT:    ret
@@ -109,7 +109,7 @@ define double @fdiv_ninf_nan_op0(double %x) {
 define double @fadd_ninf_nan_op1(double %x) {
 ; CHECK-LABEL: fadd_ninf_nan_op1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    mov x8, #9221120237041090560 // =0x7ff8000000000000
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
@@ -139,7 +139,7 @@ define double @fadd_ninf_inf_op1(double %x) {
 define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: fsub_nnan_inf_op0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9218868437227405312
+; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fsub d0, d1, d0
 ; CHECK-NEXT:    ret
@@ -153,7 +153,7 @@ define double @fsub_nnan_inf_op0(double %x) {
 define double @fmul_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: fmul_nnan_inf_op1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-4503599627370496
+; CHECK-NEXT:    mov x8, #-4503599627370496 // =0xfff0000000000000
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    ret

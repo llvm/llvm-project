@@ -78,11 +78,22 @@ entry:
 define <16 x i8> @test5(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0]
+; CHECK-NEXT:    ldrb w9, [x0]
+; CHECK-NEXT:    ldrb w10, [x1]
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    ld1r { v1.16b }, [x1]
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    dup v0.8b, w9
+; CHECK-NEXT:    mov v1.b[8], w10
+; CHECK-NEXT:    mov v1.b[9], w10
+; CHECK-NEXT:    mov v1.b[10], w10
+; CHECK-NEXT:    mov v1.b[11], w10
+; CHECK-NEXT:    mov v1.b[12], w10
+; CHECK-NEXT:    mov v1.b[13], w10
+; CHECK-NEXT:    mov v1.b[14], w10
+; CHECK-NEXT:    mov v1.b[15], w10
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v2.8b
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1

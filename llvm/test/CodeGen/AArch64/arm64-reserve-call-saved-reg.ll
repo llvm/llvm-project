@@ -37,7 +37,6 @@
 ; If a register is specified to be both reserved and callee-saved, then it
 ; should not be allocated and should not be spilled onto the stack.
 define void @foo() {
-
   %val = load volatile [30 x i64], ptr @var
   store volatile [30 x i64] %val, ptr @var
 

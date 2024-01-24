@@ -12,11 +12,14 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_gather_v2i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #1]
+; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-NEXT:    add x8, x0, #1
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
@@ -38,10 +41,14 @@ define void @masked_gather_v4i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
@@ -165,11 +172,13 @@ define void @masked_gather_v32i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v2i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldrh w9, [x0, #2]
+; CHECK-NEXT:    ld1 { v1.h }[0], [x0]
+; CHECK-NEXT:    add x8, x0, #2
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-NEXT:    rev32 v1.4h, v1.4h
+; CHECK-NEXT:    trn2 v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
 ; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0

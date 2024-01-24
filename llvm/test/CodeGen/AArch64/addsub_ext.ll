@@ -444,7 +444,7 @@ define i32 @cmp_s_i8i32(i8 %v, i32 %lhs) minsize {
 ; CHECK-NEXT:    cmp w1, w0, uxtb
 ; CHECK-NEXT:    b.ge .LBB40_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB40_2: // %end
 ; CHECK-NEXT:    mov w0, w1
@@ -465,7 +465,7 @@ define i64 @cmp_s_i8i64(i8 %v, i64 %lhs) minsize {
 ; CHECK-NEXT:    cmp x1, w0, sxtb
 ; CHECK-NEXT:    b.ge .LBB41_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB41_2: // %end
 ; CHECK-NEXT:    mov x0, x1
@@ -485,7 +485,7 @@ define i32 @cmp_s_i16i32(i16 %v, i32 %lhs) minsize {
 ; CHECK-NEXT:    cmp w1, w0, uxth
 ; CHECK-NEXT:    b.ge .LBB42_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB42_2: // %end
 ; CHECK-NEXT:    mov w0, w1
@@ -506,7 +506,7 @@ define i64 @cmp_s_i16i64(i16 %v, i64 %lhs) minsize {
 ; CHECK-NEXT:    cmp x1, w0, sxth
 ; CHECK-NEXT:    b.ge .LBB43_2
 ; CHECK-NEXT:  // %bb.1: // %then
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB43_2: // %end
 ; CHECK-NEXT:    mov x0, x1

@@ -19,7 +19,7 @@ define <vscale x 8 x i16> @mul_i16_imm(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @mul_i16_imm_neg(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: mul_i16_imm_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-200
+; CHECK-NEXT:    mov w8, #-200 // =0xffffff38
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mul z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -44,7 +44,7 @@ define <vscale x 4 x i32> @mul_i32_imm(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @mul_i32_imm_neg(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: mul_i32_imm_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-200
+; CHECK-NEXT:    mov w8, #-200 // =0xffffff38
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    mul z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -69,7 +69,7 @@ define <vscale x 2 x i64> @mul_i64_imm(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @mul_i64_imm_neg(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: mul_i64_imm_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-200
+; CHECK-NEXT:    mov x8, #-200 // =0xffffffffffffff38
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    mul z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret

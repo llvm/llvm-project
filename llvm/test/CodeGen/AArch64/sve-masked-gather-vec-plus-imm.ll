@@ -122,7 +122,7 @@ define <vscale x 2 x i64> @masked_sgather_nxv2i32(<vscale x 2 x ptr> %bases, <vs
 define <vscale x 2 x i64> @masked_gather_nxv2i8_range(<vscale x 2 x ptr> %bases, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2i8_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x8, z0.d]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr i8, <vscale x 2 x ptr> %bases, i32 32
@@ -134,7 +134,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i8_range(<vscale x 2 x ptr> %bases,
 define <vscale x 2 x half> @masked_gather_nxv2f16_range(<vscale x 2 x ptr> %bases, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2f16_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64
+; CHECK-NEXT:    mov w8, #64 // =0x40
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x8, z0.d]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr half, <vscale x 2 x ptr> %bases, i32 32
@@ -145,7 +145,7 @@ define <vscale x 2 x half> @masked_gather_nxv2f16_range(<vscale x 2 x ptr> %base
 define <vscale x 2 x bfloat> @masked_gather_nxv2bf16_range(<vscale x 2 x ptr> %bases, <vscale x 2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv2bf16_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #64
+; CHECK-NEXT:    mov w8, #64 // =0x40
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x8, z0.d]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr bfloat, <vscale x 2 x ptr> %bases, i32 32
@@ -156,7 +156,7 @@ define <vscale x 2 x bfloat> @masked_gather_nxv2bf16_range(<vscale x 2 x ptr> %b
 define <vscale x 2 x float> @masked_gather_nxv2f32_range(<vscale x 2 x ptr> %bases, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2f32_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #128
+; CHECK-NEXT:    mov w8, #128 // =0x80
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x8, z0.d]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr float, <vscale x 2 x ptr> %bases, i32 32
@@ -167,7 +167,7 @@ define <vscale x 2 x float> @masked_gather_nxv2f32_range(<vscale x 2 x ptr> %bas
 define <vscale x 2 x double> @masked_gather_nxv2f64_range(<vscale x 2 x ptr> %bases, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2f64_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #256
+; CHECK-NEXT:    mov w8, #256 // =0x100
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, z0.d]
 ; CHECK-NEXT:    ret
   %ptrs = getelementptr double, <vscale x 2 x ptr> %bases, i32 32

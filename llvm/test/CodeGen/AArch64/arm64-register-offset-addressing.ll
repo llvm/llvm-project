@@ -11,7 +11,6 @@ define i8 @test_64bit_add(ptr %a, i64 %b) {
 ; These tests are trying to form SEXT and ZEXT operations that never leave i64
 ; space, to make sure LLVM can adapt the offset register correctly.
 define void @ldst_8bit(ptr %base, i64 %offset) minsize {
-
    %off32.sext.tmp = shl i64 %offset, 32
    %off32.sext = ashr i64 %off32.sext.tmp, 32
    %addr8_sxtw = getelementptr i8, ptr %base, i64 %off32.sext
@@ -32,7 +31,6 @@ define void @ldst_8bit(ptr %base, i64 %offset) minsize {
 
 
 define void @ldst_16bit(ptr %base, i64 %offset) minsize {
-
   %addrint_uxtw = ptrtoint ptr %base to i64
   %offset_uxtw = and i64 %offset, 4294967295
   %addrint1_uxtw = add i64 %addrint_uxtw, %offset_uxtw
@@ -63,7 +61,6 @@ define void @ldst_16bit(ptr %base, i64 %offset) minsize {
 }
 
 define void @ldst_32bit(ptr %base, i64 %offset) minsize {
-
   %addrint_uxtw = ptrtoint ptr %base to i64
   %offset_uxtw = and i64 %offset, 4294967295
   %addrint1_uxtw = add i64 %addrint_uxtw, %offset_uxtw
@@ -93,7 +90,6 @@ define void @ldst_32bit(ptr %base, i64 %offset) minsize {
 }
 
 define void @ldst_64bit(ptr %base, i64 %offset) minsize {
-
   %addrint_uxtw = ptrtoint ptr %base to i64
   %offset_uxtw = and i64 %offset, 4294967295
   %addrint1_uxtw = add i64 %addrint_uxtw, %offset_uxtw

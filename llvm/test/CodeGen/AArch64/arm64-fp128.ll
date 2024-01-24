@@ -291,14 +291,14 @@ define dso_local i32 @test_br_cc() uwtable {
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    b.ge .LBB11_2
 ; CHECK-NEXT:  // %bb.1: // %iftrue
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:    mov w0, #42 // =0x2a
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_2: // %iffalse
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:    mov w0, #29
+; CHECK-NEXT:    mov w0, #29 // =0x1d
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w30

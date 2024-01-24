@@ -11,7 +11,7 @@ define i32 @assertzext(i32 %n, i1 %a, ptr %b) local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w8, #33066
+; CHECK-NEXT:    mov w8, #33066 // =0x812a
 ; CHECK-NEXT:    tst w1, #0x1
 ; CHECK-NEXT:    movk w8, #28567, lsl #16
 ; CHECK-NEXT:    csel w19, wzr, w8, ne
@@ -53,7 +53,7 @@ define i32 @assertsext(i32 %n, i8 %a) local_unnamed_addr {
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: // %if.then
-; CHECK-NEXT:    mov x9, #24575
+; CHECK-NEXT:    mov x9, #24575 // =0x5fff
 ; CHECK-NEXT:    sxtb w8, w1
 ; CHECK-NEXT:    movk x9, #15873, lsl #16
 ; CHECK-NEXT:    movk x9, #474, lsl #32

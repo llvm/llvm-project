@@ -6,7 +6,7 @@ define void @test(i8 %arg) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    and w9, w0, #0xff
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmp w9, #1
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    strb w0, [sp, #12]

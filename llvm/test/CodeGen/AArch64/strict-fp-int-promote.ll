@@ -12,7 +12,7 @@ declare float @llvm.experimental.constrained.uitofp.f32.i16(i16, metadata, metad
 define i32 @test() #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    scvtf s0, w8
 ; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    cset w0, eq
@@ -20,9 +20,9 @@ define i32 @test() #0 {
 ;
 ; SUBOPTIMAL-LABEL: test:
 ; SUBOPTIMAL:       // %bb.0: // %entry
-; SUBOPTIMAL-NEXT:    mov w8, #1
+; SUBOPTIMAL-NEXT:    mov w8, #1 // =0x1
 ; SUBOPTIMAL-NEXT:    scvtf s0, w8
-; SUBOPTIMAL-NEXT:    mov w8, #1
+; SUBOPTIMAL-NEXT:    mov w8, #1 // =0x1
 ; SUBOPTIMAL-NEXT:    scvtf s1, w8
 ; SUBOPTIMAL-NEXT:    fcmp s0, s1
 ; SUBOPTIMAL-NEXT:    cset w8, eq
@@ -39,7 +39,7 @@ entry:
 define i32 @test2() #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    scvtf s0, w8
 ; CHECK-NEXT:    ucvtf s1, w8
 ; CHECK-NEXT:    fcmp s0, s1
@@ -48,9 +48,9 @@ define i32 @test2() #0 {
 ;
 ; SUBOPTIMAL-LABEL: test2:
 ; SUBOPTIMAL:       // %bb.0: // %entry
-; SUBOPTIMAL-NEXT:    mov w8, #1
+; SUBOPTIMAL-NEXT:    mov w8, #1 // =0x1
 ; SUBOPTIMAL-NEXT:    scvtf s0, w8
-; SUBOPTIMAL-NEXT:    mov w8, #1
+; SUBOPTIMAL-NEXT:    mov w8, #1 // =0x1
 ; SUBOPTIMAL-NEXT:    ucvtf s1, w8
 ; SUBOPTIMAL-NEXT:    fcmp s0, s1
 ; SUBOPTIMAL-NEXT:    cset w8, eq

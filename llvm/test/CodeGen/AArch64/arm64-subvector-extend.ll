@@ -233,7 +233,11 @@ define <4 x i64> @cfunc4(<4 x i16> %v0) nounwind {
 define <4 x i64> @zext_v4i8_to_v4i64(<4 x i8> %v0) nounwind {
 ; CHECK-SD-LABEL: zext_v4i8_to_v4i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    adrp x8, .LCPI14_0
+; CHECK-SD-NEXT:    mov.d v0[1], v0[0]
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
+; CHECK-SD-NEXT:    tbl.8b v0, { v0 }, v1
 ; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-SD-NEXT:    ushll2.2d v1, v0, #0
 ; CHECK-SD-NEXT:    ushll.2d v0, v0, #0

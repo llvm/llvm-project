@@ -300,17 +300,39 @@ declare i32 @printf(ptr, ...) #0
 ; Don't merge in this case
 
 define i32 @nzcv_clobber(i32 %in) {
-entry:
 ; CHECK-LABEL: nzcv_clobber:
-; CHECK: stg sp, [sp, #528]
-; CHECK-NEXT: .LBB10_1:
-; CHECK: st2g x9, [x9], #32
-; CHECK-NEXT: subs x8, x8, #32
-; CHECK-NEXT: b.ne .LBB10_1
-; CHECK-NEXT: // %bb.2:
-; CHECK-NEXT: cmp w0, #10
-; CHECK-NEXT: stg sp, [sp]
-; CHECK-NEXT: b.ge .LBB10_4
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #544
+; CHECK-NEXT:    .cfi_def_cfa_offset 560
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    add x9, sp, #16
+; CHECK-NEXT:    mov x8, #512 // =0x200
+; CHECK-NEXT:    stg sp, [sp, #528]
+; CHECK-NEXT:  .LBB10_1: // %entry
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    st2g x9, [x9], #32
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB10_1
+; CHECK-NEXT:  // %bb.2: // %entry
+; CHECK-NEXT:    cmp w0, #10
+; CHECK-NEXT:    stg sp, [sp]
+; CHECK-NEXT:    b.ge .LBB10_4
+; CHECK-NEXT:  // %bb.3: // %return0
+; CHECK-NEXT:    adrp x0, .L.str
+; CHECK-NEXT:    add x0, x0, :lo12:.L.str
+; CHECK-NEXT:    mov w1, #10 // =0xa
+; CHECK-NEXT:    bl printf
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    b .LBB10_5
+; CHECK-NEXT:  .LBB10_4:
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:  .LBB10_5: // %common.ret
+; CHECK-NEXT:    add sp, sp, #544
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
 
   %a = alloca i8, i32 16, align 16
   %b = alloca i8, i32 512, align 16
@@ -334,13 +356,23 @@ return1:
 ; Merge in this case
 
 define i32 @nzcv_no_clobber(i32 %in) {
-entry:
 ; CHECK-LABEL: nzcv_no_clobber:
-; CHECK: mov x8, #544
-; CHECK-NEXT: .LBB11_1:
-; CHECK: st2g sp, [sp], #32
-; CHECK-NEXT: subs x8, x8, #32
-; CHECK-NEXT: b.ne .LBB11_1
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #544
+; CHECK-NEXT:    .cfi_def_cfa_offset 560
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    mov x8, #544 // =0x220
+; CHECK-NEXT:  .LBB11_1: // %entry
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    st2g sp, [sp], #32
+; CHECK-NEXT:    subs x8, x8, #32
+; CHECK-NEXT:    b.ne .LBB11_1
+; CHECK-NEXT:  // %bb.2: // %entry
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
 
 
   %a = alloca i8, i32 16, align 16

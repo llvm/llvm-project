@@ -14,7 +14,7 @@ define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx4vi32_runtime_offset(<
 define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfb_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 32, i32 1)
@@ -24,7 +24,7 @@ define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx4vi32_invalid_immediat
 define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfb_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 -1, i32 1)
@@ -44,7 +44,7 @@ define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx2vi64_runtime_offset(<
 define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfb_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 32, i32 1)
@@ -54,7 +54,7 @@ define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx2vi64_invalid_immediat
 define void @llvm_aarch64_sve_prfb_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfb_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfb.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 -1, i32 1)
@@ -76,7 +76,7 @@ define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_runtime_offset(<
 define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfh.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 63, i32 1)
@@ -86,7 +86,7 @@ define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediat
 define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfh.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 -1, i32 1)
@@ -96,7 +96,7 @@ define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediat
 define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediate_offset_inbound_not_multiple_of_2(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfh_gather_scalar_offset_nx4vi32_invalid_immediate_offset_inbound_not_multiple_of_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfh.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 33, i32 1)
@@ -116,7 +116,7 @@ define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_runtime_offset(<
 define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfh.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 63, i32 1)
@@ -126,7 +126,7 @@ define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediat
 define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfh.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 -1, i32 1)
@@ -136,7 +136,7 @@ define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediat
 define void @llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediate_offset_inbound_not_multiple_of_2(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfh_gather_scalar_offset_nx2vi64_invalid_immediate_offset_inbound_not_multiple_of_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfh.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 33, i32 1)
@@ -158,7 +158,7 @@ define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_runtime_offset(<
 define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #125
+; CHECK-NEXT:    mov w8, #125 // =0x7d
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfw.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 125, i32 1)
@@ -168,7 +168,7 @@ define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediat
 define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfw.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 -1, i32 1)
@@ -178,7 +178,7 @@ define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediat
 define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediate_offset_inbound_not_multiple_of_4(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfw_gather_scalar_offset_nx4vi32_invalid_immediate_offset_inbound_not_multiple_of_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfw.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 33, i32 1)
@@ -198,7 +198,7 @@ define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_runtime_offset(<
 define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #125
+; CHECK-NEXT:    mov w8, #125 // =0x7d
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfw.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 125, i32 1)
@@ -208,7 +208,7 @@ define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediat
 define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfw.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 -1, i32 1)
@@ -218,7 +218,7 @@ define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediat
 define void @llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediate_offset_inbound_not_multiple_of_4(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfw_gather_scalar_offset_nx2vi64_invalid_immediate_offset_inbound_not_multiple_of_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfw.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 33, i32 1)
@@ -240,7 +240,7 @@ define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_runtime_offset(<
 define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #125
+; CHECK-NEXT:    mov w8, #125 // =0x7d
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfd.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 125, i32 1)
@@ -250,7 +250,7 @@ define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediat
 define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfd.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 -1, i32 1)
@@ -260,7 +260,7 @@ define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediat
 define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediate_offset_inbound_not_multiple_of_8(<vscale x 4 x i32> %bases, <vscale x 4 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfd_gather_scalar_offset_nx4vi32_invalid_immediate_offset_inbound_not_multiple_of_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.s, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfd.gather.scalar.offset.nx4vi32(<vscale x 4 x i1> %Pg, <vscale x 4 x i32> %bases, i64 33, i32 1)
@@ -280,7 +280,7 @@ define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_runtime_offset(<
 define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediate_offset_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #125
+; CHECK-NEXT:    mov w8, #125 // =0x7d
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfd.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 125, i32 1)
@@ -290,7 +290,7 @@ define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediat
 define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediate_offset_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfd.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 -1, i32 1)
@@ -300,7 +300,7 @@ define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediat
 define void @llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediate_offset_inbound_not_multiple_of_8(<vscale x 2 x i64> %bases, <vscale x 2 x i1> %Pg) nounwind {
 ; CHECK-LABEL: llvm_aarch64_sve_prfd_gather_scalar_offset_nx2vi64_invalid_immediate_offset_inbound_not_multiple_of_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #33
+; CHECK-NEXT:    mov w8, #33 // =0x21
 ; CHECK-NEXT:    prfb pldl1strm, p0, [x8, z0.d, uxtw]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.prfd.gather.scalar.offset.nx2vi64(<vscale x 2 x i1> %Pg, <vscale x 2 x i64> %bases, i64 33, i32 1)
