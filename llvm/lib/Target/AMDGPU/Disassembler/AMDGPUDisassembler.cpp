@@ -805,12 +805,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                          AMDGPU::OpName::src2_modifiers);
   }
 
-  // TODO: Remove gfx90a exemption when MC tests are fixed upstream.
-  if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::DS) &&
-      !AMDGPU::hasGDS(STI) && !AMDGPU::isGFX90A(STI)) {
-    insertNamedMCOperand(MI, MCOperand::createImm(0), AMDGPU::OpName::gds);
-  }
-
   if (Res && (MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp ||
               MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp)) {
     // Insert dummy unused src2_modifiers.

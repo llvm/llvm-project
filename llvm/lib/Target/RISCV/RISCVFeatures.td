@@ -748,6 +748,10 @@ def FeatureStdExtSsaia
                        "'Ssaia' (Advanced Interrupt Architecture Supervisor "
                        "Level)", []>;
 
+def FeatureStdExtSmepmp
+    : SubtargetFeature<"smepmp", "HasStdExtSmepmp", "true",
+                       "'Smepmp' (Enhanced Physical Memory Protection)", []>;
+
 def HasHalfFPLoadStoreMove
     : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,
                 AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZfhmin,

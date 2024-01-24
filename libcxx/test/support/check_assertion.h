@@ -15,7 +15,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <functional>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -27,118 +29,206 @@
 #include "test_allocator.h"
 
 #if TEST_STD_VER < 11
-# error "C++11 or greater is required to use this header"
+#  error "C++11 or greater is required to use this header"
 #endif
 
-struct AssertionInfoMatcher {
-  static const int any_line = -1;
-  static constexpr const char* any_file = "*";
-  static constexpr const char* any_msg = "*";
+// When printing the assertion message to `stderr`, delimit it with a marker to make it easier to match the message
+// later.
+static constexpr const char* Marker = "###";
 
-  constexpr AssertionInfoMatcher() : is_empty_(true), msg_(any_msg, __builtin_strlen(any_msg)), file_(any_file, __builtin_strlen(any_file)), line_(any_line) { }
-  constexpr AssertionInfoMatcher(const char* msg, const char* file = any_file, int line = any_line)
-    : is_empty_(false), msg_(msg, __builtin_strlen(msg)), file_(file, __builtin_strlen(file)), line_(line) {}
+// (success, error-message-if-failed)
+using MatchResult = std::pair<bool, std::string>;
+using Matcher     = std::function<MatchResult(const std::string& /*text*/)>;
 
-  bool Matches(char const* file, int line, char const* message) const {
-    assert(!empty() && "empty matcher");
+MatchResult MatchAssertionMessage(const std::string& text, std::string_view expected_message) {
+  // Extract information from the error message. This has to stay synchronized with how we format assertions in the
+  // library.
+  std::regex assertion_format(".*###\\n(.*):(\\d+): assertion (.*) failed: (.*)\\n###");
 
-    if (CheckLineMatches(line) && CheckFileMatches(file) && CheckMessageMatches(message))
-        return true;
-    // Write to stdout because that's the file descriptor captured by the parent
-    // process.
-    std::printf("Failed to match assertion info!\n%s\nVS\n%s:%d (%s)\n", ToString().data(), file, line, message);
-    return false;
+  std::smatch match_result;
+  bool has_match = std::regex_match(text, match_result, assertion_format);
+  assert(has_match);
+  assert(match_result.size() == 5);
+
+  const std::string& file = match_result[1];
+  int line                = std::stoi(match_result[2]);
+  // Omitting `expression` in `match_result[3]`
+  const std::string& assertion_message = match_result[4];
+
+  bool result = assertion_message == expected_message;
+  if (!result) {
+    std::stringstream matching_error;
+    matching_error                                                       //
+        << "Expected message:   '" << expected_message.data() << "'\n"   //
+        << "Actual message:     '" << assertion_message.c_str() << "'\n" //
+        << "Source location:     " << file << ":" << std::to_string(line) << "\n";
+    return MatchResult(/*success=*/false, matching_error.str());
   }
 
-  std::string ToString() const {
-    std::string result = "msg = \""; result += msg_; result += "\"\n";
-    result += "line = " + (line_ == any_line ? "'*'" : std::to_string(line_)) + "\n";
-    result += "file = " + (file_ == any_file ? "'*'" : std::string(file_));
-    return result;
-  }
-
-  bool empty() const { return is_empty_; }
-private:
-  bool CheckLineMatches(int got_line) const {
-    if (line_ == any_line)
-      return true;
-    return got_line == line_;
-  }
-
-  bool CheckFileMatches(std::string_view got_file) const {
-    assert(!empty() && "empty matcher");
-    if (file_ == any_file)
-      return true;
-    std::size_t found_at = got_file.find(file_);
-    if (found_at == std::string_view::npos)
-      return false;
-    // require the match start at the beginning of the file or immediately after
-    // a directory separator.
-    if (found_at != 0) {
-      char last_char = got_file[found_at - 1];
-      if (last_char != '/' && last_char != '\\')
-        return false;
-    }
-    // require the match goes until the end of the string.
-    return got_file.substr(found_at) == file_;
-  }
-
-  bool CheckMessageMatches(std::string_view got_msg) const {
-    assert(!empty() && "empty matcher");
-    if (msg_ == any_msg)
-      return true;
-    std::size_t found_at = got_msg.find(msg_);
-    if (found_at == std::string_view::npos)
-      return false;
-    return found_at == 0 && got_msg.size() == msg_.size();
-  }
-private:
-  bool is_empty_;
-  std::string_view msg_;
-  std::string_view file_;
-  int line_;
-};
-
-static constexpr AssertionInfoMatcher AnyMatcher(AssertionInfoMatcher::any_msg);
-
-inline AssertionInfoMatcher& GlobalMatcher() {
-  static AssertionInfoMatcher GMatch;
-  return GMatch;
+  return MatchResult(/*success=*/true, /*maybe_error=*/"");
 }
 
-struct DeathTest {
-  enum ResultKind {
-    RK_DidNotDie, RK_MatchFound, RK_MatchFailure, RK_Terminate, RK_SetupFailure, RK_Unknown
+Matcher MakeAssertionMessageMatcher(std::string_view assertion_message) {
+  return [=](const std::string& text) { //
+    return MatchAssertionMessage(text, assertion_message);
   };
+}
 
-  static const char* ResultKindToString(ResultKind RK) {
-#define CASE(K) case K: return #K
-    switch (RK) {
-    CASE(RK_MatchFailure);
-    CASE(RK_DidNotDie);
-    CASE(RK_SetupFailure);
-    CASE(RK_MatchFound);
-    CASE(RK_Unknown);
-    CASE(RK_Terminate);
-    }
-    return "not a result kind";
+Matcher MakeAnyMatcher() {
+  return [](const std::string&) { //
+    return MatchResult(/*success=*/true, /*maybe_error=*/"");
+  };
+}
+
+enum class DeathCause {
+  // Valid causes
+  VerboseAbort = 1,
+  StdTerminate,
+  Trap,
+  // Invalid causes
+  DidNotDie,
+  SetupFailure,
+  Unknown
+};
+
+bool IsValidCause(DeathCause cause) {
+  switch (cause) {
+  case DeathCause::VerboseAbort:
+  case DeathCause::StdTerminate:
+  case DeathCause::Trap:
+    return true;
+  default:
+    return false;
+  }
+}
+
+std::string ToString(DeathCause cause) {
+  switch (cause) {
+  case DeathCause::VerboseAbort:
+    return "verbose abort";
+  case DeathCause::StdTerminate:
+    return "`std::terminate`";
+  case DeathCause::Trap:
+    return "trap";
+  case DeathCause::DidNotDie:
+    return "<invalid cause (child did not die)>";
+  case DeathCause::SetupFailure:
+    return "<invalid cause (child failed to set up test environment)>";
+  case DeathCause::Unknown:
+    return "<invalid cause (cause unknown)>";
   }
 
-  static bool IsValidResultKind(int val) {
-    return val >= RK_DidNotDie && val <= RK_Unknown;
+  assert(false && "Unreachable");
+}
+
+TEST_NORETURN void StopChildProcess(DeathCause cause) { std::exit(static_cast<int>(cause)); }
+
+DeathCause ConvertToDeathCause(int val) {
+  if (val < static_cast<int>(DeathCause::VerboseAbort) || val > static_cast<int>(DeathCause::Unknown)) {
+    return DeathCause::Unknown;
+  }
+  return static_cast<DeathCause>(val);
+}
+
+enum class Outcome {
+  Success,
+  UnexpectedCause,
+  UnexpectedErrorMessage,
+  InvalidCause,
+};
+
+std::string ToString(Outcome outcome) {
+  switch (outcome) {
+  case Outcome::Success:
+    return "success";
+  case Outcome::UnexpectedCause:
+    return "unexpected death cause";
+  case Outcome::UnexpectedErrorMessage:
+    return "unexpected error message";
+  case Outcome::InvalidCause:
+    return "invalid death cause";
   }
 
-  DeathTest(AssertionInfoMatcher const& Matcher) : matcher_(Matcher) {}
+  assert(false && "Unreachable");
+}
+
+class DeathTestResult {
+public:
+  DeathTestResult() = default;
+  DeathTestResult(Outcome set_outcome, DeathCause set_cause, const std::string& set_failure_description = "")
+      : outcome_(set_outcome), cause_(set_cause), failure_description_(set_failure_description) {}
+
+  bool success() const { return outcome() == Outcome::Success; }
+  Outcome outcome() const { return outcome_; }
+  DeathCause cause() const { return cause_; }
+  const std::string& failure_description() const { return failure_description_; }
+
+private:
+  Outcome outcome_  = Outcome::Success;
+  DeathCause cause_ = DeathCause::Unknown;
+  std::string failure_description_;
+};
+
+class DeathTest {
+public:
+  DeathTest()                            = default;
+  DeathTest(DeathTest const&)            = delete;
+  DeathTest& operator=(DeathTest const&) = delete;
 
   template <class Func>
-  ResultKind Run(Func&& f) {
+  DeathTestResult Run(DeathCause expected_cause, Func&& func, const Matcher& matcher) {
+    std::set_terminate([] { StopChildProcess(DeathCause::StdTerminate); });
+
+    DeathCause cause = Run(func);
+
+    if (!IsValidCause(cause)) {
+      return DeathTestResult(Outcome::InvalidCause, cause, ToString(cause));
+    }
+
+    if (expected_cause != cause) {
+      std::stringstream failure_description;
+      failure_description                                             //
+          << "Child died, but with a different death cause\n"         //
+          << "Expected cause:   " << ToString(expected_cause) << "\n" //
+          << "Actual cause:     " << ToString(cause) << "\n";
+      return DeathTestResult(Outcome::UnexpectedCause, cause, failure_description.str());
+    }
+
+    MatchResult match_result = matcher(GetChildStdErr());
+    if (!match_result.first) {
+      auto failure_description = std::string("Child died, but with a different error message\n") + match_result.second;
+      return DeathTestResult(Outcome::UnexpectedErrorMessage, cause, failure_description);
+    }
+
+    return DeathTestResult(Outcome::Success, cause);
+  }
+
+  void PrintFailureDetails(std::string_view failure_description, std::string_view stmt, DeathCause cause) const {
+    std::fprintf(
+        stderr, "Failure: EXPECT_DEATH( %s ) failed!\n(reason: %s)\n\n", stmt.data(), failure_description.data());
+
+    if (cause != DeathCause::Unknown) {
+      std::fprintf(stderr, "child exit code: %d\n", GetChildExitCode());
+    }
+    std::fprintf(stderr, "---------- standard err ----------\n%s", GetChildStdErr().c_str());
+    std::fprintf(stderr, "\n----------------------------------\n");
+    std::fprintf(stderr, "---------- standard out ----------\n%s", GetChildStdOut().c_str());
+    std::fprintf(stderr, "\n----------------------------------\n");
+  };
+
+private:
+  int GetChildExitCode() const { return exit_code_; }
+  std::string const& GetChildStdOut() const { return stdout_from_child_; }
+  std::string const& GetChildStdErr() const { return stderr_from_child_; }
+
+  template <class Func>
+  DeathCause Run(Func&& f) {
     int pipe_res = pipe(stdout_pipe_fd_);
     assert(pipe_res != -1 && "failed to create pipe");
     pipe_res = pipe(stderr_pipe_fd_);
     assert(pipe_res != -1 && "failed to create pipe");
     pid_t child_pid = fork();
-    assert(child_pid != -1 &&
-        "failed to fork a process to perform a death test");
+    assert(child_pid != -1 && "failed to fork a process to perform a death test");
     child_pid_ = child_pid;
     if (child_pid_ == 0) {
       RunForChild(std::forward<Func>(f));
@@ -147,10 +237,6 @@ struct DeathTest {
     return RunForParent();
   }
 
-  int getChildExitCode() const { return exit_code_; }
-  std::string const& getChildStdOut() const { return stdout_from_child_; }
-  std::string const& getChildStdErr() const { return stderr_from_child_; }
-private:
   template <class Func>
   TEST_NORETURN void RunForChild(Func&& f) {
     close(GetStdOutReadFD()); // don't need to read from the pipe in the child.
@@ -158,14 +244,13 @@ private:
     auto DupFD = [](int DestFD, int TargetFD) {
       int dup_result = dup2(DestFD, TargetFD);
       if (dup_result == -1)
-        std::exit(RK_SetupFailure);
+        StopChildProcess(DeathCause::SetupFailure);
     };
     DupFD(GetStdOutWriteFD(), STDOUT_FILENO);
     DupFD(GetStdErrWriteFD(), STDERR_FILENO);
 
-    GlobalMatcher() = matcher_;
     f();
-    std::exit(RK_DidNotDie);
+    StopChildProcess(DeathCause::DidNotDie);
   }
 
   static std::string ReadChildIOUntilEnd(int FD) {
@@ -190,7 +275,7 @@ private:
     close(GetStdErrReadFD());
   }
 
-  ResultKind RunForParent() {
+  DeathCause RunForParent() {
     CaptureIOFromChild();
 
     int status_value;
@@ -199,35 +284,27 @@ private:
 
     if (WIFEXITED(status_value)) {
       exit_code_ = WEXITSTATUS(status_value);
-      if (!IsValidResultKind(exit_code_))
-        return RK_Unknown;
-      return static_cast<ResultKind>(exit_code_);
+      return ConvertToDeathCause(exit_code_);
     }
-    return RK_Unknown;
+
+    if (WIFSIGNALED(status_value)) {
+      exit_code_ = WTERMSIG(status_value);
+      // `__builtin_trap` generqtes `SIGILL` on x86 and `SIGTRAP` on ARM.
+      if (exit_code_ == SIGILL || exit_code_ == SIGTRAP) {
+        return DeathCause::Trap;
+      }
+    }
+
+    return DeathCause::Unknown;
   }
 
-  DeathTest(DeathTest const&) = delete;
-  DeathTest& operator=(DeathTest const&) = delete;
+  int GetStdOutReadFD() const { return stdout_pipe_fd_[0]; }
+  int GetStdOutWriteFD() const { return stdout_pipe_fd_[1]; }
+  int GetStdErrReadFD() const { return stderr_pipe_fd_[0]; }
+  int GetStdErrWriteFD() const { return stderr_pipe_fd_[1]; }
 
-  int GetStdOutReadFD() const {
-    return stdout_pipe_fd_[0];
-  }
-
-  int GetStdOutWriteFD() const {
-    return stdout_pipe_fd_[1];
-  }
-
-  int GetStdErrReadFD() const {
-    return stderr_pipe_fd_[0];
-  }
-
-  int GetStdErrWriteFD() const {
-    return stderr_pipe_fd_[1];
-  }
-private:
-  AssertionInfoMatcher matcher_;
   pid_t child_pid_ = -1;
-  int exit_code_ = -1;
+  int exit_code_   = -1;
   int stdout_pipe_fd_[2];
   int stderr_pipe_fd_[2];
   std::string stdout_from_child_;
@@ -235,82 +312,56 @@ private:
 };
 
 #ifdef _LIBCPP_VERSION
-void std::__libcpp_verbose_abort(char const* printf_format, ...) {
-  // Extract information from the error message. This has to stay synchronized with how we format assertions in the
-  // library.
+void std::__libcpp_verbose_abort(char const* format, ...) {
   va_list args;
-  va_start(args, printf_format);
-  char const* message = va_arg(args, char const*);
+  va_start(args, format);
 
-  std::regex message_format("(.*):(\\d+): assertion (.*) failed: (.*)\\n");
+  std::fprintf(stderr, "%s\n", Marker);
+  std::vfprintf(stderr, format, args);
+  std::fprintf(stderr, "%s", Marker);
 
-  std::cmatch match_result;
-  bool has_match = std::regex_match(message, match_result, message_format);
-  assert(has_match);
-  assert(match_result.size() == 5);
+  va_end(args);
 
-  std::string file = match_result[1];
-  int line         = std::stoi(match_result[2]);
-  // Omitting `expression` in `match_result[3]`
-  std::string failure_reason = match_result[4];
-
-  if (GlobalMatcher().Matches(file.c_str(), line, failure_reason.c_str())) {
-    std::exit(DeathTest::RK_MatchFound);
-  }
-  std::exit(DeathTest::RK_MatchFailure);
+  StopChildProcess(DeathCause::VerboseAbort);
 }
 #endif // _LIBCPP_VERSION
 
-[[noreturn]] inline void terminate_handler() {
-  std::exit(DeathTest::RK_Terminate);
-}
-
 template <class Func>
-inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matcher) {
-  std::set_terminate(terminate_handler);
-  DeathTest DT(Matcher);
-  DeathTest::ResultKind RK = DT.Run(func);
-  auto OnFailure = [&](const char* msg) {
-    std::fprintf(stderr, "EXPECT_DEATH( %s ) failed! (%s)\n\n", stmt, msg);
-    if (RK != DeathTest::RK_Unknown) {
-      std::fprintf(stderr, "child exit code: %d\n", DT.getChildExitCode());
-    }
-    if (!DT.getChildStdErr().empty()) {
-      std::fprintf(stderr, "---------- standard err ----------\n%s\n", DT.getChildStdErr().c_str());
-    }
-    if (!DT.getChildStdOut().empty()) {
-      std::fprintf(stderr, "---------- standard out ----------\n%s\n", DT.getChildStdOut().c_str());
-    }
-    return false;
-  };
-  switch (RK) {
-  case DeathTest::RK_MatchFound:
-  case DeathTest::RK_Terminate:
-    return true;
-  case DeathTest::RK_SetupFailure:
-    return OnFailure("child failed to setup test environment");
-  case DeathTest::RK_Unknown:
-      return OnFailure("reason unknown");
-  case DeathTest::RK_DidNotDie:
-      return OnFailure("child did not die");
-  case DeathTest::RK_MatchFailure:
-      return OnFailure("matcher failed");
+bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
+  assert(IsValidCause(expected_cause));
+
+  DeathTest test_case;
+  DeathTestResult test_result = test_case.Run(expected_cause, func, matcher);
+  if (!test_result.success()) {
+    test_case.PrintFailureDetails(test_result.failure_description(), stmt, test_result.cause());
   }
-  assert(false && "unreachable");
+
+  return test_result.success();
 }
 
 template <class Func>
-inline bool ExpectDeath(const char* stmt, Func&& func) {
-  return ExpectDeath(stmt, func, AnyMatcher);
+bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func) {
+  return ExpectDeath(expected_cause, stmt, func, MakeAnyMatcher());
 }
 
-/// Assert that the specified expression throws a libc++ debug exception.
-#define EXPECT_DEATH(...) assert((ExpectDeath(#__VA_ARGS__, [&]() { __VA_ARGS__; } )))
+// clang-format off
 
-#define EXPECT_STD_TERMINATE(...) assert(ExpectDeath(#__VA_ARGS__, __VA_ARGS__))
+/// Assert that the specified expression aborts with the expected cause and, optionally, error message.
+#define EXPECT_DEATH(...)                         \
+    assert(( ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; } ) ))
+#define EXPECT_DEATH_MATCHES(matcher, ...)        \
+    assert(( ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; }, matcher) ))
+#define EXPECT_STD_TERMINATE(...)                 \
+    assert(  ExpectDeath(DeathCause::StdTerminate, #__VA_ARGS__, __VA_ARGS__)  )
 
-#define EXPECT_DEATH_MATCHES(Matcher, ...) assert((ExpectDeath(#__VA_ARGS__, [&]() { __VA_ARGS__; }, Matcher)))
+#if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
+#define TEST_LIBCPP_ASSERT_FAILURE(expr, message) \
+    assert(( ExpectDeath(DeathCause::VerboseAbort, #expr, [&]() { (void)(expr); }, MakeAssertionMessageMatcher(message)) ))
+#else
+#define TEST_LIBCPP_ASSERT_FAILURE(expr, message) \
+    assert(( ExpectDeath(DeathCause::Trap,         #expr, [&]() { (void)(expr); }) ))
+#endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 
-#define TEST_LIBCPP_ASSERT_FAILURE(expr, message) assert((ExpectDeath(#expr, [&]() { (void)(expr); }, AssertionInfoMatcher(message))))
+// clang-format on
 
 #endif // TEST_SUPPORT_CHECK_ASSERTION_H

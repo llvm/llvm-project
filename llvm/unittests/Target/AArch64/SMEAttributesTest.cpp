@@ -193,86 +193,51 @@ TEST(SMEAttributes, Transitions) {
   ASSERT_FALSE(SA(SA::Normal).requiresSMChange(SA(SA::Normal)));
   // Normal -> Normal + LocallyStreaming
   ASSERT_FALSE(SA(SA::Normal).requiresSMChange(SA(SA::Normal | SA::SM_Body)));
-  ASSERT_EQ(*SA(SA::Normal)
-                 .requiresSMChange(SA(SA::Normal | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
 
   // Normal -> Streaming
-  ASSERT_EQ(*SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled)), true);
+  ASSERT_TRUE(SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled)));
   // Normal -> Streaming + LocallyStreaming
-  ASSERT_EQ(*SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)),
-            true);
-  ASSERT_EQ(*SA(SA::Normal)
-                 .requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
+  ASSERT_TRUE(
+      SA(SA::Normal).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)));
 
   // Normal -> Streaming-compatible
   ASSERT_FALSE(SA(SA::Normal).requiresSMChange(SA(SA::SM_Compatible)));
   // Normal -> Streaming-compatible + LocallyStreaming
   ASSERT_FALSE(
       SA(SA::Normal).requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body)));
-  ASSERT_EQ(*SA(SA::Normal)
-                 .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
 
   // Streaming -> Normal
-  ASSERT_EQ(*SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal)), false);
+  ASSERT_TRUE(SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal)));
   // Streaming -> Normal + LocallyStreaming
-  ASSERT_EQ(*SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal | SA::SM_Body)),
-            false);
-  ASSERT_FALSE(SA(SA::SM_Enabled)
-                   .requiresSMChange(SA(SA::Normal | SA::SM_Body),
-                                     /*BodyOverridesInterface=*/true));
+  ASSERT_TRUE(
+      SA(SA::SM_Enabled).requiresSMChange(SA(SA::Normal | SA::SM_Body)));
 
   // Streaming -> Streaming
   ASSERT_FALSE(SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Enabled)));
   // Streaming -> Streaming + LocallyStreaming
   ASSERT_FALSE(
       SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)));
-  ASSERT_FALSE(SA(SA::SM_Enabled)
-                   .requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body),
-                                     /*BodyOverridesInterface=*/true));
 
   // Streaming -> Streaming-compatible
   ASSERT_FALSE(SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Compatible)));
   // Streaming -> Streaming-compatible + LocallyStreaming
   ASSERT_FALSE(
       SA(SA::SM_Enabled).requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body)));
-  ASSERT_FALSE(SA(SA::SM_Enabled)
-                   .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body),
-                                     /*BodyOverridesInterface=*/true));
 
   // Streaming-compatible -> Normal
-  ASSERT_EQ(*SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal)), false);
-  ASSERT_EQ(
-      *SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal | SA::SM_Body)),
-      false);
-  ASSERT_EQ(*SA(SA::SM_Compatible)
-                 .requiresSMChange(SA(SA::Normal | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
+  ASSERT_TRUE(SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal)));
+  ASSERT_TRUE(
+      SA(SA::SM_Compatible).requiresSMChange(SA(SA::Normal | SA::SM_Body)));
 
   // Streaming-compatible -> Streaming
-  ASSERT_EQ(*SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled)), true);
+  ASSERT_TRUE(SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled)));
   // Streaming-compatible -> Streaming + LocallyStreaming
-  ASSERT_EQ(
-      *SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)),
-      true);
-  ASSERT_EQ(*SA(SA::SM_Compatible)
-                 .requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
+  ASSERT_TRUE(
+      SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Enabled | SA::SM_Body)));
 
   // Streaming-compatible -> Streaming-compatible
   ASSERT_FALSE(SA(SA::SM_Compatible).requiresSMChange(SA(SA::SM_Compatible)));
   // Streaming-compatible -> Streaming-compatible + LocallyStreaming
   ASSERT_FALSE(SA(SA::SM_Compatible)
                    .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body)));
-  ASSERT_EQ(*SA(SA::SM_Compatible)
-                 .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body),
-                                   /*BodyOverridesInterface=*/true),
-            true);
 }

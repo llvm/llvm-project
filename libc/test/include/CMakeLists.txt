@@ -1,6 +1,6 @@
 add_custom_target(libc_include_tests)
 
-add_libc_unittest(
+add_libc_test(
   sys_queue_test
   SUITE
     libc_include_tests

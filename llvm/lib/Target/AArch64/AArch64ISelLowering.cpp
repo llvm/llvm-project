@@ -7635,8 +7635,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   SDValue PStateSM;
-  std::optional<bool> RequiresSMChange =
-      CallerAttrs.requiresSMChange(CalleeAttrs);
+  bool RequiresSMChange = CallerAttrs.requiresSMChange(CalleeAttrs);
   if (RequiresSMChange) {
     if (CallerAttrs.hasStreamingInterfaceOrBody())
       PStateSM = DAG.getConstant(1, DL, MVT::i64);
@@ -7910,8 +7909,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
-    SDValue NewChain = changeStreamingMode(DAG, DL, *RequiresSMChange, Chain,
-                                           InGlue, PStateSM, true);
+    SDValue NewChain =
+        changeStreamingMode(DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain,
+                            InGlue, PStateSM, true);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -8061,8 +8061,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (RequiresSMChange) {
     assert(PStateSM && "Expected a PStateSM to be set");
-    Result = changeStreamingMode(DAG, DL, !*RequiresSMChange, Result, InGlue,
-                                 PStateSM, false);
+    Result = changeStreamingMode(DAG, DL, !CalleeAttrs.hasStreamingInterface(),
+                                 Result, InGlue, PStateSM, false);
   }
 
   if (RequiresLazySave) {
@@ -25463,8 +25463,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
     auto CallerAttrs = SMEAttrs(*Inst.getFunction());
     auto CalleeAttrs = SMEAttrs(*Base);
-    if (CallerAttrs.requiresSMChange(CalleeAttrs,
-                                     /*BodyOverridesInterface=*/false) ||
+    if (CallerAttrs.requiresSMChange(CalleeAttrs) ||
         CallerAttrs.requiresLazySave(CalleeAttrs))
       return true;
   }
