@@ -330,6 +330,21 @@ memref.global "private" @gv4 : memref<f32> = dense<1.0> {alignment = 64}
 
 // -----
 
+module {
+  // CHECK: llvm.mlir.global private constant @__constant_xf32(1.41421354 : f32) {addr_space = 0 : i32} : f32
+  memref.global "private" constant @__constant_xf32 : memref<f32> = dense_resource<NAME>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      NAME: "0x08000000F304B53F"
+    }
+  }
+#-}
+
+// -----
+
 // Expand shapes need to be expanded outside of the memref-to-llvm pass.
 // CHECK-LABEL: func @expand_shape_static(
 // CHECK-SAME:         %[[ARG:.*]]: memref<{{.*}}>)

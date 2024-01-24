@@ -505,7 +505,8 @@ struct GlobalMemrefOpLowering
       Attribute initialAttr = *global.getInitialValue();
       if (auto resourceAttr = llvm::dyn_cast<DenseResourceElementsAttr>(initialAttr)) {
         auto blob = resourceAttr.getRawHandle().getBlob();
-        initialAttr = DenseElementsAttr::get(resourceAttr.getType(), blob->getData());
+        initialAttr = DenseElementsAttr::getFromRawBuffer(
+          resourceAttr.getType(), blob->getData());
       } 
 
       if (auto elementsAttr = llvm::cast<ElementsAttr>(initialAttr)) {
