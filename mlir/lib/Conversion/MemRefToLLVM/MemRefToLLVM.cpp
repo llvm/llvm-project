@@ -503,17 +503,18 @@ struct GlobalMemrefOpLowering
     Attribute initialValue = nullptr;
     if (!global.isExternal() && !global.isUninitialized()) {
       Attribute initialAttr = *global.getInitialValue();
-      if (auto resourceAttr = llvm::dyn_cast<DenseResourceElementsAttr>(initialAttr)) {
+      if (auto resourceAttr =
+              llvm::dyn_cast<DenseResourceElementsAttr>(initialAttr)) {
         auto blob = resourceAttr.getRawHandle().getBlob();
         initialAttr = DenseElementsAttr::getFromRawBuffer(
-          resourceAttr.getType(), blob->getData());
-      } 
+            resourceAttr.getType(), blob->getData());
+      }
 
       if (auto elementsAttr = llvm::cast<ElementsAttr>(initialAttr)) {
         initialValue = elementsAttr;
 
-        // For scalar memrefs, the global variable created is of the element type,
-        // so unpack the elements attribute to extract the value.
+        // For scalar memrefs, the global variable created is of the element
+        // type, so unpack the elements attribute to extract the value.
         if (type.getRank() == 0)
           initialValue = elementsAttr.getSplatValue<Attribute>();
       }
