@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -186,6 +187,21 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<bool> EnableNewPassManager(
+    "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
+
+// This flag specifies a textual description of the optimization pass pipeline
+// to run over the module. This flag switches opt to use the new pass manager
+// infrastructure, completely disabling all of the flags specific to the old
+// pass management.
+static cl::opt<std::string> PassPipeline(
+    "passes",
+    cl::desc(
+        "A textual description of the pass pipeline. To have analysis passes "
+        "available before a certain pass, add 'require<foo-analysis>'."));
+static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
+                               cl::desc("Alias for -passes"));
+
 static cl::opt<bool> TryUseNewDbgInfoFormat(
     "try-experimental-debuginfo-iterators",
     cl::desc("Enable debuginfo iterator positions, if they're built in"),
@@ -306,34 +322,6 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   return FDOut;
 }
 
-struct LLCDiagnosticHandler : public DiagnosticHandler {
-  bool handleDiagnostics(const DiagnosticInfo &DI) override {
-    DiagnosticHandler::handleDiagnostics(DI);
-    if (DI.getKind() == llvm::DK_SrcMgr) {
-      const auto &DISM = cast<DiagnosticInfoSrcMgr>(DI);
-      const SMDiagnostic &SMD = DISM.getSMDiag();
-
-      SMD.print(nullptr, errs());
-
-      // For testing purposes, we print the LocCookie here.
-      if (DISM.isInlineAsmDiag() && DISM.getLocCookie())
-        WithColor::note() << "!srcloc = " << DISM.getLocCookie() << "\n";
-
-      return true;
-    }
-
-    if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
-      if (!Remark->isEnabled())
-        return true;
-
-    DiagnosticPrinterRawOStream DP(errs());
-    errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
-    DI.print(DP);
-    errs() << "\n";
-    return true;
-  }
-};
-
 // main - Entry point for the llc compiler.
 //
 int main(int argc, char **argv) {
@@ -376,6 +364,13 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+
+  if (!PassPipeline.empty() && !getRunPassNames().empty()) {
+    errs() << "The `llc -run-pass=...` syntax for the new pass manager is "
+              "not supported, please use `llc -passes=<pipeline>` (or the `-p` "
+              "alias for a more concise version).\n";
+    return 1;
+  }
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
   // new debug-info format, if it's built in.
@@ -642,16 +637,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
       reportError(EC.message(), SplitDwarfOutputFile);
   }
 
-  // Build up all of the passes that we want to do to the module.
-  legacy::PassManager PM;
-
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
   TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
     TLII.disableAllFunctions();
-  PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   // Verify module immediately to catch problems before doInitialization() is
   // called on any passes.
@@ -666,6 +657,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
       codegen::getFileType() != CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
+
+  if (EnableNewPassManager || !PassPipeline.empty()) {
+    return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
+                                  std::move(Target), std::move(Out),
+                                  std::move(DwoOut), Context, TLII, NoVerify,
+                                  PassPipeline, codegen::getFileType());
+  }
+
+  // Build up all of the passes that we want to do to the module.
+  legacy::PassManager PM;
+  PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   {
     raw_pwrite_stream *OS = &Out->os();
@@ -700,7 +702,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
             << "run-pass cannot be used with "
-            << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
+            << TPC.getLimitedCodeGenPipelineReason() << ".\n";
         delete PTPC;
         delete MMIWP;
         return 1;
