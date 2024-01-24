@@ -400,8 +400,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
       // C++11 [class.ctor]p6:
       //   If that user-written default constructor would satisfy the
-      //   requirements of a constexpr constructor/function(C++23), the implicitly-defined
-      //   default constructor is constexpr.
+      //   requirements of a constexpr constructor/function(C++23), the
+      //   implicitly-defined default constructor is constexpr.
       if (!BaseClassDecl->hasConstexprDefaultConstructor())
         data().DefaultedDefaultConstructorIsConstexpr =
             C.getLangOpts().CPlusPlus23;
