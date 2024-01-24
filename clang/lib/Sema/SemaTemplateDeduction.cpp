@@ -869,18 +869,19 @@ public:
       return {};
     unsigned PackSize = Packs[0].Saved.pack_size();
 
-    if (std::all_of(Packs.begin() + 1, Packs.end(),
-                    [&PackSize](auto P) {
-                      return P.Saved.getKind() == TemplateArgument::Pack &&
-                             P.Saved.pack_size() == PackSize;
-                    }))
+    if (std::all_of(Packs.begin() + 1, Packs.end(), [&PackSize](auto P) {
+          return P.Saved.getKind() == TemplateArgument::Pack &&
+                 P.Saved.pack_size() == PackSize;
+        }))
       return PackSize;
     return {};
   }
 
   /// Determine whether this pack has already been deduced from a previous
   /// argument.
-  bool isDeducedFromEarlierParameter() const {return DeducedFromEarlierParameter;}
+  bool isDeducedFromEarlierParameter() const {
+    return DeducedFromEarlierParameter;
+  }
 
   /// Determine whether this pack has already been partially expanded into a
   /// sequence of (prior) function parameters / template arguments.
@@ -4406,12 +4407,12 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
         // parameters in the template parameter list of the template are
         // replaced with the corresponding deduced or default argument values
         //
-        // If we have a trailing parameter pack, that has been deduced perviously
-        // we substitute the pack here in a similar fashion as seen above with
-        // the trailing parameter packs. The main difference here is that, in
-        // this case we are not processing all of the remaining arguments. We
-        // are only process as many arguments as much we have in the already
-        // deduced parameter.
+        // If we have a trailing parameter pack, that has been deduced
+        // perviously we substitute the pack here in a similar fashion as seen
+        // above with the trailing parameter packs. The main difference here is
+        // that, in this case we are not processing all of the remaining
+        // arguments. We are only process as many arguments as much we have in
+        // the already deduced parameter.
         SmallVector<UnexpandedParameterPack, 2> Unexpanded;
         collectUnexpandedParameterPacks(ParamPattern, Unexpanded);
         if (Unexpanded.size() == 0)
