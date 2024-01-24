@@ -4926,15 +4926,55 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
 
-  // Detect shuffles which can be re-expressed as vector selects; these are
-  // shuffles in which each element in the destination is taken from an element
-  // at the corresponding index in either source vectors.
-  bool IsSelect = all_of(enumerate(Mask), [&](const auto &MaskIdx) {
-    int MaskIndex = MaskIdx.value();
-    return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
-  });
 
+  // Handle any remaining single source shuffles
   assert(!V1.isUndef() && "Unexpected shuffle canonicalization");
+  if (V2.isUndef()) {
+    // We might be able to express the shuffle as a bitrotate. But even if we
+    // don't have Zvkb and have to expand, the expanded sequence of approx. 2
+    // shifts and a vor will have a higher throughput than a vrgather.
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
+
+    // Base case for the two operand recursion below - handle the worst case
+    // single source shuffle.
+    unsigned GatherVVOpc = RISCVISD::VRGATHER_VV_VL;
+    MVT IndexVT = VT.changeTypeToInteger();
+    // Since we can't introduce illegal index types at this stage, use i16 and
+    // vrgatherei16 if the corresponding index type for plain vrgather is greater
+    // than XLenVT.
+    if (IndexVT.getScalarType().bitsGT(XLenVT)) {
+      GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
+      IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+    }
+
+    // If the mask allows, we can do all the index computation in 16 bits.  This
+    // requires less work and less register pressure at high LMUL, and creates
+    // smaller constants which may be cheaper to materialize.
+    if (IndexVT.getScalarType().bitsGT(MVT::i16) && isUInt<16>(NumElts - 1) &&
+        (IndexVT.getSizeInBits() / Subtarget.getRealMinVLen()) > 1) {
+      GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
+      IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+    }
+
+    MVT IndexContainerVT =
+      ContainerVT.changeVectorElementType(IndexVT.getScalarType());
+
+    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+    SmallVector<SDValue> GatherIndicesLHS;
+    for (int MaskIndex : Mask) {
+      bool IsLHSIndex = MaskIndex < (int)NumElts && MaskIndex >= 0;
+      GatherIndicesLHS.push_back(IsLHSIndex
+                                 ? DAG.getConstant(MaskIndex, DL, XLenVT)
+                                 : DAG.getUNDEF(XLenVT));
+    }
+    SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
+    LHSIndices = convertToScalableVector(IndexContainerVT, LHSIndices, DAG,
+                                         Subtarget);
+    SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
+                                 DAG.getUNDEF(ContainerVT), TrueMask, VL);
+    return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+  }
 
   // By default we preserve the original operand order, and use a mask to
   // select LHS as true and RHS as false. However, since RVV vector selects may
@@ -4942,6 +4982,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // instead select between RHS and LHS.
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
 
+  // Detect shuffles which can be re-expressed as vector selects; these are
+  // shuffles in which each element in the destination is taken from an element
+  // at the corresponding index in either source vectors.
+  bool IsSelect = all_of(enumerate(Mask), [&](const auto &MaskIdx) {
+    int MaskIndex = MaskIdx.value();
+    return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
+  });
   if (IsSelect) {
     // Now construct the mask that will be used by the vselect operation.
     SmallVector<SDValue> MaskVals;
@@ -4959,12 +5006,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
   }
 
-  // We might be able to express the shuffle as a bitrotate. But even if we
-  // don't have Zvkb and have to expand, the expanded sequence of approx. 2
-  // shifts and a vor will have a higher throughput than a vrgather.
-  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
-    return V;
-
   if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
     // On such a large vector we're unable to use i8 as the index type.
     // FIXME: We could promote the index to i16 and use vrgatherei16, but that
@@ -4975,12 +5016,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   // As a backup, shuffles can be lowered via a vrgather instruction, possibly
   // merged with a second vrgather.
-  SmallVector<SDValue> GatherIndicesLHS, GatherIndicesRHS;
-
-  // Keep a track of which non-undef indices are used by each LHS/RHS shuffle
-  // half.
-  DenseMap<int, unsigned> LHSIndexCounts, RHSIndexCounts;
-
+  SmallVector<int> ShuffleMaskLHS, ShuffleMaskRHS;
   SmallVector<SDValue> MaskVals;
 
   // Now construct the mask that will be used by the blended vrgather operation.
@@ -4989,107 +5025,27 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ !SwapOps;
     MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
-    GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
-                               ? DAG.getConstant(MaskIndex, DL, XLenVT)
-                               : DAG.getUNDEF(XLenVT));
-    GatherIndicesRHS.push_back(
-                               IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
-                               : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
-    if (IsLHSOrUndefIndex && MaskIndex >= 0)
-      ++LHSIndexCounts[MaskIndex];
-    if (!IsLHSOrUndefIndex)
-      ++RHSIndexCounts[MaskIndex - NumElts];
+    ShuffleMaskLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
+                             ? MaskIndex : -1);
+    ShuffleMaskRHS.push_back(IsLHSOrUndefIndex ? -1 : (MaskIndex - NumElts));
   }
 
   if (SwapOps) {
     std::swap(V1, V2);
-    std::swap(GatherIndicesLHS, GatherIndicesRHS);
+    std::swap(ShuffleMaskLHS, ShuffleMaskRHS);
   }
 
   assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
   MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
   SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
 
-  unsigned GatherVXOpc = RISCVISD::VRGATHER_VX_VL;
-  unsigned GatherVVOpc = RISCVISD::VRGATHER_VV_VL;
-  MVT IndexVT = VT.changeTypeToInteger();
-  // Since we can't introduce illegal index types at this stage, use i16 and
-  // vrgatherei16 if the corresponding index type for plain vrgather is greater
-  // than XLenVT.
-  if (IndexVT.getScalarType().bitsGT(XLenVT)) {
-    GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
-    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
-  }
-
-  // If the mask allows, we can do all the index computation in 16 bits.  This
-  // requires less work and less register pressure at high LMUL, and creates
-  // smaller constants which may be cheaper to materialize.
-  if (IndexVT.getScalarType().bitsGT(MVT::i16) && isUInt<16>(NumElts - 1) &&
-      (IndexVT.getSizeInBits() / Subtarget.getRealMinVLen()) > 1) {
-    GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
-    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
-  }
-
-  MVT IndexContainerVT =
-      ContainerVT.changeVectorElementType(IndexVT.getScalarType());
-
-  // Base case for the recursion just below - handle the worst case
-  // single source permutation.  Note that all the splat variants
-  // are handled above.
-  if (V2.isUndef()) {
-    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
-    SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
-    LHSIndices = convertToScalableVector(IndexContainerVT, LHSIndices, DAG,
-                                         Subtarget);
-    SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
-                                 DAG.getUNDEF(ContainerVT), TrueMask, VL);
-    return convertFromScalableVector(VT, Gather, DAG, Subtarget);
-  }
-
-  // Translate the gather index we computed above (and possibly swapped)
-  // back to a shuffle mask.  This step should disappear once we complete
-  // the migration to recursive design.
-  SmallVector<int> ShuffleMaskLHS;
-  ShuffleMaskLHS.reserve(GatherIndicesLHS.size());
-  for (SDValue GatherIndex : GatherIndicesLHS) {
-    if (GatherIndex.isUndef()) {
-      ShuffleMaskLHS.push_back(-1);
-      continue;
-    }
-    auto *IdxC = cast<ConstantSDNode>(GatherIndex);
-    ShuffleMaskLHS.push_back(IdxC->getZExtValue());
-  }
-
-  // Recursively invoke lowering for the LHS as if there were no RHS.
-  // This allows us to leverage all of our single source permute tricks.
-  SDValue Gather =
-    DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
-  Gather = convertToScalableVector(ContainerVT, Gather, DAG, Subtarget);
-
-  // Blend in second vector source with an additional vrgather.
-  V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
-
-  MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
-  SelectMask =
-    convertToScalableVector(MaskContainerVT, SelectMask, DAG, Subtarget);
-
-  // If only one index is used, we can use a "splat" vrgather.
-  // TODO: We can splat the most-common index and fix-up any stragglers, if
-  // that's beneficial.
-  if (RHSIndexCounts.size() == 1) {
-    int SplatIndex = RHSIndexCounts.begin()->getFirst();
-    Gather = DAG.getNode(GatherVXOpc, DL, ContainerVT, V2,
-                         DAG.getConstant(SplatIndex, DL, XLenVT), Gather,
-                         SelectMask, VL);
-  } else {
-    SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
-    RHSIndices =
-      convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
-    Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices, Gather,
-                         SelectMask, VL);
-  }
-
-  return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+  // Recursively invoke lowering for each operand if we had two
+  // independent single source shuffles, and then combine the result via a
+  // vselect.  Note that the vselect will likely be folded back into the
+  // second permute (vrgather, or other) by the post-isel combine.
+  V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
+  V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), ShuffleMaskRHS);
+  return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V2, V1);
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
