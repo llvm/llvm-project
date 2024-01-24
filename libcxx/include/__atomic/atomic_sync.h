@@ -46,12 +46,12 @@ __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile*, __cxx_contention
 template <class _Atp, class _Fn>
 struct __libcpp_atomic_wait_backoff_impl {
   _Atp* __a;
-  _Fn __test_fn;
+  _Fn __test_with_old;
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(64)) {
-      auto const __monitor = std::__libcpp_atomic_monitor(__a);
-      if (__test_fn())
+      auto __monitor = std::__libcpp_atomic_monitor(__a);
+      if (__test_with_old(__monitor))
         return true;
       std::__libcpp_atomic_wait(__a, __monitor);
     } else if (__elapsed > chrono::microseconds(4))
@@ -62,9 +62,17 @@ struct __libcpp_atomic_wait_backoff_impl {
   }
 };
 
+template <class _Atp, class _Fn, class _Fn2>
+_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
+__cxx_atomic_wait(_Atp* __a, _Fn&& __test_fn, _Fn2&& __test_with_old) {
+  __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_Fn2> > __backoff_fn = {__a, __test_with_old};
+  return std::__libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
+}
+
 template <class _Atp, class _Fn>
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_wait(_Atp* __a, _Fn&& __test_fn) {
-  __libcpp_atomic_wait_backoff_impl<_Atp, __decay_t<_Fn> > __backoff_fn = {__a, __test_fn};
+  auto __test_with_old = [&](auto&) { return __test_fn(); };
+  __libcpp_atomic_wait_backoff_impl<_Atp, decltype(__test_with_old)> __backoff_fn{__a, __test_with_old};
   return std::__libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
 }
 
