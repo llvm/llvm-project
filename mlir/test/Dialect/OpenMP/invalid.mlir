@@ -1729,3 +1729,12 @@ func.func @omp_target_update_invalid_motion_modifier_5(%map1 : memref<?xi32>) {
   return
 }
 llvm.mlir.global internal @_QFsubEx() : i32
+
+// -----
+
+func.func @omp_distribute(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+  "omp.distribute"(%data_var) <{operandSegmentSizes = array<i32: 0, 1, 0>}> ({
+      "omp.terminator"() : () -> ()
+    }) : (memref<i32>) -> ()
+}
