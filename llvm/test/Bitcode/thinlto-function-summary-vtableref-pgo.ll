@@ -1,6 +1,6 @@
 ; RUN: opt -module-summary %s -o %t.o
 
-; RUN llvm-bcanalyzer -dump %t.o | FileCheck %s
+; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
 
 ; RUN: llvm-dis -o - %t.o | FileCheck %s --check-prefix=DIS
 ; Round trip it through llvm-as
@@ -13,7 +13,7 @@
 ; CHECK-NEXT:   <VALUE_GUID op0=8 op1=1960855528937986108/>
 ; "_ZN4Base4funcEv" referenced by the indirect call instruction.
 ; CHECK-NEXT:   <VALUE_GUID op0=7 op1=5459407273543877811/>
-; CHECK-NEXT:   <PERMODULE abbrevid=5 op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=8 op8=7/>
+; CHECK-NEXT:   <PERMODULE_PROFILE abbrevid=4 op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=8 op8=7 op9=2/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
