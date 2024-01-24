@@ -116,7 +116,7 @@ EXTERN void *llvm_omp_target_alloc_multi_devices(size_t size, int num_devices,
     return nullptr;
 
   DeviceTy &Device = *PM->getDevice(DeviceNums[0]);
-  if (!Device.RTL->is_system_supporting_managed_memory())
+  if (!Device.RTL->is_system_supporting_managed_memory(Device.DeviceID))
     return nullptr;
 
   // disregard device ids for now and allocate shared memory that can be

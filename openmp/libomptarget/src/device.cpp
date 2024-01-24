@@ -83,10 +83,6 @@ llvm::Error DeviceTy::init() {
   int32_t Ret = 0;
   if (RTL->init_requires)
     Ret = RTL->init_requires(PM->getRequirements());
-  
-  // set_up_env() has a temporary dependency on RequiresFlags being set. This
-  // spot is the earliest possible call-site.
-  RTL->set_up_env();
 
   if (Ret != OFFLOAD_SUCCESS)
     return llvm::createStringError(
@@ -395,4 +391,10 @@ void DeviceTy::dumpOffloadEntries() {
       Kind = "global var.";
     fprintf(stderr, "  %11s: %s\n", Kind, It.second.getNameAsCStr());
   }
+}
+
+bool DeviceTy::useAutoZeroCopy() {
+  if (RTL->use_auto_zero_copy)
+    return RTL->use_auto_zero_copy(RTLDeviceID);
+  return false;
 }

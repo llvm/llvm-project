@@ -252,8 +252,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (((Device.RTL->requested_prepopulate_gpu_page_table()) ||
-              (Device.RTL->are_allocations_for_maps_on_apus_disabled()) ||
+  } else if (((Device.RTL->requested_prepopulate_gpu_page_table(
+                  Device.DeviceID)) ||
+              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) ||
               (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
              (!HasCloseModifier)) {
     // If unified shared memory is active, implicitly mapped variables that
@@ -267,20 +268,24 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // memory as coarse-grained. The usage of coarse-grained memory can be
       // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
       // This is not done for APUs.
-      if (!(Device.RTL->has_apu_device() ||
-            Device.RTL->has_USM_capable_dGPU()) &&
-          Device.RTL->is_fine_grained_memory_enabled() && HstPtrBegin &&
-          Device.RTL->set_coarse_grain_mem_region) {
+      if (!(Device.RTL->has_apu_device(Device.DeviceID) ||
+            Device.RTL->has_USM_capable_dGPU(Device.DeviceID)) &&
+          Device.RTL->is_fine_grained_memory_enabled(Device.DeviceID) &&
+          HstPtrBegin && Device.RTL->set_coarse_grain_mem_region) {
         Device.RTL->set_coarse_grain_mem_region(Device.DeviceID, HstPtrBegin,
                                                 Size);
       }
 
-      if (Device.RTL->has_apu_device() &&
-          Device.RTL->requested_prepopulate_gpu_page_table() &&
+      if (Device.RTL->has_apu_device(Device.DeviceID) &&
+          Device.RTL->requested_prepopulate_gpu_page_table(Device.DeviceID) &&
           Device.RTL->prepopulate_page_table) {
         Device.RTL->prepopulate_page_table(Device.DeviceID, HstPtrBegin, Size);
       }
     }
+    INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+         "Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
+         "memory\n",
+         DPxPTR((uintptr_t)HstPtrBegin), Size);
     DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
        "memory\n",
        DPxPTR((uintptr_t)HstPtrBegin), Size);
@@ -436,7 +441,7 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
   } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-             Device.RTL->are_allocations_for_maps_on_apus_disabled()) {
+             PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.

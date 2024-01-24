@@ -824,6 +824,33 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return Error::success();
   }
 
+  // Query whether libomptarget should update global
+  // references in device binary upon loading it.
+  bool canUseHostGlobals();
+  virtual bool canUseHostGlobalsImpl() { return false; }
+
+  // Returns true if the system is equipped with an APU.
+  // moved in from plugin
+  //  virtual bool hasAPUDevice() { return false; }
+  bool hasAPUDevice();
+  virtual bool hasAPUDeviceImpl() { return false; }
+
+  // Returns true if the system is equipped with a dGPU that supports USM
+  // virtual bool hasDGpuWithUsmSupport() { return false; }
+  bool hasDGpuWithUsmSupport();
+  virtual bool hasDGpuWithUsmSupportImpl() { return false; }
+
+  // Returns true if user requested Eager Maps implementation.
+  // virtual bool requestedPrepopulateGPUPageTable() { return false; }
+  bool requestedPrepopulateGPUPageTable();
+  virtual bool requestedPrepopulateGPUPageTableImpl() { return false; }
+
+  // Returns true if coarse graining of mapped variables is
+  // disabled on MI200 GPUs.
+  // virtual bool IsFineGrainedMemoryEnabled() { return false; }
+  bool IsFineGrainedMemoryEnabled();
+  virtual bool IsFineGrainedMemoryEnabledImpl() { return false; }
+
   /// Create an event.
   Error createEvent(void **EventPtrStorage);
   virtual Error createEventImpl(void **EventPtrStorage) = 0;
@@ -919,6 +946,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
+
+  /// Returns true if current plugin architecture is an APU
+  /// and unified_shared_memory was not requested by the program.
+  bool useAutoZeroCopy();
+  virtual bool useAutoZeroCopyImpl() { return false; }
 
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
@@ -1050,23 +1082,9 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
-  // Returns true if the system is equipped with an APU.
-  virtual bool hasAPUDevice() { return false; }
-
-  // Returns true if the system is equipped with a dGPU that supports USM
-  virtual bool hasDGpuWithUsmSupport() { return false; }
-
-  virtual bool AreAllocationsForMapsOnApusDisabled() { return false; }
-
-  virtual bool requestedPrepopulateGPUPageTable() { return false; }
-
-  virtual bool IsFineGrainedMemoryEnabled() { return false; }
-
+  /// Returns true if the system supports managed memory (SVN in AMD GPUs).
   virtual bool IsSystemSupportingManagedMemory() { return false; }
 
-  virtual void setUpEnv() {}
-  virtual void
-  checkAndAdjustUsmModeForTargetImage(const __tgt_device_image *TgtImage) {}
   /// Get the plugin-specific device identifier offset.
   int32_t getDeviceIdStartIndex() const { return DeviceIdStartIndex; }
 
@@ -1135,10 +1153,6 @@ struct GenericPluginTy {
 
   /// Indicate whether the plugin supports empty images.
   virtual bool supportsEmptyImages() const { return false; }
-
-  /// Return true if host globals can be enabled on a system that supprots
-  /// unified shared memory.
-  virtual bool canUseHostGlobals() { return false; }
 
 protected:
   /// Indicate whether a device id is valid.

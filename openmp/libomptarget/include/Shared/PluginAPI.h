@@ -34,19 +34,6 @@ int32_t __tgt_rtl_init_plugin();
 // target RTL.
 int32_t __tgt_rtl_number_of_devices(void);
 
-// Return if the system is equipped with an APU
-bool __tgt_rtl_has_apu_device(void);
-
-// Returns true, if the system is equipped with a dGPU which supports USM.
-bool __tgt_rtl_has_USM_capable_dGPU(void);
-
-bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled(void);
-
-bool __tgt_rtl_is_fine_grained_memory_enabled(void);
-
-// Set up environement e.g. depending on the values of the env vars
-void __tgt_rtl_set_up_env(void);
-
 // Return an integer different from zero if the provided device image can be
 // supported by the runtime. The functionality is similar to comparing the
 // result of __tgt__rtl__load__binary to NULL. However, this is meant to be a
@@ -249,14 +236,29 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                            bool SaveOutput,
                                            uint64_t &ReqPtrArgOffset);
 
-bool __tgt_rtl_requested_prepopulate_gpu_page_table();
+// Return if the system is equipped with an APU
+bool __tgt_rtl_has_apu_device(int32_t DeviceId);
+
+// Returns true, if the system is equipped with a dGPU which supports USM.
+bool __tgt_rtl_has_USM_capable_dGPU(int32_t DeviceId);
+
+// Returns true if coarse graining of mapped memory is disabled
+// (it only applies to MI200 GPUs).
+bool __tgt_rtl_is_fine_grained_memory_enabled(int32_t DeviceId);
+
+// Returns true if GPU page table prefaulting is enabled. False
+// otherwise.
+bool __tgt_rtl_requested_prepopulate_gpu_page_table(int32_t DeviceId);
 
 // Check if image is incompatible due to XNACK mismatch.
 void __tgt_rtl_check_invalid_image(__tgt_device_image *Image);
 
-bool __tgt_rtl_can_use_host_globals();
+// Returns true if globals in the device binary are pointer types
+// and need to be initialized to the original variable host binary address.
+bool __tgt_rtl_can_use_host_globals(int32_t);
 
-bool __tgt_rtl_is_system_supporting_managed_memory();
+// Returns true if GPU supports managed memory (SVN in AMD GPUs).
+bool __tgt_rtl_is_system_supporting_managed_memory(int32_t);
 
 int32_t __tgt_rtl_launch_kernel_sync(int32_t, void *, void **, ptrdiff_t *,
                                      KernelArgsTy *);
@@ -277,7 +279,8 @@ int32_t __tgt_rtl_release_async_info(int32_t, __tgt_async_info *);
 int32_t __tgt_rtl_activate_record_replay(int32_t, uint64_t, void *, bool,
                                          bool, uint64_t &);
 
-void __tgt_rtl_set_up_env(void);
+// Returns true if the device \p DeviceId suggests to use auto zero-copy.
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId);
 
 #ifdef __cplusplus
 }

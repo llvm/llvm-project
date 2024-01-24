@@ -1507,12 +1507,28 @@ uint32_t GenericDeviceTy::queryCoarseGrainMemory(const void *ptr,
   return queryCoarseGrainMemoryImpl(ptr, size);
 }
 
+bool GenericDeviceTy::hasAPUDevice() { return hasAPUDeviceImpl(); }
+
+bool GenericDeviceTy::hasDGpuWithUsmSupport() {
+  return hasDGpuWithUsmSupportImpl();
+}
+
+bool GenericDeviceTy::requestedPrepopulateGPUPageTable() {
+  return requestedPrepopulateGPUPageTableImpl();
+}
+
+bool GenericDeviceTy::IsFineGrainedMemoryEnabled() {
+  return IsFineGrainedMemoryEnabledImpl();
+}
+
 Error GenericDeviceTy::prepopulatePageTable(void *ptr, int64_t size) {
   assert(ptr != nullptr);
   assert(size > 0);
 
   return prepopulatePageTableImpl(ptr, size);
 }
+
+bool GenericDeviceTy::canUseHostGlobals() { return canUseHostGlobalsImpl(); }
 
 Error GenericDeviceTy::printInfo() {
   InfoQueueTy InfoQueue;
@@ -1555,6 +1571,8 @@ Error GenericDeviceTy::waitEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
 Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
+
+bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
 Error GenericPluginTy::init() {
   auto NumDevicesOrErr = initImpl();
@@ -1711,8 +1729,8 @@ void __tgt_rtl_check_invalid_image(__tgt_device_image *InvalidImage) {
   Plugin::get().checkInvalidImage(InvalidImage);
 }
 
-bool __tgt_rtl_can_use_host_globals() {
-  return Plugin::get().canUseHostGlobals();
+bool __tgt_rtl_can_use_host_globals(int32_t DeviceId) {
+  return Plugin::get().getDevice(DeviceId).canUseHostGlobals();
 }
 
 int32_t __tgt_rtl_supports_empty_images() {
@@ -1736,29 +1754,25 @@ int __tgt_rtl_number_of_team_procs(int DeviceId) {
   return Plugin::get().getDevice(DeviceId).getNumComputeUnits();
 }
 
-bool __tgt_rtl_has_apu_device() { return Plugin::get().hasAPUDevice(); }
-
-bool __tgt_rtl_has_USM_capable_dGPU() {
-  return Plugin::get().hasDGpuWithUsmSupport();
+bool __tgt_rtl_has_apu_device(int32_t DeviceId) {
+  return Plugin::get().getDevice(DeviceId).hasAPUDevice();
 }
 
-bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled() {
-  return Plugin::get().AreAllocationsForMapsOnApusDisabled();
+bool __tgt_rtl_has_USM_capable_dGPU(int32_t DeviceId) {
+  return Plugin::get().getDevice(DeviceId).hasDGpuWithUsmSupport();
 }
 
-bool __tgt_rtl_requested_prepopulate_gpu_page_table() {
-  return Plugin::get().requestedPrepopulateGPUPageTable();
+bool __tgt_rtl_requested_prepopulate_gpu_page_table(int32_t DeviceId) {
+  return Plugin::get().getDevice(DeviceId).requestedPrepopulateGPUPageTable();
 }
 
-bool __tgt_rtl_is_fine_grained_memory_enabled() {
-  return Plugin::get().IsFineGrainedMemoryEnabled();
+bool __tgt_rtl_is_fine_grained_memory_enabled(int32_t DeviceId) {
+  return Plugin::get().getDevice(DeviceId).IsFineGrainedMemoryEnabled();
 }
 
-bool __tgt_rtl_is_system_supporting_managed_memory() {
+bool __tgt_rtl_is_system_supporting_managed_memory(int32_t DeviceId) {
   return Plugin::get().IsSystemSupportingManagedMemory();
 }
-
-void __tgt_rtl_set_up_env() { Plugin::get().setUpEnv(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   Plugin::get().setRequiresFlag(RequiresFlags);
@@ -2227,6 +2241,15 @@ int32_t __tgt_rtl_get_function(__tgt_device_binary Binary, const char *Name,
   // Note that this is not the kernel's device address.
   *KernelPtr = &Kernel;
   return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId) {
+  // Automatic zero-copy only applies to programs that did
+  // not request unified_shared_memory and are deployed on an
+  // APU with XNACK enabled.
+  if (Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)
+    return false;
+  return Plugin::get().getDevice(DeviceId).useAutoZeroCopy();
 }
 
 #ifdef __cplusplus

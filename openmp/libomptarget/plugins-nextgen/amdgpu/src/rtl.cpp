@@ -313,6 +313,30 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
 #endif
 }
 
+Expected<std::string> getTargetTripleAndFeatures(hsa_agent_t Agent) {
+  std::string Target;
+  auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
+    uint32_t Length;
+    hsa_status_t Status;
+    Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME_LENGTH, &Length);
+    if (Status != HSA_STATUS_SUCCESS)
+      return Status;
+
+    llvm::SmallVector<char> ISAName(Length);
+    Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName.begin());
+    if (Status != HSA_STATUS_SUCCESS)
+      return Status;
+
+    llvm::StringRef TripleTarget(ISAName.begin(), Length);
+    if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
+      Target = TripleTarget.ltrim('-').rtrim('\0').str();
+    return HSA_STATUS_SUCCESS;
+  });
+  if (Err)
+    return Err;
+  return Target;
+}
+
 } // namespace utils
 
 /// Utility class representing generic resource references to AMDGPU resources.
@@ -2450,6 +2474,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_UseMultipleSdmaEngines(
             // setting default to true here appears to solve random sdma problem
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", true),
+        OMPX_ApuMaps("OMPX_APU_MAPS", false),
+        OMPX_DisableUsmMaps("OMPX_DISABLE_USM_MAPS", false),
+        OMPX_NoMapChecks("OMPX_DISABLE_MAPS", true),
+        OMPX_EagerApuMaps("OMPX_EAGER_ZERO_COPY_MAPS", false),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
@@ -2685,6 +2713,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     DP("The number of XGMI Engines: %i\n", NumXGmiEngines);
 
+    // Detect if XNACK is enabled
+    auto TargeTripleAndFeaturesOrError =
+        utils::getTargetTripleAndFeatures(Agent);
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    if (static_cast<StringRef>(*TargeTripleAndFeaturesOrError)
+            .contains("xnack+"))
+      IsXnackEnabled = true;
+
+    // detect if device is an APU.
+    if (auto Err = checkIfAPU())
+      return Err;
+
+    // detect special cases for MI200 and MI300A
+    specialBehaviorHandling();
+
+    // detect ROCm-specific environment variables
+    // for map and zero-copy control
+    // TODO: put them back in constructor
+    //    readEnvVars();
+
     return Plugin::success();
   }
 
@@ -2862,6 +2911,104 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  bool canUseHostGlobalsImpl() override final {
+    // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory
+    // is not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we
+    // can also use globals directly from the host.
+    bool EnableHostGlobals = false;
+
+    // TODO: replace with proper access to existing variables in the device
+    // class.
+    bool IsZeroCopyOnAPU =
+        useAutoZeroCopyImpl(); // AreAllocationsForMapsOnApusDisabled();
+    BoolEnvar HSAXnack = BoolEnvar("HSA_XNACK", false);
+
+    if (IsZeroCopyOnAPU && HSAXnack.get())
+      EnableHostGlobals = true;
+
+    // Check if we are on a system that has an APU or on a non-APU system
+    // where unified shared memory can be enabled:
+    bool IsUsmSystem = IsAPU || hasDGpuWithUsmSupportImpl();
+
+    // Warn user if there is a mismatch between the request and the system
+    // architecture:
+    if (EnableHostGlobals && !IsUsmSystem)
+      fprintf(stderr, "OMPX_APU_MAPS and HSA_XNACK enabled on system that"
+                      " does not support unified shared memory");
+
+    return IsUsmSystem && EnableHostGlobals;
+  }
+
+  // TODO: clean up the following three functions after removing auto_zero_copy
+  // support and document appropriately.
+  void checkAndAdjustUsmModeForTargetImage(const __tgt_device_image *TgtImage) {
+    assert((TgtImage != nullptr) && "TgtImage is nullptr");
+    assert(!(Plugin::get().getRequiresFlags() & OMP_REQ_UNDEFINED) &&
+           "Requires flags are not set.");
+
+    if (!(IsAPU || hasDGpuWithUsmSupportImpl()))
+      return;
+
+    bool IsXnackRequired =
+        Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY;
+    utils::XnackBuildMode BinaryXnackMode =
+        utils::extractXnackModeFromBinary(TgtImage);
+
+    if (IsXnackRequired) {
+      handleImageRequiresUsmMode(BinaryXnackMode);
+    } else {
+      handleDefaultMode(BinaryXnackMode);
+    }
+  }
+
+  void handleImageRequiresUsmMode(utils::XnackBuildMode XnackImageMode) {
+    bool IsXnackActiveOnSystem = IsXnackEnabled;
+
+    if ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
+        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4 &&
+         IsXnackActiveOnSystem) ||
+        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4 &&
+         !IsXnackActiveOnSystem)) {
+      if (OMPX_EagerApuMaps.get() && IsAPU)
+        PrepopulateGPUPageTable = true; // Pre-faulting
+    }
+
+    if (!IsXnackActiveOnSystem &&
+        (XnackImageMode != ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4)) {
+      FAILURE_MESSAGE(
+          "Running a program that requries XNACK on a system where XNACK is "
+          "disabled. This may cause problems when using a OS-allocated pointer "
+          "inside a target region. "
+          "Re-run with HSA_XNACK=1 to remove this warning.\n");
+    }
+  }
+
+  void handleDefaultMode(utils::XnackBuildMode XnackImageMode) {
+    // assuming that copying is required
+    // handled in userAutoZeroCopyImpl
+    // DisableAllocationsForMapsOnApus = false;
+    bool IsXnackActiveOnSystem = IsXnackEnabled;
+
+    if (IsXnackActiveOnSystem && (IsAPU || OMPX_ApuMaps.get()) &&
+        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
+         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4))) {
+      if (IsAPU && OMPX_EagerApuMaps.get()) {
+        PrepopulateGPUPageTable = true; // Pre-faulting
+      }
+      return;
+    }
+
+    if (!IsXnackActiveOnSystem && IsAPU && OMPX_EagerApuMaps.get() &&
+        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
+         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4))) {
+      PrepopulateGPUPageTable = true; // Pre-faulting
+      return;
+    }
+
+    return;
+  }
+  //#endif
+
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
                                            int32_t ImageId) override {
@@ -2874,7 +3021,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (Error Err = AMDImage->loadExecutable(*this))
       return std::move(Err);
 
-    Plugin::get().checkAndAdjustUsmModeForTargetImage(TgtImage);
+    checkAndAdjustUsmModeForTargetImage(TgtImage);
 
     return AMDImage;
   }
@@ -3464,6 +3611,28 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 #endif
   }
 
+  /// Returns true if auto zero-copy the best configuration for the current
+  /// arch.
+  /// On AMDGPUs, automatic zero-copy is turned on
+  /// when running on an APU with XNACK (unified memory) support
+  /// enabled. On discrete GPUs, automatic zero-copy is triggered
+  /// if the user sets the environment variable OMPX_APU_MAPS=1
+  /// and if XNACK is enabled. The rationale is that zero-copy
+  /// is the best configuration (performance, memory footprint) on APUs,
+  /// while it is often not the best on discrete GPUs.
+  /// XNACK can be enabled with a kernel boot parameter or with
+  /// the HSA_XNACK environment variable.
+  /// ROCm-only behavior: default (non USM, with xnack- or xnack-any)
+  /// and OMPX_EAGER_APU_MAPS is automatic zero-copy with pre-fault.
+  // carlo
+  bool useAutoZeroCopyImpl() override {
+    return (
+        ((IsAPU || OMPX_ApuMaps) && IsXnackEnabled) ||
+        (IsAPU &&
+         !(Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY) &&
+         !IsXnackEnabled && OMPX_EagerApuMaps.get()));
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = StackSize;
@@ -3619,6 +3788,92 @@ private:
     return Err;
   }
 
+  /// Detect if current architecture is an APU.
+  Error checkIfAPU() {
+    // TODO: replace with ROCr API once it becomes available.
+    // MI200
+    llvm::StringRef StrGfxName(ComputeUnitKind);
+    IsEquippedWithGFX90A = llvm::StringSwitch<bool>(StrGfxName)
+                               .Case("gfx90a", true)
+                               .Default(false);
+    if (IsEquippedWithGFX90A)
+      return Plugin::success();
+
+    // MI300A
+    IsAPU = llvm::StringSwitch<bool>(StrGfxName)
+                .Case("gfx940", true)
+                .Default(false);
+    if (IsAPU)
+      return Plugin::success();
+
+    // MI300X
+    IsEquippedWithMI300X = llvm::StringSwitch<bool>(StrGfxName)
+                               .Case("gfx941", true)
+                               .Default(false);
+    if (IsEquippedWithMI300X)
+      return Plugin::success();
+
+    bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
+                        .Case("gfx942", true)
+                        .Default(false);
+    if (!MayBeAPU) // not gfx90a, gfx940, gfx941, or or gfx942
+      return Plugin::success();
+
+    // Can be MI300A or MI300X
+    uint32_t ChipID = 0;
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_CHIP_ID, ChipID))
+      return Err;
+
+    if (!(ChipID & 0x1)) {
+      IsAPU = true;
+      return Plugin::success();
+    }
+    IsEquippedWithMI300X = true;
+    return Plugin::success();
+  }
+
+  /// Determines if
+  /// - Map checks should be disabled
+  /// - Coarse graining upon map on MI200 needs to be disabled.
+  /// - Prefaulting GPU page tables on MI300A needs to be enabled.
+  void specialBehaviorHandling() {
+    if (OMPX_NoMapChecks.get() == false) {
+      NoUSMMapChecks = false;
+    }
+
+    if (OMPX_DisableUsmMaps.get() == true) {
+      EnableFineGrainedMemory = true;
+    }
+
+    if (IsAPU) {
+      // OMPX_EAGER_ZERO_COPY_MAPS=1 && HSA_XNACK=0 (XNACK-disabled)
+      // && default (non-USM) program
+      if ((OMPX_EagerApuMaps.get() == true) && !IsXnackEnabled &&
+          !(Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+        PrepopulateGPUPageTable = true;
+      }
+    }
+  }
+
+  bool requestedPrepopulateGPUPageTableImpl() override final {
+    return PrepopulateGPUPageTable;
+  }
+
+  bool IsFineGrainedMemoryEnabledImpl() override final {
+    return EnableFineGrainedMemory;
+  }
+
+  bool hasAPUDeviceImpl() override final { return IsAPU; }
+
+  // TODO: move the following two functions in private section.
+  bool hasMI300xDevice() { return IsEquippedWithMI300X; }
+
+  bool hasGfx90aDevice() { return IsEquippedWithGFX90A; }
+
+  bool hasDGpuWithUsmSupportImpl() override final {
+    return hasGfx90aDevice() || hasMI300xDevice();
+  }
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;
@@ -3686,6 +3941,28 @@ private:
   /// Use ROCm 5.7 interface for multiple SDMA engines
   BoolEnvar OMPX_UseMultipleSdmaEngines;
 
+  /// Value of OMPX_APU_MAPS env var used to force
+  /// automatic zero-copy behavior on non-APU GPUs.
+  BoolEnvar OMPX_ApuMaps;
+
+  /// Value of OMPX_DISABLE_USM_MAPS. Use on MI200
+  /// systems to disable both device memory
+  /// allocations and host-device memory copies upon
+  /// map, and coarse graining of mapped variables.
+  BoolEnvar OMPX_DisableUsmMaps;
+
+  /// Value of OMPX_DISABLE_MAPS. Turns off map table checks
+  /// in libomptarget in unified_shared_memory mode. Legacy:
+  /// never turned to false (unified_shared_memory mode is
+  /// currently always without map checks.
+  BoolEnvar OMPX_NoMapChecks;
+
+  /// Value of OMPX_EAGER_ZERO_COPY_MAPS. When true, it
+  /// makes the plugin prefault the GPU page table upon
+  /// map. This allows running with XNACK-Disabled and
+  /// use zero-copy.
+  BoolEnvar OMPX_EagerApuMaps;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -3730,6 +4007,36 @@ private:
   // The maximum scratch memory size per thread.
   // See COMPUTE_TMPRING_SIZE.WAVESIZE (divided by threads per wave).
   uint32_t MaxThreadScratchSize;
+
+  /// Is the plugin associated with an APU?
+  bool IsAPU = false;
+
+  // replaced by IsAPU
+  //  bool IsEquippedWithMI300A = false;
+
+  // Is the device an MI300X?
+  bool IsEquippedWithMI300X = false;
+
+  // Is the device an MI200?
+  bool IsEquippedWithGFX90A = false;
+
+  /// True if the system is configured with XNACK-Enabled.
+  /// False otherwise.
+  bool IsXnackEnabled = false;
+
+  /// Set by OMPX_EAGER_ZERO_COPY_MAPS environment variable.
+  /// If set, map clauses provoke prefaulting of the GPU
+  /// page table (applies to limited cases).
+  bool PrepopulateGPUPageTable = false;
+
+  // Set by OMPX_DISABLE_USM_MAPS environment variable.
+  // If set, fine graned memory is used for maps instead of coarse grained.
+  bool EnableFineGrainedMemory = false;
+
+  /// Set by OMPX_DISABLE_MAPS environment variable.
+  // If false, map checks are performed also in unified_shared_memory mode.
+  // TODO: this feature is non functional.
+  bool NoUSMMapChecks = true;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -3967,10 +4274,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (auto Err = HostDevice->init())
       return std::move(Err);
 
-    scanForUSMCapableDevices();
-
-    readEnvVars();
-
     return NumDevices;
   }
 
@@ -3996,43 +4299,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
-  bool hasAPUDevice() override final {
-    if (!Initialized)
-      FATAL_MESSAGE(1, "%s", "hasAPUDevice called on uninitialized plugin");
-
-    return IsEquippedWithMI300A;
-  }
-
-  bool hasMI300xDevice() {
-    if (!Initialized)
-      FATAL_MESSAGE(1, "%s", "hasMI300xDevice called on uninitialized plugin");
-
-    return IsEquippedWithMI300X;
-  }
-
-  bool hasGfx90aDevice() {
-    if (!Initialized)
-      FATAL_MESSAGE(1, "%s", "hasGfx90aDevice called on uninitialized plugin");
-
-    return IsEquippedWithGFX90A;
-  }
-
-  bool hasDGpuWithUsmSupport() override final {
-    return hasGfx90aDevice() || hasMI300xDevice();
-  }
-
-  bool AreAllocationsForMapsOnApusDisabled() override final {
-    return DisableAllocationsForMapsOnApus;
-  }
-
-  bool requestedPrepopulateGPUPageTable() override final {
-    return PrepopulateGPUPageTable;
-  }
-
-  bool IsFineGrainedMemoryEnabled() override final {
-    return EnableFineGrainedMemory;
-  }
-
   bool IsSystemSupportingManagedMemory() override final {
     bool HasManagedMemorySupport = false;
     hsa_status_t Status = hsa_system_get_info(HSA_AMD_SYSTEM_INFO_SVM_SUPPORTED,
@@ -4042,31 +4308,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       return false;
 
     return HasManagedMemorySupport;
-  }
-
-  void readEnvVars() {
-    if (!Initialized)
-      FATAL_MESSAGE(1, "%s", "parseEnvVars was called on uninitialized plugin");
-
-    DisableUsmMaps = BoolEnvar("OMPX_DISABLE_USM_MAPS", false);
-    HsaXnack = BoolEnvar("HSA_XNACK", false);
-    APUPrefault = BoolEnvar("OMPX_EAGER_ZERO_COPY_MAPS", false);
-    ZeroCopyForMapsOnUsm = BoolEnvar("OMPX_APU_MAPS", false);
-  }
-
-  void setUpEnv() override final {
-    if (DisableUsmMaps.get() == true) {
-      EnableFineGrainedMemory = true;
-    }
-
-    if (hasAPUDevice()) {
-      // OMPX_EAGER_ZERO_COPY_MAPS=1 && HSA_XNACK=0 (XNACK-disabled)
-      // && default (non-USM) program
-      if ((APUPrefault.get() == true) && !IsXnackEnabled() &&
-          !(Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
-        PrepopulateGPUPageTable = true;
-      }
-    }
   }
 
   void checkInvalidImage(__tgt_device_image *TgtImage) override final {
@@ -4085,131 +4326,17 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
 
     for (hsa_agent_t Agent : KernelAgents) {
-      std::string Target;
-      auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
-        uint32_t Length;
-        hsa_status_t Status;
-        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME_LENGTH, &Length);
-        if (Status != HSA_STATUS_SUCCESS)
-          return Status;
-
-        llvm::SmallVector<char> ISAName(Length);
-        Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, ISAName.begin());
-        if (Status != HSA_STATUS_SUCCESS)
-          return Status;
-
-        llvm::StringRef TripleTarget(ISAName.begin(), Length);
-        if (TripleTarget.consume_front("amdgcn-amd-amdhsa"))
-          Target = TripleTarget.ltrim('-').rtrim('\0').str();
-        return HSA_STATUS_SUCCESS;
-      });
-      if (Err)
-        return std::move(Err);
-
+      auto TargeTripleAndFeaturesOrError =
+          utils::getTargetTripleAndFeatures(Agent);
+      if (!TargeTripleAndFeaturesOrError)
+        return TargeTripleAndFeaturesOrError.takeError();
       if (!utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
                                            ElfOrErr->getPlatformFlags(),
-                                           Target))
+                                           *TargeTripleAndFeaturesOrError))
         return false;
     }
 
     return true;
-  }
-
-  void checkAndAdjustUsmModeForTargetImage(
-      const __tgt_device_image *TgtImage) override final {
-    assert((TgtImage != nullptr) && "TgtImage is nullptr");
-    assert(!(Plugin::get().getRequiresFlags() & OMP_REQ_UNDEFINED) &&
-           "Requires flags are not set.");
-
-    if (!(hasAPUDevice() || hasDGpuWithUsmSupport()))
-      return;
-
-    bool IsXnackRequired =
-        Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY;
-    utils::XnackBuildMode BinaryXnackMode =
-        utils::extractXnackModeFromBinary(TgtImage);
-
-    if (IsXnackRequired) {
-      handleImageRequiresUsmMode(BinaryXnackMode);
-    } else {
-      handleDefaultMode(BinaryXnackMode);
-    }
-  }
-
-  void handleImageRequiresUsmMode(utils::XnackBuildMode XnackImageMode) {
-    bool IsXnackActiveOnSystem = IsXnackEnabled();
-
-    if ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
-        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4 &&
-         IsXnackActiveOnSystem) ||
-        (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4 &&
-         !IsXnackActiveOnSystem)) {
-      DisableAllocationsForMapsOnApus = true; // Zero-copy
-
-      if (APUPrefault.get() && hasAPUDevice())
-        PrepopulateGPUPageTable = true; // Pre-faulting
-    }
-
-    if (!IsXnackActiveOnSystem &&
-        (XnackImageMode != ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4)) {
-      FAILURE_MESSAGE(
-          "Running a program that requries XNACK on a system where XNACK is "
-          "disabled. This may cause problems when using a OS-allocated pointer "
-          "inside a target region. "
-          "Re-run with HSA_XNACK=1 to remove this warning.\n");
-    }
-  }
-
-  void handleDefaultMode(utils::XnackBuildMode XnackImageMode) {
-    // assuming that copying is required
-    DisableAllocationsForMapsOnApus = false;
-    bool IsXnackActiveOnSystem = IsXnackEnabled();
-
-    if (IsXnackActiveOnSystem &&
-        (hasAPUDevice() || ZeroCopyForMapsOnUsm.get()) &&
-        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
-         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4))) {
-      DisableAllocationsForMapsOnApus = true; // Zero-copy
-
-      if (hasAPUDevice() && APUPrefault.get()) {
-        PrepopulateGPUPageTable = true; // Pre-faulting
-      }
-      return;
-    }
-
-    if (!IsXnackActiveOnSystem && hasAPUDevice() && APUPrefault.get() &&
-        ((XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4) ||
-         (XnackImageMode == ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4))) {
-      DisableAllocationsForMapsOnApus = true; // Zero-copy
-      PrepopulateGPUPageTable = true;         // Pre-faulting
-      return;
-    }
-
-    return;
-  }
-
-  bool canUseHostGlobals() override final {
-    // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory
-    // is not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we
-    // can also use globals directly from the host.
-    bool EnableHostGlobals = false;
-    bool IsZeroCopyOnAPU = AreAllocationsForMapsOnApusDisabled();
-    BoolEnvar HSAXnack = BoolEnvar("HSA_XNACK", false);
-
-    if (IsZeroCopyOnAPU && HSAXnack.get())
-      EnableHostGlobals = true;
-
-    // Check if we are on a system that has an APU or on a non-APU system
-    // where unified shared memory can be enabled:
-    bool IsUsmSystem = hasAPUDevice() || hasDGpuWithUsmSupport();
-
-    // Warn user if there is a mismatch between the request and the system
-    // architecture:
-    if (EnableHostGlobals && !IsUsmSystem)
-      fprintf(stderr, "OMPX_APU_MAPS and HSA_XNACK enabled on system that"
-                      " does not support unified shared memory");
-
-    return IsUsmSystem && EnableHostGlobals;
   }
 
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -4277,6 +4404,10 @@ private:
     return HSA_STATUS_ERROR;
   }
 
+  // TODO: This duplicates code that uses the target triple and features
+  // to determine if XNACK is enabled. Merge into a single implementation
+  // if possible (is this info available in ROCm 5.7? This might not apply
+  // to trunk).
   bool IsXnackEnabled() const {
     bool hasSystemXnackEnabled = false;
     hsa_status_t HsaStatus = hsa_system_get_info(
@@ -4287,76 +4418,10 @@ private:
     return hasSystemXnackEnabled;
   }
 
-  void scanForUSMCapableDevices() {
-
-    char GfxName[64];
-    for (hsa_agent_t GPUAgent : KernelAgents) {
-      std::memset((void *)&GfxName, 0, sizeof(char) * 64);
-
-      hsa_status_t Status = hsa_agent_get_info(
-          GPUAgent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME, GfxName);
-
-      std::string StrGfxName(GfxName);
-
-      std::transform(std::begin(StrGfxName), std::end(StrGfxName),
-                     std::begin(StrGfxName),
-                     [](char c) { return std::tolower(c); });
-
-      if (StrGfxName == "gfx90a") {
-        IsEquippedWithGFX90A = true;
-      } else if (StrGfxName == "gfx940") {
-        IsEquippedWithMI300A = true;
-      } else if (StrGfxName == "gfx941") {
-        IsEquippedWithMI300X = true;
-      } else if (StrGfxName == "gfx942") {
-        uint32_t ChipID = 0;
-        Status = hsa_agent_get_info(
-            GPUAgent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_CHIP_ID, &ChipID);
-
-        if (Status != HSA_STATUS_SUCCESS) {
-          continue;
-        }
-
-        if (ChipID & 0x1)
-          IsEquippedWithMI300X = true;
-        else
-          IsEquippedWithMI300A = true;
-      }
-    }
-  }
-
   /// Indicate whether the HSA runtime was correctly initialized. Even if there
   /// is no available devices this boolean will be true. It indicates whether
   /// we can safely call HSA functions (e.g., hsa_shut_down).
   bool Initialized;
-
-  bool IsEquippedWithMI300A{false};
-  bool IsEquippedWithMI300X{false};
-  bool IsEquippedWithGFX90A{false};
-
-  BoolEnvar NoMapChecks;
-  BoolEnvar DisableUsmMaps;
-  BoolEnvar HsaXnack;
-  BoolEnvar APUPrefault;
-
-  // Set by OMPX_APU_MAPS
-  // Enables code that detect if zero copying is possible. If so, the variable
-  // DisableAllocationsForMapsOnApus is set to 'true'.
-  BoolEnvar ZeroCopyForMapsOnUsm;
-
-  // If set, maps cause no copy operations. USM is used instead. Allocated
-  // memory remains coarse grained. The variable is only considered to be set if
-  // ZeroCopyForMapsOnUsm (OMPX_APU_MAPS) is set.
-  bool DisableAllocationsForMapsOnApus{false};
-
-  // Set by OMPX_EAGER_ZERO_COPY_MAPS environment variable.
-  // If set, map clauses provoke prefaulting of the GPU
-  // page table.
-  bool PrepopulateGPUPageTable{false};
-
-  // Set by OMPX_DISABLE_USM_MAPS environment variable.
-  // If set, fine graned memory is used for maps instead of coarse grained.
-  bool EnableFineGrainedMemory{false};
 
   /// Arrays of the available GPU and CPU agents. These arrays of handles should
   /// not be here but in the AMDGPUDeviceTy structures directly. However, the

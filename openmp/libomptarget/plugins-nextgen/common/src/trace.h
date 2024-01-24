@@ -325,49 +325,40 @@ int __tgt_rtl_number_of_devices() {
 #define __tgt_rtl_number_of_devices(...)                                       \
   __tgt_rtl_number_of_devices_impl(__VA_ARGS__)
 
-static bool __tgt_rtl_is_apu_system_impl();
-bool __tgt_rtl_has_apu_device() {
+static bool __tgt_rtl_is_apu_system_impl(int32_t device_id);
+bool __tgt_rtl_has_apu_device(int32_t device_id) {
   auto t = detail::log<bool>(__func__);
-  bool r = __tgt_rtl_is_apu_system_impl();
+  bool r = __tgt_rtl_is_apu_system_impl(device_id);
   t.res(r);
   return r;
 }
 #define __tgt_rtl_has_apu_device(...) __tgt_rtl_is_apu_system_impl(__VA_ARGS__)
 
-static bool __tgt_rtl_has_USM_capable_dGPU_impl();
-bool __tgt_rtl_has_USM_capable_dGPU() {
+static bool __tgt_rtl_has_USM_capable_dGPU_impl(int32_t device_id);
+bool __tgt_rtl_has_USM_capable_dGPU(int32_t device_id) {
   auto t = detail::log<bool>(__func__);
-  bool r = __tgt_rtl_has_USM_capable_dGPU_impl();
+  bool r = __tgt_rtl_has_USM_capable_dGPU_impl(device_id);
   t.res(r);
   return r;
 }
 #define __tgt_rtl_has_USM_capable_dGPU(...)                                   \
   __tgt_rtl_has_USM_capable_dGPU_impl(__VA_ARGS__)
 
-static bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl();
-bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled() {
+static bool
+__tgt_rtl_requested_prepopulate_gpu_page_table_impl(int32_t device_id);
+bool __tgt_rtl_requested_prepopulate_gpu_page_table(int32_t device_id) {
   auto t = detail::log<bool>(__func__);
-  bool r = __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl();
-  t.res(r);
-  return r;
-}
-#define __tgt_rtl_are_allocations_for_maps_on_apus_disabled(...)               \
-  __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl(__VA_ARGS__)
-
-static bool __tgt_rtl_requested_prepopulate_gpu_page_table_impl();
-bool __tgt_rtl_requested_prepopulate_gpu_page_table() {
-  auto t = detail::log<bool>(__func__);
-  bool r = __tgt_rtl_requested_prepopulate_gpu_page_table_impl();
+  bool r = __tgt_rtl_requested_prepopulate_gpu_page_table_impl(device_id);
   t.res(r);
   return r;
 }
 #define __tgt_rtl_requested_prepopulate_gpu_page_table(...)                    \
   __tgt_rtl_requested_prepopulate_gpu_page_table_impl(__VA_ARGS__)
 
-static bool __tgt_rtl_is_fine_grained_memory_enabled_impl();
-bool __tgt_rtl_is_fine_grained_memory_enabled() {
+static bool __tgt_rtl_is_fine_grained_memory_enabled_impl(int32_t device_id);
+bool __tgt_rtl_is_fine_grained_memory_enabled(int32_t device_id) {
   auto t = detail::log<bool>(__func__);
-  bool r = __tgt_rtl_is_fine_grained_memory_enabled_impl();
+  bool r = __tgt_rtl_is_fine_grained_memory_enabled_impl(device_id);
   t.res(r);
   return r;
 }
