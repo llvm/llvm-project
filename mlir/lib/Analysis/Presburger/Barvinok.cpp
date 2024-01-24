@@ -338,11 +338,6 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
   // functions, each one associated with a region in parameter space (chamber).
   std::vector<std::pair<PresburgerRelation, GeneratingFunction>> gf({});
 
-  // The active region will be defined as activeRegionCoeffs x p +
-  // activeRegionConstant ≥ 0. The active region is a polyhedron in parameter
-  // space.
-  FracMatrix activeRegion(numIneqs - numVars, numSymbols + 1);
-
   // These vectors store lists of
   // subsets of inequalities,
   // the vertices corresponding to them, and
@@ -411,6 +406,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
     // This is equivalent to A2 • [X | y] + [B2 | c2]
     // Thus we premultiply [X | y] with each row of A2
     // and add each row of [B2 | c2].
+    FracMatrix activeRegion(numIneqs - numVars, numSymbols + 1);
     for (unsigned i = 0; i < numIneqs - numVars; i++) {
       activeRegion.setRow(i, (*vertex).preMultiplyWithRow(a2.getRow(i)));
       activeRegion.addToRow(i, b2c2.getRow(i), 1);
