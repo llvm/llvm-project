@@ -24,6 +24,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ProcessStructReader.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -2233,6 +2234,80 @@ SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
   return Value::ValueType::Scalar;
 }
 
+namespace {
+struct SwiftNominalType {
+  std::string module;
+  std::string identifier;
+};
+
+// Find the Swift class that backs an ObjC type.
+//
+// A Swift class that uses the @objc(<ClassName>) attribute will emit ObjC
+// metadata into the binary. Typically, ObjC classes have a symbol in the form
+// of OBJC_CLASS_$_<ClassName>, however for Swift classes, there are two symbols
+// that both point to the ObjC class metadata, where the second symbol is a
+// Swift mangled name.
+std::optional<SwiftNominalType> GetSwiftClass(ValueObject &valobj,
+                                              AppleObjCRuntime &objc_runtime) {
+  // To find the Swift symbol, the following preparation steps are taken:
+  //   1. Get the value's ISA pointer
+  //   2. Resolve the ISA load address into an Address instance
+  //   3. Get the Module that contains the Address
+  auto descriptor_sp = objc_runtime.GetClassDescriptor(valobj);
+  if (!descriptor_sp)
+    return {};
+
+  auto isa_load_addr = descriptor_sp->GetISA();
+  Address isa;
+  const auto &sections = objc_runtime.GetTargetRef().GetSectionLoadList();
+  if (!sections.ResolveLoadAddress(isa_load_addr, isa))
+    return {};
+
+  // Next, iterate over the Module's symbol table, looking for a symbol with
+  // following criteria:
+  //   1. The symbol address is the ISA address
+  //   2. The symbol name is a Swift mangled name
+  std::optional<StringRef> swift_symbol;
+  auto find_swift_symbol_for_isa = [&](Symbol *symbol) {
+    if (symbol->GetAddress() == isa) {
+      StringRef symbol_name =
+          symbol->GetMangled().GetMangledName().GetStringRef();
+      if (SwiftLanguageRuntime::IsSwiftMangledName(symbol_name)) {
+        swift_symbol = symbol_name;
+        return false;
+      }
+    }
+    return true;
+  };
+
+  isa.GetModule()->GetSymtab()->ForEachSymbolContainingFileAddress(
+      isa.GetFileAddress(), find_swift_symbol_for_isa);
+  if (!swift_symbol)
+    return {};
+
+  // Once the Swift symbol is found, demangle it into a node tree. The node tree
+  // provides the final data, the name of the class and the name of its module.
+  swift::Demangle::Context ctx;
+  auto *global = ctx.demangleSymbolAsNode(*swift_symbol);
+  using Kind = Node::Kind;
+  auto *class_node = swift_demangle::nodeAtPath(
+      global, {Kind::TypeMetadata, Kind::Type, Kind::Class});
+  if (class_node && class_node->getNumChildren() == 2) {
+    auto module_node = class_node->getFirstChild();
+    auto ident_node = class_node->getLastChild();
+    if (module_node->getKind() == Kind::Module && module_node->hasText() &&
+        ident_node->getKind() == Kind::Identifier && ident_node->hasText()) {
+      auto module_name = module_node->getText();
+      auto class_name = ident_node->getText();
+      return SwiftNominalType{module_name.str(), class_name.str()};
+    }
+  }
+
+  return {};
+}
+
+} // namespace
+
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
@@ -2259,9 +2334,22 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
       dyn_name.startswith("__NS"))
     return false;
 
+  SwiftNominalType swift_class;
+
+  if (auto maybe_swift_class = GetSwiftClass(in_value, *objc_runtime)) {
+    swift_class = *maybe_swift_class;
+    std::string type_name =
+        (llvm::Twine(swift_class.module) + "." + swift_class.identifier).str();
+    dyn_class_type_or_name.SetName(type_name.data());
+    address.SetRawAddress(in_value.GetPointerValue());
+  } else {
+    swift_class.module = swift::MANGLING_MODULE_OBJC;
+    swift_class.identifier = dyn_name;
+  }
+
   std::string remangled;
   {
-    // Create a mangle tree for __C.dyn_name?.
+    // Create a mangle tree for Swift.Optional<$module.$class>
     using namespace swift::Demangle;
     NodeFactory factory;
     NodePointer global = factory.createNode(Node::Kind::Global);
@@ -2272,7 +2360,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
     NodePointer ety = factory.createNode(Node::Kind::Type);
     bge->addChild(ety, factory);
     NodePointer e = factory.createNode(Node::Kind::Enum);
-    e->addChild(factory.createNode(Node::Kind::Module, "Swift"), factory);
+    e->addChild(factory.createNode(Node::Kind::Module, swift::STDLIB_NAME),
+                factory);
     e->addChild(factory.createNode(Node::Kind::Identifier, "Optional"),
                 factory);
     ety->addChild(e, factory);
@@ -2281,10 +2370,11 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
     NodePointer cty = factory.createNode(Node::Kind::Type);
     list->addChild(cty, factory);
     NodePointer c = factory.createNode(Node::Kind::Class);
+    c->addChild(factory.createNode(Node::Kind::Module, swift_class.module),
+                factory);
     c->addChild(
-        factory.createNode(Node::Kind::Module, swift::MANGLING_MODULE_OBJC),
+        factory.createNode(Node::Kind::Identifier, swift_class.identifier),
         factory);
-    c->addChild(factory.createNode(Node::Kind::Identifier, dyn_name), factory);
     cty->addChild(c, factory);
 
     auto mangling = mangleNode(global);
