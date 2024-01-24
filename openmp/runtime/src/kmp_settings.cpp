@@ -29,8 +29,6 @@
 #include "ompd-specific.h"
 #endif
 
-#include "llvm/Support/Compiler.h"
-
 static int __kmp_env_toPrint(char const *name, int flag);
 
 bool __kmp_env_format = 0; // 0 - old format; 1 - new format
@@ -875,10 +873,6 @@ static void __kmp_stg_print_wait_policy(kmp_str_buf_t *buffer, char const *name,
     case library_throughput: {
       value = "PASSIVE";
     } break;
-    case library_none:
-    case library_serial: {
-      value = NULL;
-    } break;
     }
   } else {
     switch (__kmp_library) {
@@ -890,9 +884,6 @@ static void __kmp_stg_print_wait_policy(kmp_str_buf_t *buffer, char const *name,
     } break;
     case library_throughput: {
       value = "throughput";
-    } break;
-    case library_none: {
-      value = NULL;
     } break;
     }
   }
@@ -2013,7 +2004,6 @@ static inline const char *
 __kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
   switch (type) {
   case KMP_HW_CORE_TYPE_UNKNOWN:
-  case KMP_HW_MAX_NUM_CORE_TYPES:
     return "unknown";
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   case KMP_HW_CORE_TYPE_ATOM:
@@ -2022,8 +2012,7 @@ __kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
     return "intel_core";
 #endif
   }
-  KMP_ASSERT2(false, "Unhandled kmp_hw_core_type_t enumeration");
-  LLVM_BUILTIN_UNREACHABLE;
+  return "unknown";
 }
 
 #if KMP_AFFINITY_SUPPORTED
@@ -4439,10 +4428,6 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
     case kmp_sch_auto:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "auto", __kmp_chunk);
       break;
-    default:
-      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
-      LLVM_BUILTIN_UNREACHABLE;
-      break;
     }
   } else {
     switch (sched) {
@@ -4467,10 +4452,6 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       break;
     case kmp_sch_auto:
       __kmp_str_buf_print(buffer, "%s'\n", "auto");
-      break;
-    default:
-      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
-      LLVM_BUILTIN_UNREACHABLE;
       break;
     }
   }
