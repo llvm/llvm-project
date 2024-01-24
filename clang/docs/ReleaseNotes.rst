@@ -1189,8 +1189,14 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
-- The ``model`` attribute is now supported for overriding the default code
-  model used to access global variables. The following values are supported:
+- Added builtins support for all LSX (128-bits SIMD) and LASX (256-bits SIMD)
+  instructions.
+- Added builtins support for approximate calculation instructions that were
+  introduced in LoongArch Reference Manual V1.10.
+- Made ``-mcmodel=`` compatible with LoongArch gcc that accepted ``normal``,
+  ``medium`` and ``extreme``.
+- The ``model`` attribute was now supported for overriding the default code
+  model used to access global variables. The following values were supported:
   ``normal``, ``medium`` and ``extreme``.
 
   *Example Code*:
@@ -1198,6 +1204,10 @@ LoongArch Support
   .. code-block:: c
 
      int var __attribute((model("extreme")));
+
+- Default to ``-fno-direct-access-external-data`` for non-PIC.
+- An ABI mismatch with gcc/g++ about empty structs/unions passing was fixed.
+- ``_mcount`` was generated instead of ``mcount``.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
