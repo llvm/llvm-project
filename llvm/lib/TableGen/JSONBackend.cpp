@@ -159,7 +159,11 @@ void JSONEmitter::run(raw_ostream &OS) {
 
     obj["!name"] = Name;
     obj["!anonymous"] = Def.isAnonymous();
-    obj["!loc"] = SrcMgr.getFormattedLocationNoOffset(Def.getLoc().front());
+
+    json::Array locs;
+    for (const SMLoc Loc : Def.getLoc())
+      locs.push_back(SrcMgr.getFormattedLocationNoOffset(Loc));
+    obj["!locs"] = std::move(locs);
 
     root[Name] = std::move(obj);
 
