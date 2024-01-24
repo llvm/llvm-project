@@ -252,7 +252,7 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
   for (unsigned i = 0; i < 6; i++)
     poly.addInequality(ineqs.getRow(i));
 
-  std::vector<std::pair<PresburgerRelation, GeneratingFunction>> count =
+  std::vector<std::pair<PresburgerSet, GeneratingFunction>> count =
       computePolytopeGeneratingFunction(poly);
   // There is only one chamber, as it is non-parametric.
   EXPECT_EQ(count.size(), 1u);
@@ -284,9 +284,9 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
 
   count = computePolytopeGeneratingFunction(poly);
   // There is only one chamber: p ≥ 0
-  EXPECT_EQ(count.size(), 1u);
+  EXPECT_EQ(count.size(), 2u);
 
-  gf = count[0].second;
+  gf = count[1].second;
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
       gf, GeneratingFunction(
               1, {1, 1, 1},
@@ -294,4 +294,43 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
                makeFracMatrix(2, 2, {{0, 1}, {0, 0}}),
                makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
               {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}}));
+
+  ineqs = makeIntMatrix(6, 5,
+                        {{1, 0, 0, 1, 0},
+                         {0, 1, 0, 1, 0},
+                         {0, 0, 1, 1, 0},
+                         {-1, 0, 0, 1, 0},
+                         {0, -1, 0, 1, 0},
+                         {0, 0, -1, 1, 0}});
+  poly = defineHRep(3, 1);
+  for (unsigned i = 0; i < 6; i++)
+    poly.addInequality(ineqs.getRow(i));
+
+  count = computePolytopeGeneratingFunction(poly);
+
+  EXPECT_EQ(count.size(), 2u);
+
+  gf = count[0].second;
+
+  // Cartesian product of a cube with side M and a right triangle with side N.
+  ineqs = makeIntMatrix(9, 8,
+                        {{1, 0, 0, 0, 0, 1, 0, 0},
+                         {0, 1, 0, 0, 0, 1, 0, 0},
+                         {0, 0, 1, 0, 0, 1, 0, 0},
+                         {-1, 0, 0, 0, 0, 1, 0, 0},
+                         {0, -1, 0, 0, 0, 1, 0, 0},
+                         {0, 0, -1, 0, 0, 1, 0, 0},
+                         {0, 0, 0, 1, 0, 0, 0, 0},
+                         {0, 0, 0, 0, 1, 0, 0, 0},
+                         {0, 0, 0, -1, -1, 0, 1, 0}});
+  poly = defineHRep(5, 2);
+  for (unsigned i = 0; i < 9; i++)
+    poly.addInequality(ineqs.getRow(i));
+
+  count = computePolytopeGeneratingFunction(poly);
+
+  EXPECT_EQ(count.size(), 2u);
+
+  gf = count[1].second;
+  EXPECT_EQ(gf.getNumerators().size(), 24u);
 }

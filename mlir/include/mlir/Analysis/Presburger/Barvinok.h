@@ -95,7 +95,7 @@ GeneratingFunction computeUnimodularConeGeneratingFunction(ParamPoint vertex,
 /// If there is no solution, return null.
 std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 
-/// Given a list of possibly intersecting regions (PresburgerRelations) and
+/// Given a list of possibly intersecting regions (PresburgerSet) and
 /// the vertices active in each region, produce a pairwise disjoint list of
 /// regions (chambers) and identify the vertices active in each of these new
 /// regions.
@@ -105,13 +105,13 @@ std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 /// The ith relation corresponds to the activity region of the ith vertex set.
 /// Note that here, by disjoint, we mean that the intersection is not
 /// full-dimensional.
-std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>>
-computeChamberDecomposition(ArrayRef<PresburgerRelation> activeRegions,
+std::vector<std::pair<PresburgerSet, std::vector<unsigned>>>
+computeChamberDecomposition(ArrayRef<PresburgerSet> activeRegions,
                             ArrayRef<ParamPoint> vertices);
 
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.
-std::vector<std::pair<PresburgerRelation, GeneratingFunction>>
+std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 computePolytopeGeneratingFunction(PolyhedronH poly);
 
 /// Find a vector that is not orthogonal to any of the given vectors,
