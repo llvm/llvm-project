@@ -4853,16 +4853,13 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
 ///
 /// Usually this should not be used, and template argument deduction should be
 /// used in its place.
-FunctionDecl *
-Sema::InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
-                                     const TemplateArgumentList *Args,
-                                     SourceLocation Loc) {
+FunctionDecl *Sema::InstantiateFunctionDeclaration(
+    FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+    SourceLocation Loc, CodeSynthesisContext::SynthesisKind CSC) {
   FunctionDecl *FD = FTD->getTemplatedDecl();
 
   sema::TemplateDeductionInfo Info(Loc);
-  InstantiatingTemplate Inst(
-      *this, Loc, FTD, Args->asArray(),
-      CodeSynthesisContext::ExplicitTemplateArgumentSubstitution, Info);
+  InstantiatingTemplate Inst(*this, Loc, FTD, Args->asArray(), CSC, Info);
   if (Inst.isInvalid())
     return nullptr;
 
@@ -6286,8 +6283,18 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
           if (T.isNull())
             return nullptr;
-          auto *SubstRecord = T->getAsCXXRecordDecl();
-          assert(SubstRecord && "class template id not a class type?");
+          CXXRecordDecl *SubstRecord = T->getAsCXXRecordDecl();
+
+          if (!SubstRecord) {
+            // The template id T is a TemplateSpecializationType when performing
+            // a substitution for a deduction guide,
+            assert(CodeSynthesisContexts.back().Kind ==
+                   CodeSynthesisContext::BuildingDeductionGuides);
+            // Return a nullptr as a sentinel value, we handle it properly in
+            // the TemplateInstantiator::TransformInjectedClassNameType
+            // override.
+            return nullptr;
+          }
           // Check that this template-id names the primary template and not a
           // partial or explicit specialization. (In the latter cases, it's
           // meaningless to attempt to find an instantiation of D within the
