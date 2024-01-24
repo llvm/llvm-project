@@ -621,10 +621,12 @@ public:
                   llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
                   llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
                       *mapSymbols = nullptr) const;
-  bool processReduction(
-      mlir::Location currentLocation,
-      llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-      llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols) const;
+  bool
+  processReduction(mlir::Location currentLocation,
+                   llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+                   llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+                   llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                       *reductionSymbols = nullptr) const;
   bool processSectionsReduction(mlir::Location currentLocation) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool
@@ -1079,12 +1081,14 @@ public:
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
-  static void addReductionDecl(
-      mlir::Location currentLocation,
-      Fortran::lower::AbstractConverter &converter,
-      const Fortran::parser::OmpReductionClause &reduction,
-      llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-      llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols) {
+  static void
+  addReductionDecl(mlir::Location currentLocation,
+                   Fortran::lower::AbstractConverter &converter,
+                   const Fortran::parser::OmpReductionClause &reduction,
+                   llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+                   llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+                   llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                       *reductionSymbols = nullptr) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     mlir::omp::ReductionDeclareOp decl;
     const auto &redOperator{
@@ -1114,6 +1118,8 @@ public:
         if (const auto *name{
                 Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
           if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
+            if (reductionSymbols)
+              reductionSymbols->push_back(symbol);
             mlir::Value symVal = converter.getSymbolAddress(*symbol);
             if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
               symVal = declOp.getBase();
@@ -1148,6 +1154,8 @@ public:
           if (const auto *name{
                   Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
             if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
+              if (reductionSymbols)
+                reductionSymbols->push_back(symbol);
               mlir::Value symVal = converter.getSymbolAddress(*symbol);
               if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
                 symVal = declOp.getBase();
@@ -1948,13 +1956,16 @@ bool ClauseProcessor::processMap(
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols) const {
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSymbols)
+    const {
   return findRepeatableClause<ClauseTy::Reduction>(
       [&](const ClauseTy::Reduction *reductionClause,
           const Fortran::parser::CharBlock &) {
         ReductionProcessor rp;
         rp.addReductionDecl(currentLocation, converter, reductionClause->v,
-                            reductionVars, reductionDeclSymbols);
+                            reductionVars, reductionDeclSymbols,
+                            reductionSymbols);
       });
 }
 
@@ -2304,6 +2315,14 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
+  OpWithBodyGenInfo &
+  setReductions(llvm::SmallVector<const Fortran::semantics::Symbol *> *value1,
+                llvm::SmallVector<mlir::Type> *value2) {
+    reductionSymbols = value1;
+    reductionTypes = value2;
+    return *this;
+  }
+
   OpWithBodyGenInfo &setGenRegionEntryCb(GenOMPRegionEntryCBFn value) {
     genRegionEntryCB = value;
     return *this;
@@ -2323,6 +2342,11 @@ struct OpWithBodyGenInfo {
   const Fortran::parser::OmpClauseList *clauses = nullptr;
   /// [in] if provided, processes the construct's data-sharing attributes.
   DataSharingProcessor *dsp = nullptr;
+  /// [in] if provided, list of reduction symbols
+  llvm::SmallVector<const Fortran::semantics::Symbol *> *reductionSymbols =
+      nullptr;
+  /// [in] if provided, list of reduction types
+  llvm::SmallVector<mlir::Type> *reductionTypes = nullptr;
   /// [in] if provided, emits the op's region entry. Otherwise, an emtpy block
   /// is created in the region.
   GenOMPRegionEntryCBFn genRegionEntryCB = nullptr;
@@ -2567,6 +2591,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> allocateOperands, allocatorOperands,
       reductionVars;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
 
   ClauseProcessor cp(converter, clauseList);
   cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
@@ -2576,13 +2601,33 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   cp.processDefault();
   cp.processAllocate(allocatorOperands, allocateOperands);
   if (!outerCombined)
-    cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
+    cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols,
+                        &reductionSymbols);
+
+  llvm::SmallVector<mlir::Type> reductionTypes;
+  reductionTypes.reserve(reductionVars.size());
+  llvm::transform(reductionVars, std::back_inserter(reductionTypes),
+                  [](mlir::Value v) { return v.getType(); });
+
+  auto reductionCallback = [&](mlir::Operation *op) {
+    llvm::SmallVector<mlir::Location> locs(reductionVars.size(),
+                                           currentLocation);
+    auto block = converter.getFirOpBuilder().createBlock(&op->getRegion(0), {},
+                                                         reductionTypes, locs);
+    for (auto [arg, prv] :
+         llvm::zip_equal(reductionSymbols, block->getArguments())) {
+      converter.bindSymbol(*arg, prv);
+    }
+    return reductionSymbols;
+  };
 
   return genOpWithBody<mlir::omp::ParallelOp>(
       OpWithBodyGenInfo(converter, currentLocation, eval)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
-          .setClauses(&clauseList),
+          .setClauses(&clauseList)
+          .setReductions(&reductionSymbols, &reductionTypes)
+          .setGenRegionEntryCb(reductionCallback),
       /*resultTypes=*/mlir::TypeRange(), ifClauseOperand,
       numThreadsClauseOperand, allocateOperands, allocatorOperands,
       reductionVars,
@@ -3634,10 +3679,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     break;
   }
 
-  if (singleDirective) {
-    genOpenMPReduction(converter, beginClauseList);
+  if (singleDirective)
     return;
-  }
 
   // Codegen for combined directives
   bool combinedDirective = false;
@@ -3673,7 +3716,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                               ")");
 
   genNestedEvaluations(converter, eval);
-  genOpenMPReduction(converter, beginClauseList);
 }
 
 static void
