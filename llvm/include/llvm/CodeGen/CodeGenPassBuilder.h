@@ -1113,30 +1113,13 @@ void CodeGenPassBuilder<Derived>::addTargetRegisterAllocator(
 template <typename Derived>
 void CodeGenPassBuilder<Derived>::addRegAllocPass(AddMachinePass &addPass,
                                                   bool Optimized) const {
-  if (Opt.RegAlloc == RegAllocType::Default)
-    // With no -regalloc= override, ask the target for a regalloc pass.
-    derived().addTargetRegisterAllocator(addPass, Optimized);
-  else if (Opt.RegAlloc == RegAllocType::Basic)
-    addPass(RABasicPass());
-  else if (Opt.RegAlloc == RegAllocType::Fast)
-    addPass(RAFastPass());
-  else if (Opt.RegAlloc == RegAllocType::Greedy)
-    addPass(RAGreedyPass());
-  else if (Opt.RegAlloc == RegAllocType::PBQP)
-    addPass(RAPBQPPass());
-  else
-    llvm_unreachable("unknonwn register allocator type");
+  // TODO: Parse Opt.RegAlloc to add register allocator.
 }
 
 template <typename Derived>
 Error CodeGenPassBuilder<Derived>::addRegAssignmentFast(
     AddMachinePass &addPass) const {
-  if (Opt.RegAlloc != RegAllocType::Default &&
-      Opt.RegAlloc != RegAllocType::Fast)
-    return make_error<StringError>(
-        "Must use fast (default) register allocator for unoptimized regalloc.",
-        inconvertibleErrorCode());
-
+  // TODO: Ensure allocator is default or fast.
   addRegAllocPass(addPass, false);
   return Error::success();
 }
