@@ -48,6 +48,7 @@ add_header_library(
     limits.h
   DEPENDS
     .type_traits
+    libc.include.llvm-libc-macros.limits_macros
 )
 
 add_header_library(

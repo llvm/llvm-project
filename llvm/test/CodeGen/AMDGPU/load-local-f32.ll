@@ -1,11 +1,11 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; Testing for ds_read/write_128
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=SI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=SI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
 
 ; FUNC-LABEL: {{^}}load_f32_local:
 ; SICIVI: s_mov_b32 m0

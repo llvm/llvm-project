@@ -1,5 +1,5 @@
-; RUN: opt -S -codegenprepare -disable-complex-addr-modes=false -addr-sink-new-phis=true -addr-sink-new-select=true -disable-cgp-delete-phis  %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-YES
-; RUN: opt -S -codegenprepare -disable-complex-addr-modes=false -addr-sink-new-phis=false -addr-sink-new-select=true -disable-cgp-delete-phis %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NO
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -disable-complex-addr-modes=false -addr-sink-new-phis=true -addr-sink-new-select=true -disable-cgp-delete-phis  %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-YES
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -disable-complex-addr-modes=false -addr-sink-new-phis=false -addr-sink-new-select=true -disable-cgp-delete-phis %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NO
 target datalayout =
 "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-unknown-linux-gnu"

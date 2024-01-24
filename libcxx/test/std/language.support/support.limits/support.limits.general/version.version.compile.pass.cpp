@@ -6511,17 +6511,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_fstream_native_handle
-#     error "__cpp_lib_fstream_native_handle should be defined in c++26"
-#   endif
-#   if __cpp_lib_fstream_native_handle != 202306L
-#     error "__cpp_lib_fstream_native_handle should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_fstream_native_handle
-#     error "__cpp_lib_fstream_native_handle should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_fstream_native_handle
+#   error "__cpp_lib_fstream_native_handle should be defined in c++26"
+# endif
+# if __cpp_lib_fstream_native_handle != 202306L
+#   error "__cpp_lib_fstream_native_handle should have the value 202306L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7173,17 +7167,11 @@
 #   error "__cpp_lib_sample should have the value 201603L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should be defined in c++26"
-#   endif
-#   if __cpp_lib_saturation_arithmetic != 202311L
-#     error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should be defined in c++26"
+# endif
+# if __cpp_lib_saturation_arithmetic != 202311L
+#   error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
 # endif
 
 # ifndef __cpp_lib_scoped_lock
@@ -7300,17 +7288,11 @@
 #   error "__cpp_lib_span_at should have the value 202311L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_span_initializer_list
-#     error "__cpp_lib_span_initializer_list should be defined in c++26"
-#   endif
-#   if __cpp_lib_span_initializer_list != 202311L
-#     error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_span_initializer_list
-#     error "__cpp_lib_span_initializer_list should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_span_initializer_list
+#   error "__cpp_lib_span_initializer_list should be defined in c++26"
+# endif
+# if __cpp_lib_span_initializer_list != 202311L
+#   error "__cpp_lib_span_initializer_list should have the value 202311L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

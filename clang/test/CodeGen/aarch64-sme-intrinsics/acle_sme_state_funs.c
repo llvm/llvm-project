@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -S -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 // CHECK-LABEL: @test_in_streaming_mode(
 // CHECK-NEXT:  entry:
@@ -66,7 +66,7 @@ bool test_has_sme(void) __arm_streaming_compatible {
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svundef_za(void) __arm_streaming_compatible __arm_shared_za {
+void test_svundef_za(void) __arm_streaming_compatible __arm_out("za") {
   svundef_za();
 }
 

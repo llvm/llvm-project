@@ -112,7 +112,7 @@ define void @multi_int_induction(ptr %A, i32 %N) {
 ; UNROLL-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 190, i32 191>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 2
+; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP3]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP4]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -205,7 +205,7 @@ define void @multi_int_induction(ptr %A, i32 %N) {
 ; INTERLEAVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 190, i32 191, i32 192, i32 193>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 4
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP3]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP4]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -410,12 +410,12 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
-; UNROLL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 2
+; UNROLL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 8
 ; UNROLL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; UNROLL-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; UNROLL-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; UNROLL-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[OFFSET2]]
-; UNROLL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 2
+; UNROLL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 8
 ; UNROLL-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x float>, ptr [[TMP9]], align 4, !alias.scope [[META7]]
 ; UNROLL-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x float>, ptr [[TMP10]], align 4, !alias.scope [[META7]]
 ; UNROLL-NEXT:    [[TMP11:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD5]]
@@ -553,12 +553,12 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 4
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[OFFSET2]]
-; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 4
+; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 16
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META7]]
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP10]], align 4, !alias.scope [[META7]]
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD5]]
@@ -718,7 +718,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; UNROLL-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 2
+; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; UNROLL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 8
 ; UNROLL-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; UNROLL-NEXT:    [[TMP2]] = add <2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -809,7 +809,7 @@ define i64 @scalarize_induction_variable_01(ptr %a, i64 %n) {
 ; INTERLEAVE-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i64 4
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; INTERLEAVE-NEXT:    [[TMP2]] = add <4 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
@@ -2115,7 +2115,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[INDEX]], 2
 ; UNROLL-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
 ; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 2
+; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; UNROLL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
 ; UNROLL-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
 ; UNROLL-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
@@ -2303,7 +2303,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 4
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; INTERLEAVE-NEXT:    br i1 [[C]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
@@ -3605,7 +3605,7 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NEXT:    [[OFFSET_IDX:%.*]] = add i8 [[DOTCAST5]], [[T]]
 ; UNROLL-NEXT:    [[TMP10:%.*]] = sext i8 [[OFFSET_IDX]] to i64
 ; UNROLL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP10]]
-; UNROLL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i64 2
+; UNROLL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP11]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP12]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -3749,7 +3749,7 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = add i8 [[DOTCAST5]], [[T]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = sext i8 [[OFFSET_IDX]] to i64
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP10]]
-; INTERLEAVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i64 4
+; INTERLEAVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP11]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP12]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -3993,7 +3993,7 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NEXT:    [[OFFSET_IDX:%.*]] = add i8 [[DOTCAST5]], [[T]]
 ; UNROLL-NEXT:    [[TMP10:%.*]] = sext i8 [[OFFSET_IDX]] to i64
 ; UNROLL-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP10]]
-; UNROLL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i64 2
+; UNROLL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP11]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP12]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -4143,7 +4143,7 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = add i8 [[DOTCAST5]], [[T]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = sext i8 [[OFFSET_IDX]] to i64
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP10]]
-; INTERLEAVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i64 4
+; INTERLEAVE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP11]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP12]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -4291,7 +4291,7 @@ define void @veciv(ptr nocapture %a, i32 %start, i32 %k) {
 ; UNROLL-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; UNROLL-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
 ; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
-; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 2
+; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP1]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP2]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -4368,7 +4368,7 @@ define void @veciv(ptr nocapture %a, i32 %start, i32 %k) {
 ; INTERLEAVE-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP1]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP2]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -4509,7 +4509,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[SEXT:%.*]] = shl i64 [[OFFSET_IDX]], 32
 ; UNROLL-NEXT:    [[TMP0:%.*]] = ashr exact i64 [[SEXT]], 32
 ; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
-; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 2
+; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP1]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP2]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[OFFSET_IDX]], 4
@@ -4601,7 +4601,7 @@ define void @trunciv(ptr nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[SEXT:%.*]] = shl i64 [[OFFSET_IDX]], 32
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = ashr exact i64 [[SEXT]], 32
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP1]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP2]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[OFFSET_IDX]], 8
@@ -4746,7 +4746,7 @@ define void @nonprimary(ptr nocapture %a, i32 %start, i32 %i, i32 %k) {
 ; UNROLL-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[INDEX]], [[I]]
 ; UNROLL-NEXT:    [[TMP1:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 2
+; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP2]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP3]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -4835,7 +4835,7 @@ define void @nonprimary(ptr nocapture %a, i32 %start, i32 %i, i32 %k) {
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[INDEX]], [[I]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 4
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP2]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP3]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -4968,7 +4968,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; UNROLL-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], <i32 4, i32 4>
 ; UNROLL-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 2
+; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP0]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], ptr [[TMP1]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -5055,7 +5055,7 @@ define void @non_primary_iv_trunc(ptr %a, i64 %n) {
 ; INTERLEAVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8>
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP0]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP1]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -6048,7 +6048,7 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 [[TMP5]]
 ; UNROLL-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[VEC_IND]], [[TMP3]]
 ; UNROLL-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[STEP_ADD]], [[TMP4]]
-; UNROLL-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP6]], i64 2
+; UNROLL-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP6]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP6]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[TMP8]], ptr [[TMP9]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[OFFSET_IDX]], 4
@@ -6143,7 +6143,7 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 [[TMP5]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[VEC_IND]], [[TMP3]]
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[STEP_ADD]], [[TMP4]]
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP6]], i64 4
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP6]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP6]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP9]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[OFFSET_IDX]], 8
@@ -6394,7 +6394,7 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i32> [[VEC_IND]], <2 x i32> [[STEP_ADD]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 2
+; UNROLL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i64 8
 ; UNROLL-NEXT:    store <2 x i32> [[TMP17]], ptr [[TMP19]], align 4
 ; UNROLL-NEXT:    store <2 x i32> [[TMP18]], ptr [[TMP20]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -6552,7 +6552,7 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; INTERLEAVE-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; INTERLEAVE-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; INTERLEAVE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[PTR:%.*]], i64 [[INDEX]]
-; INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 4
+; INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i64 16
 ; INTERLEAVE-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP19]], align 4
 ; INTERLEAVE-NEXT:    store <4 x i32> [[TMP18]], ptr [[TMP20]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

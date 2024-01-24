@@ -14,6 +14,7 @@ if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
   return()
 endif()
 
+add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 

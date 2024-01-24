@@ -163,8 +163,12 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
 
   populatePatternsForOp<math::AcosOp>(patterns, ctx, "acosf", "acos");
+  populatePatternsForOp<math::AcoshOp>(patterns, ctx, "acoshf", "acosh");
+  populatePatternsForOp<math::AsinOp>(patterns, ctx, "asinf", "asin");
+  populatePatternsForOp<math::AsinhOp>(patterns, ctx, "asinhf", "asinh");
   populatePatternsForOp<math::Atan2Op>(patterns, ctx, "atan2f", "atan2");
   populatePatternsForOp<math::AtanOp>(patterns, ctx, "atanf", "atan");
+  populatePatternsForOp<math::AtanhOp>(patterns, ctx, "atanhf", "atanh");
   populatePatternsForOp<math::CbrtOp>(patterns, ctx, "cbrtf", "cbrt");
   populatePatternsForOp<math::CeilOp>(patterns, ctx, "ceilf", "ceil");
   populatePatternsForOp<math::CosOp>(patterns, ctx, "cosf", "cos");

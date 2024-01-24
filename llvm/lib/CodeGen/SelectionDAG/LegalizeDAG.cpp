@@ -3534,8 +3534,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandFABS(Node));
     break;
   case ISD::IS_FPCLASS: {
-    auto CNode = cast<ConstantSDNode>(Node->getOperand(1));
-    auto Test = static_cast<FPClassTest>(CNode->getZExtValue());
+    auto Test = static_cast<FPClassTest>(Node->getConstantOperandVal(1));
     if (SDValue Expanded =
             TLI.expandIS_FPCLASS(Node->getValueType(0), Node->getOperand(0),
                                  Test, Node->getFlags(), SDLoc(Node), DAG))

@@ -169,3 +169,16 @@
 ! RUN: -fopenmp-host-ir-file-path non-existant-file.bc \
 ! RUN: | FileCheck %s --check-prefix=HOST-IR-MISSING
 ! HOST-IR-MISSING: error: provided host compiler IR file 'non-existant-file.bc' is required to generate code for OpenMP target regions but cannot be found
+
+! Check that `-gpulibc` includes the LLVM C libraries for the GPU.
+! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=gfx90a --offload-arch=sm_52 \
+! RUN:      -gpulibc %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=LIBC-GPU %s
+! LIBC-GPU: "-lcgpu"{{.*}}"-lmgpu"
+
+! RUN:   %flang -### --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=gfx90a --offload-arch=sm_52 \
+! RUN:      -nogpulibc %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU %s
+! NO-LIBC-GPU-NOT: "-lcgpu"{{.*}}"-lmgpu"

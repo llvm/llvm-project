@@ -1024,6 +1024,10 @@ namespace DiscardExprs {
     __null;
     __builtin_offsetof(A, a);
     1,2;
+    (int)1.0;
+    (float)1;
+    (double)1.0f;
+    (signed)4u;
 
     return 0;
   }
@@ -1177,8 +1181,29 @@ namespace InvalidDeclRefs {
                           // expected-error {{not an integral constant expression}} \
                           // expected-note {{initializer of 'b02' is unknown}}
 
-  /// FIXME: This should also be diagnosed in the new interpreter.
-  int b03 = 3; // ref-note {{declared here}}
+  int b03 = 3; // ref-note {{declared here}} \
+               // expected-note {{declared here}}
   static_assert(b03, ""); // ref-error {{not an integral constant expression}} \
-                          // ref-note {{read of non-const variable}}
+                          // ref-note {{read of non-const variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-const variable}}
+}
+
+namespace NonConstReads {
+  void *p = nullptr; // ref-note {{declared here}} \
+                     // expected-note {{declared here}}
+  static_assert(!p, ""); // ref-error {{not an integral constant expression}} \
+                         // ref-note {{read of non-constexpr variable 'p'}} \
+                         // expected-error {{not an integral constant expression}} \
+                         // expected-note {{read of non-constexpr variable 'p'}}
+
+  int arr[!p]; // ref-error {{variable length array}} \
+               // expected-error {{variable length array}}
+
+  int z; // ref-note {{declared here}} \
+         // expected-note {{declared here}}
+  static_assert(z == 0, ""); // ref-error {{not an integral constant expression}} \
+                             // ref-note {{read of non-const variable 'z'}} \
+                             // expected-error {{not an integral constant expression}} \
+                             // expected-note {{read of non-const variable 'z'}}
 }

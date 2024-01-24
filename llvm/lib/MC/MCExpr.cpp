@@ -708,7 +708,7 @@ static void AttemptToFoldSymbolOffsetDifference(
       if (DF) {
         Displacement += DF->getContents().size();
       } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
-                 AF && Layout &&
+                 AF && Layout && AF->hasEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
                      *AF, Count)) {
         Displacement += Asm->computeFragmentSize(*Layout, *AF);

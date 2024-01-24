@@ -1059,7 +1059,7 @@ X test8(bool b) {
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_Y:%.*]], align 1
 // CHECK-NEXT:    store ptr [[AGG_RESULT:%.*]], ptr [[RESULT_PTR]], align 4
-// CHECK-NEXT:    call void @_ZN1YIiE1fEv(ptr sret([[STRUCT_Y]]) align 1 [[TMP]])
+// CHECK-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-NEXT:    call void @llvm.trap()
 // CHECK-NEXT:    unreachable
 //
@@ -1068,7 +1068,7 @@ X test8(bool b) {
 // CHECK-EH-03-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-EH-03-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_Y:%.*]], align 1
 // CHECK-EH-03-NEXT:    store ptr [[AGG_RESULT:%.*]], ptr [[RESULT_PTR]], align 4
-// CHECK-EH-03-NEXT:    call void @_ZN1YIiE1fEv(ptr sret([[STRUCT_Y]]) align 1 [[TMP]])
+// CHECK-EH-03-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-EH-03-NEXT:    call void @llvm.trap()
 // CHECK-EH-03-NEXT:    unreachable
 //
@@ -1077,7 +1077,7 @@ X test8(bool b) {
 // CHECK-EH-11-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-EH-11-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_Y:%.*]], align 1
 // CHECK-EH-11-NEXT:    store ptr [[AGG_RESULT:%.*]], ptr [[RESULT_PTR]], align 4
-// CHECK-EH-11-NEXT:    call void @_ZN1YIiE1fEv(ptr sret([[STRUCT_Y]]) align 1 [[TMP]])
+// CHECK-EH-11-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-EH-11-NEXT:    call void @llvm.trap()
 // CHECK-EH-11-NEXT:    unreachable
 //
@@ -1915,7 +1915,7 @@ X test15(bool b) { // http://wg21.link/p2025r2#ex-15
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-EH-11-NEXT:    store ptr [[X]], ptr [[TMP0]], align 4
-// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test16vENK3$_0clEv"(ptr sret([[CLASS_X]]) align 1 [[AGG_TMP]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test16vENK3$_0clEv"(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
 // CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr noundef [[AGG_TMP]])
@@ -2530,7 +2530,7 @@ X test18(int i) { // http://wg21.link/p2025r2#ex-11
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-EH-11-NEXT:    store ptr [[AGG_RESULT]], ptr [[TMP0]], align 4
-// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test19vENK3$_0clEv"(ptr sret([[CLASS_X]]) align 1 [[L]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test19vENK3$_0clEv"(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[L]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
 // CHECK-EH-11-NEXT:    store i1 true, ptr [[NRVO]], align 1
@@ -2584,9 +2584,9 @@ X test20() { // http://wg21.link/p2025r2#ex-18
 // CHECK-EH-11-NEXT:  entry:
 // CHECK-EH-11-NEXT:    [[AGG_TMP_ENSURED:%.*]] = alloca [[CLASS_X:%.*]], align 1
 // CHECK-EH-11-NEXT:    [[AGG_TMP_ENSURED1:%.*]] = alloca [[CLASS_X]], align 1
-// CHECK-EH-11-NEXT:    call void @_Z6test20ILb1EE1Xv(ptr sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED]])
+// CHECK-EH-11-NEXT:    call void @_Z6test20ILb1EE1Xv(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED]])
 // CHECK-EH-11-NEXT:    call void @_ZN1XD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]]) #[[ATTR6]]
-// CHECK-EH-11-NEXT:    call void @_Z6test20ILb0EE1Xv(ptr sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED1]])
+// CHECK-EH-11-NEXT:    call void @_Z6test20ILb0EE1Xv(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED1]])
 // CHECK-EH-11-NEXT:    call void @_ZN1XD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED1]]) #[[ATTR6]]
 // CHECK-EH-11-NEXT:    ret void
 //
@@ -2934,9 +2934,9 @@ X test25() {
 // CHECK-EH-11-NEXT:  entry:
 // CHECK-EH-11-NEXT:    [[AGG_TMP_ENSURED:%.*]] = alloca [[CLASS_X:%.*]], align 1
 // CHECK-EH-11-NEXT:    [[AGG_TMP_ENSURED1:%.*]] = alloca [[CLASS_X]], align 1
-// CHECK-EH-11-NEXT:    call void @_Z6test25ILb1EE1Xv(ptr sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED]])
+// CHECK-EH-11-NEXT:    call void @_Z6test25ILb1EE1Xv(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED]])
 // CHECK-EH-11-NEXT:    call void @_ZN1XD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED]]) #[[ATTR6]]
-// CHECK-EH-11-NEXT:    call void @_Z6test25ILb0EE1Xv(ptr sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED1]])
+// CHECK-EH-11-NEXT:    call void @_Z6test25ILb0EE1Xv(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP_ENSURED1]])
 // CHECK-EH-11-NEXT:    call void @_ZN1XD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP_ENSURED1]]) #[[ATTR6]]
 // CHECK-EH-11-NEXT:    ret void
 //

@@ -13,7 +13,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -26,7 +25,7 @@ TEST(LlvmLibcAToFTest, SimpleTest) {
 
   libc_errno = 0;
   EXPECT_THAT(LIBC_NAMESPACE::atof("123"),
-              Succeeds<double>(static_cast<double>(expected_fp)));
+              Succeeds<double>(expected_fp.get_val()));
 }
 
 TEST(LlvmLibcAToFTest, FailedParsingTest) {

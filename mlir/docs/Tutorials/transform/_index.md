@@ -26,6 +26,7 @@ The tutorial is divided into the following chapters.
 -  [Chapter #1](Ch1.md): Combining Existing Transformations
 -  [Chapter #2](Ch2.md): Adding a Simple New Transformation Operation
 -  [Chapter #3](Ch3.md): More than Simple Transform Operations
+-  [Chapter #4](Ch4.md): Matching Payload with Transform Operations
 -  [Chapter H](ChH.md): Reproducing Halide Schedule
 
 The code corresponding to this tutorial is located under

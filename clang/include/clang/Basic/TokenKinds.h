@@ -109,8 +109,8 @@ bool isPragmaAnnotation(TokenKind K);
 
 inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
   return (false
-#define KEYWORD_ATTRIBUTE(X) || (K == tok::kw_##X)
-#include "clang/Basic/AttrTokenKinds.inc"
+#define KEYWORD_ATTRIBUTE(X, ...) || (K == tok::kw_##X)
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
   );
 }
 

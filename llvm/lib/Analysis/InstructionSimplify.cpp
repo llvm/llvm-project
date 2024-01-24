@@ -4313,7 +4313,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
     if (!I->getType()->isVectorTy() || isa<ShuffleVectorInst>(I) ||
-        isa<CallBase>(I))
+        isa<CallBase>(I) || isa<BitCastInst>(I))
       return nullptr;
   }
 

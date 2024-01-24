@@ -662,7 +662,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_fputil_fp_bits",
     hdrs = ["src/__support/FPUtil/FPBits.h"],
-    textual_hdrs = ["src/__support/FPUtil/x86_64/LongDoubleBits.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",

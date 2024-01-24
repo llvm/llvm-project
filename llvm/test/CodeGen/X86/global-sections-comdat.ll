@@ -41,6 +41,6 @@ bb5:
 $G16 = comdat any
 @G16 = unnamed_addr constant i32 42, comdat
 
-; LINUX: .section	.rodata.cst4.G16,"aGM",@progbits,4,G16,comdat
-; LINUX-SECTIONS: .section	.rodata.cst4.G16,"aGM",@progbits,4,G16,comdat
-; LINUX-SECTIONS-SHORT: .section	.rodata.cst4,"aGM",@progbits,4,G16,comdat
+; LINUX: .section	.rodata.cst4.G16,"aMG",@progbits,4,G16,comdat
+; LINUX-SECTIONS: .section	.rodata.cst4.G16,"aMG",@progbits,4,G16,comdat
+; LINUX-SECTIONS-SHORT: .section	.rodata.cst4,"aMG",@progbits,4,G16,comdat

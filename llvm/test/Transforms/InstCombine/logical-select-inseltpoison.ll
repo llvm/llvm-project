@@ -671,11 +671,8 @@ define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %
 
 define <4 x i32> @computesignbits_through_two_input_shuffle(<4 x i32> %x, <4 x i32> %y, <4 x i1> %cond1, <4 x i1> %cond2) {
 ; CHECK-LABEL: @computesignbits_through_two_input_shuffle(
-; CHECK-NEXT:    [[SEXT1:%.*]] = sext <4 x i1> [[COND1:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SEXT2:%.*]] = sext <4 x i1> [[COND2:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i32> [[SEXT1]], <4 x i32> [[SEXT2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[COND]] to <4 x i1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i1> [[COND1:%.*]], <4 x i1> [[COND2:%.*]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %sext1 = sext <4 x i1> %cond1 to <4 x i32>

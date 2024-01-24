@@ -2209,7 +2209,8 @@ private:
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->isOneOf(tok::identifier, tok::string_literal)))) {
+          NextNonComment->is(tok::string_literal) ||
+          (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
     }
 
@@ -2233,6 +2234,12 @@ private:
 
     if (PreviousNotConst->ClosesRequiresClause)
       return false;
+
+    if (Style.isTableGen()) {
+      // keywords such as let and def* defines names.
+      if (Keywords.isTableGenDefinition(*PreviousNotConst))
+        return true;
+    }
 
     bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
                        PreviousNotConst->Previous &&
@@ -2369,7 +2376,7 @@ private:
       }
     }
 
-    if (Tok.Next->is(tok::question))
+    if (Tok.Next->isOneOf(tok::question, tok::ampamp))
       return false;
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.
@@ -2769,13 +2776,6 @@ public:
       // Consume operators with higher precedence.
       parse(Precedence + 1);
 
-      // Do not assign fake parenthesis to tokens that are part of an
-      // unexpanded macro call. The line within the macro call contains
-      // the parenthesis and commas, and we will not find operators within
-      // that structure.
-      if (Current && Current->MacroParent)
-        break;
-
       int CurrentPrecedence = getCurrentPrecedence();
 
       if (Precedence == CurrentPrecedence && Current &&
@@ -2919,6 +2919,13 @@ private:
 
   void addFakeParenthesis(FormatToken *Start, prec::Level Precedence,
                           FormatToken *End = nullptr) {
+    // Do not assign fake parenthesis to tokens that are part of an
+    // unexpanded macro call. The line within the macro call contains
+    // the parenthesis and commas, and we will not find operators within
+    // that structure.
+    if (Start->MacroParent)
+      return;
+
     Start->FakeLParens.push_back(Precedence);
     if (Precedence > prec::Unknown)
       Start->StartsBinaryExpression = true;
@@ -3759,7 +3766,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   }
 
   if (Left.is(tok::coloncolon))
-    return 500;
+    return Style.PenaltyBreakScopeResolution;
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
       Right.is(tok::kw_operator)) {
     if (Line.startsWith(tok::kw_for) && Right.PartOfMultiVariableDeclStmt)
@@ -4668,6 +4675,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
+    // spaces inside square brackets.
+    if (Left.is(tok::l_square) || Right.is(tok::r_square))
+      return Style.SpacesInSquareBrackets;
+
     if (Left.is(Keywords.kw_synchronized) && Right.is(tok::l_paren)) {
       return Style.SpaceBeforeParensOptions.AfterControlStatements ||
              spaceRequiredBeforeParens(Right);
@@ -5151,6 +5162,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
+  // FIXME: Breaking after newlines seems useful in general. Turn this into an
+  // option and recognize more cases like endl etc, and break independent of
+  // what comes after operator lessless.
+  if (Right.is(tok::lessless) && Right.Next &&
+      Right.Next->is(tok::string_literal) && Left.is(tok::string_literal) &&
+      Left.TokenText.ends_with("\\n\"")) {
+    return true;
+  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:

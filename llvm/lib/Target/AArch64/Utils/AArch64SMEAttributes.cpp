@@ -18,16 +18,24 @@ void SMEAttrs::set(unsigned M, bool Enable) {
   else
     Bitmask &= ~M;
 
+  // Streaming Mode Attrs
   assert(!(hasStreamingInterface() && hasStreamingCompatibleInterface()) &&
          "SM_Enabled and SM_Compatible are mutually exclusive");
-  assert(!(hasNewZABody() && hasSharedZAInterface()) &&
+
+  // ZA Attrs
+  assert(!(hasNewZABody() && sharesZA()) &&
          "ZA_New and ZA_Shared are mutually exclusive");
   assert(!(hasNewZABody() && preservesZA()) &&
          "ZA_New and ZA_Preserved are mutually exclusive");
-  assert(!(hasNewZABody() && (Bitmask & ZA_NoLazySave)) &&
-         "ZA_New and ZA_NoLazySave are mutually exclusive");
-  assert(!(hasSharedZAInterface() && (Bitmask & ZA_NoLazySave)) &&
-         "ZA_Shared and ZA_NoLazySave are mutually exclusive");
+  assert(!(hasNewZABody() && (Bitmask & SME_ABI_Routine)) &&
+         "ZA_New and SME_ABI_Routine are mutually exclusive");
+
+  // ZT0 Attrs
+  assert(
+      (!sharesZT0() || (isNewZT0() ^ isInZT0() ^ isInOutZT0() ^ isOutZT0() ^
+                        isPreservesZT0())) &&
+      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive");
 }
 
 SMEAttrs::SMEAttrs(const CallBase &CB) {
@@ -39,11 +47,10 @@ SMEAttrs::SMEAttrs(const CallBase &CB) {
 
 SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
   if (FuncName == "__arm_tpidr2_save" || FuncName == "__arm_sme_state")
-    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Preserved |
-                SMEAttrs::ZA_NoLazySave);
+    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine);
   if (FuncName == "__arm_tpidr2_restore")
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared |
-                SMEAttrs::ZA_NoLazySave);
+                SMEAttrs::SME_ABI_Routine);
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
@@ -60,29 +67,29 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= ZA_New;
   if (Attrs.hasFnAttr("aarch64_pstate_za_preserved"))
     Bitmask |= ZA_Preserved;
+  if (Attrs.hasFnAttr("aarch64_in_zt0"))
+    Bitmask |= encodeZT0State(StateValue::In);
+  if (Attrs.hasFnAttr("aarch64_out_zt0"))
+    Bitmask |= encodeZT0State(StateValue::Out);
+  if (Attrs.hasFnAttr("aarch64_inout_zt0"))
+    Bitmask |= encodeZT0State(StateValue::InOut);
+  if (Attrs.hasFnAttr("aarch64_preserves_zt0"))
+    Bitmask |= encodeZT0State(StateValue::Preserved);
+  if (Attrs.hasFnAttr("aarch64_new_zt0"))
+    Bitmask |= encodeZT0State(StateValue::New);
 }
 
-std::optional<bool>
-SMEAttrs::requiresSMChange(const SMEAttrs &Callee,
-                           bool BodyOverridesInterface) const {
-  // If the transition is not through a call (e.g. when considering inlining)
-  // and Callee has a streaming body, then we can ignore the interface of
-  // Callee.
-  if (BodyOverridesInterface && Callee.hasStreamingBody()) {
-    return hasStreamingInterfaceOrBody() ? std::nullopt
-                                         : std::optional<bool>(true);
-  }
-
+bool SMEAttrs::requiresSMChange(const SMEAttrs &Callee) const {
   if (Callee.hasStreamingCompatibleInterface())
-    return std::nullopt;
+    return false;
 
   // Both non-streaming
   if (hasNonStreamingInterfaceAndBody() && Callee.hasNonStreamingInterface())
-    return std::nullopt;
+    return false;
 
   // Both streaming
   if (hasStreamingInterfaceOrBody() && Callee.hasStreamingInterface())
-    return std::nullopt;
+    return false;
 
-  return Callee.hasStreamingInterface();
+  return true;
 }

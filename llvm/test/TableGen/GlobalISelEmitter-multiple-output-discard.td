@@ -38,5 +38,5 @@ def : Pat<(two_out GPR32:$val), (THREE_OUTS GPR32:$val)>;
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // DstI[out2]
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // val
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,

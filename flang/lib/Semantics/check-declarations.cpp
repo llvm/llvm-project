@@ -317,15 +317,13 @@ void CheckHelper::Check(const Symbol &symbol) {
       // are not pertinent to the characteristics of the procedure.
       // Restrictions on entities in pure procedure interfaces don't need
       // enforcement.
-    } else {
-      if (IsSaved(symbol)) {
-        if (IsInitialized(symbol)) {
-          messages_.Say(
-              "A pure subprogram may not initialize a variable"_err_en_US);
-        } else {
-          messages_.Say(
-              "A pure subprogram may not have a variable with the SAVE attribute"_err_en_US);
-        }
+    } else if (!FindCommonBlockContaining(symbol) && IsSaved(symbol)) {
+      if (IsInitialized(symbol)) {
+        messages_.Say(
+            "A pure subprogram may not initialize a variable"_err_en_US);
+      } else {
+        messages_.Say(
+            "A pure subprogram may not have a variable with the SAVE attribute"_err_en_US);
       }
     }
     if (symbol.attrs().test(Attr::VOLATILE) &&
@@ -572,6 +570,12 @@ void CheckHelper::CheckValue(
     messages_.Say(
         "VALUE attribute may not apply to an assumed-rank array"_err_en_US);
   }
+  if (context_.ShouldWarn(common::UsageWarning::Portability) &&
+      IsAssumedLengthCharacter(symbol)) {
+    // F'2008 feature not widely implemented
+    messages_.Say(
+        "VALUE attribute on assumed-length CHARACTER may not be portable"_port_en_US);
+  }
 }
 
 void CheckHelper::CheckAssumedTypeEntity( // C709
@@ -685,7 +689,7 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE"_err_en_US);
       }
-      if (details.IsAssumedSize()) { // C834
+      if (IsAssumedSizeArray(symbol)) { // C834
         if (type && type->IsPolymorphic()) {
           messages_.Say(
               "An INTENT(OUT) assumed-size dummy argument array may not be polymorphic"_err_en_US);
@@ -741,11 +745,6 @@ void CheckHelper::CheckObjectEntity(
       if (!inExplicitInterface && !inModuleProc) {
         messages_.Say(
             "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
-      }
-      if (ignoreTKR.test(common::IgnoreTKR::Contiguous) &&
-          !IsAssumedShape(symbol)) {
-        messages_.Say(
-            "!DIR$ IGNORE_TKR(C) may apply only to an assumed-shape array"_err_en_US);
       }
       if (ownerSymbol && ownerSymbol->attrs().test(Attr::ELEMENTAL) &&
           details.ignoreTKR().test(common::IgnoreTKR::Rank)) {
@@ -1121,11 +1120,11 @@ void CheckHelper::CheckArraySpec(
   bool isCUDAShared{
       GetCUDADataAttr(&symbol).value_or(common::CUDADataAttr::Device) ==
       common::CUDADataAttr::Shared};
+  bool isCrayPointee{symbol.test(Symbol::Flag::CrayPointee)};
   std::optional<parser::MessageFixedText> msg;
-  if (symbol.test(Symbol::Flag::CrayPointee) && !isExplicit &&
-      !canBeAssumedSize) {
-    msg = "Cray pointee '%s' must have explicit shape or"
-          " assumed size"_err_en_US;
+  if (isCrayPointee && !isExplicit && !canBeAssumedSize) {
+    msg =
+        "Cray pointee '%s' must have explicit shape or assumed size"_err_en_US;
   } else if (IsAllocatableOrPointer(symbol) && !canBeDeferred &&
       !isAssumedRank) {
     if (symbol.owner().IsDerivedType()) { // C745
@@ -1150,12 +1149,14 @@ void CheckHelper::CheckArraySpec(
     }
   } else if (canBeAssumedShape && !canBeDeferred) {
     msg = "Assumed-shape array '%s' must be a dummy argument"_err_en_US;
-  } else if (canBeAssumedSize && !canBeImplied && !isCUDAShared) { // C833
-    msg = "Assumed-size array '%s' must be a dummy argument"_err_en_US;
   } else if (isAssumedRank) { // C837
     msg = "Assumed-rank array '%s' must be a dummy argument"_err_en_US;
+  } else if (canBeAssumedSize && !canBeImplied && !isCUDAShared &&
+      !isCrayPointee) { // C833
+    msg = "Assumed-size array '%s' must be a dummy argument"_err_en_US;
   } else if (canBeImplied) {
-    if (!IsNamedConstant(symbol) && !isCUDAShared) { // C835, C836
+    if (!IsNamedConstant(symbol) && !isCUDAShared &&
+        !isCrayPointee) { // C835, C836
       msg = "Implied-shape array '%s' must be a named constant or a "
             "dummy argument"_err_en_US;
     }
@@ -1164,7 +1165,8 @@ void CheckHelper::CheckArraySpec(
       msg = "Named constant '%s' array must have constant or"
             " implied shape"_err_en_US;
     }
-  } else if (!IsAllocatableOrPointer(symbol) && !isExplicit) {
+  } else if (!isExplicit &&
+      !(IsAllocatableOrPointer(symbol) || isCrayPointee)) {
     if (symbol.owner().IsDerivedType()) { // C749
       msg = "Component array '%s' without ALLOCATABLE or POINTER attribute must"
             " have explicit shape"_err_en_US;
@@ -2741,7 +2743,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       context_.SetError(symbol);
     }
   }
-  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+  if (symbol.has<ObjectEntityDetails>()) {
     if (isExplicitBindC && !symbol.owner().IsModule()) {
       messages_.Say(symbol.name(),
           "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);
@@ -2764,7 +2766,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
             context_.SetError(symbol);
           }
         } else if ((isExplicitBindC || symbol.attrs().test(Attr::VALUE)) &&
-            !evaluate::IsExplicitShape(symbol) && !object->IsAssumedSize()) {
+            !evaluate::IsExplicitShape(symbol) && !IsAssumedSizeArray(symbol)) {
           SayWithDeclaration(symbol, symbol.name(),
               "BIND(C) array must have explicit shape or be assumed-size unless a dummy argument without the VALUE attribute"_err_en_US);
           context_.SetError(symbol);

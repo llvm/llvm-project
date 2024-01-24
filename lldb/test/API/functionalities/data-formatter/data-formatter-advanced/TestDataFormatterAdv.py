@@ -6,6 +6,7 @@ Test lldb data formatter subsystem.
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+import re
 
 
 class AdvDataFormatterTestCase(TestBase):
@@ -294,6 +295,27 @@ class AdvDataFormatterTestCase(TestBase):
             matching=False,
             substrs=["e_2", "n_2", "r_2", "i_2", "k_2", "o_2"],
         )
+
+        self.runCmd("settings set target.max-string-summary-length 5")
+        some_string = self.frame().FindVariable("some_string")
+        some_string_summary = some_string.GetSummary()
+        if (re.match(r"^std::__\w+::", some_string.GetTypeName())):
+          self.assertEqual(some_string_summary, '"01234"...')
+        else:
+          #libstdc++ string formatter suffers from the same problem as some_cstring below
+          pass
+
+        some_carr = self.frame().FindVariable("some_carr")
+        some_carr_summary = some_carr.GetSummary()
+        self.assertEqual(some_carr_summary, '"01234"...')
+
+        # FIXME: c-strings should honor the target.max-string-summary-length
+        # setting. Currently a C-string will be truncated at 64 (an internal
+        # implementation detail) instead of the value specified in the setting.
+        some_cstring = self.frame().FindVariable("some_cstring")
+        some_cstring_summary = some_cstring.GetSummary()
+        self.assertEqual(len(some_cstring_summary), 66)  # 64 + 2 (for quotation marks)
+        self.assertFalse(some_cstring_summary.endswith("..."))
 
         # override the cap
         self.expect(

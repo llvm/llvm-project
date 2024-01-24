@@ -607,6 +607,40 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
 }
 
+static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
+  if (MBB.empty())
+    return true;
+
+  // Branching SPIR-V intrinsics are not detected by this generic method.
+  // Thus, we can only trust negative result.
+  if (!MBB.canFallThrough())
+    return false;
+
+  // Otherwise, we must manually check if we have a SPIR-V intrinsic which
+  // prevent an implicit fallthrough.
+  for (MachineBasicBlock::reverse_iterator It = MBB.rbegin(), E = MBB.rend();
+       It != E; ++It) {
+    if (isSpvIntrinsic(*It, Intrinsic::spv_switch))
+      return false;
+  }
+  return true;
+}
+
+static void removeImplicitFallthroughs(MachineFunction &MF,
+                                       MachineIRBuilder MIB) {
+  // It is valid for MachineBasicBlocks to not finish with a branch instruction.
+  // In such cases, they will simply fallthrough their immediate successor.
+  for (MachineBasicBlock &MBB : MF) {
+    if (!isImplicitFallthrough(MBB))
+      continue;
+
+    assert(std::distance(MBB.successors().begin(), MBB.successors().end()) ==
+           1);
+    MIB.setInsertPt(MBB, MBB.end());
+    MIB.buildBr(**MBB.successors().begin());
+  }
+}
+
 bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
@@ -619,6 +653,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   generateAssignInstrs(MF, GR, MIB);
   processSwitches(MF, GR, MIB);
   processInstrsWithTypeFolding(MF, GR, MIB);
+  removeImplicitFallthroughs(MF, MIB);
 
   return true;
 }

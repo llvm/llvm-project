@@ -412,7 +412,6 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 class FloatToString {
   fputil::FPBits<T> float_bits;
-  bool is_negative;
   int exponent;
   FPBits::StorageType mantissa;
 
@@ -421,14 +420,11 @@ class FloatToString {
 
 public:
   LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
-    is_negative = float_bits.get_sign();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
 
     // Adjust for the width of the mantissa.
     exponent -= FRACTION_LEN;
-
-    // init_convert();
   }
 
   LIBC_INLINE constexpr bool is_nan() { return float_bits.is_nan(); }

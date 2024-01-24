@@ -1149,6 +1149,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
       // sure the base pointer is not an instruction defined inside the scop.
       // However, we can ignore loads that will be hoisted.
 
+      auto ASPointers = AS.getPointers();
+
       InvariantLoadsSetTy VariantLS, InvariantLS;
       // In order to detect loads which are dependent on other invariant loads
       // as invariant, we use fixed-point iteration method here i.e we iterate
@@ -1158,8 +1160,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
         const unsigned int VariantSize = VariantLS.size(),
                            InvariantSize = InvariantLS.size();
 
-        for (const auto &Ptr : AS) {
-          Instruction *Inst = dyn_cast<Instruction>(Ptr.getValue());
+        for (const Value *Ptr : ASPointers) {
+          Instruction *Inst = dyn_cast<Instruction>(const_cast<Value *>(Ptr));
           if (Inst && Context.CurRegion.contains(Inst)) {
             auto *Load = dyn_cast<LoadInst>(Inst);
             if (Load && InvariantLS.count(Load))

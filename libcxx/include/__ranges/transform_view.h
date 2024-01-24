@@ -67,8 +67,7 @@ template <input_range _View, move_constructible _Fn>
 template <input_range _View, copy_constructible _Fn>
 #  endif
   requires __transform_view_constraints<_View, _Fn>
-class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG transform_view
-    : public view_interface<transform_view<_View, _Fn>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS transform_view : public view_interface<transform_view<_View, _Fn>> {
   template <bool>
   class __iterator;
   template <bool>

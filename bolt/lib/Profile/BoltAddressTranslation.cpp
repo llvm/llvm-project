@@ -8,8 +8,9 @@
 
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Core/BinaryFunction.h"
-#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/LEB128.h"
 
 #define DEBUG_TYPE "bolt-bat"
 
@@ -44,7 +45,7 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
   // and this deleted block will both share the same output address (the same
   // key), and we need to map back. We choose here to privilege the successor by
   // allowing it to overwrite the previously inserted key in the map.
-  Map[BBOutputOffset] = BBInputOffset;
+  Map[BBOutputOffset] = BBInputOffset << 1;
 
   const auto &IOAddressMap =
       BB.getFunction()->getBinaryContext().getIOAddressMap();
@@ -61,8 +62,8 @@ void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
 
     LLVM_DEBUG(dbgs() << "  Key: " << Twine::utohexstr(OutputOffset) << " Val: "
                       << Twine::utohexstr(InputOffset) << " (branch)\n");
-    Map.insert(
-        std::pair<uint32_t, uint32_t>(OutputOffset, InputOffset | BRANCHENTRY));
+    Map.insert(std::pair<uint32_t, uint32_t>(OutputOffset,
+                                             (InputOffset << 1) | BRANCHENTRY));
   }
 }
 
@@ -101,36 +102,53 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     }
   }
 
-  const uint32_t NumFuncs = Maps.size();
-  OS.write(reinterpret_cast<const char *>(&NumFuncs), 4);
-  LLVM_DEBUG(dbgs() << "Writing " << NumFuncs << " functions for BAT.\n");
+  // Output addresses are delta-encoded
+  uint64_t PrevAddress = 0;
+  writeMaps</*Cold=*/false>(Maps, PrevAddress, OS);
+  writeMaps</*Cold=*/true>(Maps, PrevAddress, OS);
+
+  outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
+}
+
+template <bool Cold>
+void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
+                                       uint64_t &PrevAddress, raw_ostream &OS) {
+  const uint32_t NumFuncs =
+      llvm::count_if(llvm::make_first_range(Maps), [&](const uint64_t Address) {
+        return Cold == ColdPartSource.count(Address);
+      });
+  encodeULEB128(NumFuncs, OS);
+  LLVM_DEBUG(dbgs() << "Writing " << NumFuncs << (Cold ? " cold" : "")
+                    << " functions for BAT.\n");
+  size_t PrevIndex = 0;
   for (auto &MapEntry : Maps) {
     const uint64_t Address = MapEntry.first;
+    // Only process cold fragments in cold mode, and vice versa.
+    if (Cold != ColdPartSource.count(Address))
+      continue;
     MapTy &Map = MapEntry.second;
     const uint32_t NumEntries = Map.size();
     LLVM_DEBUG(dbgs() << "Writing " << NumEntries << " entries for 0x"
                       << Twine::utohexstr(Address) << ".\n");
-    OS.write(reinterpret_cast<const char *>(&Address), 8);
-    OS.write(reinterpret_cast<const char *>(&NumEntries), 4);
+    encodeULEB128(Address - PrevAddress, OS);
+    PrevAddress = Address;
+    if (Cold) {
+      size_t HotIndex =
+          std::distance(ColdPartSource.begin(), ColdPartSource.find(Address));
+      encodeULEB128(HotIndex - PrevIndex, OS);
+      PrevIndex = HotIndex;
+    }
+    encodeULEB128(NumEntries, OS);
+    uint64_t InOffset = 0;
+    // Output and Input addresses and delta-encoded
     for (std::pair<const uint32_t, uint32_t> &KeyVal : Map) {
-      OS.write(reinterpret_cast<const char *>(&KeyVal.first), 4);
-      OS.write(reinterpret_cast<const char *>(&KeyVal.second), 4);
+      const uint64_t OutputAddress = KeyVal.first + Address;
+      encodeULEB128(OutputAddress - PrevAddress, OS);
+      PrevAddress = OutputAddress;
+      encodeSLEB128(KeyVal.second - InOffset, OS);
+      InOffset = KeyVal.second;
     }
   }
-  const uint32_t NumColdEntries = ColdPartSource.size();
-  LLVM_DEBUG(dbgs() << "Writing " << NumColdEntries
-                    << " cold part mappings.\n");
-  OS.write(reinterpret_cast<const char *>(&NumColdEntries), 4);
-  for (std::pair<const uint64_t, uint64_t> &ColdEntry : ColdPartSource) {
-    OS.write(reinterpret_cast<const char *>(&ColdEntry.first), 8);
-    OS.write(reinterpret_cast<const char *>(&ColdEntry.second), 8);
-    LLVM_DEBUG(dbgs() << " " << Twine::utohexstr(ColdEntry.first) << " -> "
-                      << Twine::utohexstr(ColdEntry.second) << "\n");
-  }
-
-  outs() << "BOLT-INFO: Wrote " << Maps.size() << " BAT maps\n";
-  outs() << "BOLT-INFO: Wrote " << NumColdEntries
-         << " BAT cold-to-hot entries\n";
 }
 
 std::error_code BoltAddressTranslation::parse(StringRef Buf) {
@@ -152,53 +170,54 @@ std::error_code BoltAddressTranslation::parse(StringRef Buf) {
   if (Name.substr(0, 4) != "BOLT")
     return make_error_code(llvm::errc::io_error);
 
-  if (Buf.size() - Offset < 4)
-    return make_error_code(llvm::errc::io_error);
+  Error Err(Error::success());
+  std::vector<uint64_t> HotFuncs;
+  uint64_t PrevAddress = 0;
+  parseMaps</*Cold=*/false>(HotFuncs, PrevAddress, DE, Offset, Err);
+  parseMaps</*Cold=*/true>(HotFuncs, PrevAddress, DE, Offset, Err);
+  outs() << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
+  return errorToErrorCode(std::move(Err));
+}
 
-  const uint32_t NumFunctions = DE.getU32(&Offset);
-  LLVM_DEBUG(dbgs() << "Parsing " << NumFunctions << " functions\n");
+template <bool Cold>
+void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
+                                       uint64_t &PrevAddress, DataExtractor &DE,
+                                       uint64_t &Offset, Error &Err) {
+  const uint32_t NumFunctions = DE.getULEB128(&Offset, &Err);
+  LLVM_DEBUG(dbgs() << "Parsing " << NumFunctions << (Cold ? " cold" : "")
+                    << " functions\n");
+  size_t HotIndex = 0;
   for (uint32_t I = 0; I < NumFunctions; ++I) {
-    if (Buf.size() - Offset < 12)
-      return make_error_code(llvm::errc::io_error);
-
-    const uint64_t Address = DE.getU64(&Offset);
-    const uint32_t NumEntries = DE.getU32(&Offset);
+    const uint64_t Address = PrevAddress + DE.getULEB128(&Offset, &Err);
+    PrevAddress = Address;
+    if (Cold) {
+      HotIndex += DE.getULEB128(&Offset, &Err);
+      ColdPartSource.emplace(Address, HotFuncs[HotIndex]);
+    } else {
+      HotFuncs.push_back(Address);
+    }
+    const uint32_t NumEntries = DE.getULEB128(&Offset, &Err);
     MapTy Map;
 
     LLVM_DEBUG(dbgs() << "Parsing " << NumEntries << " entries for 0x"
                       << Twine::utohexstr(Address) << "\n");
-    if (Buf.size() - Offset < 8 * NumEntries)
-      return make_error_code(llvm::errc::io_error);
+    uint64_t InputOffset = 0;
     for (uint32_t J = 0; J < NumEntries; ++J) {
-      const uint32_t OutputAddr = DE.getU32(&Offset);
-      const uint32_t InputAddr = DE.getU32(&Offset);
-      Map.insert(std::pair<uint32_t, uint32_t>(OutputAddr, InputAddr));
-      LLVM_DEBUG(dbgs() << Twine::utohexstr(OutputAddr) << " -> "
-                        << Twine::utohexstr(InputAddr) << "\n");
+      const uint64_t OutputDelta = DE.getULEB128(&Offset, &Err);
+      const uint64_t OutputAddress = PrevAddress + OutputDelta;
+      const uint64_t OutputOffset = OutputAddress - Address;
+      PrevAddress = OutputAddress;
+      const int64_t InputDelta = DE.getSLEB128(&Offset, &Err);
+      InputOffset += InputDelta;
+      Map.insert(std::pair<uint32_t, uint32_t>(OutputOffset, InputOffset));
+      LLVM_DEBUG(
+          dbgs() << formatv("{0:x} -> {1:x} ({2}/{3}b -> {4}/{5}b), {6:x}\n",
+                            OutputOffset, InputOffset, OutputDelta,
+                            encodeULEB128(OutputDelta, nulls()), InputDelta,
+                            encodeSLEB128(InputDelta, nulls()), OutputAddress));
     }
     Maps.insert(std::pair<uint64_t, MapTy>(Address, Map));
   }
-
-  if (Buf.size() - Offset < 4)
-    return make_error_code(llvm::errc::io_error);
-
-  const uint32_t NumColdEntries = DE.getU32(&Offset);
-  LLVM_DEBUG(dbgs() << "Parsing " << NumColdEntries << " cold part mappings\n");
-  for (uint32_t I = 0; I < NumColdEntries; ++I) {
-    if (Buf.size() - Offset < 16)
-      return make_error_code(llvm::errc::io_error);
-    const uint32_t ColdAddress = DE.getU64(&Offset);
-    const uint32_t HotAddress = DE.getU64(&Offset);
-    ColdPartSource.insert(
-        std::pair<uint64_t, uint64_t>(ColdAddress, HotAddress));
-    LLVM_DEBUG(dbgs() << Twine::utohexstr(ColdAddress) << " -> "
-                      << Twine::utohexstr(HotAddress) << "\n");
-  }
-  outs() << "BOLT-INFO: Parsed " << Maps.size() << " BAT entries\n";
-  outs() << "BOLT-INFO: Parsed " << NumColdEntries
-         << " BAT cold-to-hot entries\n";
-
-  return std::error_code();
 }
 
 void BoltAddressTranslation::dump(raw_ostream &OS) {
@@ -209,7 +228,7 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
     OS << "BB mappings:\n";
     for (const auto &Entry : MapEntry.second) {
       const bool IsBranch = Entry.second & BRANCHENTRY;
-      const uint32_t Val = Entry.second & ~BRANCHENTRY;
+      const uint32_t Val = Entry.second >> 1; // dropping BRANCHENTRY bit
       OS << "0x" << Twine::utohexstr(Entry.first) << " -> "
          << "0x" << Twine::utohexstr(Val);
       if (IsBranch)
@@ -244,7 +263,7 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
 
   --KeyVal;
 
-  const uint32_t Val = KeyVal->second & ~BRANCHENTRY;
+  const uint32_t Val = KeyVal->second >> 1; // dropping BRANCHENTRY bit
   // Branch source addresses are translated to the first instruction of the
   // source BB to avoid accounting for modifications BOLT may have made in the
   // BB regarding deletion/addition of instructions.
