@@ -365,9 +365,9 @@ static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
   return Reg >= AMDGPU::AGPR0 && Reg <= AMDGPU::AGPR255;
 }
 
-static DecodeStatus decodeOperand_AVLdSt_Any(MCInst &Inst, unsigned Imm,
-                                             AMDGPUDisassembler::OpWidthTy Opw,
-                                             const MCDisassembler *Decoder) {
+static DecodeStatus decodeAVLdSt(MCInst &Inst, unsigned Imm,
+                                 AMDGPUDisassembler::OpWidthTy Opw,
+                                 const MCDisassembler *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
   if (!DAsm->isGFX90A()) {
     Imm &= 511;
@@ -399,6 +399,13 @@ static DecodeStatus decodeOperand_AVLdSt_Any(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, DAsm->decodeSrcOp(Opw, Imm | 256));
 }
 
+template <AMDGPUDisassembler::OpWidthTy Opw>
+static DecodeStatus decodeAVLdSt(MCInst &Inst, unsigned Imm,
+                                 uint64_t /* Addr */,
+                                 const MCDisassembler *Decoder) {
+  return decodeAVLdSt(Inst, Imm, Opw, Decoder);
+}
+
 static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
                                            uint64_t Addr,
                                            const MCDisassembler *Decoder) {
@@ -406,41 +413,6 @@ static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
   auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(
       Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW64, Imm, false, 64, true));
-}
-
-static DecodeStatus
-DecodeAVLdSt_32RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
-                             const MCDisassembler *Decoder) {
-  return decodeOperand_AVLdSt_Any(Inst, Imm,
-                                  AMDGPUDisassembler::OPW32, Decoder);
-}
-
-static DecodeStatus
-DecodeAVLdSt_64RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
-                             const MCDisassembler *Decoder) {
-  return decodeOperand_AVLdSt_Any(Inst, Imm,
-                                  AMDGPUDisassembler::OPW64, Decoder);
-}
-
-static DecodeStatus
-DecodeAVLdSt_96RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
-                             const MCDisassembler *Decoder) {
-  return decodeOperand_AVLdSt_Any(Inst, Imm,
-                                  AMDGPUDisassembler::OPW96, Decoder);
-}
-
-static DecodeStatus
-DecodeAVLdSt_128RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
-                              const MCDisassembler *Decoder) {
-  return decodeOperand_AVLdSt_Any(Inst, Imm,
-                                  AMDGPUDisassembler::OPW128, Decoder);
-}
-
-static DecodeStatus
-DecodeAVLdSt_160RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
-                              const MCDisassembler *Decoder) {
-  return decodeOperand_AVLdSt_Any(Inst, Imm, AMDGPUDisassembler::OPW160,
-                                  Decoder);
 }
 
 #define DECODE_SDWA(DecName) \
