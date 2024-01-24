@@ -156,7 +156,9 @@ int lprofWriteDataImpl(ProfDataWriter *Writer,
                        const char *CountersBegin, const char *CountersEnd,
                        const char *BitmapBegin, const char *BitmapEnd,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
-                       const char *NamesEnd, int SkipNameDataWrite);
+                       const char *NamesEnd, const VTableProfData *VTableBegin,
+                       const VTableProfData *VTableEnd, const char *VNamesBegin,
+                       const char *VNamesEnd, int SkipNameDataWrite);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
