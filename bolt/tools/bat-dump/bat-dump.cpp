@@ -75,7 +75,7 @@ static std::string GetExecutablePath(const char *Argv0) {
     if (llvm::ErrorOr<std::string> P =
             llvm::sys::findProgramByName(ExecutablePath))
       ExecutablePath = *P;
-  return std::string(ExecutablePath.str());
+  return std::string(ExecutablePath);
 }
 
 void dumpBATFor(llvm::object::ELFObjectFileBase *InputFile) {

@@ -122,6 +122,7 @@ X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "gracemont")
 //
 // We cannot just re-sort the list though because its order is dictated by the
 // order of bits in CodeGenFunction::GetX86CpuSupportsMask.
+// We cannot re-adjust the position of X86_FEATURE_COMPAT at the whole list.
 #ifndef X86_FEATURE_COMPAT
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) X86_FEATURE(ENUM, STR)
 #endif
@@ -184,12 +185,12 @@ X86_FEATURE       (AMX_TILE,        "amx-tile")
 X86_FEATURE       (CLDEMOTE,        "cldemote")
 X86_FEATURE       (CLFLUSHOPT,      "clflushopt")
 X86_FEATURE       (CLWB,            "clwb")
+X86_FEATURE_COMPAT(F16C,            "f16c",                  38)
 X86_FEATURE       (CLZERO,          "clzero")
 X86_FEATURE       (CMPXCHG16B,      "cx16")
 X86_FEATURE       (CMPXCHG8B,       "cx8")
 X86_FEATURE       (CRC32,           "crc32")
 X86_FEATURE       (ENQCMD,          "enqcmd")
-X86_FEATURE       (F16C,            "f16c")
 X86_FEATURE       (FSGSBASE,        "fsgsbase")
 X86_FEATURE       (FXSR,            "fxsr")
 X86_FEATURE       (INVPCID,         "invpcid")
@@ -229,9 +230,9 @@ X86_FEATURE       (XSAVE,           "xsave")
 X86_FEATURE       (XSAVEC,          "xsavec")
 X86_FEATURE       (XSAVEOPT,        "xsaveopt")
 X86_FEATURE       (XSAVES,          "xsaves")
+X86_FEATURE_COMPAT(AVX512FP16,      "avx512fp16",            39)
 X86_FEATURE       (HRESET,          "hreset")
 X86_FEATURE       (RAOINT,          "raoint")
-X86_FEATURE       (AVX512FP16,      "avx512fp16")
 X86_FEATURE       (AMX_FP16,        "amx-fp16")
 X86_FEATURE       (CMPCCXADD,       "cmpccxadd")
 X86_FEATURE       (AVXNECONVERT,    "avxneconvert")

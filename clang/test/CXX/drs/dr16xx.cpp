@@ -472,7 +472,7 @@ namespace dr1696 { // dr1696: 7
     const A &a = A(); // #dr1696-D1-a
   };
   D1 d1 = {}; // #dr1696-d1
-  // since-cxx14-warning@-1 {{sorry, lifetime extension of temporary created by aggregate initialization using default member initializer is not supported; lifetime of temporary will end at the end of the full-expression}}
+  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}}
   //   since-cxx14-note@#dr1696-D1-a {{initializing field 'a' with default member initializer}}
 
   struct D2 {

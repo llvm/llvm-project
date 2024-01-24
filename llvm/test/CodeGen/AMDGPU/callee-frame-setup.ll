@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+enable-flat-scratch < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+enable-flat-scratch < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,FLATSCR %s
 
 ; GCN-LABEL: {{^}}callee_no_stack:
 ; GCN: ; %bb.0:

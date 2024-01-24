@@ -12,6 +12,7 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
 ; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+; RUN: llc < %s -mtriple=aarch64 -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-AARCH64
 ; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
 
 ; COM: Machine function splitting with AFDO profiles
@@ -470,9 +471,8 @@ define void @foo16(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ; MFS-O0-LABEL:               foo16
 ; MFS-O0-X86:                 jmp
 ; MFS-O0-X86-NOT:             jmp
-; MFS-O0-AARCH64:                 br
-; MFS-O0-AARCH64:                 br
-; MFS-O0-AARCH64-NOT:             br
+; MFS-O0-AARCH64:                 b       foo16.cold
+; MFS-O0-AARCH64-NOT:             b       foo16.cold
 ; MFS-O0:                     .section        .text.split.foo16
 ; MFS-O0-NEXT:                foo16.cold
   %2 = call i32 @baz()

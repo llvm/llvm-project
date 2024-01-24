@@ -209,4 +209,3 @@ define <vscale x 4 x i1> @splat_idx_nxv4i32(<vscale x 4 x i1> %v, i64 %idx) {
   %splat = shufflevector <vscale x 4 x i1> %ins, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i1> %splat
 }
-

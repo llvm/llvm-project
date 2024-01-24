@@ -6785,7 +6785,7 @@ INTERCEPTOR(SSIZE_T, sendto, int fd, void *buf, SIZE_T len, int flags,
 #endif
 
 #if SANITIZER_INTERCEPT_EVENTFD_READ_WRITE
-INTERCEPTOR(int, eventfd_read, int fd, u64 *value) {
+INTERCEPTOR(int, eventfd_read, int fd, __sanitizer_eventfd_t *value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, eventfd_read, fd, value);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
@@ -6796,7 +6796,7 @@ INTERCEPTOR(int, eventfd_read, int fd, u64 *value) {
   }
   return res;
 }
-INTERCEPTOR(int, eventfd_write, int fd, u64 value) {
+INTERCEPTOR(int, eventfd_write, int fd, __sanitizer_eventfd_t value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, eventfd_write, fd, value);
   if (fd >= 0) {
@@ -9965,7 +9965,13 @@ INTERCEPTOR(void, sl_free, void *sl, int freeall) {
 INTERCEPTOR(SSIZE_T, getrandom, void *buf, SIZE_T buflen, unsigned int flags) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getrandom, buf, buflen, flags);
-  SSIZE_T n = REAL(getrandom)(buf, buflen, flags);
+  // If GRND_NONBLOCK is set in the flags, it is non blocking.
+  static const int grnd_nonblock = 1; 
+  SSIZE_T n;
+  if ((flags & grnd_nonblock))
+    n = REAL(getrandom)(buf, buflen, flags);
+  else
+    n = COMMON_INTERCEPTOR_BLOCK_REAL(getrandom)(buf, buflen, flags);
   if (n > 0) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, n);
   }

@@ -228,15 +228,15 @@ _LIBCPP_HIDE_FROM_ABI void __store_basic_format_arg(basic_format_arg<_Context>* 
   ([&] { *__data++ = __format::__create_format_arg<_Context>(__args); }(), ...);
 }
 
-template <class _Context, size_t N>
+template <class _Context, size_t _Np>
 struct __packed_format_arg_store {
-  __basic_format_arg_value<_Context> __values_[N];
+  __basic_format_arg_value<_Context> __values_[_Np];
   uint64_t __types_ = 0;
 };
 
-template <class _Context, size_t N>
+template <class _Context, size_t _Np>
 struct __unpacked_format_arg_store {
-  basic_format_arg<_Context> __args_[N];
+  basic_format_arg<_Context> __args_[_Np];
 };
 
 } // namespace __format

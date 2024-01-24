@@ -2,7 +2,7 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NOHSA %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCNX3-HSA %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCNX3-NOHSA %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-HSA -check-prefix=GCN-GFX900-HSA %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn--amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN-HSA -check-prefix=GCN-GFX908-HSA %s
 

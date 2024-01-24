@@ -7,12 +7,9 @@
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true
 
 #include "Inputs/errno_var.h"
+#include "Inputs/std-c-library-functions-POSIX.h"
 
-typedef typeof(sizeof(int)) size_t;
-typedef __typeof(sizeof(int)) off_t;
-typedef size_t ssize_t;
-ssize_t send(int sockfd, const void *buf, size_t len, int flags);
-off_t lseek(int fildes, off_t offset, int whence);
+#define NULL ((void *) 0)
 
 void clang_analyzer_warnIfReached();
 void clang_analyzer_eval(int);
@@ -53,4 +50,42 @@ int errno_lseek(int fildes, off_t offset) {
     clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
   }
   return 0;
+}
+
+void errno_mkstemp(char *template) {
+  int FD = mkstemp(template);
+  if (FD >= 0) {
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
+    close(FD);
+  } else {
+    clang_analyzer_eval(FD == -1);   // expected-warning{{TRUE}}
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no warning
+  }
+}
+
+void errno_mkdtemp(char *template) {
+  char *Dir = mkdtemp(template);
+  if (Dir == NULL) {
+    clang_analyzer_eval(errno != 0);      // expected-warning{{TRUE}}
+    if (errno) {}                         // no warning
+  } else {
+    clang_analyzer_eval(Dir == template); // expected-warning{{TRUE}}
+    if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+void errno_getcwd(char *Buf, size_t Sz) {
+  char *Path = getcwd(Buf, Sz);
+  if (Sz == 0) {
+    clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
+    clang_analyzer_eval(Path == NULL); // expected-warning{{TRUE}}
+    if (errno) {}                      // no warning
+  } else if (Path == NULL) {
+    clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
+    if (errno) {}                      // no warning
+  } else {
+    clang_analyzer_eval(Path == Buf);  // expected-warning{{TRUE}}
+    if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
+  }
 }

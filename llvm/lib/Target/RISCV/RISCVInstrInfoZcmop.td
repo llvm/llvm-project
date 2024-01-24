@@ -22,9 +22,13 @@ class CMOPInst<bits<3> imm3, string opcodestr>
   let Inst{12-11} = 0;
 }
 
-foreach i = 0...7 in {
-  let Predicates = [HasStdExtZcmop] in {
-    defvar n = !add(!mul(i, 2), 1);
-    def CMOP # n : CMOPInst<i, "cmop." # n>, Sched<[]>;
-  } // Predicates = [HasStdExtZcmop]
+// CMOP1, CMOP5 is used by Zicfiss.
+let Predicates = [HasStdExtZcmop, NoHasStdExtZicfiss] in {
+  def CMOP1 : CMOPInst<0, "cmop.1">, Sched<[]>;
+  def CMOP5 : CMOPInst<2, "cmop.5">, Sched<[]>;
+}
+
+foreach n = [3, 7, 9, 11, 13, 15] in {
+  let Predicates = [HasStdExtZcmop] in
+  def CMOP # n : CMOPInst<!srl(n, 1), "cmop." # n>, Sched<[]>;
 }

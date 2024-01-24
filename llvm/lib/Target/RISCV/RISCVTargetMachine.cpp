@@ -128,10 +128,20 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPushPopOptPass(*PR);
 }
 
-static StringRef computeDataLayout(const Triple &TT) {
-  if (TT.isArch64Bit())
+static StringRef computeDataLayout(const Triple &TT,
+                                   const TargetOptions &Options) {
+  StringRef ABIName = Options.MCOptions.getABIName();
+  if (TT.isArch64Bit()) {
+    if (ABIName == "lp64e")
+      return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
+
     return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+  }
   assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+
+  if (ABIName == "ilp32e")
+    return "e-m:e-p:32:32-i64:64-n32-S32";
+
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
@@ -146,7 +156,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
+    : LLVMTargetMachine(T, computeDataLayout(TT, Options), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
@@ -348,7 +358,8 @@ public:
     ScheduleDAGMILive *DAG = nullptr;
     if (EnableMISchedLoadClustering) {
       DAG = createGenericSchedLive(C);
-      DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+      DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
     if (ST.hasMacroFusion()) {
       DAG = DAG ? DAG : createGenericSchedLive(C);

@@ -150,6 +150,13 @@ public:
   bool hasHalfFPLoadStoreMove() const {
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
+
+  bool hasConditionalMoveFusion() const {
+    // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
+    return (hasConditionalCompressedMoveFusion() && hasStdExtCOrZca()) ||
+           hasShortForwardBranchOpt();
+  }
+
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;

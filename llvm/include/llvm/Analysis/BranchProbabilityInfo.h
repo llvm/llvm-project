@@ -436,6 +436,8 @@ public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.

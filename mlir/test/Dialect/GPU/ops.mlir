@@ -94,6 +94,17 @@ module attributes {gpu.container_module} {
       // CHECK-NEXT: } : (f32) -> f32
       %sum1 = gpu.all_reduce add %one uniform {} : (f32) -> f32
 
+      // CHECK: %{{.*}} = gpu.all_reduce %{{.*}} {
+      // CHECK-NEXT: ^{{.*}}(%{{.*}}: f32, %{{.*}}: f32):
+      // CHECK-NEXT: %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
+      // CHECK-NEXT: gpu.yield %{{.*}} : f32
+      // CHECK-NEXT: } : (f32) -> f32
+      %sum2 = gpu.all_reduce %one { 
+      ^bb(%lhs : f32, %rhs : f32):
+        %tmp = arith.addf %lhs, %rhs : f32
+        gpu.yield %tmp : f32
+      } : (f32) -> (f32)
+
       // CHECK: %{{.*}} = gpu.subgroup_reduce add %{{.*}} : (f32) -> f32
       %sum_subgroup = gpu.subgroup_reduce add %one : (f32) -> f32
 
@@ -411,4 +422,7 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
   gpu.func @kernel(%arg0 : f32) kernel {
     gpu.return
   }
+}
+
+gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 }

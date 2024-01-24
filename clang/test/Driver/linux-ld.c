@@ -541,6 +541,15 @@
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
+//
+// Check that musleabihf is treated as a hardfloat config, with respect to
+// multiarch directories.
+//
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=arm-unknown-linux-musleabihf -rtlib=platform --unwindlib=platform \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/ubuntu_12.04_LTS_multiarch_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-12-04-ARM-HF %s
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}/usr/lib/arm-linux-gnueabihf{{/|\\\\}}crt1.o"
 // CHECK-UBUNTU-12-04-ARM-HF: "{{.*}}/usr/lib/arm-linux-gnueabihf{{/|\\\\}}crti.o"
@@ -1338,7 +1347,24 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD-LINK %s
 // CHECK-ANDROID-PTHREAD-LINK-NOT: argument unused during compilation: '-pthread'
-//
+
+/// Check -fandroid-pad-segment.
+// RUN: %clang -### %s --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain="" --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   -fandroid-pad-segment 2>&1 | FileCheck --check-prefix=CHECK-ANDROID-PAD-PHDR %s
+// CHECK-ANDROID-PAD-PHDR: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-ANDROID-PAD-PHDR: "[[SYSROOT]]/usr/lib/crtbegin_dynamic.o" "[[SYSROOT]]/usr/lib/crt_pad_segment.o"
+
+// RUN: %clang -### %s --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain="" --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:   -fandroid-pad-segment -fno-android-pad-segment 2>&1 | FileCheck --check-prefix=CHECK-NO-ANDROID-PAD-PHDR %s
+// CHECK-NO-ANDROID-PAD-PHDR: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-NO-ANDROID-PAD-PHDR: "[[SYSROOT]]/usr/lib/crtbegin_dynamic.o"
+// CHECK-NO-ANDROID-PAD-PHDR-NOT: crt_pad_segment.o"
+
+// RUN: not %clang -### %s --target=aarch64-linux -fandroid-pad-segment 2>&1 | FileCheck --check-prefix=ERR-ANDROID-PAD-EHDR %s
+// ERR-ANDROID-PAD-EHDR: error: unsupported option '-fandroid-pad-segment' for target 'aarch64-linux'
+
 // Check linker invocation on a Debian LoongArch sysroot.
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=loongarch64-linux-gnu -rtlib=platform --unwindlib=platform \

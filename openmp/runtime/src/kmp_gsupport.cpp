@@ -357,7 +357,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ORDERED_END)(void) {
 // They come in two flavors: 64-bit unsigned, and either 32-bit signed
 // (IA-32 architecture) or 64-bit signed (Intel(R) 64).
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||          \
+    KMP_ARCH_PPC
 #define KMP_DISPATCH_INIT __kmp_aux_dispatch_init_4
 #define KMP_DISPATCH_FINI_CHUNK __kmp_aux_dispatch_fini_chunk_4
 #define KMP_DISPATCH_NEXT __kmpc_dispatch_next_4

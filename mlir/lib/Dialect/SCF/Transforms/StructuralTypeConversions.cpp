@@ -241,7 +241,7 @@ public:
     for (Value operand : adaptor.getOperands())
       unpackUnrealizedConversionCast(operand, unpackedYield);
 
-    rewriter.updateRootInPlace(op, [&]() { op->setOperands(unpackedYield); });
+    rewriter.modifyOpInPlace(op, [&]() { op->setOperands(unpackedYield); });
     return success();
   }
 };

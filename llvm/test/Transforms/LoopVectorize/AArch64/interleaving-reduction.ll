@@ -32,12 +32,12 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP2]]
 ; INTERLEAVE-4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP3]]
 ; INTERLEAVE-4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP8]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 4
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP9]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 8
-; INTERLEAVE-4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP10]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 12
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP8]], align 1
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP9]], align 1
+; INTERLEAVE-4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP10]], align 1
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP11]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP12]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; INTERLEAVE-4-NEXT:    [[TMP13]] = add <4 x i32> [[VEC_PHI1]], [[WIDE_LOAD4]]
@@ -87,8 +87,8 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[TMP0]]
 ; INTERLEAVE-2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
 ; INTERLEAVE-2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
-; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
+; INTERLEAVE-2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 1
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP5]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP6]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; INTERLEAVE-2-NEXT:    [[TMP7]] = add <4 x i32> [[VEC_PHI1]], [[WIDE_LOAD2]]

@@ -12,12 +12,14 @@
 
 #include "LoongArchAsmBackend.h"
 #include "LoongArchFixupKinds.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/LEB128.h"
 
 #define DEBUG_TYPE "loongarch-asmbackend"
 
@@ -91,6 +93,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_Data_leb128:
     return Value;
   case LoongArch::fixup_loongarch_b16: {
     if (!isInt<18>(Value))
@@ -128,6 +131,15 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
+static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
+                        MutableArrayRef<char> Data, uint64_t Value) {
+  unsigned I;
+  for (I = 0; I != Data.size() && Value; ++I, Value >>= 7)
+    Data[I] |= uint8_t(Value & 0x7f);
+  if (Value)
+    Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
+}
+
 void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
                                      const MCValue &Target,
@@ -142,6 +154,10 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
     return;
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
   MCContext &Ctx = Asm.getContext();
+
+  // Fixup leb128 separately.
+  if (Fixup.getTargetKind() == FK_Data_leb128)
+    return fixupLeb128(Ctx, Fixup, Data, Value);
 
   // Apply any target-specific value adjustments.
   Value = adjustFixupValue(Fixup, Value, Ctx);
@@ -173,6 +189,7 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_Data_leb128:
     return !Target.isAbsolute();
   }
 }
@@ -202,7 +219,149 @@ getRelocPairForSize(unsigned Size) {
     return std::make_pair(
         MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD64),
         MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB64));
+  case 128:
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD_ULEB128),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB_ULEB128));
   }
+}
+
+std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
+                                                       MCAsmLayout &Layout,
+                                                       int64_t &Value) const {
+  const MCExpr &Expr = LF.getValue();
+  if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, Layout))
+    return std::make_pair(false, false);
+  LF.getFixups().push_back(
+      MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  return std::make_pair(true, true);
+}
+
+bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
+                                             MCAsmLayout &Layout,
+                                             bool &WasRelaxed) const {
+  MCContext &C = Layout.getAssembler().getContext();
+
+  int64_t LineDelta = DF.getLineDelta();
+  const MCExpr &AddrDelta = DF.getAddrDelta();
+  SmallVectorImpl<char> &Data = DF.getContents();
+  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
+  size_t OldSize = Data.size();
+
+  int64_t Value;
+  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+    return false;
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  assert(IsAbsolute && "CFA with invalid expression");
+  (void)IsAbsolute;
+
+  Data.clear();
+  Fixups.clear();
+  raw_svector_ostream OS(Data);
+
+  // INT64_MAX is a signal that this is actually a DW_LNE_end_sequence.
+  if (LineDelta != INT64_MAX) {
+    OS << uint8_t(dwarf::DW_LNS_advance_line);
+    encodeSLEB128(LineDelta, OS);
+  }
+
+  unsigned Offset;
+  std::pair<MCFixupKind, MCFixupKind> FK;
+
+  // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
+  // takes a single unsigned half (unencoded) operand. The maximum encodable
+  // value is therefore 65535.  Set a conservative upper bound for relaxation.
+  if (Value > 60000) {
+    unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
+
+    OS << uint8_t(dwarf::DW_LNS_extended_op);
+    encodeULEB128(PtrSize + 1, OS);
+
+    OS << uint8_t(dwarf::DW_LNE_set_address);
+    Offset = OS.tell();
+    assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
+    FK = getRelocPairForSize(PtrSize == 4 ? 32 : 64);
+    OS.write_zeros(PtrSize);
+  } else {
+    OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
+    Offset = OS.tell();
+    FK = getRelocPairForSize(16);
+    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
+  }
+
+  const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
+  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(FK)));
+  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
+
+  if (LineDelta == INT64_MAX) {
+    OS << uint8_t(dwarf::DW_LNS_extended_op);
+    OS << uint8_t(1);
+    OS << uint8_t(dwarf::DW_LNE_end_sequence);
+  } else {
+    OS << uint8_t(dwarf::DW_LNS_copy);
+  }
+
+  WasRelaxed = OldSize != Data.size();
+  return true;
+}
+
+bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
+                                        MCAsmLayout &Layout,
+                                        bool &WasRelaxed) const {
+  const MCExpr &AddrDelta = DF.getAddrDelta();
+  SmallVectorImpl<char> &Data = DF.getContents();
+  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
+  size_t OldSize = Data.size();
+
+  int64_t Value;
+  if (AddrDelta.evaluateAsAbsolute(Value, Layout))
+    return false;
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  assert(IsAbsolute && "CFA with invalid expression");
+  (void)IsAbsolute;
+
+  Data.clear();
+  Fixups.clear();
+  raw_svector_ostream OS(Data);
+
+  assert(
+      Layout.getAssembler().getContext().getAsmInfo()->getMinInstAlignment() ==
+          1 &&
+      "expected 1-byte alignment");
+  if (Value == 0) {
+    WasRelaxed = OldSize != Data.size();
+    return true;
+  }
+
+  auto AddFixups = [&Fixups,
+                    &AddrDelta](unsigned Offset,
+                                std::pair<MCFixupKind, MCFixupKind> FK) {
+    const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
+    Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(FK)));
+    Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
+  };
+
+  if (isUIntN(6, Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc);
+    AddFixups(0, getRelocPairForSize(6));
+  } else if (isUInt<8>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc1);
+    support::endian::write<uint8_t>(OS, 0, llvm::endianness::little);
+    AddFixups(1, getRelocPairForSize(8));
+  } else if (isUInt<16>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc2);
+    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
+    AddFixups(1, getRelocPairForSize(16));
+  } else if (isUInt<32>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc4);
+    support::endian::write<uint32_t>(OS, 0, llvm::endianness::little);
+    AddFixups(1, getRelocPairForSize(32));
+  } else {
+    llvm_unreachable("unsupported CFA encoding");
+  }
+
+  WasRelaxed = OldSize != Data.size();
+  return true;
 }
 
 bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
@@ -226,21 +385,27 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
                                                   uint64_t &FixedValue) const {
   std::pair<MCFixupKind, MCFixupKind> FK;
   uint64_t FixedValueA, FixedValueB;
-  const MCSection &SecA = Target.getSymA()->getSymbol().getSection();
-  const MCSection &SecB = Target.getSymB()->getSymbol().getSection();
+  const MCSymbol &SA = Target.getSymA()->getSymbol();
+  const MCSymbol &SB = Target.getSymB()->getSymbol();
 
-  // We need record relocation if SecA != SecB. Usually SecB is same as the
-  // section of Fixup, which will be record the relocation as PCRel. If SecB
-  // is not same as the section of Fixup, it will report error. Just return
-  // false and then this work can be finished by handleFixup.
-  if (&SecA != &SecB)
-    return false;
+  bool force = !SA.isInSection() || !SB.isInSection();
+  if (!force) {
+    const MCSection &SecA = SA.getSection();
+    const MCSection &SecB = SB.getSection();
 
-  // In SecA == SecB case. If the linker relaxation is enabled, we need record
-  // the ADD, SUB relocations. Otherwise the FixedValue has already been
-  // calculated out in evaluateFixup, return true and avoid record relocations.
-  if (!STI.hasFeature(LoongArch::FeatureRelax))
-    return true;
+    // We need record relocation if SecA != SecB. Usually SecB is same as the
+    // section of Fixup, which will be record the relocation as PCRel. If SecB
+    // is not same as the section of Fixup, it will report error. Just return
+    // false and then this work can be finished by handleFixup.
+    if (&SecA != &SecB)
+      return false;
+
+    // In SecA == SecB case. If the linker relaxation is enabled, we need record
+    // the ADD, SUB relocations. Otherwise the FixedValue has already been calc-
+    // ulated out in evaluateFixup, return true and avoid record relocations.
+    if (!STI.hasFeature(LoongArch::FeatureRelax))
+      return true;
+  }
 
   switch (Fixup.getKind()) {
   case llvm::FK_Data_1:
@@ -254,6 +419,9 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAsmLayout &Layout,
     break;
   case llvm::FK_Data_8:
     FK = getRelocPairForSize(64);
+    break;
+  case llvm::FK_Data_leb128:
+    FK = getRelocPairForSize(128);
     break;
   default:
     llvm_unreachable("unsupported fixup size");

@@ -1151,8 +1151,9 @@ TYPE_PARSER(construct<PartRef>(name,
 
 // R913 structure-component -> data-ref
 // The final part-ref in the data-ref is not allowed to have subscripts.
-TYPE_PARSER(construct<StructureComponent>(
-    construct<DataRef>(some(Parser<PartRef>{} / percentOrDot)), name))
+TYPE_CONTEXT_PARSER("component"_en_US,
+    construct<StructureComponent>(
+        construct<DataRef>(some(Parser<PartRef>{} / percentOrDot)), name))
 
 // R919 subscript -> scalar-int-expr
 constexpr auto subscript{scalarIntExpr};

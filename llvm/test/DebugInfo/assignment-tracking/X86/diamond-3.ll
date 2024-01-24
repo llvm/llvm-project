@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
+
 ;; Hand written to test scenario we can definitely run into in the wild. This
 ;; file name includes "diamond" because the idea is that we lose (while
 ;; optimizing) one of the diamond branches which was empty except for a debug

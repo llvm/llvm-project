@@ -6674,7 +6674,7 @@ class Crc32m<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
   let Constraints = "$src1 = $dst";
 }
 
-let Predicates = [HasCRC32], OpMap = T8, OpPrefix = XD in {
+let Predicates = [HasCRC32, NoEGPR], OpMap = T8, OpPrefix = XD in {
   def CRC32r32r8  : Crc32r<Xi8, GR32, int_x86_sse42_crc32_32_8>;
   def CRC32r32m8  : Crc32m<Xi8, GR32, int_x86_sse42_crc32_32_8>;
   def CRC32r32r16 : Crc32r<Xi16, GR32, int_x86_sse42_crc32_32_16>, OpSize16;
@@ -6686,6 +6686,20 @@ let Predicates = [HasCRC32], OpMap = T8, OpPrefix = XD in {
   def CRC32r64r8 : Crc32r<Xi8, GR64, null_frag>, REX_W;
   let mayLoad = 1 in
     def CRC32r64m8 : Crc32m<Xi8, GR64, null_frag>, REX_W;
+}
+
+let Predicates = [HasCRC32, HasEGPR, In64BitMode], OpMap = T_MAP4, OpEnc = EncEVEX in {
+  def CRC32r32r8_EVEX  : Crc32r<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32m8_EVEX  : Crc32m<Xi8, GR32, int_x86_sse42_crc32_32_8>;
+  def CRC32r32r16_EVEX : Crc32r<Xi16, GR32, int_x86_sse42_crc32_32_16>, PD;
+  def CRC32r32m16_EVEX : Crc32m<Xi16, GR32, int_x86_sse42_crc32_32_16>, PD;
+  def CRC32r32r32_EVEX : Crc32r<Xi32, GR32, int_x86_sse42_crc32_32_32>;
+  def CRC32r32m32_EVEX : Crc32m<Xi32, GR32, int_x86_sse42_crc32_32_32>;
+  def CRC32r64r64_EVEX : Crc32r<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64m64_EVEX : Crc32m<Xi64, GR64, int_x86_sse42_crc32_64_64>;
+  def CRC32r64r8_EVEX : Crc32r<Xi8, GR64, null_frag>, REX_W;
+  let mayLoad = 1 in
+    def CRC32r64m8_EVEX : Crc32m<Xi8, GR64, null_frag>, REX_W;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8317,6 +8331,10 @@ let Predicates = [HasAVXNECONVERT] in {
        f256mem>, T8;
   defm VCVTNEPS2BF16 : VCVTNEPS2BF16_BASE, VEX, T8, XS, ExplicitVEXPrefix;
 
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128X:$src))),
+            (VCVTNEPS2BF16rr VR128:$src)>;
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (loadv4f32 addr:$src))),
+            (VCVTNEPS2BF16rm addr:$src)>;
   def : Pat<(v8bf16 (X86vfpround (v8f32 VR256:$src))),
             (VCVTNEPS2BF16Yrr VR256:$src)>;
   def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),

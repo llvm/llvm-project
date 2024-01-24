@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_PARSE_PARSER_H
 #define LLVM_CLANG_PARSE_PARSER_H
 
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
@@ -233,6 +234,26 @@ class Parser : public CodeCompletionHandler {
 
   /// Parsing OpenACC directive mode.
   bool OpenACCDirectiveParsing = false;
+
+  /// Currently parsing a situation where an OpenACC array section could be
+  /// legal, such as a 'var-list'.
+  bool AllowOpenACCArraySections = false;
+
+  /// RAII object to set reset OpenACC parsing a context where Array Sections
+  /// are allowed.
+  class OpenACCArraySectionRAII {
+    Parser &P;
+
+  public:
+    OpenACCArraySectionRAII(Parser &P) : P(P) {
+      assert(!P.AllowOpenACCArraySections);
+      P.AllowOpenACCArraySections = true;
+    }
+    ~OpenACCArraySectionRAII() {
+      assert(P.AllowOpenACCArraySections);
+      P.AllowOpenACCArraySections = false;
+    }
+  };
 
   /// When true, we are directly inside an Objective-C message
   /// send expression.
@@ -3546,9 +3567,28 @@ private:
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
   void ParseOpenACCCacheVarList();
-  /// Parses a single variable in a variable list for the 'cache' construct.
-  bool ParseOpenACCCacheVar();
+  /// Parses a single variable in a variable list for OpenACC.
+  bool ParseOpenACCVar();
+  /// Parses the variable list for the variety of clauses that take a var-list,
+  /// including the optional Special Token listed for some,based on clause type.
+  bool ParseOpenACCClauseVarList(OpenACCClauseKind Kind);
+  /// Parses any parameters for an OpenACC Clause, including required/optional
+  /// parens.
+  bool ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
+                                OpenACCClauseKind Kind);
+  /// Parses a single clause in a clause-list for OpenACC.
+  bool ParseOpenACCClause(OpenACCDirectiveKind DirKind);
+  /// Parses the clause-list for an OpenACC directive.
+  void ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
   bool ParseOpenACCWaitArgument();
+  /// Parses the clause of the 'bind' argument, which can be a string literal or
+  /// an ID expression.
+  ExprResult ParseOpenACCBindClauseArgument();
+  /// Parses the clause kind of 'int-expr', which can be any integral
+  /// expression.
+  ExprResult ParseOpenACCIntExpr();
+  /// Parses the 'device-type-list', which is a list of identifiers.
+  bool ParseOpenACCDeviceTypeList();
 
 private:
   //===--------------------------------------------------------------------===//
@@ -3623,6 +3663,18 @@ private:
   Decl *
   ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                          SourceLocation &DeclEnd);
+
+  /// Parse the given string as a type.
+  ///
+  /// This is a dangerous utility function currently employed only by API notes.
+  /// It is not a general entry-point for safely parsing types from strings.
+  ///
+  /// \param TypeStr The string to be parsed as a type.
+  /// \param Context The name of the context in which this string is being
+  /// parsed, which will be used in diagnostics.
+  /// \param IncludeLoc The location at which this parse was triggered.
+  TypeResult ParseTypeFromString(StringRef TypeStr, StringRef Context,
+                                 SourceLocation IncludeLoc);
 
   //===--------------------------------------------------------------------===//
   // Modules

@@ -148,7 +148,8 @@ enum ProcessorFeatures {
   FEATURE_LZCNT,
   FEATURE_MOVBE,
 
-  FEATURE_X86_64_BASELINE = 95,
+  FEATURE_AVX512FP16 = 94,
+  FEATURE_X86_64_BASELINE,
   FEATURE_X86_64_V2,
   FEATURE_X86_64_V3,
   FEATURE_X86_64_V4,
@@ -676,7 +677,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 25:
     CPU = "znver3";
     *Type = AMDFAM19H;
-    if ((Model >= 0x00 && Model <= 0x0f) || (Model >= 0x20 && Model <= 0x2f) ||
+    if ((Model <= 0x0f) || (Model >= 0x20 && Model <= 0x2f) ||
         (Model >= 0x30 && Model <= 0x3f) || (Model >= 0x40 && Model <= 0x4f) ||
         (Model >= 0x50 && Model <= 0x5f)) {
       // Family 19h Models 00h-0Fh (Genesis, Chagall) Zen 3
@@ -812,6 +813,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_AVX5124FMAPS);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VP2INTERSECT);
+  if (HasLeaf7 && ((EDX >> 23) & 1) && HasAVX512Save)
+    setFeature(FEATURE_AVX512FP16);
 
   // EAX from subleaf 0 is the maximum subleaf supported. Some CPUs don't
   // return all 0s for invalid subleaves so check the limit.

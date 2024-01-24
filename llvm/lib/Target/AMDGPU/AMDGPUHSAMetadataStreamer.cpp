@@ -532,7 +532,8 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
       Func.getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
-  auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
+  auto CodeObjectVersion =
+      AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
   auto Kernels =
@@ -646,7 +647,15 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     Offset += 8; // Skipped.
   }
 
-  Offset += 72; // Reserved.
+  // Emit argument for hidden dynamic lds size
+  if (MFI.isDynamicLDSUsed()) {
+    emitKernelArg(DL, Int32Ty, Align(4), "hidden_dynamic_lds_size", Offset,
+                  Args);
+  } else {
+    Offset += 4; // skipped
+  }
+
+  Offset += 68; // Reserved.
 
   // hidden_private_base and hidden_shared_base are only when the subtarget has
   // ApertureRegs.

@@ -22,16 +22,20 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          const char *pathname, const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized)
-    : CompileUnit(module_sp, user_data, FileSpec(pathname), cu_sym_id, language,
-                  is_optimized) {}
+    : CompileUnit(module_sp, user_data,
+                  std::make_shared<SupportFile>(FileSpec(pathname)), cu_sym_id,
+                  language, is_optimized) {}
 
 CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
-                         const FileSpec &fspec, const lldb::user_id_t cu_sym_id,
+                         lldb::SupportFileSP support_file_sp,
+                         const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
-                         lldb_private::LazyBool is_optimized)
+                         lldb_private::LazyBool is_optimized,
+                         SupportFileList &&support_files)
     : ModuleChild(module_sp), UserID(cu_sym_id), m_user_data(user_data),
-      m_language(language), m_flags(0), m_file_spec(fspec),
-      m_is_optimized(is_optimized) {
+      m_language(language), m_flags(0),
+      m_primary_support_file_sp(support_file_sp),
+      m_support_files(std::move(support_files)), m_is_optimized(is_optimized) {
   if (language != eLanguageTypeUnknown)
     m_flags.Set(flagsParsedLanguage);
   assert(module_sp);
@@ -178,10 +182,6 @@ void CompileUnit::SetLineTable(LineTable *line_table) {
   m_line_table_up.reset(line_table);
 }
 
-void CompileUnit::SetSupportFiles(FileSpecList support_files) {
-  m_support_files = std::move(support_files);
-}
-
 DebugMacros *CompileUnit::GetDebugMacros() {
   if (m_debug_macros_sp.get() == nullptr) {
     if (m_flags.IsClear(flagsParsedDebugMacros)) {
@@ -213,7 +213,7 @@ VariableListSP CompileUnit::GetVariableList(bool can_create) {
   return m_variables;
 }
 
-std::vector<uint32_t> FindFileIndexes(const FileSpecList &files,
+std::vector<uint32_t> FindFileIndexes(const SupportFileList &files,
                                       const FileSpec &file) {
   std::vector<uint32_t> result;
   uint32_t idx = -1;
@@ -411,7 +411,7 @@ bool CompileUnit::ForEachExternalModule(
   return false;
 }
 
-const FileSpecList &CompileUnit::GetSupportFiles() {
+const SupportFileList &CompileUnit::GetSupportFiles() {
   if (m_support_files.GetSize() == 0) {
     if (m_flags.IsClear(flagsParsedSupportFiles)) {
       m_flags.Set(flagsParsedSupportFiles);

@@ -446,6 +446,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // ExitBB can be re-used for the exit block of the Plan.
     NewBB = State->CFG.ExitBB;
     State->CFG.PrevBB = NewBB;
+    State->Builder.SetInsertPoint(NewBB->getFirstNonPHI());
 
     // Update the branch instruction in the predecessor to branch to ExitBB.
     VPBlockBase *PredVPB = getSingleHierarchicalPredecessor();
@@ -1135,29 +1136,18 @@ void VPlanIngredient::print(raw_ostream &O) const {
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  if (this == New)
-    return;
-  for (unsigned J = 0; J < getNumUsers();) {
-    VPUser *User = Users[J];
-    bool RemovedUser = false;
-    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I)
-      if (User->getOperand(I) == this) {
-        User->setOperand(I, New);
-        RemovedUser = true;
-      }
-    // If a user got removed after updating the current user, the next user to
-    // update will be moved to the current position, so we only need to
-    // increment the index if the number of users did not change.
-    if (!RemovedUser)
-      J++;
-  }
+  replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
 }
 
 void VPValue::replaceUsesWithIf(
     VPValue *New,
     llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  // Note that this early exit is required for correctness; the implementation
+  // below relies on the number of users for this VPValue to decrease, which
+  // isn't the case if this == New.
   if (this == New)
     return;
+
   for (unsigned J = 0; J < getNumUsers();) {
     VPUser *User = Users[J];
     bool RemovedUser = false;

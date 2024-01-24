@@ -389,7 +389,7 @@ module attributes {transform.with_named_sequence} {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [7]
+      %tiled_generic, %forall = transform.structured.tile_using_forall %0 num_threads [7]
            : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
     }
@@ -445,7 +445,7 @@ module attributes {transform.with_named_sequence} {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%IN_MAT2: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2 : (!transform.any_op) -> !transform.any_op
-      %forall, %tiled_generic = transform.structured.tile_using_forall %0 num_threads [4]
+      %tiled_generic, %forall = transform.structured.tile_using_forall %0 num_threads [4]
            : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
     }

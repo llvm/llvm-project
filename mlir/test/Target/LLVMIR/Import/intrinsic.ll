@@ -720,6 +720,13 @@ define void @coro_resume(ptr %0) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @coro_promise
+define void @coro_promise(ptr %0, i32 %1, i1 %2) {
+  ; CHECK: llvm.intr.coro.promise %{{.*}}, %{{.*}}, %{{.*}} : (!llvm.ptr, i32, i1) -> !llvm.ptr
+  %4 = call ptr @llvm.coro.promise(ptr %0, i32 %1, i1 %2)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @eh_typeid_for
 define void @eh_typeid_for(ptr %0) {
   ; CHECK: llvm.intr.eh.typeid.for %{{.*}} : (!llvm.ptr) -> i32
@@ -1046,6 +1053,7 @@ declare i8 @llvm.coro.suspend(token, i1)
 declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare void @llvm.coro.resume(ptr)
+declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
 declare i32 @llvm.eh.typeid.for(ptr)
 declare ptr @llvm.stacksave.p0()
 declare ptr addrspace(1) @llvm.stacksave.p1()

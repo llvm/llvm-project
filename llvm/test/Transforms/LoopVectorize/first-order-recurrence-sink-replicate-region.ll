@@ -215,9 +215,10 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:  EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%and.red>, vp<[[SEL]]>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: Live-out i32 %res = vp<[[SEL]]>
+; CHECK-NEXT: Live-out i32 %res = vp<[[RED_RES]]>
 ; CHECK-NEXT: }
 ;
 entry:
