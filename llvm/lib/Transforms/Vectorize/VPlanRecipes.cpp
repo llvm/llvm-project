@@ -258,7 +258,7 @@ VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
                              const Twine &Name)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, ArrayRef<VPValue *>({A, B}),
                           Pred, DL),
-      VPValue(this), Opcode(Opcode), Name(Name.str()) {
+      Opcode(Opcode), Name(Name.str()) {
   assert(Opcode == Instruction::ICmp &&
          "only ICmp predicates supported at the moment");
 }
@@ -267,7 +267,7 @@ VPInstruction::VPInstruction(unsigned Opcode,
                              std::initializer_list<VPValue *> Operands,
                              FastMathFlags FMFs, DebugLoc DL, const Twine &Name)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, FMFs, DL),
-      VPValue(this), Opcode(Opcode), Name(Name.str()) {
+      Opcode(Opcode), Name(Name.str()) {
   // Make sure the VPInstruction is a floating-point operation.
   assert(isFPMathOp() && "this op can't take fast-math flags");
 }
@@ -580,7 +580,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   auto &CI = *cast<CallInst>(getUnderlyingInstr());
   assert(!isa<DbgInfoIntrinsic>(CI) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
-  State.setDebugLocFrom(CI.getDebugLoc());
+  State.setDebugLocFrom(getDebugLoc());
 
   bool UseIntrinsic = VectorIntrinsicID != Intrinsic::not_intrinsic;
   FunctionType *VFTy = nullptr;
@@ -1712,16 +1712,20 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
-  PHINode *PN = cast<PHINode>(getUnderlyingValue());
   auto &Builder = State.Builder;
+
+  // Reductions do not have to start at zero. They can start with
+  // any loop invariant values.
+  VPValue *StartVPV = getStartValue();
+  Value *StartV = StartVPV->getLiveInIRValue();
 
   // In order to support recurrences we need to be able to vectorize Phi nodes.
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
   bool ScalarPHI = State.VF.isScalar() || IsInLoop;
-  Type *VecTy =
-      ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), State.VF);
+  Type *VecTy = ScalarPHI ? StartV->getType()
+                          : VectorType::get(StartV->getType(), State.VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
   assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
@@ -1734,11 +1738,6 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   }
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-
-  // Reductions do not have to start at zero. They can start with
-  // any loop invariant values.
-  VPValue *StartVPV = getStartValue();
-  Value *StartV = StartVPV->getLiveInIRValue();
 
   Value *Iden = nullptr;
   RecurKind RK = RdxDesc.getRecurrenceKind();

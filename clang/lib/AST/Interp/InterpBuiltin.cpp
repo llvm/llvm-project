@@ -164,6 +164,8 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
   case X:                                                                      \
     return Ret<X>(S, OpPC, Result);
   switch (*T) {
+    RET_CASE(PT_Ptr);
+    RET_CASE(PT_FnPtr);
     RET_CASE(PT_Float);
     RET_CASE(PT_Bool);
     RET_CASE(PT_Sint8);
@@ -613,15 +615,34 @@ static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType PtrT =
+      S.getContext().classify(Call->getArg(0)->getType()).value_or(PT_Ptr);
+
+  if (PtrT == PT_FnPtr) {
+    const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
+    S.Stk.push<FunctionPointer>(Arg);
+  } else if (PtrT == PT_Ptr) {
+    const Pointer &Arg = S.Stk.peek<Pointer>();
+    S.Stk.push<Pointer>(Arg);
+  } else {
+    assert(false && "Unsupported pointer type passed to __builtin_addressof()");
+  }
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
-  QualType ReturnType = Call->getCallReturnType(S.getCtx());
-  std::optional<PrimType> ReturnT = S.getContext().classify(ReturnType);
+  std::optional<PrimType> ReturnT = S.getContext().classify(Call->getType());
+
   // If classify failed, we assume void.
-  assert(ReturnT || ReturnType->isVoidType());
+  assert(ReturnT || Call->getType()->isVoidType());
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -818,6 +839,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll:
     if (!interp__builtin_ffs(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BI__builtin_addressof:
+    if (!interp__builtin_addressof(S, OpPC, Frame, F, Call))
       return false;
     break;
 

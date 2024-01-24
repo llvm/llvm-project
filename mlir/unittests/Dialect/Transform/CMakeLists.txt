@@ -6,6 +6,7 @@ target_link_libraries(MLIRTransformDialectTests
   PRIVATE
   MLIRFuncDialect
   MLIRTestTransformDialect
+  MLIRTransformDebugExtension
   MLIRTransformDialect
   MLIRTransformDialectTransforms
 )

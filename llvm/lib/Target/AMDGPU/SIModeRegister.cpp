@@ -285,7 +285,7 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
                        1;
       unsigned Offset =
           (Dst & AMDGPU::Hwreg::OFFSET_MASK_) >> AMDGPU::Hwreg::OFFSET_SHIFT_;
-      unsigned Mask = ((1 << Width) - 1) << Offset;
+      unsigned Mask = maskTrailingOnes<unsigned>(Width) << Offset;
 
       // If an InsertionPoint is set we will insert a setreg there.
       if (InsertionPoint) {

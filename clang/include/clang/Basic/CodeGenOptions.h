@@ -495,10 +495,7 @@ public:
   }
 
   /// Check if any form of instrumentation is on.
-  bool hasProfileInstr() const {
-    return hasProfileClangInstr() || hasProfileIRInstr() ||
-           hasProfileCSIRInstr();
-  }
+  bool hasProfileInstr() const { return getProfileInstr() != ProfileNone; }
 
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {

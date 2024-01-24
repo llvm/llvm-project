@@ -314,7 +314,9 @@ void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
   if (A && A->getAllocatedType() == ExpectedElementType)
     return;
 
-  if (dyn_cast<GetElementPtrInst>(Pointer))
+  // Do not emit spv_ptrcast if Pointer is a result of GEP of expected type.
+  GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Pointer);
+  if (GEPI && GEPI->getResultElementType() == ExpectedElementType)
     return;
 
   setInsertPointSkippingPhis(*IRB, I);

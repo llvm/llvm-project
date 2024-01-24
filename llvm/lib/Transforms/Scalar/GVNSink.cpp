@@ -132,7 +132,7 @@ public:
         ActiveBlocks.remove(BB);
         continue;
       }
-      Insts.push_back(BB->getTerminator()->getPrevNonDebugInstruction());
+      Insts.push_back(BB->getTerminator()->getPrevNode());
     }
     if (Insts.empty())
       Fail = true;
@@ -168,7 +168,7 @@ public:
       if (Inst == &Inst->getParent()->front())
         ActiveBlocks.remove(Inst->getParent());
       else
-        NewInsts.push_back(Inst->getPrevNonDebugInstruction());
+        NewInsts.push_back(Inst->getPrevNode());
     }
     if (NewInsts.empty()) {
       Fail = true;
@@ -834,7 +834,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
                                   BasicBlock *BBEnd) {
   SmallVector<Instruction *, 4> Insts;
   for (BasicBlock *BB : Blocks)
-    Insts.push_back(BB->getTerminator()->getPrevNonDebugInstruction());
+    Insts.push_back(BB->getTerminator()->getPrevNode());
   Instruction *I0 = Insts.front();
 
   SmallVector<Value *, 4> NewOperands;

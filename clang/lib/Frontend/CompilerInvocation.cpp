@@ -1861,20 +1861,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     if (Args.hasArg(OPT_funified_lto))
       Opts.PrepareForThinLTO = true;
   }
-  if (Arg *A = Args.getLastArg(options::OPT_ffat_lto_objects,
-                               options::OPT_fno_fat_lto_objects)) {
-    if (A->getOption().matches(options::OPT_ffat_lto_objects)) {
-      if (Arg *Uni = Args.getLastArg(options::OPT_funified_lto,
-                                     options::OPT_fno_unified_lto)) {
-        if (Uni->getOption().matches(options::OPT_fno_unified_lto))
-          Diags.Report(diag::err_drv_incompatible_options)
-              << A->getAsString(Args) << "-fno-unified-lto";
-      } else
-        Diags.Report(diag::err_drv_argument_only_allowed_with)
-            << A->getAsString(Args) << "-funified-lto";
-    }
-  }
-
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != Language::LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -3176,7 +3162,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       llvm::sys::fs::make_absolute(WorkingDir, P);
   }
   llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = std::string(P.str());
+  Opts.ModuleCachePath = std::string(P);
 
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -3217,7 +3203,7 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       SmallString<32> Buffer;
       llvm::sys::path::append(Buffer, Opts.Sysroot,
                               llvm::StringRef(A->getValue()).substr(1));
-      Path = std::string(Buffer.str());
+      Path = std::string(Buffer);
     }
 
     Opts.AddPath(Path, Group, IsFramework,
@@ -3480,7 +3466,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 Twine(Major) + "." + Twine(Minor) + "." + Twine(Subminor));
   }
 
-  if ((!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS()) {
+  if ((!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17 && !Opts.C23) ||
+      T.isOSzOS()) {
     if (!Opts.Trigraphs)
       GenerateArg(Consumer, OPT_fno_trigraphs);
   } else {
@@ -3876,10 +3863,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Mimicking gcc's behavior, trigraphs are only enabled if -trigraphs
   // is specified, or -std is set to a conforming mode.
-  // Trigraphs are disabled by default in c++1z onwards.
+  // Trigraphs are disabled by default in C++17 and C23 onwards.
   // For z/OS, trigraphs are enabled by default (without regard to the above).
   Opts.Trigraphs =
-      (!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17) || T.isOSzOS();
+      (!Opts.GNUMode && !Opts.MSVCCompat && !Opts.CPlusPlus17 && !Opts.C23) ||
+      T.isOSzOS();
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
 
@@ -4236,19 +4224,34 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // TODO: Revisit restricting SPIR-V to logical once we've figured out how to
     // handle PhysicalStorageBuffer64 memory model
     if (T.isDXIL() || T.isSPIRVLogical()) {
-      enum { ShaderModel, ShaderStage };
+      enum { ShaderModel, VulkanEnv, ShaderStage };
+      enum { OS, Environment };
+
+      int ExpectedOS = T.isSPIRVLogical() ? VulkanEnv : ShaderModel;
+
       if (T.getOSName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ShaderModel << T.str();
-      } else if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
-        Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
-            << ShaderModel << T.getOSName() << T.str();
+            << ExpectedOS << OS << T.str();
       } else if (T.getEnvironmentName().empty()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
-            << ShaderStage << T.str();
+            << ShaderStage << Environment << T.str();
       } else if (!T.isShaderStageEnvironment()) {
         Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
             << ShaderStage << T.getEnvironmentName() << T.str();
+      }
+
+      if (T.isDXIL()) {
+        if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
+          Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+              << ShaderModel << T.getOSName() << T.str();
+        }
+      } else if (T.isSPIRVLogical()) {
+        if (!T.isVulkanOS() || T.getVulkanVersion() == VersionTuple(0)) {
+          Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+              << VulkanEnv << T.getOSName() << T.str();
+        }
+      } else {
+        llvm_unreachable("expected DXIL or SPIR-V target");
       }
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();

@@ -17,9 +17,7 @@ func.func @entry() {
   %c1_i32 = arith.constant 1 : i32
 
   // Calculate the size of a 32-bit tile, e.g. ZA{n}.s.
-  %vscale = vector.vscale
-  %min_elts_s = arith.constant 4 : index
-  %svl_s = arith.muli %min_elts_s, %vscale : index
+  %svl_s = arm_sme.streaming_vl <word>
   %za_s_size = arith.muli %svl_s, %svl_s : index
 
   // Allocate memory.

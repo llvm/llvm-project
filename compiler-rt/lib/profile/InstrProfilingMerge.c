@@ -41,6 +41,9 @@ uint64_t lprofGetLoadModuleSignature(void) {
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
 
 /* Returns 1 if profile is not structurally compatible.  */
@@ -234,4 +237,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif

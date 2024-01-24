@@ -58,6 +58,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -86,6 +87,9 @@ STATISTIC(OpsNarrowed     , "Number of load/op/store narrowed");
 STATISTIC(LdStFP2Int      , "Number of fp load/store pairs transformed to int");
 STATISTIC(SlicedLoads, "Number of load sliced");
 STATISTIC(NumFPLogicOpsConv, "Number of logic ops converted to fp ops");
+
+DEBUG_COUNTER(DAGCombineCounter, "dagcombine",
+              "Controls whether a DAG combine is performed for a node");
 
 static cl::opt<bool>
 CombinerGlobalAA("combiner-global-alias-analysis", cl::Hidden,
@@ -2076,6 +2080,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
 }
 
 SDValue DAGCombiner::combine(SDNode *N) {
+  if (!DebugCounter::shouldExecute(DAGCombineCounter))
+    return SDValue();
+
   SDValue RV;
   if (!DisableGenericCombines)
     RV = visit(N);
@@ -10999,8 +11006,8 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
   SDLoc DL(N);
 
   // fold (bswap c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::BSWAP, DL, VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::BSWAP, DL, VT, {N0}))
+    return C;
   // fold (bswap (bswap x)) -> x
   if (N0.getOpcode() == ISD::BSWAP)
     return N0.getOperand(0);
@@ -11059,10 +11066,11 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
 SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (bitreverse c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::BITREVERSE, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::BITREVERSE, DL, VT, {N0}))
+    return C;
   // fold (bitreverse (bitreverse x)) -> x
   if (N0.getOpcode() == ISD::BITREVERSE)
     return N0.getOperand(0);
@@ -11072,16 +11080,16 @@ SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
 SDValue DAGCombiner::visitCTLZ(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (ctlz c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::CTLZ, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::CTLZ, DL, VT, {N0}))
+    return C;
 
   // If the value is known never to be zero, switch to the undef version.
-  if (!LegalOperations || TLI.isOperationLegal(ISD::CTLZ_ZERO_UNDEF, VT)) {
+  if (!LegalOperations || TLI.isOperationLegal(ISD::CTLZ_ZERO_UNDEF, VT))
     if (DAG.isKnownNeverZero(N0))
-      return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, SDLoc(N), VT, N0);
-  }
+      return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, DL, VT, N0);
 
   return SDValue();
 }
@@ -11089,26 +11097,28 @@ SDValue DAGCombiner::visitCTLZ(SDNode *N) {
 SDValue DAGCombiner::visitCTLZ_ZERO_UNDEF(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (ctlz_zero_undef c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, SDLoc(N), VT, N0);
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(ISD::CTLZ_ZERO_UNDEF, DL, VT, {N0}))
+    return C;
   return SDValue();
 }
 
 SDValue DAGCombiner::visitCTTZ(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (cttz c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::CTTZ, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::CTTZ, DL, VT, {N0}))
+    return C;
 
   // If the value is known never to be zero, switch to the undef version.
-  if (!LegalOperations || TLI.isOperationLegal(ISD::CTTZ_ZERO_UNDEF, VT)) {
+  if (!LegalOperations || TLI.isOperationLegal(ISD::CTTZ_ZERO_UNDEF, VT))
     if (DAG.isKnownNeverZero(N0))
-      return DAG.getNode(ISD::CTTZ_ZERO_UNDEF, SDLoc(N), VT, N0);
-  }
+      return DAG.getNode(ISD::CTTZ_ZERO_UNDEF, DL, VT, N0);
 
   return SDValue();
 }
@@ -11116,20 +11126,23 @@ SDValue DAGCombiner::visitCTTZ(SDNode *N) {
 SDValue DAGCombiner::visitCTTZ_ZERO_UNDEF(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (cttz_zero_undef c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::CTTZ_ZERO_UNDEF, SDLoc(N), VT, N0);
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(ISD::CTTZ_ZERO_UNDEF, DL, VT, {N0}))
+    return C;
   return SDValue();
 }
 
 SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // fold (ctpop c1) -> c2
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0))
-    return DAG.getNode(ISD::CTPOP, SDLoc(N), VT, N0);
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::CTPOP, DL, VT, {N0}))
+    return C;
   return SDValue();
 }
 
@@ -13375,9 +13388,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     SDValue N00 = N0.getOperand(0);
     EVT ExtVT = cast<VTSDNode>(N0->getOperand(1))->getVT();
-    if (N00.getOpcode() == ISD::TRUNCATE &&
+    if ((N00.getOpcode() == ISD::TRUNCATE || TLI.isTruncateFree(N00, ExtVT)) &&
         (!LegalTypes || TLI.isTypeLegal(ExtVT))) {
-      SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00.getOperand(0));
+      SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00);
       return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, T);
     }
   }
@@ -26008,6 +26021,7 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
   // Try to convert a scalar binop with an extracted vector element to a vector
   // binop. This is intended to reduce potentially expensive register moves.
   // TODO: Check if both operands are extracted.
+  // TODO: How to prefer scalar/vector ops with multiple uses of the extact?
   // TODO: Generalize this, so it can be called from visitINSERT_VECTOR_ELT().
   SDValue Scalar = N->getOperand(0);
   unsigned Opcode = Scalar.getOpcode();
@@ -26016,6 +26030,8 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
       TLI.isBinOp(Opcode) && Scalar.getValueType() == VecEltVT &&
       Scalar.getOperand(0).getValueType() == VecEltVT &&
       Scalar.getOperand(1).getValueType() == VecEltVT &&
+      Scalar->isOnlyUserOf(Scalar.getOperand(0).getNode()) &&
+      Scalar->isOnlyUserOf(Scalar.getOperand(1).getNode()) &&
       DAG.isSafeToSpeculativelyExecute(Opcode) && hasOperation(Opcode, VT)) {
     // Match an extract element and get a shuffle mask equivalent.
     SmallVector<int, 8> ShufMask(VT.getVectorNumElements(), -1);

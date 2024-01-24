@@ -611,12 +611,19 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
                    diag::err_verify_missing_start) << KindStr;
       continue;
     }
+    llvm::SmallString<8> CloseBrace("}}");
+    const char *const DelimBegin = PH.C;
     PH.Advance();
+    // Count the number of opening braces for `string` kinds
+    for (; !D.RegexKind && PH.Next("{"); PH.Advance())
+      CloseBrace += '}';
     const char* const ContentBegin = PH.C; // mark content begin
-    // Search for token: }}
-    if (!PH.SearchClosingBrace("{{", "}}")) {
-      Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
-                   diag::err_verify_missing_end) << KindStr;
+    // Search for closing brace
+    StringRef OpenBrace(DelimBegin, ContentBegin - DelimBegin);
+    if (!PH.SearchClosingBrace(OpenBrace, CloseBrace)) {
+      Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                   diag::err_verify_missing_end)
+          << KindStr << CloseBrace;
       continue;
     }
     const char* const ContentEnd = PH.P; // mark content end

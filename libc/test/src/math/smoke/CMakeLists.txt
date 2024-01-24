@@ -87,6 +87,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   fabsl_test
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
   SUITE
     libc-math-smoke-tests
   SRCS
@@ -97,8 +99,22 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.fabsl
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabsf128_test
   # FIXME: Currently fails on the GPU build.
   UNIT_TEST_ONLY
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fabsf128_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fabsf128
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1087,6 +1103,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sqrtf128_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.fp_bits
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
   generic_sqrtf_test
   SUITE
     libc-math-smoke-tests
@@ -1126,6 +1156,22 @@ add_fp_unittest(
     generic_sqrtl_test.cpp
   DEPENDS
     libc.src.math.sqrtl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.generic.sqrt
+  COMPILE_OPTIONS
+    -O3
+  # FIXME: Currently fails on the GPU build.
+  UNIT_TEST_ONLY
+)
+
+add_fp_unittest(
+  generic_sqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    generic_sqrtf128_test.cpp
+  DEPENDS
+    libc.src.math.sqrtf128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
@@ -1214,6 +1260,9 @@ add_fp_unittest(
     libc.include.signal
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1227,6 +1276,9 @@ add_fp_unittest(
     libc.include.signal
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1240,6 +1292,9 @@ add_fp_unittest(
     libc.include.signal
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
+  # FIXME: The nan tests currently have death tests, which aren't supported for
+  # hermetic tests.
+  UNIT_TEST_ONLY
 )
 
 # FIXME: These tests are currently spurious for NVPTX.

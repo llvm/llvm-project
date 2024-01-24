@@ -197,6 +197,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fabsf128
+  SRCS
+    fabsf128.cpp
+  HDRS
+    ../fabsf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   trunc
   SRCS
     trunc.cpp
@@ -1302,6 +1314,18 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
 )
+
+add_entrypoint_object(
+  sqrtf128
+  SRCS
+    sqrtf128.cpp
+  HDRS
+    ../sqrtf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt 
+  COMPILE_OPTIONS
+    -O3
+  )
 
 add_entrypoint_object(
   remquof

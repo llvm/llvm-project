@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX11 %s
 
 ; GCN-LABEL: {{^}}smrd_imm_dlc:
 ; GFX10: s_buffer_load_dword s0, s[0:3], 0x0 dlc ; encoding: [0x00,0x40,0x20,0xf4,0x00,0x00,0x00,0xfa]

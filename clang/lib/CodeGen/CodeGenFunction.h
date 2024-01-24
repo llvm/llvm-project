@@ -3073,6 +3073,25 @@ public:
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
   void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
                        QualType IndexType, bool Accessed);
+  void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
+                           llvm::Value *Index, QualType IndexType,
+                           QualType IndexedType, bool Accessed);
+
+  // Find a struct's flexible array member. It may be embedded inside multiple
+  // sub-structs, but must still be the last field.
+  const FieldDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
+                                                const RecordDecl *RD,
+                                                StringRef Name,
+                                                uint64_t &Offset);
+
+  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
+  /// \p nullptr if either the attribute or the field doesn't exist.
+  const FieldDecl *FindCountedByField(const FieldDecl *FD);
+
+  /// Build an expression accessing the "counted_by" field.
+  llvm::Value *EmitCountedByFieldExpr(const Expr *Base,
+                                      const FieldDecl *FAMDecl,
+                                      const FieldDecl *CountDecl);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
@@ -4872,6 +4891,9 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
+
+  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
+                                           llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
