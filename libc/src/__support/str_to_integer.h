@@ -15,7 +15,6 @@
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/errno/libc_errno.h" // For ERANGE
-#include <limits.h>
 
 namespace LIBC_NAMESPACE {
 namespace internal {
