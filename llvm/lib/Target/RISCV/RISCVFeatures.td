@@ -200,14 +200,6 @@ def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
                  AssemblerPredicate<(all_of FeatureStdExtD),
                                     "'D' (Double-Precision Floating-Point)">;
 
-def FeatureStdExtH
-    : SubtargetFeature<"h", "HasStdExtH", "true",
-                       "'H' (Hypervisor)">;
-
-def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
-                 AssemblerPredicate<(all_of FeatureStdExtH),
-                                    "'H' (Hypervisor)">;
-
 def FeatureStdExtZfhmin
     : SubtargetFeature<"zfhmin", "HasStdExtZfhmin", "true",
                        "'Zfhmin' (Half-Precision Floating-Point Minimal)",
@@ -746,6 +738,16 @@ def HasVInstructionsF16 : Predicate<"Subtarget->hasVInstructionsF16()">;
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
 def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMultiply()">;
+
+// Hypervisor Extensions
+
+def FeatureStdExtH
+    : SubtargetFeature<"h", "HasStdExtH", "true",
+                       "'H' (Hypervisor)">;
+
+def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
+                 AssemblerPredicate<(all_of FeatureStdExtH),
+                                    "'H' (Hypervisor)">;
 
 // Supervisor extensions
 
