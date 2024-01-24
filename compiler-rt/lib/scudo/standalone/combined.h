@@ -1530,7 +1530,7 @@ private:
     constexpr auto kFramesPerStack = 8;
     static_assert(isPowerOfTwo(kFramesPerStack));
 
-    // We need StackDepot to be aligned to 8-bytes so the ring we st ore after
+    // We need StackDepot to be aligned to 8-bytes so the ring we store after
     // is correctly assigned.
     static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
 
