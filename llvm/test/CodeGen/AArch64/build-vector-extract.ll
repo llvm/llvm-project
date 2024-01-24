@@ -416,8 +416,9 @@ define <2 x i64> @extract3_i16_zext_insert1_i64_zero(<8 x i16> %x) {
 define <2 x i64> @extract0_i8_zext_insert0_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract0_i8_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov v1.b[0], v0.b[0]
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 0
   %z = zext i8 %e to i64
@@ -442,8 +443,9 @@ define <2 x i64> @extract0_i8_zext_insert0_i64_zero(<16 x i8> %x) {
 define <2 x i64> @extract1_i8_zext_insert0_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract1_i8_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[1]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    adrp x8, .LCPI34_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI34_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 1
   %z = zext i8 %e to i64
@@ -468,8 +470,9 @@ define <2 x i64> @extract1_i8_zext_insert0_i64_zero(<16 x i8> %x) {
 define <2 x i64> @extract2_i8_zext_insert0_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract2_i8_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[2]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    adrp x8, .LCPI36_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI36_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 2
   %z = zext i8 %e to i64
@@ -494,8 +497,9 @@ define <2 x i64> @extract2_i8_zext_insert0_i64_zero(<16 x i8> %x) {
 define <2 x i64> @extract3_i8_zext_insert0_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract3_i8_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[3]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    adrp x8, .LCPI38_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI38_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 3
   %z = zext i8 %e to i64
@@ -520,8 +524,9 @@ define <2 x i64> @extract3_i8_zext_insert0_i64_zero(<16 x i8> %x) {
 define <2 x i64> @extract0_i8_zext_insert1_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract0_i8_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[0]
-; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    adrp x8, .LCPI40_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI40_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 0
   %z = zext i8 %e to i64
@@ -546,8 +551,9 @@ define <2 x i64> @extract0_i8_zext_insert1_i64_zero(<16 x i8> %x) {
 define <2 x i64> @extract1_i8_zext_insert1_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract1_i8_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[1]
-; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    adrp x8, .LCPI42_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI42_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 1
   %z = zext i8 %e to i64
@@ -572,8 +578,9 @@ define <2 x i64> @extract1_i8_zext_insert1_i64_zero(<16 x i8> %x) {
 define <2 x i64> @extract2_i8_zext_insert1_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract2_i8_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[2]
-; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    adrp x8, .LCPI44_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI44_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 2
   %z = zext i8 %e to i64
@@ -598,8 +605,9 @@ define <2 x i64> @extract2_i8_zext_insert1_i64_zero(<16 x i8> %x) {
 define <2 x i64> @extract3_i8_zext_insert1_i64_undef(<16 x i8> %x) {
 ; CHECK-LABEL: extract3_i8_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umov w8, v0.b[3]
-; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    adrp x8, .LCPI46_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI46_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %e = extractelement <16 x i8> %x, i32 3
   %z = zext i8 %e to i64

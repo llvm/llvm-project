@@ -250,11 +250,16 @@ define <8 x i16> @combine_v8i16_undef(<4 x i16> %0, <4 x i16> %1) {
 define <16 x i8> @combine_v8i16_8first(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v8i16_8first:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI17_0
-; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI17_0]
-; CHECK-NEXT:    tbl.16b v0, { v1, v2 }, v3
+; CHECK-NEXT:    adrp x9, .LCPI17_1
+; CHECK-NEXT:    mov.d v1[1], v0[0]
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    ldr d2, [x9, :lo12:.LCPI17_1]
+; CHECK-NEXT:    tbl.8b v3, { v1 }, v0
+; CHECK-NEXT:    tbl.8b v0, { v1 }, v2
+; CHECK-NEXT:    mov.d v0[1], v3[0]
 ; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
   ret <16 x i8> %3
@@ -265,11 +270,16 @@ define <16 x i8> @combine_v8i16_8first(<8 x i8> %0, <8 x i8> %1) {
 define <16 x i8> @combine_v8i16_8firstundef(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v8i16_8firstundef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
-; CHECK-NEXT:    tbl.16b v0, { v1, v2 }, v3
+; CHECK-NEXT:    adrp x9, .LCPI18_1
+; CHECK-NEXT:    mov.d v1[1], v0[0]
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    ldr d2, [x9, :lo12:.LCPI18_1]
+; CHECK-NEXT:    tbl.8b v3, { v1 }, v0
+; CHECK-NEXT:    tbl.8b v0, { v1 }, v2
+; CHECK-NEXT:    mov.d v0[1], v3[0]
 ; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 undef>
   ret <16 x i8> %3

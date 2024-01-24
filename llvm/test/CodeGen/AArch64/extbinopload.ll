@@ -5,8 +5,15 @@ define <4 x i16> @normal_load_v4i8(ptr %p) {
 ; CHECK-LABEL: normal_load_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp s0, s1, [x0]
-; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v2.8b
+; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %l1 = load <4 x i8>, ptr %p
   %q = getelementptr i8, ptr %p, i32 4
@@ -36,10 +43,16 @@ define <4 x i16> @load_v4i8(ptr %p) {
 ; CHECK-LABEL: load_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp s1, s0, [x0]
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v2.8b
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #3
-; CHECK-NEXT:    uaddw v0.8h, v0.8h, v1.8b
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ret
   %l1 = load <4 x i8>, ptr %p
   %q = getelementptr i8, ptr %p, i32 4
@@ -263,14 +276,19 @@ define <16 x i16> @load_v16i8(ptr %p) {
 define <2 x i16> @std_v2i8_v2i16(ptr %p) {
 ; CHECK-LABEL: std_v2i8_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    ldrb w9, [x0, #3]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    mov v1.s[1], w9
+; CHECK-NEXT:    add x8, x0, #2
+; CHECK-NEXT:    ld1 { v1.b }[0], [x0]
+; CHECK-NEXT:    ld1 { v0.b }[0], [x8]
+; CHECK-NEXT:    add x8, x0, #3
+; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-NEXT:    add x8, x0, #1
+; CHECK-NEXT:    ld1 { v1.b }[4], [x8]
+; CHECK-NEXT:    adrp x8, .LCPI12_0
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI12_0]
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
+; CHECK-NEXT:    tbl v1.8b, { v1.16b }, v2.8b
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #3
 ; CHECK-NEXT:    add v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
@@ -646,35 +664,30 @@ define <16 x i32> @extrause_load(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-LABEL: extrause_load:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    add x8, x3, #8
+; CHECK-NEXT:    adrp x8, .LCPI21_0
+; CHECK-NEXT:    add x10, x3, #8
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI21_0]
 ; CHECK-NEXT:    add x11, x3, #12
+; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    str s1, [x4]
+; CHECK-NEXT:    add x9, x1, #12
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    ldp s0, s5, [x2]
-; CHECK-NEXT:    ushll v2.8h, v0.8b, #0
-; CHECK-NEXT:    umov w9, v2.h[0]
-; CHECK-NEXT:    umov w10, v2.h[1]
-; CHECK-NEXT:    mov v0.b[8], w9
-; CHECK-NEXT:    umov w9, v2.h[2]
-; CHECK-NEXT:    mov v0.b[9], w10
-; CHECK-NEXT:    umov w10, v2.h[3]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
 ; CHECK-NEXT:    ldr s2, [x1]
 ; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-NEXT:    mov v0.b[10], w9
-; CHECK-NEXT:    add x9, x1, #4
-; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    mov v0.b[11], w10
-; CHECK-NEXT:    add x10, x1, #12
 ; CHECK-NEXT:    ld1 { v0.s }[3], [x3], #4
 ; CHECK-NEXT:    ldr s4, [x0, #12]
 ; CHECK-NEXT:    ldp s3, s16, [x0, #4]
 ; CHECK-NEXT:    ld1 { v5.s }[1], [x3]
 ; CHECK-NEXT:    ldp s6, s7, [x2, #8]
-; CHECK-NEXT:    ld1 { v4.s }[1], [x10]
-; CHECK-NEXT:    ld1 { v3.s }[1], [x9]
-; CHECK-NEXT:    ld1 { v6.s }[1], [x8]
-; CHECK-NEXT:    ld1 { v7.s }[1], [x11]
+; CHECK-NEXT:    ld1 { v4.s }[1], [x9]
+; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ld1 { v3.s }[1], [x8]
 ; CHECK-NEXT:    add x8, x1, #8
+; CHECK-NEXT:    ld1 { v6.s }[1], [x10]
+; CHECK-NEXT:    ld1 { v7.s }[1], [x11]
 ; CHECK-NEXT:    ld1 { v16.s }[1], [x8]
 ; CHECK-NEXT:    uaddl v2.8h, v3.8b, v4.8b
 ; CHECK-NEXT:    ushll v3.8h, v6.8b, #0
@@ -1362,16 +1375,19 @@ define <4 x i32> @bitcast(ptr %p) {
 define <4 x i32> @atomic(ptr %p) {
 ; CHECK-LABEL: atomic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldar w8, [x0]
-; CHECK-NEXT:    movi v0.2d, #0x0000ff000000ff
-; CHECK-NEXT:    ldr s1, [x0, #4]
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    zip1 v2.8b, v2.8b, v0.8b
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #3
-; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldar w9, [x0]
+; CHECK-NEXT:    ldr s0, [x0, #4]
+; CHECK-NEXT:    adrp x8, .LCPI31_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI31_0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    zip1 v1.8b, v1.8b, v0.8b
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
+; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-NEXT:    tbl v1.16b, { v1.16b }, v2.16b
+; CHECK-NEXT:    shl v0.4s, v0.4s, #3
+; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %l1b = load atomic float, ptr %p acquire, align 4
   %l1 = bitcast float %l1b to <4 x i8>
@@ -1392,10 +1408,16 @@ define <4 x i32> @volatile(ptr %p) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ldr s1, [x0, #4]
+; CHECK-NEXT:    adrp x8, .LCPI32_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI32_0]
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #3
-; CHECK-NEXT:    uaddw v0.4s, v1.4s, v0.4h
+; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    tbl v1.16b, { v1.16b }, v2.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
+; CHECK-NEXT:    shl v1.4s, v1.4s, #3
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %l1b = load volatile float, ptr %p

@@ -826,8 +826,14 @@ define <4 x i16> @hadd8_sext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 define <4 x i16> @hadd8_zext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-LABEL: hadd8_zext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI57_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI57_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    uhadd.4h v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <4 x i8> %src1 to <4 x i16>
@@ -856,8 +862,14 @@ define <4 x i16> @hadd8_sext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 define <4 x i16> @hadd8_zext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-LABEL: hadd8_zext_lsr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI59_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI59_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    uhadd.4h v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <4 x i8> %src1 to <4 x i16>
@@ -886,9 +898,14 @@ define <2 x i16> @hadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 define <2 x i16> @hadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-LABEL: hadd8x2_zext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    and.8b v1, v1, v2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI61_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI61_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    uhadd.2s v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
@@ -903,10 +920,11 @@ define <2 x i16> @hadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl.2s v0, v0, #24
 ; CHECK-NEXT:    shl.2s v1, v1, #24
+; CHECK-NEXT:    movi.2d v2, #0000000000000000
 ; CHECK-NEXT:    sshr.2s v0, v0, #24
 ; CHECK-NEXT:    ssra.2s v0, v1, #24
-; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-NEXT:    and.8b v0, v0, v1
+; CHECK-NEXT:    rev32.4h v0, v0
+; CHECK-NEXT:    trn2.4h v0, v0, v2
 ; CHECK-NEXT:    ushr.2s v0, v0, #1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
@@ -919,9 +937,14 @@ define <2 x i16> @hadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 define <2 x i16> @hadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-LABEL: hadd8x2_zext_lsr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    and.8b v1, v1, v2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI63_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI63_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    uhadd.2s v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
@@ -951,8 +974,14 @@ define <4 x i16> @rhadd8_sext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 define <4 x i16> @rhadd8_zext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-LABEL: rhadd8_zext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI65_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI65_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    urhadd.4h v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <4 x i8> %src1 to <4 x i16>
@@ -985,8 +1014,14 @@ define <4 x i16> @rhadd8_sext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 define <4 x i16> @rhadd8_zext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-LABEL: rhadd8_zext_lsr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI67_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI67_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    urhadd.4h v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <4 x i8> %src1 to <4 x i16>
@@ -1017,9 +1052,14 @@ define <2 x i16> @rhadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 define <2 x i16> @rhadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-LABEL: rhadd8x2_zext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    and.8b v1, v1, v2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI69_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI69_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    urhadd.2s v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
@@ -1035,12 +1075,13 @@ define <2 x i16> @rhadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl.2s v0, v0, #24
 ; CHECK-NEXT:    shl.2s v1, v1, #24
-; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
+; CHECK-NEXT:    movi.2d v2, #0000000000000000
 ; CHECK-NEXT:    sshr.2s v0, v0, #24
 ; CHECK-NEXT:    sshr.2s v1, v1, #24
 ; CHECK-NEXT:    mvn.8b v0, v0
 ; CHECK-NEXT:    sub.2s v0, v1, v0
-; CHECK-NEXT:    and.8b v0, v0, v2
+; CHECK-NEXT:    rev32.4h v0, v0
+; CHECK-NEXT:    trn2.4h v0, v0, v2
 ; CHECK-NEXT:    ushr.2s v0, v0, #1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
@@ -1054,9 +1095,14 @@ define <2 x i16> @rhadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 define <2 x i16> @rhadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-LABEL: rhadd8x2_zext_lsr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    and.8b v1, v1, v2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    adrp x8, .LCPI71_0
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI71_0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
 ; CHECK-NEXT:    urhadd.2s v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = zext <2 x i8> %src1 to <2 x i16>
