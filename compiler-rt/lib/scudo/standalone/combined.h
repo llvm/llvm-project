@@ -969,7 +969,8 @@ public:
                            uintptr_t MemoryAddr, size_t MemorySize) {
     // N.B. we need to support corrupted data in any of the buffers here. We get
     // this information from an external process (the crashing process) that
-    // shouldn't be able to crash crash_dump.
+    // should not be able to crash the crash dumper (crash_dump on Android).
+    // See also the get_error_info_fuzzer.
     *ErrorInfo = {};
     if (!allocatorSupportsMemoryTagging<Config>() ||
         MemoryAddr + MemorySize < MemoryAddr)
