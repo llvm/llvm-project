@@ -1526,37 +1526,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       const DataLayout &DL = MO.getGlobal()->getParent()->getDataLayout();
       if (MO.getGlobal()->getPointerAlignment(DL) < 4)
         llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
-
-      // A faster non-TOC-based local-exec sequence is represented by
-      // directly loading or storing off of the thread pointer and with
-      // an immediate operand having the MO_TPREL_FLAG.
-      // Such instructions do not otherwise arise.
-      unsigned Flag = MO.getTargetFlags();
-      if (Flag == PPCII::MO_TPREL_FLAG) {
-        assert(HasAIXSmallLocalExecTLS &&
-               "loads/stores with thread-pointer only expected with "
-               "local-exec small TLS");
-        int64_t Offset = MO.getOffset();
-        LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
-        const MCExpr *Expr = getAdjustedLocalExecExpr(MO, Offset);
-        if (Expr)
-          TmpInst.getOperand(OpNum) = MCOperand::createExpr(Expr);
-        EmitToStreamer(*OutStreamer, TmpInst);
-        return;
-      }
     }
-    // Now process the instruction normally.
-    break;
-  }
-  case PPC::PseudoEIEIO: {
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
-    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
-    return;
+    // As these load/stores share common code with the following load/stores,
+    // fall through to the subsequent cases in order to either process the
+    // non-TOC-based local-exec sequence or to process the instruction normally.
+    [[fallthrough]];
   }
   case PPC::LBZ:
   case PPC::LBZ8:
@@ -1605,7 +1579,18 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }
+    // Now process the instruction normally.
     break;
+  }
+  case PPC::PseudoEIEIO: {
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
+    return;
   }
   }
 

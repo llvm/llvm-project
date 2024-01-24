@@ -7833,8 +7833,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
           // Add the non-zero offset information into the load or store
           // instruction to be used for non-TOC-based local-exec accesses.
           GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);
-          if (!GA)
-            continue;
+          assert(GA && "Expecting a valid GlobalAddressSDNode when folding "
+                       "addi into local-exec accesses!");
           ImmOpnd = CurDAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
                                                    MVT::i64, Offset,
                                                    GA->getTargetFlags());
