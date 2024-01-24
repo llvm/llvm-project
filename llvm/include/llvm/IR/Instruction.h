@@ -86,6 +86,11 @@ public:
   /// Returns true if any DPValues are attached to this instruction.
   bool hasDbgValues() const;
 
+  /// Transfer any DPValues on the position \p It onto this instruction.
+  /// \returns true if adoption worked, false otherwise.
+  bool adoptDbgValues(BasicBlock *BB, InstListType::iterator It,
+                      bool InsertAtHead);
+
   /// Erase any DPValues attached to this instruction.
   void dropDbgValues();
 
