@@ -16,7 +16,9 @@
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
+#include <chrono>
 #include <ctime>
+#include <thread>
 
 #ifdef _WIN32
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
@@ -40,10 +42,8 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 #endif
 
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
-// System is posix-compliant and has getlogin_r and sleep
+// System is posix-compliant and has getlogin_r
 #include <unistd.h>
-#elif _WIN32
-#include <windows.h> // for sleep
 #endif
 
 extern "C" {
@@ -123,7 +123,7 @@ void RTNAME(Sleep)(std::int64_t seconds) {
   if (seconds < 1) {
     return;
   }
-  sleep(static_cast<unsigned>(seconds));
+  std::this_thread::sleep_for(std::chrono::seconds(seconds));
 }
 
 } // namespace Fortran::runtime
