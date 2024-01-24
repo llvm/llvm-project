@@ -14751,17 +14751,11 @@ define i32 @load_single_extract_valid_const_index_v3i32(ptr %A, i32 %idx) {
 }
 
 define i32 @load_single_extract_variable_index_masked_i32(ptr %A, i32 %idx) {
-; SDAG-LABEL: load_single_extract_variable_index_masked_i32:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    and w8, w1, #0x3
-; SDAG-NEXT:    ldr w0, [x0, w8, uxtw #2]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: load_single_extract_variable_index_masked_i32:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    and w8, w1, #0x3
-; CHECK-GISEL-NEXT:    ldr w0, [x0, w8, uxtw #2]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: load_single_extract_variable_index_masked_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    and w8, w1, #0x3
+; CHECK-NEXT:    ldr w0, [x0, w8, uxtw #2]
+; CHECK-NEXT:    ret
   %idx.x = and i32 %idx, 3
   %lv = load <4 x i32>, ptr %A
   %e = extractelement <4 x i32> %lv, i32 %idx.x
@@ -14769,17 +14763,11 @@ define i32 @load_single_extract_variable_index_masked_i32(ptr %A, i32 %idx) {
 }
 
 define i32 @load_single_extract_variable_index_masked2_i32(ptr %A, i32 %idx) {
-; SDAG-LABEL: load_single_extract_variable_index_masked2_i32:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    and w8, w1, #0x1
-; SDAG-NEXT:    ldr w0, [x0, w8, uxtw #2]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: load_single_extract_variable_index_masked2_i32:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    and w8, w1, #0x1
-; CHECK-GISEL-NEXT:    ldr w0, [x0, w8, uxtw #2]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: load_single_extract_variable_index_masked2_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    and w8, w1, #0x1
+; CHECK-NEXT:    ldr w0, [x0, w8, uxtw #2]
+; CHECK-NEXT:    ret
   %idx.x = and i32 %idx, 1
   %lv = load <4 x i32>, ptr %A
   %e = extractelement <4 x i32> %lv, i32 %idx.x

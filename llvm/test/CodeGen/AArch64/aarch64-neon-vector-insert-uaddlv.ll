@@ -274,14 +274,29 @@ define void @insert_vec_v16i8_uaddlv_from_v8i8(ptr %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    movi.2d v2, #0000000000000000
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, lCPI13_1@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr d3, [x8, lCPI13_1@PAGEOFF]
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x8, lCPI13_0@PAGE
 ; CHECK-NEXT:    uaddlv.8b h1, v0
-; CHECK-NEXT:    stp q0, q0, [x0, #32]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v3
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    ldr d3, [x8, lCPI13_0@PAGEOFF]
 ; CHECK-NEXT:    mov.h v2[0], v1[0]
-; CHECK-NEXT:    bic.4h v2, #255, lsl #8
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    ucvtf.4s v0, v0
+; CHECK-NEXT:    mov.d v2[1], v2[0]
+; CHECK-NEXT:    stp q0, q0, [x0, #32]
+; CHECK-NEXT:    tbl.8b v2, { v2 }, v3
 ; CHECK-NEXT:    ushll.4s v2, v2, #0
 ; CHECK-NEXT:    ucvtf.4s v2, v2
 ; CHECK-NEXT:    stp q2, q0, [x0]
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
+; CHECK-NEXT:    .loh AdrpAdrp Lloh0, Lloh2
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 
 entry:
   %vaddlv = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> zeroinitializer)
@@ -296,14 +311,20 @@ define void @insert_vec_v8i8_uaddlv_from_v8i8(ptr %0) {
 ; CHECK-LABEL: insert_vec_v8i8_uaddlv_from_v8i8:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:  Lloh4:
+; CHECK-NEXT:    adrp x8, lCPI14_0@PAGE
 ; CHECK-NEXT:    stp xzr, xzr, [x0, #16]
+; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:    ldr d2, [x8, lCPI14_0@PAGEOFF]
 ; CHECK-NEXT:    uaddlv.8b h1, v0
 ; CHECK-NEXT:    mov.h v0[0], v1[0]
-; CHECK-NEXT:    bic.4h v0, #7, lsl #8
+; CHECK-NEXT:    mov.d v0[1], v0[0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    ucvtf.4s v0, v0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh5
 
 entry:
   %vaddlv = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> zeroinitializer)
@@ -426,14 +447,20 @@ define void @insert_vec_v8i8_uaddlv_from_v4i32(ptr %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:  Lloh6:
+; CHECK-NEXT:    adrp x8, lCPI20_0@PAGE
 ; CHECK-NEXT:    stp xzr, xzr, [x0, #16]
 ; CHECK-NEXT:    uaddlv.4s d0, v0
 ; CHECK-NEXT:    mov.h v1[0], v0[0]
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
-; CHECK-NEXT:    ushll.4s v0, v1, #0
+; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:    ldr d0, [x8, lCPI20_0@PAGEOFF]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    tbl.8b v0, { v1 }, v0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    ucvtf.4s v0, v0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh7
 
 entry:
   %vaddlv = tail call i64 @llvm.aarch64.neon.uaddlv.i64.v4i32(<4 x i32> zeroinitializer)
@@ -449,15 +476,30 @@ define void @insert_vec_v16i8_uaddlv_from_v4i32(ptr %0) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:    adrp x8, lCPI21_1@PAGE
+; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:    ldr d2, [x8, lCPI21_1@PAGEOFF]
+; CHECK-NEXT:  Lloh10:
+; CHECK-NEXT:    adrp x8, lCPI21_0@PAGE
 ; CHECK-NEXT:    uaddlv.4s d0, v0
 ; CHECK-NEXT:    mov.h v1[0], v0[0]
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
-; CHECK-NEXT:    stp q0, q0, [x0, #32]
+; CHECK-NEXT:    mov.d v1[1], v1[0]
+; CHECK-NEXT:    tbl.8b v0, { v0 }, v2
+; CHECK-NEXT:  Lloh11:
+; CHECK-NEXT:    ldr d2, [x8, lCPI21_0@PAGEOFF]
+; CHECK-NEXT:    tbl.8b v1, { v1 }, v2
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    ucvtf.4s v0, v0
 ; CHECK-NEXT:    ushll.4s v1, v1, #0
 ; CHECK-NEXT:    ucvtf.4s v1, v1
+; CHECK-NEXT:    stp q0, q0, [x0, #32]
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh10, Lloh11
+; CHECK-NEXT:    .loh AdrpAdrp Lloh8, Lloh10
+; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh9
 
 entry:
   %vaddlv = tail call i64 @llvm.aarch64.neon.uaddlv.i64.v4i32(<4 x i32> zeroinitializer)

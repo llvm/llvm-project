@@ -133,7 +133,7 @@ define void @testLeftGood4x16(<4 x i16> %src1, <4 x i16> %src2, ptr %dest) nounw
 define void @testLeftBad4x16(<4 x i16> %src1, <4 x i16> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testLeftBad4x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    mov w8, #16500 // =0x4074
 ; CHECK-NEXT:    shl.4h v1, v1, #14
 ; CHECK-NEXT:    dup.4h v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
@@ -163,7 +163,7 @@ define void @testRightGood4x16(<4 x i16> %src1, <4 x i16> %src2, ptr %dest) noun
 define void @testRightBad4x16(<4 x i16> %src1, <4 x i16> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testRightBad4x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    mov w8, #16500 // =0x4074
 ; CHECK-NEXT:    dup.4h v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    usra.4h v0, v1, #14
@@ -192,7 +192,7 @@ define void @testLeftGood8x16(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) nounw
 define void @testLeftBad8x16(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testLeftBad8x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    mov w8, #16500 // =0x4074
 ; CHECK-NEXT:    shl.8h v1, v1, #14
 ; CHECK-NEXT:    dup.8h v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
@@ -222,7 +222,7 @@ define void @testRightGood8x16(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) noun
 define void @testRightBad8x16(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testRightBad8x16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16500
+; CHECK-NEXT:    mov w8, #16500 // =0x4074
 ; CHECK-NEXT:    dup.8h v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
 ; CHECK-NEXT:    usra.8h v0, v1, #14
@@ -251,7 +251,7 @@ define void @testLeftGood2x32(<2 x i32> %src1, <2 x i32> %src2, ptr %dest) nounw
 define void @testLeftBad2x32(<2 x i32> %src1, <2 x i32> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testLeftBad2x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    mov w8, #4194300 // =0x3ffffc
 ; CHECK-NEXT:    shl.2s v1, v1, #22
 ; CHECK-NEXT:    dup.2s v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
@@ -281,7 +281,7 @@ define void @testRightGood2x32(<2 x i32> %src1, <2 x i32> %src2, ptr %dest) noun
 define void @testRightBad2x32(<2 x i32> %src1, <2 x i32> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testRightBad2x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    mov w8, #4194300 // =0x3ffffc
 ; CHECK-NEXT:    ushr.2s v1, v1, #22
 ; CHECK-NEXT:    dup.2s v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
@@ -311,7 +311,7 @@ define void @testLeftGood4x32(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) nounw
 define void @testLeftBad4x32(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testLeftBad4x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    mov w8, #4194300 // =0x3ffffc
 ; CHECK-NEXT:    shl.4s v1, v1, #22
 ; CHECK-NEXT:    dup.4s v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
@@ -341,7 +341,7 @@ define void @testRightGood4x32(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) noun
 define void @testRightBad4x32(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testRightBad4x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4194300
+; CHECK-NEXT:    mov w8, #4194300 // =0x3ffffc
 ; CHECK-NEXT:    ushr.4s v1, v1, #22
 ; CHECK-NEXT:    dup.4s v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
@@ -358,7 +358,11 @@ define void @testRightBad4x32(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) nounw
 define void @testLeftGood2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testLeftGood2x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sli.2d v0, v1, #48
+; CHECK-NEXT:    adrp x8, .LCPI24_0
+; CHECK-NEXT:    shl.2d v1, v1, #48
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI24_0]
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v2
+; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %and.i = and <2 x i64> %src1, <i64 281474976710655, i64 281474976710655>
@@ -371,7 +375,7 @@ define void @testLeftGood2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) nounw
 define void @testLeftBad2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testLeftBad2x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #10
+; CHECK-NEXT:    mov x8, #10 // =0xa
 ; CHECK-NEXT:    shl.2d v1, v1, #48
 ; CHECK-NEXT:    movk x8, #1, lsl #48
 ; CHECK-NEXT:    dup.2d v2, x8
@@ -389,7 +393,11 @@ define void @testLeftBad2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) nounwi
 define void @testRightGood2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testRightGood2x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sri.2d v0, v1, #48
+; CHECK-NEXT:    adrp x8, .LCPI26_0
+; CHECK-NEXT:    ushr.2d v1, v1, #48
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI26_0]
+; CHECK-NEXT:    tbl.16b v0, { v0 }, v2
+; CHECK-NEXT:    orr.16b v0, v0, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %and.i = and <2 x i64> %src1, <i64 18446744073709486080, i64 18446744073709486080>
@@ -402,7 +410,7 @@ define void @testRightGood2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) noun
 define void @testRightBad2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) nounwind {
 ; CHECK-LABEL: testRightBad2x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #10
+; CHECK-NEXT:    mov x8, #10 // =0xa
 ; CHECK-NEXT:    ushr.2d v1, v1, #48
 ; CHECK-NEXT:    movk x8, #1, lsl #48
 ; CHECK-NEXT:    dup.2d v2, x8

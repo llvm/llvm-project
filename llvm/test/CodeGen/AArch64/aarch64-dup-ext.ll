@@ -116,11 +116,12 @@ entry:
 define <2 x i64> @dupzext_v2i16_v2i64(i16 %src, <2 x i16> %b) {
 ; CHECK-LABEL: dupzext_v2i16_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    rev32 v0.4h, v0.4h
 ; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    dup v2.2s, w8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    umull v0.2d, v2.2s, v0.2s
+; CHECK-NEXT:    trn2 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    dup v1.2s, w8
+; CHECK-NEXT:    umull v0.2d, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
     %in = zext i16 %src to i64

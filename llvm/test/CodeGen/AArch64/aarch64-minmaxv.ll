@@ -1185,8 +1185,11 @@ entry:
 define i8 @uminv_v2i8(<2 x i8> %a) {
 ; CHECK-SD-LABEL: uminv_v2i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    adrp x8, .LCPI60_0
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI60_0]
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    uminp v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -1211,10 +1214,13 @@ define i8 @uminv_v3i8(<3 x i8> %a) {
 ; CHECK-SD-LABEL: uminv_v3i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi d0, #0xff00ff00ff00ff
+; CHECK-SD-NEXT:    adrp x8, .LCPI61_0
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI61_0]
 ; CHECK-SD-NEXT:    mov v0.h[0], w0
 ; CHECK-SD-NEXT:    mov v0.h[1], w1
 ; CHECK-SD-NEXT:    mov v0.h[2], w2
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    uminv h0, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -1236,7 +1242,11 @@ entry:
 define i8 @uminv_v4i8(<4 x i8> %a) {
 ; CHECK-SD-LABEL: uminv_v4i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    adrp x8, .LCPI62_0
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI62_0]
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    uminv h0, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -1300,8 +1310,9 @@ entry:
 define i16 @uminv_v2i16(<2 x i16> %a) {
 ; CHECK-SD-LABEL: uminv_v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-SD-NEXT:    trn2 v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    uminp v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -1548,8 +1559,11 @@ entry:
 define i8 @umaxv_v2i8(<2 x i8> %a) {
 ; CHECK-SD-LABEL: umaxv_v2i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    adrp x8, .LCPI79_0
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI79_0]
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    umaxp v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -1574,10 +1588,13 @@ define i8 @umaxv_v3i8(<3 x i8> %a) {
 ; CHECK-SD-LABEL: umaxv_v3i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    adrp x8, .LCPI80_0
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI80_0]
 ; CHECK-SD-NEXT:    mov v0.h[0], w0
 ; CHECK-SD-NEXT:    mov v0.h[1], w1
 ; CHECK-SD-NEXT:    mov v0.h[2], w2
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    umaxv h0, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -1599,7 +1616,11 @@ entry:
 define i8 @umaxv_v4i8(<4 x i8> %a) {
 ; CHECK-SD-LABEL: umaxv_v4i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    adrp x8, .LCPI81_0
+; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    ldr d1, [x8, :lo12:.LCPI81_0]
+; CHECK-SD-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-SD-NEXT:    umaxv h0, v0.4h
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -1663,8 +1684,9 @@ entry:
 define i16 @umaxv_v2i16(<2 x i16> %a) {
 ; CHECK-SD-LABEL: umaxv_v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-SD-NEXT:    trn2 v0.4h, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    umaxp v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret

@@ -202,17 +202,25 @@ define <4 x i32> @fzext_v4i32(ptr %a) {
 ; CHECK-LE-LABEL: fzext_v4i32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
+; CHECK-LE-NEXT:    adrp x8, .LCPI9_0
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
 ; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fzext_v4i32:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr s0, [x0]
+; CHECK-BE-NEXT:    adrp x8, .LCPI9_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI9_0
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
   %x = load <4 x i8>, ptr %a
@@ -358,16 +366,25 @@ define <4 x i16> @fzext_v4i16(ptr %a) {
 ; CHECK-LE-LABEL: fzext_v4i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
+; CHECK-LE-NEXT:    adrp x8, .LCPI16_0
+; CHECK-LE-NEXT:    ldr d1, [x8, :lo12:.LCPI16_0]
 ; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-LE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fzext_v4i16:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr s0, [x0]
+; CHECK-BE-NEXT:    adrp x8, .LCPI16_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI16_0
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x8]
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-BE-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-BE-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ret
   %x = load <4 x i8>, ptr %a
   %y = zext <4 x i8> %x to <4 x i16>

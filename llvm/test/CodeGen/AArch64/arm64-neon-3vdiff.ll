@@ -104,7 +104,9 @@ define <8 x i16> @test_vaddl_a8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vaddl_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %a to <8 x i16>
@@ -117,9 +119,10 @@ entry:
 define <4 x i32> @test_vaddl_a16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vaddl_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %a to <4 x i32>
@@ -132,9 +135,10 @@ entry:
 define <2 x i64> @test_vaddl_a32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vaddl_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %a to <2 x i64>
@@ -232,7 +236,9 @@ define <8 x i16> @test_vaddl_high_a8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vaddl_high_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uaddl2 v0.8h, v0.16b, v1.16b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI15_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -247,9 +253,10 @@ entry:
 define <4 x i32> @test_vaddl_high_a16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddl_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddl2 v0.4s, v0.8h, v1.8h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI16_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -264,9 +271,10 @@ entry:
 define <2 x i64> @test_vaddl_high_a32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddl_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddl2 v0.2d, v0.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -348,7 +356,9 @@ define <8 x i16> @test_vaddw_a8(<8 x i16> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vaddw_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uaddw v0.8h, v0.8h, v1.8b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI24_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI24_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %b to <8 x i16>
@@ -360,9 +370,10 @@ entry:
 define <4 x i32> @test_vaddw_a16(<4 x i32> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vaddw_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI25_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI25_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %b to <4 x i32>
@@ -374,9 +385,10 @@ entry:
 define <2 x i64> @test_vaddw_a32(<2 x i64> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vaddw_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddw v0.2d, v0.2d, v1.2s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %b to <2 x i64>
@@ -461,7 +473,9 @@ define <8 x i16> @test_vaddw_high_a8(<8 x i16> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vaddw_high_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uaddw2 v0.8h, v0.8h, v1.16b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI33_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI33_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -474,9 +488,10 @@ entry:
 define <4 x i32> @test_vaddw_high_a16(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddw_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI34_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI34_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -489,9 +504,10 @@ entry:
 define <2 x i64> @test_vaddw_high_a32(<2 x i64> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddw_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    uaddw2 v0.2d, v0.2d, v1.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -577,7 +593,9 @@ define <8 x i16> @test_vsubl_a8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vsubl_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    usubl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI42_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI42_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %a to <8 x i16>
@@ -590,9 +608,10 @@ entry:
 define <4 x i32> @test_vsubl_a16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vsubl_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI43_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %a to <4 x i32>
@@ -605,9 +624,10 @@ entry:
 define <2 x i64> @test_vsubl_a32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vsubl_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %a to <2 x i64>
@@ -705,7 +725,9 @@ define <8 x i16> @test_vsubl_high_a8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vsubl_high_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    usubl2 v0.8h, v0.16b, v1.16b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI51_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI51_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -720,9 +742,10 @@ entry:
 define <4 x i32> @test_vsubl_high_a16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubl_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubl2 v0.4s, v0.8h, v1.8h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI52_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI52_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -737,9 +760,10 @@ entry:
 define <2 x i64> @test_vsubl_high_a32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubl_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubl2 v0.2d, v0.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
@@ -821,7 +845,9 @@ define <8 x i16> @test_vsubw_a8(<8 x i16> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vsubw_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    usubw v0.8h, v0.8h, v1.8b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI60_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI60_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %b to <8 x i16>
@@ -833,9 +859,10 @@ entry:
 define <4 x i32> @test_vsubw_a16(<4 x i32> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vsubw_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI61_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI61_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <4 x i16> %b to <4 x i32>
@@ -847,9 +874,10 @@ entry:
 define <2 x i64> @test_vsubw_a32(<2 x i64> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vsubw_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubw v0.2d, v0.2d, v1.2s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <2 x i32> %b to <2 x i64>
@@ -934,7 +962,9 @@ define <8 x i16> @test_vsubw_high_a8(<8 x i16> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vsubw_high_a8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    usubw2 v0.8h, v0.8h, v1.16b
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    adrp x8, .LCPI69_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI69_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <16 x i8> %b, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -947,9 +977,10 @@ entry:
 define <4 x i32> @test_vsubw_high_a16(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubw_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    usubw2 v0.4s, v0.4s, v1.8h
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    adrp x8, .LCPI70_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI70_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <8 x i16> %b, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -962,9 +993,10 @@ entry:
 define <2 x i64> @test_vsubw_high_a32(<2 x i64> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubw_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEXT:    usubw2 v0.2d, v0.2d, v1.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i.i.i = shufflevector <4 x i32> %b, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
