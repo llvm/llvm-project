@@ -54,8 +54,7 @@ static lto::Config createConfig() {
   // LLD supports the new relocations and address-significance tables.
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.EmitAddrsig = true;
-  for (StringRef C : config->mllvmOpts)
-    c.MllvmArgs.emplace_back(C.str());
+  c.EmbedCmdArgs = context().cmdArgs;
 
   // Always emit a section per function/datum with LTO.
   c.Options.FunctionSections = true;

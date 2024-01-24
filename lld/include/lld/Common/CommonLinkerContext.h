@@ -21,6 +21,7 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
 
 namespace llvm {
@@ -33,12 +34,14 @@ class CommonLinkerContext {
 public:
   CommonLinkerContext();
   virtual ~CommonLinkerContext();
+  void storeCmdArgs(const llvm::opt::ArgList &args);
 
   static void destroy();
 
   llvm::BumpPtrAllocator bAlloc;
   llvm::StringSaver saver{bAlloc};
   llvm::DenseMap<void *, SpecificAllocBase *> instances;
+  std::vector<uint8_t> cmdArgs;
 
   ErrorHandler e;
 };

@@ -11,6 +11,7 @@
 #include "InputFiles.h"
 #include "Symbols.h"
 #include "lld/Common/Args.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
@@ -40,6 +41,7 @@ using namespace llvm;
 namespace lld::wasm {
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config c;
+  c.EmbedCmdArgs = context().cmdArgs;
   c.Options = initTargetOptionsFromCodeGenFlags();
 
   // Always emit a section per function/data with LTO.

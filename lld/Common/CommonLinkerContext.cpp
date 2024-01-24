@@ -37,6 +37,15 @@ CommonLinkerContext::~CommonLinkerContext() {
   lctx = nullptr;
 }
 
+void CommonLinkerContext::storeCmdArgs(const llvm::opt::ArgList &args) {
+  cmdArgs.clear();
+  for (const llvm::opt::Arg *arg : args) {
+    StringRef str(args.getArgString(arg->getIndex()));
+    cmdArgs.insert(cmdArgs.end(), str.begin(), str.end());
+    cmdArgs.push_back('\0');
+  }
+}
+
 CommonLinkerContext &lld::commonContext() {
   assert(lctx);
   return *lctx;
