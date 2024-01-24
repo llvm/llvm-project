@@ -311,7 +311,7 @@ public:
   // calls `y`, usually 3/4.
   void LLL(Fraction delta);
 
-  // Multiply each row of the matrix by the LCD of the denominators, thereby
+  // Multiply each row of the matrix by the LCM of the denominators, thereby
   // converting it to an integer matrix.
   IntMatrix normalizeRows();
 };

@@ -1041,6 +1041,13 @@ PresburgerRelation PresburgerRelation::simplify() const {
   return result;
 }
 
+bool PresburgerRelation::isFullDim() const {
+  bool fullDim = llvm::any_of(getAllDisjuncts(), [&](IntegerRelation disjunct) {
+    return disjunct.isFullDim();
+  });
+  return fullDim;
+}
+
 void PresburgerRelation::print(raw_ostream &os) const {
   os << "Number of Disjuncts: " << getNumDisjuncts() << "\n";
   for (const IntegerRelation &disjunct : disjuncts) {

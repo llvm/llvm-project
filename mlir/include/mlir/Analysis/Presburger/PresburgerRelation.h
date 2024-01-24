@@ -217,6 +217,10 @@ public:
   /// redundencies.
   PresburgerRelation simplify() const;
 
+  /// Return true if any of the disjuncts is full-dimensional
+  /// (see IntegerRelation::isFullDim()).
+  bool isFullDim() const;
+
   /// Print the set's internal state.
   void print(raw_ostream &os) const;
   void dump() const;

@@ -2519,11 +2519,9 @@ bool IntegerRelation::isFullDim() {
   // If along the direction of any of the inequalities, the upper and lower
   // optima are the same, then the region is not full-dimensional.
   Simplex simplex(*this);
-  bool fullDim = llvm::none_of(llvm::seq<int>(0, getNumInequalities()),
-                               [&](unsigned i) -> bool {
-                                 return simplex.isFlatAlong(getInequality(i));
-                               });
-  return fullDim;
+  return llvm::none_of(llvm::seq<int>(0, getNumInequalities()), [&](int i) {
+    return simplex.isFlatAlong(getInequality(i));
+  });
 }
 
 void IntegerRelation::print(raw_ostream &os) const {

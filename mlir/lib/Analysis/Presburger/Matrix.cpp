@@ -359,7 +359,10 @@ Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
                                   unsigned fromColumn,
                                   unsigned toColumn) const {
   assert(fromRow <= toRow && "end of row range must be after beginning!");
-  assert(fromColumn <= toColumn && "end of row range must be after beginning!");
+  assert(toRow < nRows && "end of row range out of bounds!");
+  assert(fromColumn <= toColumn &&
+         "end of column range must be after beginning!");
+  assert(toColumn < nColumns && "end of column range out of bounds!");
   Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
   for (unsigned i = fromRow; i <= toRow; ++i)
     for (unsigned j = fromColumn; j <= toColumn; ++j)

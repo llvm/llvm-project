@@ -101,11 +101,12 @@ std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 /// In the return type, the vertices are stored by their index in the
 /// `vertices` argument, i.e., the set {2, 3, 4} represents the vertex set
 /// {vertices[2], vertices[3], vertices[4]}.
+/// The ith relation corresponds to the activity region of the ith vertex set.
 /// Note that here, by disjoint, we mean that the intersection is not
 /// full-dimensional.
 std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>>
-computeChamberDecomposition(std::vector<PresburgerRelation> activeRegions,
-                            std::vector<ParamPoint> vertices);
+computeChamberDecomposition(ArrayRef<PresburgerRelation> activeRegions,
+                            ArrayRef<ParamPoint> vertices);
 
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.

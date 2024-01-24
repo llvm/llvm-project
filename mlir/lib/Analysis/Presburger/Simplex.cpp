@@ -2109,15 +2109,13 @@ bool Simplex::isFlatAlong(ArrayRef<MPInt> coeffs) {
   auto upOpt = computeOptimum(Simplex::Direction::Up, coeffs);
   auto downOpt = computeOptimum(Simplex::Direction::Down, coeffs);
 
-  if (upOpt.getKind() != OptimumKind::Bounded)
+  if (!upOpt.isBounded())
     return false;
-  if (downOpt.getKind() != OptimumKind::Bounded)
+  if (!downOpt.isBounded())
     return false;
 
   // Check if the upper and lower optima are equal.
-  if (*upOpt == *downOpt)
-    return true;
-  return false;
+  return *upOpt == *downOpt;
 }
 
 void SimplexBase::print(raw_ostream &os) const {

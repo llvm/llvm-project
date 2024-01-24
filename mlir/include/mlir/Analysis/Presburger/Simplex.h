@@ -773,8 +773,9 @@ public:
 
   /// Check if the simplex takes only one rational value along the
   /// direction of `coeffs`.
+  ///
   /// `this` must be nonempty.
-  bool isFlatAlong(const ArrayRef<MPInt> coeffs);
+  bool isFlatAlong(ArrayRef<MPInt> coeffs);
 
   /// Returns true if the polytope is unbounded, i.e., extends to infinity in
   /// some direction. Otherwise, returns false.

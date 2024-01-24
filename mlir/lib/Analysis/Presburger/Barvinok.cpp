@@ -172,6 +172,8 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
           .determinant() == 0)
     return std::nullopt;
 
+  // Perform row operations to make each column all zeros except for the
+  // diagonal element, which is made to be one.
   for (unsigned i = 0; i < d; ++i) {
     // First ensure that the diagonal element is nonzero, by swapping
     // it with a row that is non-zero at column i.
@@ -196,7 +198,7 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
       // ith row, appropriately scaled.
       Fraction currentElement = equations(j, i);
       equations.addToRow(/*sourceRow=*/i, /*targetRow=*/j,
-                         -currentElement / diagElement);
+                         /*scale=*/-currentElement / diagElement);
     }
   }
 
@@ -229,10 +231,14 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 /// We maintain a list of pairwise disjoint chambers and their vertex-sets;
 /// we iterate over the vertex list, each time appending the vertex to the
 /// chambers where it is active and creating a new chamber if necessary.
+///
+/// Given the region each vertex is active in, for each subset of vertices,
+/// the region that precisely this subset is in, is the intersection of the
+/// regions that these are active in, intersected with the complements of the
+/// remaining regions.
 std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>>
 mlir::presburger::detail::computeChamberDecomposition(
-    std::vector<PresburgerRelation> activeRegions,
-    std::vector<ParamPoint> vertices) {
+    ArrayRef<PresburgerRelation> activeRegions, ArrayRef<ParamPoint> vertices) {
   // We maintain a list of regions and their associated vertex sets,
   // initialized with the first vertex and its corresponding activity region.
   std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> chambers = {
@@ -240,8 +246,6 @@ mlir::presburger::detail::computeChamberDecomposition(
   // Note that instead of storing lists of actual vertices, we store lists
   // of indices. Thus the set {2, 3, 4} represents the vertex set
   // {vertices[2], vertices[3], vertices[4]}.
-
-  std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> newChambers;
 
   // We iterate over the vertex set.
   // For each vertex v_j and its activity region R_j,
@@ -253,37 +257,35 @@ mlir::presburger::detail::computeChamberDecomposition(
   // Once we have examined all R_i, we add a final chamber
   // R_j - (union of all existing chambers),
   // in which only v_j is active.
+
+  // At each step, we define a new chamber list after considering vertex v_j,
+  // replacing and appending chambers as discussed above.
+  std::vector<std::pair<PresburgerRelation, std::vector<unsigned>>> newChambers;
   for (unsigned j = 1, e = vertices.size(); j < e; j++) {
     newChambers.clear();
 
     PresburgerRelation newRegion = activeRegions[j];
-    ParamPoint newVertex = vertices[j];
 
-    for (unsigned i = 0, f = chambers.size(); i < f; i++) {
-      auto [currentRegion, currentVertices] = chambers[i];
-
+    for (auto [currentRegion, currentVertices] : chambers) {
       // First, we check if the intersection of R_j and R_i.
       // It is a disjoint union of convex regions in the parameter space,
       // and so we know that it is full-dimensional if any of the disjuncts
       // is full-dimensional.
       PresburgerRelation intersection = currentRegion.intersect(newRegion);
-      bool isFullDim = intersection.getNumRangeVars() == 0 ||
-                       llvm::any_of(intersection.getAllDisjuncts(),
-                                    [&](IntegerRelation disjunct) -> bool {
-                                      return disjunct.isFullDim();
-                                    });
+      bool isFullDim =
+          intersection.getNumRangeVars() == 0 || intersection.isFullDim();
 
       // If the intersection is not full-dimensional, we do not modify
       // the chamber list.
       if (!isFullDim)
-        newChambers.push_back(chambers[i]);
+        newChambers.emplace_back(currentRegion, currentVertices);
       else {
         // If it is, we add the intersection and the difference as new chambers.
         PresburgerRelation subtraction = currentRegion.subtract(newRegion);
-        newChambers.push_back(std::make_pair(subtraction, currentVertices));
+        newChambers.emplace_back(subtraction, currentVertices);
 
         currentVertices.push_back(j);
-        newChambers.push_back(std::make_pair(intersection, currentVertices));
+        newChambers.emplace_back(intersection, currentVertices);
       }
     }
 
@@ -441,27 +443,28 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
     auto [currentRegion, currentVertices] = chamber;
     GeneratingFunction chamberGf(numSymbols, {}, {}, {});
     for (unsigned i : currentVertices) {
-      // We collect the inequalities corresponding to each vertex.
+      // We collect the inequalities corresponding to each vertex to compute
+      // the tangent cone at that vertex.
       // We only need the coefficients of the variables (NOT the parameters)
       // as the generating function only depends on these.
       // We translate the cones to be pointed at the origin by making the
       // constant terms zero.
-      ConeH tgtCone = defineHRep(numVars);
-      for (unsigned j = 0; j < numVars; j++) {
-        for (unsigned k = 0; k < numVars; k++)
+      ConeH tangentCone = defineHRep(numVars);
+      for (unsigned j = 0; j < numVars; ++j) {
+        for (unsigned k = 0; k < numVars; ++k)
           ineq[k] = subsets[i](j, k);
-        tgtCone.addInequality(ineq);
+        tangentCone.addInequality(ineq);
       }
       // We assume that the tangent cone is unimodular.
       SmallVector<std::pair<int, ConeH>, 4> unimodCones = {
-          std::make_pair(1, tgtCone)};
+          std::make_pair(1, tangentCone)};
       for (std::pair<int, ConeH> signedCone : unimodCones) {
         auto [sign, cone] = signedCone;
         chamberGf = chamberGf +
                     unimodularConeGeneratingFunction(vertices[i], sign, cone);
       }
     }
-    gf.push_back(std::make_pair(currentRegion, chamberGf));
+    gf.emplace_back(currentRegion, chamberGf);
   }
   return gf;
 }
