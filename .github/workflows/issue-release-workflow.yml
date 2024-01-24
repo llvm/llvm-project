@@ -33,6 +33,8 @@ jobs:
   backport-commits:
     name: Backport Commits
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
@@ -66,6 +68,9 @@ jobs:
   create-pull-request:
     name: Create Pull Request
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
