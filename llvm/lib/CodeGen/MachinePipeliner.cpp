@@ -108,6 +108,8 @@ STATISTIC(NumNodeOrderIssues, "Number of node order issues found");
 STATISTIC(NumFailBranch, "Pipeliner abort due to unknown branch");
 STATISTIC(NumFailLoop, "Pipeliner abort due to unsupported loop");
 STATISTIC(NumFailPreheader, "Pipeliner abort due to missing preheader");
+STATISTIC(NumFailLargeNumInsts,
+          "Pipeliner abort due to the number of instructions too large");
 STATISTIC(NumFailLargeMaxMII, "Pipeliner abort due to MaxMII too large");
 STATISTIC(NumFailZeroMII, "Pipeliner abort due to zero MII");
 STATISTIC(NumFailNoSchedule, "Pipeliner abort due to no schedule found");
@@ -122,6 +124,12 @@ static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
 static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",
                                       cl::desc("Enable SWP at Os."), cl::Hidden,
                                       cl::init(false));
+
+/// A command line argument to limit the number of instructions for pipelining.
+static cl::opt<unsigned> SwpMaxInsts(
+    "pipeliner-max-insts",
+    cl::desc("Maximum number of instructions in a loop for pipeliner."),
+    cl::Hidden, cl::init(200));
 
 /// A command line argument to limit minimum initial interval for pipelining.
 static cl::opt<int> SwpMaxMii("pipeliner-max-mii",
@@ -468,6 +476,22 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
                                    E = MBB->instr_end();
        I != E; ++I, --size)
     ;
+
+  // Suspend before DAG computation if there are too many instructions
+  if (size > SwpMaxInsts) {
+    LLVM_DEBUG(dbgs() << "#Instructions > " << SwpMaxInsts
+                      << ", we don't pipeline large loops\n");
+    NumFailLargeNumInsts++;
+    ORE->emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "schedule",
+                                               L.getStartLoc(), L.getHeader())
+             << "The number of instructions too large: "
+             << ore::NV("#Instructions", size) << " > "
+             << ore::NV("SwpMaxInsts", SwpMaxInsts) << "."
+             << "Refer to -pipeliner-max-insts.";
+    });
+    return false;
+  }
 
   SMS.enterRegion(MBB, MBB->begin(), MBB->getFirstTerminator(), size);
   SMS.schedule();
