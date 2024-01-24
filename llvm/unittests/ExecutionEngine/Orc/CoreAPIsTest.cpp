@@ -1193,8 +1193,9 @@ TEST_F(CoreAPIsStandardTest, SimpleAsynchronousGeneratorTest) {
       [&](Expected<SymbolMap> Result) {
         LookupCompleted = true;
         EXPECT_THAT_EXPECTED(Result, Succeeded());
-        if (Result)
+        if (Result) {
           EXPECT_EQ(*Result, SymbolMap({{Foo, FooSym}}));
+        }
       },
       NoDependenciesToRegister);
 
@@ -1228,8 +1229,9 @@ TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
       [&](Expected<SymbolMap> Result) {
         Lookup1Completed = true;
         EXPECT_THAT_EXPECTED(Result, Succeeded());
-        if (Result)
+        if (Result) {
           EXPECT_EQ(*Result, SymbolMap({{Foo, FooSym}}));
+        }
       },
       NoDependenciesToRegister);
 
@@ -1256,8 +1258,9 @@ TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
       [&](Expected<SymbolMap> Result) {
         Lookup2Completed = true;
         EXPECT_THAT_EXPECTED(Result, Succeeded());
-        if (Result)
+        if (Result) {
           EXPECT_EQ(*Result, SymbolMap({{Bar, BarSym}}));
+        }
       },
       NoDependenciesToRegister);
 
@@ -1273,8 +1276,9 @@ TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
       [&](Expected<SymbolMap> Result) {
         Lookup3Completed = true;
         EXPECT_THAT_EXPECTED(Result, Succeeded());
-        if (Result)
+        if (Result) {
           EXPECT_EQ(*Result, SymbolMap({{Bar, BarSym}}));
+        }
       },
       NoDependenciesToRegister);
 
@@ -1288,8 +1292,9 @@ TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
       [&](Expected<SymbolMap> Result) {
         Lookup4Completed = true;
         EXPECT_THAT_EXPECTED(Result, Succeeded());
-        if (Result)
+        if (Result) {
           EXPECT_EQ(*Result, SymbolMap({{Baz, BazSym}}));
+        }
       },
       NoDependenciesToRegister);
 
@@ -1314,8 +1319,9 @@ TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
   EXPECT_NE(G.Lookup, std::nullopt);
 
   // Check that the most recently captured lookup is lookup 4 (for baz).
-  if (G.Lookup)
+  if (G.Lookup) {
     EXPECT_EQ(G.Lookup->Names.begin()->first, Baz);
+  }
 
   cantFail(JD.define(absoluteSymbols({{Baz, BazSym}})));
   G.takeLookup().LS.continueLookup(Error::success());
