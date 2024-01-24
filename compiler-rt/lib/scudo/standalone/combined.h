@@ -923,7 +923,7 @@ public:
 
   const char *getStackDepotAddress() {
     initThreadMaybe();
-    return reinterpret_cast<char *>(StackDepot);
+    return reinterpret_cast<char *>(Depot);
   }
 
   uptr getStackDepotSize() {
@@ -953,7 +953,7 @@ public:
 
   static void collectTraceMaybe(const char *RawStackDepot,
                                 uintptr_t (&Trace)[MaxTraceSize], u32 Hash) {
-    auto *Depot = reinterpret_cast<const class StackDepot *>(RawStackDepot);
+    auto *Depot = reinterpret_cast<const StackDepot *>(RawStackDepot);
     uptr RingPos, Size;
     if (!Depot->find(Hash, &RingPos, &Size))
       return;
@@ -978,10 +978,9 @@ public:
     if (DepotPtr) {
       // check for corrupted StackDepot. First we need to check whether we can
       // read the metadata, then whether the metadata matches the size.
-      if (DepotSize < sizeof(StackDepot))
+      if (DepotSize < sizeof(Depot))
         return;
-      if (!reinterpret_cast<const class StackDepot *>(DepotPtr)->isValid(
-              DepotSize))
+      if (!reinterpret_cast<const StackDepot *>(DepotPtr)->isValid(DepotSize))
         return;
     }
 
@@ -1050,7 +1049,7 @@ private:
   uptr GuardedAllocSlotSize = 0;
 #endif // GWP_ASAN_HOOKS
 
-  StackDepot *StackDepot = nullptr;
+  StackDepot *Depot = nullptr;
   uptr StackDepotSize = 0;
   MemMapT RawStackDepotMap;
 
@@ -1532,12 +1531,12 @@ private:
 
     // We need StackDepot to be aligned to 8-bytes so the ring we store after
     // is correctly assigned.
-    static_assert(sizeof(StackDepot) % alignof(atomic_u64) == 0);
+    static_assert(sizeof(Depot) % alignof(atomic_u64) == 0);
 
     // Make sure the maximum sized StackDepot fits withint a uintptr_t to
     // simplify the overflow checking.
-    static_assert(sizeof(StackDepot) + UINT32_MAX * sizeof(atomic_u64) *
-                                           UINT32_MAX * sizeof(atomic_u32) <
+    static_assert(sizeof(Depot) + UINT32_MAX * sizeof(atomic_u64) * UINT32_MAX *
+                                      sizeof(atomic_u32) <
                   UINTPTR_MAX);
 
     if (AllocationRingBufferSize > kMaxU32Pow2 / kStacksPerRingBufferEntry)
@@ -1549,15 +1548,15 @@ private:
     u32 RingSize = static_cast<u32>(TabSize * kFramesPerStack);
     DCHECK(isPowerOfTwo(RingSize));
 
-    StackDepotSize = sizeof(StackDepot) + sizeof(atomic_u64) * RingSize +
+    StackDepotSize = sizeof(Depot) + sizeof(atomic_u64) * RingSize +
                      sizeof(atomic_u32) * TabSize;
     MemMapT DepotMap;
     DepotMap.map(
         /*Addr=*/0U, roundUp(StackDepotSize, getPageSizeCached()),
         "scudo:stack_depot");
-    StackDepot = reinterpret_cast<class StackDepot *>(DepotMap.getBase());
-    StackDepot->init(RingSize, TabSize);
-    DCHECK(StackDepot->isValid(StackDepotSize));
+    Depot = reinterpret_cast<StackDepot *>(DepotMap.getBase());
+    Depot->init(RingSize, TabSize);
+    DCHECK(Depot->isValid(StackDepotSize));
     RawStackDepotMap = DepotMap;
 
     MemMapT MemMap;
@@ -1582,7 +1581,7 @@ private:
                              RawRingBufferMap.getCapacity());
     }
     RawRingBuffer = nullptr;
-    if (StackDepot) {
+    if (Depot) {
       RawStackDepotMap.unmap(RawStackDepotMap.getBase(),
                              RawStackDepotMap.getCapacity());
     }
