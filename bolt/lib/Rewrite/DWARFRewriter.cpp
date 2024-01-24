@@ -1439,7 +1439,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
       // Only case that it hasn't been true was for manually modified assembly
       // file. Adding this warning in case assumption is false.
       errs()
-          << "BOLT-WARNING: [internal-dwarf-error]: A TU at offset: "
+          << "BOLT-WARNING: [internal-dwarf-error]: A TU at offset: 0x"
           << Twine::utohexstr(TU->getOffset())
           << " is not sharing "
              ".debug_line entry with CU. DW_AT_stmt_list for this TU won't be "
@@ -1462,7 +1462,7 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
 CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
                                                 DIEStreamer &Streamer) {
   // update TypeUnit DW_AT_stmt_list with new .debug_line information.
-  auto updateLineTable = [&](DWARFUnit &Unit) -> void {
+  auto updateLineTable = [&](const DWARFUnit &Unit) -> void {
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(Unit);
     DIEValue StmtAttrInfo = UnitDIE->findAttribute(dwarf::DW_AT_stmt_list);
     if (!StmtAttrInfo || !TypeUnitRelocMap.count(&Unit))
