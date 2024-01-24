@@ -101,8 +101,14 @@ private:
   bool IsMachOObject;
   using ReferenceMap = std::map<uint64_t, std::set<uint64_t>>;
 
-  raw_ostream &aggregate(const char *);
+  // For errors that have sensible names as the first (or only) string
+  // you can just use aggregate() << "DIE looks stupid: " << details...
+  // and it will get aggregated as "DIE looks stupid".
   ErrorAggregator &aggregate();
+  // For errors that have details before good 'categories', you'll need
+  // to provide the aggregated name, like this:
+  // aggregate("CU index is busted") << "CU index [" << n << "] is busted"
+  raw_ostream &aggregate(const char *);
   raw_ostream &error() const;
   raw_ostream &warn() const;
   raw_ostream &note() const;
