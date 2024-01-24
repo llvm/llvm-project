@@ -2354,33 +2354,26 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VBLENDPSrri:
     // If we're optimizing for size, try to use MOVSD/MOVSS.
     if (MI.getParent()->getParent()->getFunction().hasOptSize()) {
-      unsigned Mask;
-      switch (Opc) {
-      default:
-        llvm_unreachable("Unreachable!");
-      case X86::BLENDPDrri:
-        Opc = X86::MOVSDrr;
-        Mask = 0x03;
-        break;
-      case X86::BLENDPSrri:
-        Opc = X86::MOVSSrr;
-        Mask = 0x0F;
-        break;
-      case X86::VBLENDPDrri:
-        Opc = X86::VMOVSDrr;
-        Mask = 0x03;
-        break;
-      case X86::VBLENDPSrri:
-        Opc = X86::VMOVSSrr;
-        Mask = 0x0F;
-        break;
-      }
+      unsigned Mask = (Opc == X86::BLENDPDrri || Opc == X86::VBLENDPDrri) ? 0x03: 0x0F;
       if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    Opc = X86::TO;                                                             \
+    break;
+        switch (Opc) {
+        default:
+          llvm_unreachable("Unreachable!");
+        FROM_TO(BLENDPDrri, MOVSDrr)
+        FROM_TO(BLENDPSrri, MOVSSrr)
+        FROM_TO(VBLENDPDrri, VMOVSDrr)
+        FROM_TO(VBLENDPSrri, VMOVSSrr)
+        }
         WorkingMI = CloneIfNew(MI);
         WorkingMI->setDesc(get(Opc));
         WorkingMI->removeOperand(3);
         break;
       }
+#undef FROM_TO
     }
     [[fallthrough]];
   case X86::PBLENDWrri:
