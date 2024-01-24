@@ -160,10 +160,10 @@ profile data you would use the following command:
 
   $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \
-       -DBOOTSTRAP_CLANG_PERF_TRAINING_DEPS=runtimes
+       -DBOOTSTRAP_CLANG_PGO_TRAINING_DEPS=runtimes
 
 The BOOTSTRAP\_ prefixes tells CMake to pass the variables on to the instrumented
-stage two build.  And the CLANG_PERF_TRAINING_DEPS option let's you specify
+stage two build.  And the CLANG_PGO_TRAINING_DEPS option let's you specify
 additional build targets to build before building the external project.  The
 LLVM Test Suite requires compiler-rt to build, so we need to add the
 `runtimes` target as a dependency.
@@ -195,12 +195,12 @@ You can feed that file into the LLVM_PROFDATA_FILE option when you build your
 optimized compiler.
 
 It may be necessary to build additional targets before running perf training, such as
-builtins and runtime libraries. You can use the :code:`CLANG_PERF_TRAINING_DEPS` CMake
+builtins and runtime libraries. You can use the :code:`CLANG_PGO_TRAINING_DEPS` CMake
 variable for that purpose:
 
 .. code-block:: cmake
 
-  set(CLANG_PERF_TRAINING_DEPS builtins runtimes CACHE STRING "")
+  set(CLANG_PGO_TRAINING_DEPS builtins runtimes CACHE STRING "")
 
 The PGO cache has a slightly different stage naming scheme than other
 multi-stage builds. It generates three stages: stage1, stage2-instrumented, and
