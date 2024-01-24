@@ -42,8 +42,6 @@ public:
 
   bool AddBreakpointID(BreakpointID bp_id);
 
-  bool AddBreakpointID(const char *bp_id);
-
   // TODO: This should take a const BreakpointID.
   bool FindBreakpointID(BreakpointID &bp_id, size_t *position) const;
 
