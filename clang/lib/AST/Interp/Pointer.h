@@ -234,8 +234,14 @@ public:
 
   /// Returns the type of the innermost field.
   QualType getType() const {
-    if (inPrimitiveArray() && Offset != Base)
-      return getFieldDesc()->getType()->getAsArrayTypeUnsafe()->getElementType();
+    if (inPrimitiveArray() && Offset != Base) {
+      // Unfortunately, complex types are not array types in clang, but they are
+      // for us.
+      if (const auto *AT = getFieldDesc()->getType()->getAsArrayTypeUnsafe())
+        return AT->getElementType();
+      if (const auto *CT = getFieldDesc()->getType()->castAs<ComplexType>())
+        return CT->getElementType();
+    }
     return getFieldDesc()->getType();
   }
 
