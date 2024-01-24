@@ -1384,30 +1384,17 @@ def AVDst_512 : RegisterOperand<AV_512> {
   let EncoderMethod = "getAVOperandEncoding";
 }
 
-def AVLdSt_32 : RegisterOperand<AV_32> {
-  let DecoderMethod = "DecodeAVLdSt_32RegisterClass";
+class AVLdStOperand<RegisterClass regClass, string width>
+    : RegisterOperand<regClass> {
+  let DecoderMethod = "decodeAVLdSt<AMDGPUDisassembler::" # width # ">";
   let EncoderMethod = "getAVOperandEncoding";
 }
 
-def AVLdSt_64 : RegisterOperand<AV_64> {
-  let DecoderMethod = "DecodeAVLdSt_64RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
-
-def AVLdSt_96 : RegisterOperand<AV_96> {
-  let DecoderMethod = "DecodeAVLdSt_96RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
-
-def AVLdSt_128 : RegisterOperand<AV_128> {
-  let DecoderMethod = "DecodeAVLdSt_128RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
-
-def AVLdSt_160 : RegisterOperand<AV_160> {
-  let DecoderMethod = "DecodeAVLdSt_160RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
+def AVLdSt_32 : AVLdStOperand<AV_32, "OPW32">;
+def AVLdSt_64 : AVLdStOperand<AV_64, "OPW64">;
+def AVLdSt_96 : AVLdStOperand<AV_96, "OPW96">;
+def AVLdSt_128 : AVLdStOperand<AV_128, "OPW128">;
+def AVLdSt_160 : AVLdStOperand<AV_160, "OPW160">;
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant

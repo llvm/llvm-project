@@ -17,7 +17,7 @@
 # AA:          Contents of section .debug_info:
 # AA-NEXT:      0000 [[ADDR]] 00000000 aaaaaaaa 00000000
 # AA:          Contents of section .not_debug:
-# AA-NEXT:      0000 bbbbbbbb bbbbbbbb 00000000          .
+# AA-NEXT:      0000 bbbbbbbb 2a000000 00000000          .
 
 ## Specifying zero can get a behavior similar to GNU ld.
 # RUN: ld.lld --icf=all -z dead-reloc-in-nonalloc=.debug_info=0 %t.o %tabs.o -o %tzero
