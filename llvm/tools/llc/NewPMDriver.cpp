@@ -15,7 +15,6 @@
 #include "NewPMDriver.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/CodeGen/CodeGenPassBuilder.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -30,6 +29,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Passes/CodeGenPassBuilder.h" // TODO: Include pass headers properly.
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/CommandLine.h"
