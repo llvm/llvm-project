@@ -821,7 +821,7 @@ static mlir::Type getEleTy(mlir::Type ty) {
   return ReferenceType::get(eleTy);
 }
 
-// This is an unsafe safe way to deduce this (won't be true in internal
+// This is an unsafe way to deduce this (won't be true in internal
 // procedure or inside select-rank for assumed-size). Only here to satisfy
 // legacy code until removed.
 static bool isAssumedSize(llvm::SmallVectorImpl<mlir::Value> &extents) {

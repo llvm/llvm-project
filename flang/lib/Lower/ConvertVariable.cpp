@@ -1500,8 +1500,6 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
         result.emplace_back(
             computeExtent(builder, loc, lowerBounds[spec.index()], ub));
     } else if (spec.value()->ubound().isStar()) {
-      // Assumed extent is undefined. Must be provided by user's code.
-      // result.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
       result.emplace_back(getAssumedSizeExtent(loc, builder));
     }
   }
@@ -1530,9 +1528,7 @@ lowerExplicitCharLen(Fortran::lower::AbstractConverter &converter,
   return mlir::Value{};
 }
 
-/// Treat negative values as undefined. Assumed size arrays will return -1 from
-/// the front end for example. Using negative values can produce hard to find
-/// bugs much further along in the compilation.
+/// Assumed size arrays last extent is -1 in the front end.
 static mlir::Value genExtentValue(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Type idxTy,
                                   long frontEndExtent) {
