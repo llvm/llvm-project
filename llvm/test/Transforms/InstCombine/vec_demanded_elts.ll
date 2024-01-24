@@ -515,7 +515,7 @@ define ptr @gep_vbase_w_s_idx(<2 x ptr> %base, i64 %index) {
 
 define ptr @gep_splat_base_w_s_idx(ptr %base) {
 ; CHECK-LABEL: @gep_splat_base_w_s_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> undef, ptr %base, i32 0
@@ -579,7 +579,7 @@ define ptr @gep_cvbase_w_cv_idx(<2 x ptr> %base, i64 %raw_addr) {
 
 define ptr @gep_sbase_w_cv_idx(ptr %base) {
 ; CHECK-LABEL: @gep_sbase_w_cv_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %gep = getelementptr i32, ptr %base, <2 x i64> <i64 0, i64 1>
