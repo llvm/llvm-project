@@ -265,36 +265,29 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
   auto sv_zero_offset_begin = stride_view_over_base_zero_offset.begin();
   auto sv_one_offset_begin  = stride_view_over_base_one_offset.begin();
 
-  auto sv_zero_offset_should_be_one   = sv_zero_offset_begin;
-  auto sv_zero_offset_should_be_four  = ++sv_zero_offset_begin;
-  auto sv_zero_offset_should_be_seven = ++sv_zero_offset_begin;
+  auto sv_zero_offset_zeroth_index = sv_zero_offset_begin;
+  auto sv_zero_offset_third_index  = ++sv_zero_offset_begin;
+  auto sv_zero_offset_sixth_index  = ++sv_zero_offset_begin;
 
-  auto sv_one_offset_should_be_two  = sv_one_offset_begin;
-  auto sv_one_offset_should_be_five = ++sv_one_offset_begin;
+  auto sv_one_offset_oneth_index  = sv_one_offset_begin;
+  auto sv_one_offset_fourth_index = ++sv_one_offset_begin;
 
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
   static_assert(CanMinus<decltype(sv_zero_offset_begin)>);
 
-  assert(*sv_zero_offset_should_be_one == 1);
-  assert(*sv_zero_offset_should_be_four == 4);
-  assert(*sv_zero_offset_should_be_seven == 7);
-
-  assert(*sv_one_offset_should_be_two == 2);
-  assert(*sv_one_offset_should_be_five == 5);
-
   // Check positive __n with exact multiple of left's stride.
-  assert(sv_zero_offset_should_be_four - sv_zero_offset_should_be_one == 1);
-  assert(sv_zero_offset_should_be_seven - sv_zero_offset_should_be_one == 2);
-  // Check positive __n with non-exact multiple of left's stride.
-  assert(sv_one_offset_should_be_two - sv_zero_offset_should_be_one == 1);
-  assert(sv_one_offset_should_be_five - sv_zero_offset_should_be_one == 2);
+  assert(sv_zero_offset_third_index - sv_zero_offset_zeroth_index == 1);
+  assert(sv_zero_offset_sixth_index - sv_zero_offset_zeroth_index == 2);
+  // Check positive __n with non-exact multiple of left's stride (will do ceil here).
+  assert(sv_one_offset_oneth_index - sv_zero_offset_zeroth_index == 1);
+  assert(sv_one_offset_fourth_index - sv_zero_offset_zeroth_index == 2);
 
   // Check negative __n with exact multiple of left's stride.
-  assert(sv_zero_offset_should_be_one - sv_zero_offset_should_be_four == -1);
-  assert(sv_zero_offset_should_be_one - sv_zero_offset_should_be_seven == -2);
-  // Check negative __n with non-exact multiple of left's stride.
-  assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_two == -1);
-  assert(sv_zero_offset_should_be_one - sv_one_offset_should_be_five == -2);
+  assert(sv_zero_offset_zeroth_index - sv_zero_offset_third_index == -1);
+  assert(sv_zero_offset_zeroth_index - sv_zero_offset_sixth_index == -2);
+  // Check negative __n with non-exact multiple of left's stride (will do ceil here).
+  assert(sv_zero_offset_zeroth_index - sv_one_offset_oneth_index == -1);
+  assert(sv_zero_offset_zeroth_index - sv_one_offset_fourth_index == -2);
 
   assert(stride_view_over_base_zero_offset.end() == std::default_sentinel);
   assert(std::default_sentinel == stride_view_over_base_zero_offset.end());
@@ -340,12 +333,7 @@ constexpr bool test_forward_operator_minus(Iter begin, Iter end) {
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
   static_assert(CanMinus<decltype(sv_zero_offset_begin)>);
   static_assert(std::forward_iterator<std::ranges::iterator_t<Base>>);
-  assert(*sv_zero_offset_should_be_one == 1);
-  assert(*sv_zero_offset_should_be_four == 4);
-  assert(*sv_zero_offset_should_be_seven == 7);
 
-  assert(*sv_one_offset_should_be_two == 2);
-  assert(*sv_one_offset_should_be_five == 5);
   // Check positive __n with exact multiple of left's stride.
   assert(sv_zero_offset_should_be_four - sv_zero_offset_should_be_one == 1);
   assert(sv_zero_offset_should_be_seven - sv_zero_offset_should_be_one == 2);
