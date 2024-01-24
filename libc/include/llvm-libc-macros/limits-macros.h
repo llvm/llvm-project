@@ -36,6 +36,7 @@
 #endif // __has_include_next(<limits.h>)
 
 // Supplement missing macros if there are any.
+// Making sure that we provide all C23 constants.
 
 #ifndef CHAR_BIT
 #ifdef __CHAR_BIT__
