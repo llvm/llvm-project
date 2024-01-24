@@ -342,11 +342,18 @@ def DenormalFPMathF32 : ComplexStrAttr<"denormal-fp-math-f32", [FnAttr]>;
 class CompatRule<string F> {
   // The name of the function called to check the attribute of the caller and
   // callee and decide whether inlining should be allowed. The function's
-  // signature must match "bool(const Function&, const Function &)", where the
+  // signature must match "bool(const Function&, const Function&)", where the
   // first parameter is the reference to the caller and the second parameter is
   // the reference to the callee. It must return false if the attributes of the
   // caller and callee are incompatible, and true otherwise.
   string CompatFunc = F;
+  string AttrName = "";
+}
+
+class CompatRuleAttr<string F, string Attr> : CompatRule<F> {
+  // The checker function is extended with an third argument as the function attribute string.
+  // bool(const Function&, const Function&, const StringRef&)"
+  string AttrName = Attr;
 }
 
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
@@ -359,7 +366,10 @@ def : CompatRule<"isEqual<ShadowCallStackAttr>">;
 def : CompatRule<"isEqual<UseSampleProfileAttr>">;
 def : CompatRule<"isEqual<NoProfileAttr>">;
 def : CompatRule<"checkDenormMode">;
-
+def : CompatRule<"checkStrictFP">;
+def : CompatRuleAttr<"isEqual", "sign-return-address">;
+def : CompatRuleAttr<"isEqual", "sign-return-address-key">;
+def : CompatRuleAttr<"isEqual", "branch-protection-pauth-lr">;
 
 class MergeRule<string F> {
   // The name of the function called to merge the attributes of the caller and

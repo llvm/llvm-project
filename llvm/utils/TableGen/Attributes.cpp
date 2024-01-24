@@ -87,7 +87,12 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
 
   for (auto *Rule : CompatRules) {
     StringRef FuncName = Rule->getValueAsString("CompatFunc");
-    OS << "  Ret &= " << FuncName << "(Caller, Callee);\n";
+    StringRef AttrName = Rule->getValueAsString("AttrName");
+    if (AttrName.empty())
+      OS << "  Ret &= " << FuncName << "(Caller, Callee);\n";
+    else
+      OS << "  Ret &= " << FuncName << "(Caller, Callee, \"" << AttrName
+         << "\");\n";
   }
 
   OS << "\n";
