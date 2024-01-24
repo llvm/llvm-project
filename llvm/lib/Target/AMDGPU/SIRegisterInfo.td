@@ -1341,9 +1341,14 @@ def VCSrc_v2f16 : RegOrV2F16 <"VS_32", "OPERAND_REG_INLINE_C">;
 //  VISrc_* Operands with a VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
+def VISrc_64_f16 : RegOrF16 <"VReg_64", "OPERAND_REG_INLINE_C">;
+def VISrc_64_b32 : RegOrB32 <"VReg_64", "OPERAND_REG_INLINE_C">;
 def VISrc_64_f64 : RegOrF64 <"VReg_64", "OPERAND_REG_INLINE_C">;
+def VISrc_128_f16 : RegOrF16 <"VReg_128", "OPERAND_REG_INLINE_C">;
 def VISrc_128_b32 : RegOrB32 <"VReg_128", "OPERAND_REG_INLINE_C">;
 def VISrc_128_f32 : RegOrF32 <"VReg_128", "OPERAND_REG_INLINE_C">;
+def VISrc_256_b32 : RegOrB32 <"VReg_256", "OPERAND_REG_INLINE_C">;
+def VISrc_256_f32 : RegOrF32 <"VReg_256", "OPERAND_REG_INLINE_C">;
 def VISrc_256_f64 : RegOrF64 <"VReg_256", "OPERAND_REG_INLINE_C">;
 def VISrc_512_b32 : RegOrB32 <"VReg_512", "OPERAND_REG_INLINE_C">;
 def VISrc_512_f32 : RegOrF32 <"VReg_512", "OPERAND_REG_INLINE_C">;
