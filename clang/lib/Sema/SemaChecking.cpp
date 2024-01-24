@@ -2471,7 +2471,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case Builtin::BI##ID: \
     return SemaAtomicOpsOverloaded(TheCallResult, AtomicExpr::AO##ID);
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
   case Builtin::BI__annotation:
     if (SemaBuiltinMSVCAnnotation(*this, TheCall))
       return ExprError();
@@ -3013,6 +3013,11 @@ enum ArmSMEState : unsigned {
   ArmOutZA = 0b10,
   ArmInOutZA = 0b11,
   ArmZAMask = 0b11,
+
+  ArmInZT0 = 0b01 << 2,
+  ArmOutZT0 = 0b10 << 2,
+  ArmInOutZT0 = 0b11 << 2,
+  ArmZT0Mask = 0b11 << 2
 };
 
 bool Sema::ParseSVEImmChecks(
@@ -3206,6 +3211,13 @@ static bool hasArmZAState(const FunctionDecl *FD) {
          (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
 }
 
+static bool hasArmZT0State(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
+}
+
 static ArmSMEState getSMEState(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
@@ -3232,6 +3244,11 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
            diag::warn_attribute_arm_za_builtin_no_za_state)
+          << TheCall->getSourceRange();
+
+    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD))
+      Diag(TheCall->getBeginLoc(),
+           diag::warn_attribute_arm_zt0_builtin_no_zt0_state)
           << TheCall->getSourceRange();
   }
 
@@ -7852,18 +7869,18 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   static_assert(sizeof(NumArgs)/sizeof(NumArgs[0]) == NumForm
       && sizeof(NumVals)/sizeof(NumVals[0]) == NumForm,
       "need to update code for modified forms");
-  static_assert(AtomicExpr::AO__c11_atomic_init == 0 &&
-                    AtomicExpr::AO__c11_atomic_fetch_min + 1 ==
-                        AtomicExpr::AO__atomic_load,
+  static_assert(AtomicExpr::AO__atomic_add_fetch == 0 &&
+                    AtomicExpr::AO__atomic_xor_fetch + 1 ==
+                        AtomicExpr::AO__c11_atomic_compare_exchange_strong,
                 "need to update code for modified C11 atomics");
-  bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_init &&
-                  Op <= AtomicExpr::AO__opencl_atomic_fetch_max;
-  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_load &&
-               Op <= AtomicExpr::AO__hip_atomic_fetch_max;
-  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_load &&
-                  Op <= AtomicExpr::AO__scoped_atomic_fetch_max;
-  bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_init &&
-               Op <= AtomicExpr::AO__c11_atomic_fetch_min) ||
+  bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_compare_exchange_strong &&
+                  Op <= AtomicExpr::AO__opencl_atomic_store;
+  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_compare_exchange_strong &&
+               Op <= AtomicExpr::AO__hip_atomic_store;
+  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_add_fetch &&
+                  Op <= AtomicExpr::AO__scoped_atomic_xor_fetch;
+  bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_compare_exchange_strong &&
+                Op <= AtomicExpr::AO__c11_atomic_store) ||
                IsOpenCL;
   bool IsN = Op == AtomicExpr::AO__atomic_load_n ||
              Op == AtomicExpr::AO__atomic_store_n ||

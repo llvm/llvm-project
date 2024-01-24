@@ -197,6 +197,40 @@ mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
       }));
 }
 
+Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
+                                        Type type, const APInt &value) {
+  TypedAttr attr;
+  if (isa<IntegerType>(type)) {
+    attr = builder.getIntegerAttr(type, value);
+  } else {
+    auto vecTy = cast<ShapedType>(type);
+    attr = SplatElementsAttr::get(vecTy, value);
+  }
+
+  return builder.create<arith::ConstantOp>(loc, attr);
+}
+
+Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
+                                        Type type, int64_t value) {
+  unsigned elementBitWidth = 0;
+  if (auto intTy = dyn_cast<IntegerType>(type))
+    elementBitWidth = intTy.getWidth();
+  else
+    elementBitWidth = cast<ShapedType>(type).getElementTypeBitWidth();
+
+  return createScalarOrSplatConstant(builder, loc, type,
+                                     APInt(elementBitWidth, value));
+}
+
+Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
+                                        Type type, const APFloat &value) {
+  if (isa<FloatType>(type))
+    return builder.createOrFold<arith::ConstantOp>(
+        loc, type, builder.getFloatAttr(type, value));
+  TypedAttr splat = SplatElementsAttr::get(cast<ShapedType>(type), value);
+  return builder.createOrFold<arith::ConstantOp>(loc, type, splat);
+}
+
 Value ArithBuilder::_and(Value lhs, Value rhs) {
   return b.create<arith::AndIOp>(loc, lhs, rhs);
 }

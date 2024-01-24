@@ -134,14 +134,15 @@ const char *getEdgeKindName(Edge::Kind K);
 /// Stubs are often called "veneers" in the official docs and online.
 ///
 enum class StubsFlavor {
-  Unsupported = 0,
+  Undefined = 0,
+  pre_v7,
   v7,
 };
 
 /// JITLink sub-arch configuration for Arm CPU models
 struct ArmConfig {
   bool J1J2BranchEncoding = false;
-  StubsFlavor Stubs = StubsFlavor::Unsupported;
+  StubsFlavor Stubs = StubsFlavor::Undefined;
   // In the long term, we might want a linker switch like --target1-rel
   bool Target1Rel = false;
 };
@@ -149,18 +150,12 @@ struct ArmConfig {
 /// Obtain the sub-arch configuration for a given Arm CPU model.
 inline ArmConfig getArmConfigForCPUArch(ARMBuildAttrs::CPUArch CPUArch) {
   ArmConfig ArmCfg;
-  switch (CPUArch) {
-  case ARMBuildAttrs::v7:
-  case ARMBuildAttrs::v8_A:
+  if (CPUArch == ARMBuildAttrs::v7 || CPUArch >= ARMBuildAttrs::v7E_M) {
     ArmCfg.J1J2BranchEncoding = true;
     ArmCfg.Stubs = StubsFlavor::v7;
-    break;
-  default:
-    DEBUG_WITH_TYPE("jitlink", {
-      dbgs() << "  Warning: ARM config not defined for CPU architecture "
-             << getCPUArchName(CPUArch) << " (" << CPUArch << ")\n";
-    });
-    break;
+  } else {
+    ArmCfg.J1J2BranchEncoding = false;
+    ArmCfg.Stubs = StubsFlavor::pre_v7;
   }
   return ArmCfg;
 }
@@ -342,6 +337,43 @@ public:
 
 private:
   Section *GOTSection = nullptr;
+};
+
+/// Stubs builder emits non-position-independent Arm stubs for pre-v7 CPUs.
+/// These architectures have no MovT/MovW instructions and don't support Thumb2.
+/// BL is the only Thumb instruction that can generate stubs and they can always
+/// be transformed into BLX.
+class StubsManager_prev7 {
+public:
+  StubsManager_prev7() = default;
+
+  /// Name of the object file section that will contain all our stubs.
+  static StringRef getSectionName() {
+    return "__llvm_jitlink_aarch32_STUBS_prev7";
+  }
+
+  /// Implements link-graph traversal via visitExistingEdges()
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
+
+private:
+  // Each stub uses a single block that can have 2 entryponts, one for Arm and
+  // one for Thumb
+  struct StubMapEntry {
+    Block *B = nullptr;
+    Symbol *ArmEntry = nullptr;
+    Symbol *ThumbEntry = nullptr;
+  };
+
+  std::pair<StubMapEntry *, bool> getStubMapSlot(StringRef Name) {
+    auto &&[Stubs, NewStub] = StubMap.try_emplace(Name);
+    return std::make_pair(&Stubs->second, NewStub);
+  }
+
+  Symbol *getOrCreateSlotEntrypoint(LinkGraph &G, StubMapEntry &Slot,
+                                    bool Thumb);
+
+  DenseMap<StringRef, StubMapEntry> StubMap;
+  Section *StubsSection = nullptr;
 };
 
 /// Stubs builder for v7 emits non-position-independent Arm and Thumb stubs.
