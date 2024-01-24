@@ -1049,6 +1049,11 @@ Bug Fixes to C++ Support
 
 - Set the ``__cpp_auto_cast`` feature test macro in C++23 mode.
 
+- Fix crash for inconsistent deducing state of function return types
+  in importing modules.
+  Fixes (`#78830 <https://github.com/llvm/llvm-project/issues/78830>`_)
+  Fixes (`#60085 <https://github.com/llvm/llvm-project/issues/60085>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
