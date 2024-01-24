@@ -39,7 +39,9 @@ public:
              const wasm::WasmTableType *TableType,
              const wasm::WasmSignature *Signature)
       : Info(Info), GlobalType(GlobalType), TableType(TableType),
-        Signature(Signature) {}
+        Signature(Signature) {
+    assert(!Signature || Signature->Kind != wasm::WasmSignature::Placeholder);
+  }
 
   const wasm::WasmSymbolInfo &Info;
   const wasm::WasmGlobalType *GlobalType;

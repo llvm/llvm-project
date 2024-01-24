@@ -1167,11 +1167,13 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       // Rec groups expand the type index space (beyond what was declared at
       // the top of the section, and also consume one element in that space.
       uint32_t RecSize = readVaruint32(Ctx);
-      assert(RecSize > 0); // TODO real errors here and below
+      if (RecSize == 0)
+        return make_error<GenericBinaryError>("Rec group size cannot be 0",
+                                              object_error::parse_failed);
       Signatures.reserve(Signatures.size() + RecSize);
       Count += RecSize;
       llvm::errs() << llvm::format(" Rec size %d\n", RecSize);
-      Sig.Kind = wasm::WasmSignature::Other;
+      Sig.Kind = wasm::WasmSignature::Placeholder;
       Signatures.push_back(std::move(Sig));
       continue;
     }
@@ -1182,7 +1184,9 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       if (Form == wasm::WASM_TYPE_SUB || Form == wasm::WASM_TYPE_SUB_FINAL) {
         uint32_t Supers = readVaruint32(Ctx);
         if (Supers > 0) {
-          assert(Supers == 1);
+          if (Supers != 1)
+            return make_error<GenericBinaryError>(
+                "Invalid number of supertypes", object_error::parse_failed);
           /* Discard SuperIndex */ readVaruint32(Ctx);
         }
         Form = readVaruint32(Ctx);
@@ -1201,7 +1205,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
         llvm::errs() << llvm::format(" bad form %x", Form) << '\n';
         return make_error<GenericBinaryError>("bad form", object_error::parse_failed);
       }
-      Sig.Kind = wasm::WasmSignature::Other;
+      Sig.Kind = wasm::WasmSignature::Placeholder;
       Signatures.push_back(std::move(Sig));
       continue;
     }
@@ -1363,6 +1367,7 @@ Error WasmObjectFile::parseTagSection(ReadContext &Ctx) {
     wasm::WasmTag Tag;
     Tag.Index = NumImportedTags + Tags.size();
     Tag.SigIndex = Type;
+    Signatures[Type].Kind = wasm::WasmSignature::Tag;
     Tags.push_back(Tag);
   }
 

@@ -400,6 +400,11 @@ struct WasmDataSegment {
   uint32_t Comdat; // from the "comdat info" section
 };
 
+// Represents a Wasm element segment, with some limitations compared the spec:
+// 1) Does not model passive or declarative segments (Segment will end up with
+// an Offset field of i32.const 0)
+// 2) Does not model init exprs (Segment will get an empty Functions list)
+// 2) Does not model types other than basic funcref/externref (see ValType)
 struct WasmElemSegment {
   uint32_t Flags;
   uint32_t TableNumber;
@@ -466,12 +471,13 @@ struct WasmLinkingData {
   std::vector<WasmSymbolInfo> SymbolTable;
 };
 
-// Represents anything that can be encoded in the type section, but only
-// signatures are actually modeled. TODO: maybe refactor to make this explicit.
 struct WasmSignature {
   SmallVector<ValType, 1> Returns;
   SmallVector<ValType, 4> Params;
-  enum {Function, Other} Kind = Function; // Recursive, Composite(Array,Struct),  
+  // LLVM can parse types other than functions encoded in the type section,
+  // but does not actually model them. Instead a placeholder signature is
+  // created in the Object's signature list.
+  enum { Function, Tag, Placeholder } Kind = Function;
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State = Plain;
 
