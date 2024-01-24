@@ -25,30 +25,26 @@ def X86rao_xor  : SDNode<"X86ISD::AXOR", SDTRAOBinaryArith,
 def X86rao_and  : SDNode<"X86ISD::AAND", SDTRAOBinaryArith,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
-multiclass RAOINT_BASE<string m, string suffix = ""> {
-  let Predicates = [HasRAOINT] in
-    def 32mr#suffix : I<0xfc, MRMDestMem, (outs), (ins i32mem:$src1, GR32:$src2),
-                        !strconcat("a", m, "{l}\t", binop_args),
-                        [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR32:$src2)]>,
-                      NoCD8, Sched<[WriteALURMW]>;
+multiclass RaoInt<string m, string suffix = ""> {
+  let SchedRW = [WriteALURMW, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault] in {
+    def 32mr#suffix : BinOpMR<0xfc, "a"#m, binop_args, Xi32, (outs),
+                        [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR32:$src2)]>;
 
-  let Predicates = [HasRAOINT, In64BitMode] in
-    def 64mr#suffix : I<0xfc, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
-                        !strconcat("a", m, "{q}\t", binop_args),
-                        [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR64:$src2)]>,
-                      NoCD8, Sched<[WriteALURMW]>, REX_W;
+    def 64mr#suffix : BinOpMR<0xfc, "a"#m, binop_args, Xi64, (outs),
+                        [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR64:$src2)]>, REX_W;
+  }
 }
 
 let Predicates = [HasRAOINT, NoEGPR] in {
-defm AADD : RAOINT_BASE<"add">, T8;
-defm AAND : RAOINT_BASE<"and">, T8, PD;
-defm AOR  : RAOINT_BASE<"or" >, T8, XD;
-defm AXOR : RAOINT_BASE<"xor">, T8, XS;
+defm AADD : RaoInt<"add">, T8;
+defm AAND : RaoInt<"and">, T8, PD;
+defm AOR  : RaoInt<"or" >, T8, XD;
+defm AXOR : RaoInt<"xor">, T8, XS;
 }
 
 let Predicates = [HasRAOINT, HasEGPR, In64BitMode] in {
-defm AADD : RAOINT_BASE<"add", "_EVEX">, EVEX, T_MAP4;
-defm AAND : RAOINT_BASE<"and", "_EVEX">, EVEX, T_MAP4, PD;
-defm AOR  : RAOINT_BASE<"or", "_EVEX">,  EVEX, T_MAP4, XD;
-defm AXOR : RAOINT_BASE<"xor", "_EVEX">, EVEX, T_MAP4, XS;
+defm AADD : RaoInt<"add", "_EVEX">, EVEX, T_MAP4;
+defm AAND : RaoInt<"and", "_EVEX">, EVEX, T_MAP4, PD;
+defm AOR  : RaoInt<"or",  "_EVEX">, EVEX, T_MAP4, XD;
+defm AXOR : RaoInt<"xor", "_EVEX">, EVEX, T_MAP4, XS;
 }
