@@ -611,6 +611,10 @@ DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   return std::nullopt;
 }
 
+bool DWARFDebugNames::Entry::hasParentInformation() const {
+  return lookup(dwarf::DW_IDX_parent).has_value();
+}
+
 std::optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
     return Off->getAsReferenceUVal();
@@ -650,13 +654,48 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
   return std::nullopt;
 }
 
+Expected<std::optional<DWARFDebugNames::Entry>>
+DWARFDebugNames::Entry::getParentDIEEntry() const {
+  // The offset of the accelerator table entry for the parent.
+  std::optional<DWARFFormValue> ParentEntryOff = lookup(dwarf::DW_IDX_parent);
+  assert(ParentEntryOff.has_value() && "hasParentInformation() must be called");
+
+  if (ParentEntryOff->getForm() == dwarf::Form::DW_FORM_flag_present)
+    return std::nullopt;
+  return NameIdx->getEntryAtRelativeOffset(ParentEntryOff->getRawUValue());
+}
+
+void DWARFDebugNames::Entry::dumpParentIdx(
+    ScopedPrinter &W, const DWARFFormValue &FormValue) const {
+  Expected<std::optional<Entry>> ParentEntry = getParentDIEEntry();
+  if (!ParentEntry) {
+    W.getOStream() << "<invalid offset data>";
+    consumeError(ParentEntry.takeError());
+    return;
+  }
+
+  if (!ParentEntry->has_value()) {
+    W.getOStream() << "<parent not indexed>";
+    return;
+  }
+
+  auto AbsoluteOffset = NameIdx->EntriesBase + FormValue.getRawUValue();
+  W.getOStream() << "Entry @ 0x" + Twine::utohexstr(AbsoluteOffset);
+}
+
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
   W.startLine() << formatv("Abbrev: {0:x}\n", Abbr->Code);
   W.startLine() << formatv("Tag: {0}\n", Abbr->Tag);
   assert(Abbr->Attributes.size() == Values.size());
   for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
-    W.startLine() << formatv("{0}: ", std::get<0>(Tuple).Index);
-    std::get<1>(Tuple).dump(W.getOStream());
+    auto Index = std::get<0>(Tuple).Index;
+    W.startLine() << formatv("{0}: ", Index);
+
+    auto FormValue = std::get<1>(Tuple);
+    if (Index == dwarf::Index::DW_IDX_parent)
+      dumpParentIdx(W, FormValue);
+    else
+      FormValue.dump(W.getOStream());
     W.getOStream() << '\n';
   }
 }
