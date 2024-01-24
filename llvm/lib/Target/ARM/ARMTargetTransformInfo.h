@@ -347,7 +347,6 @@ inline bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
   if (EltSz != 8 && EltSz != 16 && EltSz != 32)
     return false;
 
-  unsigned NumElts = VT.getVectorNumElements();
   unsigned BlockElts = M[0] + 1;
   // If the first shuffle index is UNDEF, be optimistic.
   if (M[0] < 0)
@@ -356,7 +355,7 @@ inline bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
   if (BlockSize <= EltSz || BlockSize != BlockElts * EltSz)
     return false;
 
-  for (unsigned i = 0; i < NumElts; ++i) {
+  for (unsigned i = 0, e = M.size(); i < e; ++i) {
     if (M[i] < 0)
       continue; // ignore UNDEF indices
     if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
