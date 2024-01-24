@@ -59,6 +59,7 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
         if (fi->line > line)
             continue;
 
+        // search all CFG stmts in function for matching variable
         ASTContext *Context = &fi->D->getASTContext();
         for (const auto &[stmt, block] : fi->stmtBlockPairs) {
             const std::string var =
@@ -115,11 +116,13 @@ int main(int argc, const char **argv) {
     std::unique_ptr<CompilationDatabase> cb =
         getCompilationDatabase(BUILD_PATH);
 
+    // print all files in compilation database
     const auto &allFiles = cb->getAllFiles();
-    llvm::errs() << "All files:\n";
+    llvm::errs() << "All files (" << allFiles.size() << "):\n";
     for (auto &file : allFiles)
         llvm::errs() << "  " << file << "\n";
 
+    // build AST for all files
     ClangTool Tool(*cb, allFiles);
     std::vector<std::unique_ptr<ASTUnit>> ASTs;
     Tool.buildASTs(ASTs);
