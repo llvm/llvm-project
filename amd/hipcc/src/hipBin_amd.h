@@ -91,6 +91,7 @@ HipBinAmd::HipBinAmd() {
   constructHipPath();
   constructRoccmPath();
   constructCompilerPath();
+  readHipVersion();
 }
 
 // returns the Rocclr Home path
@@ -227,7 +228,7 @@ void HipBinAmd::printCompilerInfo() const {
   const string& hipClangPath = getCompilerPath();
   const string& hipPath = getHipPath();
   if (isWindows()) {
-    string cmd = hipClangPath + "/clang++ --print-resource-dir";
+    string cmd = hipClangPath + "/clang++ --version";
     system(cmd.c_str());  // hipclang version
     cout << "llc-version :" << endl;
     cmd = hipClangPath + "/llc --version";
@@ -240,7 +241,7 @@ void HipBinAmd::printCompilerInfo() const {
     system(cmd.c_str());  // ld flags
     cout << endl;
   } else {
-    string cmd = hipClangPath + "/clang++ --print-resource-dir";
+    string cmd = hipClangPath + "/clang++ --version";
     system(cmd.c_str());  // hipclang version
     cmd = hipClangPath + "/llc --version";
     system(cmd.c_str());  // llc version
@@ -438,10 +439,9 @@ void HipBinAmd::printFull() {
   cout << "CPP_CONFIG         :" << ccpConfig << endl;
 
   cout << endl << "==hip-clang" << endl;
-  cout << "HSA_PATH           :" << hsaPath << endl;
   cout << "HIP_CLANG_PATH     :" << hipClangPath << endl;
   printCompilerInfo();
-  cout << endl << "== Envirnoment Variables" << endl;
+  cout << endl << "== Environment Variables" << endl;
   printEnvironmentVariables();
   getSystemInfo();
   if (fs::exists("/usr/bin/lsb_release"))

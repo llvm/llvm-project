@@ -155,7 +155,7 @@ void HipBinNvidia::printFull() {
   cout << endl << "== nvcc" << endl;
   cout << "CUDA_PATH          :" << cudaPath <<endl;
   printCompilerInfo();
-  cout << endl << "== Envirnoment Variables" << endl;
+  cout << endl << "== Environment Variables" << endl;
   printEnvironmentVariables();
   getSystemInfo();
   if (fs::exists("/usr/bin/lsb_release"))
