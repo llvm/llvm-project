@@ -31,3 +31,8 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --offload-new-driver --nvptx-arch-tool=%t/nvptx_arch_sm_70 -x cuda --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-sm_70
 // ARCH-sm_70: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
+
+// case when nvptx-arch is used via '-march=native'
+// RUN:   %clang -### --target=nvptx64-nvidia-cuda -nogpulib -march=native --nvptx-arch-tool=%t/nvptx_arch_sm_70 \
+// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 | FileCheck %s --check-prefix=MARCH-sm_70
+// MARCH-sm_70: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
