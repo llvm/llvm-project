@@ -895,14 +895,14 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
   ASSERT_TRUE(Depot->isValid(sizeof(Buf)));
   ASSERT_FALSE(Depot->isValid(sizeof(Buf) - 1));
   scudo::uptr Stack[] = {1, 2, 3};
-  scudo::u32 Elem = Depot->insert(Buf, &Stack[0], &Stack[3]);
+  scudo::u32 Elem = Depot->insert(&Stack[0], &Stack[3]);
   scudo::uptr RingPosPtr = 0;
   scudo::uptr SizePtr = 0;
-  ASSERT_TRUE(Depot->find(Buf, Elem, &RingPosPtr, &SizePtr));
+  ASSERT_TRUE(Depot->find(Elem, &RingPosPtr, &SizePtr));
   ASSERT_EQ(SizePtr, 3);
-  EXPECT_EQ(Depot->at(Buf, RingPosPtr), 1);
-  EXPECT_EQ(Depot->at(Buf, RingPosPtr + 1), 2);
-  EXPECT_EQ(Depot->at(Buf, RingPosPtr + 2), 3);
+  EXPECT_EQ(Depot->at(RingPosPtr), 1);
+  EXPECT_EQ(Depot->at(RingPosPtr + 1), 2);
+  EXPECT_EQ(Depot->at(RingPosPtr + 2), 3);
 }
 
 #if SCUDO_CAN_USE_PRIMARY64

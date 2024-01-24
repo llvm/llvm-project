@@ -291,9 +291,8 @@ public:
     uptr Size =
         android_unsafe_frame_pointer_chase(Stack, MaxTraceSize + DiscardFrames);
     Size = Min<uptr>(Size, MaxTraceSize + DiscardFrames);
-    return reinterpret_cast<StackDepot *>(RawStackDepot)
-        ->insert(RawStackDepot, Stack + Min<uptr>(DiscardFrames, Size),
-                 Stack + Size);
+    return StackDepot->insert(Stack + Min<uptr>(DiscardFrames, Size),
+                              Stack + Size);
 #else
     return 0;
 #endif
@@ -924,7 +923,7 @@ public:
 
   const char *getStackDepotAddress() {
     initThreadMaybe();
-    return RawStackDepot;
+    return reinterpret_cast<char *>(StackDepot);
   }
 
   uptr getStackDepotSize() {
@@ -954,12 +953,12 @@ public:
 
   static void collectTraceMaybe(const char *RawStackDepot,
                                 uintptr_t (&Trace)[MaxTraceSize], u32 Hash) {
-    auto *Depot = reinterpret_cast<const StackDepot *>(RawStackDepot);
+    auto *Depot = reinterpret_cast<const class StackDepot *>(RawStackDepot);
     uptr RingPos, Size;
-    if (!Depot->find(RawStackDepot, Hash, &RingPos, &Size))
+    if (!Depot->find(Hash, &RingPos, &Size))
       return;
     for (unsigned I = 0; I != Size && I != MaxTraceSize; ++I)
-      Trace[I] = static_cast<uintptr_t>(Depot->at(RawStackDepot, RingPos + I));
+      Trace[I] = static_cast<uintptr_t>(Depot->at(RingPos + I));
   }
 
   static void getErrorInfo(struct scudo_error_info *ErrorInfo,
@@ -981,7 +980,8 @@ public:
       // read the metadata, then whether the metadata matches the size.
       if (DepotSize < sizeof(StackDepot))
         return;
-      if (!reinterpret_cast<const StackDepot *>(DepotPtr)->isValid(DepotSize))
+      if (!reinterpret_cast<const class StackDepot *>(DepotPtr)->isValid(
+              DepotSize))
         return;
     }
 
@@ -1050,7 +1050,7 @@ private:
   uptr GuardedAllocSlotSize = 0;
 #endif // GWP_ASAN_HOOKS
 
-  char *RawStackDepot = nullptr;
+  StackDepot *StackDepot = nullptr;
   uptr StackDepotSize = 0;
   MemMapT RawStackDepotMap;
 
@@ -1555,10 +1555,9 @@ private:
     DepotMap.map(
         /*Addr=*/0U, roundUp(StackDepotSize, getPageSizeCached()),
         "scudo:stack_depot");
-    RawStackDepot = reinterpret_cast<char *>(DepotMap.getBase());
-    auto *Depot = reinterpret_cast<StackDepot *>(DepotMap.getBase());
-    Depot->init(RingSize, TabSize);
-    DCHECK(Depot->isValid(StackDepotSize));
+    StackDepot = reinterpret_cast<class StackDepot *>(DepotMap.getBase());
+    StackDepot->init(RingSize, TabSize);
+    DCHECK(StackDepot->isValid(StackDepotSize));
     RawStackDepotMap = DepotMap;
 
     MemMapT MemMap;
@@ -1583,7 +1582,7 @@ private:
                              RawRingBufferMap.getCapacity());
     }
     RawRingBuffer = nullptr;
-    if (RawStackDepot) {
+    if (StackDepot) {
       RawStackDepotMap.unmap(RawStackDepotMap.getBase(),
                              RawStackDepotMap.getCapacity());
     }

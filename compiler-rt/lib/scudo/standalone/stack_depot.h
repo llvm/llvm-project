@@ -69,23 +69,26 @@ class alignas(16) StackDepot {
   // This is immediately followed by RingSize atomic_u64 and
   // (TabMask + 1) atomic_u32.
 
-  atomic_u64 *getRing(char *RawStackDepot) {
-    return reinterpret_cast<atomic_u64 *>(RawStackDepot + sizeof(StackDepot));
+  atomic_u64 *getRing() {
+    return reinterpret_cast<atomic_u64 *>(reinterpret_cast<char *>(this) +
+                                          sizeof(StackDepot));
   }
 
-  atomic_u32 *getTab(char *RawStackDepot) {
-    return reinterpret_cast<atomic_u32 *>(RawStackDepot + sizeof(StackDepot) +
+  atomic_u32 *getTab() {
+    return reinterpret_cast<atomic_u32 *>(reinterpret_cast<char *>(this) +
+                                          sizeof(StackDepot) +
                                           sizeof(atomic_u64) * RingSize);
   }
 
-  const atomic_u64 *getRing(const char *RawStackDepot) const {
-    return reinterpret_cast<const atomic_u64 *>(RawStackDepot +
-                                                sizeof(StackDepot));
+  const atomic_u64 *getRing() const {
+    return reinterpret_cast<const atomic_u64 *>(
+        reinterpret_cast<const char *>(this) + sizeof(StackDepot));
   }
 
-  const atomic_u32 *getTab(const char *RawStackDepot) const {
+  const atomic_u32 *getTab() const {
     return reinterpret_cast<const atomic_u32 *>(
-        RawStackDepot + sizeof(StackDepot) + sizeof(atomic_u64) * RingSize);
+        reinterpret_cast<const char *>(this) + sizeof(StackDepot) +
+        sizeof(atomic_u64) * RingSize);
   }
 
 public:
@@ -131,9 +134,9 @@ public:
 
   // Insert hash of the stack trace [Begin, End) into the stack depot, and
   // return the hash.
-  u32 insert(char *RawStackDepot, uptr *Begin, uptr *End) {
-    auto *Tab = getTab(RawStackDepot);
-    auto *Ring = getRing(RawStackDepot);
+  u32 insert(uptr *Begin, uptr *End) {
+    auto *Tab = getTab();
+    auto *Ring = getRing();
 
     MurMur2HashBuilder B;
     for (uptr *I = Begin; I != End; ++I)
@@ -162,10 +165,9 @@ public:
   // Look up a stack trace by hash. Returns true if successful. The trace may be
   // accessed via operator[] passing indexes between *RingPosPtr and
   // *RingPosPtr + *SizePtr.
-  bool find(const char *RawStackDepot, u32 Hash, uptr *RingPosPtr,
-            uptr *SizePtr) const {
-    auto *Tab = getTab(RawStackDepot);
-    auto *Ring = getRing(RawStackDepot);
+  bool find(u32 Hash, uptr *RingPosPtr, uptr *SizePtr) const {
+    auto *Tab = getTab();
+    auto *Ring = getRing();
 
     u32 Pos = Hash & TabMask;
     u32 RingPos = atomic_load_relaxed(&Tab[Pos]);
@@ -188,8 +190,8 @@ public:
     return B.get() == Hash;
   }
 
-  u64 at(const char *RawStackDepot, uptr RingPos) const {
-    auto *Ring = getRing(RawStackDepot);
+  u64 at(uptr RingPos) const {
+    auto *Ring = getRing();
     return atomic_load_relaxed(&Ring[RingPos & RingMask]);
   }
 
