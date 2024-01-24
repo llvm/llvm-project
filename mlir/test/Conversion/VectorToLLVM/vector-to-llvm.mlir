@@ -1148,20 +1148,19 @@ func.func @extract_strided_slice_scalable(%arg0 : vector<1x4x[4]xi32>) -> vector
 }
 
 // CHECK-LABEL:   func.func @extract_strided_slice_scalable(
-// CHECK-SAME:      %[[VAL_0:.*]]: vector<1x4x[4]xi32>) -> vector<1x1x[4]xi32> {
-//      CHECK:      %[[VAL_1:.*]] = builtin.unrealized_conversion_cast %[[VAL_0]] : vector<1x4x[4]xi32> to !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_2:.*]] = arith.constant 0 : i32
-//      CHECK:      %[[VAL_3:.*]] = arith.constant dense<0> : vector<1x1x[4]xi32>
-//      CHECK:      %[[VAL_4:.*]] = builtin.unrealized_conversion_cast %[[VAL_3]] : vector<1x1x[4]xi32> to !llvm.array<1 x array<1 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_5:.*]] = llvm.extractvalue %[[VAL_1]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_6:.*]] = arith.constant 0 : i32
-//      CHECK:      %[[VAL_7:.*]] = arith.constant dense<0> : vector<1x[4]xi32>
-//      CHECK:      %[[VAL_8:.*]] = builtin.unrealized_conversion_cast %[[VAL_7]] : vector<1x[4]xi32> to !llvm.array<1 x vector<[4]xi32>>
-//      CHECK:      %[[VAL_9:.*]] = llvm.extractvalue %[[VAL_1]][0, 3] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_10:.*]] = llvm.insertvalue %[[VAL_9]], %[[VAL_8]][0] : !llvm.array<1 x vector<[4]xi32>>
-//      CHECK:      %[[VAL_11:.*]] = llvm.insertvalue %[[VAL_10]], %[[VAL_4]][0] : !llvm.array<1 x array<1 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_12:.*]] = builtin.unrealized_conversion_cast %[[VAL_11]] : !llvm.array<1 x array<1 x vector<[4]xi32>>> to vector<1x1x[4]xi32>
-//      CHECK:      return %[[VAL_12]] : vector<1x1x[4]xi32>
+// CHECK-SAME:      %[[ARG_0:.*]]: vector<1x4x[4]xi32>) -> vector<1x1x[4]xi32> {
+
+//      CHECK:      %[[CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : vector<1x4x[4]xi32> to !llvm.array<1 x array<4 x vector<[4]xi32>>>
+//      CHECK:      %[[CST:.*]] = arith.constant dense<0> : vector<1x1x[4]xi32>
+//      CHECK:      %[[CAST_2:.*]] = builtin.unrealized_conversion_cast %[[CST]] : vector<1x1x[4]xi32> to !llvm.array<1 x array<1 x vector<[4]xi32>>>
+//      CHECK:      %[[CST_1:.*]] = arith.constant dense<0> : vector<1x[4]xi32>
+//      CHECK:      %[[CAST_3:.*]] = builtin.unrealized_conversion_cast %[[CST_1]] : vector<1x[4]xi32> to !llvm.array<1 x vector<[4]xi32>>
+
+//      CHECK:      %[[EXT:.*]] = llvm.extractvalue %[[CAST_1]][0, 3] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
+//      CHECK:      %[[INS_1:.*]] = llvm.insertvalue %[[EXT]], %[[CAST_3]][0] : !llvm.array<1 x vector<[4]xi32>>
+//      CHECK:      %[[INS_2:.*]] = llvm.insertvalue %[[INS_1]], %[[CAST_2]][0] : !llvm.array<1 x array<1 x vector<[4]xi32>>>
+
+//      CHECK:      builtin.unrealized_conversion_cast %[[INS_2]] : !llvm.array<1 x array<1 x vector<[4]xi32>>> to vector<1x1x[4]xi32>
 
 // -----
 
@@ -1235,18 +1234,19 @@ func.func @insert_strided_slice_scalable(%arg0 : vector<1x1x[4]xi32>, %arg1: vec
   return %0 : vector<1x4x[4]xi32>
 }
 // CHECK-LABEL:   func.func @insert_strided_slice_scalable(
-// CHECK-SAME:      %[[VAL_0:.*]]: vector<1x1x[4]xi32>,
-// CHECK-SAME:      %[[VAL_1:.*]]: vector<1x4x[4]xi32>) -> vector<1x4x[4]xi32> {
-//      CHECK:      %[[VAL_2:.*]] = builtin.unrealized_conversion_cast %[[VAL_0]] : vector<1x1x[4]xi32> to !llvm.array<1 x array<1 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_3:.*]] = builtin.unrealized_conversion_cast %[[VAL_1]] : vector<1x4x[4]xi32> to !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_4:.*]] = llvm.extractvalue %[[VAL_2]][0] : !llvm.array<1 x array<1 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_5:.*]] = llvm.extractvalue %[[VAL_3]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_6:.*]] = llvm.extractvalue %[[VAL_2]][0, 0] : !llvm.array<1 x array<1 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_7:.*]] = llvm.extractvalue %[[VAL_3]][0, 3] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_8:.*]] = llvm.insertvalue %[[VAL_6]], %[[VAL_5]][3] : !llvm.array<4 x vector<[4]xi32>>
-//      CHECK:      %[[VAL_9:.*]] = llvm.insertvalue %[[VAL_8]], %[[VAL_3]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
-//      CHECK:      %[[VAL_10:.*]] = builtin.unrealized_conversion_cast %[[VAL_9]] : !llvm.array<1 x array<4 x vector<[4]xi32>>> to vector<1x4x[4]xi32>
-//      CHECK:      return %[[VAL_10]] : vector<1x4x[4]xi32>
+// CHECK-SAME:      %[[ARG_0:.*]]: vector<1x1x[4]xi32>,
+// CHECK-SAME:      %[[ARG_1:.*]]: vector<1x4x[4]xi32>) -> vector<1x4x[4]xi32> {
+
+//      CHECK:      %[[CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : vector<1x1x[4]xi32> to !llvm.array<1 x array<1 x vector<[4]xi32>>>
+//      CHECK:      %[[CAST_2:.*]] = builtin.unrealized_conversion_cast %[[ARG_1]] : vector<1x4x[4]xi32> to !llvm.array<1 x array<4 x vector<[4]xi32>>>
+
+//      CHECK:      %[[EXT_1:.*]] = llvm.extractvalue %[[CAST_2]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
+//      CHECK:      %[[EXT_2:.*]] = llvm.extractvalue %[[CAST_1]][0, 0] : !llvm.array<1 x array<1 x vector<[4]xi32>>>
+
+//      CHECK:      %[[INS_1:.*]] = llvm.insertvalue %[[EXT_2]], %[[EXT_1]][3] : !llvm.array<4 x vector<[4]xi32>>
+//      CHECK:      %[[INS_2:.*]] = llvm.insertvalue %[[INS_1]], %[[CAST_2]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
+
+//      CHECK:       builtin.unrealized_conversion_cast %[[INS_2]] : !llvm.array<1 x array<4 x vector<[4]xi32>>> to vector<1x4x[4]xi32>
 
 // -----
 
