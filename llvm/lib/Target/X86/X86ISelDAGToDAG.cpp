@@ -4252,7 +4252,7 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   // This only works when the result is truncated.
   for (const SDNode *User : N->uses()) {
     auto name = User->getOperationName(CurDAG);
-    if (User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
+    if (!User.isMachineOpcode() || User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return false;
     EVT TuncateType = User->getValueType(0);
     if (TuncateType == MVT::i32)
