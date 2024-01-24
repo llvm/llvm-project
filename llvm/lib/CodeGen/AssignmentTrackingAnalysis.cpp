@@ -829,6 +829,13 @@ class MemLocFragmentFill {
   void process(BasicBlock &BB, VarFragMap &LiveSet) {
     BBInsertBeforeMap[&BB].clear();
     for (auto &I : BB) {
+      for (auto &DPV : I.getDbgValueRange()) {
+        if (const auto *Locs = FnVarLocs->getWedge(&DPV)) {
+          for (const VarLocInfo &Loc : *Locs) {
+            addDef(Loc, &DPV, *I.getParent(), LiveSet);
+          }
+        }
+      }
       if (const auto *Locs = FnVarLocs->getWedge(&I)) {
         for (const VarLocInfo &Loc : *Locs) {
           addDef(Loc, &I, *I.getParent(), LiveSet);
@@ -2487,73 +2494,78 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
       VariableDefinedBytes.clear();
     }
 
-    // Get the location defs that start just before this instruction.
-    const auto *Locs = FnVarLocs.getWedge(&I);
-    if (!Locs)
-      continue;
+    auto HandleLocsForWedge = [&](auto *WedgePosition) {
+      // Get the location defs that start just before this instruction.
+      const auto *Locs = FnVarLocs.getWedge(WedgePosition);
+      if (!Locs)
+        return;
 
-    NumWedgesScanned++;
-    bool ChangedThisWedge = false;
-    // The new pruned set of defs, reversed because we're scanning backwards.
-    SmallVector<VarLocInfo> NewDefsReversed;
+      NumWedgesScanned++;
+      bool ChangedThisWedge = false;
+      // The new pruned set of defs, reversed because we're scanning backwards.
+      SmallVector<VarLocInfo> NewDefsReversed;
 
-    // Iterate over the existing defs in reverse.
-    for (auto RIt = Locs->rbegin(), REnd = Locs->rend(); RIt != REnd; ++RIt) {
-      NumDefsScanned++;
-      DebugAggregate Aggr =
-          getAggregate(FnVarLocs.getVariable(RIt->VariableID));
-      uint64_t SizeInBits = Aggr.first->getSizeInBits().value_or(0);
-      uint64_t SizeInBytes = divideCeil(SizeInBits, 8);
+      // Iterate over the existing defs in reverse.
+      for (auto RIt = Locs->rbegin(), REnd = Locs->rend(); RIt != REnd; ++RIt) {
+        NumDefsScanned++;
+        DebugAggregate Aggr =
+            getAggregate(FnVarLocs.getVariable(RIt->VariableID));
+        uint64_t SizeInBits = Aggr.first->getSizeInBits().value_or(0);
+        uint64_t SizeInBytes = divideCeil(SizeInBits, 8);
 
-      // Cutoff for large variables to prevent expensive bitvector operations.
-      const uint64_t MaxSizeBytes = 2048;
+        // Cutoff for large variables to prevent expensive bitvector operations.
+        const uint64_t MaxSizeBytes = 2048;
 
-      if (SizeInBytes == 0 || SizeInBytes > MaxSizeBytes) {
-        // If the size is unknown (0) then keep this location def to be safe.
-        // Do the same for defs of large variables, which would be expensive
-        // to represent with a BitVector.
-        NewDefsReversed.push_back(*RIt);
-        continue;
+        if (SizeInBytes == 0 || SizeInBytes > MaxSizeBytes) {
+          // If the size is unknown (0) then keep this location def to be safe.
+          // Do the same for defs of large variables, which would be expensive
+          // to represent with a BitVector.
+          NewDefsReversed.push_back(*RIt);
+          continue;
+        }
+
+        // Only keep this location definition if it is not fully eclipsed by
+        // other definitions in this wedge that come after it
+
+        // Inert the bytes the location definition defines.
+        auto InsertResult =
+            VariableDefinedBytes.try_emplace(Aggr, BitVector(SizeInBytes));
+        bool FirstDefinition = InsertResult.second;
+        BitVector &DefinedBytes = InsertResult.first->second;
+
+        DIExpression::FragmentInfo Fragment =
+            RIt->Expr->getFragmentInfo().value_or(
+                DIExpression::FragmentInfo(SizeInBits, 0));
+        bool InvalidFragment = Fragment.endInBits() > SizeInBits;
+        uint64_t StartInBytes = Fragment.startInBits() / 8;
+        uint64_t EndInBytes = divideCeil(Fragment.endInBits(), 8);
+
+        // If this defines any previously undefined bytes, keep it.
+        if (FirstDefinition || InvalidFragment ||
+            DefinedBytes.find_first_unset_in(StartInBytes, EndInBytes) != -1) {
+          if (!InvalidFragment)
+            DefinedBytes.set(StartInBytes, EndInBytes);
+          NewDefsReversed.push_back(*RIt);
+          continue;
+        }
+
+        // Redundant def found: throw it away. Since the wedge of defs is being
+        // rebuilt, doing nothing is the same as deleting an entry.
+        ChangedThisWedge = true;
+        NumDefsRemoved++;
       }
 
-      // Only keep this location definition if it is not fully eclipsed by
-      // other definitions in this wedge that come after it
-
-      // Inert the bytes the location definition defines.
-      auto InsertResult =
-          VariableDefinedBytes.try_emplace(Aggr, BitVector(SizeInBytes));
-      bool FirstDefinition = InsertResult.second;
-      BitVector &DefinedBytes = InsertResult.first->second;
-
-      DIExpression::FragmentInfo Fragment =
-          RIt->Expr->getFragmentInfo().value_or(
-              DIExpression::FragmentInfo(SizeInBits, 0));
-      bool InvalidFragment = Fragment.endInBits() > SizeInBits;
-      uint64_t StartInBytes = Fragment.startInBits() / 8;
-      uint64_t EndInBytes = divideCeil(Fragment.endInBits(), 8);
-
-      // If this defines any previously undefined bytes, keep it.
-      if (FirstDefinition || InvalidFragment ||
-          DefinedBytes.find_first_unset_in(StartInBytes, EndInBytes) != -1) {
-        if (!InvalidFragment)
-          DefinedBytes.set(StartInBytes, EndInBytes);
-        NewDefsReversed.push_back(*RIt);
-        continue;
+      // Un-reverse the defs and replace the wedge with the pruned version.
+      if (ChangedThisWedge) {
+        std::reverse(NewDefsReversed.begin(), NewDefsReversed.end());
+        FnVarLocs.setWedge(WedgePosition, std::move(NewDefsReversed));
+        NumWedgesChanged++;
+        Changed = true;
       }
-
-      // Redundant def found: throw it away. Since the wedge of defs is being
-      // rebuilt, doing nothing is the same as deleting an entry.
-      ChangedThisWedge = true;
-      NumDefsRemoved++;
-    }
-
-    // Un-reverse the defs and replace the wedge with the pruned version.
-    if (ChangedThisWedge) {
-      std::reverse(NewDefsReversed.begin(), NewDefsReversed.end());
-      FnVarLocs.setWedge(&I, std::move(NewDefsReversed));
-      NumWedgesChanged++;
-      Changed = true;
-    }
+    };
+    HandleLocsForWedge(&I);
+    for (DPValue &DPV : reverse(I.getDbgValueRange()))
+      HandleLocsForWedge(&DPV);
   }
 
   return Changed;
@@ -2578,42 +2590,48 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
   // instructions.
   for (const Instruction &I : *BB) {
     // Get the defs that come just before this instruction.
-    const auto *Locs = FnVarLocs.getWedge(&I);
-    if (!Locs)
-      continue;
+    auto HandleLocsForWedge = [&](auto *WedgePosition) {
+      const auto *Locs = FnVarLocs.getWedge(WedgePosition);
+      if (!Locs)
+        return;
 
-    NumWedgesScanned++;
-    bool ChangedThisWedge = false;
-    // The new pruned set of defs.
-    SmallVector<VarLocInfo> NewDefs;
+      NumWedgesScanned++;
+      bool ChangedThisWedge = false;
+      // The new pruned set of defs.
+      SmallVector<VarLocInfo> NewDefs;
 
-    // Iterate over the existing defs.
-    for (const VarLocInfo &Loc : *Locs) {
-      NumDefsScanned++;
-      DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
-                        std::nullopt, Loc.DL.getInlinedAt());
-      auto VMI = VariableMap.find(Key);
+      // Iterate over the existing defs.
+      for (const VarLocInfo &Loc : *Locs) {
+        NumDefsScanned++;
+        DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
+                          std::nullopt, Loc.DL.getInlinedAt());
+        auto VMI = VariableMap.find(Key);
 
-      // Update the map if we found a new value/expression describing the
-      // variable, or if the variable wasn't mapped already.
-      if (VMI == VariableMap.end() || VMI->second.first != Loc.Values ||
-          VMI->second.second != Loc.Expr) {
-        VariableMap[Key] = {Loc.Values, Loc.Expr};
-        NewDefs.push_back(Loc);
-        continue;
+        // Update the map if we found a new value/expression describing the
+        // variable, or if the variable wasn't mapped already.
+        if (VMI == VariableMap.end() || VMI->second.first != Loc.Values ||
+            VMI->second.second != Loc.Expr) {
+          VariableMap[Key] = {Loc.Values, Loc.Expr};
+          NewDefs.push_back(Loc);
+          continue;
+        }
+
+        // Did not insert this Loc, which is the same as removing it.
+        ChangedThisWedge = true;
+        NumDefsRemoved++;
       }
 
-      // Did not insert this Loc, which is the same as removing it.
-      ChangedThisWedge = true;
-      NumDefsRemoved++;
-    }
+      // Replace the existing wedge with the pruned version.
+      if (ChangedThisWedge) {
+        FnVarLocs.setWedge(WedgePosition, std::move(NewDefs));
+        NumWedgesChanged++;
+        Changed = true;
+      }
+    };
 
-    // Replace the existing wedge with the pruned version.
-    if (ChangedThisWedge) {
-      FnVarLocs.setWedge(&I, std::move(NewDefs));
-      NumWedgesChanged++;
-      Changed = true;
-    }
+    for (DPValue &DPV : I.getDbgValueRange())
+      HandleLocsForWedge(&DPV);
+    HandleLocsForWedge(&I);
   }
 
   return Changed;
@@ -2660,41 +2678,46 @@ removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
   // instructions.
   for (const Instruction &I : *BB) {
     // Get the defs that come just before this instruction.
-    const auto *Locs = FnVarLocs.getWedge(&I);
-    if (!Locs)
-      continue;
+    auto HandleLocsForWedge = [&](auto *WedgePosition) {
+      const auto *Locs = FnVarLocs.getWedge(WedgePosition);
+      if (!Locs)
+        return;
 
-    NumWedgesScanned++;
-    bool ChangedThisWedge = false;
-    // The new pruned set of defs.
-    SmallVector<VarLocInfo> NewDefs;
+      NumWedgesScanned++;
+      bool ChangedThisWedge = false;
+      // The new pruned set of defs.
+      SmallVector<VarLocInfo> NewDefs;
 
-    // Iterate over the existing defs.
-    for (const VarLocInfo &Loc : *Locs) {
-      NumDefsScanned++;
-      DebugAggregate Aggr{FnVarLocs.getVariable(Loc.VariableID).getVariable(),
-                          Loc.DL.getInlinedAt()};
-      DebugVariable Var = FnVarLocs.getVariable(Loc.VariableID);
+      // Iterate over the existing defs.
+      for (const VarLocInfo &Loc : *Locs) {
+        NumDefsScanned++;
+        DebugAggregate Aggr{FnVarLocs.getVariable(Loc.VariableID).getVariable(),
+                            Loc.DL.getInlinedAt()};
+        DebugVariable Var = FnVarLocs.getVariable(Loc.VariableID);
 
-      // Remove undef entries that are encountered before any non-undef
-      // intrinsics from the entry block.
-      if (Loc.Values.isKillLocation(Loc.Expr) && !HasDefinedBits(Aggr, Var)) {
-        // Did not insert this Loc, which is the same as removing it.
-        NumDefsRemoved++;
-        ChangedThisWedge = true;
-        continue;
+        // Remove undef entries that are encountered before any non-undef
+        // intrinsics from the entry block.
+        if (Loc.Values.isKillLocation(Loc.Expr) && !HasDefinedBits(Aggr, Var)) {
+          // Did not insert this Loc, which is the same as removing it.
+          NumDefsRemoved++;
+          ChangedThisWedge = true;
+          continue;
+        }
+
+        DefineBits(Aggr, Var);
+        NewDefs.push_back(Loc);
       }
 
-      DefineBits(Aggr, Var);
-      NewDefs.push_back(Loc);
-    }
-
-    // Replace the existing wedge with the pruned version.
-    if (ChangedThisWedge) {
-      FnVarLocs.setWedge(&I, std::move(NewDefs));
-      NumWedgesChanged++;
-      Changed = true;
-    }
+      // Replace the existing wedge with the pruned version.
+      if (ChangedThisWedge) {
+        FnVarLocs.setWedge(WedgePosition, std::move(NewDefs));
+        NumWedgesChanged++;
+        Changed = true;
+      }
+    };
+    for (DPValue &DPV : I.getDbgValueRange())
+      HandleLocsForWedge(&DPV);
+    HandleLocsForWedge(&I);
   }
 
   return Changed;
@@ -2725,6 +2748,9 @@ static DenseSet<DebugAggregate> findVarsWithStackSlot(Function &Fn) {
       // with this change. TODO: Consider only looking at allocas.
       for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(&I)) {
         Result.insert({DAI->getVariable(), DAI->getDebugLoc().getInlinedAt()});
+      }
+      for (DPValue *DPV : at::getDPVAssignmentMarkers(&I)) {
+        Result.insert({DPV->getVariable(), DPV->getDebugLoc().getInlinedAt()});
       }
     }
   }
