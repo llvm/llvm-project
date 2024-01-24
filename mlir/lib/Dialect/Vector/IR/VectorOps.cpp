@@ -2857,9 +2857,8 @@ LogicalResult InsertStridedSliceOp::verify() {
           /*halfOpen=*/false, /*min=*/1)))
     return failure();
 
-  unsigned idx = 0;
   unsigned rankDiff = destShape.size() - sourceShape.size();
-  for (unsigned ub = sourceShape.size(); idx < ub; ++idx) {
+  for (unsigned idx = 0; idx < sourceShape.size(); ++idx) {
     if (sourceVectorType.getScalableDims()[idx] !=
         destVectorType.getScalableDims()[idx + rankDiff]) {
       return emitOpError("mismatching scalable flags (at source vector idx=")
@@ -3288,8 +3287,7 @@ LogicalResult ExtractStridedSliceOp::verify() {
   if (getResult().getType() != resultType)
     return emitOpError("expected result type to be ") << resultType;
 
-  unsigned idx = 0;
-  for (unsigned ub = sizes.size(); idx < ub; ++idx) {
+  for (unsigned idx = 0; idx < sizes.size(); ++idx) {
     if (type.getScalableDims()[idx]) {
       auto inputDim = type.getShape()[idx];
       auto inputSize = llvm::cast<IntegerAttr>(sizes[idx]).getInt();
