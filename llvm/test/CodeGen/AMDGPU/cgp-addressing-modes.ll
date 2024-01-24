@@ -166,6 +166,46 @@ done:
   ret void
 }
 
+; This used to be a special case when the scavenge slot was
+; fixed at offset 0.
+; OPT-LABEL: @test_sink_scratch_small_offset_i32_reserved(
+; OPT-NOT:  getelementptr [512 x i32]
+; OPT: br i1
+; OPT: getelementptr i8,
+
+; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32_reserved:
+; GCN: s_and_saveexec_b64
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
+; GCN: {{^.LBB[0-9]+}}_2:
+
+define amdgpu_kernel void @test_sink_scratch_small_offset_i32_reserved(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %arg) {
+entry:
+  %alloca = alloca [512 x i32], align 4, addrspace(5)
+  %out.gep.0 = getelementptr i32, ptr addrspace(1) %out, i64 999998
+  %out.gep.1 = getelementptr i32, ptr addrspace(1) %out, i64 999999
+  %add.arg = add i32 %arg, 8
+  %alloca.gep = getelementptr [512 x i32], ptr addrspace(5) %alloca, i32 0, i32 1023
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  store volatile i32 123, ptr addrspace(5) %alloca.gep
+  %tmp1 = load volatile i32, ptr addrspace(5) %alloca.gep
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
+  store i32 %x, ptr addrspace(1) %out.gep.0
+  %load = load volatile i32, ptr addrspace(5) %alloca.gep
+  store i32 %load, ptr addrspace(1) %out.gep.1
+  br label %done
+
+done:
+  ret void
+}
+
 ; OPT-LABEL: @test_no_sink_scratch_large_offset_i32(
 ; OPT: %alloca.gep = getelementptr [512 x i32], ptr addrspace(5) %alloca, i32 0, i32 1024
 ; OPT: br i1
