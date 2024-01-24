@@ -57,7 +57,14 @@
 
 // -----
 
+#unalias_me = "goodbye"
+#keep_aliased = "alias_test:dot_in_name"
+
 // CHECK: #test.conditional_alias<hello>
 "test.op"() {attr = #test.conditional_alias<"hello">} : () -> ()
 // CHECK-NEXT: #test.conditional_alias<#test_encoding>
 "test.op"() {attr = #test.conditional_alias<"alias_test:tensor_encoding">} : () -> ()
+// CHECK: #test.conditional_alias<goodbye>
+"test.op"() {attr = #test.conditional_alias<#unalias_me>} : () -> ()
+// CHECK-NEXT: #test.conditional_alias<#test2Ealias>
+"test.op"() {attr = #test.conditional_alias<#keep_aliased>} : () -> ()
