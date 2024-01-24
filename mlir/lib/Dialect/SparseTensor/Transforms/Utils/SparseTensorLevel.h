@@ -176,7 +176,7 @@ public:
 
   // Generate a conditional it.next() in the following form
   //
-  // if (crd == it.crd)
+  // if (cond)
   //    yield it.next
   // else
   //    yield it
@@ -185,7 +185,7 @@ public:
   // if it.next() is trivial to compute, we can use a select operation instead.
   // E.g.,
   //
-  //  it = select crd == it.crd ? it+1 : it
+  //  it = select cond ? it+1 : it
   virtual ValueRange forwardIf(OpBuilder &b, Location l, Value cond);
 
   // Locate the iterator to the position specified by *crd*, this can only

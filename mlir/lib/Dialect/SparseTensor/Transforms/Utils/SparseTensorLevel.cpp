@@ -465,14 +465,12 @@ public:
   NonEmptySubSectIterator(OpBuilder &b, Location l,
                           const SparseIterator *parent,
                           std::unique_ptr<SparseIterator> &&delegate,
-                          Value subSectSz, unsigned stride)
+                          Value subSectSz)
       : SparseIterator(IterKind::kNonEmptySubSect, delegate->tid, delegate->lvl,
                        /*itVals=*/subSectMeta),
-        subSectSz(subSectSz), stride(stride), parent(parent),
-        delegate(std::move(delegate)) {
-
+        parent(parent), delegate(std::move(delegate)),
+        tupleSz(this->delegate->serialize().size()), subSectSz(subSectSz) {
     auto *p = dyn_cast_or_null<NonEmptySubSectIterator>(parent);
-    assert(stride == 1);
     if (p == nullptr) {
       // Extract subsections along the root level.
       maxTupleCnt = C_IDX(1);
@@ -488,8 +486,6 @@ public:
     // We don't need an extra buffer to find subsections on dense levels.
     if (randomAccessible())
       return;
-    // The number of values we need to store to serialize the wrapped iterator.
-    tupleSz = this->delegate->serialize().size();
     subSectPosBuf = allocSubSectPosBuf(b, l);
   }
 
@@ -574,7 +570,6 @@ public:
   }
 
   Value toSubSectCrd(OpBuilder &b, Location l, Value wrapCrd) const {
-    assert(stride == 1);
     return SUBI(wrapCrd, getAbsOff());
   }
 
@@ -598,18 +593,17 @@ public:
   Value getAbsOff() const { return subSectMeta[1]; }
   Value getNotEnd() const { return subSectMeta[2]; }
 
+  const SparseIterator *parent;
+  std::unique_ptr<SparseIterator> delegate;
+
   // Number of values required to serialize the wrapped iterator.
-  unsigned tupleSz;
+  const unsigned tupleSz;
   // Max number of tuples, and the actual number of tuple.
   Value maxTupleCnt, tupleCnt;
   // The memory used to cache the tuple serialized from the wrapped iterator.
   Value subSectPosBuf;
 
   const Value subSectSz;
-  const unsigned stride;
-
-  const SparseIterator *parent;
-  std::unique_ptr<SparseIterator> delegate;
 
   Value subSectMeta[3]; // minCrd, absolute offset, notEnd
 };
@@ -1189,8 +1183,6 @@ ValueRange NonEmptySubSectIterator::forward(OpBuilder &b, Location l) {
   Value minAbsOff = ADDI(getAbsOff(), c1);
   nxAbsOff = b.create<arith::MaxUIOp>(l, minAbsOff, nxAbsOff);
 
-  assert(stride == 1 && "Not yet implemented");
-
   seek(ValueRange{nxMinCrd, nxAbsOff, nxNotEnd});
   // The coordinate should not exceeds the space upper bound.
   Value crd = deref(b, l);
@@ -1286,7 +1278,7 @@ std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
   // Try unwrap the NonEmptySubSectIterator from a filter parent.
   parent = tryUnwrapFilter<NonEmptySubSectIterator>(parent);
   auto it = std::make_unique<NonEmptySubSectIterator>(
-      b, l, parent, std::move(delegate), size, 1);
+      b, l, parent, std::move(delegate), size);
 
   if (stride != 1)
     return std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
