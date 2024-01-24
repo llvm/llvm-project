@@ -240,6 +240,17 @@ public:
                             unsigned SrcSubReg) const override;
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
+
+  const TargetRegisterClass *
+  getTargetRegisterClass(const TargetRegisterClass *RC) const override {
+    if (ARM::MQPRRegClass.hasSubClassEq(RC))
+      return &ARM::MQPRRegClass;
+    if (ARM::SPRRegClass.hasSubClassEq(RC))
+      return &ARM::SPRRegClass;
+    if (ARM::DPR_VFP2RegClass.hasSubClassEq(RC))
+      return &ARM::DPR_VFP2RegClass;
+    return RC;
+  }
 };
 
 } // end namespace llvm

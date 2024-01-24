@@ -278,6 +278,14 @@ public:
     return &InstrInfo->getRegisterInfo();
   }
 
+  /// Returns true as the ARM Architecture is supported by the Init Undef Pass.
+  /// We want to enable this for MVE and NEON instructions, however this can be
+  /// easily expanded by adding more Pseudo Instructions for the relevant
+  /// Register types.
+  bool supportsInitUndef() const override {
+    return HasMVEIntegerOps || HasNEON;
+  }
+
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
