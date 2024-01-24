@@ -3257,6 +3257,7 @@ cc_binary(
         ":IRPrinter",
         ":IRReader",
         ":MC",
+        ":Passes",
         ":Remarks",
         ":Support",
         ":Target",
