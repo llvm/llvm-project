@@ -83,11 +83,11 @@ func.func @single_first_inner_dim_packing(%arg0: tensor<256x5xf32>) -> tensor<8x
 
 // -----
 
-// CHECK-LABEL: func.func @pack_1d_to_1d
+// CHECK-LABEL: func.func @pack_1x32_to_1x32x1x1
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]
 // CHECK:         %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]] {{\[}}[0], [1, 2, 3]]
 // CHECK:         return %[[EXPANDED]]
-func.func @pack_1d_to_1d(%arg0 : tensor<1x32xf32>) -> tensor<1x32x1x1xf32> {
+func.func @pack_1x32_to_1x32x1x1(%arg0 : tensor<1x32xf32>) -> tensor<1x32x1x1xf32> {
   %empty = tensor.empty() : tensor<1x32x1x1xf32>
   %pack = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [1, 1] into %empty
     : tensor<1x32xf32> -> tensor<1x32x1x1xf32>

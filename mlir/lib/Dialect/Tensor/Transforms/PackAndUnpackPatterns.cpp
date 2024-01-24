@@ -42,8 +42,8 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   }
 
   /// Returns success() if it is only packing on the innermost dimension.
-  LogicalResult isPackOneInnerMostDim(RewriterBase &rewriter,
-                                      PackOp packOp) const {
+  LogicalResult isPackOnInnerMostDim(RewriterBase &rewriter,
+                                     PackOp packOp) const {
     auto outerDimsPerm = packOp.getOuterDimsPerm();
     if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
       return rewriter.notifyMatchFailure(
@@ -64,10 +64,12 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   /// greater than 1 and packing only happens on the dimension. It assumes that
   /// the pack op does not have padding value.
   LogicalResult isPack1DSrc(RewriterBase &rewriter, PackOp packOp) const {
+    assert(!packOp.getPaddingValue() &&
+           "expect the op does not have padding value.");
     ArrayRef<int64_t> srcShape = packOp.getSourceType().getShape();
     if (getNumGtOneDims(srcShape) > 1) {
       return rewriter.notifyMatchFailure(
-          packOp, "expects source is not 1D tensor with unit dims");
+          packOp, "expects source to have at most one non-unit dims");
     }
 
     // The pack op does not have padding value. Non-unit inner tile size must be
@@ -75,7 +77,7 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
     SmallVector<int64_t> innerTiles = packOp.getStaticTiles();
     if (getNumGtOneDims(innerTiles) > 1) {
       return rewriter.notifyMatchFailure(
-          packOp, "expects has at most one non-unit inner tiles");
+          packOp, "expects at most one non-unit inner tiles");
     }
 
     return success();
@@ -86,9 +88,10 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
     if (packOp.getPaddingValue())
       return rewriter.notifyMatchFailure(packOp, "expects no padding value");
 
-    if (failed(isPackOneInnerMostDim(rewriter, packOp)) &&
-        failed(isPack1DSrc(rewriter, packOp)))
+    if (failed(isPackOnInnerMostDim(rewriter, packOp)) &&
+        failed(isPack1DSrc(rewriter, packOp))) {
       return failure();
+    }
 
     RankedTensorType sourceType = packOp.getSourceType();
     RankedTensorType destType = packOp.getDestType();
