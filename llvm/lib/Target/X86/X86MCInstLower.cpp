@@ -1806,6 +1806,96 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   }
 
+  case X86::MOVSDrm:
+  case X86::MOVSSrm:
+  case X86::VMOVSDrm:
+  case X86::VMOVSSrm:
+  case X86::VMOVSDZrm:
+  case X86::VMOVSSZrm:
+  case X86::MOVSDrm_alt:
+  case X86::MOVSSrm_alt:
+  case X86::VMOVSDrm_alt:
+  case X86::VMOVSSrm_alt:
+  case X86::VMOVSDZrm_alt:
+  case X86::VMOVSSZrm_alt:
+  case X86::MOVDI2PDIrm:
+  case X86::MOVQI2PQIrm:
+  case X86::VMOVDI2PDIrm:
+  case X86::VMOVQI2PQIrm:
+  case X86::VMOVDI2PDIZrm:
+  case X86::VMOVQI2PQIZrm: {
+    assert(MI->getNumOperands() >= (1 + X86::AddrNumOperands) &&
+           "Unexpected number of operands!");
+    int SclWidth = 32;
+    int VecWidth = 128;
+
+    switch (MI->getOpcode()) {
+    default:
+      llvm_unreachable("Invalid opcode");
+    case X86::MOVSDrm:
+    case X86::VMOVSDrm:
+    case X86::VMOVSDZrm:
+    case X86::MOVSDrm_alt:
+    case X86::VMOVSDrm_alt:
+    case X86::VMOVSDZrm_alt:
+    case X86::MOVQI2PQIrm:
+    case X86::VMOVQI2PQIrm:
+    case X86::VMOVQI2PQIZrm:
+      SclWidth = 64;
+      VecWidth = 128;
+      break;
+    case X86::MOVSSrm:
+    case X86::VMOVSSrm:
+    case X86::VMOVSSZrm:
+    case X86::MOVSSrm_alt:
+    case X86::VMOVSSrm_alt:
+    case X86::VMOVSSZrm_alt:
+    case X86::MOVDI2PDIrm:
+    case X86::VMOVDI2PDIrm:
+    case X86::VMOVDI2PDIZrm:
+      SclWidth = 32;
+      VecWidth = 128;
+      break;
+    }
+    std::string Comment;
+    raw_string_ostream CS(Comment);
+    const MachineOperand &DstOp = MI->getOperand(0);
+    CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+
+    if (auto *C =
+            X86::getConstantFromPool(*MI, MI->getOperand(1 + X86::AddrDisp))) {
+      if ((unsigned)SclWidth == C->getType()->getScalarSizeInBits()) {
+        if (auto *CI = dyn_cast<ConstantInt>(C)) {
+          CS << "[";
+          printConstant(CI->getValue(), CS);
+          for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
+            CS << ",0";
+          }
+          CS << "]";
+          OutStreamer.AddComment(CS.str());
+          break; // early-out
+        }
+        if (auto *CF = dyn_cast<ConstantFP>(C)) {
+          CS << "[";
+          printConstant(CF->getValue(), CS);
+          APFloat ZeroFP = APFloat::getZero(CF->getValue().getSemantics());
+          for (int I = 1, E = VecWidth / SclWidth; I < E; ++I) {
+            CS << ",";
+            printConstant(ZeroFP, CS);
+          }
+          CS << "]";
+          OutStreamer.AddComment(CS.str());
+          break; // early-out
+        }
+      }
+    }
+
+    // We didn't find a constant load, fallback to a shuffle mask decode.
+    CS << (SclWidth == 32 ? "mem[0],zero,zero,zero" : "mem[0],zero");
+    OutStreamer.AddComment(CS.str());
+    break;
+  }
+
 #define MOV_CASE(Prefix, Suffix)                                               \
   case X86::Prefix##MOVAPD##Suffix##rm:                                        \
   case X86::Prefix##MOVAPS##Suffix##rm:                                        \

@@ -745,6 +745,9 @@ public:
       const Fortran::parser::ProcedureDesignator &pd) {
     const auto *name{Fortran::parser::Unwrap<Fortran::parser::Name>(pd)};
     assert(name && "Invalid Reduction Intrinsic.");
+    if (!name->symbol->GetUltimate().attrs().test(
+            Fortran::semantics::Attr::INTRINSIC))
+      return false;
     auto redType = llvm::StringSwitch<std::optional<IntrinsicProc>>(
                        getRealName(name).ToString())
                        .Case("max", IntrinsicProc::MAX)
