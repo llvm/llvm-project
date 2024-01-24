@@ -1435,8 +1435,8 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          retagMask(N)};
       for (size_t LocNo = 0; LocNo < DPtr->getNumVariableLocationOps(); ++LocNo)
         if (DPtr->getVariableLocationOp(LocNo) == AI)
-          DPtr->setExpression(DIExpression::appendOpsToArg(DPtr->getExpression(),
-                                                           NewOps, LocNo));
+          DPtr->setExpression(DIExpression::appendOpsToArg(
+              DPtr->getExpression(), NewOps, LocNo));
     };
 
     llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
