@@ -14,7 +14,7 @@
 namespace mlir {
 namespace sparse_tensor {
 
-/// The base class for all types of sparse tensor levels. It provides interface
+/// The base class for all types of sparse tensor levels. It provides interfaces
 /// to query the loop range (see `peekRangeAt`) and look up the coordinates (see
 /// `peekCrdAt`).
 class SparseTensorLevel {
