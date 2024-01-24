@@ -2578,7 +2578,9 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
 Instruction *InstCombinerImpl::foldICmpRemConstant(ICmpInst &Cmp,
                                                    BinaryOperator *Rem,
                                                    const APInt &C) {
-  assert((Rem->getOpcode() == Instruction::SRem || Rem->getOpcode() == Instruction::URem) && "Only for srem/urem!");
+  assert((Rem->getOpcode() == Instruction::SRem ||
+          Rem->getOpcode() == Instruction::URem) &&
+         "Only for srem/urem!");
   const ICmpInst::Predicate Pred = Cmp.getPredicate();
   // Check for ==/!= 0
   if (!ICmpInst::isEquality(Pred) || !C.isZero())
@@ -2613,9 +2615,11 @@ Instruction *InstCombinerImpl::foldICmpRemConstant(ICmpInst &Cmp,
     if (K == 1)
       NewRem = Builder.CreateSRem(A, B);
     else
-      NewRem = Builder.CreateSRem(Builder.CreateMul(A, ConstantInt::get(A->getType(), K), "", true, true), B);
-  }
-  else {
+      NewRem = Builder.CreateSRem(
+          Builder.CreateMul(A, ConstantInt::get(A->getType(), K), "", true,
+                            true),
+          B);
+  } else {
     if (!match(X, m_NUWMul(m_Value(A), m_APInt(C1))))
       return nullptr;
     if (!match(Y, m_NUWMul(m_Value(B), m_APInt(C2))))
@@ -2630,7 +2634,10 @@ Instruction *InstCombinerImpl::foldICmpRemConstant(ICmpInst &Cmp,
     if (K == 1)
       NewRem = Builder.CreateSRem(A, B);
     else
-      NewRem = Builder.CreateSRem(Builder.CreateMul(A, ConstantInt::get(A->getType(), K), "", true, false), B);
+      NewRem = Builder.CreateSRem(
+          Builder.CreateMul(A, ConstantInt::get(A->getType(), K), "", true,
+                            false),
+          B);
   }
   return new ICmpInst(Pred, NewRem, ConstantInt::get(Ty, C));
 }
@@ -3772,10 +3779,10 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
     if (Instruction *I = foldICmpSRemConstant(Cmp, BO, C))
       return I;
     break;
-   [[fallthrough]]; 
+    [[fallthrough]];
   case Instruction::URem:
-    if (Instruction *I = foldICmpRemConstant(Cmp, BO, C)) 
-      return I; 
+    if (Instruction *I = foldICmpRemConstant(Cmp, BO, C))
+      return I;
     break;
   case Instruction::UDiv:
     if (Instruction *I = foldICmpUDivConstant(Cmp, BO, C))
