@@ -5525,11 +5525,10 @@ define signext i32 @cmpxchg_i32_monotonic_crossbb(ptr %ptr, i32 signext %cmp, i3
 ; RV64IA-ZACAS-NEXT:    beqz a3, .LBB64_2
 ; RV64IA-ZACAS-NEXT:  # %bb.1: # %then
 ; RV64IA-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
-; RV64IA-ZACAS-NEXT:    sext.w a0, a1
+; RV64IA-ZACAS-NEXT:    mv a0, a1
 ; RV64IA-ZACAS-NEXT:    ret
 ; RV64IA-ZACAS-NEXT:  .LBB64_2: # %else
-; RV64IA-ZACAS-NEXT:    lw a1, 0(a0)
-; RV64IA-ZACAS-NEXT:    sext.w a0, a1
+; RV64IA-ZACAS-NEXT:    lw a0, 0(a0)
 ; RV64IA-ZACAS-NEXT:    ret
   br i1 %c, label %then, label %else
 
