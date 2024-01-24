@@ -67,6 +67,9 @@ FunctionPass *llvm::createX86FixupVectorConstants() {
 static std::optional<APInt> extractConstantBits(const Constant *C) {
   unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
 
+  if (auto *CUndef = dyn_cast<UndefValue>(C))
+    return APInt::getZero(NumBits);
+
   if (auto *CInt = dyn_cast<ConstantInt>(C))
     return CInt->getValue();
 
@@ -80,6 +83,18 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
         return APInt::getSplat(NumBits, *Bits);
       }
     }
+
+    APInt Bits = APInt::getZero(NumBits);
+    for (unsigned I = 0, E = CV->getNumOperands(); I != E; ++I) {
+      Constant *Elt = CV->getOperand(I);
+      std::optional<APInt> SubBits = extractConstantBits(Elt);
+      if (!SubBits)
+        return std::nullopt;
+      assert(NumBits == (E * SubBits->getBitWidth()) &&
+             "Illegal vector element size");
+      Bits.insertBits(*SubBits, I * SubBits->getBitWidth());
+    }
+    return Bits;
   }
 
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
@@ -223,6 +238,35 @@ static Constant *rebuildSplatableConstant(const Constant *C,
   return rebuildConstant(OriginalType->getContext(), SclTy, *Splat, NumSclBits);
 }
 
+static Constant *rebuildZeroUpperConstant(const Constant *C,
+                                          unsigned ScalarBitWidth) {
+  Type *Ty = C->getType();
+  Type *SclTy = Ty->getScalarType();
+  unsigned NumBits = Ty->getPrimitiveSizeInBits();
+  unsigned NumSclBits = SclTy->getPrimitiveSizeInBits();
+  LLVMContext &Ctx = C->getContext();
+
+  if (NumBits > ScalarBitWidth) {
+    // Determine if the upper bits are all zero.
+    if (std::optional<APInt> Bits = extractConstantBits(C)) {
+      if (Bits->countLeadingZeros() >= (NumBits - ScalarBitWidth)) {
+        // If the original constant was made of smaller elements, try to retain
+        // those types.
+        if (ScalarBitWidth > NumSclBits && (ScalarBitWidth % NumSclBits) == 0)
+          return rebuildConstant(Ctx, SclTy, *Bits, NumSclBits);
+
+        // Fallback to raw integer bits.
+        APInt RawBits = Bits->zextOrTrunc(ScalarBitWidth);
+        return ConstantInt::get(Ctx, RawBits);
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+typedef std::function<Constant *(const Constant *, unsigned)> RebuildFn;
+
 bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                                                      MachineBasicBlock &MBB,
                                                      MachineInstr &MI) {
@@ -233,37 +277,45 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   bool HasBWI = ST->hasBWI();
   bool HasVLX = ST->hasVLX();
 
-  auto ConvertToBroadcast = [&](unsigned OpBcst256, unsigned OpBcst128,
-                                unsigned OpBcst64, unsigned OpBcst32,
-                                unsigned OpBcst16, unsigned OpBcst8,
-                                unsigned OperandNo) {
-    assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
-           "Unexpected number of operands!");
+  auto FixupConstant =
+      [&](unsigned OpBcst256, unsigned OpBcst128, unsigned OpBcst64,
+          unsigned OpBcst32, unsigned OpBcst16, unsigned OpBcst8,
+          unsigned OpUpper64, unsigned OpUpper32, unsigned OperandNo) {
+        assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
+               "Unexpected number of operands!");
 
-    if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
-      // Attempt to detect a suitable splat from increasing splat widths.
-      std::pair<unsigned, unsigned> Broadcasts[] = {
-          {8, OpBcst8},   {16, OpBcst16},   {32, OpBcst32},
-          {64, OpBcst64}, {128, OpBcst128}, {256, OpBcst256},
-      };
-      for (auto [BitWidth, OpBcst] : Broadcasts) {
-        if (OpBcst) {
-          // Construct a suitable splat constant and adjust the MI to
-          // use the new constant pool entry.
-          if (Constant *NewCst = rebuildSplatableConstant(C, BitWidth)) {
-            unsigned NewCPI =
-                CP->getConstantPoolIndex(NewCst, Align(BitWidth / 8));
-            MI.setDesc(TII->get(OpBcst));
-            MI.getOperand(OperandNo + X86::AddrDisp).setIndex(NewCPI);
-            return true;
+        if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
+          // Attempt to detect a suitable splat/vzload from increasing constant
+          // bitwidths.
+          // Prefer vzload vs broadcast for same bitwidth to avoid domain flips.
+          std::tuple<unsigned, unsigned, RebuildFn> FixupLoad[] = {
+              {8, OpBcst8, rebuildSplatableConstant},
+              {16, OpBcst16, rebuildSplatableConstant},
+              {32, OpUpper32, rebuildZeroUpperConstant},
+              {32, OpBcst32, rebuildSplatableConstant},
+              {64, OpUpper64, rebuildZeroUpperConstant},
+              {64, OpBcst64, rebuildSplatableConstant},
+              {128, OpBcst128, rebuildSplatableConstant},
+              {256, OpBcst256, rebuildSplatableConstant},
+          };
+          for (auto [BitWidth, Op, RebuildConstant] : FixupLoad) {
+            if (Op) {
+              // Construct a suitable constant and adjust the MI to use the new
+              // constant pool entry.
+              if (Constant *NewCst = RebuildConstant(C, BitWidth)) {
+                unsigned NewCPI =
+                    CP->getConstantPoolIndex(NewCst, Align(BitWidth / 8));
+                MI.setDesc(TII->get(Op));
+                MI.getOperand(OperandNo + X86::AddrDisp).setIndex(NewCPI);
+                return true;
+              }
+            }
           }
         }
-      }
-    }
-    return false;
-  };
+        return false;
+      };
 
-  // Attempt to convert full width vector loads into broadcast loads.
+  // Attempt to convert full width vector loads into broadcast/vzload loads.
   switch (Opc) {
   /* FP Loads */
   case X86::MOVAPDrm:
@@ -271,79 +323,82 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::MOVUPDrm:
   case X86::MOVUPSrm:
     // TODO: SSE3 MOVDDUP Handling
-    return false;
+    return FixupConstant(0, 0, 0, 0, 0, 0, X86::MOVSDrm, X86::MOVSSrm, 1);
   case X86::VMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPDrm:
   case X86::VMOVUPSrm:
-    return ConvertToBroadcast(0, 0, X86::VMOVDDUPrm, X86::VBROADCASTSSrm, 0, 0,
-                              1);
+    return FixupConstant(0, 0, X86::VMOVDDUPrm, X86::VBROADCASTSSrm, 0, 0,
+                         X86::VMOVSDrm, X86::VMOVSSrm, 1);
   case X86::VMOVAPDYrm:
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
   case X86::VMOVUPSYrm:
-    return ConvertToBroadcast(0, X86::VBROADCASTF128rm, X86::VBROADCASTSDYrm,
-                              X86::VBROADCASTSSYrm, 0, 0, 1);
+    return FixupConstant(0, X86::VBROADCASTF128rm, X86::VBROADCASTSDYrm,
+                         X86::VBROADCASTSSYrm, 0, 0, 0, 0, 1);
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPSZ128rm:
   case X86::VMOVUPDZ128rm:
   case X86::VMOVUPSZ128rm:
-    return ConvertToBroadcast(0, 0, X86::VMOVDDUPZ128rm,
-                              X86::VBROADCASTSSZ128rm, 0, 0, 1);
+    return FixupConstant(0, 0, X86::VMOVDDUPZ128rm, X86::VBROADCASTSSZ128rm, 0,
+                         0, X86::VMOVSDZrm, X86::VMOVSSZrm, 1);
   case X86::VMOVAPDZ256rm:
   case X86::VMOVAPSZ256rm:
   case X86::VMOVUPDZ256rm:
   case X86::VMOVUPSZ256rm:
-    return ConvertToBroadcast(0, X86::VBROADCASTF32X4Z256rm,
-                              X86::VBROADCASTSDZ256rm, X86::VBROADCASTSSZ256rm,
-                              0, 0, 1);
+    return FixupConstant(0, X86::VBROADCASTF32X4Z256rm, X86::VBROADCASTSDZ256rm,
+                         X86::VBROADCASTSSZ256rm, 0, 0, 0, 0, 1);
   case X86::VMOVAPDZrm:
   case X86::VMOVAPSZrm:
   case X86::VMOVUPDZrm:
   case X86::VMOVUPSZrm:
-    return ConvertToBroadcast(X86::VBROADCASTF64X4rm, X86::VBROADCASTF32X4rm,
-                              X86::VBROADCASTSDZrm, X86::VBROADCASTSSZrm, 0, 0,
-                              1);
+    return FixupConstant(X86::VBROADCASTF64X4rm, X86::VBROADCASTF32X4rm,
+                         X86::VBROADCASTSDZrm, X86::VBROADCASTSSZrm, 0, 0, 0, 0,
+                         1);
     /* Integer Loads */
+  case X86::MOVDQArm:
+  case X86::MOVDQUrm:
+    return FixupConstant(0, 0, 0, 0, 0, 0, X86::MOVQI2PQIrm, X86::MOVDI2PDIrm,
+                         1);
   case X86::VMOVDQArm:
   case X86::VMOVDQUrm:
-    return ConvertToBroadcast(
-        0, 0, HasAVX2 ? X86::VPBROADCASTQrm : X86::VMOVDDUPrm,
-        HasAVX2 ? X86::VPBROADCASTDrm : X86::VBROADCASTSSrm,
-        HasAVX2 ? X86::VPBROADCASTWrm : 0, HasAVX2 ? X86::VPBROADCASTBrm : 0,
-        1);
+    return FixupConstant(0, 0, HasAVX2 ? X86::VPBROADCASTQrm : X86::VMOVDDUPrm,
+                         HasAVX2 ? X86::VPBROADCASTDrm : X86::VBROADCASTSSrm,
+                         HasAVX2 ? X86::VPBROADCASTWrm : 0,
+                         HasAVX2 ? X86::VPBROADCASTBrm : 0, X86::VMOVQI2PQIrm,
+                         X86::VMOVDI2PDIrm, 1);
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm:
-    return ConvertToBroadcast(
+    return FixupConstant(
         0, HasAVX2 ? X86::VBROADCASTI128rm : X86::VBROADCASTF128rm,
         HasAVX2 ? X86::VPBROADCASTQYrm : X86::VBROADCASTSDYrm,
         HasAVX2 ? X86::VPBROADCASTDYrm : X86::VBROADCASTSSYrm,
         HasAVX2 ? X86::VPBROADCASTWYrm : 0, HasAVX2 ? X86::VPBROADCASTBYrm : 0,
-        1);
+        0, 0, 1);
   case X86::VMOVDQA32Z128rm:
   case X86::VMOVDQA64Z128rm:
   case X86::VMOVDQU32Z128rm:
   case X86::VMOVDQU64Z128rm:
-    return ConvertToBroadcast(0, 0, X86::VPBROADCASTQZ128rm,
-                              X86::VPBROADCASTDZ128rm,
-                              HasBWI ? X86::VPBROADCASTWZ128rm : 0,
-                              HasBWI ? X86::VPBROADCASTBZ128rm : 0, 1);
+    return FixupConstant(0, 0, X86::VPBROADCASTQZ128rm, X86::VPBROADCASTDZ128rm,
+                         HasBWI ? X86::VPBROADCASTWZ128rm : 0,
+                         HasBWI ? X86::VPBROADCASTBZ128rm : 0,
+                         X86::VMOVQI2PQIZrm, X86::VMOVDI2PDIZrm, 1);
   case X86::VMOVDQA32Z256rm:
   case X86::VMOVDQA64Z256rm:
   case X86::VMOVDQU32Z256rm:
   case X86::VMOVDQU64Z256rm:
-    return ConvertToBroadcast(0, X86::VBROADCASTI32X4Z256rm,
-                              X86::VPBROADCASTQZ256rm, X86::VPBROADCASTDZ256rm,
-                              HasBWI ? X86::VPBROADCASTWZ256rm : 0,
-                              HasBWI ? X86::VPBROADCASTBZ256rm : 0, 1);
+    return FixupConstant(0, X86::VBROADCASTI32X4Z256rm, X86::VPBROADCASTQZ256rm,
+                         X86::VPBROADCASTDZ256rm,
+                         HasBWI ? X86::VPBROADCASTWZ256rm : 0,
+                         HasBWI ? X86::VPBROADCASTBZ256rm : 0, 0, 0, 1);
   case X86::VMOVDQA32Zrm:
   case X86::VMOVDQA64Zrm:
   case X86::VMOVDQU32Zrm:
   case X86::VMOVDQU64Zrm:
-    return ConvertToBroadcast(X86::VBROADCASTI64X4rm, X86::VBROADCASTI32X4rm,
-                              X86::VPBROADCASTQZrm, X86::VPBROADCASTDZrm,
-                              HasBWI ? X86::VPBROADCASTWZrm : 0,
-                              HasBWI ? X86::VPBROADCASTBZrm : 0, 1);
+    return FixupConstant(X86::VBROADCASTI64X4rm, X86::VBROADCASTI32X4rm,
+                         X86::VPBROADCASTQZrm, X86::VPBROADCASTDZrm,
+                         HasBWI ? X86::VPBROADCASTWZrm : 0,
+                         HasBWI ? X86::VPBROADCASTBZrm : 0, 0, 0, 1);
   }
 
   auto ConvertToBroadcastAVX512 = [&](unsigned OpSrc32, unsigned OpSrc64) {
@@ -368,7 +423,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
 
     if (OpBcst32 || OpBcst64) {
       unsigned OpNo = OpBcst32 == 0 ? OpNoBcst64 : OpNoBcst32;
-      return ConvertToBroadcast(0, 0, OpBcst64, OpBcst32, 0, 0, OpNo);
+      return FixupConstant(0, 0, OpBcst64, OpBcst32, 0, 0, 0, 0, OpNo);
     }
     return false;
   };
