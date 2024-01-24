@@ -71,10 +71,12 @@ add_libc_unittest(
     mincore_test.cpp
   DEPENDS
     libc.include.sys_mman
+    libc.include.unistd
     libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
+    libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoSetterMatcher
 )
