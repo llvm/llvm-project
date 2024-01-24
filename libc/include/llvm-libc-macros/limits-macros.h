@@ -69,7 +69,8 @@
 #define LONG_WIDTH __LONG_WIDTH__
 #elif defined(__WORDSIZE)
 #define LONG_WIDTH __WORDSIZE
-#else // use sizeof(long) * CHAR_BIT as backup.
+#else
+// Use sizeof(long) * CHAR_BIT as backup. This is needed for clang-13 or before.
 #define LONG_WIDTH (sizeof(long) * CHAR_BIT)
 #endif // __LONG_WIDTH__
 #endif // LONG_WIDTH
