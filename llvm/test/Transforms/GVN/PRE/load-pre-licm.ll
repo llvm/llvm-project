@@ -291,9 +291,13 @@ header:
 define i8 @test7a(i1 %c1, ptr %p, i8 %i, i8 %j) {
 ; CHECK-LABEL: @test7a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[C:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_C_CRIT_EDGE:%.*]]
+; CHECK:       entry.C_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
+; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
 ; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
@@ -302,9 +306,9 @@ define i8 @test7a(i1 %c1, ptr %p, i8 %i, i8 %j) {
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[C]]
 ; CHECK:       C:
-; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE]], [[ENTRY_C_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[Y]], [[B]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_C_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
 ; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
-; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
 entry:
@@ -377,9 +381,13 @@ C:
 define i8 @test7c(i1 %c1, i1 %c2, ptr %p, i8 %i, i8 %j) {
 ; CHECK-LABEL: @test7c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[D:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_D_CRIT_EDGE:%.*]]
+; CHECK:       entry.D_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
+; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
 ; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
@@ -390,9 +398,9 @@ define i8 @test7c(i1 %c1, i1 %c2, ptr %p, i8 %i, i8 %j) {
 ; CHECK:       C:
 ; CHECK-NEXT:    br label [[D]]
 ; CHECK:       D:
-; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[I]], [[B]] ], [ [[J]], [[C]] ]
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE]], [[ENTRY_D_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[X]], [[B]] ], [ [[Y]], [[C]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_D_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[I]], [[B]] ], [ [[J]], [[C]] ]
 ; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
-; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
 entry:
@@ -421,13 +429,18 @@ D:
 
 
 ; Similar to test7a except there is a volatile load in block B from an
-; address that may overlap with %pj.
+; address that may overlap with %pj. We should still be able to
+; perform load PRE since the volatile load does not clobber anything.
 define i8 @test7d(i1 %c1, ptr %p, i8 %i, i8 %j, i32 %v) {
 ; CHECK-LABEL: @test7d(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[C:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[A:%.*]], label [[ENTRY_C_CRIT_EDGE:%.*]]
+; CHECK:       entry.C_crit_edge:
+; CHECK-NEXT:    [[PK_PHI_TRANS_INSERT:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[Z_PRE:%.*]] = load i8, ptr [[PK_PHI_TRANS_INSERT]], align 1
+; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P:%.*]], i8 [[I:%.*]]
+; CHECK-NEXT:    [[PI:%.*]] = getelementptr i8, ptr [[P]], i8 [[I]]
 ; CHECK-NEXT:    [[PJ:%.*]] = getelementptr i8, ptr [[P]], i8 [[J:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PI]], align 1
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[PJ]], align 1
@@ -438,9 +451,9 @@ define i8 @test7d(i1 %c1, ptr %p, i8 %i, i8 %j, i32 %v) {
 ; CHECK-NEXT:    [[Y2:%.*]] = load volatile i32, ptr [[PJ2]], align 4
 ; CHECK-NEXT:    br label [[C]]
 ; CHECK:       C:
-; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY:%.*]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
+; CHECK-NEXT:    [[Z:%.*]] = phi i8 [ [[Z_PRE]], [[ENTRY_C_CRIT_EDGE]] ], [ [[X]], [[A]] ], [ [[Y]], [[B]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i8 [ [[I]], [[ENTRY_C_CRIT_EDGE]] ], [ [[I]], [[A]] ], [ [[J]], [[B]] ]
 ; CHECK-NEXT:    [[PK:%.*]] = getelementptr i8, ptr [[P]], i8 [[K]]
-; CHECK-NEXT:    [[Z:%.*]] = load i8, ptr [[PK]], align 1
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
 entry:
