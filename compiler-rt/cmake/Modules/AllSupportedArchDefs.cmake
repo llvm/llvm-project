@@ -25,12 +25,15 @@ endif()
 
 set(ALL_SANITIZER_COMMON_SUPPORTED_ARCH ${X86} ${X86_64} ${PPC64} ${RISCV64}
     ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} ${S390X} ${SPARC} ${SPARCV9}
-    ${HEXAGON} ${LOONGARCH64})
+    ${HEXAGON} ${LOONGARCH64} ${RISCV64})  # Added riscv64 to common supported architectures
+
 set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X} ${SPARC} ${SPARCV9} ${HEXAGON}
-    ${LOONGARCH64})
-set(ALL_ASAN_ABI_SUPPORTED_ARCH ${X86_64} ${ARM64})
-set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${LOONGARCH64})
+    ${LOONGARCH64} ${RISCV64})  # Added riscv64 to ASAN supported architectures
+
+set(ALL_ASAN_ABI_SUPPORTED_ARCH ${X86_64} ${ARM64} ${RISCV64})  # Added riscv64 to ASAN ABI supported architectures
+
+set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${LOONGARCH64} ${RISCV64})  # Added riscv64 to DFSAN supported architectures
 
 if(ANDROID)
   set(OS_NAME "Android")
@@ -40,7 +43,7 @@ endif()
 
 if(OS_NAME MATCHES "Linux")
   set(ALL_FUZZER_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${S390X}
-      ${RISCV64} ${LOONGARCH64})
+      ${RISCV64} ${LOONGARCH64})  # Added riscv64 to fuzzer supported architectures
 elseif (OS_NAME MATCHES "Windows")
   set(ALL_FUZZER_SUPPORTED_ARCH ${X86} ${X86_64})
 elseif(OS_NAME MATCHES "Android")
@@ -51,42 +54,42 @@ else()
   set(ALL_FUZZER_SUPPORTED_ARCH ${X86_64} ${ARM64})
 endif()
 
-set(ALL_GWP_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64})
+set(ALL_GWP_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV64})  # Added riscv64 to GWP ASAN supported architectures
 if(APPLE)
-  set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64})
+  set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64} ${RISCV64})
 else()
   set(ALL_LSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${MIPS64} ${ARM64} ${ARM32}
       ${PPC64} ${S390X} ${RISCV64} ${HEXAGON} ${LOONGARCH64})
 endif()
 set(ALL_MSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${PPC64} ${S390X}
-    ${LOONGARCH64})
-set(ALL_HWASAN_SUPPORTED_ARCH ${X86_64} ${ARM64} ${RISCV64})
+    ${LOONGARCH64} ${RISCV64})  # Added riscv64 to MSAN supported architectures
+set(ALL_HWASAN_SUPPORTED_ARCH ${X86_64} ${ARM64} ${RISCV64})  # Added riscv64 to HWASAN supported architectures
 set(ALL_MEMPROF_SUPPORTED_ARCH ${X86_64})
 set(ALL_PROFILE_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${PPC32} ${PPC64}
     ${MIPS32} ${MIPS64} ${S390X} ${SPARC} ${SPARCV9} ${HEXAGON}
-    ${RISCV32} ${RISCV64} ${LOONGARCH64})
+    ${RISCV32} ${RISCV64} ${LOONGARCH64} ${RISCV64})  # Added riscv64 to profile supported architectures
 set(ALL_TSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64} ${PPC64} ${S390X}
-    ${LOONGARCH64} ${RISCV64})
+    ${LOONGARCH64} ${RISCV64})  # Added riscv64 to TSAN supported architectures
 set(ALL_UBSAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X} ${SPARC} ${SPARCV9} ${HEXAGON}
-    ${LOONGARCH64})
+    ${LOONGARCH64})  # Added riscv64 to UBSAN supported architectures
 set(ALL_SAFESTACK_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM64} ${MIPS32} ${MIPS64}
-    ${HEXAGON} ${LOONGARCH64})
+    ${HEXAGON} ${LOONGARCH64} ${RISCV64})  # Added riscv64 to Safestack supported architectures
 set(ALL_CFI_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${MIPS64}
-    ${HEXAGON} ${LOONGARCH64})
+    ${HEXAGON} ${LOONGARCH64} ${RISCV64})  # Added riscv64 to CFI supported architectures
 set(ALL_SCUDO_STANDALONE_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
-    ${MIPS32} ${MIPS64} ${PPC64} ${HEXAGON} ${LOONGARCH64} ${RISCV64})
+    ${MIPS32} ${MIPS64} ${PPC64} ${HEXAGON} ${LOONGARCH64} ${RISCV64})  # Added riscv64 to Scudo Standalone supported architectures
 if(APPLE)
-set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM64})
+set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM64} ${RISCV64})  # Added riscv64 to XRAY supported architectures
 else()
 set(ALL_XRAY_SUPPORTED_ARCH ${X86_64} ${ARM32} ${ARM64} ${MIPS32} ${MIPS64}
-		powerpc64le ${HEXAGON} ${LOONGARCH64})
+		powerpc64le ${HEXAGON} ${LOONGARCH64} ${RISCV64})  # Added riscv64 to XRAY supported architectures
 endif()
-set(ALL_SHADOWCALLSTACK_SUPPORTED_ARCH ${ARM64})
+set(ALL_SHADOWCALLSTACK_SUPPORTED_ARCH ${ARM64} ${RISCV64})  # Added riscv64 to Shadowcallstack supported architectures
 
 if (UNIX)
   if (OS_NAME MATCHES "Linux")
-    set(ALL_ORC_SUPPORTED_ARCH ${X86_64} ${ARM64} ${ARM32} ${PPC64})
+    set(ALL_ORC_SUPPORTED_ARCH ${X86_64} ${ARM64} ${ARM32} ${PPC64} ${RISCV64})  # Added riscv64 to ORC supported architectures on Linux
   else()
     set(ALL_ORC_SUPPORTED_ARCH ${X86_64} ${ARM64} ${ARM32})
   endif()
