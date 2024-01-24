@@ -30,7 +30,9 @@ void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
   bool Flavor = MI->getOpcode() == X86::CMPCCXADDmr32 ||
-                MI->getOpcode() == X86::CMPCCXADDmr64;
+                MI->getOpcode() == X86::CMPCCXADDmr64 ||
+                MI->getOpcode() == X86::CMPCCXADDmr32_EVEX ||
+                MI->getOpcode() == X86::CMPCCXADDmr64_EVEX;
   switch (Imm) {
   default: llvm_unreachable("Invalid condcode argument!");
   case    0: O << "o";  break;

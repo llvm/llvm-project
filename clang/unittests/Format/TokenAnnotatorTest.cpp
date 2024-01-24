@@ -2209,6 +2209,29 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_EQ(Tokens[0]->ColumnWidth, sizeof("[{ It can break\n") - 1);
   EXPECT_TRUE(Tokens[0]->IsMultiline);
   EXPECT_EQ(Tokens[0]->LastLineColumnWidth, sizeof("   the string. }]") - 1);
+
+  // Identifier tokens. In TableGen, identifiers can begin with a number.
+  // In ambiguous cases, the lexer tries to lex it as a number.
+  // Even if the try fails, it does not fall back to identifier lexing and
+  // regard as an error.
+  // The ambiguity is not documented. The result of those tests are based on the
+  // implementation of llvm::TGLexer::LexToken.
+  Tokens = Annotate("1234");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("0x1abC");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  // This is invalid syntax of number, but not an identifier.
+  Tokens = Annotate("0x1234x");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("identifier");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  // Identifier beginning with a number.
+  Tokens = Annotate("0x");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  Tokens = Annotate("2dVector");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  Tokens = Annotate("01234Vector");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
@@ -2496,6 +2519,20 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+
+  Tokens = annotate("class Foo<int> f() {}");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+
+  Tokens = annotate("template <typename T> class Foo<T> f() {}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[14], BK_Block);
 
   Tokens = annotate("void f() override {};");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;

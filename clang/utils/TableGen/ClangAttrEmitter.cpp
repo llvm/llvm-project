@@ -1919,7 +1919,7 @@ struct AttributeSubjectMatchRule {
     }
     if (isAbstractRule())
       Result += "_abstract";
-    return std::string(Result.str());
+    return std::string(Result);
   }
 
   std::string getEnumValue() const { return "attr::" + getEnumValueName(); }

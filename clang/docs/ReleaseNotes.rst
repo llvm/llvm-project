@@ -183,6 +183,9 @@ C++ Language Changes
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Implemented `P1907R1 <https://wg21.link/P1907R1>` which extends allowed non-type template argument
+  kinds with e.g. floating point values and pointers and references to subobjects.
+  This feature is still experimental. Accordingly, `__cpp_nontype_template_args` was not updated.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -271,6 +274,13 @@ C23 Feature Support
   previously implemented allowing a label at the end of a compound statement,
   and now we've implemented allowing a label to be followed by a declaration
   instead of a statement.
+- Implemented
+  `N2940 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2940.pdf>`_ which
+  removes support for trigraphs in C23 and later. In earlier language modes,
+  trigraphs remain enabled by default in conforming modes (e.g. ``-std=c17``)
+  and disabled by default in GNU and Microsoft modes (e.g., ``-std=gnu17`` or
+  ``-fms-compatibility``). If needed, you can enable trigraphs by passing
+  ``-ftrigraphs``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -575,11 +585,12 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses unexpanded packs within the template argument lists of function template specializations.
 - Clang now diagnoses attempts to bind a bitfield to an NTTP of a reference type as erroneous
   converted constant expression and not as a reference to subobject.
+- Clang now diagnoses ``auto`` and ``decltype(auto)`` in declarations of conversion function template
+  (`CWG1878: <https://cplusplus.github.io/CWG/issues/1878.html>`_)
 - Clang now diagnoses the requirement that non-template friend declarations with requires clauses
   and template friend declarations with a constraint that depends on a template parameter from an
   enclosing template must be a definition.
-- Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
-
+- Clang now diagnoses incorrect usage of ``const`` and ``pure`` attributes, so ``-Wignored-attributes`` diagnoses more cases.
 - Clang now emits more descriptive diagnostics for 'unusual' expressions (e.g. incomplete index
   expressions on matrix types or builtin functions without an argument list) as placement-args
   to new-expressions.
@@ -826,6 +837,8 @@ Bug Fixes in This Version
 - Fix an issue with missing symbol definitions when the first coroutine
   statement appears in a discarded ``if constexpr`` branch.
   Fixes (`#78290 <https://github.com/llvm/llvm-project/issues/78290>`_)
+- Fixed assertion failure with deleted overloaded unary operators.
+  Fixes (`#78314 <https://github.com/llvm/llvm-project/issues/78314>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1001,6 +1014,9 @@ Bug Fixes to C++ Support
 - Clang now allows parenthesized initialization of arrays in `operator new[]`.
   Fixes: (`#68198 <https://github.com/llvm/llvm-project/issues/68198>`_)
 
+- Fixes CTAD for aggregates on nested template classes. Fixes:
+  (`#77599 <https://github.com/llvm/llvm-project/issues/77599>`_)
+
 - Fix crash when importing the same module with an dynamic initializer twice
   in different visibility.
   Fixes (`#67893 <https://github.com/llvm/llvm-project/issues/67893>`_)
@@ -1151,6 +1167,15 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+- The ``model`` attribute is now supported for overriding the default code
+  model used to access global variables. The following values are supported:
+  ``normal``, ``medium`` and ``extreme``.
+
+  *Example Code*:
+
+  .. code-block:: c
+
+     int var __attribute((model("extreme")));
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -1234,6 +1259,7 @@ clang-format
 - Add ``PenaltyBreakScopeResolution`` option.
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
+- Add ``SkipMacroDefinitionBody`` option.
 
 libclang
 --------

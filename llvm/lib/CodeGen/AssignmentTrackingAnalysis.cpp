@@ -1851,8 +1851,7 @@ bool AssignmentTrackingLowering::join(
   // invalidated later, we will remove it when we revisit this block. This
   // is essentially the same as initialising all LocKinds and Assignments to
   // an implicit ⊥ value which is the identity value for the join operation.
-  for (auto I = pred_begin(&BB), E = pred_end(&BB); I != E; I++) {
-    const BasicBlock *Pred = *I;
+  for (const BasicBlock *Pred : predecessors(&BB)) {
     if (Visited.count(Pred))
       VisitedPreds.push_back(Pred);
   }
