@@ -1568,37 +1568,19 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     //   called for those cases.
     if (CXXConstructorDecl *Constructor
           = dyn_cast<CXXConstructorDecl>(ICS.UserDefined.ConversionFunction)) {
-      QualType FromType;
-      SourceLocation FromLoc;
-      // C++11 [over.ics.list]p6, per DR2137:
-      // C++17 [over.ics.list]p6:
-      //   If C is not an initializer-list constructor and the initializer list
-      //   has a single element of type cv U, where U is X or a class derived
-      //   from X, the implicit conversion sequence has Exact Match rank if U is
-      //   X, or Conversion rank if U is derived from X.
-      if (const auto *InitList = dyn_cast<InitListExpr>(From);
-          InitList && InitList->getNumInits() == 1 &&
-          !S.isInitListConstructor(Constructor)) {
-        const Expr *SingleInit = InitList->getInit(0);
-        FromType = SingleInit->getType();
-        FromLoc = SingleInit->getBeginLoc();
-      } else {
-        FromType = From->getType();
-        FromLoc = From->getBeginLoc();
-      }
-      QualType FromCanon =
-          S.Context.getCanonicalType(FromType.getUnqualifiedType());
+      QualType FromCanon
+        = S.Context.getCanonicalType(From->getType().getUnqualifiedType());
       QualType ToCanon
         = S.Context.getCanonicalType(ToType).getUnqualifiedType();
       if (Constructor->isCopyConstructor() &&
           (FromCanon == ToCanon ||
-           S.IsDerivedFrom(FromLoc, FromCanon, ToCanon))) {
+           S.IsDerivedFrom(From->getBeginLoc(), FromCanon, ToCanon))) {
         // Turn this into a "standard" conversion sequence, so that it
         // gets ranked with standard conversion sequences.
         DeclAccessPair Found = ICS.UserDefined.FoundConversionFunction;
         ICS.setStandard();
         ICS.Standard.setAsIdentityConversion();
-        ICS.Standard.setFromType(FromType);
+        ICS.Standard.setFromType(From->getType());
         ICS.Standard.setAllToTypes(ToType);
         ICS.Standard.CopyConstructor = Constructor;
         ICS.Standard.FoundCopyConstructor = Found;
@@ -5324,18 +5306,18 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       IsDesignatedInit)
     return Result;
 
-  // Per DR1467 and DR2137:
-  //   If the parameter type is an aggregate class X and the initializer list
-  //   has a single element of type cv U, where U is X or a class derived from
-  //   X, the implicit conversion sequence is the one required to convert the
-  //   element to the parameter type.
+  // Per DR1467:
+  //   If the parameter type is a class X and the initializer list has a single
+  //   element of type cv U, where U is X or a class derived from X, the
+  //   implicit conversion sequence is the one required to convert the element
+  //   to the parameter type.
   //
   //   Otherwise, if the parameter type is a character array [... ]
   //   and the initializer list has a single element that is an
   //   appropriately-typed string literal (8.5.2 [dcl.init.string]), the
   //   implicit conversion sequence is the identity conversion.
   if (From->getNumInits() == 1 && !IsDesignatedInit) {
-    if (ToType->isRecordType() && ToType->isAggregateType()) {
+    if (ToType->isRecordType()) {
       QualType InitType = From->getInit(0)->getType();
       if (S.Context.hasSameUnqualifiedType(InitType, ToType) ||
           S.IsDerivedFrom(From->getBeginLoc(), InitType, ToType))

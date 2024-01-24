@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/errno/libc_errno.h"
 #include "src/time/gmtime.h"
 #include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"
-
-#include <limits.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
