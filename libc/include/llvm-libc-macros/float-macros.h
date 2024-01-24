@@ -9,7 +9,19 @@
 #ifndef __LLVM_LIBC_MACROS_FLOAT_MACROS_H
 #define __LLVM_LIBC_MACROS_FLOAT_MACROS_H
 
+// Suppress `#include_next is a language extension` warnings.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-include-next"
+#else // gcc
+#pragma GCC system_header
+#endif //__clang__
+
 #include_next <float.h>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif //__clang__
 
 #ifndef FLT_RADIX
 #define FLT_RADIX __FLT_RADIX__
