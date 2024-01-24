@@ -498,33 +498,8 @@ class ReleaseWorkflow:
         release_branch_for_issue = self.release_branch_for_issue
         if release_branch_for_issue is None:
             return False
-        head_branch = branch
-        if not repo.fork:
-            # If the target repo is not a fork of llvm-project, we need to copy
-            # the branch into the target repo.  GitHub only supports cross-repo pull
-            # requests on forked repos.
-            head_branch = f"{owner}-{branch}"
-            local_repo = Repo(self.llvm_project_dir)
-            push_done = False
-            for _ in range(0, 5):
-                try:
-                    local_repo.git.fetch(
-                        f"https://github.com/{owner}/{repo_name}", f"{branch}:{branch}"
-                    )
-                    local_repo.git.push(
-                        self.push_url, f"{branch}:{head_branch}", force=True
-                    )
-                    push_done = True
-                    break
-                except Exception as e:
-                    print(e)
-                    time.sleep(30)
-                    continue
-            if not push_done:
-                raise Exception("Failed to mirror branch into {}".format(self.push_url))
-            owner = repo.owner.login
 
-        head = f"{owner}:{head_branch}"
+        head = f"{owner}:{branch}"
         if self.check_if_pull_request_exists(repo, head):
             print("PR already exists...")
             return True
