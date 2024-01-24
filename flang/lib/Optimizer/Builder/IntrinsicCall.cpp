@@ -5694,7 +5694,7 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value extent = fir::factory::readExtent(builder, loc, array, dim);
   zero = builder.createConvert(loc, extent.getType(), zero);
   // Note: for assumed size, the extent is -1, and the lower bound should
-  // be return. It is important to test extent == 0 and not extent > 0.
+  // be returned. It is important to test extent == 0 and not extent > 0.
   auto dimIsEmpty = builder.create<mlir::arith::CmpIOp>(
       loc, mlir::arith::CmpIPredicate::eq, extent, zero);
   one = builder.createConvert(loc, lb.getType(), one);
@@ -5719,7 +5719,7 @@ createBoxForRuntimeBoundInquiry(mlir::Location loc, fir::FirOpBuilder &builder,
                                             /*slice=*/mlir::Value{});
       },
       [&](const auto &) -> mlir::Value {
-        // This a pointer/allocatable, or an entity not yet tracked with a
+        // This is a pointer/allocatable, or an entity not yet tracked with a
         // fir.box. For pointer/allocatable, createBox will forward the
         // descriptor that contains the correct lower bound information. For
         // other entities, a new fir.box will be made with the local lower
