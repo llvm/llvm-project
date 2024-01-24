@@ -335,10 +335,10 @@ static void initFileWriter(ProfDataWriter *This, FILE *File) {
 COMPILER_RT_VISIBILITY ProfBufferIO *
 lprofCreateBufferIOInternal(void *File, uint32_t BufferSz) {
   FreeHook = &free;
-  DynamicBufferIOBuffer = (uint8_t *)calloc(BufferSz, 1);
+  DynamicBufferIOBuffer = (uint8_t *)calloc(1, BufferSz);
   VPBufferSize = BufferSz;
   ProfDataWriter *fileWriter =
-      (ProfDataWriter *)calloc(sizeof(ProfDataWriter), 1);
+      (ProfDataWriter *)calloc(1, sizeof(ProfDataWriter));
   initFileWriter(fileWriter, File);
   ProfBufferIO *IO = lprofCreateBufferIO(fileWriter);
   IO->OwnFileWriter = 1;
