@@ -124,6 +124,28 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
         Worklist.push_back(Operand);
     }
   }
+
+  const Instruction *I = dyn_cast<Instruction>(CurUser);
+  if (I) {
+    uint32_t ActualNumValueData = 0;
+    uint64_t TotalCount = 0;
+    // 24 is the maximum number of values preserved for one instrumented site,
+    // defined by INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE in
+    // compiler-rt/lib/profile/InstrProfilingValue.c; passing 24 as
+    // `MaxNumValueData` controls the max number of elements in the returned
+    // array. The actual number of values is gated by the number of ops in !prof
+    // metadata.
+    auto ValueDataArray = getValueProfDataFromInst(
+        *I, IPVK_VTableTarget, 24 /* MaxNumValueData */, ActualNumValueData,
+        TotalCount);
+
+    if (ValueDataArray.get()) {
+      for (uint32_t j = 0; j < ActualNumValueData; j++) {
+        RefEdges.insert(Index.getOrInsertValueInfo(
+            ValueDataArray[j].Value /* VTableGUID */));
+      }
+    }
+  }
   return HasBlockAddress;
 }
 
