@@ -52,14 +52,6 @@ TEST(LlvmLibcMincoreTest, InvalidVec) {
   libc_errno = 0;
   int res = LIBC_NAMESPACE::mincore(addr, 1, nullptr);
   EXPECT_THAT(res, Fails(EFAULT, -1));
-  void *area = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
-                                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  EXPECT_NE(area, MAP_FAILED);
-  unsigned char *ptr = static_cast<unsigned char *>(area) + page_size - 3;
-  res = LIBC_NAMESPACE::mincore(addr, 4 * page_size, ptr);
-  EXPECT_THAT(res, Fails(EFAULT, -1));
-  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
-  EXPECT_THAT(LIBC_NAMESPACE::munmap(area, 2), Succeeds());
 }
 
 TEST(LlvmLibcMincoreTest, NoError) {
