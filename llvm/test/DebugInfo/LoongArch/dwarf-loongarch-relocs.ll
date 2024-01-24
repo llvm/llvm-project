@@ -1,22 +1,19 @@
 ; RUN: llc --filetype=obj --mtriple=loongarch64 --mattr=-relax %s -o %t.o
 ; RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS-BOTH,RELOCS-NORL %s
-; RUN: llvm-objdump --source %t.o | FileCheck --check-prefixes=SOURCE,SOURCE-NORL %s
-; RUN: llvm-dwarfdump --debug-info --debug-line %t.o | FileCheck --check-prefixes=DWARF,DWARF-NORL %s
+; RUN: llvm-objdump --source %t.o | FileCheck --check-prefix=SOURCE %s
+; RUN: llvm-dwarfdump --debug-info --debug-line %t.o | FileCheck --check-prefix=DWARF %s
 
-; RUN: llc --filetype=obj --mtriple=loongarch64 --mattr=+relax %s -o %t.r.o
+; RUN: llc --filetype=obj --mtriple=loongarch64 --mattr=+relax --align-all-functions=2 %s -o %t.r.o
 ; RUN: llvm-readobj -r %t.r.o | FileCheck --check-prefixes=RELOCS-BOTH,RELOCS-ENRL %s
-; RUN: llvm-objdump --source %t.r.o | FileCheck --check-prefixes=SOURCE,SOURCE-ENRL %s
-; RUN: llvm-dwarfdump --debug-info --debug-line %t.r.o | FileCheck --check-prefixes=DWARF,DWARF-ENRL %s
+; RUN: llvm-objdump --source %t.r.o | FileCheck --check-prefix=SOURCE %s
+; RUN: llvm-dwarfdump --debug-info --debug-line %t.r.o | FileCheck --check-prefix=DWARF %s
 
 ; RELOCS-BOTH:       Relocations [
 ; RELOCS-BOTH-NEXT:    Section ({{.*}}) .rela.text {
-; RELOCS-NORL-NEXT:      0x14 R_LARCH_PCALA_HI20 sym 0x0
-; RELOCS-NORL-NEXT:      0x18 R_LARCH_PCALA_LO12 sym 0x0
-; RELOCS-ENRL-NEXT:      0x0 R_LARCH_ALIGN .Lla-relax-align0 0x5
-; RELOCS-ENRL-NEXT:      0x30 R_LARCH_PCALA_HI20 sym 0x0
-; RELOCS-ENRL-NEXT:      0x30 R_LARCH_RELAX - 0x0
-; RELOCS-ENRL-NEXT:      0x34 R_LARCH_PCALA_LO12 sym 0x0
-; RELOCS-ENRL-NEXT:      0x34 R_LARCH_RELAX - 0x0
+; RELOCS-BOTH-NEXT:      0x14 R_LARCH_PCALA_HI20 sym 0x0
+; RELOCS-ENRL-NEXT:      0x14 R_LARCH_RELAX - 0x0
+; RELOCS-BOTH-NEXT:      0x18 R_LARCH_PCALA_LO12 sym 0x0
+; RELOCS-ENRL-NEXT:      0x18 R_LARCH_RELAX - 0x0
 ; RELOCS-BOTH-NEXT:    }
 ; RELOCS-BOTH:         Section ({{.*}}) .rela.debug_frame {
 ; RELOCS-NORL-NEXT:      0x1C R_LARCH_32 .debug_frame 0x0
@@ -39,8 +36,7 @@
 ; RELOCS-BOTH-NEXT:    }
 ; RELOCS-BOTH-NEXT:  ]
 
-; SOURCE-NORL:  0000000000000000 <foo>:
-; SOURCE-ENRL:  000000000000001c <foo>:
+; SOURCE:  0000000000000000 <foo>:
 ; SOURCE:  ; {
 ; SOURCE:  ;   asm volatile(
 ; SOURCE:  ;   return 0;
@@ -91,16 +87,11 @@
 ; DWARF-EMPTY:
 ; DWARF-NEXT:  Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; DWARF-NEXT:  ------------------ ------ ------ ------ --- ------------- ------- -------------
-; DWARF-NORL-NEXT:  0x0000000000000000      2      0      0   0             0       0  is_stmt
-; DWARF-NORL-NEXT:  0x0000000000000010      3      3      0   0             0       0  is_stmt prologue_end
-; DWARF-NORL-NEXT:  0x0000000000000020     10      3      0   0             0       0  is_stmt
-; DWARF-NORL-NEXT:  0x000000000000002c     10      3      0   0             0       0  epilogue_begin
-; DWARF-NORL-NEXT:  0x0000000000000034     10      3      0   0             0       0  end_sequence
-; DWARF-ENRL-NEXT:  0x000000000000001c      2      0      0   0             0       0  is_stmt
-; DWARF-ENRL-NEXT:  0x000000000000002c      3      3      0   0             0       0  is_stmt prologue_end
-; DWARF-ENRL-NEXT:  0x000000000000003c     10      3      0   0             0       0  is_stmt
-; DWARF-ENRL-NEXT:  0x0000000000000048     10      3      0   0             0       0  epilogue_begin
-; DWARF-ENRL-NEXT:  0x0000000000000050     10      3      0   0             0       0  end_sequence
+; DWARF-NEXT:  0x0000000000000000      2      0      0   0             0       0  is_stmt
+; DWARF-NEXT:  0x0000000000000010      3      3      0   0             0       0  is_stmt prologue_end
+; DWARF-NEXT:  0x0000000000000020     10      3      0   0             0       0  is_stmt
+; DWARF-NEXT:  0x000000000000002c     10      3      0   0             0       0  epilogue_begin
+; DWARF-NEXT:  0x0000000000000034     10      3      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-loongarch-relocs.c'
 source_filename = "dwarf-loongarch-relocs.c"
