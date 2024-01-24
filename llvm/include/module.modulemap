@@ -46,11 +46,8 @@ module LLVM_Backend {
     exclude header "llvm/CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "llvm/CodeGen/LinkAllCodegenComponents.h"
 
-    exclude header "llvm/CodeGen/CodeGenPassBuilder.h"
-
     // These are intended for (repeated) textual inclusion.
     textual header "llvm/CodeGen/DIEValue.def"
-    textual header "llvm/CodeGen/MachinePassRegistry.def"
   }
 }
 

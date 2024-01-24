@@ -12,8 +12,8 @@
 
 #include "X86TargetMachine.h"
 
-#include "llvm/CodeGen/CodeGenPassBuilder.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
