@@ -436,39 +436,35 @@ def WRMSRLIST : I<0x01, MRM_C6, (outs), (ins), "wrmsrlist", []>, TB, XS;
 def RDMSRLIST : I<0x01, MRM_C6, (outs), (ins), "rdmsrlist", []>, TB, XD;
 }
 
-multiclass Urdwrmsr_rr<string suffix> {
-  let mayLoad = 1 in
+multiclass Urdwrmsr<Map rrmap, string suffix> {
+  let mayLoad = 1 in {
+    let OpMap = rrmap in
     def URDMSRrr#suffix : I<0xf8, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                             "urdmsr\t{$src, $dst|$dst, $src}",
                             [(set GR64:$dst, (int_x86_urdmsr GR64:$src))]>, XD, NoCD8;
-  let mayStore = 1 in
-    def UWRMSRrr#suffix  : I<0xf8, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
-                             "uwrmsr\t{$src2, $src1|$src1, $src2}",
-                             [(int_x86_uwrmsr GR64:$src1, GR64:$src2)]>, XS, NoCD8;
-}
-
-multiclass Urdwrmsr_ri<string suffix> {
-  let mayLoad = 1 in
     def URDMSRri#suffix  : Ii32<0xf8, MRM0r, (outs GR64:$dst), (ins i64i32imm:$imm),
                                 "urdmsr\t{$imm, $dst|$dst, $imm}",
                                 [(set GR64:$dst, (int_x86_urdmsr i64immSExt32_su:$imm))]>,
-                           T_MAP7, XD, NoCD8;
-  let mayStore = 1 in
+                           T_MAP7, VEX, XD, NoCD8;
+}
+  let mayStore = 1 in {
+    let OpMap = rrmap in
+    def UWRMSRrr#suffix  : I<0xf8, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
+                             "uwrmsr\t{$src2, $src1|$src1, $src2}",
+                             [(int_x86_uwrmsr GR64:$src1, GR64:$src2)]>, XS, NoCD8;
     def UWRMSRir#suffix  : Ii32<0xf8, MRM0r, (outs), (ins GR64:$src, i64i32imm:$imm),
                                 "uwrmsr\t{$src, $imm|$imm, $src}",
                                 [(int_x86_uwrmsr i64immSExt32_su:$imm, GR64:$src)]>,
-                           T_MAP7, XS, NoCD8;
+                           T_MAP7, VEX, XS, NoCD8;
+  }
 }
 
-let Predicates = [HasUSERMSR, NoEGPR] in {
-  defm "" : Urdwrmsr_rr<"">, T8;
-  defm "" : Urdwrmsr_ri<"">, VEX;
-}
+let Predicates = [HasUSERMSR, NoEGPR] in
+  defm "" : Urdwrmsr<T8, "">;
 
-let Predicates = [HasUSERMSR, HasEGPR, In64BitMode], mayLoad = 1 in {
-  defm "" : Urdwrmsr_rr<"_EVEX">, EVEX, T_MAP4;
-  defm "" : Urdwrmsr_ri<"_EVEX">, EVEX;
-}
+let Predicates = [HasUSERMSR, HasEGPR, In64BitMode] in
+  defm "" : Urdwrmsr<T_MAP4, "_EVEX">, EVEX;
+
 let Defs = [RAX, RDX], Uses = [ECX] in
 def RDPMC : I<0x33, RawFrm, (outs), (ins), "rdpmc", []>, TB;
 

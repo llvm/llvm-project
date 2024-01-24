@@ -78,14 +78,11 @@ multiclass Aesencdecwide<string suffix> {
   def AESDECWIDE256KL#suffix : I<0xD8, MRM3m, (outs), (ins opaquemem:$src), "aesdecwide256kl\t$src", []>, NoCD8, XS;
 }
 
-let SchedRW = [WriteSystem] in {
-  let Uses = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
-      Defs = [EFLAGS, XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
-      mayLoad = 1 in {
-    let Predicates = [HasWIDEKL, NoEGPR] in
-      defm "" : Aesencdecwide<"">, T8;
+let SchedRW = [WriteSystem], Uses = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7],
+    Defs = [EFLAGS, XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7], mayLoad = 1 in {
+  let Predicates = [HasWIDEKL, NoEGPR] in
+    defm "" : Aesencdecwide<"">, T8;
 
-    let Predicates = [HasWIDEKL, HasEGPR, In64BitMode] in
-      defm "" : Aesencdecwide<"_EVEX">, EVEX, T_MAP4;
-  }
+  let Predicates = [HasWIDEKL, HasEGPR, In64BitMode] in
+    defm "" : Aesencdecwide<"_EVEX">, EVEX, T_MAP4;
 } // SchedRW

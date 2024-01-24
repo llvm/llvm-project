@@ -1561,20 +1561,20 @@ multiclass Enqcmds<string suffix> {
   def ENQCMD32#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
                           "enqcmd\t{$src, $dst|$dst, $src}",
                           [(set EFLAGS, (X86enqcmd GR32:$dst, addr:$src))]>,
-                        NoCD8, XD, AdSize32, Requires<[HasENQCMD, NoEGPR]>;
+                        NoCD8, XD, AdSize32;
   def ENQCMD64#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
                           "enqcmd\t{$src, $dst|$dst, $src}",
                           [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
-                        NoCD8, XD, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
+                        NoCD8, XD, AdSize64;
 
   def ENQCMDS32#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
                            "enqcmds\t{$src, $dst|$dst, $src}",
                            [(set EFLAGS, (X86enqcmds GR32:$dst, addr:$src))]>,
-                         NoCD8, XS, AdSize32, Requires<[HasENQCMD, NoEGPR]>;
+                         NoCD8, XS, AdSize32;
   def ENQCMDS64#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
                           "enqcmds\t{$src, $dst|$dst, $src}",
                           [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
-                         NoCD8, XS, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
+                         NoCD8, XS, AdSize64;
 }
 
 let SchedRW = [WriteStore], Defs = [EFLAGS] in {
@@ -1587,9 +1587,8 @@ let SchedRW = [WriteStore], Defs = [EFLAGS] in {
                     [(set EFLAGS, (X86enqcmds GR16:$dst, addr:$src))]>,
                   T8, XS, AdSize16, Requires<[HasENQCMD, Not64BitMode]>;
 
-  defm "" : Enqcmds<"">, T8;
-  let Predicates = [HasENQCMD, HasEGPR, In64BitMode] in
-  defm "" : Enqcmds<"_EVEX">, EVEX, T_MAP4;
+  defm "" : Enqcmds<"">, T8, Requires<[HasENQCMD, NoEGPR]>;
+  defm "" : Enqcmds<"_EVEX">, EVEX, T_MAP4, Requires<[HasENQCMD, HasEGPR, In64BitMode]>;
 
 }
 
