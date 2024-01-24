@@ -817,10 +817,44 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   MachineInstr &MI = *MBBI;
   MachineOperand &RVTarget = MI.getOperand(0);
   assert(RVTarget.isGlobal() && "invalid operand for attached call");
-  MachineInstr *OriginalCall =
-      createCall(MBB, MBBI, TII, MI.getOperand(1),
-                 // Regmask starts after the RV and call targets.
-                 /*RegMaskStartIdx=*/2);
+
+  MachineInstr *OriginalCall = nullptr;
+
+  if (MI.getOpcode() == AArch64::BLRA_RVMARKER) {
+    // Pointer auth call.
+    MachineOperand &Key = MI.getOperand(2);
+    assert((Key.getImm() == 0 || Key.getImm() == 1) &&
+           "invalid key for ptrauth call");
+    MachineOperand &IntDisc = MI.getOperand(3);
+    MachineOperand &AddrDisc = MI.getOperand(4);
+
+    OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BLRA))
+                       .getInstr();
+    OriginalCall->addOperand(MI.getOperand(1));
+    OriginalCall->addOperand(Key);
+    OriginalCall->addOperand(IntDisc);
+    OriginalCall->addOperand(AddrDisc);
+
+    unsigned RegMaskStartIdx = 5;
+    // Skip register arguments. Those are added during ISel, but are not
+    // needed for the concrete branch.
+    while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
+      auto MOP = MI.getOperand(RegMaskStartIdx);
+      assert(MOP.isReg() && "can only add register operands");
+      OriginalCall->addOperand(MachineOperand::CreateReg(
+          MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
+          /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
+      RegMaskStartIdx++;
+    }
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI.operands(), RegMaskStartIdx))
+      OriginalCall->addOperand(MO);
+  } else {
+    assert(MI.getOpcode() == AArch64::BLR_RVMARKER && "unknown rvmarker MI");
+    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(1),
+                              // Regmask starts after the RV and call targets.
+                              /*RegMaskStartIdx=*/2);
+  }
 
   BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
                      .addReg(AArch64::FP, RegState::Define)
@@ -1529,6 +1563,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::LDR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);
    case AArch64::BLR_RVMARKER:
+   case AArch64::BLRA_RVMARKER:
      return expandCALL_RVMARKER(MBB, MBBI);
    case AArch64::BLR_BTI:
      return expandCALL_BTI(MBB, MBBI);

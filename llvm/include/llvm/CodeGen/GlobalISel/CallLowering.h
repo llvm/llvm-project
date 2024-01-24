@@ -99,6 +99,11 @@ public:
     ArgInfo() = default;
   };
 
+  struct PointerAuthInfo {
+    Register Discriminator;
+    uint64_t Key;
+  };
+
   struct CallLoweringInfo {
     /// Calling convention to be used for the call.
     CallingConv::ID CallConv = CallingConv::C;
@@ -124,6 +129,8 @@ public:
     const CallBase *CB = nullptr;
 
     MDNode *KnownCallees = nullptr;
+
+    std::optional<PointerAuthInfo> PAI;
 
     /// True if the call must be tail call optimized.
     bool IsMustTailCall = false;
@@ -587,6 +594,7 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &Call,
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
+                 std::optional<PointerAuthInfo> PAI,
                  Register ConvergenceCtrlToken,
                  std::function<unsigned()> GetCalleeReg) const;
 
