@@ -307,7 +307,7 @@ For now, we'll only add a title.
 
 Now we're ready to send this change out into the world!
 
-The ``[clang]`` and ``[Diagnostic]`` are what we call tags. This loose convention
+The ``[clang]`` and ``[Diagnostic]`` prefixes are what we call tags. This loose convention
 tells readers of the git log what areas a change is modifying. If you don't know
 the tags for the modules you've changed, you can look at the commit history
 for those areas of the repository.
