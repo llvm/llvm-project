@@ -320,6 +320,13 @@ public:
   CompilerType CreateGenericTypeParamType(unsigned int depth,
                                     unsigned int index) override;
 
+  /// Builds a bound generic struct demangle tree with the name, module name,
+  /// and the struct's elements.
+  static swift::Demangle::NodePointer CreateBoundGenericStruct(
+      llvm::StringRef name, llvm::StringRef module_name,
+      llvm::ArrayRef<swift::Demangle::NodePointer> type_list_elements,
+      swift::Demangle::Demangler &dem);
+
   /// Get the Swift raw pointer type.
   CompilerType GetRawPointerType();
   /// Determine whether \p type is a protocol.
