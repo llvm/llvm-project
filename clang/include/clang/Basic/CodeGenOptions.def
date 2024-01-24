@@ -369,6 +369,9 @@ ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibr
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 
+/// Whether to enable TLSDESC. AArch64 enables TLSDESC regardless of this value.
+CODEGENOPT(EnableTLSDESC, 1, 0)
+
 /// Bit size of immediate TLS offsets (0 == use the default).
 VALUE_CODEGENOPT(TLSSize, 8, 0)
 
