@@ -1121,9 +1121,9 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint16_t Value = readU16();
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
       OutMIs[InsnID].addIntrinsicID((Intrinsic::ID)Value);
-          DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                          dbgs() << CurrentIdx << ": GIR_AddIntrinsicID(OutMIs["
-                                 << InsnID << "], " << Value << ")\n");
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddIntrinsicID(OutMIs["
+                             << InsnID << "], " << Value << ")\n");
       break;
     }
     case GIR_SetImplicitDefDead: {
