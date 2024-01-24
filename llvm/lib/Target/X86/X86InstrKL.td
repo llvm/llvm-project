@@ -55,7 +55,7 @@ let SchedRW = [WriteSystem] in {
     let Uses = [XMM0, XMM1], Defs = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, EFLAGS] in
       def ENCODEKEY256 : Encodekey<0xFB, "encodekey256">, T8;
 
-    let Constraints = "$src1 = $dst", Defs = [EFLAGS], Predicates = [NoEGPR] in
+    let Constraints = "$src1 = $dst", Defs = [EFLAGS] in
       defm "" : Aesencdec<"">, T8;
   }
 
@@ -66,7 +66,7 @@ let SchedRW = [WriteSystem] in {
     let Uses = [XMM0, XMM1], Defs = [XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, EFLAGS] in
       def ENCODEKEY256_EVEX : Encodekey<0xDB, "encodekey256">, EVEX, T_MAP4;
 
-    let Constraints = "$src1 = $dst", Defs = [EFLAGS], Predicates = [HasEGPR, In64BitMode] in
+    let Constraints = "$src1 = $dst", Defs = [EFLAGS] in
       defm "" : Aesencdec<"_EVEX">, EVEX, T_MAP4;
   }
 } // SchedRW
