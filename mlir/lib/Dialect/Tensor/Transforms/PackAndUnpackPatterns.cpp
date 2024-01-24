@@ -117,8 +117,9 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
                                                     operand, reassociation);
   }
 
-  LogicalResult matchAndRewrite(UnPackOp unpackOp,
-                                PatternRewriter &rewriter) const override {
+  /// Returns success() if it is unpacking on the innermost dimension.
+  LogicalResult isUnpackOnInnerMostDim(RewriterBase &rewriter,
+                                       UnPackOp unpackOp) const {
     auto outerDimsPerm = unpackOp.getOuterDimsPerm();
     if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
       return rewriter.notifyMatchFailure(
@@ -134,9 +135,36 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
     ArrayRef<int64_t> dimsPos = unpackOp.getInnerDimsPos();
     if (dimsPos.size() != 1 || (dimsPos[0] + 1 != destType.getRank())) {
       return rewriter.notifyMatchFailure(
-          unpackOp, "expects unpacking at the innermost dimension");
+          unpackOp, "expects unpacking on the innermost dimension");
     }
 
+    return success();
+  }
+
+  /// Returns success() if it unpacks a 1D or 2D source operand to a 1D
+  /// destination.
+  LogicalResult isUnpackTo1DDest(RewriterBase &rewriter,
+                                 UnPackOp unpackOp) const {
+    ArrayRef<int64_t> destShape = unpackOp.getDestType().getShape();
+    if (getNumGtOneDims(destShape) > 1)
+      return failure();
+
+    SmallVector<int64_t> innerTiles = unpackOp.getStaticTiles();
+    if (getNumGtOneDims(innerTiles) > 1)
+      return failure();
+
+    return success();
+  }
+
+  LogicalResult matchAndRewrite(UnPackOp unpackOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(isUnpackOnInnerMostDim(rewriter, unpackOp)) &&
+        failed(isUnpackTo1DDest(rewriter, unpackOp))) {
+      return failure();
+    }
+
+    RankedTensorType sourceType = unpackOp.getSourceType();
+    RankedTensorType destType = unpackOp.getDestType();
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
