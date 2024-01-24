@@ -1615,6 +1615,28 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
 def : Pat<(fneg (v8f32 LASX256:$xj)), (XVBITREVI_W LASX256:$xj, 31)>;
 def : Pat<(fneg (v4f64 LASX256:$xj)), (XVBITREVI_D LASX256:$xj, 63)>;
 
+// XVFFINT_{S_W/D_L}
+def : Pat<(v8f32 (sint_to_fp v8i32:$vj)), (XVFFINT_S_W v8i32:$vj)>;
+def : Pat<(v4f64 (sint_to_fp v4i64:$vj)), (XVFFINT_D_L v4i64:$vj)>;
+def : Pat<(v4f64 (sint_to_fp v4i32:$vj)),
+          (XVFFINT_D_L (VEXT2XV_D_W (SUBREG_TO_REG (i64 0), v4i32:$vj,
+                                                   sub_128)))>;
+def : Pat<(v4f32 (sint_to_fp v4i64:$vj)),
+          (EXTRACT_SUBREG (XVFCVT_S_D (XVPERMI_D (XVFFINT_D_L v4i64:$vj), 238),
+                                      (XVFFINT_D_L v4i64:$vj)),
+                          sub_128)>;
+
+// XVFFINT_{S_WU/D_LU}
+def : Pat<(v8f32 (uint_to_fp v8i32:$vj)), (XVFFINT_S_WU v8i32:$vj)>;
+def : Pat<(v4f64 (uint_to_fp v4i64:$vj)), (XVFFINT_D_LU v4i64:$vj)>;
+def : Pat<(v4f64 (uint_to_fp v4i32:$vj)),
+          (XVFFINT_D_LU (VEXT2XV_DU_WU (SUBREG_TO_REG (i64 0), v4i32:$vj,
+                                                      sub_128)))>;
+def : Pat<(v4f32 (uint_to_fp v4i64:$vj)),
+          (EXTRACT_SUBREG (XVFCVT_S_D (XVPERMI_D (XVFFINT_D_LU v4i64:$vj), 238),
+                                       (XVFFINT_D_LU v4i64:$vj)),
+                          sub_128)>;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern
