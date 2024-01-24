@@ -5,7 +5,7 @@
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef float  v8f   __attribute__((ext_vector_type(8)));
 typedef half   v8h   __attribute__((ext_vector_type(8)));
-typedef __bf16 v8bf  __attribute__((ext_vector_type(8)));
+typedef short  v8s   __attribute__((ext_vector_type(8)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
 
 // Wave32
@@ -31,11 +31,11 @@ void test_amdgcn_wmma_f32_16x16x16_f16_w32(global v8f* out, v8h a, v8h b, v8f c)
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_f32_16x16x16_bf16_w32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v8f32.v8bf16(<8 x bfloat> [[A:%.*]], <8 x bfloat> [[B:%.*]], <8 x float> [[C:%.*]])
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v8f32.v8i16(<8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x float> [[C:%.*]])
 // CHECK-GFX1200-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
-void test_amdgcn_wmma_f32_16x16x16_bf16_w32(global v8f* out, v8bf a, v8bf b, v8f c)
+void test_amdgcn_wmma_f32_16x16x16_bf16_w32(global v8f* out, v8s a, v8s b, v8f c)
 {
   *out = __builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12(a, b, c);
 }
@@ -61,11 +61,11 @@ void test_amdgcn_wmma_f16_16x16x16_f16_w32(global v8h* out, v8h a, v8h b, v8h c)
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_wmma_bf16_16x16x16_bf16_w32(
 // CHECK-GFX1200-NEXT:  entry:
-// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v8bf16.v8bf16(<8 x bfloat> [[A:%.*]], <8 x bfloat> [[B:%.*]], <8 x bfloat> [[C:%.*]], i1 false)
-// CHECK-GFX1200-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1200-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v8i16.v8i16(<8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], i1 false)
+// CHECK-GFX1200-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1200-NEXT:    ret void
 //
-void test_amdgcn_wmma_bf16_16x16x16_bf16_w32(global v8bf* out, v8bf a, v8bf b, v8bf c)
+void test_amdgcn_wmma_bf16_16x16x16_bf16_w32(global v8s* out, v8s a, v8s b, v8s c)
 {
   *out = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12(a, b, c);
 }

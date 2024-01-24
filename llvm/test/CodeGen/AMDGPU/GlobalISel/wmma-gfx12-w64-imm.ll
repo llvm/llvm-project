@@ -39,72 +39,40 @@ bb:
   ret void
 }
 
-define amdgpu_ps void @test_wmma_f32_16x16x16_bf16_imm(<4 x bfloat> %A, <4 x bfloat> %B, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_wmma_f32_16x16x16_bf16_imm(<4 x i16> %A, <4 x i16> %B, ptr addrspace(1) %out) {
 ; GFX12-LABEL: test_wmma_f32_16x16x16_bf16_imm:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX12-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
-; GFX12-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
-; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX12-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX12-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX12-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX12-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; GFX12-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX12-NEXT:    v_or_b32_e32 v6, v6, v0
-; GFX12-NEXT:    v_or_b32_e32 v7, v7, v1
-; GFX12-NEXT:    v_or_b32_e32 v8, v8, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_or_b32_e32 v9, v9, v3
-; GFX12-NEXT:    v_wmma_f32_16x16x16_bf16 v[0:3], v[6:7], v[8:9], 1.0
-; GFX12-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX12-NEXT:    v_wmma_f32_16x16x16_bf16 v[6:9], v[0:1], v[2:3], 1.0
+; GFX12-NEXT:    global_store_b128 v[4:5], v[6:9], off
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4bf16.v4bf16.v4f32(<4 x bfloat> %A, <4 x bfloat> %B, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4i16.v4i16.v4f32(<4 x i16> %A, <4 x i16> %B, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_wmma_f32_16x16x16_bf16_imm_non_inlineable(<4 x bfloat> %A, <4 x bfloat> %B, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_wmma_f32_16x16x16_bf16_imm_non_inlineable(<4 x i16> %A, <4 x i16> %B, ptr addrspace(1) %out) {
 ; GFX12-LABEL: test_wmma_f32_16x16x16_bf16_imm_non_inlineable:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
-; GFX12-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX12-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX12-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX12-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
-; GFX12-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX12-NEXT:    s_mov_b32 s0, 0x40400000
-; GFX12-NEXT:    v_or_b32_e32 v6, v6, v0
-; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v2
-; GFX12-NEXT:    v_or_b32_e32 v7, v7, v1
-; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 16, v9
-; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_mov_b32 s1, s0
 ; GFX12-NEXT:    s_mov_b32 s2, s0
-; GFX12-NEXT:    s_mov_b32 s3, s0
-; GFX12-NEXT:    v_or_b32_e32 v8, v8, v0
-; GFX12-NEXT:    v_or_b32_e32 v9, v1, v2
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s1
-; GFX12-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-NEXT:    v_mov_b32_e32 v3, s3
+; GFX12-NEXT:    v_mov_b32_e32 v9, s3
+; GFX12-NEXT:    v_mov_b32_e32 v8, s2
+; GFX12-NEXT:    v_mov_b32_e32 v7, s1
+; GFX12-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_wmma_f32_16x16x16_bf16 v[0:3], v[6:7], v[8:9], v[0:3]
-; GFX12-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX12-NEXT:    v_wmma_f32_16x16x16_bf16 v[6:9], v[0:1], v[2:3], v[6:9]
+; GFX12-NEXT:    global_store_b128 v[4:5], v[6:9], off
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
-  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4bf16.v4bf16.v4f32(<4 x bfloat> %A, <4 x bfloat> %B, <4 x float> <float 3.0, float 3.0, float 3.0, float 3.0>)
+  %res = call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4i16.v4i16.v4f32(<4 x i16> %A, <4 x i16> %B, <4 x float> <float 3.0, float 3.0, float 3.0, float 3.0>)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -143,28 +111,13 @@ bb:
   ret void
 }
 
-define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm(<4 x bfloat> %A, <4 x bfloat> %B, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm(<4 x i16> %A, <4 x i16> %B, ptr addrspace(1) %out) {
 ; GFX12-LABEL: test_wmma_bf16_16x16x16_bf16_imm:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
-; GFX12-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
-; GFX12-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX12-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX12-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX12-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX12-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX12-NEXT:    v_or_b32_e32 v0, v6, v0
-; GFX12-NEXT:    v_lshlrev_b32_e32 v6, 16, v9
-; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-NEXT:    s_mov_b32 s0, 0x3f803f80
-; GFX12-NEXT:    v_or_b32_e32 v1, v7, v1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
-; GFX12-NEXT:    v_or_b32_e32 v3, v6, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v7, s1
-; GFX12-NEXT:    v_or_b32_e32 v2, v8, v2
 ; GFX12-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_wmma_bf16_16x16x16_bf16 v[6:7], v[0:1], v[2:3], v[6:7]
@@ -173,33 +126,18 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm(<4 x bfloat> %A, <4 x bf
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
-  %res = call <4 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v4bf16.v4bf16.v4bf16.v4bf16(<4 x bfloat> %A, <4 x bfloat> %B, <4 x bfloat> <bfloat 1.0, bfloat 1.0, bfloat 1.0, bfloat 1.0>, i1 0)
-  store <4 x bfloat> %res, ptr addrspace(1) %out
+  %res = call <4 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v4i16.v4i16.v4i16.v4i16(<4 x i16> %A, <4 x i16> %B, <4 x i16> <i16 16256, i16 16256, i16 16256, i16 16256>, i1 0)
+  store <4 x i16> %res, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm_non_inlineable(<4 x bfloat> %A, <4 x bfloat> %B, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm_non_inlineable(<4 x i16> %A, <4 x i16> %B, ptr addrspace(1) %out) {
 ; GFX12-LABEL: test_wmma_bf16_16x16x16_bf16_imm_non_inlineable:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
-; GFX12-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
-; GFX12-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX12-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX12-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; GFX12-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX12-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; GFX12-NEXT:    v_or_b32_e32 v0, v6, v0
-; GFX12-NEXT:    v_lshlrev_b32_e32 v6, 16, v9
-; GFX12-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-NEXT:    s_mov_b32 s0, 0x3fc03fc0
-; GFX12-NEXT:    v_or_b32_e32 v1, v7, v1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
-; GFX12-NEXT:    v_or_b32_e32 v3, v6, v3
 ; GFX12-NEXT:    v_mov_b32_e32 v7, s1
-; GFX12-NEXT:    v_or_b32_e32 v2, v8, v2
 ; GFX12-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_wmma_bf16_16x16x16_bf16 v[6:7], v[0:1], v[2:3], v[6:7]
@@ -208,8 +146,8 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_imm_non_inlineable(<4 x bflo
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
-  %res = call <4 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v4bf16.v4bf16.v4bf16.v4bf16(<4 x bfloat> %A, <4 x bfloat> %B, <4 x bfloat> <bfloat 1.5, bfloat 1.5, bfloat 1.5, bfloat 1.5>, i1 0)
-  store <4 x bfloat> %res, ptr addrspace(1) %out
+  %res = call <4 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v4i16.v4i16.v4i16.v4i16(<4 x i16> %A, <4 x i16> %B, <4 x i16> <i16 16320, i16 16320, i16 16320, i16 16320>, i1 0)
+  store <4 x i16> %res, ptr addrspace(1) %out
   ret void
 }
 
@@ -480,9 +418,9 @@ bb:
 }
 
 declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v4f16.v4f16.v4f32(<4 x half>, <4 x half>, <4 x float>)
-declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4bf16.v4bf16.v4f32(<4 x bfloat>, <4 x bfloat>, <4 x float>)
+declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v4i16.v4i16.v4f32(<4 x i16>, <4 x i16>, <4 x float>)
 declare <4 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v4f16.v4f16.v4f16.v4f16(<4 x half>, <4 x half>, <4 x half>, i1 immarg)
-declare <4 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v4bf16.v4bf16.v4bf16.v4bf16(<4 x bfloat>, <4 x bfloat>, <4 x bfloat>, i1 immarg)
+declare <4 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v4i16.v4i16.v4i16.v4i16(<4 x i16>, <4 x i16>, <4 x i16>, i1 immarg)
 declare <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8.v4i32.i32.i32.v4i32(i1 immarg, i32, i1 immarg, i32, <4 x i32>, i1 immarg)
 declare <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4.v4i32.i32.i32.v4i32(i1 immarg, i32, i1 immarg, i32, <4 x i32>, i1 immarg)
 declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v4f32.i32.i32.v4f32(i32, i32, <4 x float>)

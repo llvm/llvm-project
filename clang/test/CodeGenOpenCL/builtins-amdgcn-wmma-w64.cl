@@ -7,8 +7,8 @@ typedef half   v8h   __attribute__((ext_vector_type(8)));
 typedef half   v16h  __attribute__((ext_vector_type(16)));
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
-typedef __bf16 v8bf  __attribute__((ext_vector_type(8)));
-typedef __bf16 v16bf __attribute__((ext_vector_type(16)));
+typedef short  v8s   __attribute__((ext_vector_type(8)));
+typedef short  v16s  __attribute__((ext_vector_type(16)));
 
 #ifdef WMMA_GFX1100_TESTS
 
@@ -35,11 +35,11 @@ void test_amdgcn_wmma_f32_16x16x16_f16_w64(global v4f* out, v16h a, v16h b, v4f 
 
 // CHECK-GFX1100-LABEL: @test_amdgcn_wmma_f32_16x16x16_bf16_w64(
 // CHECK-GFX1100-NEXT:  entry:
-// CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v16bf16(<16 x bfloat> [[A:%.*]], <16 x bfloat> [[B:%.*]], <4 x float> [[C:%.*]])
+// CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v16i16(<16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <4 x float> [[C:%.*]])
 // CHECK-GFX1100-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1100-NEXT:    ret void
 //
-void test_amdgcn_wmma_f32_16x16x16_bf16_w64(global v4f* out, v16bf a, v16bf b, v4f c)
+void test_amdgcn_wmma_f32_16x16x16_bf16_w64(global v4f* out, v16s a, v16s b, v4f c)
 {
   *out = __builtin_amdgcn_wmma_f32_16x16x16_bf16_w64(a, b, c);
 }
@@ -65,11 +65,11 @@ void test_amdgcn_wmma_f16_16x16x16_f16_w64(global v8h* out, v16h a, v16h b, v8h 
 
 // CHECK-GFX1100-LABEL: @test_amdgcn_wmma_bf16_16x16x16_bf16_w64(
 // CHECK-GFX1100-NEXT:  entry:
-// CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v8bf16.v16bf16(<16 x bfloat> [[A:%.*]], <16 x bfloat> [[B:%.*]], <8 x bfloat> [[C:%.*]], i1 true)
-// CHECK-GFX1100-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v8i16.v16i16(<16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], i1 true)
+// CHECK-GFX1100-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1100-NEXT:    ret void
 //
-void test_amdgcn_wmma_bf16_16x16x16_bf16_w64(global v8bf* out, v16bf a, v16bf b, v8bf c)
+void test_amdgcn_wmma_bf16_16x16x16_bf16_w64(global v8s* out, v16s a, v16s b, v8s c)
 {
   *out = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64(a, b, c, true);
 }
@@ -95,11 +95,11 @@ void test_amdgcn_wmma_f16_16x16x16_f16_tied_w64(global v8h* out, v16h a, v16h b,
 
 // CHECK-GFX1100-LABEL: @test_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(
 // CHECK-GFX1100-NEXT:  entry:
-// CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.tied.v8bf16.v16bf16(<16 x bfloat> [[A:%.*]], <16 x bfloat> [[B:%.*]], <8 x bfloat> [[C:%.*]], i1 true)
-// CHECK-GFX1100-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.tied.v8i16.v16i16(<16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], i1 true)
+// CHECK-GFX1100-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1100-NEXT:    ret void
 //
-void test_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(global v8bf* out, v16bf a, v16bf b, v8bf c)
+void test_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(global v8s* out, v16s a, v16s b, v8s c)
 {
   *out = __builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(a, b, c, true);
 }
