@@ -1241,6 +1241,11 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
                              It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
       }
     }
+    // We must early-exit here to prevent any DPValues from being emitted below,
+    // as we have just emitted the debug values resulting from assignment
+    // tracking analysis, making any existing DPValues redundant (and probably
+    // less correct).
+    return;
   }
 
   // Is there is any debug-info attached to this instruction, in the form of

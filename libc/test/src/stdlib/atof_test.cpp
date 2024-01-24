@@ -26,7 +26,7 @@ TEST(LlvmLibcAToFTest, SimpleTest) {
 
   libc_errno = 0;
   EXPECT_THAT(LIBC_NAMESPACE::atof("123"),
-              Succeeds<double>(static_cast<double>(expected_fp)));
+              Succeeds<double>(expected_fp.get_val()));
 }
 
 TEST(LlvmLibcAToFTest, FailedParsingTest) {
