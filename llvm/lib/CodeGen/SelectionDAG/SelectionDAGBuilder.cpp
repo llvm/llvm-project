@@ -1549,6 +1549,11 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
                                            unsigned Order, bool IsVariadic) {
   if (Values.empty())
     return true;
+
+  // Filter EntryValue locations out early.
+  if (visitEntryValueDbgValue(Values, Var, Expr, DbgLoc))
+    return true;
+
   SmallVector<SDDbgOperand> LocationOps;
   SmallVector<SDNode *> Dependencies;
   for (const Value *V : Values) {
@@ -6023,14 +6028,14 @@ static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
 /// If DI is a debug value with an EntryValue expression, lower it using the
 /// corresponding physical register of the associated Argument value
 /// (guaranteed to exist by the verifier).
-bool SelectionDAGBuilder::visitEntryValueDbgValue(const DbgValueInst &DI) {
-  DILocalVariable *Variable = DI.getVariable();
-  DIExpression *Expr = DI.getExpression();
-  if (!Expr->isEntryValue() || !hasSingleElement(DI.getValues()))
+bool SelectionDAGBuilder::visitEntryValueDbgValue(
+    ArrayRef<const Value *> Values, DILocalVariable *Variable,
+    DIExpression *Expr, DebugLoc DbgLoc) {
+  if (!Expr->isEntryValue() || !hasSingleElement(Values))
     return false;
 
   // These properties are guaranteed by the verifier.
-  Argument *Arg = cast<Argument>(DI.getValue(0));
+  const Argument *Arg = cast<Argument>(Values[0]);
   assert(Arg->hasAttribute(Attribute::AttrKind::SwiftAsync));
 
   auto ArgIt = FuncInfo.ValueMap.find(Arg);
@@ -6044,9 +6049,8 @@ bool SelectionDAGBuilder::visitEntryValueDbgValue(const DbgValueInst &DI) {
 
   for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
     if (ArgVReg == VirtReg || ArgVReg == PhysReg) {
-      SDDbgValue *SDV =
-          DAG.getVRegDbgValue(Variable, Expr, PhysReg, false /*IsIndidrect*/,
-                              DI.getDebugLoc(), SDNodeOrder);
+      SDDbgValue *SDV = DAG.getVRegDbgValue(
+          Variable, Expr, PhysReg, false /*IsIndidrect*/, DbgLoc, SDNodeOrder);
       DAG.AddDbgValue(SDV, false /*treat as dbg.declare byval parameter*/);
       return true;
     }
@@ -6337,9 +6341,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
-
-    if (visitEntryValueDbgValue(DI))
-      return;
 
     if (DI.isKillLocation()) {
       handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);

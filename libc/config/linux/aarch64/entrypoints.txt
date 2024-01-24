@@ -168,6 +168,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
 
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed

@@ -123,8 +123,11 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
 
   getTargetStreamer()->EmitDirectiveAMDGCNTarget();
 
-  if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+    getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
+        CodeObjectVersion);
     HSAMetadataStream->begin(M, *getTargetStreamer()->getTargetID());
+  }
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
@@ -230,8 +233,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
           IsaInfo::getNumExtraSGPRs(
               &STM, CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
               getTargetStreamer()->getTargetID()->isXnackOnOrAny()),
-      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
-      CodeObjectVersion);
+      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
   Streamer.popSection();
 }
@@ -323,7 +325,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
-  CodeObjectVersion = AMDGPU::getCodeObjectVersion(M);
+  CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
@@ -631,8 +633,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
   // In the beginning all features are either 'Any' or 'NotSupported',
   // depending on global target features. This will cover empty modules.
-  getTargetStreamer()->initializeTargetID(
-      *getGlobalSTI(), getGlobalSTI()->getFeatureString(), CodeObjectVersion);
+  getTargetStreamer()->initializeTargetID(*getGlobalSTI(),
+                                          getGlobalSTI()->getFeatureString());
 
   // If module is empty, we are done.
   if (M.empty())

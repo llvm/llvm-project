@@ -859,8 +859,6 @@ public:
   }
 
   bool hasInstPrefetch() const {
-    // GFX12 can still encode the s_set_inst_prefetch_distance instruction but
-    // it has no effect.
     return getGeneration() == GFX10 || getGeneration() == GFX11;
   }
 

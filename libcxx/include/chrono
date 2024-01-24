@@ -296,6 +296,10 @@ template<class charT, class traits, class Duration>     // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const sys_time<Duration>& tp);
 
+template<class charT, class traits>                    // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const sys_days& dp);
+
 class file_clock                                        // C++20
 {
 public:

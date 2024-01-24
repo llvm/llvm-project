@@ -381,6 +381,17 @@ public:
     All,
   };
 
+  enum class VisibilityForcedKinds {
+    /// Force hidden visibility
+    ForceHidden,
+    /// Force protected visibility
+    ForceProtected,
+    /// Force default visibility
+    ForceDefault,
+    /// Don't alter the visibility
+    Source,
+  };
+
   enum class VisibilityFromDLLStorageClassKinds {
     /// Keep the IR-gen assigned visibility.
     Keep,
@@ -403,7 +414,7 @@ public:
     IncompleteOnly = 3,
   };
 
-  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran };
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran, CX_None };
 
 public:
   /// The used language standard.
@@ -671,6 +682,26 @@ public:
   bool isAllDefaultVisibilityExportMapping() const {
     return getDefaultVisibilityExportMapping() ==
            DefaultVisiblityExportMapping::All;
+  }
+
+  bool hasGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() !=
+           VisibilityForcedKinds::Source;
+  }
+
+  bool hasDefaultGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceDefault;
+  }
+
+  bool hasProtectedGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceProtected;
+  }
+
+  bool hasHiddenGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceHidden;
   }
 
   /// Remap path prefix according to -fmacro-prefix-path option.
