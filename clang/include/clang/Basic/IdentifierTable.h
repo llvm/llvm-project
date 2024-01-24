@@ -18,6 +18,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -109,102 +110,77 @@ static constexpr int FirstBuiltinID = LastInterestingIdentifierID + 1;
 class alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
-  // Front-end token ID or tok::identifier.
-  LLVM_PREFERRED_TYPE(tok::TokenKind)
-  unsigned TokenID : 9;
+  // The fields in storage is currently:
+  //
+  //   Bits   8-0  - Front-end token ID or tok::identifier.
+  //   Bits  24-9  - ObjC keyword ('protocol' in '@protocol') or builtin
+  //                 (__builtin_inf). First NUM_OBJC_KEYWORDS values are for
+  //                 Objective-C, the remaining values are for builtins.
+  //   Bit     25  - True if there is a #define for the identifier.
+  //   Bit     26  - True if there was a #define for the identifier.
+  //   Bit     27  - True if the identifier is a language extension.
+  //   Bit     28  - True if the identifier is a keyword in a newer or proposed
+  //                 Standard.
+  //   Bit     29  - True if the identifier is poisoned.
+  //   Bit     30  - True if the identifier is a C++ operator keyword.
+  //   Bit     31  - Internal bit set by the member function
+  //                 RecomputeNeedsHandleIdentifier. See comment about
+  //                 RecomputeNeedsHandleIdentifier for more info.
+  //   Bit     32  - True if the identifier was loaded (at least partially)
+  //                 from an AST file.
+  //   Bit     33  - True if the identifier has changed from the definition
+  //                 loaded from an AST file.
+  //   Bit     34  - True if the identifier's frontend information has changed
+  //                 from the definition loaded from an AST file.
+  //   Bit     35  - True if revertTokenIDToIdentifier was called.
+  //   Bit     36  - True if there may be additional information about this
+  //                 identifier stored externally.
+  //   Bit     37  - True if this is the 'import' contextual keyword.
+  //   Bit     38  - True if this is a mangled OpenMP variant name.
+  //   Bit     39  - True if this is a deprecated macro.
+  //   Bit     40  - True if this macro is unsafe in headers.
+  //   Bit     41  - True if this macro is final.
+  //
+  //   Bits 42-63  - Unused.
 
-  // ObjC keyword ('protocol' in '@protocol') or builtin (__builtin_inf).
-  // First NUM_OBJC_KEYWORDS values are for Objective-C,
-  // the remaining values are for builtins.
-  unsigned ObjCOrBuiltinID : ObjCOrBuiltinIDBits;
+  using Bitfield = llvm::Bitfield;
 
-  // True if there is a #define for this.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned HasMacro : 1;
+  uint64_t Storage;
 
-  // True if there was a #define for this.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned HadMacro : 1;
+  using TokenID = Bitfield::Element<tok::TokenKind, 0, 9, tok::NUM_TOKENS>;
+  using ObjCOrBuiltinID = Bitfield::Element<unsigned, 9, ObjCOrBuiltinIDBits>;
+  using HasMacro = Bitfield::Element<bool, 25, 1>;
+  using HadMacro = Bitfield::Element<bool, 26, 1>;
+  using IsExtension = Bitfield::Element<bool, 27, 1>;
+  using IsFutureCompatKeyword = Bitfield::Element<bool, 28, 1>;
+  using IsPoisoned = Bitfield::Element<bool, 29, 1>;
+  using IsCPPOperatorKeyword = Bitfield::Element<bool, 30, 1>;
+  using NeedsHandleIdentifier = Bitfield::Element<bool, 31, 1>;
+  using IsFromAST = Bitfield::Element<bool, 32, 1>;
+  using ChangedAfterLoad = Bitfield::Element<bool, 33, 1>;
+  using FEChangedAfterLoad = Bitfield::Element<bool, 34, 1>;
+  using RevertedTokenID = Bitfield::Element<bool, 35, 1>;
+  using OutOfDate = Bitfield::Element<bool, 36, 1>;
+  using IsModulesImport = Bitfield::Element<bool, 37, 1>;
+  using IsMangledOpenMPVariantName = Bitfield::Element<bool, 38, 1>;
+  using IsDeprecatedMacro = Bitfield::Element<bool, 39, 1>;
+  using IsRestrictExpansion = Bitfield::Element<bool, 40, 1>;
+  using IsFinal = Bitfield::Element<bool, 41, 1>;
 
-  // True if the identifier is a language extension.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsExtension : 1;
-
-  // True if the identifier is a keyword in a newer or proposed Standard.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsFutureCompatKeyword : 1;
-
-  // True if the identifier is poisoned.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsPoisoned : 1;
-
-  // True if the identifier is a C++ operator keyword.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsCPPOperatorKeyword : 1;
-
-  // Internal bit set by the member function RecomputeNeedsHandleIdentifier.
-  // See comment about RecomputeNeedsHandleIdentifier for more info.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned NeedsHandleIdentifier : 1;
-
-  // True if the identifier was loaded (at least partially) from an AST file.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsFromAST : 1;
-
-  // True if the identifier has changed from the definition
-  // loaded from an AST file.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned ChangedAfterLoad : 1;
-
-  // True if the identifier's frontend information has changed from the
-  // definition loaded from an AST file.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned FEChangedAfterLoad : 1;
-
-  // True if revertTokenIDToIdentifier was called.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned RevertedTokenID : 1;
-
-  // True if there may be additional information about
-  // this identifier stored externally.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned OutOfDate : 1;
-
-  // True if this is the 'import' contextual keyword.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsModulesImport : 1;
-
-  // True if this is a mangled OpenMP variant name.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsMangledOpenMPVariantName : 1;
-
-  // True if this is a deprecated macro.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsDeprecatedMacro : 1;
-
-  // True if this macro is unsafe in headers.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsRestrictExpansion : 1;
-
-  // True if this macro is final.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsFinal : 1;
-
-  // 22 bits left in a 64-bit word.
+  // getter/setter for the Bitfields.
+  template <typename T> typename T::Type get() const {
+    return Bitfield::get<T>(Storage);
+  }
+  template <typename T> void set(typename T::Type Val) {
+    Bitfield::set<T>(Storage, Val);
+  }
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
 
   llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;
 
-  IdentifierInfo()
-      : TokenID(tok::identifier), ObjCOrBuiltinID(0), HasMacro(false),
-        HadMacro(false), IsExtension(false), IsFutureCompatKeyword(false),
-        IsPoisoned(false), IsCPPOperatorKeyword(false),
-        NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
-        FEChangedAfterLoad(false), RevertedTokenID(false), OutOfDate(false),
-        IsModulesImport(false), IsMangledOpenMPVariantName(false),
-        IsDeprecatedMacro(false), IsRestrictExpansion(false), IsFinal(false) {}
+  IdentifierInfo() : Storage(0) { set<TokenID>(tok::identifier); }
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;
@@ -241,24 +217,23 @@ public:
 
   /// Return true if this identifier is \#defined to some other value.
   /// \note The current definition may be in a module and not currently visible.
-  bool hasMacroDefinition() const {
-    return HasMacro;
-  }
+  bool hasMacroDefinition() const { return get<HasMacro>(); }
   void setHasMacroDefinition(bool Val) {
-    if (HasMacro == Val) return;
+    if (hasMacroDefinition() == Val)
+      return;
 
-    HasMacro = Val;
+    set<HasMacro>(Val);
     if (Val) {
-      NeedsHandleIdentifier = true;
-      HadMacro = true;
+      set<NeedsHandleIdentifier>(true);
+      set<HadMacro>(true);
     } else {
       // If this is a final macro, make the deprecation and header unsafe bits
       // stick around after the undefinition so they apply to any redefinitions.
-      if (!IsFinal) {
+      if (!isFinal()) {
         // Because calling the setters of these calls recomputes, just set them
         // manually to avoid recomputing a bunch of times.
-        IsDeprecatedMacro = false;
-        IsRestrictExpansion = false;
+        set<IsDeprecatedMacro>(false);
+        set<IsRestrictExpansion>(false);
       }
       RecomputeNeedsHandleIdentifier();
     }
@@ -266,45 +241,43 @@ public:
   /// Returns true if this identifier was \#defined to some value at any
   /// moment. In this case there should be an entry for the identifier in the
   /// macro history table in Preprocessor.
-  bool hadMacroDefinition() const {
-    return HadMacro;
-  }
+  bool hadMacroDefinition() const { return get<HadMacro>(); }
 
-  bool isDeprecatedMacro() const { return IsDeprecatedMacro; }
+  bool isDeprecatedMacro() const { return get<IsDeprecatedMacro>(); }
 
   void setIsDeprecatedMacro(bool Val) {
-    if (IsDeprecatedMacro == Val)
+    if (isDeprecatedMacro() == Val)
       return;
-    IsDeprecatedMacro = Val;
+    set<IsDeprecatedMacro>(Val);
     if (Val)
-      NeedsHandleIdentifier = true;
+      set<NeedsHandleIdentifier>(true);
     else
       RecomputeNeedsHandleIdentifier();
   }
 
-  bool isRestrictExpansion() const { return IsRestrictExpansion; }
+  bool isRestrictExpansion() const { return get<IsRestrictExpansion>(); }
 
   void setIsRestrictExpansion(bool Val) {
-    if (IsRestrictExpansion == Val)
+    if (isRestrictExpansion() == Val)
       return;
-    IsRestrictExpansion = Val;
+    set<IsRestrictExpansion>(Val);
     if (Val)
-      NeedsHandleIdentifier = true;
+      set<NeedsHandleIdentifier>(true);
     else
       RecomputeNeedsHandleIdentifier();
   }
 
-  bool isFinal() const { return IsFinal; }
+  bool isFinal() const { return get<IsFinal>(); }
+  void setIsFinal(bool Val) { set<IsFinal>(Val); }
 
-  void setIsFinal(bool Val) { IsFinal = Val; }
-
-  /// If this is a source-language token (e.g. 'for'), this API
-  /// can be used to cause the lexer to map identifiers to source-language
+  /// get/setTokenID - If this is a source-language token (e.g. 'for'), this
+  /// API can be used to cause the lexer to map identifiers to source-language
   /// tokens.
-  tok::TokenKind getTokenID() const { return (tok::TokenKind)TokenID; }
+  tok::TokenKind getTokenID() const { return get<TokenID>(); }
+  void setTokenID(tok::TokenKind TK) { set<TokenID>(TK); }
 
   /// True if revertTokenIDToIdentifier() was called.
-  bool hasRevertedTokenIDToIdentifier() const { return RevertedTokenID; }
+  bool hasRevertedTokenIDToIdentifier() const { return get<RevertedTokenID>(); }
 
   /// Revert TokenID to tok::identifier; used for GNU libstdc++ 4.2
   /// compatibility.
@@ -313,14 +286,14 @@ public:
   /// to tok::identifier for libstdc++ 4.2. Keep track of when this happens
   /// using this method so we can inform serialization about it.
   void revertTokenIDToIdentifier() {
-    assert(TokenID != tok::identifier && "Already at tok::identifier");
-    TokenID = tok::identifier;
-    RevertedTokenID = true;
+    assert(getTokenID() != tok::identifier && "Already at tok::identifier");
+    setTokenID(tok::identifier);
+    set<RevertedTokenID>(true);
   }
   void revertIdentifierToTokenID(tok::TokenKind TK) {
-    assert(TokenID == tok::identifier && "Should be at tok::identifier");
-    TokenID = TK;
-    RevertedTokenID = false;
+    assert(getTokenID() == tok::identifier && "Should be at tok::identifier");
+    setTokenID(TK);
+    set<RevertedTokenID>(false);
   }
 
   /// Return the preprocessor keyword ID for this identifier.
@@ -334,54 +307,54 @@ public:
   tok::ObjCKeywordKind getObjCKeywordID() const {
     static_assert(FirstObjCKeywordID == 1,
                   "hard-coding this assumption to simplify code");
-    if (ObjCOrBuiltinID <= LastObjCKeywordID)
-      return tok::ObjCKeywordKind(ObjCOrBuiltinID);
-    else
-      return tok::objc_not_keyword;
+    if (getObjCOrBuiltinID() <= LastObjCKeywordID)
+      return static_cast<tok::ObjCKeywordKind>(getObjCOrBuiltinID());
+    return tok::objc_not_keyword;
   }
-  void setObjCKeywordID(tok::ObjCKeywordKind ID) { ObjCOrBuiltinID = ID; }
+  void setObjCKeywordID(tok::ObjCKeywordKind ID) { set<ObjCOrBuiltinID>(ID); }
 
   /// Return a value indicating whether this is a builtin function.
   ///
   /// 0 is not-built-in. 1+ are specific builtin functions.
   unsigned getBuiltinID() const {
-    if (ObjCOrBuiltinID >= FirstBuiltinID)
-      return 1 + (ObjCOrBuiltinID - FirstBuiltinID);
-    else
-      return 0;
+    if (getObjCOrBuiltinID() >= FirstBuiltinID)
+      return 1 + (getObjCOrBuiltinID() - FirstBuiltinID);
+    return 0;
   }
   void setBuiltinID(unsigned ID) {
     assert(ID != 0);
-    ObjCOrBuiltinID = FirstBuiltinID + (ID - 1);
+    setObjCOrBuiltinID(FirstBuiltinID + (ID - 1));
     assert(getBuiltinID() == ID && "ID too large for field!");
   }
-  void clearBuiltinID() { ObjCOrBuiltinID = 0; }
+  void clearBuiltinID() { setObjCOrBuiltinID(tok::objc_not_keyword); }
 
   tok::InterestingIdentifierKind getInterestingIdentifierID() const {
-    if (ObjCOrBuiltinID >= FirstInterestingIdentifierID &&
-        ObjCOrBuiltinID <= LastInterestingIdentifierID)
+    if (getObjCOrBuiltinID() >= FirstInterestingIdentifierID &&
+        getObjCOrBuiltinID() <= LastInterestingIdentifierID)
       return tok::InterestingIdentifierKind(
-          1 + (ObjCOrBuiltinID - FirstInterestingIdentifierID));
+          1 + (getObjCOrBuiltinID() - FirstInterestingIdentifierID));
     else
       return tok::not_interesting;
   }
   void setInterestingIdentifierID(unsigned ID) {
     assert(ID != tok::not_interesting);
-    ObjCOrBuiltinID = FirstInterestingIdentifierID + (ID - 1);
+    setObjCOrBuiltinID(FirstInterestingIdentifierID + (ID - 1));
     assert(getInterestingIdentifierID() == ID && "ID too large for field!");
   }
 
-  unsigned getObjCOrBuiltinID() const { return ObjCOrBuiltinID; }
-  void setObjCOrBuiltinID(unsigned ID) { ObjCOrBuiltinID = ID; }
+  unsigned getObjCOrBuiltinID() const { return get<ObjCOrBuiltinID>(); }
+  void setObjCOrBuiltinID(unsigned ID) {
+    set<ObjCOrBuiltinID>(static_cast<tok::ObjCKeywordKind>(ID));
+  }
 
-  /// get/setExtension - Initialize information about whether or not this
+  /// is/setExtension - Initialize information about whether or not this
   /// language token is an extension.  This controls extension warnings, and is
   /// only valid if a custom token ID is set.
-  bool isExtensionToken() const { return IsExtension; }
+  bool isExtensionToken() const { return get<IsExtension>(); }
   void setIsExtensionToken(bool Val) {
-    IsExtension = Val;
+    set<IsExtension>(Val);
     if (Val)
-      NeedsHandleIdentifier = true;
+      set<NeedsHandleIdentifier>(true);
     else
       RecomputeNeedsHandleIdentifier();
   }
@@ -391,34 +364,35 @@ public:
   /// controls compatibility warnings, and is only true when not parsing the
   /// corresponding Standard. Once a compatibility problem has been diagnosed
   /// with this keyword, the flag will be cleared.
-  bool isFutureCompatKeyword() const { return IsFutureCompatKeyword; }
+  bool isFutureCompatKeyword() const { return get<IsFutureCompatKeyword>(); }
   void setIsFutureCompatKeyword(bool Val) {
-    IsFutureCompatKeyword = Val;
+    set<IsFutureCompatKeyword>(Val);
     if (Val)
-      NeedsHandleIdentifier = true;
+      set<NeedsHandleIdentifier>(true);
     else
       RecomputeNeedsHandleIdentifier();
   }
 
-  /// setIsPoisoned - Mark this identifier as poisoned.  After poisoning, the
-  /// Preprocessor will emit an error every time this token is used.
+  /// is/setIsPoisoned - Controls whether this identifier is poisoned. After
+  /// poisoning, the Preprocessor will emit an error every time this token is
+  /// used.
+  bool isPoisoned() const { return get<IsPoisoned>(); }
   void setIsPoisoned(bool Value = true) {
-    IsPoisoned = Value;
+    set<IsPoisoned>(Value);
     if (Value)
-      NeedsHandleIdentifier = true;
+      set<NeedsHandleIdentifier>(true);
     else
       RecomputeNeedsHandleIdentifier();
   }
-
-  /// Return true if this token has been poisoned.
-  bool isPoisoned() const { return IsPoisoned; }
 
   /// isCPlusPlusOperatorKeyword/setIsCPlusPlusOperatorKeyword controls whether
   /// this identifier is a C++ alternate representation of an operator.
-  void setIsCPlusPlusOperatorKeyword(bool Val = true) {
-    IsCPPOperatorKeyword = Val;
+  bool isCPlusPlusOperatorKeyword() const {
+    return get<IsCPPOperatorKeyword>();
   }
-  bool isCPlusPlusOperatorKeyword() const { return IsCPPOperatorKeyword; }
+  void setIsCPlusPlusOperatorKeyword(bool Val = true) {
+    set<IsCPPOperatorKeyword>(Val);
+  }
 
   /// Return true if this token is a keyword in the specified language.
   bool isKeyword(const LangOptions &LangOpts) const;
@@ -437,69 +411,70 @@ public:
   ///
   /// If this returns false, we know that HandleIdentifier will not affect
   /// the token.
-  bool isHandleIdentifierCase() const { return NeedsHandleIdentifier; }
+  bool isHandleIdentifierCase() const { return get<NeedsHandleIdentifier>(); }
 
   /// Return true if the identifier in its current state was loaded
   /// from an AST file.
-  bool isFromAST() const { return IsFromAST; }
-
-  void setIsFromAST() { IsFromAST = true; }
+  bool isFromAST() const { return get<IsFromAST>(); }
+  void setIsFromAST() { set<IsFromAST>(true); }
 
   /// Determine whether this identifier has changed since it was loaded
   /// from an AST file.
   bool hasChangedSinceDeserialization() const {
-    return ChangedAfterLoad;
+    return get<ChangedAfterLoad>();
   }
 
   /// Note that this identifier has changed since it was loaded from
   /// an AST file.
-  void setChangedSinceDeserialization() {
-    ChangedAfterLoad = true;
-  }
+  void setChangedSinceDeserialization() { set<ChangedAfterLoad>(true); }
 
   /// Determine whether the frontend token information for this
   /// identifier has changed since it was loaded from an AST file.
   bool hasFETokenInfoChangedSinceDeserialization() const {
-    return FEChangedAfterLoad;
+    return get<FEChangedAfterLoad>();
   }
 
   /// Note that the frontend token information for this identifier has
   /// changed since it was loaded from an AST file.
   void setFETokenInfoChangedSinceDeserialization() {
-    FEChangedAfterLoad = true;
+    set<FEChangedAfterLoad>(true);
   }
 
   /// Determine whether the information for this identifier is out of
   /// date with respect to the external source.
-  bool isOutOfDate() const { return OutOfDate; }
+  bool isOutOfDate() const { return get<OutOfDate>(); }
 
   /// Set whether the information for this identifier is out of
   /// date with respect to the external source.
   void setOutOfDate(bool OOD) {
-    OutOfDate = OOD;
+    set<OutOfDate>(OOD);
     if (OOD)
-      NeedsHandleIdentifier = true;
+      set<NeedsHandleIdentifier>(true);
     else
       RecomputeNeedsHandleIdentifier();
   }
 
   /// Determine whether this is the contextual keyword \c import.
-  bool isModulesImport() const { return IsModulesImport; }
+  bool isModulesImport() const { return get<IsModulesImport>(); }
 
   /// Set whether this identifier is the contextual keyword \c import.
   void setModulesImport(bool I) {
-    IsModulesImport = I;
+    set<IsModulesImport>(I);
     if (I)
-      NeedsHandleIdentifier = true;
+      set<NeedsHandleIdentifier>(true);
     else
       RecomputeNeedsHandleIdentifier();
   }
 
   /// Determine whether this is the mangled name of an OpenMP variant.
-  bool isMangledOpenMPVariantName() const { return IsMangledOpenMPVariantName; }
+  bool isMangledOpenMPVariantName() const {
+    return get<IsMangledOpenMPVariantName>();
+  }
 
   /// Set whether this is the mangled name of an OpenMP variant.
-  void setMangledOpenMPVariantName(bool I) { IsMangledOpenMPVariantName = I; }
+  void setMangledOpenMPVariantName(bool I) {
+    set<IsMangledOpenMPVariantName>(I);
+  }
 
   /// Return true if this identifier is an editor placeholder.
   ///
@@ -542,9 +517,9 @@ private:
   /// This method is very tied to the definition of HandleIdentifier.  Any
   /// change to it should be reflected here.
   void RecomputeNeedsHandleIdentifier() {
-    NeedsHandleIdentifier = isPoisoned() || hasMacroDefinition() ||
-                            isExtensionToken() || isFutureCompatKeyword() ||
-                            isOutOfDate() || isModulesImport();
+    set<NeedsHandleIdentifier>(isPoisoned() || hasMacroDefinition() ||
+                               isExtensionToken() || isFutureCompatKeyword() ||
+                               isOutOfDate() || isModulesImport());
   }
 };
 
@@ -686,8 +661,8 @@ public:
 
   IdentifierInfo &get(StringRef Name, tok::TokenKind TokenCode) {
     IdentifierInfo &II = get(Name);
-    II.TokenID = TokenCode;
-    assert(II.TokenID == (unsigned) TokenCode && "TokenCode too large");
+    II.setTokenID(TokenCode);
+    assert(II.getTokenID() == TokenCode && "TokenCode too large");
     return II;
   }
 
