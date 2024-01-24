@@ -17,21 +17,20 @@
 
 // <debugging>
 
-// bool is_debugger_present() noexcept;
+// void breakpoint_if_debugging() noexcept;
 
 #include <cassert>
 #include <debugging>
-#include <cstdlib>
 
 // Test with debugger attached:
 
-// LLDB command: `lldb "is_debugger_present.pass" -o run -o detach -o quit`
-// GDB command:  `gdb is_debugger_present.pass -ex run -ex detach -ex quit --silent`
+// LLDB command: `lldb "breakpoint_if_debugging.pass" -o run -o detach -o quit`
+// GDB command:  `gdb breakpoint_if_debugging.pass -ex run -ex detach -ex quit --silent`
 
 void test() {
-  static_assert(noexcept(std::is_debugger_present()));
+  static_assert(noexcept(std::breakpoint_if_debugging()));
 
-  assert(std::is_debugger_present());
+  std::breakpoint_if_debugging();
 }
 
 int main(int, char**) {

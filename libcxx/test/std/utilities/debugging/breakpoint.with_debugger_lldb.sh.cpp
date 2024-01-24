@@ -8,6 +8,12 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
+// UNSUPPORTED: gcc
+// UNSUPPORTED: android
+
+// RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
+// RUN: %{lldb} %t.exe -o run -o detach -o quit
+// RUN: %{gdb} %t.exe -ex run -ex detach -ex quit --silent
 
 // <debugging>
 
@@ -53,6 +59,8 @@
 // 44	}
 // Detaching from program: /home/llvm-dev/Projects/llvm-project/build/breakpoint.pass, process 53887
 // [Inferior 1 (process 53887) detached]
+
+// https://lldb.llvm.org/use/python-reference.html#running-a-python-script-when-a-breakpoint-gets-hit
 
 void test() {
   static_assert(noexcept(std::breakpoint()));

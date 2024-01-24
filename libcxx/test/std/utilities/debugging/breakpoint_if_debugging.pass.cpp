@@ -16,10 +16,7 @@
 #include <cassert>
 #include <debugging>
 
-// Test with debugger attached:
-
-// LLDB command: `lldb "breakpoint_if_debugging.pass" -o run -o detach -o quit`
-// GDB command:  `gdb breakpoint_if_debugging.pass -ex run -ex detach -ex quit --silent`
+// Test without debugger.
 
 void test() {
   static_assert(noexcept(std::breakpoint_if_debugging()));
