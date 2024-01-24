@@ -103,11 +103,11 @@ define void @reverse() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> <i32 1, i32 0>
@@ -254,11 +254,11 @@ define void @select() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 8, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 15>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v2i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = shufflevector <2 x half> undef, <2 x half> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> <i32 8, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 15>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <16 x i32> <i32 0, i32 17, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 8, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 15>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = shufflevector <2 x double> undef, <2 x double> undef, <2 x i32> <i32 1, i32 0>
@@ -333,7 +333,7 @@ define void @vrev2() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = shufflevector <4 x half> undef, <4 x half> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8f16 = shufflevector <8 x half> undef, <8 x half> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16f16 = shufflevector <16 x half> undef, <16 x half> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
