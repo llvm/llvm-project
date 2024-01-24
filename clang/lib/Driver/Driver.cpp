@@ -6482,18 +6482,15 @@ bool Driver::GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Minor))
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Micro))
     return false;
@@ -6521,9 +6518,8 @@ bool Driver::GetReleaseVersion(StringRef Str,
     Digits[CurDigit] = Digit;
     if (Str.empty())
       return true;
-    if (Str[0] != '.')
+    if (!Str.consume_front("."))
       return false;
-    Str = Str.drop_front(1);
     CurDigit++;
   }
 

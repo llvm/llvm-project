@@ -1033,6 +1033,13 @@ public:
            isWindowsCygwinEnvironment() || isOHOSFamily();
   }
 
+  /// Tests whether the target uses TLS Descriptor by default.
+  bool hasDefaultTLSDESC() const {
+    // TODO: Improve check for other platforms, like Android, and RISC-V
+    // Note: This is currently only used on RISC-V.
+    return isOSBinFormatELF() && isAArch64();
+  }
+
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {
     return isOSBinFormatXCOFF() || isWasm();

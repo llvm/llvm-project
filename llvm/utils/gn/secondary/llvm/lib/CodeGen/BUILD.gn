@@ -8,9 +8,7 @@ static_library("CodeGenTypes") {
     "//llvm/include/llvm/CodeGen:GenVT",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "LowLevelType.cpp"
-  ]
+  sources = [ "LowLevelType.cpp" ]
 }
 
 static_library("CodeGen") {
@@ -50,13 +48,11 @@ static_library("CodeGen") {
     "CFGuardLongjmp.cpp",
     "CFIFixup.cpp",
     "CFIInstrInserter.cpp",
-    "GCEmptyBasicBlocks.cpp",
     "CalcSpillWeights.cpp",
     "CallBrPrepare.cpp",
     "CallingConvLower.cpp",
     "CodeGen.cpp",
     "CodeGenCommonISel.cpp",
-    "CodeGenPassBuilder.cpp",
     "CodeGenPrepare.cpp",
     "CommandFlags.cpp",
     "ComplexDeinterleavingPass.cpp",
@@ -80,6 +76,7 @@ static_library("CodeGen") {
     "FinalizeISel.cpp",
     "FixupStatepointCallerSaved.cpp",
     "FuncletLayout.cpp",
+    "GCEmptyBasicBlocks.cpp",
     "GCMetadata.cpp",
     "GCMetadataPrinter.cpp",
     "GCRootLowering.cpp",
