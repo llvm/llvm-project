@@ -99,6 +99,7 @@ TEST(LlvmLibcMincoreTest, PageOut) {
   // touch the page
   {
     static_cast<char *>(addr)[0] = 0;
+    // TODO: use wrapper functions for mlock/munlock once implemented.
     LIBC_NAMESPACE::syscall_impl(
         SYS_mlock, reinterpret_cast<unsigned long>(addr), page_size);
     libc_errno = 0;
