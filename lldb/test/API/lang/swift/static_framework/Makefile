@@ -14,9 +14,9 @@ lib%.a: %.swift
 		SWIFT_SOURCES=$(patsubst lib%.a,%.swift,$@) \
 		MODULENAME=$(patsubst lib%.a,%,$@) \
 		SWIFTFLAGS_EXTRAS="$(patsubst %,-F%/DOES_NOT_EXIST,$(FRAMEWORKS))" \
-		$(patsubst lib%.a,%.o,$@) \
+		$(patsubst lib%.a,%.swift.o,$@) \
 		$(patsubst lib%.a,%.swiftmodule,$@)
-	ar -r $@ $(BUILDDIR)/$(patsubst lib%.a,%.o,$@)
+	ar -r $@ $(BUILDDIR)/$(patsubst lib%.a,%.swift.o,$@)
 
 %.framework: lib%.a
 	mkdir -p $(BUILDDIR)/$@/Headers

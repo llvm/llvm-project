@@ -14,8 +14,8 @@ libmod.%.dylib: mod.%.swift
 	mv libmod.dylib.dSYM $@.dSYM || true
 	rm mod.swiftmodule
 	mv mod.swiftinterface mod.$*.swiftinterface
-	mv mod.o mod.$*.o
-	rm mod.swift mod.partial.swiftmodule
+	mv mod.swift.o mod.$*.swift.o
+	rm mod.swift
 
 main.%: main.swift
 	ln -sf libmod.$*.dylib libmod.dylib
