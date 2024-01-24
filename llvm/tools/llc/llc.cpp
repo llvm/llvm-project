@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This is the llc code generator driver. It provides a convenient
-// command-line interface for generating native assembly-language code,
+// command-line interface for generating an assembly file or a relocatable file,
 // given LLVM bitcode.
 //
 //===----------------------------------------------------------------------===//
