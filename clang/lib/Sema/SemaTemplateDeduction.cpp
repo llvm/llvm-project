@@ -730,6 +730,7 @@ private:
   void addPack(unsigned Index) {
     // Save the deduced template argument for the parameter pack expanded
     // by this pack expansion, then clear out the deduction.
+    DeducedFromEarlierParameter = !Deduced[Index].isNull();
     DeducedPack Pack(Index);
     Pack.Saved = Deduced[Index];
     Deduced[Index] = TemplateArgument();
@@ -858,6 +859,29 @@ public:
       Info.PendingDeducedPacks[Pack.Index] = Pack.Outer;
   }
 
+  std::optional<unsigned> getSavedPackSize(unsigned Index,
+                                           TemplateArgument Pattern) const {
+
+    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+    S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
+    if (Unexpanded.size() == 0 ||
+        Packs[0].Saved.getKind() != clang::TemplateArgument::Pack)
+      return {};
+    unsigned PackSize = Packs[0].Saved.pack_size();
+
+    if (std::all_of(Packs.begin() + 1, Packs.end(),
+                    [&PackSize](auto P) {
+                      return P.Saved.getKind() == TemplateArgument::Pack &&
+                             P.Saved.pack_size() == PackSize;
+                    }))
+      return PackSize;
+    return {};
+  }
+
+  /// Determine whether this pack has already been deduced from a previous
+  /// argument.
+  bool isDeducedFromEarlierParameter() const {return DeducedFromEarlierParameter;}
+
   /// Determine whether this pack has already been partially expanded into a
   /// sequence of (prior) function parameters / template arguments.
   bool isPartiallyExpanded() { return IsPartiallyExpanded; }
@@ -970,7 +994,6 @@ public:
         NewPack = Pack.DeferredDeduction;
         Result = checkDeducedTemplateArguments(S.Context, OldPack, NewPack);
       }
-
       NamedDecl *Param = TemplateParams->getParam(Pack.Index);
       if (Result.isNull()) {
         Info.Param = makeTemplateParameter(Param);
@@ -1003,8 +1026,11 @@ private:
   unsigned PackElements = 0;
   bool IsPartiallyExpanded = false;
   bool DeducePackIfNotAlreadyDeduced = false;
+  bool DeducedFromEarlierParameter = false;
+
   /// The number of expansions, if we have a fully-expanded pack in this scope.
   std::optional<unsigned> FixedNumExpansions;
+
 
   SmallVector<DeducedPack, 2> Packs;
 };
@@ -4369,6 +4395,41 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
           ParamTypesForArgChecking.push_back(ParamPattern);
           // FIXME: Should we add OriginalCallArgs for these? What if the
           // corresponding argument is a list?
+          PackScope.nextPackElement();
+        }
+      } else if (!IsTrailingPack && !PackScope.isPartiallyExpanded() &&
+                 PackScope.isDeducedFromEarlierParameter() &&
+                 !isa<PackExpansionType>(ParamTypes[ParamIdx + 1])) {
+        // [temp.deduct.general#3]
+        // When all template arguments have been deduced
+        // or obtained from default template arguments, all uses of template
+        // parameters in the template parameter list of the template are
+        // replaced with the corresponding deduced or default argument values
+        //
+        // If we have a trailing parameter pack, that has been deduced perviously
+        // we substitute the pack here in a similar fashion as seen above with
+        // the trailing parameter packs. The main difference here is that, in
+        // this case we are not processing all of the remaining arguments. We
+        // are only process as many arguments as much we have in the already
+        // deduced parameter.
+        SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+        collectUnexpandedParameterPacks(ParamPattern, Unexpanded);
+        if (Unexpanded.size() == 0)
+          continue;
+
+        std::optional<unsigned> ArgPosAfterSubstitution =
+            PackScope.getSavedPackSize(getDepthAndIndex(Unexpanded[0]).second,
+                                       ParamPattern);
+        if (!ArgPosAfterSubstitution)
+          continue;
+
+        unsigned PackArgEnd = ArgIdx + *ArgPosAfterSubstitution;
+        for (; ArgIdx < PackArgEnd && ArgIdx < Args.size(); ArgIdx++) {
+          ParamTypesForArgChecking.push_back(ParamPattern);
+          if (auto Result = DeduceCallArgument(ParamPattern, ArgIdx,
+                                               /*ExplicitObjetArgument=*/false))
+            return Result;
+
           PackScope.nextPackElement();
         }
       }
