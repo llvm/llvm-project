@@ -50,7 +50,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
       if (xbits.is_nan())
         return x;
       if (fputil::fenv_is_round_up())
-        return FPBits::min_denormal();
+        return FPBits::min_subnormal().get_val();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
@@ -61,7 +61,7 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
       if (xbits.uintval() < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-          return FPBits::max_normal();
+          return FPBits::max_normal().get_val();
 
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_OVERFLOW);

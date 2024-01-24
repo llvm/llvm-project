@@ -38,14 +38,16 @@ LIBC_INLINE long double sqrt(long double x);
 LIBC_INLINE long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
+  using Sign = fputil::Sign;
   constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);
+  constexpr auto LDNAN = LDBits::build_quiet_nan(Sign::POS, ONE >> 1).get_val();
 
-  FPBits<long double> bits(x);
+  LDBits bits(x);
 
   if (bits.is_inf_or_nan()) {
     if (bits.is_neg() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return LDBits::build_quiet_nan(ONE >> 1);
+      return LDNAN;
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
@@ -57,7 +59,7 @@ LIBC_INLINE long double sqrt(long double x) {
     return x;
   } else if (bits.is_neg()) {
     // sqrt( negative numbers ) = NaN
-    return LDBits::build_quiet_nan(ONE >> 1);
+    return LDNAN;
   } else {
     int x_exp = bits.get_explicit_exponent();
     StorageType x_mant = bits.get_mantissa();
