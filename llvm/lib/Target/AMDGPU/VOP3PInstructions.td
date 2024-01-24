@@ -998,39 +998,14 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit NegLoAny = !or(NegLo01, NegLo2);
   bit NegHiAny = !or(NegHi01, NegHi2);
 
-  let DstRC = !cond(!eq(ArgTy[0], v8f32): VDst_256,
-                    !eq(ArgTy[0], v8i32): VDst_256,
-                    !eq(ArgTy[0], v8f16): VDst_128,
-                    !eq(ArgTy[0], v8i16): VDst_128,
-                    !eq(ArgTy[0], v4f32): VDst_128,
-                    !eq(ArgTy[0], v4i32): VDst_128,
-                    !eq(ArgTy[0], v4f16): VDst_64,
-                    !eq(ArgTy[0], v4i16): VDst_64);
-  let Src0RC64 = !cond(!eq(ArgTy[1], v8f16): VRegSrc_128,
-                       !eq(ArgTy[1], v4f16): VRegSrc_64,
-                       !eq(ArgTy[1], v4i16): VRegSrc_64,
-                       !eq(ArgTy[1], v8i16): VRegSrc_128,
-                       !eq(ArgTy[1], v4i32): VRegSrc_128,
-                       !eq(ArgTy[1], v2i32): VRegSrc_64,
-                       !eq(ArgTy[1], i32)  : VRegSrc_32);
-  let Src1RC64 = !cond(!eq(ArgTy[2], v16f16): VRegSrc_256,
-                       !eq(ArgTy[2], v16i16): VRegSrc_256,
-                       !eq(ArgTy[2], v8f16): VRegSrc_128,
-                       !eq(ArgTy[2], v8i16): VRegSrc_128,
-                       !eq(ArgTy[2], v4i32): VRegSrc_128,
-                       !eq(ArgTy[1], v4i16): VRegSrc_64,
-                       !eq(ArgTy[1], v4f16): VRegSrc_64,
-                       !eq(ArgTy[2], v2i32): VRegSrc_64,
-                       !eq(ArgTy[2], i32)  : VRegSrc_32);
+  let DstRC = !cast<RegisterOperand>("VDst_"#ArgTy[0].Size);
+  let Src0RC64 = !cast<RegisterOperand>("VRegSrc_"#ArgTy[1].Size);
+  let Src1RC64 = !cast<RegisterOperand>("VRegSrc_"#ArgTy[2].Size);
   let Src2RC64 = !if(IsSWMMAC, DstRC,
-                               !cond(!eq(ArgTy[3], v8f32): VISrc_256_f32,
-                                     !eq(ArgTy[3], v8i32): VISrc_256_b32,
-                                     !eq(ArgTy[3], v8f16): VISrc_128_f16,
-                                     !eq(ArgTy[3], v8i16): VISrc_128_f32, // bf16
-                                     !eq(ArgTy[3], v4f16): VISrc_64_f16,
-                                     !eq(ArgTy[3], v4i16): VISrc_64_b32,
-                                     !eq(ArgTy[3], v4i32): VISrc_128_b32,
-                                     !eq(ArgTy[3], v4f32): VISrc_128_f32));
+                               !cast<RegisterOperand>("VISrc_"#ArgTy[3].Size#
+                                                      !cond(IsC_F32: "_f32",
+                                                            IsC_F16: "_f16",
+                                                            1: "_b32")));
 
   // For f16 and bf16 matrices A and B, each element can be modified by
   // fneg(neg_lo,neg_hi = 1). For iu4 and iu8 matrices A and B neg_lo is
