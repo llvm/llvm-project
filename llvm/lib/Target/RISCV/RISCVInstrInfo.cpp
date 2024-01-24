@@ -2434,10 +2434,8 @@ RISCVInstrInfo::getOutliningCandidateInfo(
 
   unsigned SequenceSize = 0;
 
-  auto I = RepeatedSequenceLocs[0].front();
-  auto E = std::next(RepeatedSequenceLocs[0].back());
-  for (; I != E; ++I)
-    SequenceSize += getInstSizeInBytes(*I);
+  for (auto &MI : RepeatedSequenceLocs[0])
+    SequenceSize += getInstSizeInBytes(MI);
 
   // call t0, function = 8 bytes.
   unsigned CallOverhead = 8;
