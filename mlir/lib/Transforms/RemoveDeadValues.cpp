@@ -598,6 +598,9 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this terminator is associated with either a
       // function op or a region branch op and gets cleaned when these ops are
       // cleaned.
+    } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
+      // Nothing to do here because this is a terminator op and it should be
+      // honored with respect to its parent
     } else if (isa<RegionBranchTerminatorOpInterface>(op)) {
       // Nothing to do because this terminator is associated with a region
       // branch op and gets cleaned when the latter is cleaned.
