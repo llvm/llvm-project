@@ -41,7 +41,7 @@ add_llvm_library(LLVMOptDriver
 
 add_llvm_tool(opt
   PARTIAL_SOURCES_INTENDED
-  opt.cpp 
+  opt.cpp
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
