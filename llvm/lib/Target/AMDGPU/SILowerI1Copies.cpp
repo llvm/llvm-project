@@ -31,9 +31,9 @@
 
 using namespace llvm;
 
-static Register
-insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
-                    MachineRegisterInfo::RegisterAttributes LaneMaskRegAttrs);
+static Register insertUndefLaneMask(MachineBasicBlock *MBB,
+                                    MachineRegisterInfo *MRI,
+                                    Register LaneMaskRegAttrs);
 
 namespace {
 
@@ -78,7 +78,7 @@ public:
                            MachineBasicBlock::iterator I, const DebugLoc &DL,
                            Register DstReg, Register PrevReg,
                            Register CurReg) override;
-  void constrainAsLaneMask(Incoming &In) override;
+  void constrainIncomingRegisterTakenAsIs(Incoming &In) override;
 
   bool lowerCopiesFromI1();
   bool lowerCopiesToI1();
@@ -304,8 +304,7 @@ public:
   /// blocks, so that the SSA updater doesn't have to search all the way to the
   /// function entry.
   void addLoopEntries(unsigned LoopLevel, MachineSSAUpdater &SSAUpdater,
-                      MachineRegisterInfo &MRI,
-                      MachineRegisterInfo::RegisterAttributes LaneMaskRegAttrs,
+                      MachineRegisterInfo &MRI, Register LaneMaskRegAttrs,
                       ArrayRef<Incoming> Incomings = {}) {
     assert(LoopLevel < CommonDominators.size());
 
@@ -412,15 +411,14 @@ FunctionPass *llvm::createSILowerI1CopiesPass() {
   return new SILowerI1Copies();
 }
 
-Register llvm::createLaneMaskReg(
-    MachineRegisterInfo *MRI,
-    MachineRegisterInfo::RegisterAttributes LaneMaskRegAttrs) {
-  return MRI->createVirtualRegister(LaneMaskRegAttrs);
+Register llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
+                                 Register LaneMaskRegAttrs) {
+  return MRI->cloneVirtualRegister(LaneMaskRegAttrs);
 }
 
-static Register
-insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
-                    MachineRegisterInfo::RegisterAttributes LaneMaskRegAttrs) {
+static Register insertUndefLaneMask(MachineBasicBlock *MBB,
+                                    MachineRegisterInfo *MRI,
+                                    Register LaneMaskRegAttrs) {
   MachineFunction &MF = *MBB->getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -621,7 +619,7 @@ bool PhiLoweringHelper::lowerPhis() {
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
         if (PIA.isSource(IMBB)) {
-          constrainAsLaneMask(Incoming);
+          constrainIncomingRegisterTakenAsIs(Incoming);
           SSAUpdater.AddAvailableValue(&IMBB, Incoming.Reg);
         } else {
           Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
@@ -913,4 +911,6 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
   }
 }
 
-void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) {}
+void Vreg1LoweringHelper::constrainIncomingRegisterTakenAsIs(Incoming &In) {
+  return;
+}
