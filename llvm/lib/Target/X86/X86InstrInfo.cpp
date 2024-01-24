@@ -2275,7 +2275,13 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::SHRD32rri8:
   case X86::SHLD32rri8:
   case X86::SHRD64rri8:
-  case X86::SHLD64rri8: {
+  case X86::SHLD64rri8:
+  case X86::SHRD16rri8_ND:
+  case X86::SHLD16rri8_ND:
+  case X86::SHRD32rri8_ND:
+  case X86::SHLD32rri8_ND:
+  case X86::SHRD64rri8_ND:
+  case X86::SHLD64rri8_ND: {
     unsigned Size;
     switch (Opc) {
     default:
@@ -2303,6 +2309,30 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     case X86::SHLD64rri8:
       Size = 64;
       Opc = X86::SHRD64rri8;
+      break;
+    case X86::SHRD16rri8_ND:
+      Size = 16;
+      Opc = X86::SHLD16rri8_ND;
+      break;
+    case X86::SHLD16rri8_ND:
+      Size = 16;
+      Opc = X86::SHRD16rri8_ND;
+      break;
+    case X86::SHRD32rri8_ND:
+      Size = 32;
+      Opc = X86::SHLD32rri8_ND;
+      break;
+    case X86::SHLD32rri8_ND:
+      Size = 32;
+      Opc = X86::SHRD32rri8_ND;
+      break;
+    case X86::SHRD64rri8_ND:
+      Size = 64;
+      Opc = X86::SHLD64rri8_ND;
+      break;
+    case X86::SHLD64rri8_ND:
+      Size = 64;
+      Opc = X86::SHRD64rri8_ND;
       break;
     }
     WorkingMI = CloneIfNew(MI);
