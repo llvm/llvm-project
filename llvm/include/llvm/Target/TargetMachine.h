@@ -248,6 +248,9 @@ public:
   /// Returns true if this target uses emulated TLS.
   bool useEmulatedTLS() const;
 
+  /// Returns true if this target uses TLS Descriptors.
+  bool useTLSDESC() const;
+
   /// Returns the TLS model which should be used for the given global variable.
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
 
