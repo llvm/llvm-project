@@ -163,6 +163,7 @@ static bool isSendMsgTraceDataOrGDS(const SIInstrInfo &TII,
 static bool isPermlane(const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
   return Opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANE64_B32 ||
          Opcode == AMDGPU::V_PERMLANEX16_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANE16_VAR_B32_e64 ||
          Opcode == AMDGPU::V_PERMLANEX16_VAR_B32_e64;
@@ -1143,6 +1144,7 @@ bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
   if (!ST.hasVMEMtoScalarWriteHazard())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
 
   if (!SIInstrInfo::isSALU(*MI) && !SIInstrInfo::isSMRD(*MI))
     return false;
@@ -1189,6 +1191,7 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   if (!ST.hasSMEMtoVectorWriteHazard())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
 
   if (!SIInstrInfo::isVALU(*MI))
     return false;
@@ -1242,7 +1245,8 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
       case AMDGPU::S_WAITCNT: {
         const int64_t Imm = MI.getOperand(0).getImm();
         AMDGPU::Waitcnt Decoded = AMDGPU::decodeWaitcnt(IV, Imm);
-        return (Decoded.LgkmCnt == 0);
+        // DsCnt corresponds to LGKMCnt here.
+        return (Decoded.DsCnt == 0);
       }
       default:
         // SOPP instructions cannot mitigate the hazard.
@@ -1272,7 +1276,11 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVcmpxExecWARHazard(MachineInstr *MI) {
-  if (!ST.hasVcmpxExecWARHazard() || !SIInstrInfo::isVALU(*MI))
+  if (!ST.hasVcmpxExecWARHazard())
+    return false;
+  assert(!ST.hasExtendedWaitCounts());
+
+  if (!SIInstrInfo::isVALU(*MI))
     return false;
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -1342,6 +1350,7 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
     return false;
 
   assert(ST.hasLdsBranchVmemWARHazard());
+  assert(!ST.hasExtendedWaitCounts());
 
   auto IsHazardInst = [](const MachineInstr &MI) {
     if (SIInstrInfo::isDS(MI))
@@ -1451,6 +1460,8 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
     return I.readsRegister(VDSTReg, &TRI) || I.modifiesRegister(VDSTReg, &TRI);
   };
   bool LdsdirCanWait = ST.hasLdsWaitVMSRC();
+  // TODO: On GFX12 the hazard should expire on S_WAIT_LOADCNT/SAMPLECNT/BVHCNT
+  // according to the type of VMEM instruction.
   auto IsExpiredFn = [this, LdsdirCanWait](const MachineInstr &I, int) {
     return SIInstrInfo::isVALU(I) || SIInstrInfo::isEXP(I) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT && !I.getOperand(0).getImm()) ||
@@ -1476,11 +1487,11 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
-  if (!ST.isWave64())
-    return false;
   if (!ST.hasVALUPartialForwardingHazard())
     return false;
-  if (!SIInstrInfo::isVALU(*MI))
+  assert(!ST.hasExtendedWaitCounts());
+
+  if (!ST.isWave64() || !SIInstrInfo::isVALU(*MI))
     return false;
 
   SmallSetVector<Register, 4> SrcVGPRs;
@@ -1627,6 +1638,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   if (!ST.hasVALUTransUseHazard())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
+
   if (!SIInstrInfo::isVALU(*MI))
     return false;
 
@@ -1713,8 +1726,8 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
     if (!SIInstrInfo::isWMMA(I))
       return false;
 
-    // Src0 or Src1 of the current wmma instruction overlaps with the dest of
-    // the previous wmma.
+    // Src0(matrix A) or Src1(matrix B) of the current wmma instruction overlaps
+    // with the dest(matrix D) of the previous wmma.
     const Register CurSrc0Reg =
         TII->getNamedOperand(*MI, AMDGPU::OpName::src0)->getReg();
     const Register CurSrc1Reg =
@@ -1726,25 +1739,6 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
     if (TRI->regsOverlap(PrevDstReg, CurSrc0Reg) ||
         TRI->regsOverlap(PrevDstReg, CurSrc1Reg)) {
       return true;
-    }
-
-    // Src2 of the current wmma instruction overlaps with the dest of the
-    // previous wmma.
-    const MachineOperand *Src2 =
-        TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    const Register CurSrc2Reg = Src2->isReg() ? Src2->getReg() : Register();
-
-    if (CurSrc2Reg != AMDGPU::NoRegister &&
-        TRI->regsOverlap(PrevDstReg, CurSrc2Reg)) {
-
-      const MachineOperand *Src2Mods =
-          TII->getNamedOperand(*MI, AMDGPU::OpName::src2_modifiers);
-      const bool NoSrc2Mods =
-          (Src2Mods->getImm() & (SISrcMods::NEG | SISrcMods::NEG_HI)) == 0;
-      // Exception: there is no hazard if the wmma instructions are of the same
-      // type and there is no input modifier on src2 of the current instruction.
-      return !(NoSrc2Mods && (TII->pseudoToMCOpcode(I.getOpcode()) ==
-                              TII->pseudoToMCOpcode(MI->getOpcode())));
     }
 
     return false;
@@ -1766,6 +1760,7 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
 bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!ST.hasShift64HighRegBug())
     return false;
+  assert(!ST.hasExtendedWaitCounts());
 
   switch (MI->getOpcode()) {
   default:
@@ -1895,6 +1890,7 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
 
   if (!ST.hasFPAtomicToDenormModeHazard())
     return 0;
+  assert(!ST.hasExtendedWaitCounts());
 
   if (MI->getOpcode() != AMDGPU::S_DENORM_MODE)
     return 0;
@@ -2720,11 +2716,11 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
 }
 
 bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
-  if (!ST.isWave64())
-    return false;
   if (!ST.hasVALUMaskWriteHazard())
     return false;
-  if (!SIInstrInfo::isSALU(*MI))
+  assert(!ST.hasExtendedWaitCounts());
+
+  if (!ST.isWave64() || !SIInstrInfo::isSALU(*MI))
     return false;
 
   // The hazard sequence is three instructions:

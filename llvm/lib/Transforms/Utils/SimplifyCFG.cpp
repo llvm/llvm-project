@@ -1770,6 +1770,11 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   Locs.push_back(I1->getDebugLoc());
   for (auto *OtherSuccTI : OtherSuccTIs)
     Locs.push_back(OtherSuccTI->getDebugLoc());
+  // Also clone DPValues from the existing terminator, and all others (to
+  // duplicate existing hoisting behaviour).
+  NT->cloneDebugInfoFrom(I1);
+  for (Instruction *OtherSuccTI : OtherSuccTIs)
+    NT->cloneDebugInfoFrom(OtherSuccTI);
   NT->setDebugLoc(DILocation::getMergedLocations(Locs));
 
   // PHIs created below will adopt NT's merged DebugLoc.
@@ -3101,10 +3106,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
     //   %merge = select %cond, %two, %one
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
-    for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
-      if (llvm::is_contained(DAI->location_ops(), OrigV))
-        DAI->replaceVariableLocationOp(OrigV, S);
-    }
+    auto replaceVariable = [OrigV, S](auto *DbgAssign) {
+      if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
+        DbgAssign->replaceVariableLocationOp(OrigV, S);
+    };
+    for_each(at::getAssignmentMarkers(SpeculatedStore), replaceVariable);
+    for_each(at::getDPVAssignmentMarkers(SpeculatedStore), replaceVariable);
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -3133,7 +3140,9 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
   // instructions, in the same way that dbg.value intrinsics are dropped at the
   // end of this block.
   for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
-    It.dropDbgValues();
+    for (DPValue &DPV : make_early_inc_range(It.getDbgValueRange()))
+      if (!DPV.isDbgAssign())
+        It.dropOneDbgValue(&DPV);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
 
@@ -5414,13 +5423,11 @@ static bool CasesAreContiguous(SmallVectorImpl<ConstantInt *> &Cases) {
 }
 
 static void createUnreachableSwitchDefault(SwitchInst *Switch,
-                                           DomTreeUpdater *DTU,
-                                           bool RemoveOrigDefaultBlock = true) {
+                                           DomTreeUpdater *DTU) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
   auto *OrigDefaultBlock = Switch->getDefaultDest();
-  if (RemoveOrigDefaultBlock)
-    OrigDefaultBlock->removePredecessor(BB);
+  OrigDefaultBlock->removePredecessor(BB);
   BasicBlock *NewDefaultBlock = BasicBlock::Create(
       BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
       OrigDefaultBlock);
@@ -5429,8 +5436,7 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 2> Updates;
     Updates.push_back({DominatorTree::Insert, BB, &*NewDefaultBlock});
-    if (RemoveOrigDefaultBlock &&
-        !is_contained(successors(BB), OrigDefaultBlock))
+    if (!is_contained(successors(BB), OrigDefaultBlock))
       Updates.push_back({DominatorTree::Delete, BB, &*OrigDefaultBlock});
     DTU->applyUpdates(Updates);
   }
@@ -5612,33 +5618,10 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
       Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
   if (HasDefault && DeadCases.empty() &&
-      NumUnknownBits < 64 /* avoid overflow */) {
-    uint64_t AllNumCases = 1ULL << NumUnknownBits;
-    if (SI->getNumCases() == AllNumCases) {
-      createUnreachableSwitchDefault(SI, DTU);
-      return true;
-    }
-    // When only one case value is missing, replace default with that case.
-    // Eliminating the default branch will provide more opportunities for
-    // optimization, such as lookup tables.
-    if (SI->getNumCases() == AllNumCases - 1) {
-      assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
-      IntegerType *CondTy = cast<IntegerType>(Cond->getType());
-      if (CondTy->getIntegerBitWidth() > 64 ||
-          !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
-        return false;
-
-      uint64_t MissingCaseVal = 0;
-      for (const auto &Case : SI->cases())
-        MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();
-      auto *MissingCase =
-          cast<ConstantInt>(ConstantInt::get(Cond->getType(), MissingCaseVal));
-      SwitchInstProfUpdateWrapper SIW(*SI);
-      SIW.addCase(MissingCase, SI->getDefaultDest(), SIW.getSuccessorWeight(0));
-      createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
-      SIW.setSuccessorWeight(0, 0);
-      return true;
-    }
+      NumUnknownBits < 64 /* avoid overflow */ &&
+      SI->getNumCases() == (1ULL << NumUnknownBits)) {
+    createUnreachableSwitchDefault(SI, DTU);
+    return true;
   }
 
   if (DeadCases.empty())

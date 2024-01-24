@@ -68,7 +68,7 @@ struct __fn;
 template <move_constructible _Tp, semiregular _Bound = unreachable_sentinel_t>
   requires(is_object_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>> &&
            (__integer_like_with_usable_difference_type<_Bound> || same_as<_Bound, unreachable_sentinel_t>))
-class _LIBCPP_ABI_2023_OVERLAPPING_SUBOBJECT_FIX_TAG repeat_view : public view_interface<repeat_view<_Tp, _Bound>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS repeat_view : public view_interface<repeat_view<_Tp, _Bound>> {
   friend struct views::__take::__fn;
   friend struct views::__drop::__fn;
   class __iterator;

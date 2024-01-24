@@ -411,6 +411,12 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombineSignExtendInReg(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
     MatchData = {LoadMI, AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT};
     return Width == 16;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+    MatchData = {LoadMI, AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE};
+    return Width == 8;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+    MatchData = {LoadMI, AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT};
+    return Width == 16;
   }
   return false;
 }

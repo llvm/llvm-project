@@ -31,7 +31,9 @@ struct Incoming {
       : Reg(Reg), Block(Block), UpdatedReg(UpdatedReg) {}
 };
 
-Register createLaneMaskReg(MachineRegisterInfo *MRI, Register LaneMaskRegAttrs);
+Register
+createLaneMaskReg(MachineRegisterInfo *MRI,
+                  MachineRegisterInfo::RegisterAttributes LaneMaskRegAttrs);
 
 class PhiLoweringHelper {
 public:
@@ -47,7 +49,7 @@ protected:
   MachineRegisterInfo *MRI = nullptr;
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
-  Register LaneMaskRegAttrs;
+  MachineRegisterInfo::RegisterAttributes LaneMaskRegAttrs;
 
 #ifndef NDEBUG
   DenseSet<Register> PhiRegisters;
@@ -68,7 +70,8 @@ public:
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
 
   void initializeLaneMaskRegisterAttributes(Register LaneMask) {
-    LaneMaskRegAttrs = LaneMask;
+    LaneMaskRegAttrs.RCOrRB = &MRI->getRegClassOrRegBank(LaneMask);
+    LaneMaskRegAttrs.Ty = MRI->getType(LaneMask);
   }
 
   bool isLaneMaskReg(Register Reg) const {
@@ -91,7 +94,7 @@ public:
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, Register DstReg,
                                    Register PrevReg, Register CurReg) = 0;
-  virtual void constrainIncomingRegisterTakenAsIs(Incoming &In) = 0;
+  virtual void constrainAsLaneMask(Incoming &In) = 0;
 };
 
 } // end namespace llvm

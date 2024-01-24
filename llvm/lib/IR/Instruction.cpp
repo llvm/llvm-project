@@ -146,9 +146,9 @@ void Instruction::insertBefore(BasicBlock &BB,
   bool InsertAtHead = InsertPos.getHeadBit();
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
-    if (!SrcMarker)
-      SrcMarker = BB.createMarker(InsertPos);
-    DbgMarker->absorbDebugValues(*SrcMarker, false);
+    // If there's no source marker, InsertPos is very likely end().
+    if (SrcMarker)
+      DbgMarker->absorbDebugValues(*SrcMarker, false);
   }
 
   // If we're inserting a terminator, check if we need to flush out

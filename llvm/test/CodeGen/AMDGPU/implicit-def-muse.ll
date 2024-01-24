@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck %s
 
 ; CHECK-LABEL: vcopy_i1_undef
 ; CHECK: [[IMPDEF0:%[0-9]+]]:sreg_64 = IMPLICIT_DEF

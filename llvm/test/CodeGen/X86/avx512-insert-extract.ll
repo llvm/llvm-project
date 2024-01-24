@@ -2175,7 +2175,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-NEXT:    movzwl %ax, %eax
 ; KNL-NEXT:    vmovd %eax, %xmm1
 ; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
-; KNL-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; KNL-NEXT:    vmovss {{.*#+}} xmm2 = [6.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; KNL-NEXT:    vucomiss %xmm2, %xmm1
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    andl $1, %eax
@@ -2217,7 +2217,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; SKX-NEXT:    movzwl %ax, %eax
 ; SKX-NEXT:    vmovd %eax, %xmm1
 ; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
-; SKX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SKX-NEXT:    vmovss {{.*#+}} xmm2 = [6.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SKX-NEXT:    vucomiss %xmm2, %xmm1
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    kmovd %eax, %k0

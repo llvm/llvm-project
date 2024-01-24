@@ -67,7 +67,7 @@ TEST_F(LlvmLibcLog1pTest, TrickyInputs) {
       0x5671e2f1628093e4, 0x73dac56e2bf1a951, 0x8001bc6879ea14c5,
   };
   for (int i = 0; i < N; ++i) {
-    double x = double(FPBits(INPUTS[i]));
+    double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log1p, x,
                                    LIBC_NAMESPACE::log1p(x), 0.5);
   }

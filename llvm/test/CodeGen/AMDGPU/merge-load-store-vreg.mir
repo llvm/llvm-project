@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,VI %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 # If there's a base offset, check that SILoadStoreOptimizer creates
 # V_ADD_{I|U}32_e64 for that offset; _e64 uses a vreg for the carry (rather than

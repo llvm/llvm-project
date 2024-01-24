@@ -40,16 +40,12 @@ LIBC_INLINE T trunc(T x) {
     return x;
 
   // If the exponent is such that abs(x) is less than 1, then return 0.
-  if (exponent <= -1) {
-    if (bits.get_sign())
-      return T(-0.0);
-    else
-      return T(0.0);
-  }
+  if (exponent <= -1)
+    return FPBits<T>::zero(bits.sign()).get_val();
 
   int trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  return T(bits);
+  return bits.get_val();
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -60,7 +56,7 @@ LIBC_INLINE T ceil(T x) {
   if (bits.is_inf_or_nan() || bits.is_zero())
     return x;
 
-  bool is_neg = bits.get_sign();
+  bool is_neg = bits.is_neg();
   int exponent = bits.get_exponent();
 
   // If the exponent is greater than the most negative mantissa
@@ -77,7 +73,7 @@ LIBC_INLINE T ceil(T x) {
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  T trunc_value = T(bits);
+  T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.
   if (trunc_value == x)
@@ -93,7 +89,7 @@ LIBC_INLINE T ceil(T x) {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T floor(T x) {
   FPBits<T> bits(x);
-  if (bits.get_sign()) {
+  if (bits.is_neg()) {
     return -ceil(-x);
   } else {
     return trunc(x);
@@ -109,7 +105,6 @@ LIBC_INLINE T round(T x) {
   if (bits.is_inf_or_nan() || bits.is_zero())
     return x;
 
-  bool is_neg = bits.get_sign();
   int exponent = bits.get_exponent();
 
   // If the exponent is greater than the most negative mantissa
@@ -119,25 +114,19 @@ LIBC_INLINE T round(T x) {
 
   if (exponent == -1) {
     // Absolute value of x is greater than equal to 0.5 but less than 1.
-    if (is_neg)
-      return T(-1.0);
-    else
-      return T(1.0);
+    return FPBits<T>::one(bits.sign()).get_val();
   }
 
   if (exponent <= -2) {
     // Absolute value of x is less than 0.5.
-    if (is_neg)
-      return T(-0.0);
-    else
-      return T(0.0);
+    return FPBits<T>::zero(bits.sign()).get_val();
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bool half_bit_set =
       bool(bits.get_mantissa() & (StorageType(1) << (trim_size - 1)));
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  T trunc_value = T(bits);
+  T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.
   if (trunc_value == x)
@@ -148,7 +137,7 @@ LIBC_INLINE T round(T x) {
     // same as the trunc value.
     return trunc_value;
   } else {
-    return is_neg ? trunc_value - T(1.0) : trunc_value + T(1.0);
+    return bits.is_neg() ? trunc_value - T(1.0) : trunc_value + T(1.0);
   }
 }
 
@@ -161,7 +150,7 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
   if (bits.is_inf_or_nan() || bits.is_zero())
     return x;
 
-  bool is_neg = bits.get_sign();
+  bool is_neg = bits.is_neg();
   int exponent = bits.get_exponent();
   int rounding_mode = quick_get_round();
 
@@ -191,7 +180,7 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   FPBits<T> new_bits = bits;
   new_bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
-  T trunc_value = T(new_bits);
+  T trunc_value = new_bits.get_val();
 
   // If x is already an integer, return it.
   if (trunc_value == x)
@@ -247,18 +236,18 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
 
   if (bits.is_inf_or_nan()) {
     set_domain_error_and_raise_invalid();
-    return bits.get_sign() ? INTEGER_MIN : INTEGER_MAX;
+    return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
   }
 
   int exponent = bits.get_exponent();
   constexpr int EXPONENT_LIMIT = sizeof(I) * 8 - 1;
   if (exponent > EXPONENT_LIMIT) {
     set_domain_error_and_raise_invalid();
-    return bits.get_sign() ? INTEGER_MIN : INTEGER_MAX;
+    return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
   } else if (exponent == EXPONENT_LIMIT) {
-    if (bits.get_sign() == 0 || bits.get_mantissa() != 0) {
+    if (bits.is_pos() || bits.get_mantissa() != 0) {
       set_domain_error_and_raise_invalid();
-      return bits.get_sign() ? INTEGER_MIN : INTEGER_MAX;
+      return bits.is_neg() ? INTEGER_MIN : INTEGER_MAX;
     }
     // If the control reaches here, then it means that the rounded
     // value is the most negative number for the signed integer type I.

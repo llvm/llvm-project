@@ -128,11 +128,13 @@ lexical features of LLVM:
 #. Comments are delimited with a '``;``' and go until the end of line.
 #. Unnamed temporaries are created when the result of a computation is
    not assigned to a named value.
-#. Unnamed temporaries are numbered sequentially (using a per-function
-   incrementing counter, starting with 0). Note that basic blocks and unnamed
-   function parameters are included in this numbering. For example, if the
-   entry basic block is not given a label name and all function parameters are
-   named, then it will get number 0.
+#. By default, unnamed temporaries are numbered sequentially (using a
+   per-function incrementing counter, starting with 0). However, when explicitly
+   specifying temporary numbers, it is allowed to skip over numbers.
+
+   Note that basic blocks and unnamed function parameters are included in this
+   numbering. For example, if the entry basic block is not given a label name
+   and all function parameters are named, then it will get number 0.
 
 It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
@@ -3310,7 +3312,7 @@ Memory Model for Concurrent Operations
 The LLVM IR does not define any way to start parallel threads of
 execution or to register signal handlers. Nonetheless, there are
 platform-specific ways to create them, and we define LLVM IR's behavior
-in their presence. This model is inspired by the C++0x memory model.
+in their presence. This model is inspired by the C++ memory model.
 
 For a more informal introduction to this model, see the :doc:`Atomics`.
 
@@ -3318,7 +3320,7 @@ We define a *happens-before* partial order as the least partial order
 that
 
 -  Is a superset of single-thread program order, and
--  When a *synchronizes-with* ``b``, includes an edge from ``a`` to
+-  When ``a`` *synchronizes-with* ``b``, includes an edge from ``a`` to
    ``b``. *Synchronizes-with* pairs are introduced by platform-specific
    techniques, like pthread locks, thread creation, thread joining,
    etc., and by atomic instructions. (See also :ref:`Atomic Memory Ordering
@@ -3382,13 +3384,12 @@ Atomic instructions (:ref:`cmpxchg <i_cmpxchg>`,
 :ref:`atomicrmw <i_atomicrmw>`, :ref:`fence <i_fence>`,
 :ref:`atomic load <i_load>`, and :ref:`atomic store <i_store>`) take
 ordering parameters that determine which other atomic instructions on
-the same address they *synchronize with*. These semantics are borrowed
-from Java and C++0x, but are somewhat more colloquial. If these
-descriptions aren't precise enough, check those specs (see spec
-references in the :doc:`atomics guide <Atomics>`).
-:ref:`fence <i_fence>` instructions treat these orderings somewhat
-differently since they don't take an address. See that instruction's
-documentation for details.
+the same address they *synchronize with*. These semantics implement
+the Java or C++ memory models; if these descriptions aren't precise
+enough, check those specs (see spec references in the
+:doc:`atomics guide <Atomics>`). :ref:`fence <i_fence>` instructions
+treat these orderings somewhat differently since they don't take an
+address. See that instruction's documentation for details.
 
 For a simpler introduction to the ordering constraints, see the
 :doc:`Atomics`.
@@ -3416,32 +3417,37 @@ For a simpler introduction to the ordering constraints, see the
     stronger) operations on the same address. If an address is written
     ``monotonic``-ally by one thread, and other threads ``monotonic``-ally
     read that address repeatedly, the other threads must eventually see
-    the write. This corresponds to the C++0x/C1x
-    ``memory_order_relaxed``.
+    the write. This corresponds to the C/C++ ``memory_order_relaxed``.
 ``acquire``
     In addition to the guarantees of ``monotonic``, a
     *synchronizes-with* edge may be formed with a ``release`` operation.
-    This is intended to model C++'s ``memory_order_acquire``.
+    This is intended to model C/C++'s ``memory_order_acquire``.
 ``release``
     In addition to the guarantees of ``monotonic``, if this operation
     writes a value which is subsequently read by an ``acquire``
-    operation, it *synchronizes-with* that operation. (This isn't a
-    complete description; see the C++0x definition of a release
-    sequence.) This corresponds to the C++0x/C1x
+    operation, it *synchronizes-with* that operation. Furthermore,
+    this occurs even if the value written by a ``release`` operation
+    has been modified by a read-modify-write operation before being
+    read. (Such a set of operations comprises a *release
+    sequence*). This corresponds to the C/C++
     ``memory_order_release``.
 ``acq_rel`` (acquire+release)
     Acts as both an ``acquire`` and ``release`` operation on its
-    address. This corresponds to the C++0x/C1x ``memory_order_acq_rel``.
+    address. This corresponds to the C/C++ ``memory_order_acq_rel``.
 ``seq_cst`` (sequentially consistent)
     In addition to the guarantees of ``acq_rel`` (``acquire`` for an
     operation that only reads, ``release`` for an operation that only
     writes), there is a global total order on all
-    sequentially-consistent operations on all addresses, which is
-    consistent with the *happens-before* partial order and with the
-    modification orders of all the affected addresses. Each
+    sequentially-consistent operations on all addresses. Each
     sequentially-consistent read sees the last preceding write to the
-    same address in this global order. This corresponds to the C++0x/C1x
-    ``memory_order_seq_cst`` and Java volatile.
+    same address in this global order. This corresponds to the C/C++
+    ``memory_order_seq_cst`` and Java ``volatile``.
+
+    Note: this global total order is *not* guaranteed to be fully
+    consistent with the *happens-before* partial order if
+    non-``seq_cst`` accesses are involved. See the C++ standard
+    `[atomics.order] <https://wg21.link/atomics.order>`_ section
+    for more details on the exact guarantees.
 
 .. _syncscope:
 
@@ -5336,6 +5342,8 @@ X86:
   operand in a SSE register. If AVX is also enabled, can also be a 256-bit
   vector operand in an AVX register. If AVX-512 is also enabled, can also be a
   512-bit vector operand in an AVX512 register. Otherwise, an error.
+- ``Ws``: A symbolic reference with an optional constant addend or a label
+  reference.
 - ``x``: The same as ``v``, except that when AVX-512 is enabled, the ``x`` code
   only allocates into the first 16 AVX-512 registers, while the ``v`` code
   allocates into any of the 32 AVX-512 registers.
@@ -5518,6 +5526,7 @@ X86:
   the operand. (The behavior for relocatable symbol expressions is a
   target-specific behavior for this typically target-independent modifier)
 - ``H``: Print a memory reference with additional offset +8.
+- ``p``: Print a raw symbol name (without syntax-specific prefixes).
 - ``P``: Print a memory reference used as the argument of a call instruction or
   used with explicit base reg and index reg as its offset. So it can not use
   additional regs to present the memory reference. (E.g. omit ``(rip)``, even
@@ -10757,7 +10766,13 @@ still *synchronize-with* the explicit ``fence`` and establish the
 
 A ``fence`` which has ``seq_cst`` ordering, in addition to having both
 ``acquire`` and ``release`` semantics specified above, participates in
-the global program order of other ``seq_cst`` operations and/or fences.
+the global program order of other ``seq_cst`` operations and/or
+fences. Furthermore, the global ordering created by a ``seq_cst``
+fence must be compatible with the individual total orders of
+``monotonic`` (or stronger) memory accesses occurring before and after
+such a fence. The exact semantics of this interaction are somewhat
+complicated, see the C++ standard's `[atomics.order]
+<https://wg21.link/atomics.order>`_ section for more details.
 
 A ``fence`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
@@ -15487,6 +15502,8 @@ NaN, the intrinsic lowering is responsible for quieting the inputs to
 correctly return the non-NaN input (e.g. by using the equivalent of
 ``llvm.canonicalize``).
 
+.. _i_minimum:
+
 '``llvm.minimum.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15524,6 +15541,8 @@ If either operand is a NaN, returns NaN. Otherwise returns the lesser
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
 IEEE 754-2018.
+
+.. _i_maximum:
 
 '``llvm.maximum.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20386,6 +20405,106 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+
+.. _int_vp_minimum:
+
+'``llvm.vp.minimum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.minimum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.minimum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.minimum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point minimum of two vectors of floating-point values,
+propagating NaNs and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of floating-point type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.minimum``' intrinsic performs floating-point minimum (:ref:`minimum <i_minimum>`)
+of the first and second vector operand on each enabled lane, the result being 
+NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+The operation is performed in the default floating-point environment.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.minimum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.minimum.v4f32(<4 x float> %a, <4 x float> %b)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+
+.. _int_vp_maximum:
+
+'``llvm.vp.maximum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.maximum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.maximum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.maximum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point maximum of two vectors of floating-point values,
+propagating NaNs and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of floating-point type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.maximum``' intrinsic performs floating-point maximum (:ref:`maximum <i_maximum>`)
+of the first and second vector operand on each enabled lane, the result being 
+NaN if either operand is a NaN. -0.0 is considered to be less than +0.0 for this
+intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`. 
+The operation is performed in the default floating-point environment.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.maximum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.maximum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 

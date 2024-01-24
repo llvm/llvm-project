@@ -53,3 +53,14 @@ __m512 testZMM0(void) {
 #endif
   return zmm0;
 }
+
+extern int var, arr[4];
+struct Pair { int a, b; } pair;
+
+// CHECK-LABEL: test_Ws(
+// CHECK:         call void asm sideeffect "// ${0:p} ${1:p} ${2:p}", "^Ws,^Ws,^Ws,~{dirflag},~{fpsr},~{flags}"(ptr @var, ptr getelementptr inbounds ([4 x i32], ptr @arr, i64 0, i64 3), ptr @test_Ws)
+// CHECK:         call void asm sideeffect "// $0", "^Ws,~{dirflag},~{fpsr},~{flags}"(ptr getelementptr inbounds (%struct.Pair, ptr @pair, i32 0, i32 1))
+void test_Ws(void) {
+  asm("// %p0 %p1 %p2" :: "Ws"(&var), "Ws"(&arr[3]), "Ws"(test_Ws));
+  asm("// %0" :: "Ws"(&pair.b));
+}

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare float @llvm.amdgcn.cvt.f32.bf8(i32, i32)
 declare float @llvm.amdgcn.cvt.f32.fp8(i32, i32)

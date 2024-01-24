@@ -412,13 +412,13 @@ void Environment::initialize() {
           QualType ThisPointeeType =
               SurroundingMethodDecl->getFunctionObjectParameterType();
           setThisPointeeStorageLocation(
-              cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
         }
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {
       QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
       setThisPointeeStorageLocation(
-          cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+          cast<RecordStorageLocation>(createObject(ThisPointeeType)));
     }
   }
 }
@@ -747,6 +747,7 @@ static bool isOriginalRecordConstructor(const Expr &RecordPRValue) {
     return !Init->isSemanticForm() || !Init->isTransparent();
   return isa<CXXConstructExpr>(RecordPRValue) || isa<CallExpr>(RecordPRValue) ||
          isa<LambdaExpr>(RecordPRValue) ||
+         isa<CXXDefaultInitExpr>(RecordPRValue) ||
          // The framework currently does not propagate the objects created in
          // the two branches of a `ConditionalOperator` because there is no way
          // to reconcile their storage locations, which are different. We
@@ -781,8 +782,13 @@ Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
     return Val->getLoc();
   }
 
-  // Expression nodes that propagate a record prvalue should have exactly one
-  // child.
+  if (auto *Op = dyn_cast<BinaryOperator>(&RecordPRValue);
+      Op && Op->isCommaOp()) {
+    return getResultObjectLocation(*Op->getRHS());
+  }
+
+  // All other expression nodes that propagate a record prvalue should have
+  // exactly one child.
   llvm::SmallVector<const Stmt *> children(RecordPRValue.child_begin(),
                                            RecordPRValue.child_end());
   assert(children.size() == 1);

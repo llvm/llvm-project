@@ -847,6 +847,15 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec Float = HeaderSpec<
+      "float.h",
+      [
+        Macro<"FLT_MANT_DIG">,
+        Macro<"DBL_MANT_DIG">,
+        Macro<"LDBL_MANT_DIG">,
+      ]
+  >;
+
   NamedType SigAtomicT = NamedType<"sig_atomic_t">;
   HeaderSpec Signal = HeaderSpec<
       "signal.h",
@@ -1149,6 +1158,7 @@ def StdC : StandardSpec<"stdc"> {
     CType,
     Errno,
     Fenv,
+    Float,
     Math,
     String,
     StdIO,

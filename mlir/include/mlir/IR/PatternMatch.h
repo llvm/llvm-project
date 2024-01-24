@@ -402,6 +402,10 @@ public:
     Listener()
         : OpBuilder::Listener(ListenerBase::Kind::RewriterBaseListener) {}
 
+    /// Notify the listener that the specified block is about to be erased.
+    /// At this point, the block has zero uses.
+    virtual void notifyBlockRemoved(Block *block) {}
+
     /// Notify the listener that the specified operation was modified in-place.
     virtual void notifyOperationModified(Operation *op) {}
 
@@ -451,6 +455,10 @@ public:
     }
     void notifyBlockCreated(Block *block) override {
       listener->notifyBlockCreated(block);
+    }
+    void notifyBlockRemoved(Block *block) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyBlockRemoved(block);
     }
     void notifyOperationModified(Operation *op) override {
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
@@ -585,28 +593,30 @@ public:
 
   /// This method is used to notify the rewriter that an in-place operation
   /// modification is about to happen. A call to this function *must* be
-  /// followed by a call to either `finalizeRootUpdate` or `cancelRootUpdate`.
-  /// This is a minor efficiency win (it avoids creating a new operation and
-  /// removing the old one) but also often allows simpler code in the client.
-  virtual void startRootUpdate(Operation *op) {}
+  /// followed by a call to either `finalizeOpModification` or
+  /// `cancelOpModification`. This is a minor efficiency win (it avoids creating
+  /// a new operation and removing the old one) but also often allows simpler
+  /// code in the client.
+  virtual void startOpModification(Operation *op) {}
 
-  /// This method is used to signal the end of a root update on the given
-  /// operation. This can only be called on operations that were provided to a
-  /// call to `startRootUpdate`.
-  virtual void finalizeRootUpdate(Operation *op);
+  /// This method is used to signal the end of an in-place modification of the
+  /// given operation. This can only be called on operations that were provided
+  /// to a call to `startOpModification`.
+  virtual void finalizeOpModification(Operation *op);
 
-  /// This method cancels a pending root update. This can only be called on
-  /// operations that were provided to a call to `startRootUpdate`.
-  virtual void cancelRootUpdate(Operation *op) {}
+  /// This method cancels a pending in-place modification. This can only be
+  /// called on operations that were provided to a call to
+  /// `startOpModification`.
+  virtual void cancelOpModification(Operation *op) {}
 
-  /// This method is a utility wrapper around a root update of an operation. It
-  /// wraps calls to `startRootUpdate` and `finalizeRootUpdate` around the given
-  /// callable.
+  /// This method is a utility wrapper around an in-place modification of an
+  /// operation. It wraps calls to `startOpModification` and
+  /// `finalizeOpModification` around the given callable.
   template <typename CallableT>
-  void updateRootInPlace(Operation *root, CallableT &&callable) {
-    startRootUpdate(root);
+  void modifyOpInPlace(Operation *root, CallableT &&callable) {
+    startOpModification(root);
     callable();
-    finalizeRootUpdate(root);
+    finalizeOpModification(root);
   }
 
   /// Find uses of `from` and replace them with `to`. It also marks every
@@ -619,7 +629,7 @@ public:
   void replaceAllUsesWith(IRObjectWithUseList<OperandType> *from, ValueT &&to) {
     for (OperandType &operand : llvm::make_early_inc_range(from->getUses())) {
       Operation *op = operand.getOwner();
-      updateRootInPlace(op, [&]() { operand.set(to); });
+      modifyOpInPlace(op, [&]() { operand.set(to); });
     }
   }
   void replaceAllUsesWith(ValueRange from, ValueRange to) {
