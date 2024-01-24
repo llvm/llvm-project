@@ -12,6 +12,7 @@
 #include "enum-set.h"
 #include "flang/Common/Fortran.h"
 #include <cstring>
+#include <limits>
 
 // Define a FormatValidator class template to validate a format expression
 // of a given CHAR type.  To enable use in runtime library code as well as
@@ -214,15 +215,13 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   case '7':
   case '8':
   case '9': {
-    int64_t lastValue;
     const CHAR *lastCursor;
     integerValue_ = 0;
     bool overflow{false};
     do {
-      lastValue = integerValue_;
       lastCursor = cursor_;
       integerValue_ = 10 * integerValue_ + c - '0';
-      if (lastValue > integerValue_) {
+      if (integerValue_ > std::numeric_limits<int>::max()) {
         overflow = true;
       }
       c = NextChar();

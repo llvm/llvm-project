@@ -36,7 +36,7 @@
   write(*,'("a""""bc", 2x)')
   write(*,'(3Habc)')
   write(*,'(3Habc, 2X, 3X)')
-  write(*,'(987654321098765432X)')
+  write(*,'(2147483647X)')
   write(*,'($)')
   write(*,'(\)')
   write(*,'(RZ,RU,RP,RN,RD,RC,SS,SP,S,3G15.3e2)')

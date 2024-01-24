@@ -63,7 +63,7 @@ FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
 }
 
 template <typename CONTEXT>
-int FormatControl<CONTEXT>::GetIntField(
+std::int32_t FormatControl<CONTEXT>::GetIntField(
     IoErrorHandler &handler, CharType firstCh, bool *hadError) {
   CharType ch{firstCh ? firstCh : PeekNext()};
   if (ch != '-' && ch != '+' && (ch < '0' || ch > '9')) {
@@ -74,7 +74,7 @@ int FormatControl<CONTEXT>::GetIntField(
     }
     return 0;
   }
-  int result{0};
+  std::int64_t result{0};
   bool negate{ch == '-'};
   if (negate || ch == '+') {
     if (firstCh) {
@@ -85,8 +85,8 @@ int FormatControl<CONTEXT>::GetIntField(
     ch = PeekNext();
   }
   while (ch >= '0' && ch <= '9') {
-    if (result >
-        std::numeric_limits<int>::max() / 10 - (static_cast<int>(ch) - '0')) {
+    result = 10 * result + ch - '0';
+    if (result > std::numeric_limits<int>::max()) {
       handler.SignalError(
           IostatErrorInFormat, "FORMAT integer field out of range");
       if (hadError) {
@@ -94,7 +94,6 @@ int FormatControl<CONTEXT>::GetIntField(
       }
       return result;
     }
-    result = 10 * result + ch - '0';
     if (firstCh) {
       firstCh = '\0';
     } else {
