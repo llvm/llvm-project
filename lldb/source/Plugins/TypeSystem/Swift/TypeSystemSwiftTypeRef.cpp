@@ -611,7 +611,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   }
   NodePointer n = GetDemangledType(dem, desugared_name.GetStringRef());
   if (!n) {
-    LLDB_LOG(GetLog(LLDBLog::Types), "Unrecognized demangling %s",
+    LLDB_LOG(GetLog(LLDBLog::Types), "Unrecognized demangling {0}",
              desugared_name.AsCString());
     return {{}, {}};
   }
