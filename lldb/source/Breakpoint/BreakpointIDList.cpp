@@ -48,15 +48,6 @@ bool BreakpointIDList::AddBreakpointID(BreakpointID bp_id) {
                // return true.
 }
 
-bool BreakpointIDList::AddBreakpointID(const char *bp_id_str) {
-  auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-  if (!bp_id)
-    return false;
-
-  m_breakpoint_ids.push_back(*bp_id);
-  return true;
-}
-
 bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id,
                                         size_t *position) const {
   for (size_t i = 0; i < m_breakpoint_ids.size(); ++i) {
