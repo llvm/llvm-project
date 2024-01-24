@@ -1244,6 +1244,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fminf128
+  SRCS
+    fminf128.cpp
+  HDRS
+    ../fminf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   fmax
   SRCS
     fmax.cpp
@@ -1273,6 +1285,18 @@ add_entrypoint_object(
     fmaxl.cpp
   HDRS
     ../fmaxl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fmaxf128
+  SRCS
+    fmaxf128.cpp
+  HDRS
+    ../fmaxf128.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
