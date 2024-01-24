@@ -13183,7 +13183,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
   auto &TreeRoot = VectorizableTree[0]->Scalars;
   auto *TreeRootIT = dyn_cast<IntegerType>(TreeRoot[0]->getType());
-  if (!TreeRootIT)
+  if (!TreeRootIT || VectorizableTree.front()->State == TreeEntry::NeedToGather)
     return;
 
   // Ensure the roots of the vectorizable tree don't form a cycle.
