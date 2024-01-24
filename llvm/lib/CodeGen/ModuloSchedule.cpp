@@ -979,8 +979,8 @@ void ModuloScheduleExpander::updateMemOperands(MachineInstr &NewMI,
       NewMMOs.push_back(
           MF.getMachineMemOperand(MMO, AdjOffset, MMO->getSize()));
     } else {
-      NewMMOs.push_back(
-          MF.getMachineMemOperand(MMO, 0, MemoryLocation::UnknownSize));
+      NewMMOs.clear();
+      break;
     }
   }
   NewMI.setMemRefs(MF, NewMMOs);

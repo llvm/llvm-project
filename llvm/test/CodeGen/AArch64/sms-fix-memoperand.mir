@@ -1,0 +1,126 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -start-before=pipeliner -aarch64-enable-pipeliner
+# REQUIRES: asserts
+
+# Check that assertions do not fail
+
+--- |
+  define dso_local void @f(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b, i32 noundef %n) local_unnamed_addr #0 {
+  entry:
+    %cmp6 = icmp sgt i32 %n, 0
+    br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
+  
+  for.body.preheader:                               ; preds = %entry
+    %wide.trip.count = zext nneg i32 %n to i64
+    %0 = icmp eq i32 %n, 1
+    br i1 %0, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new
+  
+  for.body.preheader.new:                           ; preds = %for.body.preheader
+    %unroll_iter = and i64 %wide.trip.count, 2147483646
+    br label %for.body
+  
+  for.cond.cleanup.loopexit.unr-lcssa:              ; preds = %for.body, %for.body.preheader
+    %indvars.iv.unr = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next.1, %for.body ]
+    %1 = and i64 %wide.trip.count, 1
+    %lcmp.mod.not = icmp eq i64 %1, 0
+    br i1 %lcmp.mod.not, label %for.cond.cleanup, label %for.body.epil
+  
+  for.body.epil:                                    ; preds = %for.cond.cleanup.loopexit.unr-lcssa
+    %arrayidx.epil = getelementptr inbounds double, ptr %b, i64 %indvars.iv.unr
+    %2 = load double, ptr %arrayidx.epil, align 8
+    %mul.epil = fmul double %2, 2.000000e+00
+    %arrayidx2.epil = getelementptr inbounds double, ptr %a, i64 %indvars.iv.unr
+    store double %mul.epil, ptr %arrayidx2.epil, align 8
+    br label %for.cond.cleanup
+  
+  for.cond.cleanup:                                 ; preds = %for.body.epil, %for.cond.cleanup.loopexit.unr-lcssa, %entry
+    ret void
+  
+  for.body:                                         ; preds = %for.body, %for.body.preheader.new
+    %indvars.iv = phi i64 [ 0, %for.body.preheader.new ], [ %indvars.iv.next.1, %for.body ]
+    %3 = shl i64 %indvars.iv, 3
+    %scevgep13 = getelementptr i8, ptr %b, i64 %3
+    %4 = load double, ptr %scevgep13, align 8
+    %mul = fmul double %4, 2.000000e+00
+    %5 = shl i64 %indvars.iv, 3
+    %scevgep12 = getelementptr i8, ptr %a, i64 %5
+    store double %mul, ptr %scevgep12, align 8
+    %6 = shl i64 %indvars.iv, 3
+    %scevgep = getelementptr i8, ptr %b, i64 %6
+    %scevgep9 = getelementptr i8, ptr %scevgep, i64 8
+    %7 = load double, ptr %scevgep9, align 8
+    %mul.1 = fmul double %7, 2.000000e+00
+    %scevgep10 = getelementptr i8, ptr %a, i64 %6
+    %scevgep11 = getelementptr i8, ptr %scevgep10, i64 8
+    store double %mul.1, ptr %scevgep11, align 8
+    %indvars.iv.next.1 = add nuw i64 %indvars.iv, 2
+    %niter.ncmp.1 = icmp eq i64 %unroll_iter, %indvars.iv.next.1
+    br i1 %niter.ncmp.1, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body
+  }
+
+...
+---
+name:            f
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%5' }
+  - { reg: '$x1', virtual-reg: '%6' }
+  - { reg: '$w2', virtual-reg: '%7' }
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $w2
+  
+    %7:gpr32common = COPY $w2
+    %6:gpr64common = COPY $x1
+    %5:gpr64common = COPY $x0
+    dead $wzr = SUBSWri %7, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.5, implicit $nzcv
+    B %bb.1
+  
+  bb.1.for.body.preheader:
+    %10:gpr32 = ORRWrs $wzr, %7, 0
+    %0:gpr64 = SUBREG_TO_REG 0, killed %10, %subreg.sub_32
+    dead $wzr = SUBSWri %7, 1, 0, implicit-def $nzcv
+    Bcc 1, %bb.2, implicit $nzcv
+  
+  bb.7:
+    %11:gpr64all = COPY $xzr
+    %9:gpr64all = COPY %11
+    B %bb.3
+  
+  bb.2.for.body.preheader.new:
+    %14:gpr64common = ANDXri %0, 8157
+    %15:gpr64all = COPY $xzr
+    %13:gpr64all = COPY %15
+    B %bb.6
+  
+  bb.3.for.cond.cleanup.loopexit.unr-lcssa:
+    %2:gpr64 = PHI %9, %bb.7, %4, %bb.6
+    %25:gpr32 = COPY %0.sub_32
+    TBZW killed %25, 0, %bb.5
+    B %bb.4
+  
+  bb.4.for.body.epil:
+    %26:gpr64 = UBFMXri %2, 61, 60
+    %27:fpr64 = LDRDroX %6, %26, 0, 0 :: (load (s64) from %ir.arrayidx.epil)
+    %28:fpr64 = nofpexcept FADDDrr %27, %27, implicit $fpcr
+    STRDroX killed %28, %5, %26, 0, 0 :: (store (s64) into %ir.arrayidx2.epil)
+  
+  bb.5.for.cond.cleanup:
+    RET_ReallyLR
+  
+  bb.6.for.body:
+    %3:gpr64common = PHI %13, %bb.2, %4, %bb.6
+    %16:gpr64 = UBFMXri %3, 61, 60
+    %17:gpr64common = ADDXrr %6, %16
+    %18:fpr64 = LDRDui %17, 0 :: (load (s64) from %ir.scevgep13)
+    %19:fpr64 = nofpexcept FADDDrr %18, %18, implicit $fpcr
+    %20:gpr64common = ADDXrr %5, %16
+    %21:fpr64 = LDRDui %17, 1 :: (load (s64) from %ir.scevgep9)
+    %22:fpr64 = nofpexcept FADDDrr %21, %21, implicit $fpcr
+    %23:gpr64common = nuw ADDXri %3, 2, 0
+    %4:gpr64all = COPY %23
+    dead $xzr = SUBSXrr %14, %23, implicit-def $nzcv
+    Bcc 0, %bb.3, implicit $nzcv
+    B %bb.6
+
+...
