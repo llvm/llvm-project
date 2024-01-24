@@ -951,9 +951,8 @@ public:
 
   static const uptr MaxTraceSize = 64;
 
-  static void collectTraceMaybe(const char *RawStackDepot,
+  static void collectTraceMaybe(const StackDepot *Depot,
                                 uintptr_t (&Trace)[MaxTraceSize], u32 Hash) {
-    auto *Depot = reinterpret_cast<const StackDepot *>(RawStackDepot);
     uptr RingPos, Size;
     if (!Depot->find(Hash, &RingPos, &Size))
       return;
@@ -976,12 +975,14 @@ public:
         MemoryAddr + MemorySize < MemoryAddr)
       return;
 
+    const StackDepot *Depot = nullptr;
     if (DepotPtr) {
       // check for corrupted StackDepot. First we need to check whether we can
       // read the metadata, then whether the metadata matches the size.
-      if (DepotSize < sizeof(Depot))
+      if (DepotSize < sizeof(*Depot))
         return;
-      if (!reinterpret_cast<const StackDepot *>(DepotPtr)->isValid(DepotSize))
+      Depot = reinterpret_cast<const StackDepot *>(DepotPtr);
+      if (!Depot->isValid(DepotSize))
         return;
     }
 
@@ -990,19 +991,19 @@ public:
     // Check for OOB in the current block and the two surrounding blocks. Beyond
     // that, UAF is more likely.
     if (extractTag(FaultAddr) != 0)
-      getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, DepotPtr,
+      getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
                          RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
                          MemorySize, 0, 2);
 
     // Check the ring buffer. For primary allocations this will only find UAF;
     // for secondary allocations we can find either UAF or OOB.
-    getRingBufferErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, DepotPtr,
+    getRingBufferErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
                            RingBufferPtr, RingBufferSize);
 
     // Check for OOB in the 28 blocks surrounding the 3 we checked earlier.
     // Beyond that we are likely to hit false positives.
     if (extractTag(FaultAddr) != 0)
-      getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, DepotPtr,
+      getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
                          RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
                          MemorySize, 2, 16);
   }
@@ -1340,7 +1341,7 @@ private:
 
   static void getInlineErrorInfo(struct scudo_error_info *ErrorInfo,
                                  size_t &NextErrorReport, uintptr_t FaultAddr,
-                                 const char *RawStackDepot,
+                                 const StackDepot *Depot,
                                  const char *RegionInfoPtr, const char *Memory,
                                  const char *MemoryTags, uintptr_t MemoryAddr,
                                  size_t MemorySize, size_t MinDistance,
@@ -1405,8 +1406,8 @@ private:
           UntaggedFaultAddr < ChunkAddr ? BUFFER_UNDERFLOW : BUFFER_OVERFLOW;
       R->allocation_address = ChunkAddr;
       R->allocation_size = Header.SizeOrUnusedBytes;
-      if (RawStackDepot) {
-        collectTraceMaybe(RawStackDepot, R->allocation_trace,
+      if (Depot) {
+        collectTraceMaybe(Depot, R->allocation_trace,
                           Data[MemTagAllocationTraceIndex]);
       }
       R->allocation_tid = Data[MemTagAllocationTidIndex];
@@ -1425,13 +1426,13 @@ private:
   static void getRingBufferErrorInfo(struct scudo_error_info *ErrorInfo,
                                      size_t &NextErrorReport,
                                      uintptr_t FaultAddr,
-                                     const char *RawStackDepot,
+                                     const StackDepot *Depot,
                                      const char *RingBufferPtr,
                                      size_t RingBufferSize) {
     auto *RingBuffer =
         reinterpret_cast<const AllocationRingBuffer *>(RingBufferPtr);
     size_t RingBufferElements = ringBufferElementsFromBytes(RingBufferSize);
-    if (!RingBuffer || RingBufferElements == 0 || !RawStackDepot)
+    if (!RingBuffer || RingBufferElements == 0 || !Depot)
       return;
     uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
 
@@ -1490,10 +1491,9 @@ private:
 
       R->allocation_address = UntaggedEntryPtr;
       R->allocation_size = EntrySize;
-      collectTraceMaybe(RawStackDepot, R->allocation_trace, AllocationTrace);
+      collectTraceMaybe(Depot, R->allocation_trace, AllocationTrace);
       R->allocation_tid = AllocationTid;
-      collectTraceMaybe(RawStackDepot, R->deallocation_trace,
-                        DeallocationTrace);
+      collectTraceMaybe(Depot, R->deallocation_trace, DeallocationTrace);
       R->deallocation_tid = DeallocationTid;
     }
   }
