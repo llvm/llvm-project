@@ -164,7 +164,7 @@ void string_sufficient_paren() {
   // FIXME: For very large arrays, it would be preferable to emit a small copy and a memset.
   // CHECKCXX20: call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} %[[PTR]], ptr align {{[0-9]+}} @[[ABC15]], i32 15,
   // CHECKCXX20-NOT: memset
-  new char[15] { "abc" };
+  new char[15]("abc");
 }
 #endif
 

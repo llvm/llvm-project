@@ -1,4 +1,9 @@
-# RUN: rm -rf %t && mkdir -p %t/armv7 && mkdir -p %t/thumbv7
+# RUN: rm -rf %t && mkdir -p %t/armv6 && mkdir -p %t/armv7 && mkdir -p %t/thumbv7
+# RUN: llvm-mc -triple=armv6-none-linux-gnueabi -arm-add-build-attributes -filetype=obj -o %t/armv6/out.o %s
+# RUN: llvm-objdump -r %t/armv6/out.o | FileCheck --check-prefix=CHECK-TYPE %s
+# RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb -slab-page-size 4096 \
+# RUN:              -abs target=0x76bbe88f -check %s %t/armv6/out.o
+
 # RUN: llvm-mc -triple=armv7-none-linux-gnueabi -arm-add-build-attributes -filetype=obj -o %t/armv7/out.o %s
 # RUN: llvm-objdump -r %t/armv7/out.o | FileCheck --check-prefix=CHECK-TYPE %s
 # RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb -slab-page-size 4096 \
@@ -29,6 +34,13 @@ rel32:
 	.word target - .
 	.size rel32, .-rel32
 
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_TARGET1 target
+# jitlink-check: *{4}(target1_abs32) = target
+	.global target1_abs32
+target1_abs32:
+	.word target(target1)
+	.size	target1_abs32, .-target1_abs32
+
 # CHECK-TYPE: {{[0-9a-f]+}} R_ARM_GOT_PREL target
 #
 # The GOT entry contains the absolute address of the external:
@@ -57,6 +69,41 @@ got_prel_offset:
 	.size	got_prel_offset, .-got_prel_offset
 	.size	got_prel, .-got_prel
 
+# EH personality routine in .ARM.exidx
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_NONE __aeabi_unwind_cpp_pr0
+	.globl __aeabi_unwind_cpp_pr0
+	.type __aeabi_unwind_cpp_pr0,%function
+	.align 2
+__aeabi_unwind_cpp_pr0:
+	bx lr
+
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_PREL31 .text
+#
+# An .ARM.exidx table entry is 8-bytes in size, made up of 2 4-byte entries.
+# First word contains offset to function for this entry:
+# jitlink-check: (*{4}section_addr(out.o, .ARM.exidx))[31:0] = prel31 - section_addr(out.o, .ARM.exidx)
+#
+# Most-significant bit in second word denotes inline entry when set (and
+# relocation to .ARM.extab otherwise). Inline entry with compact model index 0:
+#   0x9b      vsp = r11
+#   0x84 0x80 pop {r11, r14}
+#
+# jitlink-check: *{4}(section_addr(out.o, .ARM.exidx) + 4) = 0x809b8480
+#
+	.globl  prel31
+	.type   prel31,%function
+	.align  2
+prel31:
+	.fnstart
+	.save   {r11, lr}
+	push    {r11, lr}
+	.setfp  r11, sp
+	mov     r11, sp
+	pop     {r11, lr}
+	mov     pc, lr
+	.fnend
+	.size   prel31,.-prel31
+
 # This test is executable with any 4-byte external target:
 #  > echo "unsigned target = 42;" | clang -target armv7-linux-gnueabihf -o target.o -c -xc -
 #  > llvm-jitlink target.o armv7/out.o
@@ -67,5 +114,6 @@ got_prel_offset:
 main:
 	push	{lr}
 	bl	got_prel
+	bl	prel31
 	pop	{pc}
 	.size   main, .-main

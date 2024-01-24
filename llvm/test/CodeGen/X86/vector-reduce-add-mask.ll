@@ -864,7 +864,7 @@ define i16 @test_v4i16_v4i8(<4 x i16> %a0) {
 ;
 ; SSE41-LABEL: test_v4i16_v4i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,32768,16384,8192,u,u,u,u>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [u,32768,16384,8192,u,u,u,u]
 ; SSE41-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]

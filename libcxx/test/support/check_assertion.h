@@ -9,7 +9,9 @@
 #ifndef TEST_SUPPORT_CHECK_ASSERTION_H
 #define TEST_SUPPORT_CHECK_ASSERTION_H
 
+#include <array>
 #include <cassert>
+#include <csignal>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
@@ -85,6 +87,7 @@ Matcher MakeAnyMatcher() {
 enum class DeathCause {
   // Valid causes
   VerboseAbort = 1,
+  StdAbort,
   StdTerminate,
   Trap,
   // Invalid causes
@@ -96,6 +99,7 @@ enum class DeathCause {
 bool IsValidCause(DeathCause cause) {
   switch (cause) {
   case DeathCause::VerboseAbort:
+  case DeathCause::StdAbort:
   case DeathCause::StdTerminate:
   case DeathCause::Trap:
     return true;
@@ -108,6 +112,8 @@ std::string ToString(DeathCause cause) {
   switch (cause) {
   case DeathCause::VerboseAbort:
     return "verbose abort";
+  case DeathCause::StdAbort:
+    return "`std::abort`";
   case DeathCause::StdTerminate:
     return "`std::terminate`";
   case DeathCause::Trap:
@@ -121,6 +127,19 @@ std::string ToString(DeathCause cause) {
   }
 
   assert(false && "Unreachable");
+}
+
+template <std::size_t N>
+std::string ToString(std::array<DeathCause, N> const& causes) {
+  std::stringstream ss;
+  ss << "{";
+  for (std::size_t i = 0; i != N; ++i) {
+    ss << ToString(causes[i]);
+    if (i + 1 != N)
+      ss << ", ";
+  }
+  ss << "}";
+  return ss.str();
 }
 
 TEST_NORETURN void StopChildProcess(DeathCause cause) { std::exit(static_cast<int>(cause)); }
@@ -177,8 +196,9 @@ public:
   DeathTest(DeathTest const&)            = delete;
   DeathTest& operator=(DeathTest const&) = delete;
 
-  template <class Func>
-  DeathTestResult Run(DeathCause expected_cause, Func&& func, const Matcher& matcher) {
+  template <std::size_t N, class Func>
+  DeathTestResult Run(const std::array<DeathCause, N>& expected_causes, Func&& func, const Matcher& matcher) {
+    std::signal(SIGABRT, [](int) { StopChildProcess(DeathCause::StdAbort); });
     std::set_terminate([] { StopChildProcess(DeathCause::StdTerminate); });
 
     DeathCause cause = Run(func);
@@ -187,12 +207,12 @@ public:
       return DeathTestResult(Outcome::InvalidCause, cause, ToString(cause));
     }
 
-    if (expected_cause != cause) {
+    if (std::find(expected_causes.begin(), expected_causes.end(), cause) == expected_causes.end()) {
       std::stringstream failure_description;
-      failure_description                                             //
-          << "Child died, but with a different death cause\n"         //
-          << "Expected cause:   " << ToString(expected_cause) << "\n" //
-          << "Actual cause:     " << ToString(cause) << "\n";
+      failure_description                                               //
+          << "Child died, but with a different death cause\n"           //
+          << "Expected cause(s): " << ToString(expected_causes) << "\n" //
+          << "Actual cause:      " << ToString(cause) << "\n";
       return DeathTestResult(Outcome::UnexpectedCause, cause, failure_description.str());
     }
 
@@ -328,12 +348,14 @@ void std::__libcpp_verbose_abort(char const* format, ...) {
 }
 #endif // _LIBCPP_VERSION
 
-template <class Func>
-bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
-  assert(IsValidCause(expected_cause));
+template <std::size_t N, class Func>
+bool ExpectDeath(
+    const std::array<DeathCause, N>& expected_causes, const char* stmt, Func&& func, const Matcher& matcher) {
+  for (auto cause : expected_causes)
+    assert(IsValidCause(cause));
 
   DeathTest test_case;
-  DeathTestResult test_result = test_case.Run(expected_cause, func, matcher);
+  DeathTestResult test_result = test_case.Run(expected_causes, func, matcher);
   if (!test_result.success()) {
     test_case.PrintFailureDetails(test_result.failure_description(), stmt, test_result.cause());
   }
@@ -342,17 +364,31 @@ bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func, const
 }
 
 template <class Func>
+bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func, const Matcher& matcher) {
+  return ExpectDeath(std::array<DeathCause, 1>{expected_cause}, stmt, func, matcher);
+}
+
+template <std::size_t N, class Func>
+bool ExpectDeath(const std::array<DeathCause, N>& expected_causes, const char* stmt, Func&& func) {
+  return ExpectDeath(expected_causes, stmt, func, MakeAnyMatcher());
+}
+
+template <class Func>
 bool ExpectDeath(DeathCause expected_cause, const char* stmt, Func&& func) {
-  return ExpectDeath(expected_cause, stmt, func, MakeAnyMatcher());
+  return ExpectDeath(std::array<DeathCause, 1>{expected_cause}, stmt, func, MakeAnyMatcher());
 }
 
 // clang-format off
 
 /// Assert that the specified expression aborts with the expected cause and, optionally, error message.
+#define EXPECT_ANY_DEATH(...)                         \
+    assert(( ExpectDeath(std::array<DeathCause, 4>{DeathCause::VerboseAbort, DeathCause::StdAbort, DeathCause::StdTerminate, DeathCause::Trap}, #__VA_ARGS__, [&]() { __VA_ARGS__; } ) ))
 #define EXPECT_DEATH(...)                         \
     assert(( ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; } ) ))
 #define EXPECT_DEATH_MATCHES(matcher, ...)        \
     assert(( ExpectDeath(DeathCause::VerboseAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; }, matcher) ))
+#define EXPECT_STD_ABORT(...)                 \
+    assert(  ExpectDeath(DeathCause::StdAbort, #__VA_ARGS__, [&]() { __VA_ARGS__; })  )
 #define EXPECT_STD_TERMINATE(...)                 \
     assert(  ExpectDeath(DeathCause::StdTerminate, #__VA_ARGS__, __VA_ARGS__)  )
 

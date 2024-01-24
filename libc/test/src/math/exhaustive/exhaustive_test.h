@@ -55,7 +55,7 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
     uint64_t failed = 0;
     do {
       FPBits xbits(bits);
-      FloatType x = FloatType(xbits);
+      FloatType x = xbits.get_val();
       bool correct =
           TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, FUNC(x), 0.5, rounding);
       failed += (!correct);
@@ -127,9 +127,8 @@ struct LlvmLibcExhaustiveMathTest
             msg << "Test failed for " << std::dec << failed_in_range
                 << " inputs in range: " << range_begin << " to " << range_end
                 << " [0x" << std::hex << range_begin << ", 0x" << range_end
-                << "), [" << std::hexfloat
-                << static_cast<FloatType>(FPBits(range_begin)) << ", "
-                << static_cast<FloatType>(FPBits(range_end)) << ")\n";
+                << "), [" << std::hexfloat << FPBits(range_begin).get_val()
+                << ", " << FPBits(range_end).get_val() << ")\n";
             std::cerr << msg.str() << std::flush;
 
             failed.fetch_add(failed_in_range);

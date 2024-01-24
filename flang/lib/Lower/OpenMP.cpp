@@ -27,6 +27,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -385,7 +386,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
             // construct
             mlir::OpBuilder::InsertPoint unstructuredSectionsIP =
                 firOpBuilder.saveInsertionPoint();
-            firOpBuilder.setInsertionPointToStart(&op->getRegion(0).back());
+            mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
+            firOpBuilder.setInsertionPoint(lastOper);
             lastPrivIP = firOpBuilder.saveInsertionPoint();
             firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
           }
@@ -2206,15 +2208,6 @@ static mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
   return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
 }
 
-static void resetBeforeTerminator(fir::FirOpBuilder &firOpBuilder,
-                                  mlir::Operation *storeOp,
-                                  mlir::Block &block) {
-  if (storeOp)
-    firOpBuilder.setInsertionPointAfter(storeOp);
-  else
-    firOpBuilder.setInsertionPointToStart(&block);
-}
-
 static mlir::Operation *
 createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
                               mlir::Location loc, mlir::Value indexVal,
@@ -2257,11 +2250,17 @@ static void createBodyOfOp(
     const llvm::SmallVector<const Fortran::semantics::Symbol *> &args = {},
     bool outerCombined = false, DataSharingProcessor *dsp = nullptr) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  auto insertMarker = [](fir::FirOpBuilder &builder) {
+    mlir::Value undef = builder.create<fir::UndefOp>(builder.getUnknownLoc(),
+                                                     builder.getIndexType());
+    return undef.getDefiningOp();
+  };
+
   // If an argument for the region is provided then create the block with that
   // argument. Also update the symbol's address with the mlir argument value.
   // e.g. For loops the argument is the induction variable. And all further
   // uses of the induction variable should use this mlir value.
-  mlir::Operation *storeOp = nullptr;
   if (args.size()) {
     std::size_t loopVarTypeSize = 0;
     for (const Fortran::semantics::Symbol *arg : args)
@@ -2272,20 +2271,20 @@ static void createBodyOfOp(
     firOpBuilder.createBlock(&op.getRegion(), {}, tiv, locs);
     // The argument is not currently in memory, so make a temporary for the
     // argument, and store it there, then bind that location to the argument.
+    mlir::Operation *storeOp = nullptr;
     for (auto [argIndex, argSymbol] : llvm::enumerate(args)) {
       mlir::Value indexVal =
           fir::getBase(op.getRegion().front().getArgument(argIndex));
       storeOp =
           createAndSetPrivatizedLoopVar(converter, loc, indexVal, argSymbol);
     }
+    firOpBuilder.setInsertionPointAfter(storeOp);
   } else {
     firOpBuilder.createBlock(&op.getRegion());
   }
-  // Set the insert for the terminator operation to go at the end of the
-  // block - this is either empty or the block with the stores above,
-  // the end of the block works for both.
-  mlir::Block &block = op.getRegion().back();
-  firOpBuilder.setInsertionPointToEnd(&block);
+
+  // Mark the earliest insertion point.
+  mlir::Operation *marker = insertMarker(firOpBuilder);
 
   // If it is an unstructured region and is not the outer region of a combined
   // construct, create empty blocks for all evaluations.
@@ -2294,37 +2293,101 @@ static void createBodyOfOp(
                                             mlir::omp::YieldOp>(
         firOpBuilder, eval.getNestedEvaluations());
 
-  // Insert the terminator.
-  Fortran::lower::genOpenMPTerminator(firOpBuilder, op.getOperation(), loc);
-  // Reset the insert point to before the terminator.
-  resetBeforeTerminator(firOpBuilder, storeOp, block);
+  // Start with privatization, so that the lowering of the nested
+  // code will use the right symbols.
+  constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
+                          std::is_same_v<Op, mlir::omp::SimdLoopOp>;
+  bool privatize = clauses && !outerCombined;
 
-  // Handle privatization. Do not privatize if this is the outer operation.
-  if (clauses && !outerCombined) {
-    constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
-                            std::is_same_v<Op, mlir::omp::SimdLoopOp>;
+  firOpBuilder.setInsertionPoint(marker);
+  std::optional<DataSharingProcessor> tempDsp;
+  if (privatize) {
     if (!dsp) {
-      DataSharingProcessor proc(converter, *clauses, eval);
-      proc.processStep1();
-      proc.processStep2(op, isLoop);
-    } else {
-      if (isLoop && args.size() > 0)
-        dsp->setLoopIV(converter.getSymbolAddress(*args[0]));
-      dsp->processStep2(op, isLoop);
+      tempDsp.emplace(converter, *clauses, eval);
+      tempDsp->processStep1();
     }
-
-    if (storeOp)
-      firOpBuilder.setInsertionPointAfter(storeOp);
   }
 
   if constexpr (std::is_same_v<Op, mlir::omp::ParallelOp>) {
     threadPrivatizeVars(converter, eval);
-    if (clauses)
+    if (clauses) {
+      firOpBuilder.setInsertionPoint(marker);
       ClauseProcessor(converter, *clauses).processCopyin();
+    }
   }
 
-  if (genNested)
+  if (genNested) {
+    // genFIR(Evaluation&) tries to patch up unterminated blocks, causing
+    // a lot of complications for our approach if the terminator generation
+    // is delayed past this point. Insert a temporary terminator here, then
+    // delete it.
+    firOpBuilder.setInsertionPointToEnd(&op.getRegion().back());
+    auto *temp = Fortran::lower::genOpenMPTerminator(firOpBuilder,
+                                                     op.getOperation(), loc);
+    firOpBuilder.setInsertionPointAfter(marker);
     genNestedEvaluations(converter, eval);
+    temp->erase();
+  }
+
+  // Get or create a unique exiting block from the given region, or
+  // return nullptr if there is no exiting block.
+  auto getUniqueExit = [&](mlir::Region &region) -> mlir::Block * {
+    // Find the blocks where the OMP terminator should go. In simple cases
+    // it is the single block in the operation's region. When the region
+    // is more complicated, especially with unstructured control flow, there
+    // may be multiple blocks, and some of them may have non-OMP terminators
+    // resulting from lowering of the code contained within the operation.
+    // All the remaining blocks are potential exit points from the op's region.
+    //
+    // Explicit control flow cannot exit any OpenMP region (other than via
+    // STOP), and that is enforced by semantic checks prior to lowering. STOP
+    // statements are lowered to a function call.
+
+    // Collect unterminated blocks.
+    llvm::SmallVector<mlir::Block *> exits;
+    for (mlir::Block &b : region) {
+      if (b.empty() || !b.back().hasTrait<mlir::OpTrait::IsTerminator>())
+        exits.push_back(&b);
+    }
+
+    if (exits.empty())
+      return nullptr;
+    // If there already is a unique exiting block, do not create another one.
+    // Additionally, some ops (e.g. omp.sections) require only 1 block in
+    // its region.
+    if (exits.size() == 1)
+      return exits[0];
+    mlir::Block *exit = firOpBuilder.createBlock(&region);
+    for (mlir::Block *b : exits) {
+      firOpBuilder.setInsertionPointToEnd(b);
+      firOpBuilder.create<mlir::cf::BranchOp>(loc, exit);
+    }
+    return exit;
+  };
+
+  if (auto *exitBlock = getUniqueExit(op.getRegion())) {
+    firOpBuilder.setInsertionPointToEnd(exitBlock);
+    auto *term = Fortran::lower::genOpenMPTerminator(firOpBuilder,
+                                                     op.getOperation(), loc);
+    // Only insert lastprivate code when there actually is an exit block.
+    // Such a block may not exist if the nested code produced an infinite
+    // loop (this may not make sense in production code, but a user could
+    // write that and we should handle it).
+    firOpBuilder.setInsertionPoint(term);
+    if (privatize) {
+      if (!dsp) {
+        assert(tempDsp.has_value());
+        tempDsp->processStep2(op, isLoop);
+      } else {
+        if (isLoop && args.size() > 0)
+          dsp->setLoopIV(converter.getSymbolAddress(*args[0]));
+        dsp->processStep2(op, isLoop);
+      }
+    }
+  }
+
+  firOpBuilder.setInsertionPointAfter(marker);
+  marker->erase();
 }
 
 static void genBodyOfTargetDataOp(
@@ -3756,14 +3819,14 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 // Public functions
 //===----------------------------------------------------------------------===//
 
-void Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
-                                         mlir::Operation *op,
-                                         mlir::Location loc) {
+mlir::Operation *Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
+                                                     mlir::Operation *op,
+                                                     mlir::Location loc) {
   if (mlir::isa<mlir::omp::WsLoopOp, mlir::omp::ReductionDeclareOp,
                 mlir::omp::AtomicUpdateOp, mlir::omp::SimdLoopOp>(op))
-    builder.create<mlir::omp::YieldOp>(loc);
+    return builder.create<mlir::omp::YieldOp>(loc);
   else
-    builder.create<mlir::omp::TerminatorOp>(loc);
+    return builder.create<mlir::omp::TerminatorOp>(loc);
 }
 
 void Fortran::lower::genOpenMPConstruct(

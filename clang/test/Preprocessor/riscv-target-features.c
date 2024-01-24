@@ -1310,10 +1310,10 @@
 
 // Experimental extensions
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN: -march=rv32i_zaamo0p1 -x c -E -dM %s \
+// RUN: -march=rv32i_zaamo0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZAAMO-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN: -march=rv64i_zaamo0p1 -x c -E -dM %s \
+// RUN: -march=rv64i_zaamo0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZAAMO-EXT %s
 // CHECK-ZAAMO-EXT: __riscv_zaamo 2000{{$}}
 
@@ -1326,10 +1326,10 @@
 // CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN: -march=rv32i_zalrsc0p1 -x c -E -dM %s \
+// RUN: -march=rv32i_zalrsc0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZALRSC-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN: -march=rv64i_zalrsc0p1 -x c -E -dM %s \
+// RUN: -march=rv64i_zalrsc0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZALRSC-EXT %s
 // CHECK-ZALRSC-EXT: __riscv_zalrsc 2000{{$}}
 
@@ -1417,4 +1417,6 @@
 // RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -E -dM %s \
 // RUN:   -munaligned-access -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
+// RUN: %clang --target=riscv64-unknown-linux-gnu -mcpu=sifive-p450 -E -dM %s \
+// RUN:  -o - | FileCheck %s --check-prefix=CHECK-MISALIGNED-FAST
 // CHECK-MISALIGNED-FAST: __riscv_misaligned_fast 1

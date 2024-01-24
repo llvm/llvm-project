@@ -3,7 +3,7 @@
 ; RUN: llvm-as -o a.bc %s
 ; RUN: ld.lld --lto-partitions=2 -save-temps -o out a.bc -shared
 ; RUN: llvm-nm out.lto.o | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-nm out1.lto.o | FileCheck --check-prefix=CHECK1 %s
+; RUN: llvm-nm out.lto.1.o | FileCheck --check-prefix=CHECK1 %s
 
 ; RUN: not ld.lld --lto-partitions=0 a.bc -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID %s
 ; INVALID: --lto-partitions: number of threads must be > 0
