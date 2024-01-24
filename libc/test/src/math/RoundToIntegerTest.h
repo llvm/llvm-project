@@ -37,7 +37,15 @@ private:
   const F neg_zero = F(FPBits::zero(Sign::NEG));
   const F inf = F(FPBits::inf());
   const F neg_inf = F(FPBits::inf(Sign::NEG));
-  const F nan = F(FPBits::build_quiet_nan(1));
+  const F nan = F(FPBits::build_quiet_nan(Sign::POS, 1));
+
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
 
@@ -215,10 +223,8 @@ public:
 
   void testSubnormalRange(RoundToIntegerFunc func) {
     constexpr StorageType COUNT = 1'000'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_SUBNORMAL - FPBits::MIN_SUBNORMAL) / COUNT;
-    for (StorageType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
-         i += STEP) {
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
       F x = F(FPBits(i));
       if (x == F(0.0))
         continue;
@@ -259,10 +265,8 @@ public:
       return;
 
     constexpr StorageType COUNT = 1'000'001;
-    constexpr StorageType STEP =
-        (FPBits::MAX_NORMAL - FPBits::MIN_NORMAL) / COUNT;
-    for (StorageType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL;
-         i += STEP) {
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType i = MIN_NORMAL; i <= MAX_NORMAL; i += STEP) {
       F x = F(FPBits(i));
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.

@@ -1118,6 +1118,9 @@ AMDGPU Support
   arguments in C ABI. Callee is responsible for allocating stack memory and
   copying the value of the struct if modified. Note that AMDGPU backend still
   supports byval for struct arguments.
+- The default value for ``-mcode-object-version`` is now 5.
+  See `AMDHSA Code Object V5 Metadata <https://llvm.org/docs/AMDGPUUsage.html#code-object-v5-metadata>`_
+  for more details.
 
 X86 Support
 ^^^^^^^^^^^
