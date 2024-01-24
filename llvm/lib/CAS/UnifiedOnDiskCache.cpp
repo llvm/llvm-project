@@ -251,6 +251,15 @@ void UnifiedOnDiskCache::setSizeLimit(std::optional<uint64_t> SizeLimit) {
 }
 
 uint64_t UnifiedOnDiskCache::getStorageSize() const {
+  uint64_t TotalSize = getPrimaryStorageSize();
+  if (UpstreamGraphDB)
+    TotalSize += UpstreamGraphDB->getStorageSize();
+  if (UpstreamKVDB)
+    TotalSize += UpstreamKVDB->getStorageSize();
+  return TotalSize;
+}
+
+uint64_t UnifiedOnDiskCache::getPrimaryStorageSize() const {
   return PrimaryGraphDB->getStorageSize() + PrimaryKVDB->getStorageSize();
 }
 
@@ -268,7 +277,7 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
   // the primary has reached its own limit. Essentially in such situation we
   // prefer reclaiming the storage later in order to have more consistent cache
   // hits behavior.
-  return (CurSizeLimit / 2) < getStorageSize();
+  return (CurSizeLimit / 2) < getPrimaryStorageSize();
 }
 
 Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {

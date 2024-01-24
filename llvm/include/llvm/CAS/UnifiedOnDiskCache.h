@@ -129,6 +129,9 @@ private:
   Expected<std::optional<ObjectID>>
   faultInFromUpstreamKV(ArrayRef<uint8_t> Key);
 
+  /// \returns the storage size of the primary directory.
+  uint64_t getPrimaryStorageSize() const;
+
   std::string RootPath;
   std::atomic<uint64_t> SizeLimit;
 
