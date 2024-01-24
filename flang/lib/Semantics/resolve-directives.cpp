@@ -481,21 +481,28 @@ public:
   bool Pre(const parser::OmpClause::Reduction &x) {
     const parser::OmpReductionOperator &opr{
         std::get<parser::OmpReductionOperator>(x.v.t)};
+    auto createDummyProcSymbol = [&](const parser::Name *name) {
+      // If name resolution failed, create a dummy symbol
+      const auto namePair{
+          currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
+      auto &newSymbol{*namePair.first->second};
+      name->symbol = &newSymbol;
+    };
     if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
       if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
         if (!name->symbol) {
-          const auto namePair{currScope().try_emplace(
-              name->source, Attrs{}, ProcEntityDetails{})};
-          auto &symbol{*namePair.first->second};
-          name->symbol = &symbol;
-          name->symbol->set(Symbol::Flag::OmpReduction);
-          AddToContextObjectWithDSA(*name->symbol, Symbol::Flag::OmpReduction);
+          if (!ResolveName(name)) {
+            createDummyProcSymbol(name);
+          }
         }
       }
       if (const auto *procRef{
               parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-        ResolveOmp(*procRef->v.thing.component.symbol,
-            Symbol::Flag::OmpReduction, currScope());
+        if (!procRef->v.thing.component.symbol) {
+          if (!ResolveName(&procRef->v.thing.component)) {
+            createDummyProcSymbol(&procRef->v.thing.component);
+          }
+        }
       }
     }
     const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
@@ -1947,6 +1954,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
         } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
+            !symbol->test(Symbol::Flag::OmpThreadprivate) &&
             // Exclude indices of sequential loops that are privatised in
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA

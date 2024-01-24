@@ -19,7 +19,7 @@ body: |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr2_sgpr3, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
     ; GFX12-NEXT: GLOBAL_INV 16, implicit $exec
-    ; GFX12-NEXT: S_WAITCNT 1015
+    ; GFX12-NEXT: S_WAIT_LOADCNT 0
     ; GFX12-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     renamable $vgpr0 = GLOBAL_LOAD_DWORD_SADDR renamable $sgpr2_sgpr3, killed $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
     GLOBAL_INV 16, implicit $exec

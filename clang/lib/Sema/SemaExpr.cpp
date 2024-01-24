@@ -20769,7 +20769,7 @@ void Sema::MarkMemberReferenced(MemberExpr *E) {
   bool MightBeOdrUse = true;
   if (E->performsVirtualDispatch(getLangOpts())) {
     if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(E->getMemberDecl()))
-      if (Method->isPure())
+      if (Method->isPureVirtual())
         MightBeOdrUse = false;
   }
   SourceLocation Loc =

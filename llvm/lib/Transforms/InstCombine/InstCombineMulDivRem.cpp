@@ -330,6 +330,19 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       return BinaryOperator::CreateMul(X, X);
   }
 
+  {
+    Value *X, *Y;
+    // abs(X) * abs(Y) -> abs(X * Y)
+    if (I.hasNoSignedWrap() &&
+        match(Op0,
+              m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One()))) &&
+        match(Op1, m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(Y), m_One()))))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(Intrinsic::abs,
+                                           Builder.CreateNSWMul(X, Y),
+                                           Builder.getTrue()));
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *Op1C;

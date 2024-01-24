@@ -6663,14 +6663,14 @@ let Defs = [ECX, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
 class Crc32r<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
   : ITy<0xF1, MRMSrcReg, t, (outs rc:$dst), (ins rc:$src1, t.RegClass:$src2),
       "crc32", binop_args, [(set rc:$dst, (node rc:$src1, t.RegClass:$src2))]>,
-    Sched<[WriteCRC32]>, NoCD8 {
+    Sched<[WriteCRC32]> {
   let Constraints = "$src1 = $dst";
 }
 
 class Crc32m<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
   : ITy<0xF1, MRMSrcMem, t, (outs rc:$dst), (ins rc:$src1, t.MemOperand:$src2),
       "crc32", binop_args, [(set rc:$dst, (node rc:$src1, (load addr:$src2)))]>,
-    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]>, NoCD8 {
+    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]> {
   let Constraints = "$src1 = $dst";
 }
 

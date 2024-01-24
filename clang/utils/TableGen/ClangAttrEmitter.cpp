@@ -1919,7 +1919,7 @@ struct AttributeSubjectMatchRule {
     }
     if (isAbstractRule())
       Result += "_abstract";
-    return std::string(Result.str());
+    return std::string(Result);
   }
 
   std::string getEnumValue() const { return "attr::" + getEnumValueName(); }
@@ -3589,7 +3589,7 @@ void EmitClangRegularKeywordAttributeInfo(RecordKeeper &Records,
 
       OS << "KEYWORD_ATTRIBUTE("
          << S.getSpellingRecord().getValueAsString("Name") << ", "
-         << (HasArgs ? "true" : "false") << ")\n";
+         << (HasArgs ? "true" : "false") << ", )\n";
     }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
 }

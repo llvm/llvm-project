@@ -746,11 +746,6 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
       }
-      if (ignoreTKR.test(common::IgnoreTKR::Contiguous) &&
-          !IsAssumedShape(symbol)) {
-        messages_.Say(
-            "!DIR$ IGNORE_TKR(C) may apply only to an assumed-shape array"_err_en_US);
-      }
       if (ownerSymbol && ownerSymbol->attrs().test(Attr::ELEMENTAL) &&
           details.ignoreTKR().test(common::IgnoreTKR::Rank)) {
         messages_.Say(

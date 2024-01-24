@@ -675,9 +675,14 @@ R"(All available -march extensions for RISC-V
     c                   2.0
     v                   1.0
     h                   1.0
+    zic64b              1.0
     zicbom              1.0
     zicbop              1.0
     zicboz              1.0
+    ziccamoa            1.0
+    ziccif              1.0
+    zicclsm             1.0
+    ziccrse             1.0
     zicntr              2.0
     zicsr               2.0
     zifencei            2.0
@@ -685,6 +690,8 @@ R"(All available -march extensions for RISC-V
     zihintpause         2.0
     zihpm               2.0
     zmmul               1.0
+    za128rs             1.0
+    za64rs              1.0
     zawrs               1.0
     zfa                 1.0
     zfh                 1.0
@@ -753,6 +760,7 @@ R"(All available -march extensions for RISC-V
     zhinx               1.0
     zhinxmin            1.0
     smaia               1.0
+    smepmp              1.0
     ssaia               1.0
     svinval             1.0
     svnapot             1.0

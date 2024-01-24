@@ -47,7 +47,6 @@ MODULE_PASS("attributor", AttributorPass())
 MODULE_PASS("attributor-light", AttributorLightPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
 MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
-MODULE_PASS("cg-profile", CGProfilePass())
 MODULE_PASS("check-debugify", NewPMCheckDebugifyPass())
 MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("coro-cleanup", CoroCleanupPass())
@@ -59,7 +58,6 @@ MODULE_PASS("dfsan", DataFlowSanitizerPass())
 MODULE_PASS("dot-callgraph", CallGraphDOTPrinterPass())
 MODULE_PASS("dxil-upgrade", DXILUpgradePass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
-MODULE_PASS("embed-bitcode", EmbedBitcodePass())
 MODULE_PASS("extract-blocks", BlockExtractorPass({}, false))
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
@@ -151,6 +149,21 @@ MODULE_PASS_WITH_PARAMS(
     "asan", "AddressSanitizerPass",
     [](AddressSanitizerOptions Opts) { return AddressSanitizerPass(Opts); },
     parseASanPassOptions, "kernel")
+MODULE_PASS_WITH_PARAMS(
+    "cg-profile", "CGProfilePass",
+    [](bool InLTOPostLink) { return CGProfilePass(InLTOPostLink);},
+    parseCGProfilePassOptions, "in-lto-post-link")
+MODULE_PASS_WITH_PARAMS(
+    "global-merge", "GlobalMergePass",
+    [TM = TM](GlobalMergeOptions Opts) { return GlobalMergePass(TM, Opts); },
+    parseGlobalMergeOptions,
+    "group-by-use;ignore-single-use;max-offset=N;merge-const;merge-external;"
+    "no-group-by-use;no-ignore-single-use;no-merge-const;no-merge-external;"
+    "size-only")
+MODULE_PASS_WITH_PARAMS(
+    "embed-bitcode", "EmbedBitcodePass",
+    [](EmbedBitcodeOptions Opts) { return EmbedBitcodePass(Opts); },
+    parseEmbedBitcodePassOptions, "thinlto;emit-summary")
 MODULE_PASS_WITH_PARAMS(
     "globaldce", "GlobalDCEPass",
     [](bool InLTOPostLink) { return GlobalDCEPass(InLTOPostLink); },

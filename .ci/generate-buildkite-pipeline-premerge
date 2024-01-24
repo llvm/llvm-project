@@ -107,7 +107,7 @@ function add-dependencies() {
       done
     ;;
     compiler-rt|libc|openmp)
-      echo clang
+      echo clang lld
     ;;
     flang|lldb)
       for p in llvm clang; do
