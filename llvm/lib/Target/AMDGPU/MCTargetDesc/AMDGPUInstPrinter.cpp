@@ -1322,6 +1322,16 @@ void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
                                    const MCSubtargetInfo &STI,
                                    raw_ostream &O) {
   unsigned Opc = MI->getOpcode();
+  if (isCvt_F32_Fp8_Bf8_e64(Opc)) {
+    auto SrcMod =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+    unsigned Mod = MI->getOperand(SrcMod).getImm();
+    unsigned Index0 = !!(Mod & SISrcMods::OP_SEL_0);
+    unsigned Index1 = !!(Mod & SISrcMods::OP_SEL_1);
+    if (Index0 || Index1)
+      O << " op_sel:[" << Index0 << ',' << Index1 << ']';
+    return;
+  }
   if (isPermlane16(Opc)) {
     auto FIN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
     auto BCN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers);

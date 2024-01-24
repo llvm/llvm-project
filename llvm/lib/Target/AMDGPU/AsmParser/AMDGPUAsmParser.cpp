@@ -3529,6 +3529,9 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
     return !isInlineConstant(Inst, OpIdx);
   } else if (MO.isReg()) {
     auto Reg = MO.getReg();
+    if (!Reg) {
+      return false;
+    }
     const MCRegisterInfo *TRI = getContext().getRegisterInfo();
     auto PReg = mc2PseudoReg(Reg);
     return isSGPR(PReg, TRI) && PReg != SGPR_NULL;
@@ -8363,12 +8366,20 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   const bool IsPacked = (Desc.TSFlags & SIInstrFlags::IsPacked) != 0;
 
   if (Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
-      Opc == AMDGPU::V_CVT_SR_FP8_F32_vi) {
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
+      Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_gfx12 ||
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_gfx12) {
     Inst.addOperand(MCOperand::createImm(0)); // Placeholder for src2_mods
     Inst.addOperand(Inst.getOperand(0));
   }
 
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in)) {
+  // Adding vdst_in operand is already covered for these DPP instructions in
+  // cvtVOP3DPP.
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in) &&
+      !(Opc == AMDGPU::V_CVT_PK_BF8_F32_e64_dpp_gfx12 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp_gfx12 ||
+        Opc == AMDGPU::V_CVT_PK_BF8_F32_e64_dpp8_gfx12 ||
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp8_gfx12)) {
     assert(!IsPacked);
     Inst.addOperand(Inst.getOperand(0));
   }
@@ -8866,6 +8877,22 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       } else if (Src2ModIdx == NumOperands) {
         // Add unused dummy src2_modifiers
         Inst.addOperand(MCOperand::createImm(0));
+      }
+    }
+
+    int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+    if (VdstInIdx == static_cast<int>(Inst.getNumOperands())) {
+      Inst.addOperand(Inst.getOperand(0));
+    }
+
+    bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12;
+    if (IsVOP3CvtSrDpp) {
+      if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
+        Inst.addOperand(MCOperand::createImm(0));
+        Inst.addOperand(MCOperand::createReg(0));
       }
     }
 

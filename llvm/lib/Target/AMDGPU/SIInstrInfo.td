@@ -1694,8 +1694,9 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
         !if(HasOMod,
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                clampmod0:$clamp, omod0:$omod),
-          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               clampmod0:$clamp))
+          !if (HasClamp,
+            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, clampmod0:$clamp),
+            (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
       /* else */,
         // VOP1 without modifiers
         !if (HasClamp,
@@ -2289,6 +2290,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsSingle = 0;
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
+
+  field bit IsFP8 = 0;
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
