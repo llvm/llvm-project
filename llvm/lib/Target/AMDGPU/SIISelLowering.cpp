@@ -2072,11 +2072,45 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
   const SIMachineFunctionInfo &MFI,
   EVT VT,
   AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
-  const ArgDescriptor *Reg;
+  const ArgDescriptor *Reg = nullptr;
   const TargetRegisterClass *RC;
   LLT Ty;
 
-  std::tie(Reg, RC, Ty) = MFI.getPreloadedValue(PVID);
+  CallingConv::ID CC = DAG.getMachineFunction().getFunction().getCallingConv();
+  const ArgDescriptor WorkGroupIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP9);
+  // If GridZ is not programmed in an entry function then the hardware will set
+  // it to all zeros, so there is no need to mask the GridY value in the low
+  // order bits.
+  const ArgDescriptor WorkGroupIDY = ArgDescriptor::createRegister(
+      AMDGPU::TTMP7,
+      AMDGPU::isEntryFunctionCC(CC) && !MFI.hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
+  const ArgDescriptor WorkGroupIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
+  if (Subtarget->hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+    switch (PVID) {
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
+      Reg = &WorkGroupIDX;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
+      Reg = &WorkGroupIDY;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
+      Reg = &WorkGroupIDZ;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (!Reg)
+    std::tie(Reg, RC, Ty) = MFI.getPreloadedValue(PVID);
   if (!Reg) {
     if (PVID == AMDGPUFunctionArgInfo::PreloadedValue::KERNARG_SEGMENT_PTR) {
       // It's possible for a kernarg intrinsic call to appear in a kernel with
@@ -2505,28 +2539,24 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
     }
   }
 
-  if (Info.hasWorkGroupIDX()) {
-    Register Reg = Info.addWorkGroupIDX(HasArchitectedSGPRs);
-    if (!HasArchitectedSGPRs)
+  if (!HasArchitectedSGPRs) {
+    if (Info.hasWorkGroupIDX()) {
+      Register Reg = Info.addWorkGroupIDX();
       MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+      CCInfo.AllocateReg(Reg);
+    }
 
-    CCInfo.AllocateReg(Reg);
-  }
-
-  if (Info.hasWorkGroupIDY()) {
-    Register Reg = Info.addWorkGroupIDY(HasArchitectedSGPRs);
-    if (!HasArchitectedSGPRs)
+    if (Info.hasWorkGroupIDY()) {
+      Register Reg = Info.addWorkGroupIDY();
       MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+      CCInfo.AllocateReg(Reg);
+    }
 
-    CCInfo.AllocateReg(Reg);
-  }
-
-  if (Info.hasWorkGroupIDZ()) {
-    Register Reg = Info.addWorkGroupIDZ(HasArchitectedSGPRs);
-    if (!HasArchitectedSGPRs)
+    if (Info.hasWorkGroupIDZ()) {
+      Register Reg = Info.addWorkGroupIDZ();
       MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
-
-    CCInfo.AllocateReg(Reg);
+      CCInfo.AllocateReg(Reg);
+    }
   }
 
   if (Info.hasWorkGroupInfo()) {
@@ -8241,6 +8271,36 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue GA = DAG.getTargetGlobalAddress(RelocSymbol, DL, MVT::i32, 0,
                                             SIInstrInfo::MO_ABS32_LO);
     return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};
+  }
+  case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_f16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8: {
+    if (Op.getOperand(4).getValueType() == MVT::i32)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi32 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                       Op.getOperand(3), IndexKeyi32);
+  }
+  case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {
+    if (Op.getOperand(6).getValueType() == MVT::i32)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi32 = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
+                        IndexKeyi32, Op.getOperand(7)});
   }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

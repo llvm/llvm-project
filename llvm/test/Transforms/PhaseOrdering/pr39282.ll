@@ -21,8 +21,8 @@ define void @pr39282(ptr %addr1, ptr %addr2) {
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
 ; CHECK-NEXT:    [[X_I:%.*]] = load i32, ptr [[ADDR1:%.*]], align 4, !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    store i32 [[X_I]], ptr [[ADDR2:%.*]], align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    [[ADDR1I_1:%.*]] = getelementptr inbounds i32, ptr [[ADDR1]], i64 1
-; CHECK-NEXT:    [[ADDR2I_1:%.*]] = getelementptr inbounds i32, ptr [[ADDR2]], i64 1
+; CHECK-NEXT:    [[ADDR1I_1:%.*]] = getelementptr inbounds i8, ptr [[ADDR1]], i64 4
+; CHECK-NEXT:    [[ADDR2I_1:%.*]] = getelementptr inbounds i8, ptr [[ADDR2]], i64 4
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META5:![0-9]+]])
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META7:![0-9]+]])
 ; CHECK-NEXT:    [[X_I_1:%.*]] = load i32, ptr [[ADDR1I_1]], align 4, !alias.scope !7, !noalias !5

@@ -282,12 +282,12 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
-  std::optional<PrimType> classifyComplexElementType(QualType T) const {
+  PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
 
     QualType ElemType = T->getAs<ComplexType>()->getElementType();
 
-    return this->classify(ElemType);
+    return *this->classify(ElemType);
   }
 
   bool emitComplexReal(const Expr *SubExpr);
