@@ -6333,16 +6333,16 @@
 #   error "__cpp_lib_coroutine should have the value 201902L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if TEST_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING)
 #   ifndef __cpp_lib_debugging
 #     error "__cpp_lib_debugging should be defined in c++26"
 #   endif
 #   if __cpp_lib_debugging != 202311L
 #     error "__cpp_lib_debugging should have the value 202311L in c++26"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_debugging
-#     error "__cpp_lib_debugging should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_debugging should not be defined when the requirement 'TEST_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING)' is not met!"
 #   endif
 # endif
 

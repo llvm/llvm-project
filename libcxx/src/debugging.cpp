@@ -95,28 +95,23 @@ bool __is_debugger_present() noexcept {
 bool __is_debugger_present() noexcept {
   // https://docs.kernel.org/filesystems/proc.html
 
-  try {
-    // Get the status information of a process by reading the file /proc/PID/status.
-    // The link 'self' points to the process reading the file system.
-    ifstream status_file{"/proc/self/status"};
-    if (!status_file.is_open()) {
-      _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/self/status' for reading.");
-      return false;
-    }
-
-    std::string token;
-    while (status_file >> token) {
-      // If the process is being debugged "TracerPid"'s value is non-zero.
-      if (token == "TracerPid:") {
-        int pid;
-        status_file >> pid;
-        return pid != 0;
-      }
-      getline(status_file, token);
-    }
-  } catch (...) {
-    _LIBCPP_ASSERT_INTERNAL(false, "Failed to parse '/proc/self/status'.");
+  // Get the status information of a process by reading the file /proc/PID/status.
+  // The link 'self' points to the process reading the file system.
+  ifstream status_file{"/proc/self/status"};
+  if (!status_file.is_open()) {
+    _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/self/status' for reading.");
     return false;
+  }
+
+  std::string token;
+  while (status_file >> token) {
+    // If the process is being debugged "TracerPid"'s value is non-zero.
+    if (token == "TracerPid:") {
+      int pid;
+      status_file >> pid;
+      return pid != 0;
+    }
+    getline(status_file, token);
   }
 
   return false;
