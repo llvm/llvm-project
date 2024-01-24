@@ -17,12 +17,15 @@
 #include "AMDGPUMachineModuleInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
+
+#include <iostream>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -660,6 +663,9 @@ private:
   /// instructions are added/deleted or \p MI is modified, false otherwise.
   bool expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
                                 MachineBasicBlock::iterator &MI);
+
+  bool GFX9InsertWaitcntForPreciseMem(MachineFunction &MF);
+  bool GFX10And11InsertWaitcntForPreciseMem(MachineFunction &MF);
 
 public:
   static char ID;
@@ -2622,6 +2628,70 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   return Changed;
 }
 
+bool SIMemoryLegalizer::GFX9InsertWaitcntForPreciseMem(MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  IsaVersion IV = getIsaVersion(ST.getCPU());
+
+  bool Changed = false;
+
+  for (auto &MBB : MF) {
+    for (auto MI = MBB.begin(); MI != MBB.end();) {
+      MachineInstr &Inst = *MI;
+      ++MI;
+      if (Inst.mayLoadOrStore() == false)
+        continue;
+
+      // Todo: if next insn is an s_waitcnt
+      AMDGPU::Waitcnt Wait;
+
+      if (!(Inst.getDesc().TSFlags & SIInstrFlags::maybeAtomic)) {
+        if (TII->isSMRD(Inst)) {          // scalar
+          Wait.DsCnt = 0;                 // LgkmCnt
+        } else {                          // vector
+          if (Inst.mayLoad()) {           // vector load
+            if (TII->isVMEM(Inst))        // VMEM load
+              Wait.LoadCnt = 0;           // VmCnt
+            else if (TII->isFLAT(Inst)) { // Flat load
+              Wait.LoadCnt = 0;           // VmCnt
+              Wait.DsCnt = 0;             // LgkmCnt
+            } else                        // LDS load ?
+              Wait.DsCnt = 0;             // LgkmCnt
+          } else {                        // vector store
+            if (TII->isVMEM(Inst))        // VMEM store
+              Wait.LoadCnt = 0;           // VmCnt
+            else if (TII->isFLAT(Inst)) { // Flat store
+              Wait.LoadCnt = 0;           // VmCnt
+              Wait.DsCnt = 0;             // LgkmCnt
+            } else
+              Wait.DsCnt = 0; // LDS store? LgkmCnt
+          }
+        }                 // vector
+      } else {            // atomic
+        Wait.DsCnt = 0;   // LgkmCnt
+        Wait.LoadCnt = 0; // VmCnt
+      }
+
+      unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
+      BuildMI(MBB, MI, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
+bool SIMemoryLegalizer::GFX10And11InsertWaitcntForPreciseMem(
+    MachineFunction &MF) {
+  for (auto &MBB : MF) {
+    for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
+      MachineInstr &Inst = *MI;
+      if (Inst.mayLoadOrStore() == false)
+        continue;
+    }
+  }
+  return true;
+}
+
 bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
@@ -2662,6 +2732,15 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
   }
 
   Changed |= removeAtomicPseudoMIs();
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (ST.isPreciseMemoryEnabled()) {
+    if (AMDGPU::isGFX10Plus(ST))
+      Changed |= GFX10And11InsertWaitcntForPreciseMem(MF);
+    else
+      Changed |= GFX9InsertWaitcntForPreciseMem(MF);
+  }
+
   return Changed;
 }
 
