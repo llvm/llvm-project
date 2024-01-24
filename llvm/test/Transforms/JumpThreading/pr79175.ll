@@ -4,7 +4,6 @@
 @f = external global i32
 
 ; Make sure the value of @f is reloaded prior to the final comparison.
-; FIXME: This is a miscompile.
 define i32 @test(i64 %idx, i32 %val) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[VAL:%.*]]) {
@@ -20,13 +19,12 @@ define i32 @test(i64 %idx, i32 %val) {
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[CMP_I]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP0:%.*]]
 ; CHECK:       cond.end.thread:
-; CHECK-NEXT:    [[F_RELOAD_PR:%.*]] = load i32, ptr @f, align 4
 ; CHECK-NEXT:    br label [[TMP0]]
 ; CHECK:       0:
-; CHECK-NEXT:    [[F_RELOAD:%.*]] = phi i32 [ [[F]], [[COND_END]] ], [ [[F_RELOAD_PR]], [[COND_END_THREAD]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, [[COND_END_THREAD]] ], [ [[VAL]], [[COND_END]] ]
 ; CHECK-NEXT:    [[F_IDX:%.*]] = getelementptr inbounds i32, ptr @f, i64 [[IDX]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[F_IDX]], align 4
+; CHECK-NEXT:    [[F_RELOAD:%.*]] = load i32, ptr @f, align 4
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[F_RELOAD]], 1
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[RETURN2:%.*]], label [[RETURN]]
 ; CHECK:       return:
