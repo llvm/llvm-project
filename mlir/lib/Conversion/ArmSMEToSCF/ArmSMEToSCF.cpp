@@ -26,8 +26,7 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-/// Adjusts `indices` as follows for a given tile slice and returns them in
-/// `outIndices`:
+/// Returns adjusted (1-D or 2-D) `indices` for a tile slice as follows:
 ///   rank 1: (indices[0] + (tileSliceIndex * tileSliceNumElts))
 ///   rank 2: (indices[0] + tileSliceIndex, indices[1])
 SmallVector<Value, 2> getMemrefIndices(ValueRange indices, unsigned rank,
@@ -135,11 +134,11 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
 
 /// Lower `arm_sme.tile_load` without a mask, or with a mask and a zero pad.
 ///
+///  With a mask:
+///
 ///  BEFORE:
 ///  ```mlir
 ///  %pad = arith.constant 0 : i32
-///  %num_rows = arith.constant 2 : index
-///  %num_cols = arith.constant 4 : index
 ///  %mask = vector.create_mask %num_rows, %num_cols : vector<[4]x[4]xi1>
 ///  %tile = arm_sme.tile_load %src[%c0, %c0], %pad, %mask :
 ///    memref<?x?xi32>, vector<[4]x[4]xi32>
@@ -147,12 +146,10 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
 ///
 ///  AFTER:
 ///  ```mlir
-///  %c0 = arith.constant 0 : index
-///  %c1 = arith.constant 1 : index
 ///  %init_tile = arm_sme.zero : vector<[4]x[4]xi32>
-///  %num_rows = arith.constant 2 : index
-///  %num_cols = vector.create_mask %c4 : vector<[4]xi1>
-///  %tile = scf.for %tile_slice_idx = %c0 to %num_rows step %c1
+///  %mask_cols = vector.create_mask %num_cols : vector<[4]xi1>
+///  %loop_rows = arith.minsi %num_rows, %svl_s : index
+///  %tile = scf.for %tile_slice_idx = %c0 to %loop_rows step %c1
 ///                iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>) {
 ///    %tile_update = arm_sme.load_tile_slice
 ///      %src[%tile_slice_idx], %num_cols, %iter_tile, %tile_slice_idx :
@@ -160,6 +157,9 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
 ///    scf.yield %tile_update : vector<[4]x[4]xi32>
 ///  }
 ///  ```
+///
+/// Without a mask the lowering is pretty much identical. The only difference is
+/// %mask_cols becomes an all-true mask, and %loop_rows becomes %svl_s.
 ///
 /// NOTE: Only mask of 'vector.create_mask' op is currently supported.
 struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
@@ -221,9 +221,6 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///
 ///  BEFORE:
 ///  ```mlir
-///  %pad = arith.constant 1 : i32
-///  %num_rows = arith.constant 2 : index
-///  %num_cols = arith.constant 4 : index
 ///  %mask = vector.create_mask %num_rows, %num_cols : vector<[4]x[4]xi1>
 ///  %tile = arm_sme.tile_load %src[%c0, %c0], %pad, %mask :
 ///    memref<?x?xi32>, vector<[4]x[4]xi32>
@@ -232,7 +229,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///  AFTER:
 ///  ```mlir
 ///  ...
-///  %pad_1d = arith.constant dense<1> : vector<[4]xi32>
+///  %pad_1d = vector.splat %pad : vector<[4]xi32>
 ///  %tile = scf.for %tile_slice_idx = %c0 to %svl_s step %c1
 ///                iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>) {
 ///    ...
@@ -372,7 +369,7 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
 
   LogicalResult matchAndRewrite(arm_sme::TileStoreOp tileStoreOp,
                                 PatternRewriter &rewriter) const override {
-    // Create a loop that stores each (active) active ZA tile slice from memory.
+    // Create a loop that stores each active ZA tile slice from memory.
     return createLoadStoreForOverTileSlices(
         rewriter, tileStoreOp.getLoc(), tileStoreOp.getVectorType(),
         tileStoreOp.getIndices(), tileStoreOp.getMemRefType().getRank(),
