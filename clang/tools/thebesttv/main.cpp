@@ -93,11 +93,19 @@ void findPathBetween(const fif &functionsInFile, //
 
     fi->bg->dij(from.block);
     llvm::errs() << "Dis from " << u << " to " << v << ": " << fi->bg->g.d[v]
-                 << "\n";
+                 << "\n  path:";
+    for (int x : fi->bg->g.trace(v)) {
+        llvm::errs() << " " << x;
+    }
+    llvm::errs() << "\n";
 
     fi->bg->dij(to.block);
     llvm::errs() << "Dis from " << v << " to " << u << ": " << fi->bg->g.d[u]
-                 << "\n";
+                 << "\n  path:";
+    for (int x : fi->bg->g.trace(u)) {
+        llvm::errs() << " " << x;
+    }
+    llvm::errs() << "\n";
 }
 
 int main(int argc, const char **argv) {

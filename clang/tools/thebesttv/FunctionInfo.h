@@ -6,18 +6,19 @@
 struct Graph {
     int n; // 0-indexed
     std::vector<std::vector<int>> G;
-    std::vector<int> d;
+    std::vector<int> d, fa;
 
     const int INF = 0x3f3f3f3f;
 
     struct Node {
-        int u, d;
+        int u, d, fa;
         bool operator<(const Node &b) const { return d > b.d; }
     };
 
     Graph(int n) : n(n) {
         G.resize(n);
         d.resize(n);
+        fa.resize(n);
     }
 
     void addEdge(int u, int v) { G[u].push_back(v); }
@@ -26,8 +27,10 @@ struct Graph {
         std::fill(d.begin(), d.end(), INF);
         d[s] = 0;
 
+        std::fill(fa.begin(), fa.end(), -1);
+
         std::priority_queue<Node> q;
-        q.push({s, 0});
+        q.push({s, 0, -1});
 
         while (!q.empty()) {
             Node p = q.top();
@@ -35,13 +38,26 @@ struct Graph {
             int u = p.u;
             if (p.d != d[u])
                 continue;
+
+            fa[u] = p.fa;
+
             for (int v : G[u]) {
                 if (d[v] > d[u] + 1) {
                     d[v] = d[u] + 1;
-                    q.push({v, d[v]});
+                    q.push({v, d[v], u});
                 }
             }
         }
+    }
+
+    std::vector<int> trace(int u) {
+        std::vector<int> path;
+        while (u != -1) {
+            path.push_back(u);
+            u = fa[u];
+        }
+        std::reverse(path.begin(), path.end());
+        return path;
     }
 };
 
