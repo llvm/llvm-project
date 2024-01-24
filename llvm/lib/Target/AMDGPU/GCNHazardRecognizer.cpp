@@ -1722,7 +1722,7 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  auto IsHazardFn = [MI, TII, TRI](const MachineInstr &I) {
+  auto IsHazardFn = [MI, TII, TRI, this](const MachineInstr &I) {
     if (!SIInstrInfo::isWMMA(I) && !SIInstrInfo::isSWMMAC(I))
       return false;
 
@@ -1739,6 +1739,18 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
     if (TRI->regsOverlap(PrevDstReg, CurSrc0Reg) ||
         TRI->regsOverlap(PrevDstReg, CurSrc1Reg)) {
       return true;
+    }
+
+    // GFX12+ allows overlap of matrix C with PrevDstReg (hardware will stall)
+    // but Index can't overlap with PrevDstReg.
+    if (AMDGPU::isGFX12Plus(ST)) {
+      if (SIInstrInfo::isSWMMAC(*MI)) {
+        const Register CurIndex =
+            TII->getNamedOperand(*MI, AMDGPU::OpName::src2)->getReg();
+        if (TRI->regsOverlap(PrevDstReg, CurIndex))
+          return true;
+      }
+      return false;
     }
 
     return false;
