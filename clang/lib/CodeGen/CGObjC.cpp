@@ -1785,11 +1785,10 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   static const unsigned NumItems = 16;
 
   // Fetch the countByEnumeratingWithState:objects:count: selector.
-  IdentifierInfo *II[] = {
-    &CGM.getContext().Idents.get("countByEnumeratingWithState"),
-    &CGM.getContext().Idents.get("objects"),
-    &CGM.getContext().Idents.get("count")
-  };
+  const IdentifierInfo *II[] = {
+      &CGM.getContext().Idents.get("countByEnumeratingWithState"),
+      &CGM.getContext().Idents.get("objects"),
+      &CGM.getContext().Idents.get("count")};
   Selector FastEnumSel =
       CGM.getContext().Selectors.getSelector(std::size(II), &II[0]);
 
@@ -2721,7 +2720,7 @@ llvm::Value *CodeGenFunction::EmitObjCMRRAutoreleasePoolPush() {
   CGObjCRuntime &Runtime = CGM.getObjCRuntime();
   llvm::Value *Receiver = Runtime.EmitNSAutoreleasePoolClassRef(*this);
   // [NSAutoreleasePool alloc]
-  IdentifierInfo *II = &CGM.getContext().Idents.get("alloc");
+  const IdentifierInfo *II = &CGM.getContext().Idents.get("alloc");
   Selector AllocSel = getContext().Selectors.getSelector(0, &II);
   CallArgList Args;
   RValue AllocRV =
@@ -2768,7 +2767,7 @@ llvm::Value *CodeGenFunction::EmitObjCAllocInit(llvm::Value *value,
 /// Produce the code to do a primitive release.
 /// [tmp drain];
 void CodeGenFunction::EmitObjCMRRAutoreleasePoolPop(llvm::Value *Arg) {
-  IdentifierInfo *II = &CGM.getContext().Idents.get("drain");
+  const IdentifierInfo *II = &CGM.getContext().Idents.get("drain");
   Selector DrainSel = getContext().Selectors.getSelector(0, &II);
   CallArgList Args;
   CGM.getObjCRuntime().GenerateMessageSend(*this, ReturnValueSlot(),
@@ -3716,8 +3715,8 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   if ((HelperFn = CGM.getAtomicSetterHelperFnMap(Ty)))
     return HelperFn;
 
-  IdentifierInfo *II
-    = &CGM.getContext().Idents.get("__assign_helper_atomic_property_");
+  const IdentifierInfo *II =
+      &CGM.getContext().Idents.get("__assign_helper_atomic_property_");
 
   QualType ReturnTy = C.VoidTy;
   QualType DestTy = C.getPointerType(Ty);
@@ -3814,7 +3813,7 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   if ((HelperFn = CGM.getAtomicGetterHelperFnMap(Ty)))
     return HelperFn;
 
-  IdentifierInfo *II =
+  const IdentifierInfo *II =
       &CGM.getContext().Idents.get("__copy_helper_atomic_property_");
 
   QualType ReturnTy = C.VoidTy;
@@ -3908,10 +3907,10 @@ llvm::Constant *CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
 llvm::Value *
 CodeGenFunction::EmitBlockCopyAndAutorelease(llvm::Value *Block, QualType Ty) {
   // Get selectors for retain/autorelease.
-  IdentifierInfo *CopyID = &getContext().Idents.get("copy");
+  const IdentifierInfo *CopyID = &getContext().Idents.get("copy");
   Selector CopySelector =
       getContext().Selectors.getNullarySelector(CopyID);
-  IdentifierInfo *AutoreleaseID = &getContext().Idents.get("autorelease");
+  const IdentifierInfo *AutoreleaseID = &getContext().Idents.get("autorelease");
   Selector AutoreleaseSelector =
       getContext().Selectors.getNullarySelector(AutoreleaseID);
 

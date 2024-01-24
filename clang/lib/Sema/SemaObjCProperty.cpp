@@ -419,7 +419,7 @@ Sema::HandlePropertyInClassExtension(Scope *S,
   ObjCCategoryDecl *CDecl = cast<ObjCCategoryDecl>(CurContext);
   // Diagnose if this property is already in continuation class.
   DeclContext *DC = CurContext;
-  IdentifierInfo *PropertyId = FD.D.getIdentifier();
+  const IdentifierInfo *PropertyId = FD.D.getIdentifier();
   ObjCInterfaceDecl *CCPrimary = CDecl->getClassInterface();
 
   // We need to look in the @interface to see if the @property was
@@ -571,7 +571,7 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
                                            TypeSourceInfo *TInfo,
                                            tok::ObjCKeywordKind MethodImplKind,
                                            DeclContext *lexicalDC){
-  IdentifierInfo *PropertyId = FD.D.getIdentifier();
+  const IdentifierInfo *PropertyId = FD.D.getIdentifier();
 
   // Property defaults to 'assign' if it is readwrite, unless this is ARC
   // and the type is retainable.

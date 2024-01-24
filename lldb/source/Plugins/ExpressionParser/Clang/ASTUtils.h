@@ -56,7 +56,7 @@ public:
     return m_Source->GetExternalCXXBaseSpecifiers(Offset);
   }
 
-  void updateOutOfDateIdentifier(clang::IdentifierInfo &II) override {
+  void updateOutOfDateIdentifier(const clang::IdentifierInfo &II) override {
     m_Source->updateOutOfDateIdentifier(II);
   }
 

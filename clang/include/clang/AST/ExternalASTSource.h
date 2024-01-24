@@ -138,7 +138,7 @@ public:
   virtual CXXBaseSpecifier *GetExternalCXXBaseSpecifiers(uint64_t Offset);
 
   /// Update an out-of-date identifier.
-  virtual void updateOutOfDateIdentifier(IdentifierInfo &II) {}
+  virtual void updateOutOfDateIdentifier(const IdentifierInfo &II) {}
 
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
