@@ -391,6 +391,7 @@ define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI9_0@PAGE
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr d1, [x8, lCPI9_0@PAGEOFF]
+; CHECK-NEXT:    add x8, x1, #1
 ; CHECK-NEXT:    ld1.h { v0 }[2], [x9]
 ; CHECK-NEXT:    add x9, x1, #2
 ; CHECK-NEXT:    add.4h v0, v0, v1
@@ -621,17 +622,13 @@ define void @shift_trunc_store(ptr %src, ptr %dst) {
 define void @shift_trunc_store_default_align(ptr %src, ptr %dst) {
 ; CHECK-LABEL: shift_trunc_store_default_align:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    shrn.4h v0, v0, #16
-; CHECK-NEXT:    xtn.8b v1, v0
-; CHECK-NEXT:    umov.h w8, v0[2]
-; CHECK-NEXT:    str s1, [sp, #12]
-; CHECK-NEXT:    ldrh w9, [sp, #12]
-; CHECK-NEXT:    strb w8, [x1, #2]
-; CHECK-NEXT:    strh w9, [x1]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    add x8, x1, #1
+; CHECK-NEXT:    add x9, x1, #2
+; CHECK-NEXT:    ushr.4s v0, v0, #16
+; CHECK-NEXT:    st1.b { v0 }[4], [x8]
+; CHECK-NEXT:    st1.b { v0 }[8], [x9]
+; CHECK-NEXT:    st1.b { v0 }[0], [x1]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: shift_trunc_store_default_align:
@@ -659,17 +656,13 @@ define void @shift_trunc_store_default_align(ptr %src, ptr %dst) {
 define void @shift_trunc_store_align_4(ptr %src, ptr %dst) {
 ; CHECK-LABEL: shift_trunc_store_align_4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    shrn.4h v0, v0, #16
-; CHECK-NEXT:    xtn.8b v1, v0
-; CHECK-NEXT:    umov.h w8, v0[2]
-; CHECK-NEXT:    str s1, [sp, #12]
-; CHECK-NEXT:    ldrh w9, [sp, #12]
-; CHECK-NEXT:    strb w8, [x1, #2]
-; CHECK-NEXT:    strh w9, [x1]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    add x8, x1, #1
+; CHECK-NEXT:    add x9, x1, #2
+; CHECK-NEXT:    ushr.4s v0, v0, #16
+; CHECK-NEXT:    st1.b { v0 }[4], [x8]
+; CHECK-NEXT:    st1.b { v0 }[8], [x9]
+; CHECK-NEXT:    st1.b { v0 }[0], [x1]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: shift_trunc_store_align_4:
