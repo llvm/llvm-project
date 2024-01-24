@@ -5691,10 +5691,10 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
   if (hasDefaultLowerBound(array))
     return one;
   mlir::Value lb = fir::factory::readLowerBound(builder, loc, array, dim, one);
-  if (dim + 1 == array.rank() && array.isAssumedSize())
-    return lb;
   mlir::Value extent = fir::factory::readExtent(builder, loc, array, dim);
   zero = builder.createConvert(loc, extent.getType(), zero);
+  // Note: for assumed size, the extent is -1, and the lower bound should
+  // be returned. It is important to test extent == 0 and not extent > 0.
   auto dimIsEmpty = builder.create<mlir::arith::CmpIOp>(
       loc, mlir::arith::CmpIPredicate::eq, extent, zero);
   one = builder.createConvert(loc, lb.getType(), one);
@@ -5703,52 +5703,29 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Create a fir.box to be passed to the LBOUND/UBOUND runtime.
 /// This ensure that local lower bounds of assumed shape are propagated and that
-/// a fir.box with equivalent LBOUNDs but an explicit shape is created for
-/// assumed size arrays to avoid undefined behaviors in codegen or the runtime.
+/// a fir.box with equivalent LBOUNDs.
 static mlir::Value
 createBoxForRuntimeBoundInquiry(mlir::Location loc, fir::FirOpBuilder &builder,
                                 const fir::ExtendedValue &array) {
-  if (!array.isAssumedSize())
-    return array.match(
-        [&](const fir::BoxValue &boxValue) -> mlir::Value {
-          // This entity is mapped to a fir.box that may not contain the local
-          // lower bound information if it is a dummy. Rebox it with the local
-          // shape information.
-          mlir::Value localShape = builder.createShape(loc, array);
-          mlir::Value oldBox = boxValue.getAddr();
-          return builder.create<fir::ReboxOp>(loc, oldBox.getType(), oldBox,
-                                              localShape,
-                                              /*slice=*/mlir::Value{});
-        },
-        [&](const auto &) -> mlir::Value {
-          // This a pointer/allocatable, or an entity not yet tracked with a
-          // fir.box. For pointer/allocatable, createBox will forward the
-          // descriptor that contains the correct lower bound information. For
-          // other entities, a new fir.box will be made with the local lower
-          // bounds.
-          return builder.createBox(loc, array);
-        });
-  // Assumed sized are not meant to be emboxed. This could cause the undefined
-  // extent cannot safely be understood by the runtime/codegen that will
-  // consider that the dimension is empty and that the related LBOUND value must
-  // be one. Pretend that the related extent is one to get the correct LBOUND
-  // value.
-  llvm::SmallVector<mlir::Value> shape =
-      fir::factory::getExtents(loc, builder, array);
-  assert(!shape.empty() && "assumed size must have at least one dimension");
-  shape.back() = builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-  auto safeToEmbox = array.match(
-      [&](const fir::CharArrayBoxValue &x) -> fir::ExtendedValue {
-        return fir::CharArrayBoxValue{x.getAddr(), x.getLen(), shape,
-                                      x.getLBounds()};
+  return array.match(
+      [&](const fir::BoxValue &boxValue) -> mlir::Value {
+        // This entity is mapped to a fir.box that may not contain the local
+        // lower bound information if it is a dummy. Rebox it with the local
+        // shape information.
+        mlir::Value localShape = builder.createShape(loc, array);
+        mlir::Value oldBox = boxValue.getAddr();
+        return builder.create<fir::ReboxOp>(loc, oldBox.getType(), oldBox,
+                                            localShape,
+                                            /*slice=*/mlir::Value{});
       },
-      [&](const fir::ArrayBoxValue &x) -> fir::ExtendedValue {
-        return fir::ArrayBoxValue{x.getAddr(), shape, x.getLBounds()};
-      },
-      [&](const auto &) -> fir::ExtendedValue {
-        fir::emitFatalError(loc, "not an assumed size array");
+      [&](const auto &) -> mlir::Value {
+        // This is a pointer/allocatable, or an entity not yet tracked with a
+        // fir.box. For pointer/allocatable, createBox will forward the
+        // descriptor that contains the correct lower bound information. For
+        // other entities, a new fir.box will be made with the local lower
+        // bounds.
+        return builder.createBox(loc, array);
       });
-  return builder.createBox(loc, safeToEmbox);
 }
 
 // LBOUND
