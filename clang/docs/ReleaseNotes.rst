@@ -1300,6 +1300,7 @@ clang-format
 - Add ``.clang-format-ignore`` files.
 - Add ``AlignFunctionPointers`` sub-option for ``AlignConsecutiveDeclarations``.
 - Add ``SkipMacroDefinitionBody`` option.
+- Add ``EmptyLinesAfterIncludes`` option.
 
 libclang
 --------

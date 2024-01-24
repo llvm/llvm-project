@@ -3220,6 +3220,25 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _EmptyLinesAfterIncludes:
+
+**EmptyLinesAfterIncludes** (``Unsigned``) :versionbadge:`clang-format 18` :ref:`¶ <EmptyLinesAfterIncludes>`
+  Number of lines after each include area. An include area is
+  a list of consecutive include statements. The include area may be
+  composed of multiple include blocks.
+  Limited by MaxEmptyLinesToKeep.
+  Example:
+
+  .. code-block:: c++
+
+
+     EmptyLinesAfterIncludes: 1  vs.  EmptyLinesAfterIncludes: 2
+     #include <string>                #include <string>
+     #include <map>                   #include <map>
+
+     class Test {};
+                                      class Test {};
+
 .. _ExperimentalAutoDetectBinPacking:
 
 **ExperimentalAutoDetectBinPacking** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ExperimentalAutoDetectBinPacking>`

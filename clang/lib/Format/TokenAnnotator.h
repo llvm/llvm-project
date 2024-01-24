@@ -113,6 +113,14 @@ public:
     return First && First->is(tok::comment) && !First->getNextNonComment();
   }
 
+  bool isInclude() const {
+    if (!First)
+      return false;
+
+    const auto *NextToken = First->getNextNonComment();
+    return First->is(tok::hash) && NextToken && NextToken->is(tok::pp_include);
+  }
+
   /// \c true if this line starts with the given tokens in order, ignoring
   /// comments.
   template <typename... Ts> bool startsWith(Ts... Tokens) const {

@@ -1005,6 +1005,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SDS_Leave);
   CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
               FormatStyle::SDS_Never);
+
+  CHECK_PARSE("EmptyLinesAfterIncludes: 2", EmptyLinesAfterIncludes, 2);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

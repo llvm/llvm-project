@@ -2459,6 +2459,23 @@ struct FormatStyle {
   /// \version 12
   EmptyLineBeforeAccessModifierStyle EmptyLineBeforeAccessModifier;
 
+  /// \brief Number of lines after each include area. An include area is
+  /// a list of consecutive include statements. The include area may be
+  /// composed of multiple include blocks.
+  /// Limited by MaxEmptyLinesToKeep.
+  /// Example:
+  /// \code
+  ///
+  ///    EmptyLinesAfterIncludes: 1  vs.  EmptyLinesAfterIncludes: 2
+  ///    #include <string>                #include <string>
+  ///    #include <map>                   #include <map>
+  ///
+  ///    class Test {};
+  ///                                     class Test {};
+  /// \endcode
+  /// \version 18
+  std::optional<unsigned> EmptyLinesAfterIncludes;
+
   /// If ``true``, clang-format detects whether function calls and
   /// definitions are formatted with one parameter per line.
   ///
@@ -4831,6 +4848,7 @@ struct FormatStyle {
            DerivePointerAlignment == R.DerivePointerAlignment &&
            DisableFormat == R.DisableFormat &&
            EmptyLineAfterAccessModifier == R.EmptyLineAfterAccessModifier &&
+           EmptyLinesAfterIncludes == R.EmptyLinesAfterIncludes &&
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
