@@ -77,7 +77,8 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 /// num is computed by expressing the vertex as a weighted
 /// sum of the generators, and then taking the floor of the
 /// coefficients.
-GeneratingFunction mlir::presburger::detail::unimodularConeGeneratingFunction(
+GeneratingFunction
+mlir::presburger::detail::computeUnimodularConeGeneratingFunction(
     ParamPoint vertex, int sign, ConeH cone) {
   // Consider a cone with H-representation [0  -1].
   //                                       [-1 -2]
@@ -328,7 +329,7 @@ mlir::presburger::detail::computeChamberDecomposition(
 /// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
 /// 37-66.
 std::vector<std::pair<PresburgerRelation, GeneratingFunction>>
-mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
+mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
   unsigned numVars = poly.getNumRangeVars();
   unsigned numSymbols = poly.getNumSymbolVars();
   unsigned numIneqs = poly.getNumInequalities();
@@ -460,8 +461,8 @@ mlir::presburger::detail::polytopeGeneratingFunction(PolyhedronH poly) {
           std::make_pair(1, tangentCone)};
       for (std::pair<int, ConeH> signedCone : unimodCones) {
         auto [sign, cone] = signedCone;
-        chamberGf = chamberGf +
-                    unimodularConeGeneratingFunction(vertices[i], sign, cone);
+        chamberGf = chamberGf + computeUnimodularConeGeneratingFunction(
+                                    vertices[i], sign, cone);
       }
     }
     gf.emplace_back(currentRegion, chamberGf);

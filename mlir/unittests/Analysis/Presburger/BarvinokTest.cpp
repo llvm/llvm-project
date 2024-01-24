@@ -59,7 +59,8 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
   ParamPoint vertex =
       makeFracMatrix(2, 3, {{2, 2, 0}, {-1, -Fraction(1, 2), 1}});
 
-  GeneratingFunction gf = unimodularConeGeneratingFunction(vertex, 1, cone);
+  GeneratingFunction gf =
+      computeUnimodularConeGeneratingFunction(vertex, 1, cone);
 
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
       gf, GeneratingFunction(
@@ -74,7 +75,7 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
 
   vertex = makeFracMatrix(3, 2, {{5, 2}, {6, 2}, {7, 1}});
 
-  gf = unimodularConeGeneratingFunction(vertex, 1, cone);
+  gf = computeUnimodularConeGeneratingFunction(vertex, 1, cone);
 
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
       gf,
@@ -252,7 +253,7 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
     poly.addInequality(ineqs.getRow(i));
 
   std::vector<std::pair<PresburgerRelation, GeneratingFunction>> count =
-      polytopeGeneratingFunction(poly);
+      computePolytopeGeneratingFunction(poly);
   // There is only one chamber, as it is non-parametric.
   EXPECT_EQ(count.size(), 1u);
 
@@ -281,7 +282,7 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
   for (unsigned i = 0; i < 3; i++)
     poly.addInequality(ineqs.getRow(i));
 
-  count = polytopeGeneratingFunction(poly);
+  count = computePolytopeGeneratingFunction(poly);
   // There is only one chamber: p ≥ 0
   EXPECT_EQ(count.size(), 1u);
 

@@ -85,8 +85,9 @@ ConeH getDual(ConeV cone);
 
 /// Compute the generating function for a unimodular cone.
 /// The input cone must be unimodular; it assert-fails otherwise.
-GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
-                                                    ConeH cone);
+GeneratingFunction computeUnimodularConeGeneratingFunction(ParamPoint vertex,
+                                                           int sign,
+                                                           ConeH cone);
 
 /// Find the solution of a set of equations that express affine constraints
 /// between a set of variables and a set of parameters. The solution expresses
@@ -111,7 +112,7 @@ computeChamberDecomposition(ArrayRef<PresburgerRelation> activeRegions,
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.
 std::vector<std::pair<PresburgerRelation, GeneratingFunction>>
-polytopeGeneratingFunction(PolyhedronH poly);
+computePolytopeGeneratingFunction(PolyhedronH poly);
 
 /// Find a vector that is not orthogonal to any of the given vectors,
 /// i.e., has nonzero dot product with those of the given vectors
