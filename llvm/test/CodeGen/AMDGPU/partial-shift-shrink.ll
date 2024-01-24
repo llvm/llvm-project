@@ -97,7 +97,7 @@ define <2 x i16> @trunc_srl_v2i64_16_to_v2i16(<2 x i64> %x) {
 define amdgpu_kernel void @s_trunc_srl_i64_16_to_i16(i64 %x) {
 ; GCN-LABEL: s_trunc_srl_i64_16_to_i16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshr_b32 s0, s0, 16
 ; GCN-NEXT:    s_or_b32 s0, s0, 4

@@ -180,8 +180,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}float8_extelt:
-; GCN-DAG: s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GCN-DAG: s_load_dword [[S0:s[0-9]+]], s[0:1], 0x2c
+; GCN-DAG: s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-DAG: s_load_dword [[S0:s[0-9]+]], s[2:3], 0x2c
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 1.0
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 2.0
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40400000

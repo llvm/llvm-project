@@ -85,7 +85,7 @@ define amdgpu_kernel void @fneg_fabs_v2f64(ptr addrspace(1) %out, <2 x double> %
 ; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
 ; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
 ; GCN: s_bitset1_b32 s{{[0-9]+}}, 31
-define amdgpu_kernel void @fneg_fabs_v4f64(ptr addrspace(1) %out, <4 x double> %in) {
+define amdgpu_kernel void @fneg_fabs_v4f64(ptr addrspace(1) %out, <4 x double> %in) #0 {
   %fabs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %in)
   %fsub = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %fabs
   store <4 x double> %fsub, ptr addrspace(1) %out
@@ -96,3 +96,5 @@ declare double @fabs(double) readnone
 declare double @llvm.fabs.f64(double) readnone
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>) readnone
 declare <4 x double> @llvm.fabs.v4f64(<4 x double>) readnone
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

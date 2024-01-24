@@ -333,7 +333,7 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}br_scc_ult_i32_min_simm16:
-; GCN: s_cmp_lt_u32 s2, 0xffff8000
+; GCN: s_cmp_lt_u32 s{{[0-9]+}}, 0xffff8000
 define amdgpu_kernel void @br_scc_ult_i32_min_simm16(i32 %cond, ptr addrspace(1) %out) #0 {
 entry:
   %cmp0 = icmp ult i32 %cond, -32768
@@ -552,7 +552,7 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}br_scc_ult_i32_non_u16:
-; GCN: s_cmp_lt_u32 s2, 0xfffff7ff
+; GCN: s_cmp_lt_u32 s{{[0-9]+}}, 0xfffff7ff
 define amdgpu_kernel void @br_scc_ult_i32_non_u16(i32 %cond, ptr addrspace(1) %out) #0 {
 entry:
   %size = call i32 @llvm.amdgcn.groupstaticsize()

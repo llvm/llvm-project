@@ -10,7 +10,7 @@ declare float @llvm.convert.from.fp16.f32(i16) nounwind readnone
 define amdgpu_kernel void @test_convert_fp16_to_fp32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
 ; GFX6-LABEL: test_convert_fp16_to_fp32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_mov_b32 s10, s6
@@ -28,7 +28,7 @@ define amdgpu_kernel void @test_convert_fp16_to_fp32(ptr addrspace(1) noalias %o
 ;
 ; GFX8-LABEL: test_convert_fp16_to_fp32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s6, -1
 ; GFX8-NEXT:    s_mov_b32 s10, s6
@@ -46,7 +46,7 @@ define amdgpu_kernel void @test_convert_fp16_to_fp32(ptr addrspace(1) noalias %o
 ;
 ; GFX11-LABEL: test_convert_fp16_to_fp32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s10, s6

@@ -7,8 +7,8 @@
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[1].Z
 
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x6
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x18
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x6
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x18
 ; CI-HSA: s_load_dword [[XY:s[0-9]+]], s[4:5], 0x1
 ; VI-HSA: s_load_dword [[XY:s[0-9]+]], s[4:5], 0x4
 
@@ -25,8 +25,8 @@ entry:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[1].W
 
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x7
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x1c
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x7
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x1c
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_y(ptr addrspace(1) %out) {
@@ -40,8 +40,8 @@ entry:
 ; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
 ; EG: MOV * [[VAL]], KC0[2].X
 
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x8
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x20
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x8
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x20
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
 define amdgpu_kernel void @local_size_z(ptr addrspace(1) %out) {
@@ -52,8 +52,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_size_xy:
-; SI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9+]]]], s[0:1], 0x6
-; VI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9+]]]], s[0:1], 0x18
+; SI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9+]]]], s[2:3], 0x6
+; VI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9+]]]], s[2:3], 0x18
 ; GCN: s_mul_i32 [[VAL:s[0-9]+]], s[[X]], s[[Y]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
@@ -68,10 +68,10 @@ entry:
 
 ; FUNC-LABEL: {{^}}local_size_xz:
 
-; SI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x6
-; SI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[0:1], 0x8
-; VI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[0:1], 0x18
-; VI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[0:1], 0x20
+; SI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[2:3], 0x6
+; SI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[2:3], 0x8
+; VI-NOHSA-DAG: s_load_dword [[X:s[0-9]+]], s[2:3], 0x18
+; VI-NOHSA-DAG: s_load_dword [[Z:s[0-9]+]], s[2:3], 0x20
 ; HSA-DAG: s_and_b32 [[X:s[0-9]+]], [[XY]], 0xffff
 ; GCN: s_mul_i32 [[VAL:s[0-9]+]], [[X]], [[Z]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
@@ -89,8 +89,8 @@ entry:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 1
 
-; SI-NOHSA-DAG: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[0:1], 0x7
-; VI-NOHSA-DAG: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[0:1], 0x1c
+; SI-NOHSA-DAG: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[2:3], 0x7
+; VI-NOHSA-DAG: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s[2:3], 0x1c
 ; GCN: s_mul_i32 [[VAL:s[0-9]+]], s[[#LOAD + 0]], s[[#LOAD + 1]]
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN: buffer_store_dword [[VVAL]]
@@ -107,10 +107,10 @@ entry:
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 1
 
-; SI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s[0:1], 0x6
-; SI-NOHSA-DAG: s_load_dword s[[Z:[0-9]+]], s[0:1], 0x8
-; VI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s[0:1], 0x18
-; VI-NOHSA-DAG: s_load_dword s[[Z:[0-9]+]], s[0:1], 0x20
+; SI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s[2:3], 0x6
+; SI-NOHSA-DAG: s_load_dword s[[Z:[0-9]+]], s[2:3], 0x8
+; VI-NOHSA-DAG: s_load_dwordx2 s[[[X:[0-9]+]]:[[Y:[0-9]+]]], s[2:3], 0x18
+; VI-NOHSA-DAG: s_load_dword s[[Z:[0-9]+]], s[2:3], 0x20
 ; GCN: s_mul_i32 [[M:s[0-9]+]], s[[X]], s[[Y]]
 ; GCN: s_add_i32 [[VAL:s[0-9]+]], [[M]], s[[Z]]
 ; GCN-DAG: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
@@ -127,8 +127,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_size_x_known_bits:
-; SI: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x6
-; VI: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x18
+; SI: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x6
+; VI: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x18
 ; GCN-NOT: 0xffff
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
@@ -142,8 +142,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_size_y_known_bits:
-; SI: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x7
-; VI: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x1c
+; SI: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x7
+; VI: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x1c
 ; GCN-NOT: 0xffff
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NEXT: buffer_store_dword [[VVAL]]
@@ -157,8 +157,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_size_z_known_bits:
-; SI: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x8
-; VI: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x20
+; SI: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x8
+; VI: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x20
 ; GCN-NOT: 0xffff
 ; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NEXT: buffer_store_dword [[VVAL]]

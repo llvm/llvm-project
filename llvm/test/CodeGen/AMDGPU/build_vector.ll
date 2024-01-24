@@ -82,9 +82,9 @@ entry:
 ; GFX8: buffer_store_dword v0, off, s[0:3], 0
 ; GFX1011: v_mov_b32_e32 v0, 0
 ; GFX1011: s_waitcnt lgkmcnt(0)
-; GFX10: s_lshr_b32 s2, s2, 16
+; GFX10: s_lshr_b32 s2, s4, 16
 ; GFX10: s_pack_ll_b32_b16 s2, s2, 5
-; GFX11: s_pack_hl_b32_b16 s2, s2, 5
+; GFX11: s_pack_hl_b32_b16 s2, s4, 5
 ; GFX1011: v_mov_b32_e32 v1, s2
 ; GFX10: global_store_dword v0, v1, s[0:1]
 ; GFX11: global_store_b32 v0, v1, s[0:1]

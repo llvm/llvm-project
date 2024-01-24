@@ -50,7 +50,7 @@ define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
 ; GCN-NEXT: v_and_b32_e32 [[TMP:v[0-9]+]], 0x3ff, v31
 ; GCN-NEXT: v_add_i32_e32 v0, vcc, [[TMP]], v0
 ; GCN-NEXT: s_setpc_b64
-define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
+define hidden i32 @use_workitem_id_x(i32 %arg0) #3 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %op = add i32 %id, %arg0
   ret i32 %op
@@ -64,7 +64,7 @@ define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
 ; GCN: v_mov_b32_e32 v0, 9
 ; GCN: s_swappc_b64
 ; GCN: v_add_f32_e32
-define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #0 {
+define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #3 {
   %val = call float @use_workitem_id_x(i32 9)
   %op = fadd float %val, 1.0
   store volatile float %op, ptr addrspace(1) undef
@@ -112,3 +112,4 @@ declare i32 @llvm.amdgcn.workitem.id.x() #2
 attributes #0 = { nounwind noinline }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nounwind readnone speculatable }
+attributes #3 = { nounwind noinline "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

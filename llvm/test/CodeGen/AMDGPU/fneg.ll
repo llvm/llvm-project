@@ -254,9 +254,9 @@ define <2 x i16> @v_fneg_v2i16(<2 x i16> %in) {
 }
 
 ; FUNC-LABEL: {{^}}s_fneg_v2i16_fp_use:
-; SI: s_lshr_b32 s3, s2, 16
-; SI: v_cvt_f32_f16_e32 v0, s3
-; SI: v_cvt_f32_f16_e32 v1, s2
+; SI: s_lshr_b32 s1, s0, 16
+; SI: v_cvt_f32_f16_e32 v0, s1
+; SI: v_cvt_f32_f16_e32 v1, s0
 ; SI: v_sub_f32_e32 v0, 2.0, v0
 ; SI: v_sub_f32_e32 v1, 2.0, v1
 
