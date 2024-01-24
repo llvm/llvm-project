@@ -1331,11 +1331,11 @@ multiclass AndN<X86TypeInfo t, SDPatternOperator node, string suffix = ""> {
 // Complexity is reduced to give and with immediate a chance to match first.
 let AddedComplexity = -6 in {
 defm ANDN32 : AndN<Xi32, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
-defm ANDN64 : AndN<Xi64, X86and_flag>, VEX, REX_W, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
 defm ANDN32 : AndN<Xi32, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
-defm ANDN64 : AndN<Xi64, X86and_flag, "_EVEX">, EVEX, REX_W, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
 defm ANDN32 : AndN<Xi32, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
-defm ANDN64 : AndN<Xi64, null_frag, "_NF">, EVEX, EVEX_NF, REX_W, Requires<[In64BitMode]>;
+defm ANDN64 : AndN<Xi64, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
 }
 
 multiclass Andn_Pats<string suffix> {
