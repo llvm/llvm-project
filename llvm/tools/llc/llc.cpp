@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This is the llc code generator driver. It provides a convenient
-// command-line interface for generating native assembly-language code
-// or C code, given LLVM bitcode.
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
 //
 //===----------------------------------------------------------------------===//
 
@@ -274,15 +274,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 
       switch (codegen::getFileType()) {
       case CodeGenFileType::AssemblyFile:
-        if (TargetName[0] == 'c') {
-          if (TargetName[1] == 0)
-            OutputFilename += ".cbe.c";
-          else if (TargetName[1] == 'p' && TargetName[2] == 'p')
-            OutputFilename += ".cpp";
-          else
-            OutputFilename += ".s";
-        } else
-          OutputFilename += ".s";
+        OutputFilename += ".s";
         break;
       case CodeGenFileType::ObjectFile:
         if (OS == Triple::Win32)
