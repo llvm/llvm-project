@@ -9,10 +9,10 @@
 #include "futex_word.h"
 
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/limits.h"     // INT_MAX
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/callonce.h"
 
-#include <limits.h>
 #include <linux/futex.h>
 #include <sys/syscall.h> // For syscall numbers.
 
