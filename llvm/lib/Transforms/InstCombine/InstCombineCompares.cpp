@@ -2575,6 +2575,66 @@ Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
   return new ICmpInst(ICmpInst::ICMP_UGT, And, ConstantInt::get(Ty, SignMask));
 }
 
+Instruction *InstCombinerImpl::foldICmpRemConstant(ICmpInst &Cmp,
+                                                   BinaryOperator *Rem,
+                                                   const APInt &C) {
+  assert((Rem->getOpcode() == Instruction::SRem || Rem->getOpcode() == Instruction::URem) && "Only for srem/urem!");
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
+  // Check for ==/!= 0
+  if (!ICmpInst::isEquality(Pred) || !C.isZero())
+    return nullptr;
+
+  Value *X = Rem->getOperand(0);
+  Value *Y = Rem->getOperand(1);
+
+  Value *A, *B;
+  const APInt *C1, *C2;
+  Value *NewRem;
+  APInt K;
+  Type *Ty;
+
+  if (Rem->getOpcode() == Instruction::SRem) {
+    // Check if both NSW and NUW flags are on
+    if (!match(X, m_NSWMul(m_Value(A), m_APInt(C1))))
+      return nullptr;
+    if (!match(Y, m_NSWMul(m_Value(B), m_APInt(C2))))
+      return nullptr;
+    if (!match(X, m_NUWMul(m_Value(A), m_APInt(C1))))
+      return nullptr;
+    if (!match(Y, m_NUWMul(m_Value(B), m_APInt(C2))))
+      return nullptr;
+    if (C2->isZero())
+      return nullptr;
+    if (!C1->srem(*C2).isZero())
+      return nullptr;
+    // Compute the new constant k = c1 / c2.
+    K = C1->sdiv(*C2);
+    Ty = Rem->getType();
+    if (K == 1)
+      NewRem = Builder.CreateSRem(A, B);
+    else
+      NewRem = Builder.CreateSRem(Builder.CreateMul(A, ConstantInt::get(A->getType(), K), "", true, true), B);
+  }
+  else {
+    if (!match(X, m_NUWMul(m_Value(A), m_APInt(C1))))
+      return nullptr;
+    if (!match(Y, m_NUWMul(m_Value(B), m_APInt(C2))))
+      return nullptr;
+    if (C2->isZero())
+      return nullptr;
+    if (!C1->urem(*C2).isZero())
+      return nullptr;
+    // Compute the new constant k = c1 / c2.
+    K = C1->udiv(*C2);
+    Ty = Rem->getType();
+    if (K == 1)
+      NewRem = Builder.CreateSRem(A, B);
+    else
+      NewRem = Builder.CreateSRem(Builder.CreateMul(A, ConstantInt::get(A->getType(), K), "", true, false), B);
+  }
+  return new ICmpInst(Pred, NewRem, ConstantInt::get(Ty, C));
+}
+
 /// Fold icmp (udiv X, Y), C.
 Instruction *InstCombinerImpl::foldICmpUDivConstant(ICmpInst &Cmp,
                                                     BinaryOperator *UDiv,
@@ -3711,6 +3771,11 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
   case Instruction::SRem:
     if (Instruction *I = foldICmpSRemConstant(Cmp, BO, C))
       return I;
+    break;
+   [[fallthrough]]; 
+  case Instruction::URem:
+    if (Instruction *I = foldICmpRemConstant(Cmp, BO, C)) 
+      return I; 
     break;
   case Instruction::UDiv:
     if (Instruction *I = foldICmpUDivConstant(Cmp, BO, C))
