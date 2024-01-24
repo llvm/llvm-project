@@ -7941,8 +7941,14 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   SMEAttrs CalleeAttrs, CallerAttrs(MF.getFunction());
   if (CLI.CB)
     CalleeAttrs = SMEAttrs(*CLI.CB);
-  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
-    CalleeAttrs = SMEAttrs(ES->getSymbol());
+  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee)) {
+    if (StringRef(ES->getSymbol()) == StringRef("__arm_sc_memcpy")) {
+      auto Attrs = AttributeList().addFnAttribute(
+          *DAG.getContext(), "aarch64_pstate_sm_compatible");
+      CalleeAttrs = SMEAttrs(Attrs);
+    } else
+      CalleeAttrs = SMEAttrs(ES->getSymbol());
+  }
 
   auto DescribeCallsite =
       [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {

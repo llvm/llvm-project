@@ -76,12 +76,74 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
   }
 }
 
+SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, RTLIB::Libcall LC) const {
+  const AArch64Subtarget &STI =
+      DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+  const AArch64TargetLowering *TLI = STI.getTargetLowering();
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+  Entry.Node = Dst;
+  Args.push_back(Entry);
+
+  enum { SME_MEMCPY = 0, SME_MEMMOVE, SME_MEMSET } SMELibcall;
+  switch (LC) {
+  case RTLIB::MEMCPY:
+    SMELibcall = SME_MEMCPY;
+    Entry.Node = Src;
+    Args.push_back(Entry);
+    break;
+  case RTLIB::MEMMOVE:
+    SMELibcall = SME_MEMMOVE;
+    Entry.Node = Src;
+    Args.push_back(Entry);
+    break;
+  case RTLIB::MEMSET:
+    SMELibcall = SME_MEMSET;
+    if (Src.getValueType().bitsGT(MVT::i32))
+      Src = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Src);
+    else if (Src.getValueType().bitsLT(MVT::i32))
+      Src = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Src);
+    Entry.Node = Src;
+    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
+    Entry.IsSExt = false;
+    Args.push_back(Entry);
+    break;
+  default:
+    return SDValue();
+  }
+  Entry.Node = Size;
+  Args.push_back(Entry);
+  char const *FunctionNames[3] = {"__arm_sc_memcpy", "__arm_sc_memmove",
+                                  "__arm_sc_memset"};
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL)
+      .setChain(Chain)
+      .setLibCallee(
+          TLI->getLibcallCallingConv(RTLIB::MEMCPY),
+          Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(FunctionNames[SMELibcall],
+                                TLI->getPointerTy(DAG.getDataLayout())),
+          std::move(Args))
+      .setDiscardResult();
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
+  return CallResult.second;
+}
+
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+
+  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+    return EmitSpecializedLibcall(DAG, DL, Chain, Dst, Src, Size,
+                                  RTLIB::MEMCPY);
   if (STI.hasMOPS())
     return EmitMOPS(AArch64ISD::MOPS_MEMCOPY, DAG, DL, Chain, Dst, Src, Size,
                     Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
@@ -94,6 +156,11 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
     MachinePointerInfo DstPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+
+  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+    return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
+                                  RTLIB::MEMSET);
 
   if (STI.hasMOPS()) {
     return EmitMOPS(AArch64ISD::MOPS_MEMSET, DAG, dl, Chain, Dst, Src, Size,
@@ -108,6 +175,11 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+
+  SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+  if (Attrs.hasStreamingBody() || Attrs.hasStreamingCompatibleInterface())
+    return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
+                                  RTLIB::MEMMOVE);
   if (STI.hasMOPS()) {
     return EmitMOPS(AArch64ISD::MOPS_MEMMOVE, DAG, dl, Chain, Dst, Src, Size,
                     Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
