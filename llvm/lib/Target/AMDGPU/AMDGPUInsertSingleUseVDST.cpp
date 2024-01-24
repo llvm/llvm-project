@@ -19,6 +19,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -83,26 +84,13 @@ public:
         // instruction to be marked as a single use producer.
         bool AllProducerOperandsAreSingleUse = true;
 
-        for (const auto &Operand : MI.operands()) {
-          if (!Operand.isReg())
-            continue;
+        // Gather a list of Registers used before updating use counts to avoid
+        // double counting registers that appear multiple times in a single
+        // MachineInstr.
+        DenseSet<MCRegUnit> RegistersUsed;
+
+        for (const auto &Operand : MI.all_defs()) {
           const auto Reg = Operand.getReg();
-
-          // Count the number of times each register is read.
-          if (Operand.readsReg())
-            for (const MCRegUnit &Unit : TRI->regunits(Reg))
-              RegisterUseCount[Unit]++;
-
-          // Do not attempt to optimise across exec mask changes.
-          if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
-            for (auto &UsedReg : RegisterUseCount)
-              UsedReg.second = 2;
-          }
-
-          // If we are at the point where the register first became live,
-          // check if the operands are single use.
-          if (!MI.modifiesRegister(Reg, TRI))
-            continue;
 
           const auto RegUnits = TRI->regunits(Reg);
           if (any_of(RegUnits, [&RegisterUseCount](const MCRegUnit &Unit) {
@@ -113,6 +101,22 @@ public:
           // Reset uses count when a register is no longer live.
           for (const MCRegUnit &Unit : RegUnits)
             RegisterUseCount.erase(Unit);
+        }
+
+        for (const auto &Operand : MI.all_uses()) {
+          const auto Reg = Operand.getReg();
+
+          // Count the number of times each register is read.
+          for (const MCRegUnit &Unit : TRI->regunits(Reg))
+            RegistersUsed.insert(Unit);
+        }
+        for (const MCRegUnit &Unit : RegistersUsed)
+          RegisterUseCount[Unit]++;
+
+        // Do not attempt to optimise across exec mask changes.
+        if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
+          for (auto &UsedReg : RegisterUseCount)
+            UsedReg.second = 2;
         }
         if (AllProducerOperandsAreSingleUse && SIInstrInfo::isVALU(MI)) {
           // TODO: Replace with candidate logging for instruction grouping
