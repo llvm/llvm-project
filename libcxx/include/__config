@@ -1532,7 +1532,8 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  endif
 
-#  if (defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__) || defined (_WIN32)) && !defined(__PICOLIBC__)
+#  if (defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__) || defined(_WIN32)) &&                         \
+      !defined(__PICOLIBC__) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING)
 #    define _LIBCPP_HAS_DEBUGGING
 #  endif
 

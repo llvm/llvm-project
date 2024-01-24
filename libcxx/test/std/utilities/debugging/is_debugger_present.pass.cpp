@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // <debugging>
 
@@ -15,7 +16,13 @@
 #include <cassert>
 #include <debugging>
 
-void test() { static_assert(noexcept(is_debugger_present())); }
+// Test without debugger.
+
+void test() {
+  static_assert(noexcept(std::is_debugger_present()));
+
+  assert(!std::is_debugger_present());
+}
 
 int main(int, char**) {
   test();

@@ -401,8 +401,8 @@ feature_test_macros = [
             "name": "__cpp_lib_debugging",
             "values": {"c++26": 202311},  # P2546R5 Debugging Support
             "headers": ["debugging"],
-            "test_suite_guard": "TEST_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING)",
-            "libcxx_guard": "_LIBCPP_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING)",
+            "test_suite_guard": "TEST_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING)",
+            "libcxx_guard": "_LIBCPP_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING)",
         },
         {
             "name": "__cpp_lib_destroying_delete",

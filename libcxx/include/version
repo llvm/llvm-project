@@ -492,7 +492,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 # define __cpp_lib_bind_front                           202306L
 # define __cpp_lib_bitset                               202306L
 // # define __cpp_lib_copyable_function                    202306L
-# if _LIBCPP_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING)
+# if _LIBCPP_STD_VER >= 26 && defined(_LIBCPP_HAS_DEBUGGING)
 #   define __cpp_lib_debugging                          202311L
 # endif
 // # define __cpp_lib_freestanding_algorithm               202311L

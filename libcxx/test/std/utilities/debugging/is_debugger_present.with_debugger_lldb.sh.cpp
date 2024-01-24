@@ -8,23 +8,29 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
+// UNSUPPORTED: gcc
+
+// RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
+// RUN: %{lldb} %t.exe -o run -o detach -o quit
+// RUN: %{gdb} %t.exe -ex run -ex detach -ex quit --silent
 
 // <debugging>
 
-// void breakpoint_if_debugging() noexcept;
+// bool is_debugger_present() noexcept;
 
 #include <cassert>
 #include <debugging>
+#include <cstdlib>
 
 // Test with debugger attached:
 
-// LLDB command: `lldb "breakpoint_if_debugging.pass" -o run -o detach -o quit`
-// GDB command:  `gdb breakpoint_if_debugging.pass -ex run -ex detach -ex quit --silent`
+// LLDB command: `lldb "is_debugger_present.pass" -o run -o detach -o quit`
+// GDB command:  `gdb is_debugger_present.pass -ex run -ex detach -ex quit --silent`
 
 void test() {
-  static_assert(noexcept(std::breakpoint_if_debugging()));
+  static_assert(noexcept(std::is_debugger_present()));
 
-  std::breakpoint_if_debugging();
+  assert(std::is_debugger_present());
 }
 
 int main(int, char**) {
