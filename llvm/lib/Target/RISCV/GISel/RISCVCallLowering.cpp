@@ -54,7 +54,7 @@ public:
     std::optional<unsigned> FirstMaskArgument;
     if (Subtarget.hasVInstructions() && !AssignedFirstMaskArg &&
         ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1) {
-      FirstMaskArgument = std::make_optional(ValNo);
+      FirstMaskArgument = ValNo;
       AssignedFirstMaskArg = true;
     }
 
@@ -204,7 +204,7 @@ public:
     std::optional<unsigned> FirstMaskArgument;
     if (Subtarget.hasVInstructions() && !AssignedFirstMaskArg &&
         ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1) {
-      FirstMaskArgument = std::make_optional(ValNo);
+      FirstMaskArgument = ValNo;
       AssignedFirstMaskArg = true;
     }
 
