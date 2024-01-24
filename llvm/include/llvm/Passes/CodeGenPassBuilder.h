@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_CODEGENPASSBUILDER_H
-#define LLVM_CODEGEN_CODEGENPASSBUILDER_H
+#ifndef LLVM_PASSES_CODEGENPASSBUILDER_H
+#define LLVM_PASSES_CODEGENPASSBUILDER_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -116,7 +116,7 @@ namespace llvm {
     }                                                                          \
     static AnalysisKey Key;                                                    \
   };
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
 /// This class provides access to building LLVM's passes.
 ///
@@ -676,7 +676,7 @@ CodeGenPassBuilder<Derived>::getPassNameFromLegacyName(StringRef Name) const {
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)              \
   if (Name == NAME)                                                            \
     Ret = {#PASS_NAME, true};
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
   if (Ret.first.empty())
     Ret = derived().getTargetPassNameFromLegacyName(Name);
@@ -1235,4 +1235,4 @@ void CodeGenPassBuilder<Derived>::addBlockPlacement(
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_CODEGENPASSBUILDER_H
+#endif // LLVM_PASSES_CODEGENPASSBUILDER_H
