@@ -1557,52 +1557,40 @@ def MOVDIR64B64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$
 //===----------------------------------------------------------------------===//
 // ENQCMD/S - Enqueue 64-byte command as user with 64-byte write atomicity
 //
+multiclass Enqcmds<string suffix> {
+  def ENQCMD32#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
+                          "enqcmd\t{$src, $dst|$dst, $src}",
+                          [(set EFLAGS, (X86enqcmd GR32:$dst, addr:$src))]>,
+                        NoCD8, XD, AdSize32, Requires<[HasENQCMD, NoEGPR]>;
+  def ENQCMD64#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
+                          "enqcmd\t{$src, $dst|$dst, $src}",
+                          [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
+                        NoCD8, XD, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
+
+  def ENQCMDS32#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
+                           "enqcmds\t{$src, $dst|$dst, $src}",
+                           [(set EFLAGS, (X86enqcmds GR32:$dst, addr:$src))]>,
+                         NoCD8, XS, AdSize32, Requires<[HasENQCMD, NoEGPR]>;
+  def ENQCMDS64#suffix : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
+                          "enqcmds\t{$src, $dst|$dst, $src}",
+                          [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
+                         NoCD8, XS, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
+}
+
 let SchedRW = [WriteStore], Defs = [EFLAGS] in {
   def ENQCMD16 : I<0xF8, MRMSrcMem, (outs), (ins GR16:$dst, i512mem_GR16:$src),
-                 "enqcmd\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmd GR16:$dst, addr:$src))]>,
+                   "enqcmd\t{$src, $dst|$dst, $src}",
+                   [(set EFLAGS, (X86enqcmd GR16:$dst, addr:$src))]>,
                  T8, XD, AdSize16, Requires<[HasENQCMD, Not64BitMode]>;
-  def ENQCMD32 : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
-                 "enqcmd\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmd GR32:$dst, addr:$src))]>,
-                 T8, XD, AdSize32, Requires<[HasENQCMD]>;
-  def ENQCMD64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
-                 "enqcmd\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
-                 T8, XD, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
-
   def ENQCMDS16 : I<0xF8, MRMSrcMem, (outs), (ins GR16:$dst, i512mem_GR16:$src),
-                 "enqcmds\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmds GR16:$dst, addr:$src))]>,
-                 T8, XS, AdSize16, Requires<[HasENQCMD, Not64BitMode]>;
-  def ENQCMDS32 : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
-                 "enqcmds\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmds GR32:$dst, addr:$src))]>,
-                 T8, XS, AdSize32, Requires<[HasENQCMD]>;
-  def ENQCMDS64 : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
-                 "enqcmds\t{$src, $dst|$dst, $src}",
-                 [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
-                 T8, XS, AdSize64, Requires<[HasENQCMD, NoEGPR, In64BitMode]>;
+                    "enqcmds\t{$src, $dst|$dst, $src}",
+                    [(set EFLAGS, (X86enqcmds GR16:$dst, addr:$src))]>,
+                  T8, XS, AdSize16, Requires<[HasENQCMD, Not64BitMode]>;
 
-let Predicates = [HasENQCMD, HasEGPR, In64BitMode] in {
-  def ENQCMD32_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
-                        "enqcmd\t{$src, $dst|$dst, $src}",
-                        [(set EFLAGS, (X86enqcmd GR32:$dst, addr:$src))]>,
-                      EVEX, NoCD8, T_MAP4, XD, AdSize32;
-  def ENQCMD64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
-                        "enqcmd\t{$src, $dst|$dst, $src}",
-                        [(set EFLAGS, (X86enqcmd GR64:$dst, addr:$src))]>,
-                      EVEX, NoCD8, T_MAP4, XD, AdSize64;
+  defm "" : Enqcmds<"">, T8;
+  let Predicates = [HasENQCMD, HasEGPR, In64BitMode] in
+  defm "" : Enqcmds<"_EVEX">, EVEX, T_MAP4;
 
-  def ENQCMDS32_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR32:$dst, i512mem_GR32:$src),
-                         "enqcmds\t{$src, $dst|$dst, $src}",
-                         [(set EFLAGS, (X86enqcmds GR32:$dst, addr:$src))]>,
-                       EVEX, NoCD8, T_MAP4, XS, AdSize32;
-  def ENQCMDS64_EVEX : I<0xF8, MRMSrcMem, (outs), (ins GR64:$dst, i512mem_GR64:$src),
-                         "enqcmds\t{$src, $dst|$dst, $src}",
-                         [(set EFLAGS, (X86enqcmds GR64:$dst, addr:$src))]>,
-                       EVEX, NoCD8, T_MAP4, XS, AdSize64;
-}
 }
 
 //===----------------------------------------------------------------------===//
