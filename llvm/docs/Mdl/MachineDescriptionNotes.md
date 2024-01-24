@@ -56,7 +56,7 @@ More generally, we’d like specific language to:
 *   Support all members of a processor family
 *   Describe CPU features, parameterized by subtarget
     *   Functional units
-    *   Issue slots
+    *   
     *   Pipeline structure and behaviors
 
 Since our emphasis is on easily supporting accelerators and VLIW processors, in addition to supporting all existing targets, much of this is overkill for most upstreamed CPUs.  CPU’s typically have much simpler descriptions, and don’t require much of the capability of our machine description language.  Incidentally, MDL descriptions of these targets (generated automatically from the tablegen Schedules and Itineraries) are typically much more concise than the original tablegen descriptions.
@@ -340,7 +340,7 @@ The machine description provides a mechanism for defining and associating resour
 There are a few ways that resources are defined:
 
 *   **Functional Units:** A resource is implicitly defined for every functional unit instance in a CPU definition. An instruction that executes on a particular instance will reserve that resource implicitly. 
-*   **Issue Slots: **Each CPU, or cluster of functional units in a CPU, can explicitly define a set of issue slots.  For a VLIW, these resources directly correspond to instruction encoding slots in the machine instruction word, and can be used to control which instruction slots can issue to which functional units.  For dynamically scheduled CPUs, these correspond to the width of the dynamic instruction issue. 
+*   **Issue Slots:** Each CPU, or cluster of functional units in a CPU, can explicitly define a set of issue slots.  For a VLIW, these resources directly correspond to instruction encoding slots in the machine instruction word, and can be used to control which instruction slots can issue to which functional units.  For dynamically scheduled CPUs, these correspond to the width of the dynamic instruction issue. 
 *   **Named Resources** can be explicitly defined in several contexts, described below.
 *   **Ports:** Ports are functional unit resources that model a register class constraint and a set of associated resources. These are intended to model register file ports that are shared between functional units.
 
@@ -429,7 +429,7 @@ We can also declare a set of “unnamed” pooled resources:
     resource shared_bits[0..5];
 ```
 
-This describes a resource pool with 6 members.  The entire pool can be referenced by name (ie “shared\_bits”), or each member can be referenced by index (“shared\_bits[3]”), or a subrange of members (“shared\_bits[2..3]). A resource reference can also indicate that it needs some number of resources allocated with the syntax: shared\_bits:<number>.  
+This describes a resource pool with 6 members.  The entire pool can be referenced by name (ie “shared\_bits”), or each member can be referenced by index (“shared\_bits[3]”), or a subrange of members (“shared\_bits[2..3]). A resource reference can also indicate that it needs some number of resources allocated with the syntax: `shared_bits:<number>`.  
 
 Resource pools can also have data associated with them, each member has its own set of bits:
 
@@ -545,9 +545,7 @@ More detail on this below.
 
 ### **Method 1: SuperScalar and Out-Of-Order CPUs**
 
-Fully protected pipelines, forwarding, out-of-order issue and retirement, imprecise micro-operation modeling, and dynamic functional unit allocation make this class of 
-
-CPUs difficult to model_ precisely._  However, because of their dynamic nature, precise modeling is both impossible and unnecessary.  But it is still important to provide descriptions that enable scheduling heuristics to understand the relative temporal behavior of instructions.
+Fully protected pipelines, forwarding, out-of-order issue and retirement, imprecise micro-operation modeling, and dynamic functional unit allocation make this class of CPUs difficult to model _precisely_.  However, because of their dynamic nature, precise modeling is both impossible and unnecessary.  But it is still important to provide descriptions that enable scheduling heuristics to understand the relative temporal behavior of instructions.
 
 This method is similar to the way Tablegen “Schedules” associate instructions with a set of ReadWrite resources, which are in turn associated with sets of ProcResources (or functional units), latencies and micro-operations. This approach works well for superscalar and out-of-order CPUs, and can also be used to describe scalar processors.
 
@@ -565,9 +563,7 @@ In this method, a functional unit instance is an instantiation of an _issuing_ f
 
 This approach allows a very high degree of precision and flexibility that's not available with method 1.  Its strictly more expressive than the first method, but much of that expressiveness isn’t required by superscalar CPUs.
 
-We describe this as a “tops-down” approach (explicit functional unit template definitions
-
-assert which subunits they support).  This is the method tdscan uses when scraping information about itineraries.
+We describe this as a “tops-down” approach (explicit functional unit template definitions assert which subunits they support).  This is the method tdscan uses when scraping information about itineraries.
 
 ### **Schema of a Full Processor Family Description**
 
@@ -874,7 +870,7 @@ In VLIW architectures (in particular), some functional units may be “pinned”
 
 #### **SuperScalar and Out-Of-Order CPUs**
 
-In general, the overall approach for defining superscalar CPUs is quite different from other CPU types.   This class of architecture requires information about the size of the reorder buffer, and details about queues for each functional unit. Actual functional unit utilization is described in latency or subunit rules, which can specify exactly which functional units are used.
+This class of architecture requires information about the size of the reorder buffer, and details about queues for each functional unit. Actual functional unit utilization is described in latency or subunit rules, which can specify exactly which functional units are used.
 
 Functional units can be unreserved (like alu1, below), which means that an instruction or micro-operation that runs on that unit doesn’t actually use that specific resource.  A functional unit can have a single-entry queue - in which case it is unbuffered - or a specific size queue. 
 
@@ -1015,7 +1011,7 @@ Indeed the most common case currently modeled in tablegen files is a functional 
 
 In short, there are architectural cases that cannot be modeled precisely, and there are cases where we simply need a heuristic.  We provide the hooks necessary for a compiler to provide the heuristic based on the existing model.
 
-Note: there is a philosophical question of whether we should provide best case or worst case latencies when the forwarding cannot be statically predicted.  Generally, we believe that worst case latencies are better than best case latencies, simply because too-short latencies can produce code which occasionally (or always) stalls. On the other hand, overestimating the latency produces schedules where a pair of dependent instructions _tend _to be scheduled far enough apart to avoid stalls. In effect, schedulers will separate instructions by the requested latency only when there’s other useful work to do.  Otherwise, there’s no reason to separate them - the stall is inevitable.
+Note: there is a philosophical question of whether we should provide best case or worst case latencies when the forwarding cannot be statically predicted.  Generally, we believe that worst case latencies are better than best case latencies, simply because too-short latencies can produce code which occasionally (or always) stalls. On the other hand, overestimating the latency produces schedules where a pair of dependent instructions _tend_ to be scheduled far enough apart to avoid stalls. In effect, schedulers will separate instructions by the requested latency only when there’s other useful work to do.  Otherwise, there’s no reason to separate them - the stall is inevitable (or otherwise managed in the reorder buffer).
 
 ### **Functional Unit Template Definitions**
 
@@ -1160,7 +1156,7 @@ A simple example of a full functional unit template definition:
 
 #### **Conditional Subunit Instances**
 
-In a functional unit template, a subunit instance can be conditionally instantiated based on a predicate.  Predicates are simply names of the instantiating cpu definition and functional unit instance.  This allows us to specialize a functional unit instance based on how its instantiated, for example:
+In a functional unit template, a subunit instance can be conditionally instantiated based on a predicate.  Predicates are simply names of the instantiating cpu definition and/or functional unit instance.  This allows us to specialize a functional unit instance based on how its instantiated, for example:
 
 ```
     cpu my_cpu {
@@ -1423,7 +1419,7 @@ In this example, my\_latency includes base1, base2, and base3. Deriving latency 
 
 #### **Latency References**
 
-A latency reference statement describes a single operand reference and/or resource references in a specified pipeline stage. It references instruction operands _by name, _as well as resource and port parameters, and ties the operations to named pipeline phases.
+A latency reference statement describes a single operand reference and/or resource references in a specified pipeline stage. It references instruction operands _by name_, as well as resource and port parameters, and ties the operations to named pipeline phases.
 
 Latency references have the following general form:
 
@@ -1471,7 +1467,7 @@ Phase expressions have a limited set of operators: +, -, \*, /, ().  Since laten
 
 ##### **Operand Specifiers**
 
-The operand specifier has the same grammar as in tablegen, which allows you to specify an optional operand type, the operand name, and optional sub-operand names: 
+The operand specifier has a similar syntax TableGen's operand syntax, which allows you to specify an optional operand type, the operand name, and optional sub-operand names: 
 
 ```
     operand                 : (IDENT ':')? '$' IDENT ('.' operand_ref)*
@@ -1507,13 +1503,13 @@ Or you can differentiate based on the operand name:
     use(E4, $src3);              // and some instructions have 3!
 ```
 
-Note that operands _can _be referenced by their index in an instruction’s operand list, but this is error-prone and this isn’t considered best practice because we can’t thoroughly check the validity of the index.  The syntax is simply `$<index>`.  Note that sub-operands often aren’t given names in tablegen, and must be referenced by index, for example: `$src.1`.  Unnamed variant operands (obviously) don’t have names, and are referenced by their position past the end of the operands defined for an instruction, ie `$$1`, `$$2`, etc.
+Note that operands _can_ be referenced by their index in an instruction’s operand list, but this is error-prone and this isn’t considered best practice because we can’t thoroughly check the validity of the index.  The syntax is simply `$<index>`.  Note that sub-operands often aren’t given names in tablegen, and must be referenced by index, for example: `$src.1`.  Unnamed variant operands (obviously) don’t have names, and are referenced by their position past the end of the operands defined for an instruction, ie `$$1`, `$$2`, etc.
 
 ##### **Resource References**
 
-Any latency reference can include an optional set of resource references. These have slightly different semantics depending on the operator type (def/use/predicate/hold/reserve).
+A latency reference can include an optional set of resource references. These have slightly different semantics depending on the operator type (def/use/predicate/hold/reserve).
 
-For “use”, “def”, and “predicate” statements, a set of resource references can be specified that are associated with the operand reference. As with all latency references, the operand must match an operand of the client instruction. If the reference is valid, the resource is “used” - for any of these operators - at the pipeline phase specified, unless the resource was defined with a specific phase. The “use” of the resource is equivalent to a single-cycle hold/reserve of that resource.  Some examples:
+For “use”, “def”, and “predicate” statements, a set of resource references can be specified that are associated with the operand reference. As with all latency references, the operand must match an operand of the client instruction. If the operand reference is valid, the resource is “used” - for any of these operators - at the pipeline phase specified, unless the resource was defined with a specific phase. The “use” of the resource is equivalent to a single-cycle hold/reserve of that resource.  Some examples:
 
 ```
     use(E1, $src, my_res);       // use "my_res" at cycle E1
@@ -1524,14 +1520,12 @@ For “hold” and “reserve” operations, the operand specifier is optional, 
 
 ```
     hold(E1, my_res);           // hold issue at E1 until resources are available
-    res(E32, $dst, my_res);     // reserve resources up to cycle E32
+    res(E32, $dst, my_res);     // reserve resources up to cycle E32 if $dst is a valid operand
 ```
 
 #### **Conditional References**
 
-Any reference in a latency rule can be conditional, using a predicate identifier.  The predicates are generally identical to LLVM predicates, and check an attribute of a client instruction. 
-
-Conditional references can be nested, for arbitrarily complex references. These have the following general form:
+Any reference in a latency rule can be conditional, using a predicate identifier.  The predicates are generally identical to LLVM predicates, and check an attribute of a client instruction. Conditional references can be nested, for arbitrarily complex references. These have the following general form:
 
 ```
     if <predicate_name> { <set of refs> } 
@@ -1577,13 +1571,13 @@ As part of this effort, we will incrementally modify the LLVM compiler to altern
 
 The proposed use case for the MDL language is as an alternative specification for the architecture description currently embodied in TableGen Schedules and Itineraries, particularly for architectures for which Schedules and Itineraries are not expressive enough.  It is explicitly _not_ the intent that it “replace TableGen”.  But we believe that the MDL language is a better language (vs Schedules and Itineraries) for a large class of accelerators, and can be used effectively alongside TableGen.
 
-We’ve written a tool (TdScan) which extracts enough information from TableGen descriptions so that we can sync instruction definitions with architecture definitions. TdScan can also optionally scrape all of the Schedule and Itinerary information from a tablegen description and produce an equivalent\*\* MDL description.
+We’ve written a tool (TdScan) which extracts enough information from TableGen descriptions so that we can sync instruction definitions with architecture definitions. TdScan can also optionally scrape all of the Schedule and Itinerary information from a tablegen description and produce an MDL description that captures all of that information.
 
 So there are several possible MDL usage scenarios:
 
-*   _Current: _Given a complete tablegen description with schedules or itineraries, scrape the architecture information and create an MDL description of the architecture every time you build the compiler.
-*   _Transitional: _Scrape an existing tablegen description and keep the generated MDL file, using it as the architecture description going forward.
-*   _Future (potentially): _when writing a compiler for a new architecture, write an MDL description rather than schedules and/or itineraries.
+*   _Current:_ Given a complete tablegen description with schedules or itineraries, scrape the architecture information and create an MDL description of the architecture every time you build the compiler.
+*   _Transitional:_ Scrape an existing tablegen description and keep the generated MDL file, using it as the architecture description going forward.
+*   _Future (potentially):_ when writing a compiler for a new architecture, write an MDL description rather than schedules and/or itineraries.
 
 The general development flow of using an MDL description in LLVM looks like this: 
 
@@ -1601,11 +1595,11 @@ The general development flow of using an MDL description in LLVM looks like this
 
 To synchronize an MDL architecture description with llvm TableGen descriptions, we’ve written a tool which scrapes information that the MDL compiler needs from Tablegen files. In the general case, it collects basic information about registers, register classes, operands, and instruction definitions, and it produces an “mdl” file which can be processed by the MDL compiler to sync an architecture description to the tablegen descriptions of instructions.
 
-For currently upstreamed targets that use Schedules or Itineraries, TdScan can also extract the whole architecture specification from the tablegen files, and produce an MDL description of the architecture. We’ve used this approach to prove out our llvm integration with upstreamed targets. The integration and testing of this is ongoing.
+For currently upstreamed targets that use Schedules or Itineraries, TdScan can also extract the whole architecture specification from the tablegen files, and produce an MDL description of the architecture. We’ve used this approach to prove out our llvm integration with upstreamed targets. This is fully tested, and passes all but around 190 tests (out of 93K+ tests) for all targets that use Schedules and/or Itineraries.  Those "failures" are all either very minor scheduling differences or tests that check exact debug output. 
 
 ### **Upstream Targets**
 
-In general, upstream targets have no compelling need for MDL descriptions - the existing Schedules and/or Itinerary descriptions are field tested. However, there are a few benefits to using an MDL description for existing targets.  The primary benefit is that the MDL descriptions are typically quite a bit smaller, succinct, and (we believe) intuitive than the equivalent TableGen descriptions. 
+In general, upstream targets have no compelling need for MDL descriptions - the existing Schedules and/or Itinerary descriptions are field tested. However, there are a few benefits to using an MDL description for existing targets.  The primary benefit is that the MDL descriptions are typically quite a bit smaller, succinct, and (we believe) more intuitive than the equivalent TableGen descriptions. 
 
 <table>
   <tr>
@@ -1719,7 +1713,7 @@ The MDL compiler needs 3 pieces of information from tablegen for each machine in
 
 Subunits are a new concept introduced with the MDL.  The normal approach is to modify each tablegen instruction description to explicitly specify subunit assignments, which become an additional instruction attribute.  The other approach is to use subunit template bases to use regular expressions to tie instructions to subunits (just like InstRW records).  
 
-As part of the build process, we use a program (“tdscan”) which scrapes the instruction information - including the subunit information from a target’s tablegen files and generates information about the target’s instructions.  Tdscan allows us to stay in sync with changes to instruction definitions.
+As part of the build process, we use a program (“llvm-tdscan”) which scrapes the instruction information from a target’s tablegen files and generates information about the target’s instructions.  Tdscan allows us to stay in sync with changes to instruction definitions.
 
 ### **Using the generated microarchitecture information in LLVM**
 
@@ -1728,7 +1722,7 @@ There are two classes of services that the MDL database and associated APIs prov
 *   Detailed pipeline modeling for instructions (for all processors, for all functional units) including instruction latencies calculations and resource usage (hazard management)
 *   Parallel instruction bundling and instruction scheduling.
 
-The tablegen scraper (tdscan) can correctly scan all upstreamed targets and generate correct instruction, operand, and register class information for all of them.
+The tablegen scraper (llvm-tdscan) can correctly scan all upstreamed targets and generate correct instruction, operand, and register class information for all of them.
 
 We can also extract high-level architecture information and generate correct MDL descriptions for all the upstreamed targets that have Schedules or Itineraries (AArch64, AMDGPU, AMD/R600, ARM, Hexagon, Lanai, Mips, PPC, RISCV, Sparc, SystemZ, X86).  Usually, the new architecture spec is dramatically simpler than the tablegen descriptions.
 
@@ -1750,7 +1744,7 @@ There’s more we can do here, and a deeper integration with upstreamed LLVM is 
 *   We’ve integrated the MDL methodology into LLVM’s build flow, so that you can select whether or not to include it at build time.  
 *   The MDL database is (optionally, under command line control) used to properly calculate instruction latencies for all architectures.  Caveat: we don’t yet fully convert Itinerary and Schedule forwarding information, since the LLVM model for forwarding is fundamentally different from the MDL model, and the provided information is typically incomplete.
 *   We’ve integrated the MDL-based bundle-packing and hazard management into all the LLVM schedulers, with the exception of the Swing scheduler, which is still in progress.
-*   We’ve run all the standard tests, passing all but 190 (out of 93007 tests), with any performance deltas in the noise.
+*   We’ve run all the standard tests, passing all but 190 (out of 93007 tests), with essentially no performance deltas.
 
 ## **Appendix A: Full Language Grammar**
 
