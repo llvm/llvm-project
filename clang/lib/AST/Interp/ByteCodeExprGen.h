@@ -54,7 +54,7 @@ protected:
 public:
   /// Initializes the compiler and the backend emitter.
   template <typename... Tys>
-  ByteCodeExprGen(Context &Ctx, Program &P, Tys &&... Args)
+  ByteCodeExprGen(Context &Ctx, Program &P, Tys &&...Args)
       : Emitter(Ctx, P, Args...), Ctx(Ctx), P(P) {}
 
   // Expression visitors - result returned on interp stack.
@@ -241,8 +241,7 @@ private:
                    llvm::function_ref<bool(PrimType)> Direct,
                    llvm::function_ref<bool(PrimType)> Indirect);
   bool dereferenceParam(const Expr *LV, PrimType T, const ParmVarDecl *PD,
-                        DerefKind AK,
-                        llvm::function_ref<bool(PrimType)> Direct,
+                        DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
                         llvm::function_ref<bool(PrimType)> Indirect);
   bool dereferenceVar(const Expr *LV, PrimType T, const VarDecl *PD,
                       DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
@@ -400,16 +399,17 @@ public:
     if (!Idx)
       return;
 
-    for (Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+    for (const Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
       removeIfStoredOpaqueValue(Local);
     }
   }
 
   void removeIfStoredOpaqueValue(const Scope::Local &Local) {
     if (auto *OVE =
-            llvm::dyn_cast_or_null<OpaqueValueExpr>(Local.Desc->asExpr());
-        OVE && this->Ctx->OpaqueExprs.contains(OVE)) {
-      this->Ctx->OpaqueExprs.erase(OVE);
+            llvm::dyn_cast_if_present<OpaqueValueExpr>(Local.Desc->asExpr())) {
+      if (auto it = this->Ctx->OpaqueExprs.find(OVE);
+          it != this->Ctx->OpaqueExprs.end())
+        this->Ctx->OpaqueExprs.erase(it);
     };
   }
 
