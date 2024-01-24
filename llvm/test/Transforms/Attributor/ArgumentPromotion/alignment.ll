@@ -2,8 +2,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
-;; Temporarily re-run with RemoveDIs debug-info mode to exercise a
-;; potential crash path.
+;; Test with RemoveDIs debug-info mode to exercise a potential crash path.
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CGSCC
 
