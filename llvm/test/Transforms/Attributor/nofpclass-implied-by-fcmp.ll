@@ -690,11 +690,11 @@ define float @clamp_ule_largest_denormal_0.0(float %arg) {
 define float @clamp_ogt_largest_denormal_0.0(float %arg) {
 ; CHECK-LABEL: define float @clamp_ogt_largest_denormal_0.0(
 ; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[IS_OGT_LARGEST_DENORMAL:%.*]] = fcmp ugt float [[ARG]], 0x380FFFFFC0000000
+; CHECK-NEXT:    [[IS_OGT_LARGEST_DENORMAL:%.*]] = fcmp ogt float [[ARG]], 0x380FFFFFC0000000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OGT_LARGEST_DENORMAL]], float [[ARG]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
-  %is.ogt.largest.denormal = fcmp ugt float %arg, 0x380FFFFFC0000000
+  %is.ogt.largest.denormal = fcmp ogt float %arg, 0x380FFFFFC0000000
   %select = select i1 %is.ogt.largest.denormal, float %arg, float 0.0
   ret float %select
 }
