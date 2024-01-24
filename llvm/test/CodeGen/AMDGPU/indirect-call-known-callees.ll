@@ -12,8 +12,6 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s7
-; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_load_dword s7, s[4:5], 0x0
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
@@ -24,14 +22,16 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; CHECK-NEXT:    s_addc_u32 s9, s9, snork@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[10:11], s[8:9], 0x0
 ; CHECK-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x0
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
+; CHECK-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_and_b32 s4, 1, s7
 ; CHECK-NEXT:    s_cmp_eq_u32 s4, 1
-; CHECK-NEXT:    v_mov_b32_e32 v31, v0
+; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; CHECK-NEXT:    s_cselect_b32 s5, s13, s11
 ; CHECK-NEXT:    s_cselect_b32 s4, s12, s10
+; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_mov_b32 s12, s6
+; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0

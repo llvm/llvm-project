@@ -68,13 +68,13 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX803-LABEL: test_kern_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
-; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX803-NEXT:    s_add_u32 s0, s0, s15
+; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
+; GFX803-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
-; GFX803-NEXT:    s_addc_u32 s1, s1, 0
+; GFX803-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX803-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX803-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GFX803-NEXT:    s_mov_b64 s[8:9], s[6:7]
@@ -89,10 +89,10 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; GFX900-NEXT:    s_add_u32 s0, s0, s15
+; GFX900-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX900-NEXT:    s_addc_u32 s1, s1, 0
+; GFX900-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX900-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[6:7]
@@ -112,8 +112,8 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX1010-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX1010-NEXT:    s_add_u32 s0, s0, s15
-; GFX1010-NEXT:    s_addc_u32 s1, s1, 0
+; GFX1010-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GFX1010-NEXT:    s_mov_b64 s[0:1], s[10:11]
 ; GFX1010-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1010-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; GFX1010-NEXT:    v_or3_b32 v31, v0, v1, v2
@@ -148,13 +148,13 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX803-LABEL: test_kern_stack_and_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
-; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX803-NEXT:    s_add_u32 s0, s0, s15
+; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
+; GFX803-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
-; GFX803-NEXT:    s_addc_u32 s1, s1, 0
+; GFX803-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX803-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX803-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX803-NEXT:    v_or_b32_e32 v31, v0, v2
@@ -172,10 +172,10 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; GFX900-NEXT:    s_add_u32 s0, s0, s15
+; GFX900-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX900-NEXT:    s_addc_u32 s1, s1, 0
+; GFX900-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX900-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX900-NEXT:    v_or3_b32 v31, v0, v1, v2
@@ -199,8 +199,8 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX1010-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1010-NEXT:    s_add_u32 s0, s0, s15
-; GFX1010-NEXT:    s_addc_u32 s1, s1, 0
+; GFX1010-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GFX1010-NEXT:    s_mov_b64 s[0:1], s[10:11]
 ; GFX1010-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1010-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX1010-NEXT:    s_mov_b64 s[8:9], s[6:7]
@@ -311,13 +311,13 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX803-LABEL: test_force_fp_kern_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
-; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX803-NEXT:    s_add_u32 s0, s0, s15
+; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
+; GFX803-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
-; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
-; GFX803-NEXT:    s_addc_u32 s1, s1, 0
+; GFX803-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX803-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX803-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GFX803-NEXT:    s_mov_b64 s[8:9], s[6:7]
@@ -333,10 +333,10 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; GFX900-NEXT:    s_add_u32 s0, s0, s15
+; GFX900-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX900-NEXT:    s_addc_u32 s1, s1, 0
+; GFX900-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX900-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX900-NEXT:    s_mov_b64 s[8:9], s[6:7]
@@ -358,8 +358,8 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX1010-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX1010-NEXT:    s_add_u32 s0, s0, s15
-; GFX1010-NEXT:    s_addc_u32 s1, s1, 0
+; GFX1010-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GFX1010-NEXT:    s_mov_b64 s[0:1], s[10:11]
 ; GFX1010-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1010-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; GFX1010-NEXT:    v_or3_b32 v31, v0, v1, v2
@@ -413,14 +413,14 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX803-LABEL: test_force_fp_kern_stack_and_call:
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_add_i32 s10, s10, s15
-; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
-; GFX803-NEXT:    s_add_u32 s0, s0, s15
+; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
+; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s10, 8
+; GFX803-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    s_mov_b32 s33, 0
-; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s11
-; GFX803-NEXT:    s_addc_u32 s1, s1, 0
+; GFX803-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX803-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX803-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX803-NEXT:    v_or_b32_e32 v31, v0, v2
@@ -438,11 +438,11 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; GFX900-NEXT:    s_add_u32 s0, s0, s15
+; GFX900-NEXT:    s_mov_b64 s[2:3], 0xf0000000
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX900-NEXT:    s_mov_b32 s33, 0
-; GFX900-NEXT:    s_addc_u32 s1, s1, 0
+; GFX900-NEXT:    s_mov_b64 s[0:1], flat_scratch
 ; GFX900-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX900-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX900-NEXT:    v_or3_b32 v31, v0, v1, v2
@@ -467,8 +467,8 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GFX1010-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX1010-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1010-NEXT:    s_add_u32 s0, s0, s15
-; GFX1010-NEXT:    s_addc_u32 s1, s1, 0
+; GFX1010-NEXT:    s_mov_b64 s[2:3], 0xf0000000
+; GFX1010-NEXT:    s_mov_b64 s[0:1], s[10:11]
 ; GFX1010-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1010-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX1010-NEXT:    s_mov_b64 s[8:9], s[6:7]

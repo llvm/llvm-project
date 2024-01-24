@@ -378,7 +378,7 @@ public:
 } // namespace llvm
 
 // Emit flat scratch setup code, assuming `MFI->hasFlatScratchInit()`
-void SIFrameLowering::emitEntryFunctionFlatScratchInit(
+Register SIFrameLowering::emitEntryFunctionFlatScratchInit(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     const DebugLoc &DL, Register ScratchWaveOffsetReg) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -398,6 +398,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
 
   Register FlatScrInitLo;
   Register FlatScrInitHi;
+  Register FlatScratchInitReg = AMDGPU::NoRegister;
 
   if (ST.isAmdPalOS()) {
     // Extract the scratch offset from the descriptor in the GIT
@@ -407,7 +408,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
 
     // Find unused reg to load flat scratch init into
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    Register FlatScrInit = AMDGPU::NoRegister;
+    Register FlatScratchInitReg = AMDGPU::NoRegister;
     ArrayRef<MCPhysReg> AllSGPR64s = TRI->getAllSGPR64(MF);
     unsigned NumPreloaded = (MFI->getNumPreloadedSGPRs() + 1) / 2;
     AllSGPR64s = AllSGPR64s.slice(
@@ -416,16 +417,16 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
     for (MCPhysReg Reg : AllSGPR64s) {
       if (LiveUnits.available(Reg) && !MRI.isReserved(Reg) &&
           MRI.isAllocatable(Reg) && !TRI->isSubRegisterEq(Reg, GITPtrLoReg)) {
-        FlatScrInit = Reg;
+        FlatScratchInitReg = Reg;
         break;
       }
     }
-    assert(FlatScrInit && "Failed to find free register for scratch init");
+    assert(FlatScratchInitReg && "Failed to find free register for scratch init");
 
-    FlatScrInitLo = TRI->getSubReg(FlatScrInit, AMDGPU::sub0);
-    FlatScrInitHi = TRI->getSubReg(FlatScrInit, AMDGPU::sub1);
+    FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
+    FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
 
-    buildGitPtr(MBB, I, DL, TII, FlatScrInit);
+    buildGitPtr(MBB, I, DL, TII, FlatScratchInitReg);
 
     // We now have the GIT ptr - now get the scratch descriptor from the entry
     // at offset 0 (or offset 16 for a compute shader).
@@ -440,8 +441,8 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
         MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
     unsigned EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
-    BuildMI(MBB, I, DL, LoadDwordX2, FlatScrInit)
-        .addReg(FlatScrInit)
+    BuildMI(MBB, I, DL, LoadDwordX2, FlatScratchInitReg)
+        .addReg(FlatScratchInitReg)
         .addImm(EncodedOffset) // offset
         .addImm(0)             // cpol
         .addMemOperand(MMO);
@@ -453,7 +454,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
         .addImm(0xffff);
     And->getOperand(3).setIsDead(); // Mark SCC as dead.
   } else {
-    Register FlatScratchInitReg =
+    FlatScratchInitReg =
         MFI->getPreloadedReg(AMDGPUFunctionArgInfo::FLAT_SCRATCH_INIT);
     assert(FlatScratchInitReg);
 
@@ -485,7 +486,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
         addReg(FlatScrInitHi).
         addImm(int16_t(AMDGPU::Hwreg::ID_FLAT_SCR_HI |
                        (31 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_)));
-      return;
+      return FlatScratchInitReg;
     }
 
     // For GFX9.
@@ -498,7 +499,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
       .addImm(0);
     Addc->getOperand(3).setIsDead(); // Mark SCC as dead.
 
-    return;
+    return AMDGPU::FLAT_SCR;
   }
 
   assert(ST.getGeneration() < AMDGPUSubtarget::GFX9);
@@ -519,6 +520,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
     .addReg(FlatScrInitLo, RegState::Kill)
     .addImm(8);
   LShr->getOperand(3).setIsDead(); // Mark SCC as dead.
+  return AMDGPU::FLAT_SCR;
 }
 
 // Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
@@ -707,13 +709,15 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
   }
 
+  Register FlatScratchInit = AMDGPU::NoRegister;
   if (NeedsFlatScratchInit) {
-    emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
+    FlatScratchInit =
+        emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
   }
 
   if (ScratchRsrcReg) {
     emitEntryFunctionScratchRsrcRegSetup(
-        MF, MBB, I, DL, NeedsFlatScratchInit, ScratchRsrcReg,
+        MF, MBB, I, DL, FlatScratchInit, ScratchRsrcReg,
         PreloadedScratchRsrcReg, ScratchWaveOffsetReg);
   }
 }
@@ -721,7 +725,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
 void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-    const DebugLoc &DL, bool HasFlatScratchInit, Register ScratchRsrcReg,
+    const DebugLoc &DL, Register FlatScratchInit, Register ScratchRsrcReg,
     Register PreloadedScratchRsrcReg, Register ScratchWaveOffsetReg) const {
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -771,7 +775,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
           .addReg(Rsrc03);
     }
   } else if (ST.isMesaGfxShader(Fn) ||
-             (!HasFlatScratchInit && !PreloadedScratchRsrcReg)) {
+             (!FlatScratchInit.isValid() && !PreloadedScratchRsrcReg)) {
     assert(!ST.isAmdHsaOrMesa(Fn));
     const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
 
@@ -831,10 +835,10 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
   } else if (ST.isAmdHsaOrMesa(Fn)) {
 
-    if (HasFlatScratchInit) {
+    if (FlatScratchInit) {
       I = BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY),
                   TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1))
-              .addReg(AMDGPU::FLAT_SCR)
+              .addReg(FlatScratchInit)
               .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
       I = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B64),
                   TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub2_sub3))
