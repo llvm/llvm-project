@@ -32,13 +32,11 @@ void foo() {
                         // debug-note{{safe buffers debug: gadget 'ULCArraySubscript' refused to produce a fix}}
 }
 
-void failed_decl() {
-  int a[10];  // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}} \
-              // debug-note{{safe buffers debug: failed to produce fixit for declaration 'a' : not a pointer}}
-  
-  for (int i = 0; i < 10; i++) {
-    a[i] = i;  // expected-note{{used in buffer access here}}
-  }
+void failed_decl(const int* out, unsigned idx) {
+  const int* const a[10] = {nullptr};  // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}} \
+              // debug-note{{safe buffers debug: failed to produce fixit for declaration 'a' : const size array of const pointers}}
+
+  out = a[idx];  // expected-note{{used in buffer access here}}
 }
 
 void failed_multiple_decl() {

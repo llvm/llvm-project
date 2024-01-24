@@ -95,6 +95,8 @@ public:
 #endif
 
 public:
+  enum class TargetType { Span, Array };
+
   UnsafeBufferUsageHandler() = default;
   virtual ~UnsafeBufferUsageHandler() = default;
 
@@ -112,9 +114,11 @@ public:
   ///
   /// `D` is the declaration of the callable under analysis that owns `Variable`
   /// and all of its group mates.
-  virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                         const VariableGroupsManager &VarGrpMgr,
-                                         FixItList &&Fixes, const Decl *D) = 0;
+  virtual void
+  handleUnsafeVariableGroup(const VarDecl *Variable,
+                            const VariableGroupsManager &VarGrpMgr,
+                            FixItList &&Fixes, const Decl *D,
+                            const FixitStrategy &VarTargetTypes) = 0;
 
 #ifndef NDEBUG
 public:
