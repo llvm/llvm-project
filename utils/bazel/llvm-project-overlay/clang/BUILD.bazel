@@ -307,6 +307,34 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_builtins_bpf_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsBPF.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsBPF.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsBPF.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name = "basic_builtins_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/Builtins.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/Builtins.td",
+    td_srcs = [
+        "include/clang/Basic/Builtins.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
     name = "basic_riscv_vector_builtins_gen",
     tbl_outs = [(
         "-gen-riscv-vector-builtins",
@@ -478,38 +506,6 @@ gentbl(
 )
 
 gentbl(
-    name = "basic_builtins_gen",
-    tbl_outs = [
-        (
-            "-gen-clang-builtins",
-            "include/clang/Basic/Builtins.inc",
-        ),
-    ],
-    tblgen = ":clang-tblgen",
-    td_file = "include/clang/Basic/Builtins.td",
-    td_srcs = [
-        "include/clang/Basic/Builtins.td",
-        "include/clang/Basic/BuiltinsBase.td",
-    ],
-)
-
-gentbl(
-    name = "basic_builtins_bpf_gen",
-    tbl_outs = [
-        (
-            "-gen-clang-builtins",
-            "include/clang/Basic/BuiltinsBPF.inc",
-        ),
-    ],
-    tblgen = ":clang-tblgen",
-    td_file = "include/clang/Basic/BuiltinsBPF.td",
-    td_srcs = [
-        "include/clang/Basic/BuiltinsBase.td",
-        "include/clang/Basic/BuiltinsBPF.td",
-    ],
-)
-
-gentbl(
     name = "libsema_openclbuiltins_inc_gen",
     strip_include_prefix = "lib/Sema",
     tbl_outs = [(
@@ -610,8 +606,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/clang/Basic/*.h",
-        "include/clang/Basic/Builtins.inc",
-        "include/clang/Basic/BuiltinsBPF.inc",
     ]),
     copts = [
         "-DHAVE_VCS_VERSION_INC",
@@ -660,8 +654,8 @@ cc_library(
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_typeflags_gen",
         ":basic_attr_gen",
-        ":basic_builtins_gen",
         ":basic_builtins_bpf_gen",
+        ":basic_builtins_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -978,6 +972,7 @@ cc_library(
         ":ast_stmt_nodes_gen",
         ":ast_type_properties_gen",
         ":basic",
+        ":basic_builtins_gen",
         ":lex",
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
@@ -1123,6 +1118,7 @@ cc_library(
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
         ":basic_arm_sve_streaming_attrs_gen",
+        ":basic_builtins_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
