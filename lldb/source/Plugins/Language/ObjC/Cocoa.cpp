@@ -131,6 +131,16 @@ bool lldb_private::formatters::NSTimeZoneSummaryProvider(
       stream.Printf("%s", summary_stream.GetData());
       return true;
     }
+  } else if (class_name == "_NSSwiftTimeZone") {
+    llvm::ArrayRef<llvm::StringRef> identifier_path = {"timeZone", "_timeZone",
+                                                       "some", "identifier"};
+    if (auto identifier_sp = valobj.GetChildAtNamePath(identifier_path)) {
+      std::string desc;
+      if (identifier_sp->GetSummaryAsCString(desc, options)) {
+        stream.PutCString(desc);
+        return true;
+      }
+    }
   }
 
   return false;
