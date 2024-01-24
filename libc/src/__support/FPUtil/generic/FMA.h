@@ -58,8 +58,8 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     // correct (when it matters).
     fputil::FPBits<double> t(
         (bit_prod.get_biased_exponent() >= bitz.get_biased_exponent())
-            ? ((double(bit_sum) - double(bit_prod)) - double(bitz))
-            : ((double(bit_sum) - double(bitz)) - double(bit_prod)));
+            ? ((bit_sum.get_val() - bit_prod.get_val()) - bitz.get_val())
+            : ((bit_sum.get_val() - bitz.get_val()) - bit_prod.get_val()));
 
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
@@ -72,7 +72,7 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     }
   }
 
-  return static_cast<float>(static_cast<double>(bit_sum));
+  return static_cast<float>(bit_sum.get_val());
 }
 
 namespace internal {
@@ -104,15 +104,15 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   int z_exp = 0;
 
   // Normalize denormal inputs.
-  if (LIBC_UNLIKELY(FPBits(x).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(x).is_subnormal())) {
     x_exp -= 52;
     x *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(y).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(y).is_subnormal())) {
     y_exp -= 52;
     y *= 0x1.0p+52;
   }
-  if (LIBC_UNLIKELY(FPBits(z).get_biased_exponent() == 0)) {
+  if (LIBC_UNLIKELY(FPBits(z).is_subnormal())) {
     z_exp -= 52;
     z *= 0x1.0p+52;
   }
@@ -130,9 +130,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     return x * y + z;
 
   // Extract mantissa and append hidden leading bits.
-  UInt128 x_mant = x_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  UInt128 y_mant = y_bits.get_mantissa() | FPBits::MIN_NORMAL;
-  UInt128 z_mant = z_bits.get_mantissa() | FPBits::MIN_NORMAL;
+  UInt128 x_mant = x_bits.get_explicit_mantissa();
+  UInt128 y_mant = y_bits.get_explicit_mantissa();
+  UInt128 z_mant = z_bits.get_explicit_mantissa();
 
   // If the exponent of the product x*y > the exponent of z, then no extra
   // precision beside the entire product x*y is needed.  On the other hand, when
@@ -255,11 +255,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
     if ((round_mode == FE_TOWARDZERO) ||
         (round_mode == FE_UPWARD && prod_sign.is_neg()) ||
         (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
-      result = FPBits::MAX_NORMAL;
-      return prod_sign.is_neg() ? -cpp::bit_cast<double>(result)
-                                : cpp::bit_cast<double>(result);
+      return FPBits::max_normal(prod_sign).get_val();
     }
-    return static_cast<double>(FPBits::inf(prod_sign));
+    return FPBits::inf(prod_sign).get_val();
   }
 
   // Remove hidden bit and append the exponent field and sign bit.

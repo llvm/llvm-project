@@ -28,6 +28,8 @@ static llvm::cl::opt<bool>
                          llvm::cl::desc("Enable value profiling"),
                          llvm::cl::Hidden, llvm::cl::init(false));
 
+extern llvm::cl::opt<bool> SystemHeadersCoverage;
+
 using namespace clang;
 using namespace CodeGen;
 
@@ -1022,7 +1024,7 @@ bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
   // Don't map the functions in system headers.
   const auto &SM = CGM.getContext().getSourceManager();
   auto Loc = D->getBody()->getBeginLoc();
-  return SM.isInSystemHeader(Loc);
+  return !SystemHeadersCoverage && SM.isInSystemHeader(Loc);
 }
 
 void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {

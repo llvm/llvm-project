@@ -84,8 +84,8 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
   ToDisk.NumRepetitions = 1;
-  ToDisk.Measurements.push_back(BenchmarkMeasure{"a", 1, 1});
-  ToDisk.Measurements.push_back(BenchmarkMeasure{"b", 2, 2});
+  ToDisk.Measurements.push_back(BenchmarkMeasure{"a", 1, 1, {}});
+  ToDisk.Measurements.push_back(BenchmarkMeasure{"b", 2, 2, {}});
   ToDisk.Error = "error";
   ToDisk.Info = "info";
 
@@ -162,10 +162,10 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
 
 TEST(BenchmarkResultTest, PerInstructionStats) {
   PerInstructionStats Stats;
-  Stats.push(BenchmarkMeasure{"a", 0.5, 0.0});
-  Stats.push(BenchmarkMeasure{"a", 1.5, 0.0});
-  Stats.push(BenchmarkMeasure{"a", -1.0, 0.0});
-  Stats.push(BenchmarkMeasure{"a", 0.0, 0.0});
+  Stats.push(BenchmarkMeasure{"a", 0.5, 0.0, {}});
+  Stats.push(BenchmarkMeasure{"a", 1.5, 0.0, {}});
+  Stats.push(BenchmarkMeasure{"a", -1.0, 0.0, {}});
+  Stats.push(BenchmarkMeasure{"a", 0.0, 0.0, {}});
   EXPECT_EQ(Stats.min(), -1.0);
   EXPECT_EQ(Stats.max(), 1.5);
   EXPECT_EQ(Stats.avg(), 0.25); // (0.5+1.5-1.0+0.0) / 4

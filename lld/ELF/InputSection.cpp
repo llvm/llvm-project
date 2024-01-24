@@ -245,6 +245,8 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
 // Find a symbol that encloses a given location.
 Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset,
                                               uint8_t type) const {
+  if (file->isInternal())
+    return nullptr;
   for (Symbol *b : file->getSymbols())
     if (Defined *d = dyn_cast<Defined>(b))
       if (d->section == this && d->value <= offset &&
@@ -344,7 +346,7 @@ template <class ELFT> void InputSection::copyShtGroup(uint8_t *buf) {
 }
 
 InputSectionBase *InputSection::getRelocatedSection() const {
-  if (!file || (type != SHT_RELA && type != SHT_REL))
+  if (!file || file->isInternal() || (type != SHT_RELA && type != SHT_REL))
     return nullptr;
   ArrayRef<InputSectionBase *> sections = file->getSections();
   return sections[info];

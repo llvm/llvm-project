@@ -43,3 +43,22 @@ define i32 @loads(i32 %arg) {
   ret i32 undef
 }
 
+define i32 @partialvector32(i32 %arg) #0 {
+
+  ; CHECK: cost of 1 {{.*}} store
+  store <4 x i8> undef, ptr undef, align 16
+
+  ret i32 undef
+}
+
+define i32 @partialvector64(i32 %arg) #1 {
+
+  ; CHECK: cost of 1 {{.*}} store
+  store <4 x i16> undef, ptr undef, align 16
+
+  ret i32 undef
+}
+
+attributes #0 = { "target-features"="+power8-vector,+vsx" }
+
+attributes #1 = { "target-features"="+vsx" }

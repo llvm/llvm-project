@@ -46,8 +46,8 @@ template <typename T> struct NormalFloat {
 
   Sign sign = Sign::POS;
 
-  LIBC_INLINE NormalFloat(int32_t e, StorageType m, bool s)
-      : exponent(e), mantissa(m), sign(s ? Sign::NEG : Sign::POS) {
+  LIBC_INLINE NormalFloat(Sign s, int32_t e, StorageType m)
+      : exponent(e), mantissa(m), sign(s) {
     if (mantissa >= ONE)
       return;
 
@@ -96,7 +96,7 @@ template <typename T> struct NormalFloat {
     // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
     constexpr int MAX_EXPONENT_VALUE = (1 << FPBits<T>::EXP_LEN) - 2;
     if (biased_exponent > MAX_EXPONENT_VALUE) {
-      return T(FPBits<T>::inf(sign));
+      return FPBits<T>::inf(sign).get_val();
     }
 
     FPBits<T> result(T(0.0));
@@ -129,15 +129,15 @@ template <typename T> struct NormalFloat {
         // the overflow into the exponent.
         if (new_mantissa == ONE)
           result.set_biased_exponent(1);
-        return T(result);
+        return result.get_val();
       } else {
-        return T(result);
+        return result.get_val();
       }
     }
 
     result.set_biased_exponent(exponent + FPBits<T>::EXP_BIAS);
     result.set_mantissa(mantissa);
-    return T(result);
+    return result.get_val();
   }
 
 private:
@@ -153,7 +153,7 @@ private:
     }
 
     // Normalize subnormal numbers.
-    if (bits.get_biased_exponent() == 0) {
+    if (bits.is_subnormal()) {
       unsigned shift = evaluate_normalization_shift(bits.get_mantissa());
       mantissa = StorageType(bits.get_mantissa()) << shift;
       exponent = 1 - FPBits<T>::EXP_BIAS - shift;
@@ -186,7 +186,7 @@ NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
     return;
   }
 
-  if (bits.get_biased_exponent() == 0) {
+  if (bits.is_subnormal()) {
     if (bits.get_implicit_bit() == 0) {
       // Since we ignore zero value, the mantissa in this case is non-zero.
       int normalization_shift =
@@ -215,7 +215,7 @@ template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
   // Max exponent is of the form 0xFF...E. That is why -2 and not -1.
   constexpr int MAX_EXPONENT_VALUE = (1 << LDBits::EXP_LEN) - 2;
   if (biased_exponent > MAX_EXPONENT_VALUE) {
-    return LDBits::inf(sign);
+    return LDBits::inf(sign).get_val();
   }
 
   FPBits<long double> result(0.0l);
@@ -250,16 +250,16 @@ template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
       } else {
         result.set_implicit_bit(0);
       }
-      return static_cast<long double>(result);
+      return result.get_val();
     } else {
-      return static_cast<long double>(result);
+      return result.get_val();
     }
   }
 
   result.set_biased_exponent(biased_exponent);
   result.set_mantissa(mantissa);
   result.set_implicit_bit(1);
-  return static_cast<long double>(result);
+  return result.get_val();
 }
 #endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 

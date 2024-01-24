@@ -263,17 +263,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should be defined in c++26"
-#   endif
-#   if __cpp_lib_saturation_arithmetic != 202311L
-#     error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_saturation_arithmetic
-#     error "__cpp_lib_saturation_arithmetic should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should be defined in c++26"
+# endif
+# if __cpp_lib_saturation_arithmetic != 202311L
+#   error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

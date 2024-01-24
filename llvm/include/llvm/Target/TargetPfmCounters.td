@@ -36,6 +36,13 @@ class ValidationEvent <int event_number> {
 }
 
 def InstructionRetired  : ValidationEvent<0>;
+def L1DCacheLoadMiss : ValidationEvent<1>;
+def L1DCacheStoreMiss : ValidationEvent<2>;
+def L1ICacheLoadMiss : ValidationEvent<3>;
+def DataTLBLoadMiss : ValidationEvent<4>;
+def DataTLBStoreMiss : ValidationEvent<5>;
+def InstructionTLBLoadMiss : ValidationEvent<6>;
+
 
 // PfmValidationCounter provides a mapping between the events that are
 // are interesting in regards to the snippet execution environment and
