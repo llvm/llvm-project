@@ -100,6 +100,7 @@ TEST(LlvmLibcMincoreTest, PageOut) {
   {
     static_cast<char *>(addr)[0] = 0;
     // TODO: use wrapper functions for mlock/munlock once implemented.
+    // See issue https://github.com/llvm/llvm-project/issues/79336
     LIBC_NAMESPACE::syscall_impl(
         SYS_mlock, reinterpret_cast<unsigned long>(addr), page_size);
     libc_errno = 0;
