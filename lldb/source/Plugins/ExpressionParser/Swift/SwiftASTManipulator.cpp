@@ -295,7 +295,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
 
   if (in_return) {
     result_loc_info.return_stmt =
-        new (ast_context) swift::ReturnStmt(source_loc, nullptr);
+        swift::ReturnStmt::createImplicit(ast_context, source_loc, nullptr);
     body.push_back(result_loc_info.return_stmt);
   }
 
