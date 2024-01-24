@@ -9,34 +9,7 @@
 #ifndef __LLVM_LIBC_MACROS_LIMITS_MACROS_H
 #define __LLVM_LIBC_MACROS_LIMITS_MACROS_H
 
-#if __has_include_next(<limits.h>)
-
-// Suppress `#include_next is a language extension` warnings.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-include-next"
-#else // gcc
-#pragma GCC system_header
-#endif // __clang__, __GNUC__
-
-#if defined(__GNUC__) && !defined(__clang__) && !defined(_GCC_LIMITS_H_)
-// The system's limits.h may, in turn, try to #include_next GCC's limits.h when
-// building with GCC.
-// Define the macro _GCC_LIMITS_H_ to stop its chains of #include_next.
-#define _GCC_LIMITS_H_
-#endif
-
-// Include compiler's header
-#include_next <limits.h>
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif // __clang__
-
-#endif // __has_include_next(<limits.h>)
-
-// Supplement missing macros if there are any.
-// Making sure that we provide all C23 constants.
+// Define all C23 macro constants of limits.h
 
 #ifndef CHAR_BIT
 #ifdef __CHAR_BIT__
@@ -46,11 +19,12 @@
 #endif // __CHAR_BIT__
 #endif // CHAR_BIT
 
-// TODO: define MB_LEN_MAX if missing
-//   clang: MB_LEN_MAX = 1 -
-//   https://github.com/llvm/llvm-project/blob/main/clang/lib/Headers/limits.h#L64
-//   glibc: MB_LEN_MAX = 16 -
-//   https://github.com/bminor/glibc/blob/master/include/limits.h#L32
+// TODO: https://github.com/llvm/llvm-project/issues/79358
+//   Define MB_LEN_MAX if missing.
+//     clang: MB_LEN_MAX = 1 -
+// https://github.com/llvm/llvm-project/blob/main/clang/lib/Headers/limits.h#L64
+//     glibc: MB_LEN_MAX = 16 -
+// https://github.com/bminor/glibc/blob/master/include/limits.h#L32
 
 // *_WIDTH macros
 
@@ -249,4 +223,4 @@
 #define ULLONG_MIN 0ULL
 #endif // ULLONG_MIN
 
-#endif // __LLVM_LIBC_MACROS_FLOAT_MACROS_H
+#endif // __LLVM_LIBC_MACROS_LIMITS_MACROS_H
