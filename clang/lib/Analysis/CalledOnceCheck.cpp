@@ -932,7 +932,7 @@ private:
     ParameterStatus &CurrentParamStatus = CurrentState.getStatusFor(Index);
 
     // Escape overrides whatever error we think happened.
-    if (CurrentParamStatus.isErrorStatus() && 
+    if (CurrentParamStatus.isErrorStatus() &&
         CurrentParamStatus.getKind() != ParameterStatus::Kind::Reported) {
       CurrentParamStatus = ParameterStatus::Escaped;
     }
