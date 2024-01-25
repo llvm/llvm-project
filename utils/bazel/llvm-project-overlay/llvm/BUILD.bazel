@@ -1785,13 +1785,12 @@ cc_library(
 
 cc_library(
     name = "CodeGenTypes",
-    srcs = [
-        "lib/CodeGen/LowLevelType.cpp",
-    ],
-    hdrs = [
-        "include/llvm/CodeGen/LowLevelType.h",
-        "include/llvm/CodeGen/MachineValueType.h",
-    ],
+    srcs = glob([
+        "lib/CodeGenTypes/**/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/CodeGenTypes/**/*.h",
+    ]),
     copts = llvm_copts,
     deps = [
         ":Support",
