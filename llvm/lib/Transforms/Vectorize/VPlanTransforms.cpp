@@ -503,23 +503,22 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
 
   // Truncate base induction if needed.
   VPTypeAnalysis TypeInfo(SE.getContext());
-  Type *StepTy = TypeInfo.inferScalarType(Step);
+  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
   if (TruncI) {
     Type *TruncTy = TruncI->getType();
-    assert(TypeInfo.inferScalarType(BaseIV)->getScalarSizeInBits() >
-               TruncTy->getScalarSizeInBits() &&
-           StepTy->isIntegerTy() && "Truncation requires an integer step");
-    auto *T = new VPScalarCastRecipe(Instruction::Trunc, BaseIV, TruncTy);
-    HeaderVPBB->insert(T, IP);
-    BaseIV = T;
+    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
+    BaseIV = new VPScalarCastRecipe(Instruction::Trunc, BaseIV, TruncTy);
+    HeaderVPBB->insert(BaseIV, IP);
   }
 
   // Truncate step if needed.
-  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
+  Type *StepTy = TypeInfo.inferScalarType(Step);
   if (ResultTy != StepTy) {
     assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
-           StepTy->isIntegerTy() && "Truncation requires an integer step");
-
+           "Not truncating.");
+    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
     Step = new VPScalarCastRecipe(Instruction::Trunc, Step, ResultTy);
     auto *VecPreheader =
         cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSinglePredecessor());
