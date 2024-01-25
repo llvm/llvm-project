@@ -173,10 +173,9 @@ static cl::opt<unsigned>
                            cl::desc("Default threshold (max size of unrolled "
                                     "loop), used in all but O3 optimizations"));
 
-static cl::opt<unsigned>
-    UnrollMaxIterations("unroll-max-iterations", cl::init(1'000'000),
-                        cl::Hidden,
-                        cl::desc("Maximum allowed iterations to unroll."));
+static cl::opt<unsigned> UnrollFullMaxIterations(
+    "unroll-full-max-iterations", cl::init(1'000'000), cl::Hidden,
+    cl::desc("Maximum allowed iterations to unroll under pragma unroll full."));
 
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
@@ -781,8 +780,17 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
       return PInfo.PragmaCount;
   }
 
-  if (PInfo.PragmaFullUnroll && TripCount != 0)
+  if (PInfo.PragmaFullUnroll && TripCount != 0) {
+    // Certain cases with UBSAN can cause trip count to be calculated as
+    // INT_MAX, Block full unrolling at a reasonable limit so that the compiler
+    // doesn't hang trying to unroll the loop. See PR77842
+    if (UP.Count > UnrollFullMaxIterations) {
+      LLVM_DEBUG(dbgs() << "Won't unroll; trip count is too large\n");
+      return std::nullopt;
+    }
+
     return TripCount;
+  }
 
   if (PInfo.PragmaEnableUnroll && !TripCount && MaxTripCount &&
       MaxTripCount <= UP.MaxUpperBound)
@@ -1290,14 +1298,6 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (OnlyFullUnroll && !(UP.Count >= MaxTripCount)) {
     LLVM_DEBUG(
         dbgs() << "Not attempting partial/runtime unroll in FullLoopUnroll.\n");
-    return LoopUnrollResult::Unmodified;
-  }
-
-  // Certain cases with UBSAN can cause trip count to be calculated as INT_MAX,
-  // Block unrolling at a reasonable limit so that the compiler doesn't hang
-  // trying to unroll the loop. See PR77842
-  if (UP.Count > UnrollMaxIterations) {
-    LLVM_DEBUG(dbgs() << "Won't unroll; trip count is too large\n");
     return LoopUnrollResult::Unmodified;
   }
 
