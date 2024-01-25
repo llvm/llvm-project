@@ -1279,7 +1279,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSDESC_GOTPLT>(expr) &&
       config->shared) {
-    // R_RISCV_TLSDESC_{LOAD_LO12_I,ADD_LO12_I,CALL} reference a label. Do not
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
     // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
       if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
@@ -1355,7 +1355,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     // Global-Dynamic/TLSDESC can be relaxed to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
     //
-    // R_RISCV_TLSDESC_{LOAD_LO12_I,ADD_LO12_I,CALL} reference a non-preemptible
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
     // label, so the LE transition will be categorized as R_RELAX_TLS_GD_TO_LE.
     // We fix the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {

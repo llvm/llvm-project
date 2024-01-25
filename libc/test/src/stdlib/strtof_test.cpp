@@ -14,7 +14,6 @@
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingModeTest;

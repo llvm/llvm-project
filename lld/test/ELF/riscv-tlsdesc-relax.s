@@ -19,21 +19,34 @@
 # GD64-LABEL: <foo>:
 ## &.got[c]-. = 0x20c0+8 - 0x1004 = 0x10c4
 # GD64:        1004: auipc   a2, 0x1
+# GD64-NEXT:         c.add   a7, a7
 # GD64-NEXT:         ld      a3, 0xc4(a2)
+# GD64-NEXT:         c.add   a7, a7
 # GD64-NEXT:         addi    a0, a2, 0xc4
+# GD64-NEXT:         c.add   a7, a7
 # GD64-NEXT:         jalr    t0, 0x0(a3)
 # GD64-NEXT:         c.add   a0, tp
 # GD64-NEXT:         jal     {{.*}} <foo>
-# GD64-NEXT:         auipc   a4, 0x1
-# GD64-NEXT:         ld      a5, 0xae(a4)
-# GD64-NEXT:         addi    a0, a4, 0xae
+## &.got[c]-. = 0x20c0+8 - 0x1020 = 0x10a8
+# GD64-NEXT:   1020: auipc   a4, 0x1
+# GD64-NEXT:         ld      a5, 0xa8(a4)
+# GD64-NEXT:         addi    a0, a4, 0xa8
 # GD64-NEXT:         jalr    t0, 0x0(a5)
+# GD64-NEXT:         c.add   a0, tp
+## &.got[c]-. = 0x20c0+8 - 0x1032 = 0x1096
+# GD64-NEXT:   1032: auipc   a6, 0x1
+# GD64-NEXT:         ld      a7, 0x96(a6)
+# GD64-NEXT:         addi    a0, a6, 0x96
+# GD64-NEXT:         jalr    t0, 0x0(a7)
 # GD64-NEXT:         c.add   a0, tp
 
 # LE64-LABEL: <_start>:
 # LE64-NEXT:         jal     {{.*}} <foo>
 # LE64-LABEL: <foo>:
-# LE64-NEXT:  11004: lui     a0, 0x0
+# LE64-NEXT:         c.add   a7, a7
+# LE64-NEXT:         c.add   a7, a7
+# LE64-NEXT:  11008: lui     a0, 0x0
+# LE64-NEXT:         c.add   a7, a7
 # LE64-NEXT:         addi    a0, zero, 0xc
 # LE64-NEXT:         c.add   a0, tp
 # LE64-NEXT:         jal     {{.*}} <foo>
@@ -50,20 +63,23 @@
 # IE64-LABEL: <_start>:
 # IE64-NEXT:         jal     {{.*}} <foo>
 # IE64-LABEL: <foo>:
-## &.got[c]-. = 0x120e0+8 - 0x11004 = 0x10e4
-# IE64-NEXT:  11004: auipc   a0, 0x1
-# IE64-NEXT:         ld      a0, 0xe4(a0)
+# IE64-NEXT:         c.add   a7, a7
+# IE64-NEXT:         c.add   a7, a7
+## &.got[c]-. = 0x120e0+8 - 0x11008 = 0x10e0
+# IE64-NEXT:  11008: auipc   a0, 0x1
+# IE64-NEXT:         c.add   a7, a7
+# IE64-NEXT:         ld      a0, 0xe0(a0)
 # IE64-NEXT:         c.add   a0, tp
 # IE64-NEXT:         jal     {{.*}} <foo>
 # IE64-NEXT:         addi    zero, zero, 0x0
-## &.got[c]-. = 0x120e0+8 - 0x11016 = 0x10d2
-# IE64-NEXT:  11016: auipc   a0, 0x1
-# IE64-NEXT:         ld      a0, 0xd2(a0)
+## &.got[c]-. = 0x120e0+8 - 0x1101c = 0x10cc
+# IE64-NEXT:  1101c: auipc   a0, 0x1
+# IE64-NEXT:         ld      a0, 0xcc(a0)
 # IE64-NEXT:         c.add   a0, tp
 # IE64-NEXT:         addi    zero, zero, 0x0
-## &.got[c]-. = 0x120e0+8 - 0x11024 = 0x10c4
-# IE64-NEXT:  11024: auipc   a0, 0x1
-# IE64-NEXT:         ld      a0, 0xc4(a0)
+## &.got[c]-. = 0x120e0+8 - 0x1102a = 0x10be
+# IE64-NEXT:  1102a: auipc   a0, 0x1
+# IE64-NEXT:         ld      a0, 0xbe(a0)
 # IE64-NEXT:         c.add   a0, tp
 
 #--- a.s
@@ -76,12 +92,16 @@ foo:
 .Ltlsdesc_hi0:
 .option norelax
 ## All 4 instructions have an R_RISCV_RELAX.
+## Check that optimization/relaxation are not affected by irrelevant instructions.
   auipc a2, %tlsdesc_hi(c)
   .reloc .-4, R_RISCV_RELAX, 0
+  c.add a7, a7
   ld    a3, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a2)
   .reloc .-4, R_RISCV_RELAX, 0
+  c.add a7, a7
   addi  a0, a2, %tlsdesc_add_lo(.Ltlsdesc_hi0)
   .reloc .-4, R_RISCV_RELAX, 0
+  c.add a7, a7
   jalr  t0, 0(a3), %tlsdesc_call(.Ltlsdesc_hi0)
   .reloc .-4, R_RISCV_RELAX, 0
   add   a0, a0, tp

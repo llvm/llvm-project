@@ -116,8 +116,8 @@ struct elf::RISCVRelaxAux {
   // This records symbol start and end offsets which will be adjusted according
   // to the nearest relocDeltas element.
   SmallVector<SymbolAnchor, 0> anchors;
-  // For relocations[i], the actual offset is r_offset - (i ? relocDeltas[i-1] :
-  // 0).
+  // For relocations[i], the actual offset is
+  //   r_offset - (i ? relocDeltas[i-1] : 0).
   std::unique_ptr<uint32_t[]> relocDeltas;
   // For relocations[i], the actual type is relocTypes[i].
   std::unique_ptr<RelType[]> relocTypes;
@@ -565,16 +565,16 @@ static void tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   case R_RISCV_TLSDESC_HI20:
   case R_RISCV_TLSDESC_LOAD_LO12:
     write32le(loc, 0x00000013); // nop
-    return;
+    break;
   case R_RISCV_TLSDESC_ADD_LO12:
     write32le(loc, utype(AUIPC, X_A0, hi20(val))); // auipc a0,<hi20>
-    return;
+    break;
   case R_RISCV_TLSDESC_CALL:
     if (config->is64)
       write32le(loc, itype(LD, X_A0, X_A0, lo12(val))); // ld a0,<lo12>(a0)
     else
       write32le(loc, itype(LW, X_A0, X_A0, lo12(val))); // lw a0,<lo12>(a0)
-    return;
+    break;
   default:
     llvm_unreachable("unsupported relocation for TLSDESC to IE relaxation");
   }
@@ -635,7 +635,8 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       // before AUIPC.
       tlsdescVal = val + rel.offset;
       isToIe = true;
-      tlsdescToIe(loc, rel, val);
+      if (!(i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX))
+        tlsdescToIe(loc, rel, val);
       continue;
     case R_RELAX_TLS_GD_TO_LE:
       // See the comment in handleTlsRelocation. For TLSDESC=>IE,
@@ -649,6 +650,13 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
           tlsdescVal -= rel.offset;
         val = tlsdescVal;
       }
+      // For HI20/LOAD_LO12, disable NOP conversion in the presence of
+      // R_RISCV_RELAX, in case an unrelated instruction follows the current
+      // instruction.
+      if ((rel.type == R_RISCV_TLSDESC_HI20 ||
+           rel.type == R_RISCV_TLSDESC_LOAD_LO12) &&
+          i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX)
+        continue;
       if (isToIe)
         tlsdescToIe(loc, rel, val);
       else

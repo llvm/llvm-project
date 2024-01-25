@@ -2404,7 +2404,7 @@ VirtSpecifiers::Specifier Parser::isCXX11VirtSpecifier(const Token &Tok) const {
   if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
     return VirtSpecifiers::VS_None;
 
-  IdentifierInfo *II = Tok.getIdentifierInfo();
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
 
   // Initialize the contextual keywords.
   if (!Ident_final) {

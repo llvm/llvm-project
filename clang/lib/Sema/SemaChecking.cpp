@@ -2471,7 +2471,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case Builtin::BI##ID: \
     return SemaAtomicOpsOverloaded(TheCallResult, AtomicExpr::AO##ID);
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
   case Builtin::BI__annotation:
     if (SemaBuiltinMSVCAnnotation(*this, TheCall))
       return ExprError();
@@ -7869,18 +7869,18 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   static_assert(sizeof(NumArgs)/sizeof(NumArgs[0]) == NumForm
       && sizeof(NumVals)/sizeof(NumVals[0]) == NumForm,
       "need to update code for modified forms");
-  static_assert(AtomicExpr::AO__c11_atomic_init == 0 &&
-                    AtomicExpr::AO__c11_atomic_fetch_min + 1 ==
-                        AtomicExpr::AO__atomic_load,
+  static_assert(AtomicExpr::AO__atomic_add_fetch == 0 &&
+                    AtomicExpr::AO__atomic_xor_fetch + 1 ==
+                        AtomicExpr::AO__c11_atomic_compare_exchange_strong,
                 "need to update code for modified C11 atomics");
-  bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_init &&
-                  Op <= AtomicExpr::AO__opencl_atomic_fetch_max;
-  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_load &&
-               Op <= AtomicExpr::AO__hip_atomic_fetch_max;
-  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_load &&
-                  Op <= AtomicExpr::AO__scoped_atomic_fetch_max;
-  bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_init &&
-               Op <= AtomicExpr::AO__c11_atomic_fetch_min) ||
+  bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_compare_exchange_strong &&
+                  Op <= AtomicExpr::AO__opencl_atomic_store;
+  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_compare_exchange_strong &&
+               Op <= AtomicExpr::AO__hip_atomic_store;
+  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_add_fetch &&
+                  Op <= AtomicExpr::AO__scoped_atomic_xor_fetch;
+  bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_compare_exchange_strong &&
+                Op <= AtomicExpr::AO__c11_atomic_store) ||
                IsOpenCL;
   bool IsN = Op == AtomicExpr::AO__atomic_load_n ||
              Op == AtomicExpr::AO__atomic_store_n ||
