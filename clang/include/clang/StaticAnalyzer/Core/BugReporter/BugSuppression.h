@@ -28,7 +28,7 @@ class PathDiagnosticLocation;
 
 class BugSuppression {
 public:
-  BugSuppression(ASTContext &ACtx) : ACtx(ACtx) {}
+  explicit BugSuppression(const ASTContext &ACtx) : ACtx(ACtx) {}
 
   using DiagnosticIdentifierList = llvm::ArrayRef<llvm::StringRef>;
 
