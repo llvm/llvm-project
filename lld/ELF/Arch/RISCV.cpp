@@ -587,7 +587,10 @@ static void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
     write32le(loc, 0x00000013); // nop
     return;
   case R_RISCV_TLSDESC_ADD_LO12:
-    write32le(loc, utype(LUI, X_A0, hi20(val))); // lui a0,<hi20>
+    if (isInt<12>(val))
+      write32le(loc, 0x00000013); // nop
+    else
+      write32le(loc, utype(LUI, X_A0, hi20(val))); // lui a0,<hi20>
     return;
   case R_RISCV_TLSDESC_CALL:
     if (isInt<12>(val))
@@ -607,7 +610,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
   uint64_t tlsdescVal = 0;
-  bool isToIe = true;
+  bool isToLe = false;
   const ArrayRef<Relocation> relocs = sec.relocs();
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     const Relocation &rel = relocs[i];
@@ -634,7 +637,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       // into account of NOP instructions (in the absence of R_RISCV_RELAX)
       // before AUIPC.
       tlsdescVal = val + rel.offset;
-      isToIe = true;
+      isToLe = false;
       if (!(i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX))
         tlsdescToIe(loc, rel, val);
       continue;
@@ -644,23 +647,24 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       // true, this is actually TLSDESC=>IE optimization.
       if (rel.type == R_RISCV_TLSDESC_HI20) {
         tlsdescVal = val;
-        isToIe = false;
+        isToLe = true;
       } else {
-        if (isToIe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
+        if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
           tlsdescVal -= rel.offset;
         val = tlsdescVal;
       }
-      // For HI20/LOAD_LO12, disable NOP conversion in the presence of
-      // R_RISCV_RELAX, in case an unrelated instruction follows the current
+      // When NOP conversion is eligible and R_RISCV_RELAX is present, don't
+      // write a NOP in case an unrelated instruction follows the current
       // instruction.
       if ((rel.type == R_RISCV_TLSDESC_HI20 ||
-           rel.type == R_RISCV_TLSDESC_LOAD_LO12) &&
+           rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
+           (rel.type == R_RISCV_TLSDESC_ADD_LO12 && isToLe && !hi20(val))) &&
           i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX)
         continue;
-      if (isToIe)
-        tlsdescToIe(loc, rel, val);
-      else
+      if (isToLe)
         tlsdescToLe(loc, rel, val);
+      else
+        tlsdescToIe(loc, rel, val);
       continue;
     case R_RISCV_LEB128:
       if (i + 1 < size) {
@@ -825,6 +829,7 @@ static bool relax(InputSection &sec) {
   bool changed = false;
   ArrayRef<SymbolAnchor> sa = ArrayRef(aux.anchors);
   uint64_t delta = 0;
+  bool toLeShortForm = false;
 
   std::fill_n(aux.relocTypes.get(), sec.relocs().size(), R_RISCV_NONE);
   aux.writes.clear();
@@ -869,10 +874,19 @@ static bool relax(InputSection &sec) {
         relaxHi20Lo12(sec, i, loc, r, remove);
       break;
     case R_RISCV_TLSDESC_HI20:
+      // For TLSDESC=>LE, we can use the short form if hi20 is zero.
+      toLeShortForm =
+          r.expr == R_RELAX_TLS_GD_TO_LE && !hi20(r.sym->getVA(r.addend));
+      [[fallthrough]];
     case R_RISCV_TLSDESC_LOAD_LO12:
       // For LE or IE optimization, AUIPC and L[DW] are converted to a removable
       // NOP.
       if (r.expr != R_TLSDESC_PC && i + 1 != sec.relocs().size() &&
+          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+        remove = 4;
+      break;
+    case R_RISCV_TLSDESC_ADD_LO12:
+      if (toLeShortForm && i + 1 != sec.relocs().size() &&
           sec.relocs()[i + 1].type == R_RISCV_RELAX)
         remove = 4;
       break;

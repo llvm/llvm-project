@@ -1,6 +1,7 @@
 # REQUIRES: riscv
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax a.s -o a.64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 --defsym PAD=0 -mattr=+c,+relax a.s -o a.64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 --defsym PAD=5000 -mattr=+c,+relax a.s -o aa.64.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax c.s -o c.64.o
 # RUN: ld.lld -shared -soname=c.64.so c.64.o -o c.64.so
 
@@ -9,6 +10,8 @@
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.o -o a.64.le -z separate-code
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.64.le | FileCheck %s --check-prefix=LE64
+# RUN: ld.lld -e 0 -z now aa.64.o c.64.o -o aa.64.le -z separate-code
+# RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d aa.64.le | FileCheck %s --check-prefix=LE64A
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.so -o a.64.ie -z separate-code
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.64.ie | FileCheck %s --check-prefix=IE64
@@ -45,19 +48,36 @@
 # LE64-LABEL: <foo>:
 # LE64-NEXT:         c.add   a7, a7
 # LE64-NEXT:         c.add   a7, a7
-# LE64-NEXT:  11008: lui     a0, 0x0
-# LE64-NEXT:         c.add   a7, a7
-# LE64-NEXT:         addi    a0, zero, 0xc
+# LE64-NEXT:  11008: c.add   a7, a7
+# LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:         c.add   a0, tp
 # LE64-NEXT:         jal     {{.*}} <foo>
 # LE64-NEXT:         addi    zero, zero, 0x0
-# LE64-NEXT:         lui     a0, 0x0
-# LE64-NEXT:         addi    a0, zero, 0xc
+# LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:         c.add   a0, tp
 # LE64-NEXT:         addi    zero, zero, 0x0
-# LE64-NEXT:         lui     a0, 0x0
-# LE64-NEXT:         addi    a0, zero, 0xc
+# LE64-NEXT:         addi    zero, zero, 0x0
+# LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:         c.add   a0, tp
+
+# LE64A-LABEL: <_start>:
+# LE64A-NEXT:         jal     {{.*}} <foo>
+# LE64A-LABEL: <foo>:
+# LE64A-NEXT:         c.add   a7, a7
+# LE64A-NEXT:         c.add   a7, a7
+# LE64A-NEXT:  11008: lui     a0, 0x2
+# LE64A-NEXT:         c.add   a7, a7
+# LE64A-NEXT:         addi    a0, a0, -0x479
+# LE64A-NEXT:         c.add   a0, tp
+# LE64A-NEXT:         jal     {{.*}} <foo>
+# LE64A-NEXT:         addi    zero, zero, 0x0
+# LE64A-NEXT:         lui     a0, 0x2
+# LE64A-NEXT:         addi    a0, a0, -0x479
+# LE64A-NEXT:         c.add   a0, tp
+# LE64A-NEXT:         addi    zero, zero, 0x0
+# LE64A-NEXT:         lui     a0, 0x2
+# LE64A-NEXT:         addi    a0, a0, -0x479
+# LE64A-NEXT:         c.add   a0, tp
 
 # IE64:       .got     00000010 00000000000120e0
 # IE64-LABEL: <_start>:
@@ -93,7 +113,7 @@ foo:
 .option norelax
 ## All 4 instructions have an R_RISCV_RELAX.
 ## Check that optimization/relaxation are not affected by irrelevant instructions.
-  auipc a2, %tlsdesc_hi(c)
+  auipc a2, %tlsdesc_hi(b)
   .reloc .-4, R_RISCV_RELAX, 0
   c.add a7, a7
   ld    a3, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a2)
@@ -111,11 +131,12 @@ foo:
 
 .Ltlsdesc_hi1:
 .option norelax
-## LD has an R_RISCV_RELAX.
-  auipc a4, %tlsdesc_hi(c)
+## LD and ADDI has an R_RISCV_RELAX.
+  auipc a4, %tlsdesc_hi(b)
   ld    a5, %tlsdesc_load_lo(.Ltlsdesc_hi1)(a4)
   .reloc .-4, R_RISCV_RELAX, 0
   addi  a0, a4, %tlsdesc_add_lo(.Ltlsdesc_hi1)
+  .reloc .-4, R_RISCV_RELAX, 0
   jalr  t0, 0(a5), %tlsdesc_call(.Ltlsdesc_hi1)
   add   a0, a0, tp
 .option relax
@@ -123,7 +144,7 @@ foo:
 .Ltlsdesc_hi2:
 .option norelax
 ## AUIPC has an R_RISCV_RELAX.
-  auipc a6, %tlsdesc_hi(c)
+  auipc a6, %tlsdesc_hi(b)
   .reloc .-4, R_RISCV_RELAX, 0
   ld    a7, %tlsdesc_load_lo(.Ltlsdesc_hi2)(a6)
   addi  a0, a6, %tlsdesc_add_lo(.Ltlsdesc_hi2)
@@ -135,11 +156,10 @@ foo:
 .globl a
 .zero 8
 a:
-.zero 3
-b:
-.zero 1
+.zero 2039+PAD  ## Place b at 0x7ff+PAD
 
 #--- c.s
 .tbss
-.globl c
-c: .zero 4
+.globl b
+b:
+.zero 4

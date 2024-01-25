@@ -83,20 +83,20 @@
 
 # NOREL: no relocations
 
-## st_value(a) = 8
 # LE64-LABEL: <.text>:
+## st_value(a) = 8
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
-# LE64-NEXT:         lui     a0, 0x0
+# LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    a0, zero, 0x8
 # LE64-NEXT:         add     a0, a0, tp
-## st_value(b) = 11
+## st_value(b) = 2047
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
-# LE64-NEXT:         lui     a0, 0x0
+# LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    a0, zero, 0x7ff
 # LE64-NEXT:         add     a0, a0, tp
-## st_value(c) = 12
+## st_value(c) = 2048
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         addi    zero, zero, 0x0
 # LE64-NEXT:         lui     a0, 0x1
@@ -113,12 +113,12 @@
 # IE64-LABEL: <.text>:
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
-# IE64-NEXT:         lui     a0, 0x0
+# IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    a0, zero, 0x8
 # IE64-NEXT:         add     a0, a0, tp
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
-# IE64-NEXT:         lui     a0, 0x0
+# IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    a0, zero, 0x7ff
 # IE64-NEXT:         add     a0, a0, tp
 # IE64-NEXT:         addi    zero, zero, 0x0
@@ -131,19 +131,21 @@
 # IE32:       .got     00000008 00012248
 
 # IE32-LABEL: <.text>:
+## st_value(a) = 8
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
-# IE32-NEXT:         lui     a0, 0x0
+# IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    a0, zero, 0x8
 # IE32-NEXT:         add     a0, a0, tp
+## st_value(b) = 2047
 # IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    zero, zero, 0x0
-# IE32-NEXT:         lui     a0, 0x0
+# IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:         addi    a0, zero, 0x7ff
 # IE32-NEXT:         add     a0, a0, tp
-# IE32-NEXT:         addi    zero, zero, 0x0
-# IE32-NEXT:         addi    zero, zero, 0x0
 ## &.got[c]-. = 0x12248+4 - 0x111cc = 0x1080
+# IE32-NEXT:         addi    zero, zero, 0x0
+# IE32-NEXT:         addi    zero, zero, 0x0
 # IE32-NEXT:  111cc: auipc   a0, 0x1
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
