@@ -406,6 +406,8 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   bits<1> clamp;
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
+  bits<3> matrix_a_fmt;
+  bits<3> matrix_b_fmt;
 
   let Inst{7-0} = !if(P.HasDst, vdst, 0);
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0

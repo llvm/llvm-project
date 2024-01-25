@@ -174,6 +174,8 @@ public:
     ImmTyGlobalSReg32,
     ImmTyGlobalSReg64,
     ImmTyBitOp3,
+    ImmTyMatrixAFMT,
+    ImmTyMatrixBFMT,
   };
 
   // Immediate operand kind.
@@ -406,6 +408,8 @@ public:
   bool isCPol() const { return isImmTy(ImmTyCPol); }
   bool isIndexKey8bit() const { return isImmTy(ImmTyIndexKey8bit); }
   bool isIndexKey16bit() const { return isImmTy(ImmTyIndexKey16bit); }
+  bool isMatrixAFMT() const { return isImmTy(ImmTyMatrixAFMT); }
+  bool isMatrixBFMT() const { return isImmTy(ImmTyMatrixBFMT); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
   bool isDppBankMask() const { return isImmTy(ImmTyDppBankMask); }
@@ -1129,6 +1133,8 @@ public:
       OS << "GlobalSReg64";
       break;
     case ImmTyBitOp3: OS << "BitOp3"; break;
+    case ImmTyMatrixAFMT: OS << "ImmTyMatrixAFMT"; break;
+    case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
     }
     // clang-format on
   }
@@ -1653,6 +1659,10 @@ public:
                                AMDGPUOperand::ImmTy ImmTy);
   ParseStatus parseIndexKey8bit(OperandVector &Operands);
   ParseStatus parseIndexKey16bit(OperandVector &Operands);
+  ParseStatus tryParseMatrixFMT(OperandVector &Operands, StringRef Name,
+                                AMDGPUOperand::ImmTy Type);
+  ParseStatus parseMatrixAFMT(OperandVector &Operands);
+  ParseStatus parseMatrixBFMT(OperandVector &Operands);
 
   ParseStatus parseDfmtNfmt(int64_t &Format);
   ParseStatus parseUfmt(int64_t &Format);
@@ -6864,6 +6874,44 @@ ParseStatus AMDGPUAsmParser::parseIndexKey16bit(OperandVector &Operands) {
   return tryParseIndexKey(Operands, AMDGPUOperand::ImmTyIndexKey16bit);
 }
 
+ParseStatus AMDGPUAsmParser::tryParseMatrixFMT(OperandVector &Operands,
+                                               StringRef Name,
+                                               AMDGPUOperand::ImmTy Type) {
+  using namespace llvm::AMDGPU::WMMA;
+
+  SMLoc S = getLoc();
+  StringRef Value;
+  SMLoc StringLoc;
+  ParseStatus Res = parseStringWithPrefix(Name, Value, StringLoc);
+  if (!Res.isSuccess())
+    return Res;
+
+  int64_t Int;
+  Int = StringSwitch<int64_t>(Value)
+        .Case("MATRIX_FMT_FP8", MatrixFMT::MATRIX_FMT_FP8)
+        .Case("MATRIX_FMT_BF8", MatrixFMT::MATRIX_FMT_BF8)
+        .Case("MATRIX_FMT_FP6", MatrixFMT::MATRIX_FMT_FP6)
+        .Case("MATRIX_FMT_BF6", MatrixFMT::MATRIX_FMT_BF6)
+        .Case("MATRIX_FMT_FP4", MatrixFMT::MATRIX_FMT_FP4)
+        .Default(0xffffffff);
+
+  if (Int == 0xffffffff)
+    return Error(StringLoc, "invalid " + Twine(Name) + " value");
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, Type));
+  return ParseStatus::Success;
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixAFMT(OperandVector &Operands) {
+  return tryParseMatrixFMT(Operands, "matrix_a_fmt",
+                           AMDGPUOperand::ImmTyMatrixAFMT);
+}
+
+ParseStatus AMDGPUAsmParser::parseMatrixBFMT(OperandVector &Operands) {
+  return tryParseMatrixFMT(Operands, "matrix_b_fmt",
+                           AMDGPUOperand::ImmTyMatrixBFMT);
+}
+
 // dfmt and nfmt (in a tbuffer instruction) are parsed as one to allow their
 // values to live in a joint format operand in the MCInst encoding.
 ParseStatus AMDGPUAsmParser::parseDfmtNfmt(int64_t &Format) {
@@ -8738,6 +8786,20 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     int DefaultVal = IsPacked ? -1 : 0;
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyOpSelHi,
                           DefaultVal);
+  }
+
+  int MatrixAFMTIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_fmt);
+  if (MatrixAFMTIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixAFMT, 0);
+  }
+
+  int MatrixBFMTIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_fmt);
+  if (MatrixBFMTIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptIdx,
+                          AMDGPUOperand::ImmTyMatrixBFMT, 0);
   }
 
   int NegLoIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::neg_lo);

@@ -422,3 +422,45 @@ v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 index_key:2
 
 v_swmmac_i32_16x16x256_iu4 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_lo:[1,0,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_lo:[0,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_hi:[1,0,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_hi:[0,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] matrix_b_fmt:1
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] matrix_b_fmt:xxx
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid matrix_b_fmt value
+
+v_wmma_bf16_16x16x128_f8f6f4 v[0:3], v[8:23], v[24:39], v[40:43] neg_lo:[1,0,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+
+v_wmma_bf16_16x16x128_f8f6f4 v[0:3], v[8:23], v[24:39], v[40:43] neg_lo:[0,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+
+v_wmma_bf16_16x16x128_f8f6f4 v[0:3], v[8:23], v[24:39], v[40:43] neg_hi:[1,0,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+
+v_wmma_bf16_16x16x128_f8f6f4 v[0:3], v[8:23], v[24:39], v[40:43] neg_hi:[0,1,0]
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+
+v_wmma_bf16_16x16x128_f8f6f4 v[0:3], v[8:23], v[24:39], v[40:43] clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_wmma_bf16_16x16x128_f8f6f4 v[0:3], v[8:23], v[24:39], v[40:43] matrix_b_fmt:1
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an identifier
+
+v_wmma_bf16_16x16x128_f8f6f4 v[0:3], v[8:23], v[24:39], v[40:43] matrix_b_fmt:xxx
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid matrix_b_fmt value

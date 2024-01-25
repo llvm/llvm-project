@@ -1022,6 +1022,16 @@ enum Target : unsigned {
 
 } // namespace Exp
 
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+} // namespace WMMA
+
 namespace VOP3PEncoding {
 
 enum OpSel : uint64_t {
