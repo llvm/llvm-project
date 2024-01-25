@@ -214,7 +214,6 @@ private:
 
   // These arrays is indexed by AccessIsWrite
   FunctionCallee MemProfMemoryAccessCallback[2];
-  FunctionCallee MemProfMemoryAccessCallbackSized[2];
 
   FunctionCallee MemProfMemmove, MemProfMemcpy, MemProfMemset;
   Value *DynamicShadowOffset = nullptr;
@@ -504,12 +503,7 @@ void MemProfiler::initializeCallbacks(Module &M) {
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
 
-    SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
     SmallVector<Type *, 2> Args1{1, IntptrTy};
-    MemProfMemoryAccessCallbackSized[AccessIsWrite] =
-        M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr + "N",
-                              FunctionType::get(IRB.getVoidTy(), Args2, false));
-
     MemProfMemoryAccessCallback[AccessIsWrite] =
         M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr,
                               FunctionType::get(IRB.getVoidTy(), Args1, false));
