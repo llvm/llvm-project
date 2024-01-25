@@ -2,14 +2,7 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:         warning: Instruction selection used fallback path for bswap_v8i16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bswap_v2i16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bswap_v16i16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bswap_v8i32
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bswap_v4i64
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bswap_v3i16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bswap_v7i16
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for bswap_v3i32
+; CHECK-GI:         warning: Instruction selection used fallback path for bswap_v2i16
 
 ; ====== Scalar Tests =====
 define i16 @bswap_i16(i16 %a){
