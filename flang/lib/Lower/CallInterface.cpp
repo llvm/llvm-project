@@ -976,8 +976,11 @@ private:
     };
     if (obj.attrs.test(Attrs::Optional))
       addMLIRAttr(fir::getOptionalAttrName());
-    if (obj.attrs.test(Attrs::Asynchronous))
-      TODO(loc, "ASYNCHRONOUS in procedure interface");
+    // Skipping obj.attrs.test(Attrs::Asynchronous), this does not impact the
+    // way the argument is passed given flang implement asynch IO synchronously.
+    // TODO: it would be safer to treat them as volatile because since Fortran
+    // 2018 asynchronous can also be used for C defined asynchronous user
+    // processes (see 18.10.4 Asynchronous communication).
     if (obj.attrs.test(Attrs::Contiguous))
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
