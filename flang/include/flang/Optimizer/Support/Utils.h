@@ -133,6 +133,25 @@ inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
            fir::numericMlirTypeToFortran(builder, type, loc, intrinsicName) +
            " in " + intrinsicName);
 }
+
+using MinlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
+    fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
+    mlir::Value, mlir::Value, const llvm::SmallVectorImpl<mlir::Value> &)>;
+using InitValGeneratorTy = llvm::function_ref<mlir::Value(
+    fir::FirOpBuilder &, mlir::Location, const mlir::Type &)>;
+using AddrGeneratorTy = llvm::function_ref<mlir::Value(
+    fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
+    mlir::Value)>;
+
+// Produces a loop nest for a Minloc intrinsic.
+void genMinMaxlocReductionLoop(fir::FirOpBuilder &builder, mlir::Value array,
+                               InitValGeneratorTy initVal,
+                               MinlocBodyOpGeneratorTy genBody,
+                               fir::AddrGeneratorTy getAddrFn, unsigned rank,
+                               mlir::Type elementType, mlir::Location loc,
+                               mlir::Type maskElemType, mlir::Value resultArr,
+                               bool maskMayBeLogicalScalar);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
