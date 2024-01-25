@@ -58,25 +58,23 @@ constexpr StringLiteral
 struct EnableArmStreamingPass
     : public arm_sme::impl::EnableArmStreamingBase<EnableArmStreamingPass> {
   EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode,
-                         bool onlyIfRequiredByOps) {
+                         bool enableZAConservatively) {
     this->streamingMode = streamingMode;
     this->zaMode = zaMode;
-    this->onlyIfRequiredByOps = onlyIfRequiredByOps;
+    this->enableZAConservatively = enableZAConservatively;
   }
   void runOnOperation() override {
     auto op = getOperation();
 
-    if (onlyIfRequiredByOps) {
-      bool foundTileOp = false;
+    bool enableZA = !enableZAConservatively;
+    if (enableZAConservatively) {
       op.walk([&](Operation *op) {
         if (llvm::isa<ArmSMETileOpInterface>(op)) {
-          foundTileOp = true;
+          enableZA = true;
           return WalkResult::interrupt();
         }
         return WalkResult::advance();
       });
-      if (!foundTileOp)
-        return;
     }
 
     if (op->getAttr(kEnableArmStreamingIgnoreAttr) ||
@@ -91,7 +89,7 @@ struct EnableArmStreamingPass
     // ZA can be accessed by the SME LDR, STR and ZERO instructions when not in
     // streaming-mode (see section B1.1.1, IDGNQM of spec [1]). It may be worth
     // supporting this later.
-    if (zaMode != ArmZaMode::Disabled)
+    if (enableZA && zaMode != ArmZaMode::Disabled)
       op->setAttr(stringifyArmZaMode(zaMode), unitAttr);
   }
 };

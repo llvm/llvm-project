@@ -101,10 +101,9 @@ def EnableArmStreaming
                             "The function uses ZA state. The ZA state may "
                             "be used for input and/or output.")
            )}]>,
-    Option<"onlyIfRequiredByOps", "only-if-required-by-ops", "bool",
+    Option<"enableZAConservatively", "enable-za-conservatively", "bool",
            /*default=*/"false",
-           "Only apply the selected streaming/ZA modes if the function "
-           " contains ops that require them.">
+           "Enable ZA iff the function contains ops that require it.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }

@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -enable-arm-streaming=streaming-mode=streaming-locally -verify-diagnostics | FileCheck %s -check-prefix=CHECK-LOCALLY
 // RUN: mlir-opt %s -enable-arm-streaming=streaming-mode=streaming-compatible -verify-diagnostics | FileCheck %s -check-prefix=CHECK-COMPATIBLE
 // RUN: mlir-opt %s -enable-arm-streaming=za-mode=new-za -verify-diagnostics | FileCheck %s -check-prefix=CHECK-ENABLE-ZA
-// RUN: mlir-opt %s -enable-arm-streaming=only-if-required-by-ops -verify-diagnostics | FileCheck %s -check-prefix=IF-REQUIRED
+// RUN: mlir-opt %s -enable-arm-streaming="za-mode=new-za enable-za-conservatively" -verify-diagnostics | FileCheck %s -check-prefix=IF-REQUIRED
 
 // CHECK-LABEL: @arm_streaming
 // CHECK-SAME: attributes {arm_streaming}
@@ -24,17 +24,20 @@ func.func @arm_streaming() { return }
 // CHECK-ENABLE-ZA-SAME: attributes {enable_arm_streaming_ignore}
 func.func @not_arm_streaming() attributes {enable_arm_streaming_ignore} { return }
 
-// CHECK-LABEL: @requires_arm_streaming
+// CHECK-LABEL: @requires_arm_za
 // CHECK-SAME: attributes {arm_streaming}
-// IF-REQUIRED: @requires_arm_streaming
-// IF-REQUIRED-SAME: attributes {arm_streaming}
-func.func @requires_arm_streaming() {
+// IF-REQUIRED: @requires_arm_za
+// IF-REQUIRED-SAME: attributes {arm_new_za, arm_streaming}
+func.func @requires_arm_za() {
   %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
   return
 }
 
-// CHECK-LABEL: @does_not_require_arm_streaming
+// CHECK-LABEL: @does_not_require_arm_za
 // CHECK-SAME: attributes {arm_streaming}
-// IF-REQUIRED: @does_not_require_arm_streaming
-// IF-REQUIRED-NOT: arm_streaming
-func.func @does_not_require_arm_streaming() { return }
+// There are no SME Ops inside the function, so the request to enable ZA is
+// ignored.
+// IF-REQUIRED: @does_not_require_arm_za
+// IF-REQUIRED-SAME: attributes {arm_streaming}
+// IF-REQUIRED-NOT: arm_new_za
+func.func @does_not_require_arm_za() { return }

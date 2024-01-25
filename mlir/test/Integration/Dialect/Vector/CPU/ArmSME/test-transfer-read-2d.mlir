@@ -1,7 +1,7 @@
 // DEFINE: %{entry_point} = entry
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za enable-za-conservatively" \
 // DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
 // DEFINE:   -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
