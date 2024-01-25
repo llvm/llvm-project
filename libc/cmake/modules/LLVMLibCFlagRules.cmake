@@ -134,7 +134,7 @@ set(FMA_OPT_FLAG "FMA_OPT")
 set(ROUND_OPT_FLAG "ROUND_OPT")
 # This flag will define macros that gated away vectorization code such that
 # one can always test the fallback generic code path.
-set(PREFER_GENERIC_FLAG "PREFER_GENERIC")
+set(EXPLICIT_SIMD_OPT_FLAG "EXPLICIT_SIMD_OPT")
 
 # Skip FMA_OPT flag for targets that don't support fma.
 if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
