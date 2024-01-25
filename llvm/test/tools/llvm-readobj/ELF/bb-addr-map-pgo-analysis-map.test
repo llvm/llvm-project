@@ -1,36 +1,35 @@
-## This test checks how we handle the --pgo-analysis-map option.
+## This test checks how we handle PGO Analysis Map in --bb-addr-map.
 
 ## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
 # UNSUPPORTED: system-windows
 
 ## Check 64-bit:
 # RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
-# RUN: llvm-readobj %t1.x64.o --pgo-analysis-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=CHECK
-# RUN: llvm-readelf %t1.x64.o --pgo-analysis-map | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj %t1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x64.o --bb-addr-map | FileCheck %s --check-prefix=GNU
 
 ## Check 64-bit:
 # RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.v1.x64.o
-# RUN: llvm-readobj %t1.v1.x64.o --pgo-analysis-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.v1.x64.o --check-prefix=CHECK
+# RUN: llvm-readobj %t1.v1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.v1.x64.o --check-prefix=CHECK
 
 ## Check 32-bit:
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -o %t1.x32.o
-# RUN: llvm-readobj %t1.x32.o --pgo-analysis-map 2>&1 | FileCheck -DADDR=0x11111 %s -DFILE=%t1.x32.o --check-prefix=CHECK
-# RUN: llvm-readelf %t1.x32.o --pgo-analysis-map | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj %t1.x32.o --bb-addr-map 2>&1 | FileCheck -DADDR=0x11111 %s -DFILE=%t1.x32.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x32.o --bb-addr-map | FileCheck %s --check-prefix=GNU
 
 ## Check that a malformed section can be handled.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DSIZE=6 -o %t2.o
-# RUN: llvm-readobj %t2.o --pgo-analysis-map 2>&1 | FileCheck %s -DOFFSET=0x00000006 -DFILE=%t2.o --check-prefix=TRUNCATED
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s -DOFFSET=0x00000006 -DFILE=%t2.o --check-prefix=TRUNCATED
 
 ## Check that invalid metadata can be handled.
 # RUN: yaml2obj --docnum=1 %s -DBITS=32 -DMETADATA=0xF000002 -o %t3.o
-# RUN: llvm-readobj %t3.o --pgo-analysis-map 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALIDMD
+# RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALIDMD
 
 # CHECK:      BBAddrMap [
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: [[ADDR]]
 # CHECK-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_BB_ADDR_MAP section with index 3
 # CHECK-NEXT:     Name: <?>
-# CHECK-NEXT:     EntryCount: 100
 # CHECK-NEXT:     BB entries [
 # CHECK-NEXT:       {
 # CHECK-NEXT:         ID: 0
@@ -41,13 +40,6 @@
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: No
 # CHECK-NEXT:         HasIndirectBranch: No
-# CHECK-NEXT:         Frequency: 100
-# CHECK-NEXT:         Successors [
-# CHECK-NEXT:           {
-# CHECK-NEXT:             ID: 2
-# CHECK-NEXT:             Probability: 0xFFFFFFFF
-# CHECK-NEXT:           }
-# CHECK-NEXT:         ]
 # CHECK-NEXT:       }
 # CHECK-NEXT:       {
 # CHECK-NEXT:         ID: 2
@@ -58,16 +50,31 @@
 # CHECK-NEXT:         IsEHPad: Yes
 # CHECK-NEXT:         CanFallThrough: No
 # CHECK-NEXT:         HasIndirectBranch: Yes
-# CHECK-NEXT:         Frequency: 100
-# CHECK-NEXT:         Successors [
-# CHECK-NEXT:         ]
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
+# CHECK-NEXT:     PGO analyses {
+# CHECK-NEXT:       FuncEntryCount: 100
+# CHECK-NEXT:       PGO BB entries [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           Frequency: 100
+# CHECK-NEXT:           Successors [
+# CHECK-NEXT:             {
+# CHECK-NEXT:               ID: 2
+# CHECK-NEXT:               Probability: 0xFFFFFFFF
+# CHECK-NEXT:             }
+# CHECK-NEXT:           ]
+# CHECK-NEXT:         }
+# CHECK-NEXT:         {
+# CHECK-NEXT:           Frequency: 100
+# CHECK-NEXT:           Successors [
+# CHECK-NEXT:           ]
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ]
+# CHECK-NEXT:     }
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: 0x22222
 # CHECK-NEXT:     Name: foo
-# CHECK-NEXT:     EntryCount: 8888
 # CHECK-NEXT:     BB entries [
 # CHECK-NEXT:       {
 # CHECK-NEXT:         ID: 4
@@ -78,9 +85,16 @@
 # CHECK-NEXT:         IsEHPad: No
 # CHECK-NEXT:         CanFallThrough: Yes
 # CHECK-NEXT:         HasIndirectBranch: No
-# CHECK-NEXT:         Frequency: 9000
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
+# CHECK-NEXT:     PGO analyses {
+# CHECK-NEXT:       FuncEntryCount: 8888
+# CHECK-NEXT:       PGO BB entries [
+# CHECK-NEXT:         {
+# CHECK-NEXT:           Frequency: 9000
+# CHECK-NEXT:         }
+# CHECK-NEXT:       ]
+# CHECK-NEXT:     }
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
@@ -94,7 +108,6 @@
 # TRUNCATED-NEXT:   Function {
 # TRUNCATED-NEXT:     At: 0x33333
 # TRUNCATED-NEXT:     Name: bar
-# TRUNCATED-NEXT:     EntryCount: 89
 # TRUNCATED-NEXT:     BB entries [
 # TRUNCATED-NEXT:       {
 # TRUNCATED-NEXT:         ID: 6
@@ -117,6 +130,9 @@
 # TRUNCATED-NEXT:         HasIndirectBranch: No
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:     ]
+# TRUNCATED-NEXT:     PGO analyses {
+# TRUNCATED-NEXT:       FuncEntryCount: 89
+# TRUNCATED-NEXT:     }
 # TRUNCATED-NEXT:   }
 # TRUNCATED-NEXT: ]
 

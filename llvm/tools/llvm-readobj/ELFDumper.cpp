@@ -593,7 +593,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
-  void printBBAddrMaps(bool IncludePGOAnalysis = false) override;
+  void printBBAddrMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -704,7 +704,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
-  void printBBAddrMaps(bool IncludePGOAnalysis = false) override;
+  void printBBAddrMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -738,8 +738,6 @@ private:
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsABIFlags() override;
   virtual void printZeroSymbolOtherField(const Elf_Sym &Symbol) const;
-
-  template<typename AddrMap> void printAddrMaps();
 
 protected:
   virtual std::string getGroupSectionHeaderName() const;
@@ -5072,8 +5070,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
-template <class ELFT>
-void GNUELFDumper<ELFT>::printBBAddrMaps(bool IncludePGOAnalysis) {
+template <class ELFT> void GNUELFDumper<ELFT>::printBBAddrMaps() {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
 }
 
@@ -7544,8 +7541,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
   }
 }
 
-template <class ELFT>
-void LLVMELFDumper<ELFT>::printBBAddrMaps(bool IncludePGOAnalysis) {
+template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   using Elf_Shdr = typename ELFT::Shdr;
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
@@ -7571,16 +7567,15 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool IncludePGOAnalysis) {
                                 this->describe(*Sec));
       continue;
     }
-    std::vector<PGOAnalysisMap> PGOAnalysis;
-    Expected<std::vector<BBAddrMap>> BBAddrMapOrErr = this->Obj.decodeBBAddrMap(
-        *Sec, RelocSec, IncludePGOAnalysis ? &PGOAnalysis : nullptr);
+    std::vector<PGOAnalysisMap> PGOAnalyses;
+    Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
+        this->Obj.decodeBBAddrMap(*Sec, RelocSec, &PGOAnalyses);
     if (!BBAddrMapOrErr) {
       this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
                                 ": " + toString(BBAddrMapOrErr.takeError()));
       continue;
     }
-    for (const auto &[Idx, AM] : llvm::enumerate(*BBAddrMapOrErr)) {
-      const auto *PAM = IncludePGOAnalysis ? &PGOAnalysis[Idx] : nullptr;
+    for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
       DictScope D(W, "Function");
       W.printHex("At", AM.Addr);
       SmallVector<uint32_t> FuncSymIndex =
@@ -7593,39 +7588,50 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool IncludePGOAnalysis) {
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
-      if (IncludePGOAnalysis && PAM->FeatEnable.FuncEntryCount)
-        W.printNumber("EntryCount", PAM->FuncEntryCount);
 
-      bool IncludePGOBBData =
-          IncludePGOAnalysis && PAM->BBEntries.size() == AM.BBEntries.size();
-      ListScope L(W, "BB entries");
-      for (const auto &[BIdx, BBE] : llvm::enumerate(AM.BBEntries)) {
-        const auto *PBBE = IncludePGOBBData ? &PAM->BBEntries[BIdx] : nullptr;
-        DictScope L(W);
-        W.printNumber("ID", BBE.ID);
-        W.printHex("Offset", BBE.Offset);
-        W.printHex("Size", BBE.Size);
-        W.printBoolean("HasReturn", BBE.hasReturn());
-        W.printBoolean("HasTailCall", BBE.hasTailCall());
-        W.printBoolean("IsEHPad", BBE.isEHPad());
-        W.printBoolean("CanFallThrough", BBE.canFallThrough());
-        W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+      {
+        ListScope L(W, "BB entries");
+        for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
+          DictScope L(W);
+          W.printNumber("ID", BBE.ID);
+          W.printHex("Offset", BBE.Offset);
+          W.printHex("Size", BBE.Size);
+          W.printBoolean("HasReturn", BBE.hasReturn());
+          W.printBoolean("HasTailCall", BBE.hasTailCall());
+          W.printBoolean("IsEHPad", BBE.isEHPad());
+          W.printBoolean("CanFallThrough", BBE.canFallThrough());
+          W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+        }
+      }
 
-        /// FIXME: currently we just emit the raw frequency, it may be better to
-        /// provide an option to scale it by the first entry frequence using
-        /// BlockFrequency::Scaled64 number
-        if (IncludePGOBBData && PAM->FeatEnable.BBFreq)
-          W.printNumber("Frequency", PBBE->BlockFreq.getFrequency());
+      if (PAM.FeatEnable.anyEnabled()) {
+        DictScope PD(W, "PGO analyses");
 
-        if (IncludePGOBBData && PAM->FeatEnable.BrProb) {
-          ListScope L(W, "Successors");
-          for (const auto &Succ : PBBE->Successors) {
+        if (PAM.FeatEnable.FuncEntryCount)
+          W.printNumber("FuncEntryCount", PAM.FuncEntryCount);
+
+        if (PAM.FeatEnable.BBFreq || PAM.FeatEnable.BrProb) {
+          ListScope L(W, "PGO BB entries");
+          for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {
             DictScope L(W);
-            W.printNumber("ID", Succ.ID);
-            /// FIXME: currently we just emit the raw numerator of the probably,
-            /// it may be better to provide an option to emit it as a percentage
-            /// or other prettied representation
-            W.printHex("Probability", Succ.Prob.getNumerator());
+
+            /// FIXME: currently we just emit the raw frequency, it may be
+            /// better to provide an option to scale it by the first entry
+            /// frequence using BlockFrequency::Scaled64 number
+            if (PAM.FeatEnable.BBFreq)
+              W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
+
+            if (PAM.FeatEnable.BrProb) {
+              ListScope L(W, "Successors");
+              for (const auto &Succ : PBBE.Successors) {
+                DictScope L(W);
+                W.printNumber("ID", Succ.ID);
+                /// FIXME: currently we just emit the raw numerator of the
+                /// probably, it may be better to provide an option to emit it
+                /// as a percentage or other prettied representation
+                W.printHex("Probability", Succ.Prob.getNumerator());
+              }
+            }
           }
         }
       }
