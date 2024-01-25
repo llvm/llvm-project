@@ -134,8 +134,8 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
     // MaxNumVTableAnnotations is the maximum number of vtables annotated on
     // the instruction.
     auto ValueDataArray = getValueProfDataFromInst(
-        *I, IPVK_VTableTarget, MaxNumVTableAnnotations /* MaxNumValueData */, ActualNumValueData,
-        TotalCount);
+        *I, IPVK_VTableTarget, MaxNumVTableAnnotations /* MaxNumValueData */,
+        ActualNumValueData, TotalCount);
 
     if (ValueDataArray.get()) {
       for (uint32_t j = 0; j < ActualNumValueData; j++) {
