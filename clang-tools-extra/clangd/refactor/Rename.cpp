@@ -1112,21 +1112,6 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     // TODO: Insert the ranges from the ObjCMethodDecl/ObjCMessageExpr selector
     // pieces which are being renamed. This will require us to make changes to
     // locateDeclAt to preserve this AST node.
-    //
-    // if (RInputs.NewName != "__clangd_rename_placeholder") {
-    //   llvm::StringRef NewName = RInputs.NewName;
-    //   llvm::SmallVector<llvm::StringRef, 8> NewNames;
-    //   NewName.split(NewNames, ":");
-
-    //   const auto Sel = MD->getSelector();
-    //   unsigned NumSelectorLocs = MD->getNumSelectorLocs();
-    //   for (unsigned I = 0; I < NumSelectorLocs; ++I) {
-    //     if (Sel.getNameForSlot(I) != NewNames[I]) {
-    //       RenamedRanges.insert(
-    //           tokenRangeForLoc(AST, MD->getSelectorLoc(I), SM, LangOpts));
-    //     }
-    //   }
-    // }
   } else {
     RenamedRanges.insert(CurrentIdentifier);
   }
