@@ -25,7 +25,6 @@ licenses(["notice"])
 
 PRINTF_COPTS = [
     "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
-    "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE",
     "LIBC_COPT_PRINTF_DISABLE_WRITE_INT",
 ]
 
@@ -417,7 +416,6 @@ libc_support_library(
         "src/__support/ryu_constants.h",
         "src/__support/ryu_long_double_constants.h",
     ],
-    defines = ["LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE"],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
@@ -592,6 +590,7 @@ libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -709,6 +708,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
