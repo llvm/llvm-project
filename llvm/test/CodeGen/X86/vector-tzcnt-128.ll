@@ -1762,37 +1762,37 @@ define <16 x i8> @testv16i8u(<16 x i8> %in) nounwind {
 define <2 x i64> @foldv2i64() nounwind {
 ; SSE-LABEL: foldv2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,0,0]
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [8,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: foldv2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: foldv2i64:
 ; AVX512VPOPCNTDQ:       # %bb.0:
-; AVX512VPOPCNTDQ-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; AVX512VPOPCNTDQ-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQVL-LABEL: foldv2i64:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
-; AVX512VPOPCNTDQVL-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; AVX512VPOPCNTDQVL-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: foldv2i64:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; BITALG_NOVLX-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: foldv2i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; BITALG-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; BITALG-NEXT:    retq
 ;
 ; X86-SSE-LABEL: foldv2i64:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,0,0]
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = [8,0,0,0]
 ; X86-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 0)
   ret <2 x i64> %out
@@ -1801,37 +1801,37 @@ define <2 x i64> @foldv2i64() nounwind {
 define <2 x i64> @foldv2i64u() nounwind {
 ; SSE-LABEL: foldv2i64u:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,0,0]
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [8,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: foldv2i64u:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQ-LABEL: foldv2i64u:
 ; AVX512VPOPCNTDQ:       # %bb.0:
-; AVX512VPOPCNTDQ-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; AVX512VPOPCNTDQ-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
 ; AVX512VPOPCNTDQVL-LABEL: foldv2i64u:
 ; AVX512VPOPCNTDQVL:       # %bb.0:
-; AVX512VPOPCNTDQVL-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; AVX512VPOPCNTDQVL-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: foldv2i64u:
 ; BITALG_NOVLX:       # %bb.0:
-; BITALG_NOVLX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; BITALG_NOVLX-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: foldv2i64u:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,0,0]
+; BITALG-NEXT:    vmovss {{.*#+}} xmm0 = [8,0,0,0]
 ; BITALG-NEXT:    retq
 ;
 ; X86-SSE-LABEL: foldv2i64u:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,0,0]
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = [8,0,0,0]
 ; X86-SSE-NEXT:    retl
   %out = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> <i64 256, i64 -1>, i1 -1)
   ret <2 x i64> %out

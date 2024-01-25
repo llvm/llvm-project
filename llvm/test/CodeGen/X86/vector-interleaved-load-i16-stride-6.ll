@@ -213,7 +213,7 @@ define void @load_i16_stride6_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FAST-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[1,3,2,3,4,5,6,7]
 ; AVX512BW-FAST-NEXT:    vpbroadcastw 4(%rdi), %xmm4
 ; AVX512BW-FAST-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
-; AVX512BW-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [3,9,3,9,3,9,3,9]
+; AVX512BW-FAST-NEXT:    vmovd {{.*#+}} xmm5 = [3,9,0,0,0,0,0,0]
 ; AVX512BW-FAST-NEXT:    vpermi2w %xmm1, %xmm0, %xmm5
 ; AVX512BW-FAST-NEXT:    vpbroadcastw 20(%rdi), %xmm6
 ; AVX512BW-FAST-NEXT:    vpbroadcastw 8(%rdi), %xmm7
@@ -501,19 +501,19 @@ define void @load_i16_stride6_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-LABEL: load_i16_stride6_vf4:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [0,6,12,18,0,6,12,18]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = [0,6,12,18,0,0,0,0]
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512BW-NEXT:    vmovdqa 32(%rdi), %ymm2
 ; AVX512BW-NEXT:    vpermi2w %ymm2, %ymm1, %ymm0
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,7,13,19,1,7,13,19]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm3 = [1,7,13,19,0,0,0,0]
 ; AVX512BW-NEXT:    vpermi2w %ymm2, %ymm1, %ymm3
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm4 = [2,8,14,20,2,8,14,20]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm4 = [2,8,14,20,0,0,0,0]
 ; AVX512BW-NEXT:    vpermi2w %ymm2, %ymm1, %ymm4
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm5 = [3,9,15,21,3,9,15,21]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm5 = [3,9,15,21,0,0,0,0]
 ; AVX512BW-NEXT:    vpermi2w %ymm2, %ymm1, %ymm5
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm6 = [4,10,16,22,4,10,16,22]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm6 = [4,10,16,22,0,0,0,0]
 ; AVX512BW-NEXT:    vpermi2w %ymm2, %ymm1, %ymm6
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm7 = [5,11,17,23,5,11,17,23]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm7 = [5,11,17,23,0,0,0,0]
 ; AVX512BW-NEXT:    vpermi2w %ymm2, %ymm1, %ymm7
 ; AVX512BW-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512BW-NEXT:    vmovq %xmm3, (%rdx)
