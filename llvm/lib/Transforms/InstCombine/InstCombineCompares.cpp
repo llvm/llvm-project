@@ -6103,12 +6103,10 @@ bool InstCombinerImpl::replacedSelectWithOperand(SelectInst *SI,
 // Try to "strengthen" the RHS of compare based on known bits.
 // For example, replace `icmp ugt %x, 14` with `icmp ugt %x, 15` when
 // it is known that the two least significant bits of `%x` is zero.
-static Instruction* strengthenICmpUsingKnownBits(
-  ICmpInst &I,
-  KnownBits Op0Known,
-  KnownBits Op1Known,
-  unsigned BitWidth
-) {
+static Instruction *strengthenICmpUsingKnownBits(ICmpInst &I,
+                                                 KnownBits Op0Known,
+                                                 KnownBits Op1Known,
+                                                 unsigned BitWidth) {
   if (!BitWidth)
     return nullptr;
   if (!(Op1Known.isConstant() && Op0Known.Zero.isMask()))
@@ -6144,13 +6142,13 @@ static Instruction* strengthenICmpUsingKnownBits(
     // Compute the smallest number satisfying the known-bits constrained
     // which is at greater or equal Op0MinAccordingToPred.
     Op0MinRefinedByKnownBits =
-        PowOf2 *
-        APIntOps::RoundingSDiv(Op0MinAccordingToPred, PowOf2, APInt::Rounding::UP);
+        PowOf2 * APIntOps::RoundingSDiv(Op0MinAccordingToPred, PowOf2,
+                                        APInt::Rounding::UP);
     // Compute the largest number satisfying the known-bits constrained
     // which is at less or equal Op0MaxAccordingToPred.
     Op0MaxRefinedByKnownBits =
-        PowOf2 *
-        APIntOps::RoundingSDiv(Op0MaxAccordingToPred, PowOf2, APInt::Rounding::DOWN);
+        PowOf2 * APIntOps::RoundingSDiv(Op0MaxAccordingToPred, PowOf2,
+                                        APInt::Rounding::DOWN);
     NewLower = APIntOps::smax(Op0MinRefinedByKnownBits, Op0MinAccordingToPred);
     NewUpper = APIntOps::smin(Op0MaxRefinedByKnownBits, Op0MaxAccordingToPred);
     ImprovedLower = NewLower.sgt(Op0MinAccordingToPred);
@@ -6159,11 +6157,11 @@ static Instruction* strengthenICmpUsingKnownBits(
     Op0MinAccordingToPred = Op0PredRange.getUnsignedMin();
     Op0MaxAccordingToPred = Op0PredRange.getUnsignedMax();
     Op0MinRefinedByKnownBits =
-        PowOf2 *
-        APIntOps::RoundingUDiv(Op0MinAccordingToPred, PowOf2, APInt::Rounding::UP);
+        PowOf2 * APIntOps::RoundingUDiv(Op0MinAccordingToPred, PowOf2,
+                                        APInt::Rounding::UP);
     Op0MaxRefinedByKnownBits =
-        PowOf2 *
-        APIntOps::RoundingUDiv(Op0MaxAccordingToPred, PowOf2, APInt::Rounding::DOWN);
+        PowOf2 * APIntOps::RoundingUDiv(Op0MaxAccordingToPred, PowOf2,
+                                        APInt::Rounding::DOWN);
     NewLower = APIntOps::umax(Op0MinRefinedByKnownBits, Op0MinAccordingToPred);
     NewUpper = APIntOps::umin(Op0MaxRefinedByKnownBits, Op0MaxAccordingToPred);
     ImprovedLower = NewLower.ugt(Op0MinAccordingToPred);
@@ -6178,15 +6176,13 @@ static Instruction* strengthenICmpUsingKnownBits(
   case ICmpInst::ICMP_ULT:
   case ICmpInst::ICMP_SLT: {
     if (ImprovedUpper)
-      return new ICmpInst(Pred, Op0,
-                          ConstantInt::get(Ty, NewUpper + 1));
+      return new ICmpInst(Pred, Op0, ConstantInt::get(Ty, NewUpper + 1));
     break;
   }
   case ICmpInst::ICMP_UGT:
   case ICmpInst::ICMP_SGT: {
     if (ImprovedLower)
-      return new ICmpInst(Pred, Op0,
-                          ConstantInt::get(Ty, NewLower - 1));
+      return new ICmpInst(Pred, Op0, ConstantInt::get(Ty, NewLower - 1));
     break;
   }
   }
@@ -6450,7 +6446,8 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
        (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
     return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
 
-  if (Instruction * Res = strengthenICmpUsingKnownBits(I, Op0Known, Op1Known, BitWidth))
+  if (Instruction *Res =
+          strengthenICmpUsingKnownBits(I, Op0Known, Op1Known, BitWidth))
     return Res;
 
   return nullptr;
