@@ -125,8 +125,8 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
-// MACHINE_FUNCTION_PASS("mir-printer", PrintMIRPass, ())
 // MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
+// MACHINE_FUNCTION_PASS("mir-printer", PrintMIRPass, ())
 #undef MACHINE_FUNCTION_PASS
 
 // After a pass is converted to new pass manager, its entry should be moved from
@@ -175,8 +175,6 @@ DUMMY_MACHINE_FUNCTION_PASS("fentry-insert", FEntryInserterPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("fixup-statepoint-caller-saved",
                             FixupStatepointCallerSavedPass, ())
-DUMMY_MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass,
-                            ())
 DUMMY_MACHINE_FUNCTION_PASS("fs-profile-loader", MIRProfileLoaderNewPass,
                             (File, ProfileFile, P, FS))
 DUMMY_MACHINE_FUNCTION_PASS("funclet-layout", FuncletLayoutPass, ())
