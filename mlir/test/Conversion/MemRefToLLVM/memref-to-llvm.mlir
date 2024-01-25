@@ -331,14 +331,17 @@ memref.global "private" @gv4 : memref<f32> = dense<1.0> {alignment = 64}
 // -----
 
 module {
-  // CHECK: llvm.mlir.global private constant @__constant_xf32(1.41421354 : f32) {addr_space = 0 : i32} : f32
-  memref.global "private" constant @__constant_xf32 : memref<f32> = dense_resource<NAME>
+  // CHECK: llvm.mlir.global private constant @__constant_xf32_0(1.41421354 : f32) {addr_space = 0 : i32} : f32
+  memref.global "private" constant @__constant_xf32_0 : memref<f32> = dense_resource<NAME0>
+  // CHECK: llvm.mlir.global private constant @__constant_xf32_1(dense<[5.000000e-01, 2.500000e-01]> : tensor<2xf32>) {addr_space = 0 : i32} : !llvm.array<2 x f32>
+  memref.global "private" constant @__constant_xf32_1 : memref<2xf32> = dense_resource<NAME1>
 }
 
 {-#
   dialect_resources: {
     builtin: {
-      NAME: "0x08000000F304B53F"
+      NAME0: "0x08000000F304B53F",
+      NAME1: "0x080000000000003F0000803E"
     }
   }
 #-}
