@@ -205,6 +205,7 @@ protected:
 /// automatically inserted at an insertion point. The builder is copyable.
 class OpBuilder : public Builder {
 public:
+  class InsertPoint;
   struct Listener;
 
   /// Create a builder with the given context.
@@ -285,12 +286,17 @@ public:
 
     virtual ~Listener() = default;
 
-    /// Notification handler for when an operation is inserted into the builder.
-    /// `op` is the operation that was inserted.
-    virtual void notifyOperationInserted(Operation *op) {}
+    /// Notify the listener that the specified operation was inserted.
+    ///
+    /// * If the operation was moved, then `previous` is the previous location
+    ///   of the op.
+    /// * If the operation was unlinked before it was inserted, then `previous`
+    ///   is empty.
+    ///
+    /// Note: Creating an (unlinked) op does not trigger this notification.
+    virtual void notifyOperationInserted(Operation *op, InsertPoint previous) {}
 
-    /// Notification handler for when a block is created using the builder.
-    /// `block` is the block that was created.
+    /// Notify the listener that the specified block was inserted.
     virtual void notifyBlockCreated(Block *block) {}
 
   protected:
@@ -517,7 +523,7 @@ public:
     if (succeeded(tryFold(op, results)))
       op->erase();
     else if (listener)
-      listener->notifyOperationInserted(op);
+      listener->notifyOperationInserted(op, /*previous=*/{});
   }
 
   /// Overload to create or fold a single result operation.

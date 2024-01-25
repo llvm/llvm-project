@@ -1321,10 +1321,13 @@ def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
 //  ASrc_* Operands with an AccVGPR
 //===----------------------------------------------------------------------===//
 
-def ARegSrc_32 : RegisterOperand<AGPR_32> {
-  let DecoderMethod = "decodeOperand_AGPR_32";
+class AVOperand<RegisterClass regClass, string decoder, string width>
+    : RegisterOperand<regClass> {
+  let DecoderMethod = decoder # "<AMDGPUDisassembler::" # width # ">";
   let EncoderMethod = "getAVOperandEncoding";
 }
+
+def ARegSrc_32 : AVOperand<AGPR_32, "decodeSrcA9", "OPW32">;
 
 //===----------------------------------------------------------------------===//
 //  VCSrc_* Operands with an SGPR, VGPR or an inline constant
@@ -1359,36 +1362,21 @@ def VISrc_1024_f32 : RegOrF32 <"VReg_1024", "OPERAND_REG_INLINE_C">;
 //  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
 //===----------------------------------------------------------------------===//
 
-def AVSrc_32 : RegisterOperand<AV_32> {
-  let DecoderMethod = "decodeOperand_AV_32";
-  let EncoderMethod = "getAVOperandEncoding";
-}
+class AVSrcOperand<RegisterClass regClass, string width>
+  : AVOperand<regClass, "decodeSrcAV10", width>;
 
-def AVSrc_64 : RegisterOperand<AV_64> {
-  let DecoderMethod = "decodeOperand_AV_64";
-  let EncoderMethod = "getAVOperandEncoding";
-}
+def AVSrc_32 : AVSrcOperand<AV_32, "OPW32">;
+def AVSrc_64 : AVSrcOperand<AV_64, "OPW64">;
+def AVSrc_128 : AVSrcOperand<AV_128, "OPW128">;
 
-def AVSrc_128 : RegisterOperand<AV_128> {
-  let DecoderMethod = "decodeOperand_AV_128";
-  let EncoderMethod = "getAVOperandEncoding";
-}
+class AVDstOperand<RegisterClass regClass, string width>
+  : AVOperand<regClass, "decodeAV10", width>;
 
-def AVDst_128 : RegisterOperand<AV_128> {
-  let DecoderMethod = "DecodeAVDst_128RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
-
-def AVDst_512 : RegisterOperand<AV_512> {
-  let DecoderMethod = "DecodeAVDst_512RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
+def AVDst_128 : AVDstOperand<AV_128, "OPW128">;
+def AVDst_512 : AVDstOperand<AV_512, "OPW512">;
 
 class AVLdStOperand<RegisterClass regClass, string width>
-    : RegisterOperand<regClass> {
-  let DecoderMethod = "decodeAVLdSt<AMDGPUDisassembler::" # width # ">";
-  let EncoderMethod = "getAVOperandEncoding";
-}
+  : AVOperand<regClass, "decodeAVLdSt", width>;
 
 def AVLdSt_32 : AVLdStOperand<AV_32, "OPW32">;
 def AVLdSt_64 : AVLdStOperand<AV_64, "OPW64">;
