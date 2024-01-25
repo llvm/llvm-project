@@ -1,3 +1,11 @@
+//===- VectorLegalization.cpp - Legalize vectors for lowering to ArmSME ---===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
@@ -19,6 +27,14 @@ using namespace mlir::arm_sme;
 
 namespace {
 
+// Common match failure reasons.
+static constexpr StringLiteral MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE(
+    "op vector size is not multiple of SME tiles");
+static constexpr StringLiteral MATCH_FAILURE_UNSUPPORTED_MASK_OP(
+    "op mask is unsupported for legalization/decomposition");
+static constexpr StringLiteral
+    MATCH_FAILURE_NON_PERMUTATION_MAP("op affine map is not a permutation");
+
 struct SMETile {
   // Note: The units of (row, col) are vscale (as SME tiles are scalable).
   int row{0};
@@ -26,8 +42,9 @@ struct SMETile {
   VectorType type;
 };
 
-/// Adds a constant scalable offset to `indices`. i.e. for 2D:
-/// { indices[0] + offset[0] * vscale, indices[1] + offset[1] * vscale }
+/// Adds a constant scalable offset to `indices` (which are of equal length).
+/// For example, in the 2D case this would return:
+// { indices[0] + offset[0] * vscale, indices[1] + offset[1] *  vscale }
 SmallVector<Value, 2> addConstantScalableOffset(OpBuilder &builder,
                                                 Location loc,
                                                 ValueRange indices,
@@ -42,8 +59,20 @@ SmallVector<Value, 2> addConstantScalableOffset(OpBuilder &builder,
       });
 }
 
-/// Remaps indices (e.g. from a load/store) for a larger vector type to indices
-/// for one of the SME tiles it will decompose into.
+/// Remaps `indices` (e.g. from a load/store) for a larger vector type to
+/// indices for one of the SME tiles it will decompose into.
+///
+/// For example, if you were to decompose an 8x8 load into four 4x4 tiles, the
+/// indices for each tile would need to be remapped as follows:
+///
+/// initial indices = [a,b], inital size = 8x8, target size = 4x4
+/// ┌─────────────┬─────────────┐
+/// │[a,b]        │[a,b+4]      │
+/// │             │             │
+/// ├─────────────┼─────────────┤
+/// │[a+4,b]      │[a+4,b+4]    │
+/// │             │             │
+/// └─────────────┴─────────────┘
 SmallVector<Value, 2> remapIndicesForSMETile(OpBuilder &builder, Location loc,
                                              ValueRange indices,
                                              SMETile tileTile) {
@@ -64,7 +93,7 @@ Value extractSMEMask(OpBuilder &builder, Location loc, Value mask,
   if (!mask)
     return Value{};
   auto createMask = mask.getDefiningOp<vector::CreateMaskOp>();
-  // The the operands of `vector.create_mask` (from a 2D perspective) are the
+  // The operands of `vector.create_mask` (from a 2D perspective) are the
   // coordinates where the mask ends. So we subtract where this tile starts,
   // from the mask operands to get the parameters for this tile tile.
   auto tileMaskDims = addConstantScalableOffset(
@@ -75,7 +104,9 @@ Value extractSMEMask(OpBuilder &builder, Location loc, Value mask,
 }
 
 /// Constructs an iterator that returns each SME tile (with coordinates)
-/// contained within a VectorType.
+/// contained within a VectorType. For example, if decomposing an [8]x[8] into
+/// [4]x[4] tiles, the iterator would yield the tiles: (0, 0), (0, 4), (4, 0),
+/// (4, 4).
 auto decomposeToSMETiles(OpBuilder &builder, VectorType type,
                          VectorType smeTileType,
                          bool transposeIndices = false) {
@@ -92,7 +123,8 @@ auto decomposeToSMETiles(OpBuilder &builder, VectorType type,
       });
 }
 
-/// Returns the number of SME tiles that fit into the a vector type.
+/// Returns the number of SME tiles that fit into the (2D-scalable) vector type
+/// `type`.
 int getNumberOfSMETilesForVectorType(VectorType type) {
   assert(isMultipleOfSMETileVectorType(type));
   int64_t vectorRows = type.getDimSize(0);
@@ -102,8 +134,9 @@ int getNumberOfSMETilesForVectorType(VectorType type) {
   return (vectorRows * vectorCols) / (minNumElts * minNumElts);
 }
 
-/// Legalize `vector.outerproduct` operations to fit within SME tiles.
-struct LegalizeVectorOuterProductOp
+/// Legalize `vector.outerproduct` operations to fit within SME tiles by
+/// decomposing them into tile-sized operations.
+struct LegalizeVectorOuterProductOpsByDecomposition
     : public OneToNOpConversionPattern<vector::OuterProductOp> {
   using OneToNOpConversionPattern::OneToNOpConversionPattern;
 
@@ -112,7 +145,8 @@ struct LegalizeVectorOuterProductOp
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = outerProductOp.getResultVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          outerProductOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
 
     Value mask;
     Operation *rootOp = outerProductOp;
@@ -124,7 +158,8 @@ struct LegalizeVectorOuterProductOp
     }
 
     if (!isSupportedMaskOp(mask))
-      return failure();
+      return rewriter.notifyMatchFailure(outerProductOp,
+                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
 
     ValueRange accSMETiles = adaptor.getAcc();
     auto tileType = getSMETileTypeForElement(vectorType.getElementType());
@@ -159,7 +194,7 @@ struct LegalizeVectorOuterProductOp
 // conversion adding target materializations in the `vector.mask` region
 // (invalid). This pattern matches on `vector.mask` then calls into the
 // `vector.outerproduct` pattern to work around this issue.
-struct LegalizeMaskedVectorOuterProductOp
+struct LegalizeMaskedVectorOuterProductOpsByDecomposition
     : public OneToNOpConversionPattern<vector::MaskOp> {
   using OneToNOpConversionPattern::OneToNOpConversionPattern;
 
@@ -168,7 +203,8 @@ struct LegalizeMaskedVectorOuterProductOp
                   OneToNPatternRewriter &rewriter) const override {
     if (auto outerProductOp =
             llvm::dyn_cast<vector::OuterProductOp>(maskOp.getMaskableOp())) {
-      LegalizeVectorOuterProductOp pattern(*getTypeConverter(), getContext());
+      LegalizeVectorOuterProductOpsByDecomposition pattern(*getTypeConverter(),
+                                                           getContext());
       return static_cast<RewritePattern &>(pattern).matchAndRewrite(
           outerProductOp, rewriter);
     }
@@ -176,8 +212,9 @@ struct LegalizeMaskedVectorOuterProductOp
   }
 };
 
-/// Legalize `vector.transfer_read` operations to fit within SME tiles.
-struct LegalizeTransferReadOp
+/// Legalize `vector.transfer_read` operations to fit within SME tiles by
+/// decomposing them into tile-sized operations.
+struct LegalizeTransferReadOpsByDecomposition
     : public OneToNOpConversionPattern<vector::TransferReadOp> {
   using OneToNOpConversionPattern::OneToNOpConversionPattern;
 
@@ -186,15 +223,18 @@ struct LegalizeTransferReadOp
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = readOp.getVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          readOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
 
     auto mask = readOp.getMask();
     if (!isSupportedMaskOp(mask))
-      return failure();
+      return rewriter.notifyMatchFailure(readOp,
+                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
 
     auto permutationMap = readOp.getPermutationMap();
     if (!permutationMap.isPermutation())
-      return failure();
+      return rewriter.notifyMatchFailure(readOp,
+                                         MATCH_FAILURE_NON_PERMUTATION_MAP);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
     // tranpose [1, 0].
@@ -220,8 +260,9 @@ struct LegalizeTransferReadOp
   }
 };
 
-/// Legalize `vector.transfer_write` operations to fit within SME tiles.
-struct LegalizeTransferWriteOp
+/// Legalize `vector.transfer_write` operations to fit within SME tiles by
+/// decomposing them into tile-sized operations.
+struct LegalizeTransferWriteOpsByDecomposition
     : public OneToNOpConversionPattern<vector::TransferWriteOp> {
   using OneToNOpConversionPattern::OneToNOpConversionPattern;
 
@@ -230,15 +271,18 @@ struct LegalizeTransferWriteOp
                   OneToNPatternRewriter &rewriter) const override {
     auto vectorType = writeOp.getVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          writeOp, MATCH_FAILURE_NOT_SME_TILE_TYPE_MULTIPLE);
 
     auto mask = writeOp.getMask();
     if (!isSupportedMaskOp(mask))
-      return failure();
+      return rewriter.notifyMatchFailure(writeOp,
+                                         MATCH_FAILURE_UNSUPPORTED_MASK_OP);
 
     auto permutationMap = writeOp.getPermutationMap();
     if (!permutationMap.isPermutation())
-      return failure();
+      return rewriter.notifyMatchFailure(writeOp,
+                                         MATCH_FAILURE_NON_PERMUTATION_MAP);
 
     // Note: For 2D vector types the only non-identity permutation is a simple
     // tranpose [1, 0].
@@ -289,9 +333,11 @@ struct VectorLegalizationPass
         });
 
     // Note: High benefit to ensure masked outer products are lowered first.
-    patterns.add<LegalizeMaskedVectorOuterProductOp>(converter, context, 1024);
-    patterns.add<LegalizeVectorOuterProductOp, LegalizeTransferReadOp,
-                 LegalizeTransferWriteOp>(converter, context);
+    patterns.add<LegalizeMaskedVectorOuterProductOpsByDecomposition>(
+        converter, context, 1024);
+    patterns.add<LegalizeVectorOuterProductOpsByDecomposition,
+                 LegalizeTransferReadOpsByDecomposition,
+                 LegalizeTransferWriteOpsByDecomposition>(converter, context);
     populateFuncTypeConversionPatterns(converter, patterns);
     scf::populateSCFStructuralOneToNTypeConversions(converter, patterns);
 

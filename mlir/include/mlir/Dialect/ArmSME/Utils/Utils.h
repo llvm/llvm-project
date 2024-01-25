@@ -56,8 +56,8 @@ scf::ForOp createLoopOverTileSlices(
     PatternRewriter &rewriter, Location loc, Value initTile,
     std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody);
 
-/// Returns true if `vType` is a multiple of an SME tile size. Note returns
-/// false if the `vType` exactly matches the size of an SME tile.
+/// Returns true if `vType` is a multiple of an SME tile size. Returns false if
+/// the `vType` exactly matches the size of an SME tile.
 bool isMultipleOfSMETileVectorType(VectorType vType);
 
 /// Creates a vector type for the SME tile of `elementType`.
