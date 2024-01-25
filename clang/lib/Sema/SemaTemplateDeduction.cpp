@@ -4398,8 +4398,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
           PackScope.nextPackElement();
         }
       } else if (!IsTrailingPack && !PackScope.isPartiallyExpanded() &&
-                 PackScope.isDeducedFromEarlierParameter() &&
-                 !isa<PackExpansionType>(ParamTypes[ParamIdx + 1])) {
+                 PackScope.isDeducedFromEarlierParameter()) {
         // [temp.deduct.general#3]
         // When all template arguments have been deduced
         // or obtained from default template arguments, all uses of template
