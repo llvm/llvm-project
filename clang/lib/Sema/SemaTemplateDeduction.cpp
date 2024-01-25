@@ -866,7 +866,7 @@ public:
       return {};
     unsigned PackSize = Packs[0].Saved.pack_size();
 
-    if (std::all_of(Packs.begin() + 1, Packs.end(), [&PackSize](auto P) {
+    if (std::all_of(Packs.begin() + 1, Packs.end(), [&PackSize](const auto &P) {
           return P.Saved.getKind() == TemplateArgument::Pack &&
                  P.Saved.pack_size() == PackSize;
         }))
