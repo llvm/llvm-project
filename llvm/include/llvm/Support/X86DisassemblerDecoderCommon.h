@@ -140,9 +140,7 @@ enum attributeBits {
   ENUM_ENTRY(IC_EVEX, 1, "requires an EVEX prefix")                            \
   ENUM_ENTRY(IC_EVEX_NF, 2, "requires EVEX and NF prefix")                     \
   ENUM_ENTRY(IC_EVEX_XS, 2, "requires EVEX and the XS prefix")                 \
-  ENUM_ENTRY(IC_EVEX_XS_ADSIZE, 3, "requires EVEX, XS and the ADSIZE prefix")  \
   ENUM_ENTRY(IC_EVEX_XD, 2, "requires EVEX and the XD prefix")                 \
-  ENUM_ENTRY(IC_EVEX_XD_ADSIZE, 3, "requires EVEX, XD and the ADSIZE prefix")  \
   ENUM_ENTRY(IC_EVEX_OPSIZE, 2, "requires EVEX and the OpSize prefix")         \
   ENUM_ENTRY(IC_EVEX_OPSIZE_NF, 3, "requires EVEX, NF and the OpSize prefix")  \
   ENUM_ENTRY(IC_EVEX_OPSIZE_ADSIZE, 3,                                         \

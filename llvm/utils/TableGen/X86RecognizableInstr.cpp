@@ -188,7 +188,6 @@ void RecognizableInstr::processInstr(DisassemblerTables &tables,
 
 #define EVEX_NF(n) (HasEVEX_NF ? n##_NF : n)
 #define EVEX_B_NF(n) (HasEVEX_B ? EVEX_NF(n##_B) : EVEX_NF(n))
-#define EVEX_KB_ADSIZE(n) AdSize == X86Local::AdSize32 ? n##_ADSIZE : EVEX_KB(n)
 
 InstructionContext RecognizableInstr::insnContext() const {
   InstructionContext insnContext;
@@ -278,11 +277,14 @@ InstructionContext RecognizableInstr::insnContext() const {
     }
     // No L, no W
     else if (OpPrefix == X86Local::PD) {
-      insnContext = EVEX_KB_ADSIZE(IC_EVEX_OPSIZE);
+      if (AdSize == X86Local::AdSize32)
+        insnContext = IC_EVEX_OPSIZE_ADSIZE;
+      else
+        insnContext = EVEX_KB(IC_EVEX_OPSIZE);
     } else if (OpPrefix == X86Local::XD)
-      insnContext = EVEX_KB_ADSIZE(IC_EVEX_XD);
+      insnContext = EVEX_KB(IC_EVEX_XD);
     else if (OpPrefix == X86Local::XS)
-      insnContext = EVEX_KB_ADSIZE(IC_EVEX_XS);
+      insnContext = EVEX_KB(IC_EVEX_XS);
     else if (OpPrefix == X86Local::PS)
       insnContext = EVEX_KB(IC_EVEX);
     else {

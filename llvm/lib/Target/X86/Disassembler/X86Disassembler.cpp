@@ -941,9 +941,6 @@ static bool readOpcode(struct InternalInstruction *insn) {
     case VEX_LOB_MAP6:
       insn->opcodeType = MAP6;
       return consume(insn, insn->opcode);
-    case VEX_LOB_MAP7:
-      insn->opcodeType = MAP7;
-      return consume(insn, insn->opcode);
     }
   } else if (insn->vectorExtensionType == TYPE_VEX_3B) {
     switch (mmmmmFromVEX2of3(insn->vectorExtensionPrefix[1])) {
