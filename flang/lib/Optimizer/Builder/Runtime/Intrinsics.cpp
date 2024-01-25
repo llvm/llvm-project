@@ -245,45 +245,12 @@ void fir::runtime::genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value number, mlir::Value handler,
                              mlir::Value status) {
   assert(mlir::isa<mlir::IntegerType>(number.getType()));
-  if (status)
-    assert(mlir::isa<mlir::IntegerType>(fir::unwrapRefType(status.getType())));
   mlir::Type int64 = builder.getIntegerType(64);
   number = builder.create<fir::ConvertOp>(loc, int64, number);
 
-  // we can return like a function or via the status argument
-  auto returnStatus = [&](mlir::Value stat) -> mlir::Value {
-    if (status) {
-      // status might be dynamically optional, so test if it is present
-      mlir::Value isPresent =
-          builder.create<IsPresentOp>(loc, builder.getI1Type(), status);
-      builder.genIfOp(loc, /*results=*/{}, isPresent, /*withElseRegion=*/false)
-          .genThen([&]() {
-            stat = builder.create<fir::ConvertOp>(
-                loc, fir::unwrapRefType(status.getType()), stat);
-            builder.create<fir::StoreOp>(loc, stat, status);
-          })
-          .end();
-    }
-    return {};
-  };
-
   mlir::Type handlerUnwrappedTy = fir::unwrapRefType(handler.getType());
   if (mlir::isa_and_nonnull<mlir::IntegerType>(handlerUnwrappedTy)) {
-#if _WIN32
-    // The windows documentation doesn't mention any support for passing
-    // SIG_DFL or SIG_IGN as integer arguments, so just return an error.
-
-    // reinterpret cast: the GNU extension is defined with STATUS as an integer
-    // but on Windows SIG_ERR is a void *
-    const std::int64_t sigErrVal =
-        static_cast<std::int64_t>(reinterpret_cast<std::uintptr_t>(SIG_ERR));
-    mlir::Value sigErr = builder.createIntegerConstant(loc, int64, sigErrVal);
-    returnStatus(sigErr);
-    errno = EINVAL;
-    return;
-#endif // _WIN32
-    // else just pass the integer as a function pointer like one would to
-    // signal(2)
+    // pass the integer as a function pointer like one would to signal(2)
     handler = builder.create<fir::LoadOp>(loc, handler);
     mlir::Type fnPtrTy = fir::LLVMPointerType::get(
         mlir::FunctionType::get(handler.getContext(), {}, {}));
@@ -298,7 +265,21 @@ void fir::runtime::genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value stat =
       builder.create<fir::CallOp>(loc, func, mlir::ValueRange{number, handler})
           ->getResult(0);
-  returnStatus(stat);
+
+  // return status code via status argument (if present)
+  if (status) {
+    assert(mlir::isa<mlir::IntegerType>(fir::unwrapRefType(status.getType())));
+    // status might be dynamically optional, so test if it is present
+    mlir::Value isPresent =
+        builder.create<IsPresentOp>(loc, builder.getI1Type(), status);
+    builder.genIfOp(loc, /*results=*/{}, isPresent, /*withElseRegion=*/false)
+        .genThen([&]() {
+          stat = builder.create<fir::ConvertOp>(
+              loc, fir::unwrapRefType(status.getType()), stat);
+          builder.create<fir::StoreOp>(loc, stat, status);
+        })
+        .end();
+  }
 }
 
 void fir::runtime::genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
