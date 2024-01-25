@@ -75,6 +75,7 @@ static_library("CodeGen") {
     "FaultMaps.cpp",
     "FinalizeISel.cpp",
     "FixupStatepointCallerSaved.cpp",
+    "FreeMachineFunction.cpp",
     "FuncletLayout.cpp",
     "GCEmptyBasicBlocks.cpp",
     "GCMetadata.cpp",

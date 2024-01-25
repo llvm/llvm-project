@@ -210,6 +210,7 @@ libc_support_library(
     deps = [
         "__support_cpp_type_traits",
         "__support_macros_attributes",
+        ":llvm_libc_macros_limits_macros",
     ],
 )
 
@@ -953,6 +954,11 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
     ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
 )
 
 ############################### errno targets ################################
