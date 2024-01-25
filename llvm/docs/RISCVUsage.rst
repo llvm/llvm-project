@@ -210,7 +210,7 @@ Supported
 
 .. _riscv-i2p1-note:
 
-``zicntr``, ``zicsr``, ``zifencei``, ``zihpm``
+``Zicntr``, ``Zicsr``, ``Zifencei``, ``Zihpm``
   Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is partially described in "Preface to Document Version 20190608-Base-Ratified" from the specification document (the ``zicntr`` and ``zihpm`` bits are not mentioned).  LLVM currently implements version 2.1 of the base specification. To maintain compatibility, instructions from these extensions are accepted without being in the ``-march`` string.  LLVM also allows the explicit specification of the extensions in an ``-march`` string.
 
 .. _riscv-profiles-extensions-note:
