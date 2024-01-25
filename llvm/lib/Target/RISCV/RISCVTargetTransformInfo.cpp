@@ -937,10 +937,10 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Ty->getElementType()->isIntegerTy(1)) {
-    // InstCombine does following transform:
-    // vector_reduce_u{min,max}(<n x i1>) --> vector_reduce_{and,or}(<n x i1>)
-    // vector_reduce_s{min,max}(<n x i1>) --> vector_reduce_{or,and}(<n x i1>)
-    if ((IID == Intrinsic::umax) || (IID == Intrinsic::smin))
+    // SelectionDAGBuilder does following transforms:
+    //   vector_reduce_{smin,umax}(<n x i1>) --> vector_reduce_or(<n x i1>)
+    //   vector_reduce_{smax,umin}(<n x i1>) --> vector_reduce_and(<n x i1>)
+    if (IID == Intrinsic::umax || IID == Intrinsic::smin)
       return getArithmeticReductionCost(Instruction::Or, Ty, FMF, CostKind);
     else
       return getArithmeticReductionCost(Instruction::And, Ty, FMF, CostKind);
