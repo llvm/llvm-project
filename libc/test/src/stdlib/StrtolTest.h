@@ -12,7 +12,6 @@
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 using LIBC_NAMESPACE::cpp::is_signed_v;
