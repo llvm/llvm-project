@@ -375,6 +375,7 @@ public:
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
   RT_API_ATTRS int Allocate();
+  RT_API_ATTRS void SetByteStrides();
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.
