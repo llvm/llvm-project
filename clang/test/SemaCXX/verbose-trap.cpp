@@ -10,6 +10,7 @@ char const constMsg3[] = "hello";
 
 template <const char * const str>
 void f(const char * arg) {
+  __builtin_verbose_trap("Arbitrary string literals can be used!");
   __builtin_verbose_trap("Argument_must_not_be_null");
   __builtin_verbose_trap("hello" "world");
   __builtin_verbose_trap(constMsg1);

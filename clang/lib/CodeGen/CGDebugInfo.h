@@ -346,13 +346,13 @@ class CGDebugInfo {
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
-  // A cache that maps fake function names used for __builtin_verbose_trap to
-  // subprograms.
-  std::map<std::string, llvm::DISubprogram *> FakeFuncMap;
+  // A cache that maps artificial inlined function names used for
+  // __builtin_verbose_trap to subprograms.
+  std::map<std::string, llvm::DISubprogram *> InlinedTrapFuncMap;
 
-  // A function that returns the subprogram corresponding to the fake function
-  // name.
-  llvm::DISubprogram *getFakeFuncSubprogram(const std::string &FakeFuncName);
+  // A function that returns the subprogram corresponding to the artificial
+  // inlined function for traps.
+  llvm::DISubprogram *createInlinedTrapSubprogram(const std::string &FuncName);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -610,8 +610,8 @@ public:
     return CoroutineParameterMappings;
   }
 
-  // Create a debug location from `TrapLocation` that adds a fake
-  // inline frame where the frame name is
+  // Create a debug location from `TrapLocation` that adds an artificial inline
+  // frame where the frame name is
   //
   // * `<Prefix>: <FailureMsg>` if `<FailureMsg>` is not empty.
   // * `<Prefix>` if `<FailureMsg>` is empty. Note `<Prefix>` must

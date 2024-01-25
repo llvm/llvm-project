@@ -3483,9 +3483,9 @@ debugger is attached or in a symbolicated crash log.
 **Description**
 
 ``__builtin_verbose_trap`` is lowered to the ` ``llvm.trap`` <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>`_ builtin.
-Additionally, clang emits debug metadata that represents an artificial inline
-frame whose name encodes the string passed to the builtin, prefixed by a "magic"
-prefix.
+Additionally, clang emits debugging information that represents an artificial
+inline frame whose name encodes the string passed to the builtin, prefixed by a
+"magic" prefix.
 
 For example, consider the following code:
 
@@ -3493,27 +3493,30 @@ For example, consider the following code:
 
     void foo(int* p) {
       if (p == nullptr)
-        __builtin_verbose_trap("Argument_must_not_be_null");
+        __builtin_verbose_trap("Argument must not be null!");
     }
 
-The debug metadata would look as if it were produced for the following code:
+The debugging information would look as if it were produced for the following code:
 
 .. code-block:: c++
 
     __attribute__((always_inline))
-    inline void "__llvm_verbose_trap: Argument_must_not_be_null"() {
+    inline void "__llvm_verbose_trap: Argument must not be null!"() {
       __builtin_trap();
     }
 
     void foo(int* p) {
       if (p == nullptr)
-        "__llvm_verbose_trap: Argument_must_not_be_null"();
+        "__llvm_verbose_trap: Argument must not be null!"();
     }
 
 However, the LLVM IR would not actually contain a call to the artificial
 function — it only exists in the debug metadata.
 
-Query for this feature with ``__has_builtin(__builtin_verbose_trap)``.
+Query for this feature with ``__has_builtin(__builtin_verbose_trap)``. Note that
+users need to enable debug information to enable this feature. A call to this
+builtin is equivalent to a call to ``__builtin_trap`` if debug information isn't
+enabled.
 
 ``__builtin_allow_runtime_check``
 ---------------------------------
