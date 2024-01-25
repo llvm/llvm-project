@@ -10294,6 +10294,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_relaxed:
     C = new (Context) OMPRelaxedClause();
     break;
+  case llvm::omp::OMPC_weak:
+    C = new (Context) OMPWeakClause();
+    break;
   case llvm::omp::OMPC_threads:
     C = new (Context) OMPThreadsClause();
     break;
@@ -10691,6 +10694,8 @@ void OMPClauseReader::VisitOMPAcquireClause(OMPAcquireClause *) {}
 void OMPClauseReader::VisitOMPReleaseClause(OMPReleaseClause *) {}
 
 void OMPClauseReader::VisitOMPRelaxedClause(OMPRelaxedClause *) {}
+
+void OMPClauseReader::VisitOMPWeakClause(OMPWeakClause *) {}
 
 void OMPClauseReader::VisitOMPThreadsClause(OMPThreadsClause *) {}
 
