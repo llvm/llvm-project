@@ -1977,6 +1977,28 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ASTNode &);
 } // namespace clang
 
 namespace llvm {
+
+template <> struct DenseMapInfo<clang::clangd::Range> {
+  using Range = clang::clangd::Range;
+  static inline Range getEmptyKey() {
+    static clang::clangd::Position Tomb{-1, -1};
+    static Range R{Tomb, Tomb};
+    return R;
+  }
+  static inline Range getTombstoneKey() {
+    static clang::clangd::Position Tomb{-2, -2};
+    static Range R{Tomb, Tomb};
+    return R;
+  }
+  static unsigned getHashValue(const Range &Val) {
+    return llvm::hash_combine(
+        Val.start.line, Val.start.character, Val.end.line, Val.end.character);
+  }
+  static bool isEqual(const Range &LHS, const Range &RHS) {
+    return std::tie(LHS.start, LHS.end) == std::tie(RHS.start, RHS.end);
+  }
+};
+
 template <> struct format_provider<clang::clangd::Position> {
   static void format(const clang::clangd::Position &Pos, raw_ostream &OS,
                      StringRef Style) {

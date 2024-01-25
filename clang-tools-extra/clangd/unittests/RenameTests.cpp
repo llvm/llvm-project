@@ -103,6 +103,13 @@ std::string expectedResult(Annotations Test, llvm::StringRef NewName) {
   return Result;
 }
 
+std::vector<SymbolRange> symbolRanges(llvm::ArrayRef<Range> Ranges) {
+  std::vector<SymbolRange> Result;
+  for (const auto &R : Ranges)
+    Result.emplace_back(R);
+  return Result;
+}
+
 TEST(RenameTest, WithinFileRename) {
   // For each "^" this test moves cursor to its location and applies renaming
   // while checking that all identifiers in [[]] ranges are also renamed.

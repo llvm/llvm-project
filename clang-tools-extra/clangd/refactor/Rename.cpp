@@ -38,11 +38,6 @@
 
 namespace clang {
 namespace clangd {
-
-std::vector<SymbolRange> collectRenameIdentifierRanges(
-    llvm::StringRef Identifier, llvm::StringRef Content,
-    const LangOptions &LangOpts, std::optional<Selector> Selector);
-
 namespace {
 
 std::optional<std::string> filePath(const SymbolLocation &Loc,
@@ -227,6 +222,11 @@ std::optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
         return ReasonToReject::UnsupportedSymbol;
     }
   }
+  // We allow renaming ObjC methods although they don't have a simple
+  // identifier.
+  const auto *ID = RenameDecl.getIdentifier();
+  if (!ID && !isa<ObjCMethodDecl>(&RenameDecl))
+    return ReasonToReject::UnsupportedSymbol;
   // Filter out symbols that are unsupported in both rename modes.
   if (llvm::isa<NamespaceDecl>(&RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
@@ -521,13 +521,34 @@ static bool mayBeValidIdentifier(llvm::StringRef Ident, bool AllowColon) {
   return true;
 }
 
+std::string getName(const NamedDecl &RenameDecl) {
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl))
+    return MD->getSelector().getAsString();
+  if (const auto *ID = RenameDecl.getIdentifier())
+    return ID->getName().str();
+  return "";
+}
+
 // Check if we can rename the given RenameDecl into NewName.
 // Return details if the rename would produce a conflict.
-std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
-                                     llvm::StringRef NewName) {
+std::optional<llvm::Error> checkName(const NamedDecl &RenameDecl,
+                                     llvm::StringRef NewName,
+                                     llvm::StringRef OldName) {
   trace::Span Tracer("CheckName");
   static constexpr trace::Metric InvalidNameMetric(
       "rename_name_invalid", trace::Metric::Counter, "invalid_kind");
+
+  if (OldName == NewName)
+    return makeError(ReasonToReject::SameName);
+
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+    const auto Sel = MD->getSelector();
+    if (Sel.getNumArgs() != NewName.count(':') &&
+        NewName != "__clangd_rename_placeholder")
+      return makeError(
+          InvalidName{InvalidName::BadIdentifier, NewName.str()});
+  }
+
   auto &ASTCtx = RenameDecl.getASTContext();
   std::optional<InvalidName> Result;
   if (isKeyword(NewName, ASTCtx.getLangOpts()))
@@ -545,16 +566,218 @@ std::optional<InvalidName> checkName(const NamedDecl &RenameDecl,
             Conflict->getLocation().printToString(ASTCtx.getSourceManager())};
     }
   }
-  if (Result)
+  if (Result) {
     InvalidNameMetric.record(1, toString(Result->K));
-  return Result;
+    return makeError(*Result);
+  }
+  return std::nullopt;
+}
+
+bool isMatchingSelectorName(const syntax::Token &Cur,
+                                   const syntax::Token &Next,
+                                   const SourceManager &SM,
+                                   llvm::StringRef SelectorName) {
+  if (SelectorName.empty())
+    return Cur.kind() == tok::colon;
+  return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
+         Cur.text(SM) == SelectorName &&
+         // We require the selector name and : to be contiguous to avoid
+         // potential conflicts with ternary expression.
+         //
+         // e.g. support `foo:` but not `foo :`.
+         Cur.endLocation() == Next.location();
+}
+
+bool isSelectorLike(const syntax::Token &Cur,
+                           const syntax::Token &Next) {
+  return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
+         // We require the selector name and : to be contiguous.
+         // e.g. support `foo:` but not `foo :`.
+         Cur.endLocation() == Next.location();
+}
+
+bool parseMessageExpression(
+  llvm::ArrayRef<syntax::Token> Tokens, const SourceManager &SM,
+  unsigned Index, unsigned Last,
+  Selector Sel, std::vector<Range> &SelectorPieces) {
+
+  unsigned NumArgs = Sel.getNumArgs();
+  llvm::SmallVector<char, 8> Closes;
+  SelectorPieces.clear();
+  while (Index < Last) {
+    const auto &Tok = Tokens[Index];
+
+    if (Closes.empty()) {
+      auto PieceCount = SelectorPieces.size();
+      if (PieceCount < NumArgs &&
+            isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
+                                   Sel.getNameForSlot(PieceCount))) {
+        // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
+        // token after the name.
+        if (!Sel.getNameForSlot(PieceCount).empty()) {
+          ++Index;
+        }
+        SelectorPieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+        continue;
+      }
+      // If we've found all pieces but the current token looks like another
+      // selector piece, it means the method being renamed is a strict prefix of
+      // the selector we've found - should be skipped.
+      if (SelectorPieces.size() >= NumArgs && isSelectorLike(Tok, Tokens[Index + 1]))
+        return false;
+    }
+
+    switch (Tok.kind()) {
+    case tok::l_square:
+      Closes.push_back(']');
+      break;
+    case tok::l_paren:
+      Closes.push_back(')');
+      break;
+    case tok::l_brace:
+      Closes.push_back('}');
+      break;
+    case tok::r_square:
+      if (Closes.empty())
+        return SelectorPieces.size() == NumArgs;
+
+      if (Closes.back() != ']')
+        return false;
+      Closes.pop_back();
+      break;
+    case tok::r_paren:
+      if (Closes.empty() || Closes.back() != ')')
+        return false;
+      Closes.pop_back();
+      break;
+    case tok::r_brace:
+      if (Closes.empty() || Closes.back() != '}')
+        return false;
+      Closes.pop_back();
+      break;
+    case tok::semi:
+      // top level ; ends all statements.
+      if (Closes.empty())
+        return false;
+      break;
+    default:
+      break;
+    }
+
+    ++Index;
+  }
+  return false;
+}
+
+/// Collects all ranges of the given identifier/selector in the source code.
+///
+/// If a selector is given, this does a full lex of the given source code in
+/// order to identify all selector fragments (e.g. in method exprs/decls) since
+/// they are non-contiguous.
+std::vector<SymbolRange> collectRenameIdentifierRanges(
+    llvm::StringRef Identifier, llvm::StringRef Content,
+    const LangOptions &LangOpts, std::optional<Selector> Selector) {
+  std::vector<SymbolRange> Ranges;
+  if (!Selector) {
+    auto IdentifierRanges = collectIdentifierRanges(Identifier, Content, LangOpts);
+    for (const auto &R : IdentifierRanges)
+      Ranges.emplace_back(R);
+    return Ranges;
+  }
+  // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
+  std::string NullTerminatedCode = Content.str();
+  SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
+  auto &SM = FileSM.get();
+
+  // We track parens and braces to ensure that we don't accidentally try parsing
+  // a method declaration or definition which isn't at the top level or similar
+  // looking expressions (e.g. an @selector() expression).
+  unsigned ParenCount = 0;
+  unsigned BraceCount = 0;
+  unsigned NumArgs = Selector->getNumArgs();
+
+  std::vector<Range> SelectorPieces;
+  auto Tokens = syntax::tokenize(SM.getMainFileID(), SM, LangOpts);
+  unsigned Last = Tokens.size() - 1;
+  for (unsigned Index = 0; Index < Last; ++Index) {
+    const auto &Tok = Tokens[Index];
+
+    if (BraceCount == 0 && ParenCount == 0) {
+      auto PieceCount = SelectorPieces.size();
+      if (PieceCount < NumArgs &&
+            isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
+                                   Selector->getNameForSlot(PieceCount))) {
+        // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
+        // token after the name.
+        if (!Selector->getNameForSlot(PieceCount).empty()) {
+          ++Index;
+        }
+        SelectorPieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+        continue;
+      }
+      // If we've found all pieces, we still need to try to consume more pieces
+      // as it's possible the selector being renamed is a prefix of this method
+      // name.
+      if (PieceCount >= NumArgs && isSelectorLike(Tok, Tokens[Index + 1])) {
+        ++Index;
+        SelectorPieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+        continue;
+      }
+    }
+
+    switch (Tok.kind()) {
+    case tok::l_square:
+      if (parseMessageExpression(Tokens, SM, Index + 1, Last, *Selector, SelectorPieces)) {
+        Ranges.emplace_back(std::move(SelectorPieces));
+        SelectorPieces.clear();
+      }
+      break;
+    case tok::l_paren:
+      ParenCount++;
+      break;
+    case tok::r_paren:
+      if (ParenCount > 0) {
+        --ParenCount;
+      }
+      break;
+    case tok::r_brace:
+      if (BraceCount > 0) {
+        --BraceCount;
+      }
+      break;
+    case tok::l_brace:
+      // At the top level scope we should only have method defs.
+      if (BraceCount == 0 && ParenCount == 0) {
+        // All the selector pieces in the method def have been found.
+        if (SelectorPieces.size() == NumArgs) {
+          Ranges.emplace_back(std::move(SelectorPieces));
+        }
+        SelectorPieces.clear();
+      }
+      ++BraceCount;
+      break;
+    case tok::semi:
+      // At the top level scope we should only have method decls.
+      if (BraceCount == 0 && ParenCount == 0) {
+        // All the selector pieces in the method decl have been found.
+        if (SelectorPieces.size() == NumArgs) {
+          Ranges.emplace_back(std::move(SelectorPieces));
+        }
+        SelectorPieces.clear();
+      }
+      break;
+    default:
+      break;
+    }
+  }
+  return Ranges;
 }
 
 clangd::Range tokenRangeForLoc(ParsedAST &AST, SourceLocation TokLoc,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
   const auto *Token = AST.getTokens().spelledTokenAt(TokLoc);
-  assert(Token && "got inclusion at wrong offset");
+  assert(Token && "rename expects spelled tokens");
   clangd::Range Result;
   Result.start = sourceLocToPosition(SM, Token->location());
   Result.end = sourceLocToPosition(SM, Token->endLocation());
@@ -566,18 +789,16 @@ clangd::Range tokenRangeForLoc(ParsedAST &AST, SourceLocation TokLoc,
 llvm::Expected<tooling::Replacements>
 renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
                            llvm::StringRef NewName,
-                           std::vector<SourceLocation> Locs) {
+                           std::vector<SourceLocation> SelectorOccurences) {
   const SourceManager &SM = AST.getSourceManager();
   auto Code = SM.getBufferData(SM.getMainFileID());
   auto RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
   llvm::SmallVector<llvm::StringRef, 8> NewNames;
   NewName.split(NewNames, ":");
-  if (NewNames.empty())
-    NewNames.push_back(NewName);
 
   std::vector<Range> Ranges;
   const auto &LangOpts = MD->getASTContext().getLangOpts();
-  for (const auto &Loc : Locs)
+  for (const auto &Loc : SelectorOccurences)
     Ranges.push_back(tokenRangeForLoc(AST, Loc, SM, LangOpts));
   auto FilePath = AST.tuPath();
   auto RenameRanges = collectRenameIdentifierRanges(
@@ -740,12 +961,9 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
       if (MD->getSelector().getNumArgs() > 1) {
         RenameIdentifier = MD->getSelector().getNameForSlot(0).str();
         Selector = MD->getSelector();
-        NewName.split(NewNames, ":");
       }
     }
-    if (NewNames.empty()) {
-      NewNames.push_back(NewName);
-    }
+    NewName.split(NewNames, ":");
 
     auto AffectedFileCode = (*ExpBuffer)->getBuffer();
     auto RenameRanges =
@@ -829,13 +1047,6 @@ bool operator<(const SymbolRange &LHS, const SymbolRange &RHS) {
   return LHS.range() < RHS.range();
 }
 
-std::vector<SymbolRange> symbolRanges(const std::vector<Range> Ranges) {
-  std::vector<SymbolRange> Result;
-  for (const auto &R : Ranges)
-    Result.emplace_back(R);
-  return Result;
-}
-
 llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   assert(!RInputs.Index == !RInputs.FS &&
          "Index and FS must either both be specified or both null.");
@@ -868,47 +1079,12 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
-  std::string Placeholder;
-  // We expect the token under the cursor to be changed unless the user is
-  // renaming an Objective-C selector with multiple pieces and only renames
-  // some of the selector piece(s).
-  bool RenamingCurToken = true;
+
   const auto &RenameDecl = **DeclsUnderCursor.begin();
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
-    const auto Sel = MD->getSelector();
-    if (Sel.getAsString() == RInputs.NewName)
-      return makeError(ReasonToReject::SameName);
-    if (Sel.getNumArgs() != RInputs.NewName.count(':') &&
-        RInputs.NewName != "__clangd_rename_placeholder")
-      return makeError(
-          InvalidName{InvalidName::BadIdentifier, RInputs.NewName.str()});
-    if (Sel.getNumArgs() > 1)
-      Placeholder = Sel.getAsString();
-
-    // See if the token under the cursor should actually be renamed.
-    if (RInputs.NewName != "__clangd_rename_placeholder") {
-      llvm::StringRef NewName = RInputs.NewName;
-      llvm::SmallVector<llvm::StringRef, 8> NewNames;
-      NewName.split(NewNames, ":");
-
-      unsigned NumSelectorLocs = MD->getNumSelectorLocs();
-      for (unsigned I = 0; I < NumSelectorLocs; ++I) {
-        if (MD->getSelectorLoc(I) == IdentifierToken->location()) {
-          RenamingCurToken = Sel.getNameForSlot(I) != NewNames[I];
-          break;
-        }
-      }
-    }
-  } else {
-    const auto *ID = RenameDecl.getIdentifier();
-    if (!ID)
-      return makeError(ReasonToReject::UnsupportedSymbol);
-    if (ID->getName() == RInputs.NewName)
-      return makeError(ReasonToReject::SameName);
-  }
-  auto Invalid = checkName(RenameDecl, RInputs.NewName);
+  std::string Placeholder = getName(RenameDecl);
+  auto Invalid = checkName(RenameDecl, RInputs.NewName, Placeholder);
   if (Invalid)
-    return makeError(std::move(*Invalid));
+    return std::move(*Invalid);
 
   auto Reject =
       renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index, Opts);
@@ -928,25 +1104,50 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
 
+  llvm::DenseSet<Range> RenamedRanges;
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+    // TODO: Insert the ranges from the ObjCMethodDecl/ObjCMessageExpr selector
+    // pieces which are being renamed. This will require us to make changes to
+    // locateDeclAt to preserve this AST node.
+    //
+    // if (RInputs.NewName != "__clangd_rename_placeholder") {
+    //   llvm::StringRef NewName = RInputs.NewName;
+    //   llvm::SmallVector<llvm::StringRef, 8> NewNames;
+    //   NewName.split(NewNames, ":");
+
+    //   const auto Sel = MD->getSelector();
+    //   unsigned NumSelectorLocs = MD->getNumSelectorLocs();
+    //   for (unsigned I = 0; I < NumSelectorLocs; ++I) {
+    //     if (Sel.getNameForSlot(I) != NewNames[I]) {
+    //       RenamedRanges.insert(
+    //           tokenRangeForLoc(AST, MD->getSelectorLoc(I), SM, LangOpts));
+    //     }
+    //   }
+    // }
+  } else {
+    RenamedRanges.insert(CurrentIdentifier);
+  }
+
   // Check the rename-triggering location is actually being renamed.
   // This is a robustness check to avoid surprising rename results -- if the
   // the triggering location is not actually the name of the node we identified
   // (e.g. for broken code), then rename is likely not what users expect, so we
   // reject this kind of rename.
-  auto StartOffset = positionToOffset(MainFileCode, CurrentIdentifier.start);
-  auto EndOffset = positionToOffset(MainFileCode, CurrentIdentifier.end);
-  if (!StartOffset)
-    return StartOffset.takeError();
-  if (!EndOffset)
-    return EndOffset.takeError();
-  if (RenamingCurToken &&
-      llvm::none_of(
-          *MainFileRenameEdit,
-          [&StartOffset, &EndOffset](const clang::tooling::Replacement &R) {
-            return R.getOffset() == *StartOffset &&
-                   R.getLength() == *EndOffset - *StartOffset;
-          })) {
-    return makeError(ReasonToReject::NoSymbolFound);
+  for (const auto &Range : RenamedRanges) {
+    auto StartOffset = positionToOffset(MainFileCode, Range.start);
+    auto EndOffset = positionToOffset(MainFileCode, Range.end);
+    if (!StartOffset)
+      return StartOffset.takeError();
+    if (!EndOffset)
+      return EndOffset.takeError();
+    if (llvm::none_of(
+            *MainFileRenameEdit,
+            [&StartOffset, &EndOffset](const clang::tooling::Replacement &R) {
+              return R.getOffset() == *StartOffset &&
+                     R.getLength() == *EndOffset - *StartOffset;
+            })) {
+      return makeError(ReasonToReject::NoSymbolFound);
+    }
   }
   RenameResult Result;
   Result.Target = CurrentIdentifier;
@@ -1170,152 +1371,6 @@ size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed,
     std::tie(LastLine, LastDLine, LastDColumn) = std::tie(Line, DLine, DColumn);
   }
   return Cost;
-}
-
-static bool isMatchingSelectorName(const syntax::Token &Cur,
-                                   const syntax::Token &Next,
-                                   const SourceManager &SM,
-                                   llvm::StringRef SelectorName) {
-  if (SelectorName.empty())
-    return Cur.kind() == tok::colon;
-  return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
-         Cur.text(SM) == SelectorName &&
-         // We require the selector name and : to be contiguous.
-         // e.g. support `foo:` but not `foo :`.
-         Cur.endLocation() == Next.location();
-}
-
-static bool isSelectorLike(const syntax::Token &Cur,
-                           const syntax::Token &Next) {
-  return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
-         // We require the selector name and : to be contiguous.
-         // e.g. support `foo:` but not `foo :`.
-         Cur.endLocation() == Next.location();
-}
-
-static void
-lex(llvm::StringRef Code, const LangOptions &LangOpts,
-    llvm::function_ref<void(const syntax::Token &, const SourceManager &SM)>
-        Action) {
-  // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
-  std::string NullTerminatedCode = Code.str();
-  SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
-  auto &SM = FileSM.get();
-  for (const auto &Tok : syntax::tokenize(SM.getMainFileID(), SM, LangOpts))
-    Action(Tok, SM);
-}
-
-std::vector<SymbolRange> collectRenameIdentifierRanges(
-    llvm::StringRef Identifier, llvm::StringRef Content,
-    const LangOptions &LangOpts, std::optional<Selector> Selector) {
-  std::vector<SymbolRange> Ranges;
-  if (!Selector) {
-    lex(Content, LangOpts,
-        [&](const syntax::Token &Tok, const SourceManager &SM) {
-          if (Tok.kind() != tok::identifier || Tok.text(SM) != Identifier)
-            return;
-          Ranges.emplace_back(
-              halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
-        });
-    return Ranges;
-  }
-  // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
-  std::string NullTerminatedCode = Content.str();
-  SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
-  auto &SM = FileSM.get();
-
-  auto Tokens = syntax::tokenize(SM.getMainFileID(), SM, LangOpts);
-  unsigned Last = Tokens.size() - 1;
-
-  // One parser state for top level and each `[]` pair, can be nested.
-  // Technically we should have a state or recursion for each ()/{} as well,
-  // but since we're expecting well formed code it shouldn't matter in practice.
-  struct ParserState {
-    unsigned ParenCount = 0;
-    unsigned BraceCount = 0;
-    std::vector<Range> Pieces;
-  };
-
-  // We have to track square brackets, parens and braces as we want to skip the
-  // tokens inside them. This ensures that we don't use identical selector
-  // pieces in inner message sends, blocks, lambdas and @selector expressions.
-  std::vector<ParserState> States = {ParserState()};
-  unsigned NumPieces = Selector->getNumArgs();
-
-  for (unsigned Index = 0; Index < Last; ++Index) {
-    auto &State = States.back();
-    auto &Pieces = State.Pieces;
-    const auto &Tok = Tokens[Index];
-    const auto Kind = Tok.kind();
-    auto PieceCount = Pieces.size();
-
-    if (State.ParenCount == 0) {
-      // Check for matches until we find all selector pieces.
-      if (PieceCount < NumPieces &&
-          isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
-                                 Selector->getNameForSlot(PieceCount))) {
-        if (!Selector->getNameForSlot(PieceCount).empty()) {
-          // Skip the ':' after the name. This ensures that it won't match a
-          // follow-up selector piece with an empty name.
-          ++Index;
-        }
-        Pieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
-        continue;
-      }
-      // If we've found all pieces, we still need to try to consume more pieces
-      // as it's possible the selector being renamed is a prefix of this method
-      // name.
-      if (PieceCount >= NumPieces && isSelectorLike(Tok, Tokens[Index + 1])) {
-        ++Index;
-        Pieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
-        continue;
-      }
-    }
-    switch (Kind) {
-    case tok::r_square:
-      if (States.size() > 1) {
-        // All the selector pieces in the method expr have been found.
-        if (Pieces.size() == NumPieces) {
-          Ranges.emplace_back(std::move(Pieces));
-        }
-        States.pop_back();
-      }
-      break;
-    case tok::l_square:
-      States.push_back(ParserState());
-      break;
-    case tok::l_paren:
-      State.ParenCount++;
-      break;
-    case tok::r_paren:
-      if (State.ParenCount > 0) {
-        --State.ParenCount;
-      }
-      break;
-    case tok::r_brace:
-      if (State.BraceCount > 0) {
-        --State.BraceCount;
-      }
-      break;
-    case tok::l_brace:
-      ++State.BraceCount;
-      LLVM_FALLTHROUGH;
-    case tok::semi:
-      // At the top level scope we should only have method decls/defs.
-      if (States.size() == 1) {
-        // All the selector pieces in the method decl/def have been found.
-        if (Pieces.size() == NumPieces) {
-          Ranges.emplace_back(std::move(Pieces));
-        }
-        // ; and { end method decl/defs.
-        Pieces.clear();
-      }
-      break;
-    default:
-      break;
-    }
-  }
-  return Ranges;
 }
 
 } // namespace clangd

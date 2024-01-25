@@ -83,8 +83,6 @@ struct SymbolRange {
   friend bool operator<(const SymbolRange &LHS, const SymbolRange &RHS);
 };
 
-std::vector<SymbolRange> symbolRanges(const std::vector<Range> Ranges);
-
 /// Renames all occurrences of the symbol. The result edits are unformatted.
 /// If AllowCrossFile is false, returns an error if rename a symbol that's used
 /// in another file (per the index).
