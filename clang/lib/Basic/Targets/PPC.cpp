@@ -452,7 +452,7 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
 //   - mma
 //   - power10-vector
 // - if we've explicitly turned on vsx and turned off altivec.
-// - if we've explicitly turned on soft-float and altivec.
+// - if we've explicitly turned off hard-float and turned on altivec.
 // then go ahead and error since the customer has expressed an incompatible
 // set of options.
 static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
