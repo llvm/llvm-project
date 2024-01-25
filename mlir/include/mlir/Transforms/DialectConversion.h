@@ -737,7 +737,7 @@ public:
   using PatternRewriter::cloneRegionBefore;
 
   /// PatternRewriter hook for inserting a new operation.
-  void notifyOperationInserted(Operation *op) override;
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
 
   /// PatternRewriter hook for updating the given operation in-place.
   /// Note: These methods only track updates to the given operation itself,
@@ -761,8 +761,14 @@ public:
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
+  // Hide unsupported pattern rewriter API.
   using OpBuilder::getListener;
   using OpBuilder::setListener;
+
+  void moveOpBefore(Operation *op, Block *block,
+                    Block::iterator iterator) override;
+  void moveOpAfter(Operation *op, Block *block,
+                   Block::iterator iterator) override;
 
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };

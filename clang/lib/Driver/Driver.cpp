@@ -4764,9 +4764,9 @@ Action *Driver::ConstructPhaseAction(
   case phases::Backend: {
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
-      if (Args.hasArg(options::OPT_ffat_lto_objects))
-        Output = Args.hasArg(options::OPT_emit_llvm) ? types::TY_LTO_IR
-                                                     : types::TY_PP_Asm;
+      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+          !Args.hasArg(options::OPT_emit_llvm))
+        Output = types::TY_PP_Asm;
       else if (Args.hasArg(options::OPT_S))
         Output = types::TY_LTO_IR;
       else

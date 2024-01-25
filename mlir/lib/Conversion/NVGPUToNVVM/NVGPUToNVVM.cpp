@@ -1407,7 +1407,7 @@ struct NVGPUWarpgroupMmaOpLowering
       NVVM::WGMMAScaleOutAttr scaleOut = generateScaleOut();
       NVVM::WGMMAScaleInAttr scaleIn = generateScaleIn();
       NVVM::MMALayoutAttr layoutA = generateWgmmaLayout(op.getTransposeA());
-      NVVM::MMALayoutAttr layoutB = generateWgmmaLayout(op.getTransposeB());
+      NVVM::MMALayoutAttr layoutB = generateWgmmaLayout(!op.getTransposeB());
 
       auto overflow = NVVM::MMAIntOverflowAttr::get(
           op->getContext(), NVVM::MMAIntOverflow::wrapped);

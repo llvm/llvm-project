@@ -453,6 +453,17 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DPValue &Value) {
   return OS;
 }
 
+/// Inline helper to return a range of DPValues attached to a marker. It needs
+/// to be inlined as it's frequently called, but also come after the declaration
+/// of DPMarker. Thus: it's pre-declared by users like Instruction, then an
+/// inlineable body defined here.
+inline iterator_range<simple_ilist<DPValue>::iterator>
+getDbgValueRange(DPMarker *DbgMarker) {
+  if (!DbgMarker)
+    return DPMarker::getEmptyDPValueRange();
+  return DbgMarker->getDbgValueRange();
+}
+
 } // namespace llvm
 
 #endif // LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
