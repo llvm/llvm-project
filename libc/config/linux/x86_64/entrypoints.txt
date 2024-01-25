@@ -142,6 +142,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.mincore
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -152,9 +153,6 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
-
-    # sys/socket.h entrypoints
-    libc.src.sys.socket.socket
 
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
@@ -173,6 +171,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
+
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -323,6 +327,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl
@@ -367,6 +374,8 @@ if(LIBC_COMPILER_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.copysignf128
+    libc.src.math.fabsf128
+    libc.src.math.sqrtf128
   )
 endif()
 
@@ -374,6 +383,9 @@ if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
+
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
 
     # dirent.h entrypoints
     libc.src.dirent.closedir
@@ -554,6 +566,10 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
   )
 endif()
 

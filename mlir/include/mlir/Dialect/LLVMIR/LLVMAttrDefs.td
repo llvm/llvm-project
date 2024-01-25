@@ -49,6 +49,15 @@ def LinkageAttr : LLVM_Attr<"Linkage", "linkage"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FramePointerKindAttr
+//===----------------------------------------------------------------------===//
+
+def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
+  let parameters = (ins "framePointerKind::FramePointerKind":$framePointerKind);
+  let assemblyFormat = "`<` $framePointerKind `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // Loop Attributes
 //===----------------------------------------------------------------------===//
 
@@ -216,9 +225,9 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
-    OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses,
     OptionalParameter<"FusedLoc">:$startLoc,
-    OptionalParameter<"FusedLoc">:$endLoc
+    OptionalParameter<"FusedLoc">:$endLoc,
+    OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -333,6 +342,7 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
                                        /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
+    "DistinctAttr":$id,
     LLVM_DILanguageParameter:$sourceLanguage,
     "DIFileAttr":$file,
     OptionalParameter<"StringAttr">:$producer,
@@ -415,9 +425,9 @@ def LLVM_DIGlobalVariableExpressionAttr
 def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
                                       /*traits=*/[], "DINodeAttr"> {
   let parameters = (ins
-    "DIScopeAttr":$scope,
-    "StringAttr":$name,
-    "StringAttr":$linkageName,
+    OptionalParameter<"DIScopeAttr">:$scope,
+    OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"StringAttr">:$linkageName,
     "DIFileAttr":$file,
     "unsigned":$line,
     "DITypeAttr":$type,
@@ -507,6 +517,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
+    OptionalParameter<"DistinctAttr">:$id,
     OptionalParameter<"DICompileUnitAttr">:$compileUnit,
     "DIScopeAttr":$scope,
     OptionalParameter<"StringAttr">:$name,
@@ -519,13 +530,13 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
-      "DICompileUnitAttr":$compileUnit, "DIScopeAttr":$scope, "StringRef":$name,
-      "StringRef":$linkageName, "DIFileAttr":$file, "unsigned":$line,
-      "unsigned":$scopeLine, "DISubprogramFlags":$subprogramFlags,
-      "DISubroutineTypeAttr":$type
+      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+      "DIScopeAttr":$scope, "StringRef":$name, "StringRef":$linkageName,
+      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type
     ), [{
       MLIRContext *ctx = file.getContext();
-      return $_get(ctx, compileUnit, scope, StringAttr::get(ctx, name),
+      return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),
                    StringAttr::get(ctx, linkageName), file, line,
                    scopeLine, subprogramFlags, type);
     }]>
@@ -924,4 +935,68 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
     "IntegerAttr":$maxRange);
   let assemblyFormat = "`<` struct(params) `>`";
 }
+
+//===----------------------------------------------------------------------===//
+// TargetFeaturesAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+{
+  let summary = "LLVM target features attribute";
+
+  let description = [{
+    Represents the LLVM target features as a list that can be checked within
+    passes/rewrites.
+
+    Example:
+    ```mlir
+    #llvm.target_features<["+sme", "+sve", "+sme-f64f64"]>
+    ```
+
+    Then within a pass or rewrite the features active at an op can be queried:
+
+    ```c++
+    auto targetFeatures = LLVM::TargetFeaturesAttr::featuresAt(op);
+
+    if (!targetFeatures.contains("+sme-f64f64"))
+      return failure();
+    ```
+  }];
+
+  let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$features);
+
+  let builders = [
+    TypeBuilder<(ins "::llvm::StringRef":$features)>,
+    TypeBuilder<(ins "::llvm::ArrayRef<::llvm::StringRef>":$features)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Checks if a feature is contained within the features list.
+    /// Note: Using a StringAttr allows doing pointer-comparisons.
+    bool contains(::mlir::StringAttr feature) const;
+    bool contains(::llvm::StringRef feature) const;
+
+    bool nullOrEmpty() const {
+      // Checks if this attribute is null, or the features are empty.
+      return !bool(*this) || getFeatures().empty();
+    }
+
+    /// Returns the list of features as an LLVM-compatible string.
+    std::string getFeaturesString() const;
+
+    /// Finds the target features on the parent FunctionOpInterface.
+    /// Note: This assumes the attribute name matches the return value of
+    /// `getAttributeName()`.
+    static TargetFeaturesAttr featuresAt(Operation* op);
+
+    /// Canonical name for this attribute within MLIR.
+    static constexpr StringLiteral getAttributeName() {
+      return StringLiteral("target_features");
+    }
+  }];
+
+  let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
+  let genVerifyDecl = 1;
+}
+
 #endif // LLVMIR_ATTRDEFS

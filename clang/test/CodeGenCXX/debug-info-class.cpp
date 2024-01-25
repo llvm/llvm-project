@@ -117,18 +117,11 @@ int main(int argc, char **argv) {
 // CHECK-NOT:                             identifier:
 // CHECK-SAME:                            ){{$}}
 
-// CHECK:      !DIGlobalVariableExpression(var: ![[HDR_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 52, DW_OP_stack_value))
-// CHECK:      ![[HDR_VAR]] = distinct !DIGlobalVariable(name: "HdrSize",
-// CHECK-SAME:                isLocal: true, isDefinition: true, declaration: ![[HDR_VAR_DECL:[0-9]+]])
-// CHECK:      ![[INT:[0-9]+]] = !DIBasicType(name: "int"
-// CHECK:      ![[HDR_VAR_DECL]] = !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
-
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
-
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "I"
 // CHECK-NOT:              DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
 
+// CHECK:      ![[INT:[0-9]+]] = !DIBasicType(name: "int"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
 // CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
@@ -193,6 +186,9 @@ int main(int argc, char **argv) {
 // CHECK: [[G_INNER_MEM]] = !{[[G_INNER_I:![0-9]*]]}
 // CHECK: [[G_INNER_I]] = !DIDerivedType(tag: DW_TAG_member, name: "j"
 // CHECK-SAME:                           baseType: ![[INT]]
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
 
 // CHECK: ![[EXCEPTLOC]] = !DILocation(line: 100,
 // CHECK: ![[RETLOC]] = !DILocation(line: 99,

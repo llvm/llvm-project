@@ -138,11 +138,18 @@ STRIP-DEBUG-NOT: -debug:dwarf
 RUN: ld.lld -### -m i386pep foo.o -pdb out.pdb 2>&1 | FileCheck -check-prefix PDB %s
 RUN: ld.lld -### -m i386pep foo.o -pdb=out.pdb 2>&1 | FileCheck -check-prefix PDB %s
 PDB: -debug -pdb:out.pdb
-PDB-NOT: -debug:dwarf
+PDB-NOT: -debug:
 
 RUN: ld.lld -### -m i386pep foo.o -pdb= 2>&1 | FileCheck -check-prefix PDB-DEFAULT %s
 PDB-DEFAULT: -debug
 PDB-DEFAULT-NOT: -pdb:{{.*}}
+PDB-DEFAULT-NOT: -debug:
+
+RUN: ld.lld -### -m i386pep foo.o -pdb= -S 2>&1 | FileCheck -check-prefix PDB-NODWARF %s
+PDB-NODWARF: -debug -debug:nodwarf,symtab
+
+RUN: ld.lld -### -m i386pep foo.o -pdb= -s 2>&1 | FileCheck -check-prefix PDB-NODWARF-NOSYMTAB %s
+PDB-NODWARF-NOSYMTAB: -debug -debug:nodwarf,nosymtab
 
 RUN: ld.lld -### -m i386pep foo.o --large-address-aware 2>&1 | FileCheck -check-prefix LARGE-ADDRESS-AWARE %s
 LARGE-ADDRESS-AWARE: -largeaddressaware
@@ -290,9 +297,6 @@ RUN: ld.lld -### -m i386pep foo.o --disable-runtime-pseudo-reloc 2>&1 | FileChec
 RUN: ld.lld -### -m i386pep foo.o -disable-runtime-pseudo-reloc 2>&1 | FileCheck -check-prefix DISABLE_RUNTIME_PSEUDO_RELOC %s
 DISABLE_RUNTIME_PSEUDO_RELOC: -runtime-pseudo-reloc:no
 
-RUN: ld.lld -### foo.o -m i386pe --thinlto-cache-dir=_foo 2>&1 | FileCheck -check-prefix=THINLTO_CACHEDIR %s
-THINLTO_CACHEDIR: -lldltocache:_foo
-
 RUN: ld.lld -### -m i386pep foo.o --file-alignment 0x1000 2>&1 | FileCheck -check-prefix FILEALIGN %s
 RUN: ld.lld -### -m i386pep foo.o -file-alignment 0x1000 2>&1 | FileCheck -check-prefix FILEALIGN %s
 RUN: ld.lld -### -m i386pep foo.o --file-alignment=0x1000 2>&1 | FileCheck -check-prefix FILEALIGN %s
@@ -375,9 +379,29 @@ RUN: ld.lld -### foo.o -m i386pep --guard-longjmp 2>&1 | FileCheck -check-prefix
 RUN: ld.lld -### foo.o -m i386pep --no-guard-cf --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
 GUARD_LONGJMP_NO_CF: warning: parameter --guard-longjmp only takes effect when used with --guard-cf
 
+RUN: ld.lld -### foo.o -m i386pe --thinlto-cache-dir=_foo 2>&1 | FileCheck -check-prefix=THINLTO_CACHEDIR %s
+THINLTO_CACHEDIR: -lldltocache:_foo
+
+RUN: ld.lld -### foo.o -m i386pe --thinlto-cache-policy=_foo 2>&1 | FileCheck -check-prefix=THINLTO_CACHE_POLICY %s
+THINLTO_CACHE_POLICY: -lldltocachepolicy:_foo
+
+RUN: ld.lld -### foo.o -m i386pe --thinlto-emit-imports-files 2>&1 | FileCheck -check-prefix=THINLTO_EMIT_IMPORTS_FILES %s
+THINLTO_EMIT_IMPORTS_FILES: -thinlto-emit-imports-files
+
+RUN: ld.lld -### foo.o -m i386pe --thinlto-index-only 2>&1 | FileCheck -check-prefix=THINLTO_INDEX_ONLY %s
+THINLTO_INDEX_ONLY: -thinlto-index-only{{ }}
+RUN: ld.lld -### foo.o -m i386pe --thinlto-index-only=_foo 2>&1 | FileCheck -check-prefix=THINLTO_INDEX_ONLY_EQ %s
+THINLTO_INDEX_ONLY_EQ: -thinlto-index-only:_foo
+
 RUN: ld.lld -### foo.o -m i386pep --threads 3 --thinlto-jobs=4 2>&1 | FileCheck -check-prefix=THREADS %s
 RUN: ld.lld -### foo.o -m i386pep --threads 3 -plugin-opt=jobs=4 2>&1 | FileCheck -check-prefix=THREADS %s
 THREADS: -threads:3 {{.*}} -opt:lldltojobs=4
+
+RUN: ld.lld -### foo.o -m i386pe --thinlto-object-suffix-replace=_foo 2>&1 | FileCheck -check-prefix=THINLTO_OBJECT_SUFFIX_REPLACE %s
+THINLTO_OBJECT_SUFFIX_REPLACE: -thinlto-object-suffix-replace:_foo
+
+RUN: ld.lld -### foo.o -m i386pe --thinlto-prefix-replace=_foo 2>&1 | FileCheck -check-prefix=THINLTO_PREFIX_REPLACE %s
+THINLTO_PREFIX_REPLACE: -thinlto-prefix-replace:_foo
 
 RUN: ld.lld -### foo.o -m i386pep -plugin-opt=mcpu=x86-64 -plugin-opt=-emulated-tls -plugin-opt=thinlto -plugin-opt=O2 -plugin-opt=dwo_dir=foo -plugin-opt=cs-profile-generate -plugin-opt=cs-profile-path=bar 2>&1 | FileCheck -check-prefix=LTO_OPTS %s
 LTO_OPTS: -mllvm:-mcpu=x86-64 -opt:lldlto=2 -dwodir:foo -lto-cs-profile-generate -lto-cs-profile-file:bar -mllvm:-emulated-tls
@@ -389,3 +413,16 @@ Test GCC specific LTO options that GCC passes unconditionally, that we ignore.
 
 RUN: ld.lld -### foo.o -m i386pep -plugin /usr/lib/gcc/x86_64-w64-mingw32/10-posix/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-w64-mingw32/10-posix/lto-wrapper -plugin-opt=-fresolution=/tmp/ccM9d4fP.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null
 RUN: ld.lld -### foo.o -m i386pep -plugin C:/msys64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/13.2.0/liblto_plugin.dll -plugin-opt=C:/msys64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/13.2.0/lto-wrapper.exe -plugin-opt=-fresolution=C:/msys64/tmp/cckbC7wB.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null
+
+RUN: ld.lld -### foo.o -m i386pep 2>&1 | FileCheck -check-prefix=BUILD_ID %s
+RUN: ld.lld -### foo.o -m i386pep --build-id 2>&1 | FileCheck -check-prefix=BUILD_ID %s
+BUILD_ID: -build-id{{ }}
+
+RUN: ld.lld -### foo.o -m i386pep --build-id=fast 2>&1 | FileCheck -check-prefix=BUILD_ID_WARN %s
+BUILD_ID_WARN: unsupported build id hashing: fast, using default hashing.
+BUILD_ID_WARN: -build-id{{ }}
+
+RUN: ld.lld -### foo.o -m i386pep --build-id=none 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
+RUN: ld.lld -### foo.o -m i386pep -s 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
+RUN: ld.lld -### foo.o -m i386pep -S 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
+NO_BUILD_ID: -build-id:no

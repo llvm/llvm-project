@@ -21,10 +21,10 @@ define dso_local void @constTC(ptr noalias nocapture %A) optsize {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    store <2 x i32> <i32 13, i32 13>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 2
-; CHECK-NEXT:    store <2 x i32> <i32 13, i32 13>, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i32 4
+; CHECK-NEXT:    store <2 x i32> <i32 13, i32 13>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    store <2 x i32> <i32 13, i32 13>, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    store <2 x i32> <i32 13, i32 13>, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1800
@@ -40,7 +40,7 @@ define dso_local void @constTC(ptr noalias nocapture %A) optsize {
 ; CHECK-NEXT:    store i32 13, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[RIVPLUS1]] = add nuw nsw i32 [[RIV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[RIVPLUS1]], 1800
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

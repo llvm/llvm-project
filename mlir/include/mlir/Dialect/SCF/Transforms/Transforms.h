@@ -34,7 +34,10 @@ class ParallelOp;
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
 /// analysis.
-void naivelyFuseParallelOps(Region &region);
+/// User can additionally customize alias checking with `mayAlias` hook.
+/// `mayAlias` must return false if 2 values are guaranteed to not alias.
+void naivelyFuseParallelOps(Region &region,
+                            llvm::function_ref<bool(Value, Value)> mayAlias);
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
@@ -80,6 +83,11 @@ void naivelyFuseParallelOps(Region &region);
 /// unpeeled loop with the results of the newly generated scf.for.
 LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
                                            scf::ForOp &partialIteration);
+
+/// Peel the first iteration out of the scf.for loop. If there is only one
+/// iteration, return the original loop.
+LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
+                                        scf::ForOp &partialIteration);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -127,6 +135,13 @@ struct PipeliningOption {
   /// iterations. If the epilogue is predicated; the user needs to provide a
   /// lambda to generate the predicated version of operations.
   bool peelEpilogue = true;
+
+  /// Control whether the transformation checks that the number of iterations is
+  /// greater or equal to the number of stages and skip the transformation if
+  /// this is not the case. If the loop is dynamic and this is set to true and
+  /// the loop bounds are not static the pipeliner will have to predicate
+  /// operations in the the prologue/epilogue.
+  bool supportDynamicLoops = false;
 
   // Callback to predicate operations when the prologue or epilogue are not
   // peeled. This takes the original operation, an i1 predicate value and the

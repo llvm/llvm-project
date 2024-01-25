@@ -979,7 +979,7 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(i8* %a, i8* %b, i8* %c, i6
   %8 = load i8, i8* %7, align 1
   %9 = getelementptr inbounds i8, i8* %a, i64 %.09
   store i8 %5, i8* %9, align 1
-  %10 = or i64 %.09, 1
+  %10 = or disjoint i64 %.09, 1
   %11 = getelementptr inbounds i8, i8* %a, i64 %10
   store i8 %8, i8* %11, align 1
   %12 = getelementptr inbounds i8, i8* %.08, i64 1

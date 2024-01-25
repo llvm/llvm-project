@@ -22,11 +22,15 @@
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
+#include "Utils/ELF.h"
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Program.h"
 
 namespace llvm {
 namespace omp {
@@ -62,11 +66,20 @@ cuMemGetAllocationGranularity(size_t *granularity,
                               CUmemAllocationGranularity_flags option) {}
 #endif
 
+#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11020))
+// Forward declarations of asynchronous memory management functions. This is
+// necessary for older versions of CUDA.
+CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = nullptr; }
+
+CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
+#endif
+
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
   /// Create the CUDA image with the id and the target image pointer.
-  CUDADeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), Module(nullptr) {}
+  CUDADeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                    const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage), Module(nullptr) {}
 
   /// Load the image as a CUDA module.
   Error loadModule() {
@@ -380,23 +393,89 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
                                        DeviceImageTy &Image) override {
+    // Check for the presense of global destructors at initialization time. This
+    // is required when the image may be deallocated before destructors are run.
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    if (Handler.isSymbolInImage(*this, Image, "nvptx$device$fini"))
+      Image.setPendingGlobalDtors();
+
     return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
   }
 
   virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
                                       DeviceImageTy &Image) override {
-    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
+    if (Image.hasPendingGlobalDtors())
+      return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
+    return Plugin::success();
+  }
+
+  Expected<std::unique_ptr<MemoryBuffer>>
+  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {
+    // TODO: We should be able to use the 'nvidia-ptxjitcompiler' interface to
+    //       avoid the call to 'ptxas'.
+    SmallString<128> PTXInputFilePath;
+    std::error_code EC = sys::fs::createTemporaryFile("nvptx-pre-link-jit", "s",
+                                                      PTXInputFilePath);
+    if (EC)
+      return Plugin::error("Failed to create temporary file for ptxas");
+
+    // Write the file's contents to the output file.
+    Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
+        FileOutputBuffer::create(PTXInputFilePath, MB->getBuffer().size());
+    if (!OutputOrErr)
+      return OutputOrErr.takeError();
+    std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
+    llvm::copy(MB->getBuffer(), Output->getBufferStart());
+    if (Error E = Output->commit())
+      return std::move(E);
+
+    SmallString<128> PTXOutputFilePath;
+    EC = sys::fs::createTemporaryFile("nvptx-post-link-jit", "cubin",
+                                      PTXOutputFilePath);
+    if (EC)
+      return Plugin::error("Failed to create temporary file for ptxas");
+
+    // Try to find `ptxas` in the path to compile the PTX to a binary.
+    const auto ErrorOrPath = sys::findProgramByName("ptxas");
+    if (!ErrorOrPath)
+      return Plugin::error("Failed to find 'ptxas' on the PATH.");
+
+    std::string Arch = getComputeUnitKind();
+    StringRef Args[] = {*ErrorOrPath,
+                        "-m64",
+                        "-O2",
+                        "--gpu-name",
+                        Arch,
+                        "--output-file",
+                        PTXOutputFilePath,
+                        PTXInputFilePath};
+
+    std::string ErrMsg;
+    if (sys::ExecuteAndWait(*ErrorOrPath, Args, std::nullopt, {}, 0, 0,
+                            &ErrMsg))
+      return Plugin::error("Running 'ptxas' failed: %s\n", ErrMsg.c_str());
+
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(PTXOutputFilePath.data());
+    if (!BufferOrErr)
+      return Plugin::error("Failed to open temporary file for ptxas");
+
+    // Clean up the temporary files afterwards.
+    if (sys::fs::remove(PTXOutputFilePath))
+      return Plugin::error("Failed to remove temporary file for ptxas");
+    if (sys::fs::remove(PTXInputFilePath))
+      return Plugin::error("Failed to remove temporary file for ptxas");
+
+    return std::move(*BufferOrErr);
   }
 
   /// Allocate and construct a CUDA kernel.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    new (CUDAKernel) CUDAKernelTy(KernelEntry.name);
+    new (CUDAKernel) CUDAKernelTy(Name);
 
     return *CUDAKernel;
   }
@@ -451,7 +530,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     // Allocate and initialize the image object.
     CUDADeviceImageTy *CUDAImage = Plugin::get().allocate<CUDADeviceImageTy>();
-    new (CUDAImage) CUDADeviceImageTy(ImageId, TgtImage);
+    new (CUDAImage) CUDADeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the CUDA module.
     if (auto Err = CUDAImage->loadModule())
@@ -487,6 +566,16 @@ struct CUDADeviceTy : public GenericDeviceTy {
       Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
       MemAlloc = (void *)DevicePtr;
       break;
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+      CUstream Stream;
+      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+        break;
+      if ((Res = cuMemAllocAsync(&DevicePtr, Size, Stream)))
+        break;
+      cuStreamSynchronize(Stream);
+      Res = cuStreamDestroy(Stream);
+      MemAlloc = (void *)DevicePtr;
+    }
     }
 
     if (auto Err =
@@ -517,6 +606,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_HOST:
       Res = cuMemFreeHost(TgtPtr);
       break;
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+      CUstream Stream;
+      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+        break;
+      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
+      cuStreamSynchronize(Stream);
+      if ((Res = cuStreamDestroy(Stream)))
+        break;
+    }
     }
 
     if (auto Err = Plugin::check(Res, "Error in cuMemFree[Host]: %s")) {
@@ -727,7 +825,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     // If there is already pending work on the stream it could be waiting for
     // someone to check the RPC server.
-    if (auto RPCServer = getRPCServer()) {
+    if (auto *RPCServer = getRPCServer()) {
       CUresult Res = cuStreamQuery(Stream);
       while (Res == CUDA_ERROR_NOT_READY) {
         if (auto Err = RPCServer->runServer(*this))
@@ -1055,25 +1153,20 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'nvptx-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    GlobalTy Global(KernelName, sizeof(void *));
-    if (auto Err = Handler.getGlobalMetadataFromImage(*this, Image, Global)) {
-      consumeError(std::move(Err));
+    if (IsCtor && !Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
-    }
 
     // The Nvidia backend cannot handle creating the ctor / dtor array
     // automatically so we must create it ourselves. The backend will emit
     // several globals that contain function pointers we can call. These are
     // prefixed with a known name due to Nvidia's lack of section support.
-    const ELF64LEObjectFile *ELFObj =
-        Handler.getOrCreateELFObjectFile(*this, Image);
-    if (!ELFObj)
-      return Plugin::error("Unable to create ELF object for image %p",
-                           Image.getStart());
+    auto ELFObjOrErr = Handler.getELFObjectFile(Image);
+    if (!ELFObjOrErr)
+      return ELFObjOrErr.takeError();
 
     // Search for all symbols that contain a constructor or destructor.
     SmallVector<std::pair<StringRef, uint16_t>> Funcs;
-    for (ELFSymbolRef Sym : ELFObj->symbols()) {
+    for (ELFSymbolRef Sym : ELFObjOrErr->symbols()) {
       auto NameOrErr = Sym.getName();
       if (!NameOrErr)
         return NameOrErr.takeError();
@@ -1090,7 +1183,7 @@ private:
     }
 
     // Sort the created array to be in priority order.
-    llvm::sort(Funcs, [=](auto x, auto y) { return x.second < y.second; });
+    llvm::sort(Funcs, [=](auto X, auto Y) { return X.second < Y.second; });
 
     // Allocate a buffer to store all of the known constructor / destructor
     // functions in so we can iterate them on the device.
@@ -1193,10 +1286,10 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
       std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
 
   CUresult Res =
-      cuLaunchKernel(Func, NumBlocks, /* gridDimY */ 1,
-                     /* gridDimZ */ 1, NumThreads,
-                     /* blockDimY */ 1, /* blockDimZ */ 1, MaxDynCGroupMem,
-                     Stream, (void **)Args, nullptr);
+      cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
+                     /*gridDimZ=*/1, NumThreads,
+                     /*blockDimY=*/1, /*blockDimZ=*/1, MaxDynCGroupMem, Stream,
+                     (void **)Args, nullptr);
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 
@@ -1287,7 +1380,16 @@ struct CUDAPluginTy final : public GenericPluginTy {
   }
 
   /// Check whether the image is compatible with the available CUDA devices.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
+  Expected<bool> isELFCompatible(StringRef Image) const override {
+    auto ElfOrErr =
+        ELF64LEObjectFile::create(MemoryBufferRef(Image, /*Identifier=*/""),
+                                  /*InitContent=*/false);
+    if (!ElfOrErr)
+      return ElfOrErr.takeError();
+
+    // Get the numeric value for the image's `sm_` value.
+    auto SM = ElfOrErr->getPlatformFlags() & ELF::EF_CUDA_SM;
+
     for (int32_t DevId = 0; DevId < getNumDevices(); ++DevId) {
       CUdevice Device;
       CUresult Res = cuDeviceGet(&Device, DevId);
@@ -1305,16 +1407,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
       if (auto Err = Plugin::check(Res, "Error in cuDeviceGetAttribute: %s"))
         return std::move(Err);
 
-      StringRef ArchStr(Info->Arch);
-      StringRef PrefixStr("sm_");
-      if (!ArchStr.startswith(PrefixStr))
-        return Plugin::error("Unrecognized image arch %s", ArchStr.data());
+      int32_t ImageMajor = SM / 10;
+      int32_t ImageMinor = SM % 10;
 
-      int32_t ImageMajor = ArchStr[PrefixStr.size() + 0] - '0';
-      int32_t ImageMinor = ArchStr[PrefixStr.size() + 1] - '0';
-
-      // A cubin generated for a certain compute capability is supported to run
-      // on any GPU with the same major revision and same or higher minor
+      // A cubin generated for a certain compute capability is supported to
+      // run on any GPU with the same major revision and same or higher minor
       // revision.
       if (Major != ImageMajor || Minor < ImageMinor)
         return false;

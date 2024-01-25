@@ -2299,17 +2299,19 @@ bool OmpStructureChecker::CheckReductionOperators(
           },
           [&](const parser::ProcedureDesignator &procD) {
             const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
-            if (name) {
-              if (name->source == "max" || name->source == "min" ||
-                  name->source == "iand" || name->source == "ior" ||
-                  name->source == "ieor") {
+            if (name && name->symbol) {
+              const SourceName &realName{name->symbol->GetUltimate().name()};
+              if (realName == "max" || realName == "min" ||
+                  realName == "iand" || realName == "ior" ||
+                  realName == "ieor") {
                 ok = true;
-              } else {
-                context_.Say(GetContext().clauseSource,
-                    "Invalid reduction identifier in REDUCTION "
-                    "clause."_err_en_US,
-                    ContextDirectiveAsFortran());
               }
+            }
+            if (!ok) {
+              context_.Say(GetContext().clauseSource,
+                  "Invalid reduction identifier in REDUCTION "
+                  "clause."_err_en_US,
+                  ContextDirectiveAsFortran());
             }
           },
       },
@@ -2996,11 +2998,14 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
             source.ToString());
       } else if (!(IsDummy(*symbol))) {
         context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument"_err_en_US,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
+            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
             source.ToString());
       } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
         context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument that does not have the ALLOCATABLE, POINTER or VALUE attribute."_err_en_US,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
+            "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
+            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
             source.ToString());
       }
     }

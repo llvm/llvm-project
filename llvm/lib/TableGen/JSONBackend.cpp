@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 #define DEBUG_TYPE "json-emitter"
@@ -159,6 +159,11 @@ void JSONEmitter::run(raw_ostream &OS) {
 
     obj["!name"] = Name;
     obj["!anonymous"] = Def.isAnonymous();
+
+    json::Array locs;
+    for (const SMLoc Loc : Def.getLoc())
+      locs.push_back(SrcMgr.getFormattedLocationNoOffset(Loc));
+    obj["!locs"] = std::move(locs);
 
     root[Name] = std::move(obj);
 

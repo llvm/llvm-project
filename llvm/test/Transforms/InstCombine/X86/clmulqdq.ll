@@ -51,7 +51,8 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_17(<2 x i64> %a0, <2 x i64> %a1) 
 
 define <2 x i64> @test_demanded_elts_pclmulqdq_undef_0() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_undef_0(
-; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 undef, i64 poison>, <2 x i64> <i64 undef, i64 poison>, i8 0)
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 undef, i64 1>, <2 x i64> <i64 undef, i64 1>, i8 0)
   ret <2 x i64> %1
@@ -59,7 +60,8 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_undef_0() {
 
 define <2 x i64> @test_demanded_elts_pclmulqdq_undef_1() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_undef_1(
-; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 poison, i64 undef>, <2 x i64> <i64 undef, i64 poison>, i8 1)
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 1, i64 undef>, <2 x i64> <i64 undef, i64 1>, i8 1)
   ret <2 x i64> %1
@@ -67,7 +69,8 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_undef_1() {
 
 define <2 x i64> @test_demanded_elts_pclmulqdq_undef_16() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_undef_16(
-; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 undef, i64 poison>, <2 x i64> <i64 poison, i64 undef>, i8 16)
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 undef, i64 1>, <2 x i64> <i64 1, i64 undef>, i8 16)
   ret <2 x i64> %1
@@ -75,9 +78,42 @@ define <2 x i64> @test_demanded_elts_pclmulqdq_undef_16() {
 
 define <2 x i64> @test_demanded_elts_pclmulqdq_undef_17() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_undef_17(
-; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 poison, i64 undef>, <2 x i64> <i64 poison, i64 undef>, i8 17)
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 1, i64 undef>, <2 x i64> <i64 1, i64 undef>, i8 17)
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @test_demanded_elts_pclmulqdq_poison_0() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_poison_0(
+; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+;
+  %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 poison, i64 1>, <2 x i64> <i64 poison, i64 1>, i8 0)
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @test_demanded_elts_pclmulqdq_poison_1() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_poison_1(
+; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+;
+  %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 1, i64 poison>, <2 x i64> <i64 poison, i64 1>, i8 1)
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @test_demanded_elts_pclmulqdq_poison_16() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_poison_16(
+; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+;
+  %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 poison, i64 1>, <2 x i64> <i64 1, i64 poison>, i8 16)
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @test_demanded_elts_pclmulqdq_poison_17() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_poison_17(
+; CHECK-NEXT:    ret <2 x i64> zeroinitializer
+;
+  %1 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> <i64 1, i64 poison>, <2 x i64> <i64 1, i64 poison>, i8 17)
   ret <2 x i64> %1
 }
 
@@ -135,7 +171,8 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_17(<4 x i64> %a0, <4 x i64> %
 
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_undef_0() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_undef_0(
-; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 undef, i64 poison, i64 undef, i64 poison>, <4 x i64> <i64 undef, i64 poison, i64 undef, i64 poison>, i8 0)
+; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 undef, i64 1, i64 undef, i64 1>, <4 x i64> <i64 undef, i64 1, i64 undef, i64 1>, i8 0)
   ret <4 x i64> %1
@@ -143,7 +180,8 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_undef_0() {
 
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_undef_1() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_undef_1(
-; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 poison, i64 undef, i64 poison, i64 undef>, <4 x i64> <i64 undef, i64 poison, i64 undef, i64 poison>, i8 1)
+; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 1, i64 undef, i64 1, i64 undef>, <4 x i64> <i64 undef, i64 1, i64 undef, i64 1>, i8 1)
   ret <4 x i64> %1
@@ -151,7 +189,8 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_undef_1() {
 
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_undef_16() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_undef_16(
-; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 undef, i64 poison, i64 undef, i64 poison>, <4 x i64> <i64 poison, i64 undef, i64 poison, i64 undef>, i8 16)
+; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 undef, i64 1, i64 undef, i64 1>, <4 x i64> <i64 1, i64 undef, i64 1, i64 undef>, i8 16)
   ret <4 x i64> %1
@@ -159,9 +198,42 @@ define <4 x i64> @test_demanded_elts_pclmulqdq_256_undef_16() {
 
 define <4 x i64> @test_demanded_elts_pclmulqdq_256_undef_17() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_undef_17(
-; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 poison, i64 undef, i64 poison, i64 undef>, <4 x i64> <i64 poison, i64 undef, i64 poison, i64 undef>, i8 17)
+; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 1, i64 undef, i64 1, i64 undef>, <4 x i64> <i64 1, i64 undef, i64 1, i64 undef>, i8 17)
+  ret <4 x i64> %1
+}
+
+define <4 x i64> @test_demanded_elts_pclmulqdq_256_poison_0() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_poison_0(
+; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+;
+  %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 poison, i64 1, i64 poison, i64 1>, <4 x i64> <i64 poison, i64 1, i64 poison, i64 1>, i8 0)
+  ret <4 x i64> %1
+}
+
+define <4 x i64> @test_demanded_elts_pclmulqdq_256_poison_1() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_poison_1(
+; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+;
+  %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 1, i64 poison, i64 1, i64 poison>, <4 x i64> <i64 poison, i64 1, i64 poison, i64 1>, i8 1)
+  ret <4 x i64> %1
+}
+
+define <4 x i64> @test_demanded_elts_pclmulqdq_256_poison_16() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_poison_16(
+; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+;
+  %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 poison, i64 1, i64 poison, i64 1>, <4 x i64> <i64 1, i64 poison, i64 1, i64 poison>, i8 16)
+  ret <4 x i64> %1
+}
+
+define <4 x i64> @test_demanded_elts_pclmulqdq_256_poison_17() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_256_poison_17(
+; CHECK-NEXT:    ret <4 x i64> zeroinitializer
+;
+  %1 = call <4 x i64> @llvm.x86.pclmulqdq.256(<4 x i64> <i64 1, i64 poison, i64 1, i64 poison>, <4 x i64> <i64 1, i64 poison, i64 1, i64 poison>, i8 17)
   ret <4 x i64> %1
 }
 
@@ -235,7 +307,8 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_17(<8 x i64> %a0, <8 x i64> %
 
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_undef_0() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_undef_0(
-; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison>, <8 x i64> <i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison>, i8 0)
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1>, <8 x i64> <i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1>, i8 0)
   ret <8 x i64> %1
@@ -243,7 +316,8 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_undef_0() {
 
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_undef_1() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_undef_1(
-; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef>, <8 x i64> <i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison>, i8 1)
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef>, <8 x i64> <i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1>, i8 1)
   ret <8 x i64> %1
@@ -251,7 +325,8 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_undef_1() {
 
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_undef_16() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_undef_16(
-; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison>, <8 x i64> <i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef>, i8 16)
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1>, <8 x i64> <i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef>, i8 16)
   ret <8 x i64> %1
@@ -259,8 +334,41 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_undef_16() {
 
 define <8 x i64> @test_demanded_elts_pclmulqdq_512_undef_17() {
 ; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_undef_17(
-; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef>, <8 x i64> <i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef, i64 poison, i64 undef>, i8 17)
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef>, <8 x i64> <i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef, i64 1, i64 undef>, i8 17)
+  ret <8 x i64> %1
+}
+
+define <8 x i64> @test_demanded_elts_pclmulqdq_512_poison_0() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_poison_0(
+; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+;
+  %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1>, <8 x i64> <i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1>, i8 0)
+  ret <8 x i64> %1
+}
+
+define <8 x i64> @test_demanded_elts_pclmulqdq_512_poison_1() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_poison_1(
+; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+;
+  %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison>, <8 x i64> <i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1>, i8 1)
+  ret <8 x i64> %1
+}
+
+define <8 x i64> @test_demanded_elts_pclmulqdq_512_poison_16() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_poison_16(
+; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+;
+  %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1>, <8 x i64> <i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison>, i8 16)
+  ret <8 x i64> %1
+}
+
+define <8 x i64> @test_demanded_elts_pclmulqdq_512_poison_17() {
+; CHECK-LABEL: @test_demanded_elts_pclmulqdq_512_poison_17(
+; CHECK-NEXT:    ret <8 x i64> zeroinitializer
+;
+  %1 = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> <i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison>, <8 x i64> <i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison, i64 1, i64 poison>, i8 17)
   ret <8 x i64> %1
 }

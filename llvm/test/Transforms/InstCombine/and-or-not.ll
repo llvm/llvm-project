@@ -548,7 +548,7 @@ define i32 @and_to_nxor_multiuse(float %fa, float %fb) {
 
 ; (a & b) | ~(a | b) --> ~(a ^ b)
 ; TODO: this increases instruction count if the pieces have additional users
-define i32 @or_to_nxor_multiuse(i32 %a, i32 %b) {
+define i32 @or_to_nxor_multiuse(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: @or_to_nxor_multiuse(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]

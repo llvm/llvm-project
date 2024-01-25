@@ -361,8 +361,13 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
       return UseCaptureKind::MAY_CAPTURE;
     return UseCaptureKind::NO_CAPTURE;
   }
-  case Instruction::BitCast:
   case Instruction::GetElementPtr:
+    // AA does not support pointers of vectors, so GEP vector splats need to
+    // be considered as captures.
+    if (I->getType()->isVectorTy())
+      return UseCaptureKind::MAY_CAPTURE;
+    return UseCaptureKind::PASSTHROUGH;
+  case Instruction::BitCast:
   case Instruction::PHI:
   case Instruction::Select:
   case Instruction::AddrSpaceCast:

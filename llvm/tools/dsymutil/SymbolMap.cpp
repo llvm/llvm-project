@@ -23,15 +23,11 @@ namespace llvm {
 namespace dsymutil {
 
 StringRef SymbolMapTranslator::operator()(StringRef Input) {
-  if (!Input.startswith("__hidden#") && !Input.startswith("___hidden#"))
+  if (!Input.starts_with("__hidden#") && !Input.starts_with("___hidden#"))
     return Input;
 
-  bool MightNeedUnderscore = false;
   StringRef Line = Input.drop_front(sizeof("__hidden#") - 1);
-  if (Line[0] == '#') {
-    Line = Line.drop_front();
-    MightNeedUnderscore = true;
-  }
+  bool MightNeedUnderscore = Line.consume_front("#");
 
   std::size_t LineNumber = std::numeric_limits<std::size_t>::max();
   Line.split('_').first.getAsInteger(10, LineNumber);
@@ -131,7 +127,7 @@ SymbolMapTranslator SymbolMapLoader::Load(StringRef InputFile,
   bool MangleNames = false;
 
   // Check version string first.
-  if (!LHS.startswith("BCSymbolMap Version:")) {
+  if (!LHS.starts_with("BCSymbolMap Version:")) {
     // Version string not present, warns but try to parse it.
     WithColor::warning() << SymbolMapPath
                          << " is missing version string: assuming 1.0.\n";

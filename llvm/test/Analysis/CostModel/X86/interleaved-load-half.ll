@@ -33,7 +33,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %1 = load half, ptr %arrayidx2, align 4
   %add3 = fadd fast half %1, %mul
   store half %add3, ptr %arrayidx2, align 4
-  %add4 = or i32 %i.073, 1
+  %add4 = or disjoint i32 %i.073, 1
   %arrayidx5 = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %add4
   %2 = load half, ptr %arrayidx5, align 4
   %mul6 = fmul fast half %2, %k
@@ -41,7 +41,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %3 = load half, ptr %arrayidx8, align 4
   %add9 = fadd fast half %3, %mul6
   store half %add9, ptr %arrayidx8, align 4
-  %add10 = or i32 %i.073, 2
+  %add10 = or disjoint i32 %i.073, 2
   %arrayidx11 = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %add10
   %4 = load half, ptr %arrayidx11, align 4
   %mul12 = fmul fast half %4, %k
@@ -49,7 +49,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %5 = load half, ptr %arrayidx14, align 4
   %add15 = fadd fast half %5, %mul12
   store half %add15, ptr %arrayidx14, align 4
-  %add16 = or i32 %i.073, 3
+  %add16 = or disjoint i32 %i.073, 3
   %arrayidx17 = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %add16
   %6 = load half, ptr %arrayidx17, align 4
   %mul18 = fmul fast half %6, %k
@@ -57,7 +57,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %7 = load half, ptr %arrayidx20, align 4
   %add21 = fadd fast half %7, %mul18
   store half %add21, ptr %arrayidx20, align 4
-  %add22 = or i32 %i.073, 4
+  %add22 = or disjoint i32 %i.073, 4
   %arrayidx23 = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %add22
   %8 = load half, ptr %arrayidx23, align 4
   %mul24 = fmul fast half %8, %k
@@ -65,7 +65,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %9 = load half, ptr %arrayidx26, align 4
   %add27 = fadd fast half %9, %mul24
   store half %add27, ptr %arrayidx26, align 4
-  %add28 = or i32 %i.073, 5
+  %add28 = or disjoint i32 %i.073, 5
   %arrayidx29 = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %add28
   %10 = load half, ptr %arrayidx29, align 4
   %mul30 = fmul fast half %10, %k
@@ -73,7 +73,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %11 = load half, ptr %arrayidx32, align 4
   %add33 = fadd fast half %11, %mul30
   store half %add33, ptr %arrayidx32, align 4
-  %add34 = or i32 %i.073, 6
+  %add34 = or disjoint i32 %i.073, 6
   %arrayidx35 = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %add34
   %12 = load half, ptr %arrayidx35, align 4
   %mul36 = fmul fast half %12, %k
@@ -81,7 +81,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %13 = load half, ptr %arrayidx38, align 4
   %add39 = fadd fast half %13, %mul36
   store half %add39, ptr %arrayidx38, align 4
-  %add40 = or i32 %i.073, 7
+  %add40 = or disjoint i32 %i.073, 7
   %arrayidx41 = getelementptr inbounds [120 x half], ptr @src, i32 0, i32 %add40
   %14 = load half, ptr %arrayidx41, align 4
   %mul42 = fmul fast half %14, %k

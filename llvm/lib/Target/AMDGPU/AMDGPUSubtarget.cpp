@@ -201,14 +201,18 @@ unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
   case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
   case AMDGPU::V_LSHLREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHLREV_B64_e32_gfx12:
+  case AMDGPU::V_LSHLREV_B64_e64_gfx12:
   case AMDGPU::V_LSHL_B64_e64:
   case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
   case AMDGPU::V_LSHRREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHRREV_B64_e64_gfx12:
   case AMDGPU::V_LSHR_B64_e64:
   case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_e64_gfx11:
+  case AMDGPU::V_ASHRREV_I64_e64_gfx12:
   case AMDGPU::V_ASHR_I64_e64:
     return 1;
   }
@@ -567,7 +571,7 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
   // Assume all implicit inputs are used by default
   const Module *M = F.getParent();
   unsigned NBytes =
-      AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
+      AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
   return F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes",
                                          NBytes);
 }

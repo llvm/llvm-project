@@ -249,6 +249,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptr31__from_native_exception_pointerEPv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrC1ERKS_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrC2ERKS_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -506,6 +507,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIwLb0EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIwLb1EE4initEPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__get_ostream_fileERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcE4initERKNS_5ctypeIcEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcE9__analyzeEcRKNS_5ctypeIcEE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118__time_get_storageIcEC1EPKc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -1110,6 +1112,7 @@
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_guard_acquire', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_guard_release', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_increment_exception_refcount', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_init_primary_exception', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_pure_virtual', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_rethrow', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_rethrow_primary_exception', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

@@ -16,12 +16,9 @@ namespace llvm {
 class LLVMContext;
 class VPValue;
 class VPBlendRecipe;
-class VPInterleaveRecipe;
 class VPInstruction;
-class VPReductionPHIRecipe;
 class VPWidenRecipe;
 class VPWidenCallRecipe;
-class VPWidenCastRecipe;
 class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryInstructionRecipe;
 struct VPWidenSelectRecipe;

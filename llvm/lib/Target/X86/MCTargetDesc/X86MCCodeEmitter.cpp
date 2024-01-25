@@ -251,6 +251,7 @@ public:
   void setAAA(const MCInst &MI, unsigned OpNum) {
     EVEX_aaa = getRegEncoding(MI, OpNum);
   }
+  void setNF(bool V) { EVEX_aaa |= V << 2; }
 
   X86OpcodePrefixHelper(const MCRegisterInfo &MRI)
       : W(0), R(0), X(0), B(0), M(0), R2(0), X2(0), B2(0), VEX_4V(0), VEX_L(0),
@@ -987,9 +988,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   }
 
   Prefix.setW(TSFlags & X86II::REX_W);
+  Prefix.setNF(TSFlags & X86II::EVEX_NF);
 
   bool HasEVEX_K = TSFlags & X86II::EVEX_K;
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
+  bool IsND = X86II::hasNewDataDest(TSFlags); // IsND implies HasVEX_4V
   bool HasEVEX_RC = TSFlags & X86II::EVEX_RC;
 
   switch (TSFlags & X86II::OpMapMask) {
@@ -1049,6 +1052,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   bool EncodeRC = false;
   uint8_t EVEX_rc = 0;
+
   unsigned CurOp = X86II::getOperandBias(Desc);
 
   switch (TSFlags & X86II::FormMask) {
@@ -1060,7 +1064,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     CurOp += X86::AddrNumOperands;
-    Prefix.set4V(MI, CurOp++);
+    Prefix.set4VV2(MI, CurOp++);
     break;
   }
   case X86II::MRM_C0:
@@ -1073,16 +1077,21 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     //  MemAddr, src1(VEX_4V), src2(ModR/M)
     //  MemAddr, src1(ModR/M), imm8
     //
+    // NDD:
+    //  dst(VEX_4V), MemAddr, src1(ModR/M)
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
+
+    if (IsND)
+      Prefix.set4VV2(MI, CurOp++);
 
     CurOp += X86::AddrNumOperands;
 
     if (HasEVEX_K)
       Prefix.setAAA(MI, CurOp++);
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
@@ -1098,12 +1107,18 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     //
     //  FMA4:
     //  dst(ModR/M.reg), src1(VEX_4V), src2(ModR/M), src3(Imm[7:4])
+    //
+    //  NDD:
+    //  dst(VEX_4V), src1(ModR/M), MemAddr
+    if (IsND)
+      Prefix.set4VV2(MI, CurOp++);
+
     Prefix.setRR2(MI, CurOp++);
 
     if (HasEVEX_K)
       Prefix.setAAA(MI, CurOp++);
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
@@ -1160,12 +1175,17 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     //
     //  FMA4:
     //  dst(ModR/M.reg), src1(VEX_4V), src2(Imm[7:4]), src3(ModR/M),
+    //
+    //  NDD:
+    //  dst(VEX_4V), src1(ModR/M.reg), src2(ModR/M)
+    if (IsND)
+      Prefix.set4VV2(MI, CurOp++);
     Prefix.setRR2(MI, CurOp++);
 
     if (HasEVEX_K)
       Prefix.setAAA(MI, CurOp++);
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setBB2(MI, CurOp);
@@ -1209,6 +1229,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     //  dst(ModR/M), src(ModR/M)
     //  dst(ModR/M), src(ModR/M), imm8
     //  dst(ModR/M), src1(VEX_4V), src2(ModR/M)
+    //
+    // NDD:
+    // dst(VEX_4V), src1(ModR/M), src2(ModR/M)
+    if (IsND)
+      Prefix.set4VV2(MI, CurOp++);
     Prefix.setBB2(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
@@ -1216,7 +1241,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     if (HasEVEX_K)
       Prefix.setAAA(MI, CurOp++);
 
-    if (HasVEX_4V)
+    if (!IsND && HasVEX_4V)
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
@@ -1508,6 +1533,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   unsigned OpcodeOffset = 0;
 
+  bool IsND = X86II::hasNewDataDest(TSFlags);
+
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
   default:
@@ -1576,6 +1603,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
     if (HasVEX_4V) // Skip 1st src (which is encoded in VEX_VVVV)
       ++SrcRegNum;
+    if (IsND) // Skip the NDD operand encoded in EVEX_VVVV
+      ++CurOp;
 
     emitRegModRMByte(MI.getOperand(CurOp),
                      getX86RegNum(MI.getOperand(SrcRegNum)), CB);
@@ -1602,6 +1631,9 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     if (HasVEX_4V) // Skip 1st src (which is encoded in VEX_VVVV)
       ++SrcRegNum;
 
+    if (IsND) // Skip new data destination
+      ++CurOp;
+
     bool ForceSIB = (Form == X86II::MRMDestMemFSIB);
     emitMemModRMByte(MI, CurOp, getX86RegNum(MI.getOperand(SrcRegNum)), TSFlags,
                      Kind, StartByte, CB, Fixups, STI, ForceSIB);
@@ -1617,6 +1649,9 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
     if (HasVEX_4V) // Skip 1st src (which is encoded in VEX_VVVV)
       ++SrcRegNum;
+
+    if (IsND) // Skip new data destination
+      ++CurOp;
 
     emitRegModRMByte(MI.getOperand(SrcRegNum),
                      getX86RegNum(MI.getOperand(CurOp)), CB);
@@ -1668,6 +1703,9 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   case X86II::MRMSrcMemFSIB:
   case X86II::MRMSrcMem: {
     unsigned FirstMemOp = CurOp + 1;
+
+    if (IsND) // Skip new data destination
+      CurOp++;
 
     if (HasEVEX_K) // Skip writemask
       ++FirstMemOp;

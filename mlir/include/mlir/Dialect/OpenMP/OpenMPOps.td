@@ -65,6 +65,7 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
     DefaultValuedParameter<"bool", "false">:$assume_threads_oversubscription,
     DefaultValuedParameter<"bool", "false">:$assume_no_thread_state,
     DefaultValuedParameter<"bool", "false">:$assume_no_nested_parallelism,
+    DefaultValuedParameter<"bool", "false">:$no_gpu_lib,
     DefaultValuedParameter<"uint32_t", "50">:$openmp_device_version
   );
 
@@ -635,6 +636,60 @@ def YieldOp : OpenMP_Op<"yield",
   ];
 
   let assemblyFormat = [{ ( `(` $results^ `:` type($results) `)` )? attr-dict}];
+}
+
+//===----------------------------------------------------------------------===//
+// Distribute construct [2.9.4.1]
+//===----------------------------------------------------------------------===//
+def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
+                              MemoryEffects<[MemWrite]>]> {
+  let summary = "distribute construct";
+  let description = [{
+    The distribute construct specifies that the iterations of one or more loops
+    (optionally specified using collapse clause) will be executed by the
+    initial teams in the context of their implicit tasks. The loops that the
+    distribute op is associated with starts with the outermost loop enclosed by
+    the distribute op region and going down the loop nest toward the innermost
+    loop. The iterations are distributed across the initial threads of all
+    initial teams that execute the teams region to which the distribute region
+    binds.
+
+    The distribute loop construct specifies that the iterations of the loop(s)
+    will be executed in parallel by threads in the current context. These
+    iterations are spread across threads that already exist in the enclosing
+    region. The lower and upper bounds specify a half-open range: the
+    range includes the lower bound but does not include the upper bound. If the
+    `inclusive` attribute is specified then the upper bound is also included.
+
+    The `dist_schedule_static` attribute specifies the  schedule for this
+    loop, determining how the loop is distributed across the parallel threads.
+    The optional `schedule_chunk` associated with this determines further
+    controls this distribution.
+
+    // TODO: private_var, firstprivate_var, lastprivate_var, collapse
+  }];
+  let arguments = (ins
+             UnitAttr:$dist_schedule_static,
+             Optional<IntLikeType>:$chunk_size,
+             Variadic<AnyType>:$allocate_vars,
+             Variadic<AnyType>:$allocators_vars,
+             OptionalAttr<OrderKindAttr>:$order_val);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(`dist_schedule_static` $dist_schedule_static
+          |`chunk_size` `(` $chunk_size `:` type($chunk_size) `)`
+          |`order` `(` custom<ClauseAttr>($order_val) `)`
+          |`allocate` `(`
+             custom<AllocateAndAllocator>(
+               $allocate_vars, type($allocate_vars),
+               $allocators_vars, type($allocators_vars)
+             ) `)`
+    ) $region attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1364,6 +1419,56 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
     | `device` `(` $device `:` type($device) `)`
     | `nowait` $nowait
     | `map_entries` `(` $map_operands `:` type($map_operands) `)`
+    ) attr-dict
+   }];
+
+  let hasVerifier = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// 2.14.6 target update data Construct
+//===---------------------------------------------------------------------===//
+
+def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
+                                                 [AttrSizedOperandSegments]>{
+  let  summary = "target update data construct";
+  let description = [{
+    The target update directive makes the corresponding list items in the device
+    data environment consistent with their original list items, according to the
+    specified motion clauses. The target update construct is a stand-alone
+    directive.
+
+    The optional $if_expr parameter specifies a boolean result of a
+    conditional check. If this value is 1 or is not provided then the target
+    region runs on a device, if it is 0 then the target region is executed
+    on the host device.
+
+    The optional $device parameter specifies the device number for the
+    target region.
+
+    The optional $nowait eliminates the implicit barrier so the parent
+    task can make progress even if the target task is not yet completed.
+
+    We use `MapInfoOp` to model the motion clauses and their modifiers. Even
+    though the spec differentiates between map-types & map-type-modifiers vs.
+    motion-clauses & motion-modifiers, the motion clauses and their modifiers are
+    a subset of map types and their modifiers. The subset relation is handled in
+    during verification to make sure the restrictions for target update are
+    respected.
+
+    TODO: depend clause
+  }];
+
+  let arguments = (ins Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$device,
+                       UnitAttr:$nowait,
+                       Variadic<OpenMP_PointerLikeType>:$motion_operands);
+
+  let assemblyFormat = [{
+    oilist(`if` `(` $if_expr `:` type($if_expr) `)`
+    | `device` `(` $device `:` type($device) `)`
+    | `nowait` $nowait
+    | `motion_entries` `(` $motion_operands `:` type($motion_operands) `)`
     ) attr-dict
    }];
 

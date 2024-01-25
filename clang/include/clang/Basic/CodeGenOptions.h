@@ -494,6 +494,9 @@ public:
     return getProfileInstr() == ProfileCSIRInstr;
   }
 
+  /// Check if any form of instrumentation is on.
+  bool hasProfileInstr() const { return getProfileInstr() != ProfileNone; }
+
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
     return getProfileUse() == ProfileClangInstr;
@@ -530,6 +533,10 @@ public:
     return SanitizeBinaryMetadataCovered || SanitizeBinaryMetadataAtomics ||
            SanitizeBinaryMetadataUAR;
   }
+
+  /// Reset all of the options that are not considered when building a
+  /// module.
+  void resetNonModularOptions(StringRef ModuleFormat);
 };
 
 }  // end namespace clang

@@ -135,3 +135,49 @@ define <6 x i1> @load_v6i1(ptr %p) {
   %x = load <6 x i1>, ptr %p
   ret <6 x i1> %x
 }
+
+
+define <4 x i32> @exact_vlen_i32_m1(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i32_m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl1re32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <4 x i32>, ptr %p
+  ret <4 x i32> %v
+}
+
+define <16 x i8> @exact_vlen_i8_m1(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i8_m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl1r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <16 x i8>, ptr %p
+  ret <16 x i8> %v
+}
+
+define <32 x i8> @exact_vlen_i8_m2(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i8_m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl2r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <32 x i8>, ptr %p
+  ret <32 x i8> %v
+}
+
+define <128 x i8> @exact_vlen_i8_m8(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i8_m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <128 x i8>, ptr %p
+  ret <128 x i8> %v
+}
+
+define <16 x i64> @exact_vlen_i64_m8(ptr %p) vscale_range(2,2) {
+; CHECK-LABEL: exact_vlen_i64_m8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = load <16 x i64>, ptr %p
+  ret <16 x i64> %v
+}

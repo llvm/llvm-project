@@ -1215,7 +1215,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   class BuildOptions {
-    std::bitset<Stmt::lastStmtConstant> alwaysAddMask;
+    // Stmt::lastStmtConstant has the same value as the last Stmt kind,
+    // so make sure we add one to account for this!
+    std::bitset<Stmt::lastStmtConstant + 1> alwaysAddMask;
 
   public:
     using ForcedBlkExprs = llvm::DenseMap<const Stmt *, const CFGBlock *>;

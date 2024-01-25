@@ -239,7 +239,7 @@ public:
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 
   void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
-  bool isLargeGlobalObject(const GlobalObject *GO) const;
+  bool isLargeGlobalValue(const GlobalValue *GV) const;
 
   bool isPositionIndependent() const;
 
@@ -247,6 +247,9 @@ public:
 
   /// Returns true if this target uses emulated TLS.
   bool useEmulatedTLS() const;
+
+  /// Returns true if this target uses TLS Descriptors.
+  bool useTLSDESC() const;
 
   /// Returns the TLS model which should be used for the given global variable.
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
@@ -362,7 +365,9 @@ public:
   virtual TargetTransformInfo getTargetTransformInfo(const Function &F) const;
 
   /// Allow the target to modify the pass pipeline.
-  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
+  // TODO: Populate all pass names by using <Target>PassRegistry.def.
+  virtual void registerPassBuilderCallbacks(PassBuilder &,
+                                            bool PopulateClassToPassNames) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.

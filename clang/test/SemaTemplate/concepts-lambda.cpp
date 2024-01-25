@@ -116,3 +116,36 @@ static_assert(E<int>);
 // expected-note@-11{{because 'Q.template operator()<float>()' would be invalid: no matching member function for call to 'operator()'}}
 }
 }
+
+namespace ReturnTypeRequirementInLambda {
+template <typename T>
+concept C1 = true;
+
+template <class T>
+concept test = [] {
+  return requires(T t) {
+    { t } -> C1;
+  };
+}();
+
+static_assert(test<int>);
+
+template <typename T>
+concept C2 = true;
+struct S1 {
+  int f1() { return 1; }
+};
+
+void foo() {
+  auto make_caller = []<auto member> {
+    return [](S1 *ps) {
+      if constexpr (requires {
+                      { (ps->*member)() } -> C2;
+                    })
+        ;
+    };
+  };
+
+  auto caller = make_caller.operator()<&S1::f1>();
+}
+} // namespace ReturnTypeRequirementInLambda

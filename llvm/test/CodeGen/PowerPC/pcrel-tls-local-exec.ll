@@ -14,10 +14,10 @@
 define dso_local ptr @LocalExecAddressLoad() {
 ; CHECK-S-LABEL: LocalExecAddressLoad:
 ; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    paddi r3, r13, x@TPREL, 0
+; CHECK-S-NEXT:    paddi r3, r13, x@TPREL
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <LocalExecAddressLoad>:
-; CHECK-O:         0: paddi 3, 13, 0, 0
+; CHECK-O:         0: paddi 3, 13, 0
 ; CHECK-O-NEXT:    0000000000000000:  R_PPC64_TPREL34 x
 ; CHECK-O-NEXT:    8: blr
 entry:
@@ -27,11 +27,11 @@ entry:
 define dso_local i32 @LocalExecValueLoad() {
 ; CHECK-S-LABEL: LocalExecValueLoad:
 ; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    paddi r3, r13, x@TPREL, 0
+; CHECK-S-NEXT:    paddi r3, r13, x@TPREL
 ; CHECK-S-NEXT:    lwz r3, 0(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <LocalExecValueLoad>:
-; CHECK-O:         20: paddi 3, 13, 0, 0
+; CHECK-O:         20: paddi 3, 13, 0
 ; CHECK-O-NEXT:    0000000000000020:  R_PPC64_TPREL34 x
 ; CHECK-O-NEXT:    28: lwz 3, 0(3)
 ; CHECK-O-NEXT:    2c: blr
@@ -43,11 +43,11 @@ entry:
 define dso_local void @LocalExecValueStore(i32 %in) {
 ; CHECK-S-LABEL: LocalExecValueStore:
 ; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    paddi r4, r13, x@TPREL, 0
+; CHECK-S-NEXT:    paddi r4, r13, x@TPREL
 ; CHECK-S-NEXT:    stw r3, 0(r4)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <LocalExecValueStore>:
-; CHECK-O:         40: paddi 4, 13, 0, 0
+; CHECK-O:         40: paddi 4, 13, 0
 ; CHECK-O-NEXT:    0000000000000040:  R_PPC64_TPREL34 x
 ; CHECK-O-NEXT:    48: stw 3, 0(4)
 ; CHECK-O-NEXT:    4c: blr
@@ -59,11 +59,11 @@ entry:
 define dso_local i32 @LocalExecValueLoadOffset() {
 ; CHECK-S-LABEL: LocalExecValueLoadOffset:
 ; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    paddi r3, r13, y@TPREL, 0
+; CHECK-S-NEXT:    paddi r3, r13, y@TPREL
 ; CHECK-S-NEXT:    lwz r3, 12(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <LocalExecValueLoadOffset>:
-; CHECK-O:         60: paddi 3, 13, 0, 0
+; CHECK-O:         60: paddi 3, 13, 0
 ; CHECK-O-NEXT:    0000000000000060:  R_PPC64_TPREL34 y
 ; CHECK-O-NEXT:    68: lwz 3, 12(3)
 ; CHECK-O-NEXT:    6c: blr
@@ -76,11 +76,11 @@ entry:
 define dso_local ptr @LocalExecValueLoadOffsetNoLoad() {
 ; CHECK-S-LABEL: LocalExecValueLoadOffsetNoLoad:
 ; CHECK-S:       # %bb.0: # %entry
-; CHECK-S-NEXT:    paddi r3, r13, y@TPREL, 0
+; CHECK-S-NEXT:    paddi r3, r13, y@TPREL
 ; CHECK-S-NEXT:    addi r3, r3, 12
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <LocalExecValueLoadOffsetNoLoad>:
-; CHECK-O:         80: paddi 3, 13, 0, 0
+; CHECK-O:         80: paddi 3, 13, 0
 ; CHECK-O-NEXT:    0000000000000080:  R_PPC64_TPREL34 y
 ; CHECK-O-NEXT:    88: addi 3, 3, 12
 ; CHECK-O-NEXT:    8c: blr

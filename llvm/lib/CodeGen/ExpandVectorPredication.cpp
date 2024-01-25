@@ -729,6 +729,8 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_sqrt:
   case Intrinsic::vp_maxnum:
   case Intrinsic::vp_minnum:
+  case Intrinsic::vp_maximum:
+  case Intrinsic::vp_minimum:
     return expandPredicationToFPCall(Builder, VPI,
                                      VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:

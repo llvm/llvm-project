@@ -55,6 +55,18 @@ public:
     return getCalledFunction()->getIntrinsicID();
   }
 
+  bool isAssociative() const {
+    switch (getIntrinsicID()) {
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// Return true if swapping the first two arguments to the intrinsic produces
   /// the same result.
   bool isCommutative() const {
@@ -1707,6 +1719,30 @@ public:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::assume;
   }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// Check if \p ID corresponds to a convergence control intrinsic.
+static inline bool isConvergenceControlIntrinsic(unsigned IntrinsicID) {
+  switch (IntrinsicID) {
+  default:
+    return false;
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    return true;
+  }
+}
+
+/// Represents calls to the llvm.experimintal.convergence.* intrinsics.
+class ConvergenceControlInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return isConvergenceControlIntrinsic(I->getIntrinsicID());
+  }
+
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }

@@ -153,7 +153,7 @@ subroutine acc_data
   !$acc end data
 
 ! CHECK: acc.data dataOperands(%{{.*}}) {
-! CHECK: } attributes {asyncAttr}
+! CHECK: } attributes {asyncOnly = [#acc.device_type<none>]}
 
   !$acc data present(a) async(1)
   !$acc end data
@@ -165,18 +165,18 @@ subroutine acc_data
   !$acc end data
 
 ! CHECK: acc.data dataOperands(%{{.*}}) {
-! CHECK: } attributes {waitAttr}
+! CHECK: } attributes {waitOnly = [#acc.device_type<none>]}
 
   !$acc data present(a) wait(1)
   !$acc end data
 
-! CHECK: acc.data dataOperands(%{{.*}}) wait(%{{.*}} : i32) {
+! CHECK: acc.data dataOperands(%{{.*}}) wait({%{{.*}} : i32}) {
 ! CHECK: }{{$}}
 
   !$acc data present(a) wait(devnum: 0: 1)
   !$acc end data
 
-! CHECK: acc.data dataOperands(%{{.*}}) wait_devnum(%{{.*}} : i32) wait(%{{.*}} : i32) {
+! CHECK: acc.data dataOperands(%{{.*}}) wait_devnum(%{{.*}} : i32) wait({%{{.*}} : i32}) {
 ! CHECK: }{{$}}
 
   !$acc data default(none)
@@ -198,4 +198,3 @@ subroutine acc_data
 ! CHECK-NOT: acc.data
 
 end subroutine acc_data
-

@@ -29,7 +29,7 @@ subroutine out(x)
 
   ! CHECK:     %[[V_72:[0-9]+]] = fir.load %[[V_64]] : !fir.ref<f64>
   ! CHECK:     %[[V_73:[0-9]+]] = arith.bitcast %[[V_72]] : f64 to i64
-  ! CHECK:     %[[V_74:[0-9]+]] = arith.cmpf oeq, %[[V_72]], %cst{{[_0-9]*}} : f64
+  ! CHECK:     %[[V_74:[0-9]+]] = arith.cmpf oeq, %[[V_72]], %cst{{[_0-9]*}} {{.*}} : f64
   ! CHECK:     %[[V_75:[0-9]+]] = fir.if %[[V_74]] -> (f64) {
   ! CHECK:       %[[V_101:[0-9]+]] = fir.call @_FortranAMapException(%c4{{.*}}) fastmath<contract> : (i32) -> i32
   ! CHECK:       %[[V_102:[0-9]+]] = fir.call @feraiseexcept(%[[V_101]]) fastmath<contract> : (i32) -> i32

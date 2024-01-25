@@ -18,13 +18,14 @@
 template <typename T>
 class RemQuoTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::build_quiet_nan().get_val();
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);

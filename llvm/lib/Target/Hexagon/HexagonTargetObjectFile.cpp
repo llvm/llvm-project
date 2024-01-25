@@ -140,7 +140,7 @@ MCSection *HexagonTargetObjectFile::SelectSectionForGlobal(
 
   // If the lookup table is used by more than one function, do not place
   // it in text section.
-  if (EmitLutInText && GO->getName().startswith("switch.table")) {
+  if (EmitLutInText && GO->getName().starts_with("switch.table")) {
     if (const Function *Fn = getLutUsedFunction(GO))
       return selectSectionForLookupTable(GO, TM, Fn);
   }

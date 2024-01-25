@@ -57,7 +57,7 @@ ArchAndFile::~ArchAndFile() {
 }
 
 std::string getArchName(StringRef Arch) {
-  if (Arch.startswith("thumb"))
+  if (Arch.starts_with("thumb"))
     return (llvm::Twine("arm") + Arch.drop_front(5)).str();
   return std::string(Arch);
 }

@@ -1692,9 +1692,6 @@ unsigned SystemZInstrInfo::getLoadAndTest(unsigned Opcode) const {
   case SystemZ::LR:     return SystemZ::LTR;
   case SystemZ::LGFR:   return SystemZ::LTGFR;
   case SystemZ::LGR:    return SystemZ::LTGR;
-  case SystemZ::LER:    return SystemZ::LTEBR;
-  case SystemZ::LDR:    return SystemZ::LTDBR;
-  case SystemZ::LXR:    return SystemZ::LTXBR;
   case SystemZ::LCDFR:  return SystemZ::LCDBR;
   case SystemZ::LPDFR:  return SystemZ::LPDBR;
   case SystemZ::LNDFR:  return SystemZ::LNDBR;

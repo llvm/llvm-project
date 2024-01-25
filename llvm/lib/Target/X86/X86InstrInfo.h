@@ -29,8 +29,12 @@ class X86Subtarget;
 namespace X86 {
 
 enum AsmComments {
+  // For instr that was compressed from EVEX to LEGACY.
+  AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
-  AC_EVEX_2_VEX = MachineInstr::TAsmComments
+  AC_EVEX_2_VEX = AC_EVEX_2_LEGACY << 1,
+  // For instr that was compressed from EVEX to EVEX.
+  AC_EVEX_2_EVEX = AC_EVEX_2_VEX << 1
 };
 
 /// Return a pair of condition code for the given predicate and whether
@@ -75,6 +79,16 @@ unsigned getSwappedVCMPImm(unsigned Imm);
 
 /// Check if the instruction is X87 instruction.
 bool isX87Instruction(MachineInstr &MI);
+
+/// Return the index of the instruction's first address operand, if it has a
+/// memory reference, or -1 if it has none. Unlike X86II::getMemoryOperandNo(),
+/// this also works for both pseudo instructions (e.g., TCRETURNmi) as well as
+/// real instructions (e.g., JMP64m).
+int getFirstAddrOperandIdx(const MachineInstr &MI);
+
+/// Find any constant pool entry associated with a specific instruction operand.
+const Constant *getConstantFromPool(const MachineInstr &MI, unsigned OpNo);
+
 } // namespace X86
 
 /// isGlobalStubReference - Return true if the specified TargetFlag operand is

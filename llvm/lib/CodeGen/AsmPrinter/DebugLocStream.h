@@ -18,7 +18,6 @@ namespace llvm {
 class AsmPrinter;
 class DbgVariable;
 class DwarfCompileUnit;
-class MachineInstr;
 class MCSymbol;
 
 /// Byte stream of .debug_loc entries.

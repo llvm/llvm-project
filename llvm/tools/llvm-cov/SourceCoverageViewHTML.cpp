@@ -130,10 +130,14 @@ table {
 .light-row {
   background: #ffffff;
   border: 1px solid #dbdbdb;
+  border-left: none;
+  border-right: none;
 }
 .light-row-bold {
   background: #ffffff;
   border: 1px solid #dbdbdb;
+  border-left: none;
+  border-right: none;
   font-weight: bold;
 }
 .column-entry {
@@ -147,21 +151,28 @@ table {
   text-align: left;
   background-color: #ffffd0;
 }
-.column-entry-yellow:hover {
+.column-entry-yellow:hover, tr:hover .column-entry-yellow {
   background-color: #fffff0;
 }
 .column-entry-red {
   text-align: left;
   background-color: #ffd0d0;
 }
-.column-entry-red:hover {
+.column-entry-red:hover, tr:hover .column-entry-red {
   background-color: #fff0f0;
+}
+.column-entry-gray {
+  text-align: left;
+  background-color: #fbfbfb;
+}
+.column-entry-gray:hover, tr:hover .column-entry-gray {
+  background-color: #f0f0f0;
 }
 .column-entry-green {
   text-align: left;
   background-color: #d0ffd0;
 }
-.column-entry-green:hover {
+.column-entry-green:hover, tr:hover .column-entry-green {
   background-color: #f0fff0;
 }
 .line-number {
@@ -231,6 +242,9 @@ td:last-child {
 }
 tr:hover {
   background-color: #f0f0f0;
+}
+tr:last-child {
+  border-bottom: none;
 }
 )";
 
@@ -309,7 +323,9 @@ void emitTableRow(raw_ostream &OS, const CoverageViewOptions &Opts,
           RSO << '(' << Hit << '/' << Total << ')';
         }
         const char *CellClass = "column-entry-yellow";
-        if (Pctg >= Opts.HighCovWatermark)
+        if (!Total)
+          CellClass = "column-entry-gray";
+        else if (Pctg >= Opts.HighCovWatermark)
           CellClass = "column-entry-green";
         else if (Pctg < Opts.LowCovWatermark)
           CellClass = "column-entry-red";
@@ -335,6 +351,10 @@ void emitTableRow(raw_ostream &OS, const CoverageViewOptions &Opts,
     AddCoverageTripleToColumn(FCS.BranchCoverage.getCovered(),
                               FCS.BranchCoverage.getNumBranches(),
                               FCS.BranchCoverage.getPercentCovered());
+  if (Opts.ShowMCDCSummary)
+    AddCoverageTripleToColumn(FCS.MCDCCoverage.getCoveredPairs(),
+                              FCS.MCDCCoverage.getNumPairs(),
+                              FCS.MCDCCoverage.getPercentCovered());
 
   if (IsTotals)
     OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row-bold");
@@ -385,6 +405,8 @@ static void emitColumnLabelsForIndex(raw_ostream &OS,
     Columns.emplace_back(tag("td", "Region Coverage", "column-entry-bold"));
   if (Opts.ShowBranchSummary)
     Columns.emplace_back(tag("td", "Branch Coverage", "column-entry-bold"));
+  if (Opts.ShowMCDCSummary)
+    Columns.emplace_back(tag("td", "MC/DC", "column-entry-bold"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
 
@@ -639,7 +661,7 @@ struct CoveragePrinterHTMLDirectory::Reporter : public DirectoryCoverageReport {
     sys::path::native(LinkTextStr);
 
     // remove_dots will remove trailing slash, so we need to check before it.
-    auto IsDir = LinkTextStr.endswith(sys::path::get_separator());
+    auto IsDir = LinkTextStr.ends_with(sys::path::get_separator());
     sys::path::remove_dots(LinkTextStr, /*remove_dot_dot=*/true);
 
     SmallString<128> LinkTargetStr(LinkTextStr);
@@ -953,6 +975,52 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
   }
   OS << EndPre;
   OS << EndExpansionDiv;
+}
+
+void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
+                                            unsigned ViewDepth) {
+  for (auto &Record : MRV.Records) {
+    OS << BeginExpansionDiv;
+    OS << BeginPre;
+    OS << "  MC/DC Decision Region (";
+
+    // Display Line + Column information.
+    const CounterMappingRegion &DecisionRegion = Record.getDecisionRegion();
+    std::string LineNoStr = Twine(DecisionRegion.LineStart).str();
+    std::string ColNoStr = Twine(DecisionRegion.ColumnStart).str();
+    std::string TargetName = "L" + LineNoStr;
+    OS << tag("span",
+              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr),
+                TargetName),
+              "line-number") +
+              ") to (";
+    LineNoStr = utostr(uint64_t(DecisionRegion.LineEnd));
+    ColNoStr = utostr(uint64_t(DecisionRegion.ColumnEnd));
+    OS << tag("span",
+              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr),
+                TargetName),
+              "line-number") +
+              ")\n\n";
+
+    // Display MC/DC Information.
+    OS << "  Number of Conditions: " << Record.getNumConditions() << "\n";
+    for (unsigned i = 0; i < Record.getNumConditions(); i++) {
+      OS << "     " << Record.getConditionHeaderString(i);
+    }
+    OS << "\n";
+    OS << "  Executed MC/DC Test Vectors:\n\n     ";
+    OS << Record.getTestVectorHeaderString();
+    for (unsigned i = 0; i < Record.getNumTestVectors(); i++)
+      OS << Record.getTestVectorString(i);
+    OS << "\n";
+    for (unsigned i = 0; i < Record.getNumConditions(); i++)
+      OS << Record.getConditionCoverageString(i);
+    OS << "  MC/DC Coverage for Expression: ";
+    OS << format("%0.2f", Record.getPercentCovered()) << "%\n";
+    OS << EndPre;
+    OS << EndExpansionDiv;
+  }
+  return;
 }
 
 void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,

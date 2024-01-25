@@ -91,7 +91,7 @@ bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,
       expectedToErrorOrAndEmitErrors(Context, getBitcodeTargetTriple(*BCOrErr));
   if (!TripleOrErr)
     return false;
-  return StringRef(*TripleOrErr).startswith(TriplePrefix);
+  return StringRef(*TripleOrErr).starts_with(TriplePrefix);
 }
 
 std::string LTOModule::getProducerString(MemoryBuffer *Buffer) {
@@ -382,17 +382,17 @@ void LTOModule::addDefinedDataSymbol(StringRef Name, const GlobalValue *v) {
   // special case if this data blob is an ObjC class definition
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(v)) {
     StringRef Section = GV->getSection();
-    if (Section.startswith("__OBJC,__class,")) {
+    if (Section.starts_with("__OBJC,__class,")) {
       addObjCClass(GV);
     }
 
     // special case if this data blob is an ObjC category definition
-    else if (Section.startswith("__OBJC,__category,")) {
+    else if (Section.starts_with("__OBJC,__category,")) {
       addObjCCategory(GV);
     }
 
     // special case if this data blob is the list of referenced classes
-    else if (Section.startswith("__OBJC,__cls_refs,")) {
+    else if (Section.starts_with("__OBJC,__cls_refs,")) {
       addObjCClassRef(GV);
     }
   }

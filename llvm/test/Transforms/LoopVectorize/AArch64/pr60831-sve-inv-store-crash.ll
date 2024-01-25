@@ -17,28 +17,28 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <vscale x 4 x i64> [[TMP5]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = sub i32 [[TMP14]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i64> [[TMP7]], i32 [[TMP15]]
-; CHECK-NEXT:    store i64 [[TMP16]], ptr [[TMP12]], align 1
-; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[TMP17]], 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP18]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i64> [[TMP7]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP16]], 1
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 4 x i64> [[TMP9]], i32 [[TMP17]]
+; CHECK-NEXT:    store i64 [[TMP18]], ptr [[TMP14]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

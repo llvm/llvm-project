@@ -262,7 +262,8 @@ bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
 
 bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
-                                           const MCValue &Target) {
+                                           const MCValue &Target,
+                                           const MCSubtargetInfo * /*STI*/) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;
   switch (Fixup.getTargetKind()) {

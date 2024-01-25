@@ -14,7 +14,6 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
-#include "RISCVMacroFusion.h"
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
@@ -26,6 +25,8 @@
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
+#include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -128,10 +129,20 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPushPopOptPass(*PR);
 }
 
-static StringRef computeDataLayout(const Triple &TT) {
-  if (TT.isArch64Bit())
+static StringRef computeDataLayout(const Triple &TT,
+                                   const TargetOptions &Options) {
+  StringRef ABIName = Options.MCOptions.getABIName();
+  if (TT.isArch64Bit()) {
+    if (ABIName == "lp64e")
+      return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
+
     return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+  }
   assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+
+  if (ABIName == "ilp32e")
+    return "e-m:e-p:32:32-i64:64-n32-S32";
+
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
@@ -146,7 +157,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
+    : LLVMTargetMachine(T, computeDataLayout(TT, Options), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
@@ -213,13 +224,8 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       llvm::bit_floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
 
   SmallString<512> Key;
-  Key += "RVVMin";
-  Key += std::to_string(RVVBitsMin);
-  Key += "RVVMax";
-  Key += std::to_string(RVVBitsMax);
-  Key += CPU;
-  Key += TuneCPU;
-  Key += FS;
+  raw_svector_ostream(Key) << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax
+                           << CPU << TuneCPU << FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -353,11 +359,13 @@ public:
     ScheduleDAGMILive *DAG = nullptr;
     if (EnableMISchedLoadClustering) {
       DAG = createGenericSchedLive(C);
-      DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
+      DAG->addMutation(createLoadClusterDAGMutation(
+          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
-    if (ST.hasMacroFusion()) {
+    const auto &MacroFusions = ST.getMacroFusions();
+    if (!MacroFusions.empty()) {
       DAG = DAG ? DAG : createGenericSchedLive(C);
-      DAG->addMutation(createRISCVMacroFusionDAGMutation());
+      DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
     }
     return DAG;
   }
@@ -365,9 +373,10 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override {
     const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-    if (ST.hasMacroFusion()) {
+    const auto &MacroFusions = ST.getMacroFusions();
+    if (!MacroFusions.empty()) {
       ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-      DAG->addMutation(createRISCVMacroFusionDAGMutation());
+      DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
       return DAG;
     }
     return nullptr;
@@ -549,7 +558,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
-  if (TM->getTargetTriple().getArch() == Triple::riscv64) {
+  if (TM->getTargetTriple().isRISCV64()) {
     addPass(createRISCVOptWInstrsPass());
   }
 }

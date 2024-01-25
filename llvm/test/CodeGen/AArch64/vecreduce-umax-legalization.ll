@@ -168,53 +168,32 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-GI-LABEL: test_v9i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov b2, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov b3, v0.b[3]
-; CHECK-GI-NEXT:    mov b4, v0.b[4]
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    uxtb w8, w8
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w11, s2
-; CHECK-GI-NEXT:    fmov w12, s1
-; CHECK-GI-NEXT:    mov b1, v0.b[5]
-; CHECK-GI-NEXT:    mov b2, v0.b[6]
-; CHECK-GI-NEXT:    cmp w8, w10, uxtb
-; CHECK-GI-NEXT:    fmov w10, s3
-; CHECK-GI-NEXT:    uxtb w8, w11
-; CHECK-GI-NEXT:    csel w9, w9, w12, hi
-; CHECK-GI-NEXT:    cmp w8, w9, uxtb
-; CHECK-GI-NEXT:    uxtb w8, w10
-; CHECK-GI-NEXT:    fmov w10, s4
-; CHECK-GI-NEXT:    csel w9, w9, w11, lo
-; CHECK-GI-NEXT:    fmov w11, s3
-; CHECK-GI-NEXT:    mov b3, v0.b[7]
-; CHECK-GI-NEXT:    mov b0, v0.b[8]
-; CHECK-GI-NEXT:    cmp w8, w9, uxtb
-; CHECK-GI-NEXT:    uxtb w8, w10
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    csel w9, w9, w11, lo
-; CHECK-GI-NEXT:    fmov w11, s4
-; CHECK-GI-NEXT:    cmp w8, w9, uxtb
-; CHECK-GI-NEXT:    uxtb w8, w10
-; CHECK-GI-NEXT:    fmov w10, s2
-; CHECK-GI-NEXT:    csel w9, w9, w11, lo
+; CHECK-GI-NEXT:    umov w8, v0.b[0]
+; CHECK-GI-NEXT:    umov w9, v0.b[1]
+; CHECK-GI-NEXT:    umov w10, v0.b[2]
 ; CHECK-GI-NEXT:    fmov w11, s1
-; CHECK-GI-NEXT:    cmp w8, w9, uxtb
-; CHECK-GI-NEXT:    uxtb w8, w10
-; CHECK-GI-NEXT:    fmov w10, s3
-; CHECK-GI-NEXT:    csel w9, w9, w11, lo
-; CHECK-GI-NEXT:    fmov w11, s2
-; CHECK-GI-NEXT:    cmp w8, w9, uxtb
-; CHECK-GI-NEXT:    uxtb w8, w10
-; CHECK-GI-NEXT:    fmov w10, s0
-; CHECK-GI-NEXT:    csel w9, w9, w11, lo
-; CHECK-GI-NEXT:    fmov w11, s3
-; CHECK-GI-NEXT:    cmp w8, w9, uxtb
-; CHECK-GI-NEXT:    uxtb w8, w10
-; CHECK-GI-NEXT:    csel w9, w9, w11, lo
-; CHECK-GI-NEXT:    cmp w8, w9, uxtb
-; CHECK-GI-NEXT:    csel w0, w9, w10, lo
+; CHECK-GI-NEXT:    cmp w8, w11, uxtb
+; CHECK-GI-NEXT:    umov w11, v0.b[3]
+; CHECK-GI-NEXT:    csel w8, w8, w9, hi
+; CHECK-GI-NEXT:    umov w9, v0.b[4]
+; CHECK-GI-NEXT:    cmp w10, w8, uxtb
+; CHECK-GI-NEXT:    csel w8, w8, w10, lo
+; CHECK-GI-NEXT:    umov w10, v0.b[5]
+; CHECK-GI-NEXT:    cmp w11, w8, uxtb
+; CHECK-GI-NEXT:    csel w8, w8, w11, lo
+; CHECK-GI-NEXT:    umov w11, v0.b[6]
+; CHECK-GI-NEXT:    cmp w9, w8, uxtb
+; CHECK-GI-NEXT:    csel w8, w8, w9, lo
+; CHECK-GI-NEXT:    umov w9, v0.b[7]
+; CHECK-GI-NEXT:    cmp w10, w8, uxtb
+; CHECK-GI-NEXT:    csel w8, w8, w10, lo
+; CHECK-GI-NEXT:    umov w10, v0.b[8]
+; CHECK-GI-NEXT:    cmp w11, w8, uxtb
+; CHECK-GI-NEXT:    csel w8, w8, w11, lo
+; CHECK-GI-NEXT:    cmp w9, w8, uxtb
+; CHECK-GI-NEXT:    csel w8, w8, w9, lo
+; CHECK-GI-NEXT:    cmp w10, w8, uxtb
+; CHECK-GI-NEXT:    csel w0, w8, w10, lo
 ; CHECK-GI-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.umax.v9i8(<9 x i8> %a)
   ret i8 %b
@@ -259,21 +238,18 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-GI-LABEL: test_v4i1:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w10, s1
-; CHECK-GI-NEXT:    fmov w12, s2
-; CHECK-GI-NEXT:    fmov w13, s3
-; CHECK-GI-NEXT:    and w9, w8, #0x1
-; CHECK-GI-NEXT:    and w11, w10, #0x1
-; CHECK-GI-NEXT:    cmp w9, w11
-; CHECK-GI-NEXT:    and w9, w12, #0x1
-; CHECK-GI-NEXT:    and w11, w13, #0x1
-; CHECK-GI-NEXT:    csel w8, w8, w10, hi
-; CHECK-GI-NEXT:    cmp w9, w11
-; CHECK-GI-NEXT:    csel w9, w12, w13, hi
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w11, v0.h[3]
+; CHECK-GI-NEXT:    and w12, w8, #0x1
+; CHECK-GI-NEXT:    and w13, w9, #0x1
+; CHECK-GI-NEXT:    cmp w12, w13
+; CHECK-GI-NEXT:    and w12, w10, #0x1
+; CHECK-GI-NEXT:    and w13, w11, #0x1
+; CHECK-GI-NEXT:    csel w8, w8, w9, hi
+; CHECK-GI-NEXT:    cmp w12, w13
+; CHECK-GI-NEXT:    csel w9, w10, w11, hi
 ; CHECK-GI-NEXT:    and w10, w8, #0x1
 ; CHECK-GI-NEXT:    and w11, w9, #0x1
 ; CHECK-GI-NEXT:    cmp w10, w11

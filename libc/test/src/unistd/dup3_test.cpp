@@ -16,6 +16,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 // The tests here are exactly the same as those of dup2. We only test the
 // plumbing of the dup3 syscall and not the dup3 functionality itself as it is
 // a simple syscall wrapper. Testing dup3 functionality is beyond the scope of

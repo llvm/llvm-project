@@ -1,7 +1,7 @@
 // RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -o -| FileCheck %s
 
-// CHECK-LABEL: @unary_resize_nearest_fp
-func.func @unary_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
+// CHECK-LABEL: @unary_resize_nearest_fp32
+func.func @unary_resize_nearest_fp32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
   %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xf32>
@@ -9,11 +9,29 @@ func.func @unary_resize_nearest_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x
 
 // -----
 
-// CHECK-LABEL: @unary_resize_bilinear_fp
-func.func @unary_resize_bilinear_fp(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
+// CHECK-LABEL: @unary_resize_nearest_fp16
+func.func @unary_resize_nearest_fp16(%arg0 : tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16> {
+  %resize = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xf16>
+}
+
+// -----
+
+// CHECK-LABEL: @unary_resize_bilinear_fp32
+func.func @unary_resize_bilinear_fp32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32> {
   %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf32>) -> tensor<3x1x1x7xf32>
   // CHECK: return %arg0
   return %resize : tensor<3x1x1x7xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @unary_resize_bilinear_fp16
+func.func @unary_resize_bilinear_fp16(%arg0 : tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16> {
+  %resize = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = array<i64: 2, 2, 1, 1>, offset = array<i64: 0, 0>, border = array<i64: 0, 0>} : (tensor<3x1x1x7xf16>) -> tensor<3x1x1x7xf16>
+  // CHECK: return %arg0
+  return %resize : tensor<3x1x1x7xf16>
 }
 
 // -----
@@ -285,8 +303,8 @@ func.func @resize_bilinear_int(%arg0: tensor<1x19x20x1xi8>) {
 
 // -----
 
-// CHECK-LABEL: @resize_nearest_fp
-func.func @resize_nearest_fp(%input: tensor<1x50x48x1xf32>) -> () {
+// CHECK-LABEL: @resize_nearest_fp32
+func.func @resize_nearest_fp32(%input: tensor<1x50x48x1xf32>) -> () {
   // CHECK: %[[INIT:.+]] = tensor.empty() : tensor<1x1600x1536x1xf32>
   // CHECK: %[[GENERIC:.+]] = linalg.generic
   // CHECK: %[[IDX0:.+]] = linalg.index 0

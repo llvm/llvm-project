@@ -65,6 +65,7 @@ public:
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
   bool VisitPointerArithBinOp(const BinaryOperator *E);
+  bool VisitComplexBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E);
@@ -190,10 +191,6 @@ protected:
     if (!visitInitializer(Init))
       return false;
 
-    if ((Init->getType()->isArrayType() || Init->getType()->isRecordType()) &&
-        !this->emitCheckGlobalCtor(Init))
-      return false;
-
     return this->emitPopPtr(Init);
   }
 
@@ -285,6 +282,16 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
+  PrimType classifyComplexElementType(QualType T) const {
+    assert(T->isAnyComplexType());
+
+    QualType ElemType = T->getAs<ComplexType>()->getElementType();
+
+    return *this->classify(ElemType);
+  }
+
+  bool emitComplexReal(const Expr *SubExpr);
+
   bool emitRecordDestruction(const Descriptor *Desc);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);

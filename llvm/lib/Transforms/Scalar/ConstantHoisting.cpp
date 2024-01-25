@@ -523,7 +523,8 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
     if (!DT->isReachableFromEntry(&BB))
       continue;
     for (Instruction &Inst : BB)
-      collectConstantCandidates(ConstCandMap, &Inst);
+      if (!TTI->preferToKeepConstantsAttached(Inst, Fn))
+        collectConstantCandidates(ConstCandMap, &Inst);
   }
 }
 
@@ -575,9 +576,6 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
                                            ConstCandVecType::iterator &MaxCostItr) {
   unsigned NumUses = 0;
 
-  bool OptForSize = Entry->getParent()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(Entry->getParent(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
   if (!OptForSize || std::distance(S,E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
@@ -673,8 +671,7 @@ void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
   llvm::stable_sort(ConstCandVec, [](const ConstantCandidate &LHS,
                                      const ConstantCandidate &RHS) {
     if (LHS.ConstInt->getType() != RHS.ConstInt->getType())
-      return LHS.ConstInt->getType()->getBitWidth() <
-             RHS.ConstInt->getType()->getBitWidth();
+      return LHS.ConstInt->getBitWidth() < RHS.ConstInt->getBitWidth();
     return LHS.ConstInt->getValue().ult(RHS.ConstInt->getValue());
   });
 
@@ -889,7 +886,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
         Type *Ty = ConstInfo.BaseExpr->getType();
         Base = new BitCastInst(ConstInfo.BaseExpr, Ty, "const", IP);
       } else {
-        IntegerType *Ty = ConstInfo.BaseInt->getType();
+        IntegerType *Ty = ConstInfo.BaseInt->getIntegerType();
         Base = new BitCastInst(ConstInfo.BaseInt, Ty, "const", IP);
       }
 
@@ -948,6 +945,10 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;
+  this->OptForSize = Entry.getParent()->hasOptSize() ||
+                     llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
+                                                 PGSOQueryType::IRPass);
+
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 

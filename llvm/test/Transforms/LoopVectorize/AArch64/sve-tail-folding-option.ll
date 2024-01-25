@@ -328,7 +328,7 @@ for.body:                                         ; preds = %entry, %for.body
   %mul1 = mul nuw nsw i64 %i.021, 3
   %arrayidx2 = getelementptr inbounds float, ptr %dst, i64 %mul1
   store float %0, ptr %arrayidx2, align 4
-  %add = or i64 %mul, 1
+  %add = or disjoint i64 %mul, 1
   %arrayidx4 = getelementptr inbounds float, ptr %src, i64 %add
   %1 = load float, ptr %arrayidx4, align 4
   %add6 = add nuw nsw i64 %mul1, 1

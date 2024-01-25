@@ -366,6 +366,9 @@ struct OperationFormat {
   /// Indicate whether attribute are stored in properties.
   bool useProperties;
 
+  /// Indicate whether prop-dict is used in the format
+  bool hasPropDict;
+
   /// The Operation class name
   StringRef opCppClassName;
 
@@ -895,6 +898,8 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     body << attr->getVar()->name << "Attr";
   } else if (isa<AttrDictDirective>(param)) {
     body << "result.attributes";
+  } else if (isa<PropDictDirective>(param)) {
+    body << "result";
   } else if (auto *operand = dyn_cast<OperandVariable>(param)) {
     StringRef name = operand->getVar()->name;
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
@@ -1808,9 +1813,14 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
       body << "  }\n";
     }
   }
-  body << "  _odsPrinter.printOptionalAttrDict"
-       << (withKeyword ? "WithKeyword" : "")
-       << "((*this)->getAttrs(), elidedAttrs);\n";
+  if (fmt.hasPropDict)
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "(llvm::to_vector((*this)->getDiscardableAttrs()), elidedAttrs);\n";
+  else
+    body << "  _odsPrinter.printOptionalAttrDict"
+         << (withKeyword ? "WithKeyword" : "")
+         << "((*this)->getAttrs(), elidedAttrs);\n";
 }
 
 /// Generate the printer for a literal value. `shouldEmitSpace` is true if a
@@ -1853,6 +1863,9 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 
   } else if (isa<AttrDictDirective>(element)) {
     body << "getOperation()->getAttrDictionary()";
+
+  } else if (isa<PropDictDirective>(element)) {
+    body << "getProperties()";
 
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     body << op.getGetterName(operand->getVar()->name) << "()";
@@ -2555,6 +2568,9 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
 
   // Collect the set of used attributes in the format.
   fmt.usedAttributes = seenAttrs.takeVector();
+
+  // Set whether prop-dict is used in the format
+  fmt.hasPropDict = hasPropDict;
   return success();
 }
 
@@ -3138,9 +3154,9 @@ OpFormatParser::parsePropDictDirective(SMLoc loc, Context context) {
 LogicalResult OpFormatParser::verifyCustomDirectiveArguments(
     SMLoc loc, ArrayRef<FormatElement *> arguments) {
   for (FormatElement *argument : arguments) {
-    if (!isa<AttrDictDirective, AttributeVariable, OperandVariable,
-             PropertyVariable, RefDirective, RegionVariable, SuccessorVariable,
-             StringElement, TypeDirective>(argument)) {
+    if (!isa<AttrDictDirective, PropDictDirective, AttributeVariable,
+             OperandVariable, PropertyVariable, RefDirective, RegionVariable,
+             SuccessorVariable, StringElement, TypeDirective>(argument)) {
       // TODO: FormatElement should have location info attached.
       return emitError(loc, "only variables and types may be used as "
                             "parameters to a custom directive");

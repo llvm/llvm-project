@@ -37,7 +37,7 @@ NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Prefix(
 
 bool NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Match(
     ConstString class_name) {
-  return class_name.GetStringRef().startswith(m_prefix.GetStringRef());
+  return class_name.GetStringRef().starts_with(m_prefix.GetStringRef());
 }
 
 NSDictionary_Additionals::AdditionalFormatterMatching::Full::Full(ConstString n)

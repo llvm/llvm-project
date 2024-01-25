@@ -73,7 +73,7 @@ void BasicBlock::convertToNewDbgValues() {
   SmallVector<DPValue *, 4> DPVals;
   for (Instruction &I : make_early_inc_range(InstList)) {
     assert(!I.DbgMarker && "DbgMarker already set on old-format instrs?");
-    if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
+    if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
       // Convert this dbg.value to a DPValue.
       DPValue *Value = new DPValue(DVI);
       DPVals.push_back(Value);
@@ -237,12 +237,12 @@ void BasicBlock::insertInto(Function *NewParent, BasicBlock *InsertBefore) {
   assert(NewParent && "Expected a parent");
   assert(!Parent && "Already has a parent");
 
-  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
-
   if (InsertBefore)
     NewParent->insert(InsertBefore->getIterator(), this);
   else
     NewParent->insert(NewParent->end(), this);
+
+  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
 }
 
 BasicBlock::~BasicBlock() {
@@ -770,6 +770,7 @@ void BasicBlock::flushTerminatorDbgValues() {
 
   // Transfer DPValues from the trailing position onto the terminator.
   Term->DbgMarker->absorbDebugValues(*TrailingDPValues, false);
+  TrailingDPValues->eraseFromParent();
   deleteTrailingDPValues();
 }
 
@@ -813,15 +814,22 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
 
     DPMarker *M = Dest->DbgMarker;
     M->absorbDebugValues(*SrcTrailingDPValues, InsertAtHead);
+    SrcTrailingDPValues->eraseFromParent();
     Src->deleteTrailingDPValues();
     return;
   }
 
   // There are instructions in this block; if the First iterator was
   // with begin() / getFirstInsertionPt() then the caller intended debug-info
-  // at the start of the block to be transferred.
-  if (!Src->empty() && First == Src->begin() && ReadFromHead)
-    Dest->DbgMarker->absorbDebugValues(*First->DbgMarker, InsertAtHead);
+  // at the start of the block to be transferred. Return otherwise.
+  if (Src->empty() || First != Src->begin() || !ReadFromHead)
+    return;
+
+  // Is there actually anything to transfer?
+  if (!First->hasDbgValues())
+    return;
+
+  createMarker(Dest)->absorbDebugValues(*First->DbgMarker, InsertAtHead);
 
   return;
 }
@@ -920,6 +928,7 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
   // Use this flag to signal the abnormal case, where we don't want to copy the
   // DPValues ahead of the "Last" position.
   bool ReadFromTail = !Last.getTailBit();
+  bool LastIsEnd = (Last == Src->end());
 
   /*
     Here's an illustration of what we're about to do. We have two blocks, this
@@ -995,12 +1004,16 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     DPMarker *OntoDest = getMarker(Dest);
     DPMarker *FromLast = Src->getMarker(Last);
     OntoDest->absorbDebugValues(*FromLast, true);
+    if (LastIsEnd) {
+      FromLast->eraseFromParent();
+      Src->deleteTrailingDPValues();
+    }
   }
 
   // If we're _not_ reading from the head of First, i.e. the "++++" DPValues,
   // move their markers onto Last. They remain in the Src block. No action
   // needed.
-  if (!ReadFromHead) {
+  if (!ReadFromHead && First->hasDbgValues()) {
     DPMarker *OntoLast = Src->createMarker(Last);
     DPMarker *FromFirst = Src->createMarker(First);
     OntoLast->absorbDebugValues(*FromFirst,
@@ -1030,6 +1043,7 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     DPMarker *TrailingDPValues = getTrailingDPValues();
     if (TrailingDPValues) {
       FirstMarker->absorbDebugValues(*TrailingDPValues, true);
+      TrailingDPValues->eraseFromParent();
       deleteTrailingDPValues();
     }
   }
@@ -1080,6 +1094,8 @@ void BasicBlock::insertDPValueBefore(DPValue *DPV,
   // shouldn't be generated at times when there's no terminator.
   assert(Where != end());
   assert(Where->getParent() == this);
+  if (!Where->DbgMarker)
+    createMarker(Where);
   bool InsertAtHead = Where.getHeadBit();
   Where->DbgMarker->insertDPValue(DPV, InsertAtHead);
 }

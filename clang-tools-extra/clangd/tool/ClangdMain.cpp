@@ -563,7 +563,7 @@ public:
     using namespace llvm::sys;
     // Still require "/" in body to mimic file scheme, as we want lengths of an
     // equivalent URI in both schemes to be the same.
-    if (!Body.startswith("/"))
+    if (!Body.starts_with("/"))
       return error(
           "Expect URI body to be an absolute path starting with '/': {0}",
           Body);

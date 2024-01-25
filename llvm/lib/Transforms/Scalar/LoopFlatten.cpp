@@ -70,6 +70,7 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include <optional>
@@ -96,6 +97,10 @@ static cl::opt<bool>
     WidenIV("loop-flatten-widen-iv", cl::Hidden, cl::init(true),
             cl::desc("Widen the loop induction variables, if possible, so "
                      "overflow checks won't reject flattening"));
+
+static cl::opt<bool>
+    VersionLoops("loop-flatten-version-loops", cl::Hidden, cl::init(true),
+                 cl::desc("Version loops if flattened loop could overflow"));
 
 namespace {
 // We require all uses of both induction variables to match this pattern:
@@ -140,6 +145,8 @@ struct FlattenInfo {
   PHINode *NarrowOuterInductionPHI = nullptr; // phis, i.e. the Phis before IV
                                               // has been applied. Used to skip
                                               // checks on phi nodes.
+
+  Value *NewTripCount = nullptr; // The tripcount of the flattened loop.
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};
 
@@ -207,6 +214,12 @@ struct FlattenInfo {
         match(MatchedMul, m_c_Mul(m_Trunc(m_Specific(OuterInductionPHI)),
                                   m_Value(MatchedItCount)));
 
+    // Matches the pattern ptr+i*M+j, with the two additions being done via GEP.
+    bool IsGEP = match(U, m_GEP(m_GEP(m_Value(), m_Value(MatchedMul)),
+                                m_Specific(InnerInductionPHI))) &&
+                 match(MatchedMul, m_c_Mul(m_Specific(OuterInductionPHI),
+                                           m_Value(MatchedItCount)));
+
     if (!MatchedItCount)
       return false;
 
@@ -224,7 +237,7 @@ struct FlattenInfo {
 
     // Look through extends if the IV has been widened. Don't look through
     // extends if we already looked through a trunc.
-    if (Widened && IsAdd &&
+    if (Widened && (IsAdd || IsGEP) &&
         (isa<SExtInst>(MatchedItCount) || isa<ZExtInst>(MatchedItCount))) {
       assert(MatchedItCount->getType() == InnerInductionPHI->getType() &&
              "Unexpected type mismatch in types after widening");
@@ -236,7 +249,7 @@ struct FlattenInfo {
     LLVM_DEBUG(dbgs() << "Looking for inner trip count: ";
                InnerTripCount->dump());
 
-    if ((IsAdd || IsAddTrunc) && MatchedItCount == InnerTripCount) {
+    if ((IsAdd || IsAddTrunc || IsGEP) && MatchedItCount == InnerTripCount) {
       LLVM_DEBUG(dbgs() << "Found. This sse is optimisable\n");
       ValidOuterPHIUses.insert(MatchedMul);
       LinearIVUses.insert(U);
@@ -343,9 +356,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
     // If the RHS of the compare is equal to the backedge taken count we need
     // to add one to get the trip count.
     if (SCEVRHS == BackedgeTCExt || SCEVRHS == BackedgeTakenCount) {
-      ConstantInt *One = ConstantInt::get(ConstantRHS->getType(), 1);
-      Value *NewRHS = ConstantInt::get(
-          ConstantRHS->getContext(), ConstantRHS->getValue() + One->getValue());
+      Value *NewRHS = ConstantInt::get(ConstantRHS->getContext(),
+                                       ConstantRHS->getValue() + 1);
       return setLoopComponents(NewRHS, TripCount, Increment,
                                IterationInstructions);
     }
@@ -647,33 +659,40 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
   if (OR != OverflowResult::MayOverflow)
     return OR;
 
-  for (Value *V : FI.LinearIVUses) {
-    for (Value *U : V->users()) {
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-        for (Value *GEPUser : U->users()) {
-          auto *GEPUserInst = cast<Instruction>(GEPUser);
-          if (!isa<LoadInst>(GEPUserInst) &&
-              !(isa<StoreInst>(GEPUserInst) &&
-                GEP == GEPUserInst->getOperand(1)))
-            continue;
-          if (!isGuaranteedToExecuteForEveryIteration(GEPUserInst,
-                                                      FI.InnerLoop))
-            continue;
-          // The IV is used as the operand of a GEP which dominates the loop
-          // latch, and the IV is at least as wide as the address space of the
-          // GEP. In this case, the GEP would wrap around the address space
-          // before the IV increment wraps, which would be UB.
-          if (GEP->isInBounds() &&
-              V->getType()->getIntegerBitWidth() >=
-                  DL.getPointerTypeSizeInBits(GEP->getType())) {
-            LLVM_DEBUG(
-                dbgs() << "use of linear IV would be UB if overflow occurred: ";
-                GEP->dump());
-            return OverflowResult::NeverOverflows;
-          }
-        }
+  auto CheckGEP = [&](GetElementPtrInst *GEP, Value *GEPOperand) {
+    for (Value *GEPUser : GEP->users()) {
+      auto *GEPUserInst = cast<Instruction>(GEPUser);
+      if (!isa<LoadInst>(GEPUserInst) &&
+          !(isa<StoreInst>(GEPUserInst) && GEP == GEPUserInst->getOperand(1)))
+        continue;
+      if (!isGuaranteedToExecuteForEveryIteration(GEPUserInst, FI.InnerLoop))
+        continue;
+      // The IV is used as the operand of a GEP which dominates the loop
+      // latch, and the IV is at least as wide as the address space of the
+      // GEP. In this case, the GEP would wrap around the address space
+      // before the IV increment wraps, which would be UB.
+      if (GEP->isInBounds() &&
+          GEPOperand->getType()->getIntegerBitWidth() >=
+              DL.getPointerTypeSizeInBits(GEP->getType())) {
+        LLVM_DEBUG(
+            dbgs() << "use of linear IV would be UB if overflow occurred: ";
+            GEP->dump());
+        return true;
       }
     }
+    return false;
+  };
+
+  // Check if any IV user is, or is used by, a GEP that would cause UB if the
+  // multiply overflows.
+  for (Value *V : FI.LinearIVUses) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
+      if (GEP->getNumIndices() == 1 && CheckGEP(GEP, GEP->getOperand(1)))
+        return OverflowResult::NeverOverflows;
+    for (Value *U : V->users())
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U))
+        if (CheckGEP(GEP, V))
+          return OverflowResult::NeverOverflows;
   }
 
   return OverflowResult::MayOverflow;
@@ -740,11 +759,13 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     ORE.emit(Remark);
   }
 
-  Value *NewTripCount = BinaryOperator::CreateMul(
-      FI.InnerTripCount, FI.OuterTripCount, "flatten.tripcount",
-      FI.OuterLoop->getLoopPreheader()->getTerminator());
-  LLVM_DEBUG(dbgs() << "Created new trip count in preheader: ";
-             NewTripCount->dump());
+  if (!FI.NewTripCount) {
+    FI.NewTripCount = BinaryOperator::CreateMul(
+        FI.InnerTripCount, FI.OuterTripCount, "flatten.tripcount",
+        FI.OuterLoop->getLoopPreheader()->getTerminator());
+    LLVM_DEBUG(dbgs() << "Created new trip count in preheader: ";
+               FI.NewTripCount->dump());
+  }
 
   // Fix up PHI nodes that take values from the inner loop back-edge, which
   // we are about to remove.
@@ -757,7 +778,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
   // Modify the trip count of the outer loop to be the product of the two
   // trip counts.
-  cast<User>(FI.OuterBranch->getCondition())->setOperand(1, NewTripCount);
+  cast<User>(FI.OuterBranch->getCondition())->setOperand(1, FI.NewTripCount);
 
   // Replace the inner loop backedge with an unconditional branch to the exit.
   BasicBlock *InnerExitBlock = FI.InnerLoop->getExitBlock();
@@ -778,6 +799,18 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     if (FI.Widened)
       OuterValue = Builder.CreateTrunc(FI.OuterInductionPHI, V->getType(),
                                        "flatten.trunciv");
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+      // Replace the GEP with one that uses OuterValue as the offset.
+      auto *InnerGEP = cast<GetElementPtrInst>(GEP->getOperand(0));
+      Value *Base = InnerGEP->getOperand(0);
+      // When the base of the GEP doesn't dominate the outer induction phi then
+      // we need to insert the new GEP where the old GEP was.
+      if (!DT->dominates(Base, &*Builder.GetInsertPoint()))
+        Builder.SetInsertPoint(cast<Instruction>(V));
+      OuterValue = Builder.CreateGEP(GEP->getSourceElementType(), Base,
+                                     OuterValue, "flatten." + V->getName());
+    }
 
     LLVM_DEBUG(dbgs() << "Replacing: "; V->dump(); dbgs() << "with:      ";
                OuterValue->dump());
@@ -867,7 +900,8 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
                             const TargetTransformInfo *TTI, LPMUpdater *U,
-                            MemorySSAUpdater *MSSAU) {
+                            MemorySSAUpdater *MSSAU,
+                            const LoopAccessInfo &LAI) {
   LLVM_DEBUG(
       dbgs() << "Loop flattening running on outer loop "
              << FI.OuterLoop->getHeader()->getName() << " and inner loop "
@@ -902,18 +936,55 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   // variable might overflow. In this case, we need to version the loop, and
   // select the original version at runtime if the iteration space is too
   // large.
-  // TODO: We currently don't version the loop.
   OverflowResult OR = checkOverflow(FI, DT, AC);
   if (OR == OverflowResult::AlwaysOverflowsHigh ||
       OR == OverflowResult::AlwaysOverflowsLow) {
     LLVM_DEBUG(dbgs() << "Multiply would always overflow, so not profitable\n");
     return false;
   } else if (OR == OverflowResult::MayOverflow) {
-    LLVM_DEBUG(dbgs() << "Multiply might overflow, not flattening\n");
-    return false;
+    Module *M = FI.OuterLoop->getHeader()->getParent()->getParent();
+    const DataLayout &DL = M->getDataLayout();
+    if (!VersionLoops) {
+      LLVM_DEBUG(dbgs() << "Multiply might overflow, not flattening\n");
+      return false;
+    } else if (!DL.isLegalInteger(
+                   FI.OuterTripCount->getType()->getScalarSizeInBits())) {
+      // If the trip count type isn't legal then it won't be possible to check
+      // for overflow using only a single multiply instruction, so don't
+      // flatten.
+      LLVM_DEBUG(
+          dbgs() << "Can't check overflow efficiently, not flattening\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "Multiply might overflow, versioning loop\n");
+
+    // Version the loop. The overflow check isn't a runtime pointer check, so we
+    // pass an empty list of runtime pointer checks, causing LoopVersioning to
+    // emit 'false' as the branch condition, and add our own check afterwards.
+    BasicBlock *CheckBlock = FI.OuterLoop->getLoopPreheader();
+    ArrayRef<RuntimePointerCheck> Checks(nullptr, nullptr);
+    LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE);
+    LVer.versionLoop();
+
+    // Check for overflow by calculating the new tripcount using
+    // umul_with_overflow and then checking if it overflowed.
+    BranchInst *Br = cast<BranchInst>(CheckBlock->getTerminator());
+    assert(Br->isConditional() &&
+           "Expected LoopVersioning to generate a conditional branch");
+    assert(match(Br->getCondition(), m_Zero()) &&
+           "Expected branch condition to be false");
+    IRBuilder<> Builder(Br);
+    Function *F = Intrinsic::getDeclaration(M, Intrinsic::umul_with_overflow,
+                                            FI.OuterTripCount->getType());
+    Value *Call = Builder.CreateCall(F, {FI.OuterTripCount, FI.InnerTripCount},
+                                     "flatten.mul");
+    FI.NewTripCount = Builder.CreateExtractValue(Call, 0, "flatten.tripcount");
+    Value *Overflow = Builder.CreateExtractValue(Call, 1, "flatten.overflow");
+    Br->setCondition(Overflow);
+  } else {
+    LLVM_DEBUG(dbgs() << "Multiply cannot overflow, modifying loop in-place\n");
   }
 
-  LLVM_DEBUG(dbgs() << "Multiply cannot overflow, modifying loop in-place\n");
   return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI, U, MSSAU);
 }
 
@@ -934,13 +1005,15 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
+  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, nullptr);
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)
       continue;
     FlattenInfo FI(OuterLoop, InnerLoop);
-    Changed |= FlattenLoopPair(FI, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
-                               MSSAU ? &*MSSAU : nullptr);
+    Changed |=
+        FlattenLoopPair(FI, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
+                        MSSAU ? &*MSSAU : nullptr, LAIM.getInfo(*OuterLoop));
   }
 
   if (!Changed)

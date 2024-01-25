@@ -488,27 +488,27 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   uint64_t DeadSliceSizeInBits = OldSizeInBits - NewSizeInBits;
   uint64_t DeadSliceOffsetInBits =
       OldOffsetInBits + (IsOverwriteEnd ? NewSizeInBits : 0);
-  auto SetDeadFragExpr = [](DbgAssignIntrinsic *DAI,
+  auto SetDeadFragExpr = [](auto *Assign,
                             DIExpression::FragmentInfo DeadFragment) {
     // createFragmentExpression expects an offset relative to the existing
     // fragment offset if there is one.
     uint64_t RelativeOffset = DeadFragment.OffsetInBits -
-                              DAI->getExpression()
+                              Assign->getExpression()
                                   ->getFragmentInfo()
                                   .value_or(DIExpression::FragmentInfo(0, 0))
                                   .OffsetInBits;
     if (auto NewExpr = DIExpression::createFragmentExpression(
-            DAI->getExpression(), RelativeOffset, DeadFragment.SizeInBits)) {
-      DAI->setExpression(*NewExpr);
+            Assign->getExpression(), RelativeOffset, DeadFragment.SizeInBits)) {
+      Assign->setExpression(*NewExpr);
       return;
     }
     // Failed to create a fragment expression for this so discard the value,
     // making this a kill location.
     auto *Expr = *DIExpression::createFragmentExpression(
-        DIExpression::get(DAI->getContext(), std::nullopt),
+        DIExpression::get(Assign->getContext(), std::nullopt),
         DeadFragment.OffsetInBits, DeadFragment.SizeInBits);
-    DAI->setExpression(Expr);
-    DAI->setKillLocation();
+    Assign->setExpression(Expr);
+    Assign->setKillLocation();
   };
 
   // A DIAssignID to use so that the inserted dbg.assign intrinsics do not
@@ -526,32 +526,35 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   // returned by getAssignmentMarkers so save a copy of the markers to iterate
   // over.
   auto LinkedRange = at::getAssignmentMarkers(Inst);
+  SmallVector<DPValue *> LinkedDPVAssigns = at::getDPVAssignmentMarkers(Inst);
   SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
                                            LinkedRange.end());
-  for (auto *DAI : Linked) {
+  auto InsertAssignForOverlap = [&](auto *Assign) {
     std::optional<DIExpression::FragmentInfo> NewFragment;
     if (!at::calculateFragmentIntersect(DL, OriginalDest, DeadSliceOffsetInBits,
-                                        DeadSliceSizeInBits, DAI,
+                                        DeadSliceSizeInBits, Assign,
                                         NewFragment) ||
         !NewFragment) {
       // We couldn't calculate the intersecting fragment for some reason. Be
       // cautious and unlink the whole assignment from the store.
-      DAI->setKillAddress();
-      DAI->setAssignId(GetDeadLink());
-      continue;
+      Assign->setKillAddress();
+      Assign->setAssignId(GetDeadLink());
+      return;
     }
     // No intersect.
     if (NewFragment->SizeInBits == 0)
-      continue;
+      return;
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
-    auto *NewAssign = cast<DbgAssignIntrinsic>(DAI->clone());
-    NewAssign->insertAfter(DAI);
+    auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
+    NewAssign->insertAfter(Assign);
     NewAssign->setAssignId(GetDeadLink());
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
     NewAssign->setKillAddress();
-  }
+  };
+  for_each(Linked, InsertAssignForOverlap);
+  for_each(LinkedDPVAssigns, InsertAssignForOverlap);
 }
 
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
@@ -2170,7 +2173,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
           auto *DeadSI = dyn_cast<StoreInst>(DeadI);
           auto *KillingSI = dyn_cast<StoreInst>(KillingI);
           // We are re-using tryToMergePartialOverlappingStores, which requires
-          // DeadSI to dominate DeadSI.
+          // DeadSI to dominate KillingSI.
           // TODO: implement tryToMergeParialOverlappingStores using MemorySSA.
           if (DeadSI && KillingSI && DT.dominates(DeadSI, KillingSI)) {
             if (Constant *Merged = tryToMergePartialOverlappingStores(

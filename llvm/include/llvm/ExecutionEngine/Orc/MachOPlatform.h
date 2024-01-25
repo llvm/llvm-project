@@ -47,6 +47,39 @@ public:
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Callable)
   };
 
+  /// Configuration for the mach-o header of a JITDylib. Specify common load
+  /// commands that should be added to the header.
+  struct HeaderOptions {
+    /// A dylib for use with a dylib command (e.g. LC_ID_DYLIB, LC_LOAD_DYLIB).
+    struct Dylib {
+      std::string Name;
+      uint32_t Timestamp;
+      uint32_t CurrentVersion;
+      uint32_t CompatibilityVersion;
+    };
+
+    /// Override for LC_IC_DYLIB. If this is nullopt, {JD.getName(), 0, 0, 0}
+    /// will be used.
+    std::optional<Dylib> IDDylib;
+    /// List of LC_LOAD_DYLIBs.
+    std::vector<Dylib> LoadDylibs;
+    /// List of LC_RPATHs.
+    std::vector<std::string> RPaths;
+
+    HeaderOptions() = default;
+    HeaderOptions(Dylib D) : IDDylib(std::move(D)) {}
+  };
+
+  /// Used by setupJITDylib to create MachO header MaterializationUnits for
+  /// JITDylibs.
+  using MachOHeaderMUBuilder =
+      unique_function<std::unique_ptr<MaterializationUnit>(MachOPlatform &MOP,
+                                                           HeaderOptions Opts)>;
+
+  /// Simple MachO header graph builder.
+  static inline std::unique_ptr<MaterializationUnit>
+  buildSimpleMachOHeaderMU(MachOPlatform &MOP, HeaderOptions Opts);
+
   /// Try to create a MachOPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
   ///
@@ -88,18 +121,31 @@ public:
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, std::unique_ptr<DefinitionGenerator> OrcRuntime,
+         HeaderOptions PlatformJDOpts = {},
+         MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   /// Construct using a path to the ORC runtime.
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
+         HeaderOptions PlatformJDOpts = {},
+         MachOHeaderMUBuilder BuildMachOHeaderMU = buildSimpleMachOHeaderMU,
          std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
 
+  NonOwningSymbolStringPtr getMachOHeaderStartSymbol() const {
+    return NonOwningSymbolStringPtr(MachOHeaderStartSymbol);
+  }
+
   Error setupJITDylib(JITDylib &JD) override;
+
+  /// Install any platform-specific symbols (e.g. `__dso_handle`) and create a
+  /// mach-o header based on the given options.
+  Error setupJITDylib(JITDylib &JD, HeaderOptions Opts);
+
   Error teardownJITDylib(JITDylib &JD) override;
   Error notifyAdding(ResourceTracker &RT,
                      const MaterializationUnit &MU) override;
@@ -118,6 +164,9 @@ public:
   standardRuntimeUtilityAliases();
 
 private:
+  using SymbolTableVector = SmallVector<
+      std::tuple<ExecutorAddr, ExecutorAddr, MachOExecutorSymbolFlags>>;
+
   // Data needed for bootstrap only.
   struct BootstrapInfo {
     std::mutex Mutex;
@@ -125,6 +174,7 @@ private:
     size_t ActiveGraphs = 0;
     shared::AllocActions DeferredAAs;
     ExecutorAddr MachOHeaderAddr;
+    SymbolTableVector SymTab;
   };
 
   // The MachOPlatformPlugin scans/modifies LinkGraphs to support MachO
@@ -239,7 +289,8 @@ private:
   MachOPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                 JITDylib &PlatformJD,
                 std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator,
-                Error &Err);
+                HeaderOptions PlatformJDOpts,
+                MachOHeaderMUBuilder BuildMachOHeaderMU, Error &Err);
 
   // Associate MachOPlatform JIT-side runtime support functions with handlers.
   Error associateRuntimeSupportFunctions();
@@ -267,6 +318,7 @@ private:
   ExecutionSession &ES;
   JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
+  MachOHeaderMUBuilder BuildMachOHeaderMU;
 
   SymbolStringPtr MachOHeaderStartSymbol = ES.intern("___dso_handle");
 
@@ -312,6 +364,53 @@ private:
 
   std::atomic<BootstrapInfo *> Bootstrap;
 };
+
+// Generates a MachO header.
+class SimpleMachOHeaderMU : public MaterializationUnit {
+public:
+  SimpleMachOHeaderMU(MachOPlatform &MOP, SymbolStringPtr HeaderStartSymbol,
+                      MachOPlatform::HeaderOptions Opts);
+  StringRef getName() const override { return "MachOHeaderMU"; }
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override;
+
+protected:
+  virtual jitlink::Block &createHeaderBlock(JITDylib &JD, jitlink::LinkGraph &G,
+                                            jitlink::Section &HeaderSection);
+
+  MachOPlatform &MOP;
+  MachOPlatform::HeaderOptions Opts;
+
+private:
+  struct HeaderSymbol {
+    const char *Name;
+    uint64_t Offset;
+  };
+
+  static constexpr HeaderSymbol AdditionalHeaderSymbols[] = {
+      {"___mh_executable_header", 0}};
+
+  void addMachOHeader(JITDylib &JD, jitlink::LinkGraph &G,
+                      const SymbolStringPtr &InitializerSymbol);
+  static MaterializationUnit::Interface
+  createHeaderInterface(MachOPlatform &MOP,
+                        const SymbolStringPtr &HeaderStartSymbol);
+};
+
+/// Simple MachO header graph builder.
+inline std::unique_ptr<MaterializationUnit>
+MachOPlatform::buildSimpleMachOHeaderMU(MachOPlatform &MOP,
+                                        HeaderOptions Opts) {
+  return std::make_unique<SimpleMachOHeaderMU>(MOP, MOP.MachOHeaderStartSymbol,
+                                               std::move(Opts));
+}
+
+struct MachOHeaderInfo {
+  size_t PageSize = 0;
+  uint32_t CPUType = 0;
+  uint32_t CPUSubType = 0;
+};
+MachOHeaderInfo getMachOHeaderInfoFromTriple(const Triple &TT);
 
 } // end namespace orc
 } // end namespace llvm

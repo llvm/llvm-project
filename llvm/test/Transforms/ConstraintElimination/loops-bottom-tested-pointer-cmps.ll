@@ -23,7 +23,7 @@ define void @checks_in_loops_removable(ptr %ptr, ptr %lower, ptr %upper, i8 %n) 
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
 ; CHECK-NEXT:    [[CMP_PTR_IV_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[PTR_IV]]
 ; CHECK-NEXT:    [[CMP_PTR_IV_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[PTR_IV]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP_PTR_IV_LOWER]], [[CMP_PTR_IV_UPPER]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[CMP_PTR_IV_UPPER]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    store i8 0, ptr [[PTR_IV]], align 4
@@ -88,7 +88,7 @@ define void @some_checks_in_loops_removable(ptr %ptr, ptr %lower, ptr %upper, i8
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
 ; CHECK-NEXT:    [[CMP_PTR_IV_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[PTR_IV]]
 ; CHECK-NEXT:    [[CMP_PTR_IV_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[PTR_IV]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP_PTR_IV_LOWER]], [[CMP_PTR_IV_UPPER]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[CMP_PTR_IV_UPPER]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[IV_1:%.*]] = add nuw nsw i16 [[IV]], 1
@@ -166,7 +166,7 @@ define void @no_checks_in_loops_removable(ptr %ptr, ptr %lower, ptr %upper, i8 %
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i16 [[IV]]
 ; CHECK-NEXT:    [[CMP_PTR_IV_LOWER:%.*]] = icmp ugt ptr [[LOWER]], [[PTR_IV]]
 ; CHECK-NEXT:    [[CMP_PTR_IV_UPPER:%.*]] = icmp ule ptr [[UPPER]], [[PTR_IV]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP_PTR_IV_LOWER]], [[CMP_PTR_IV_UPPER]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 false, [[CMP_PTR_IV_UPPER]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[TRAP]], label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[IV_1:%.*]] = add nuw nsw i16 [[IV]], 1

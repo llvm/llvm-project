@@ -18,12 +18,15 @@
 #include "nasty_string.h"
 #include "min_allocator.h"
 #include "test_allocator.h"
+#include "asan_testing.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S dest, S src) {
   dest.assign(src);
   LIBCPP_ASSERT(dest.__invariants());
   assert(dest == src);
+  LIBCPP_ASSERT(is_string_asan_correct(src));
+  LIBCPP_ASSERT(is_string_asan_correct(dest));
 }
 
 template <class S>

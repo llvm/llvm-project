@@ -64,7 +64,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     // sure that the return is covered. Otherwise, we can check whether there
     // is a way to reach the RI from the start of the lifetime without passing
     // through an end.
-    if (EndBlocks.count(RI->getParent()) > 0 ||
+    if (EndBlocks.contains(RI->getParent()) ||
         !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
       ++NumCoveredExits;
     }
@@ -149,6 +149,21 @@ void StackInfoBuilder::visit(Instruction &Inst) {
       }
     }
   }
+
+  // Check for non-intrinsic debug-info records.
+  for (auto &DPV : Inst.getDbgValueRange()) {
+    for (Value *V : DPV.location_ops()) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!isInterestingAlloca(*AI))
+          continue;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DPVVec = AInfo.DbgVariableRecords;
+        if (DPVVec.empty() || DPVVec.back() != &DPV)
+          DPVVec.push_back(&DPV);
+      }
+    }
+  }
+
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
   if (ExitUntag)
     Info.RetVec.push_back(ExitUntag);

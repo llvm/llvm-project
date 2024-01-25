@@ -88,6 +88,9 @@ target_compile_definitions(PluginCommon PRIVATE
   DEBUG_PREFIX="PluginInterface"
 )
 
+target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
+target_link_options(PluginCommon PUBLIC ${offload_link_flags})
+
 target_include_directories(PluginCommon
   PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}

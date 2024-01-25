@@ -27,7 +27,6 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -120,8 +119,6 @@ static Expected<Triple> readTargetTriple(StringRef FileName) {
 }
 
 int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
-
   DwpOptTable Tbl;
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
@@ -144,13 +141,21 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   OutputFilename = Args.getLastArgValue(OPT_outputFileName, "");
-  if (Args.hasArg(OPT_continueOnCuIndexOverflow)) {
-    ContinueOption =
-        Args.getLastArgValue(OPT_continueOnCuIndexOverflow, "continue");
-    if (ContinueOption == "soft-stop") {
-      OverflowOptValue = OnCuIndexOverflow::SoftStop;
-    } else {
+  if (Arg *Arg = Args.getLastArg(OPT_continueOnCuIndexOverflow,
+                                 OPT_continueOnCuIndexOverflow_EQ)) {
+    if (Arg->getOption().matches(OPT_continueOnCuIndexOverflow)) {
       OverflowOptValue = OnCuIndexOverflow::Continue;
+    } else {
+      ContinueOption = Arg->getValue();
+      if (ContinueOption == "soft-stop") {
+        OverflowOptValue = OnCuIndexOverflow::SoftStop;
+      } else if (ContinueOption == "continue") {
+        OverflowOptValue = OnCuIndexOverflow::Continue;
+      } else {
+        llvm::errs() << "invalid value for --continue-on-cu-index-overflow"
+                     << ContinueOption << '\n';
+        exit(1);
+      }
     }
   }
 

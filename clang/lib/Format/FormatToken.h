@@ -148,6 +148,7 @@ namespace format {
   TYPE(StructLBrace)                                                           \
   TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
+  TYPE(TableGenMultiLineString)                                                \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
@@ -275,14 +276,15 @@ class AnnotatedLine;
 struct FormatToken {
   FormatToken()
       : HasUnescapedNewline(false), IsMultiline(false), IsFirst(false),
-        MustBreakBefore(false), IsUnterminatedLiteral(false),
-        CanBreakBefore(false), ClosesTemplateDeclaration(false),
-        StartsBinaryExpression(false), EndsBinaryExpression(false),
-        PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
-        Finalized(false), ClosesRequiresClause(false),
-        EndsCppAttributeGroup(false), BlockKind(BK_Unknown),
-        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
-        TypeIsFinalized(false), Type(TT_Unknown) {}
+        MustBreakBefore(false), MustBreakBeforeFinalized(false),
+        IsUnterminatedLiteral(false), CanBreakBefore(false),
+        ClosesTemplateDeclaration(false), StartsBinaryExpression(false),
+        EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
+        ContinuesLineCommentSection(false), Finalized(false),
+        ClosesRequiresClause(false), EndsCppAttributeGroup(false),
+        BlockKind(BK_Unknown), Decision(FD_Unformatted),
+        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
+        Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -317,6 +319,10 @@ struct FormatToken {
   /// This happens for example when a preprocessor directive ended directly
   /// before the token.
   unsigned MustBreakBefore : 1;
+
+  /// Whether MustBreakBefore is finalized during parsing and must not
+  /// be reset between runs.
+  unsigned MustBreakBeforeFinalized : 1;
 
   /// Set to \c true if this token is an unterminated literal.
   unsigned IsUnterminatedLiteral : 1;
@@ -416,10 +422,14 @@ public:
   /// to another one please use overwriteFixedType, or even better remove the
   /// need to reassign the type.
   void setFinalizedType(TokenType T) {
+    if (MacroCtx && MacroCtx->Role == MR_UnexpandedArg)
+      return;
     Type = T;
     TypeIsFinalized = true;
   }
   void overwriteFixedType(TokenType T) {
+    if (MacroCtx && MacroCtx->Role == MR_UnexpandedArg)
+      return;
     TypeIsFinalized = false;
     setType(T);
   }
@@ -667,7 +677,7 @@ public:
   /// Returns whether \p Tok is ([{ or an opening < of a template or in
   /// protos.
   bool opensScope() const {
-    if (is(TT_TemplateString) && TokenText.endswith("${"))
+    if (is(TT_TemplateString) && TokenText.ends_with("${"))
       return true;
     if (is(TT_DictLiteral) && is(tok::less))
       return true;
@@ -677,7 +687,7 @@ public:
   /// Returns whether \p Tok is )]} or a closing > of a template or in
   /// protos.
   bool closesScope() const {
-    if (is(TT_TemplateString) && TokenText.startswith("}"))
+    if (is(TT_TemplateString) && TokenText.starts_with("}"))
       return true;
     if (is(TT_DictLiteral) && is(tok::greater))
       return true;
@@ -743,9 +753,9 @@ public:
     if (isNot(tok::string_literal))
       return false;
     StringRef Content = TokenText;
-    if (Content.startswith("\"") || Content.startswith("'"))
+    if (Content.starts_with("\"") || Content.starts_with("'"))
       Content = Content.drop_front(1);
-    if (Content.endswith("\"") || Content.endswith("'"))
+    if (Content.ends_with("\"") || Content.ends_with("'"))
       Content = Content.drop_back(1);
     Content = Content.trim();
     return Content.size() > 1 &&
@@ -1202,6 +1212,21 @@ struct AdditionalKeywords {
     kw_verilogHashHash = &IdentTable.get("##");
     kw_apostrophe = &IdentTable.get("\'");
 
+    // TableGen keywords
+    kw_bit = &IdentTable.get("bit");
+    kw_bits = &IdentTable.get("bits");
+    kw_code = &IdentTable.get("code");
+    kw_dag = &IdentTable.get("dag");
+    kw_def = &IdentTable.get("def");
+    kw_defm = &IdentTable.get("defm");
+    kw_defset = &IdentTable.get("defset");
+    kw_defvar = &IdentTable.get("defvar");
+    kw_dump = &IdentTable.get("dump");
+    kw_include = &IdentTable.get("include");
+    kw_list = &IdentTable.get("list");
+    kw_multiclass = &IdentTable.get("multiclass");
+    kw_then = &IdentTable.get("then");
+
     // Keep this at the end of the constructor to make sure everything here
     // is
     // already initialized.
@@ -1294,6 +1319,27 @@ struct AdditionalKeywords {
          kw_wildcard,     kw_wire,
          kw_with,         kw_wor,
          kw_verilogHash,  kw_verilogHashHash});
+
+    TableGenExtraKeywords = std::unordered_set<IdentifierInfo *>({
+        kw_assert,
+        kw_bit,
+        kw_bits,
+        kw_code,
+        kw_dag,
+        kw_def,
+        kw_defm,
+        kw_defset,
+        kw_defvar,
+        kw_dump,
+        kw_foreach,
+        kw_in,
+        kw_include,
+        kw_let,
+        kw_list,
+        kw_multiclass,
+        kw_string,
+        kw_then,
+    });
   }
 
   // Context sensitive keywords.
@@ -1538,6 +1584,21 @@ struct AdditionalKeywords {
 
   // Symbols in Verilog that don't exist in C++.
   IdentifierInfo *kw_apostrophe;
+
+  // TableGen keywords
+  IdentifierInfo *kw_bit;
+  IdentifierInfo *kw_bits;
+  IdentifierInfo *kw_code;
+  IdentifierInfo *kw_dag;
+  IdentifierInfo *kw_def;
+  IdentifierInfo *kw_defm;
+  IdentifierInfo *kw_defset;
+  IdentifierInfo *kw_defvar;
+  IdentifierInfo *kw_dump;
+  IdentifierInfo *kw_include;
+  IdentifierInfo *kw_list;
+  IdentifierInfo *kw_multiclass;
+  IdentifierInfo *kw_then;
 
   /// Returns \c true if \p Tok is a keyword or an identifier.
   bool isWordLike(const FormatToken &Tok) const {
@@ -1811,6 +1872,27 @@ struct AdditionalKeywords {
     }
   }
 
+  bool isTableGenDefinition(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_def, kw_defm, kw_defset, kw_defvar, kw_multiclass,
+                       kw_let, tok::kw_class);
+  }
+
+  bool isTableGenKeyword(const FormatToken &Tok) const {
+    switch (Tok.Tok.getKind()) {
+    case tok::kw_class:
+    case tok::kw_else:
+    case tok::kw_false:
+    case tok::kw_if:
+    case tok::kw_int:
+    case tok::kw_true:
+      return true;
+    default:
+      return Tok.is(tok::identifier) &&
+             TableGenExtraKeywords.find(Tok.Tok.getIdentifierInfo()) !=
+                 TableGenExtraKeywords.end();
+    }
+  }
+
 private:
   /// The JavaScript keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> JsExtraKeywords;
@@ -1820,10 +1902,13 @@ private:
 
   /// The Verilog keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> VerilogExtraKeywords;
+
+  /// The TableGen keywords beyond the C++ keyword set.
+  std::unordered_set<IdentifierInfo *> TableGenExtraKeywords;
 };
 
 inline bool isLineComment(const FormatToken &FormatTok) {
-  return FormatTok.is(tok::comment) && !FormatTok.TokenText.startswith("/*");
+  return FormatTok.is(tok::comment) && !FormatTok.TokenText.starts_with("/*");
 }
 
 // Checks if \p FormatTok is a line comment that continues the line comment

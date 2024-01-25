@@ -106,8 +106,12 @@ static uptr GetHighMemEnd() {
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  __hwasan_shadow_memory_dynamic_address =
-      FindDynamicShadowStart(shadow_size_bytes);
+  if (flags()->fixed_shadow_base != (uptr)-1) {
+    __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
+  } else {
+    __hwasan_shadow_memory_dynamic_address =
+        FindDynamicShadowStart(shadow_size_bytes);
+  }
 }
 
 static void MaybeDieIfNoTaggingAbi(const char *message) {
@@ -517,16 +521,32 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
   return AddTagToPointer(p, tag);
 }
 
+static void BeforeFork() {
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::LockGlobal();
+  }
+  // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+  // stuff we need.
+  __lsan::LockThreads();
+  __lsan::LockAllocator();
+  StackDepotLockBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  StackDepotUnlockAfterFork(fork_child);
+  // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+  // the stuff we need.
+  __lsan::UnlockAllocator();
+  __lsan::UnlockThreads();
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::UnlockGlobal();
+  }
+}
+
 void HwasanInstallAtForkHandler() {
-  auto before = []() {
-    HwasanAllocatorLock();
-    StackDepotLockAll();
-  };
-  auto after = []() {
-    StackDepotUnlockAll();
-    HwasanAllocatorUnlock();
-  };
-  pthread_atfork(before, after, after);
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
 }
 
 void InstallAtExitCheckLeaks() {

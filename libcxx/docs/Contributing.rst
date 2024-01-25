@@ -67,7 +67,6 @@ avoid invoking a user-defined ``operator,``, make sure to cast the result to
 In general, try to follow the style of existing code. There are a few
 exceptions:
 
-- ``_VSTD::foo`` is no longer used in new code. Use ``std::foo`` instead.
 - Prefer ``using foo = int`` over ``typedef int foo``. The compilers supported
   by libc++ accept alias declarations in all standard modes.
 

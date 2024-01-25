@@ -15,6 +15,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_BUILTIN_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_BUILTIN_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/string/memory_utils/utils.h"
 
 namespace LIBC_NAMESPACE::builtin {
@@ -25,13 +26,7 @@ template <size_t Size> struct Memcpy {
   static constexpr size_t SIZE = Size;
   LIBC_INLINE static void block_offset(Ptr __restrict dst, CPtr __restrict src,
                                        size_t offset) {
-#ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
-    return __builtin_memcpy_inline(dst + offset, src + offset, SIZE);
-#else
-    // The codegen may be suboptimal.
-    for (size_t i = 0; i < Size; ++i)
-      dst[i + offset] = src[i + offset];
-#endif
+    memcpy_inline<Size>(dst + offset, src + offset);
   }
 
   LIBC_INLINE static void block(Ptr __restrict dst, CPtr __restrict src) {
@@ -75,7 +70,8 @@ template <size_t Size> struct Memset {
 #ifdef LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
     __builtin_memset_inline(dst, value, Size);
 #else
-    deferred_static_assert("Missing __builtin_memset_inline");
+    static_assert(cpp::always_false<decltype(Size)>,
+                  "Missing __builtin_memset_inline");
     (void)dst;
     (void)value;
 #endif
@@ -107,22 +103,23 @@ template <size_t Size> struct Bcmp {
   using ME = Bcmp;
   static constexpr size_t SIZE = Size;
   LIBC_INLINE static BcmpReturnType block(CPtr, CPtr) {
-    deferred_static_assert("Missing __builtin_memcmp_inline");
+    static_assert(cpp::always_false<decltype(Size)>,
+                  "Missing __builtin_memcmp_inline");
     return BcmpReturnType::ZERO();
   }
 
   LIBC_INLINE static BcmpReturnType tail(CPtr, CPtr, size_t) {
-    deferred_static_assert("Not implemented");
+    static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
     return BcmpReturnType::ZERO();
   }
 
   LIBC_INLINE static BcmpReturnType head_tail(CPtr, CPtr, size_t) {
-    deferred_static_assert("Not implemented");
+    static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
     return BcmpReturnType::ZERO();
   }
 
   LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr, CPtr, size_t) {
-    deferred_static_assert("Not implemented");
+    static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
     return BcmpReturnType::ZERO();
   }
 };
@@ -133,22 +130,23 @@ template <size_t Size> struct Memcmp {
   using ME = Memcmp;
   static constexpr size_t SIZE = Size;
   LIBC_INLINE static MemcmpReturnType block(CPtr, CPtr) {
-    deferred_static_assert("Missing __builtin_memcmp_inline");
+    static_assert(cpp::always_false<decltype(Size)>,
+                  "Missing __builtin_memcmp_inline");
     return MemcmpReturnType::ZERO();
   }
 
   LIBC_INLINE static MemcmpReturnType tail(CPtr, CPtr, size_t) {
-    deferred_static_assert("Not implemented");
+    static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
     return MemcmpReturnType::ZERO();
   }
 
   LIBC_INLINE static MemcmpReturnType head_tail(CPtr, CPtr, size_t) {
-    deferred_static_assert("Not implemented");
+    static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
     return MemcmpReturnType::ZERO();
   }
 
   LIBC_INLINE static MemcmpReturnType loop_and_tail(CPtr, CPtr, size_t) {
-    deferred_static_assert("Not implemented");
+    static_assert(cpp::always_false<decltype(Size)>, "Not implemented");
     return MemcmpReturnType::ZERO();
   }
 };

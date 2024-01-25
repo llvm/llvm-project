@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -1601,11 +1602,13 @@ void ConversionPatternRewriter::cloneRegionBefore(Region &region,
     Block *cloned = mapping.lookup(&b);
     impl->notifyCreatedBlock(cloned);
     cloned->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
-        [&](Operation *op) { notifyOperationInserted(op); });
+        [&](Operation *op) { notifyOperationInserted(op, /*previous=*/{}); });
   }
 }
 
-void ConversionPatternRewriter::notifyOperationInserted(Operation *op) {
+void ConversionPatternRewriter::notifyOperationInserted(Operation *op,
+                                                        InsertPoint previous) {
+  assert(!previous.isSet() && "expected newly created op");
   LLVM_DEBUG({
     impl->logger.startLine()
         << "** Insert  : '" << op->getName() << "'(" << op << ")\n";
@@ -1613,15 +1616,15 @@ void ConversionPatternRewriter::notifyOperationInserted(Operation *op) {
   impl->createdOps.push_back(op);
 }
 
-void ConversionPatternRewriter::startRootUpdate(Operation *op) {
+void ConversionPatternRewriter::startOpModification(Operation *op) {
 #ifndef NDEBUG
   impl->pendingRootUpdates.insert(op);
 #endif
   impl->rootUpdates.emplace_back(op);
 }
 
-void ConversionPatternRewriter::finalizeRootUpdate(Operation *op) {
-  PatternRewriter::finalizeRootUpdate(op);
+void ConversionPatternRewriter::finalizeOpModification(Operation *op) {
+  PatternRewriter::finalizeOpModification(op);
   // There is nothing to do here, we only need to track the operation at the
   // start of the update.
 #ifndef NDEBUG
@@ -1630,7 +1633,7 @@ void ConversionPatternRewriter::finalizeRootUpdate(Operation *op) {
 #endif
 }
 
-void ConversionPatternRewriter::cancelRootUpdate(Operation *op) {
+void ConversionPatternRewriter::cancelOpModification(Operation *op) {
 #ifndef NDEBUG
   assert(impl->pendingRootUpdates.erase(op) &&
          "operation did not have a pending in-place update");
@@ -1648,6 +1651,18 @@ void ConversionPatternRewriter::cancelRootUpdate(Operation *op) {
 LogicalResult ConversionPatternRewriter::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   return impl->notifyMatchFailure(loc, reasonCallback);
+}
+
+void ConversionPatternRewriter::moveOpBefore(Operation *op, Block *block,
+                                             Block::iterator iterator) {
+  llvm_unreachable(
+      "moving single ops is not supported in a dialect conversion");
+}
+
+void ConversionPatternRewriter::moveOpAfter(Operation *op, Block *block,
+                                            Block::iterator iterator) {
+  llvm_unreachable(
+      "moving single ops is not supported in a dialect conversion");
 }
 
 detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
@@ -3114,7 +3129,7 @@ static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
   auto newType = FunctionType::get(rewriter.getContext(),
                                    result.getConvertedTypes(), newResults);
 
-  rewriter.updateRootInPlace(funcOp, [&] { funcOp.setType(newType); });
+  rewriter.modifyOpInPlace(funcOp, [&] { funcOp.setType(newType); });
 
   return success();
 }
@@ -3312,6 +3327,7 @@ auto ConversionTarget::getOpInfo(OperationName op) const
   return std::nullopt;
 }
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 //===----------------------------------------------------------------------===//
 // PDL Configuration
 //===----------------------------------------------------------------------===//
@@ -3382,6 +3398,7 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
         return std::move(remappedTypes);
       });
 }
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

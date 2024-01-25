@@ -426,7 +426,7 @@ define void @debug_interference(i8 %x) {
 
 define i32 @PR40940(<4 x i8> %x) {
 ; CHECK-LABEL: @PR40940(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[T2:%.*]] = bitcast <4 x i8> [[SHUF]] to i32
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[T3]])
@@ -774,7 +774,7 @@ exit:
 
 define void @canonicalize_assume(ptr %0) {
 ; DEFAULT-LABEL: @canonicalize_assume(
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0:%.*]], i64 2
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0:%.*]], i64 8
 ; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
 ; DEFAULT-NEXT:    ret void
 ;

@@ -325,14 +325,14 @@ RealFileSystem::openFileForRead(const Twine &Name) {
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
   if (WD && *WD)
-    return std::string(WD->get().Specified.str());
+    return std::string(WD->get().Specified);
   if (WD)
     return WD->getError();
 
   SmallString<128> Dir;
   if (std::error_code EC = llvm::sys::fs::current_path(Dir))
     return EC;
-  return std::string(Dir.str());
+  return std::string(Dir);
 }
 
 std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
@@ -1091,7 +1091,7 @@ class InMemoryFileSystem::DirIterator : public llvm::vfs::detail::DirIterImpl {
         }
         break;
       }
-      CurrentEntry = directory_entry(std::string(Path.str()), Type);
+      CurrentEntry = directory_entry(std::string(Path), Type);
     } else {
       // When we're at the end, make CurrentEntry invalid and DirIterImpl will
       // do the rest.
@@ -1146,7 +1146,7 @@ std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
     llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
 
   if (!Path.empty())
-    WorkingDirectory = std::string(Path.str());
+    WorkingDirectory = std::string(Path);
   return {};
 }
 
@@ -1252,7 +1252,7 @@ class llvm::vfs::RedirectingFSDirIterImpl
         Type = sys::fs::file_type::regular_file;
         break;
       }
-      CurrentEntry = directory_entry(std::string(PathStr.str()), Type);
+      CurrentEntry = directory_entry(std::string(PathStr), Type);
     } else {
       CurrentEntry = directory_entry();
     }
@@ -1328,7 +1328,7 @@ RedirectingFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   Path.toVector(AbsolutePath);
   if (std::error_code EC = makeAbsolute(AbsolutePath))
     return EC;
-  WorkingDirectory = std::string(AbsolutePath.str());
+  WorkingDirectory = std::string(AbsolutePath);
   return {};
 }
 
@@ -2334,7 +2334,6 @@ static Status getRedirectedFileStatus(const Twine &OriginalPath,
     S = Status::copyWithNewName(S, OriginalPath);
   else
     S.ExposesExternalVFSPath = true;
-  S.IsVFSMapped = true;
   return S;
 }
 

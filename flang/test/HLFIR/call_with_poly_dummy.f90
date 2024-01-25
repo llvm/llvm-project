@@ -25,7 +25,7 @@ end subroutine test1
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest2Ex"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<f32>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK:           %[[VAL_4:.*]] = arith.cmpf oeq, %[[VAL_2]], %[[VAL_3]] : f32
+! CHECK:           %[[VAL_4:.*]] = arith.cmpf oeq, %[[VAL_2]], %[[VAL_3]] {{.*}} : f32
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i1) -> !fir.logical<4>
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
 ! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]]#0 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>

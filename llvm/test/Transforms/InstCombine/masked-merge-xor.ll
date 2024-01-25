@@ -16,7 +16,7 @@
 ; Most basic positive tests
 ; ============================================================================ ;
 
-define i32 @p(i32 %x, i32 %y, i32 %m) {
+define i32 @p(i32 %x, i32 %y, i32 noundef %m) {
 ; CHECK-LABEL: @p(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
@@ -31,7 +31,7 @@ define i32 @p(i32 %x, i32 %y, i32 %m) {
   ret i32 %ret
 }
 
-define <2 x i32> @p_splatvec(<2 x i32> %x, <2 x i32> %y, <2 x i32> %m) {
+define <2 x i32> @p_splatvec(<2 x i32> %x, <2 x i32> %y, <2 x i32> noundef %m) {
 ; CHECK-LABEL: @p_splatvec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M]], <i32 -1, i32 -1>
@@ -46,7 +46,7 @@ define <2 x i32> @p_splatvec(<2 x i32> %x, <2 x i32> %y, <2 x i32> %m) {
   ret <2 x i32> %ret
 }
 
-define <3 x i32> @p_vec_undef(<3 x i32> %x, <3 x i32> %y, <3 x i32> %m) {
+define <3 x i32> @p_vec_undef(<3 x i32> %x, <3 x i32> %y, <3 x i32> noundef %m) {
 ; CHECK-LABEL: @p_vec_undef(
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i32> [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor <3 x i32> [[M]], <i32 -1, i32 undef, i32 -1>
@@ -180,7 +180,7 @@ define <3 x i32> @p_constmask2_vec_undef(<3 x i32> %x, <3 x i32> %y) {
 ; Used to make sure that the IR complexity sorting does not interfere.
 declare i32 @gen32()
 
-define i32 @p_commutative0(i32 %x, i32 %y, i32 %m) {
+define i32 @p_commutative0(i32 %x, i32 %y, i32 noundef %m) {
 ; CHECK-LABEL: @p_commutative0(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
@@ -195,7 +195,7 @@ define i32 @p_commutative0(i32 %x, i32 %y, i32 %m) {
   ret i32 %ret
 }
 
-define i32 @p_commutative1(i32 %x, i32 %m) {
+define i32 @p_commutative1(i32 %x, i32 noundef %m) {
 ; CHECK-LABEL: @p_commutative1(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
@@ -212,7 +212,7 @@ define i32 @p_commutative1(i32 %x, i32 %m) {
   ret i32 %ret
 }
 
-define i32 @p_commutative2(i32 %x, i32 %y, i32 %m) {
+define i32 @p_commutative2(i32 %x, i32 %y, i32 noundef %m) {
 ; CHECK-LABEL: @p_commutative2(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
@@ -227,7 +227,7 @@ define i32 @p_commutative2(i32 %x, i32 %y, i32 %m) {
   ret i32 %ret
 }
 
-define i32 @p_commutative3(i32 %x, i32 %m) {
+define i32 @p_commutative3(i32 %x, i32 noundef %m) {
 ; CHECK-LABEL: @p_commutative3(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
@@ -244,7 +244,7 @@ define i32 @p_commutative3(i32 %x, i32 %m) {
   ret i32 %ret
 }
 
-define i32 @p_commutative4(i32 %x, i32 %y, i32 %m) {
+define i32 @p_commutative4(i32 %x, i32 %y, i32 noundef %m) {
 ; CHECK-LABEL: @p_commutative4(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
@@ -259,7 +259,7 @@ define i32 @p_commutative4(i32 %x, i32 %y, i32 %m) {
   ret i32 %ret
 }
 
-define i32 @p_commutative5(i32 %x, i32 %m) {
+define i32 @p_commutative5(i32 %x, i32 noundef %m) {
 ; CHECK-LABEL: @p_commutative5(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
@@ -276,7 +276,7 @@ define i32 @p_commutative5(i32 %x, i32 %m) {
   ret i32 %ret
 }
 
-define i32 @p_commutative6(i32 %x, i32 %m) {
+define i32 @p_commutative6(i32 %x, i32 noundef %m) {
 ; CHECK-LABEL: @p_commutative6(
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @gen32()
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
@@ -314,7 +314,7 @@ define i32 @p_constmask_commutative(i32 %x, i32 %y) {
 
 declare void @use32(i32)
 
-define i32 @n0_oneuse(i32 %x, i32 %y, i32 %m) {
+define i32 @n0_oneuse(i32 %x, i32 %y, i32 noundef %m) {
 ; CHECK-LABEL: @n0_oneuse(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1

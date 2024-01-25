@@ -2,6 +2,11 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
+// REQUIRES: system-linux
+
+// An externally visible variable so static libraries extract.
+__attribute__((visibility("protected"), used)) int x;
+
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.elf.o
 // RUN: %clang -cc1 %s -triple nvptx64-nvidia-cuda -emit-llvm-bc -o %t.nvptx.bc
 // RUN: %clang -cc1 %s -triple amdgcn-amd-amdhsa -emit-llvm-bc -o %t.amdgpu.bc
@@ -49,10 +54,12 @@
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: llvm-ar rcs %t.a %t.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --linker-path=/usr/bin/ld.lld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CPU-LINK
+// RUN:   --linker-path=/usr/bin/ld.lld -- --whole-archive %t.a --no-whole-archive \
+// RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CPU-LINK
 
-// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -march=native -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared
+// CPU-LINK: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu -march=native -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared -Wl,--whole-archive {{.*}}.a -Wl,--no-whole-archive
 
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -mllvm -openmp-opt-disable \
@@ -123,8 +130,8 @@
 // RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b -- \
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=LINKER-ARGS
 
-// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}-Wl,a
-// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}-Wl,a -Wl,b
+// LINKER-ARGS: clang{{.*}}--target=amdgcn-amd-amdhsa{{.*}}a
+// LINKER-ARGS: clang{{.*}}--target=nvptx64-nvidia-cuda{{.*}}a b
 
 // RUN: not clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -ldummy \
 // RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b -- \
@@ -148,3 +155,31 @@
 // RUN:   --linker-path=/usr/bin/lld-link -- %t.o -libpath:./ -out:a.exe 2>&1 | FileCheck %s --check-prefix=COFF
 
 // COFF: "/usr/bin/lld-link" {{.*}}.o -libpath:./ -out:a.exe {{.*}}openmp.image.wrapper{{.*}}
+
+// RUN: clang-offload-packager -o %t-lib.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: clang-offload-packager -o %t-on.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack+
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-on.o -fembed-offload-object=%t-on.out
+// RUN: clang-offload-packager -o %t-off.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx90a:xnack-
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-off.o -fembed-offload-object=%t-off.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld -- %t-on.o %t-off.o %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=AMD-TARGET-ID
+
+// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
+
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld -- -r --whole-archive %t.a --no-whole-archive \
+// RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK
+
+// RELOCATABLE-LINK-NOT: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu
+// RELOCATABLE-LINK: /usr/bin/ld.lld{{.*}}-r

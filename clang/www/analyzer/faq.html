@@ -195,12 +195,45 @@ int foo(int length) {
 
 <h4 id="suppress_issue" class="faq">Q: How can I suppress a specific analyzer warning?</h4>
 
-<p>There is currently no solid mechanism for suppressing an analyzer warning,
-although this is currently being investigated. When you encounter an analyzer
-bug/false positive, check if it's one of the issues discussed above or if the
-analyzer <a href = "annotations.html#custom_assertions" >annotations</a> can
-resolve the issue. Second, please <a href = "filing_bugs.html">report it</a> to
-help us improve user experience. As the last resort, consider using <tt>__clang_analyzer__</tt> macro
+<p>When you encounter an analyzer bug/false positive, check if it's one of the
+issues discussed above or if the analyzer
+<a href = "annotations.html#custom_assertions" >annotations</a> can
+resolve the issue by helping the static analyzer understand the code better.
+Second, please <a href = "filing_bugs.html">report it</a> to help us improve
+user experience.</p>
+
+<p>Sometimes there's really no "good" way to eliminate the issue. In such cases
+you can "silence" it directly by annotating the problematic line of code with
+the help of Clang attribute '<a href="https://clang.llvm.org/docs/AttributeReference.html#suppress">suppress</a>':
+
+<pre class="code_example">
+int foo() {
+  int *x = nullptr;
+  ...
+  <span class="code_highlight">[[clang::suppress]]</span> {
+    // all warnings in this scope are suppressed
+    int y = *x;
+  }
+
+  // null pointer dereference warning suppressed on the next line
+  <span class="code_highlight">[[clang::suppress]]</span>
+  return *x
+}
+
+int bar(bool coin_flip) {
+  // suppress all memory leak warnings about this allocation
+  <span class="code_highlight">[[clang::suppress]]</span>
+  int *result = (int *)malloc(sizeof(int));
+
+  if (coin_flip)
+    return 0;      // including this leak path
+
+  return *result;  // as well as this leak path
+}
+</pre>
+
+
+<p>You can also consider using <tt>__clang_analyzer__</tt> macro
 <a href = "faq.html#exclude_code" >described below</a>.</p>
 
 <h4 id="exclude_code" class="faq">Q: How can I selectively exclude code the analyzer examines?</h4>

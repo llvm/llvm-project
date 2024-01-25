@@ -10,27 +10,29 @@ define void @va1arg(ptr %a, ...) {
   ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY1]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX1]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX2]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX3]](p0) :: (store (s32), align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX4]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX5]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.1 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX6]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD5]](p0) :: (store (s32) into %fixed-stack.1 + 24)
+  ; RV32-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s32)
   ; RV32-NEXT:   PseudoRET
   ;
   ; RV64-LABEL: name: va1arg
@@ -38,27 +40,29 @@ define void @va1arg(ptr %a, ...) {
   ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
-  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY1]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX1]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX2]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX3]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX4]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX5]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.1 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX6]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD5]](p0) :: (store (s64) into %fixed-stack.1 + 48)
+  ; RV64-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD5]], [[C]](s64)
   ; RV64-NEXT:   PseudoRET
   ret void
 }
@@ -70,24 +74,26 @@ define void @va2arg(ptr %a, ptr %b, ...) {
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY2]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.0, align 8)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX1]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.0 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX2]](p0) :: (store (s32), align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.0 + 8, align 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX3]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.0 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX4]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.0 + 16, align 8)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX5]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD4]](p0) :: (store (s32) into %fixed-stack.0 + 20)
+  ; RV32-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s32)
   ; RV32-NEXT:   PseudoRET
   ;
   ; RV64-LABEL: name: va2arg
@@ -96,24 +102,26 @@ define void @va2arg(ptr %a, ptr %b, ...) {
   ; RV64-NEXT: {{  $}}
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
-  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY2]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.0, align 16)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX1]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.0 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX2]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.0 + 16, align 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX3]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.0 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX4]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.0 + 32, align 16)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX5]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD4]](p0) :: (store (s64) into %fixed-stack.0 + 40)
+  ; RV64-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD4]], [[C]](s64)
   ; RV64-NEXT:   PseudoRET
   ret void
 }
@@ -126,21 +134,23 @@ define void @va3arg(ptr %a, ptr %b, ptr %c, ...) {
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY3]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX1]](p0) :: (store (s32), align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX2]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX3]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.1 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX4]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %fixed-stack.1 + 16)
+  ; RV32-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s32)
   ; RV32-NEXT:   PseudoRET
   ;
   ; RV64-LABEL: name: va3arg
@@ -150,21 +160,23 @@ define void @va3arg(ptr %a, ptr %b, ptr %c, ...) {
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
-  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY3]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX1]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX2]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX3]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.1 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX4]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD3]](p0) :: (store (s64) into %fixed-stack.1 + 32)
+  ; RV64-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD3]], [[C]](s64)
   ; RV64-NEXT:   PseudoRET
   ret void
 }
@@ -178,18 +190,20 @@ define void @va4arg(ptr %a, ptr %b, ptr %c, ptr %d, ...) {
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x13
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x14
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX]](p0) :: (store (s32), align 16)
+  ; RV32-NEXT:   G_STORE [[COPY4]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.0, align 16)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX1]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.0 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX2]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.0 + 8, align 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX3]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %fixed-stack.0 + 12)
+  ; RV32-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s32)
   ; RV32-NEXT:   PseudoRET
   ;
   ; RV64-LABEL: name: va4arg
@@ -200,18 +214,20 @@ define void @va4arg(ptr %a, ptr %b, ptr %c, ptr %d, ...) {
   ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x13
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
-  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY4]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.0, align 16)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX1]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.0 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX2]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.0 + 16, align 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX3]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD2]](p0) :: (store (s64) into %fixed-stack.0 + 24)
+  ; RV64-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD2]], [[C]](s64)
   ; RV64-NEXT:   PseudoRET
   ret void
 }
@@ -226,15 +242,17 @@ define void @va5arg(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ...) {
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x13
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x14
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x15
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY5]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX1]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.1 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX2]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %fixed-stack.1 + 8)
+  ; RV32-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s32)
   ; RV32-NEXT:   PseudoRET
   ;
   ; RV64-LABEL: name: va5arg
@@ -246,15 +264,17 @@ define void @va5arg(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ...) {
   ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x13
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x14
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY5]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX1]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.1 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX2]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD1]](p0) :: (store (s64) into %fixed-stack.1 + 16)
+  ; RV64-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C]](s64)
   ; RV64-NEXT:   PseudoRET
   ret void
 }
@@ -270,12 +290,14 @@ define void @va6arg(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ...) {
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x13
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x14
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x15
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x16
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX]](p0) :: (store (s32), align 8)
+  ; RV32-NEXT:   G_STORE [[COPY6]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.0, align 8)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX1]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[PTR_ADD]](p0) :: (store (s32) into %fixed-stack.0 + 4)
+  ; RV32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s32)
   ; RV32-NEXT:   PseudoRET
   ;
   ; RV64-LABEL: name: va6arg
@@ -288,12 +310,14 @@ define void @va6arg(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ...) {
   ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY $x13
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x14
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x15
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX]](p0) :: (store (s64), align 16)
+  ; RV64-NEXT:   G_STORE [[COPY6]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.0, align 16)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX1]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[PTR_ADD]](p0) :: (store (s64) into %fixed-stack.0 + 8)
+  ; RV64-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C]](s64)
   ; RV64-NEXT:   PseudoRET
   ret void
 }
@@ -310,9 +334,11 @@ define void @va7arg(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, ...)
   ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x14
   ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x15
   ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(p0) = COPY $x16
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x17
-  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX]](p0) :: (store (s32))
+  ; RV32-NEXT:   G_STORE [[COPY7]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %fixed-stack.1)
+  ; RV32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
   ; RV32-NEXT:   PseudoRET
   ;
   ; RV64-LABEL: name: va7arg
@@ -326,9 +352,11 @@ define void @va7arg(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, ...)
   ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x14
   ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x15
   ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(p0) = COPY $x16
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX]](p0) :: (store (s64))
+  ; RV64-NEXT:   G_STORE [[COPY7]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %fixed-stack.1)
+  ; RV64-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C]](s64)
   ; RV64-NEXT:   PseudoRET
   ret void
 }

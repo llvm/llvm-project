@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zbkb -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zbkb < %s \
-# RUN:     | llvm-objdump --mattr=+zbkb -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zbkb -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zbkb < %s \
-# RUN:     | llvm-objdump --mattr=+zbkb -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zbkb -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: ror t0, t1, t2

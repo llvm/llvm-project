@@ -452,11 +452,11 @@ TEST(VirtualFileSystemTest, BasicRealFSIteration) {
   ASSERT_FALSE(EC);
   ASSERT_NE(vfs::directory_iterator(), I);
   // Check either a or c, since we can't rely on the iteration order.
-  EXPECT_TRUE(I->path().endswith("a") || I->path().endswith("c"));
+  EXPECT_TRUE(I->path().ends_with("a") || I->path().ends_with("c"));
   I.increment(EC);
   ASSERT_FALSE(EC);
   ASSERT_NE(vfs::directory_iterator(), I);
-  EXPECT_TRUE(I->path().endswith("a") || I->path().endswith("c"));
+  EXPECT_TRUE(I->path().ends_with("a") || I->path().ends_with("c"));
   I.increment(EC);
   EXPECT_EQ(vfs::directory_iterator(), I);
 }
@@ -1563,13 +1563,11 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
   ErrorOr<vfs::Status> S = O->status("//root/file1");
   ASSERT_FALSE(S.getError());
   EXPECT_EQ("//root/foo/bar/a", S->getName());
-  EXPECT_TRUE(S->IsVFSMapped);
   EXPECT_TRUE(S->ExposesExternalVFSPath);
 
   ErrorOr<vfs::Status> SLower = O->status("//root/foo/bar/a");
   EXPECT_EQ("//root/foo/bar/a", SLower->getName());
   EXPECT_TRUE(S->equivalent(*SLower));
-  EXPECT_FALSE(SLower->IsVFSMapped);
   EXPECT_FALSE(SLower->ExposesExternalVFSPath);
 
   // file after opening
@@ -1578,7 +1576,6 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
   auto OpenedS = (*OpenedF)->status();
   ASSERT_FALSE(OpenedS.getError());
   EXPECT_EQ("//root/foo/bar/a", OpenedS->getName());
-  EXPECT_TRUE(OpenedS->IsVFSMapped);
   EXPECT_TRUE(OpenedS->ExposesExternalVFSPath);
 
   // directory
@@ -1591,21 +1588,18 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
   S = O->status("//root/mappeddir");
   ASSERT_FALSE(S.getError());
   EXPECT_TRUE(S->isDirectory());
-  EXPECT_TRUE(S->IsVFSMapped);
   EXPECT_TRUE(S->ExposesExternalVFSPath);
   EXPECT_TRUE(S->equivalent(*O->status("//root/foo/bar")));
 
   SLower = O->status("//root/foo/bar");
   EXPECT_EQ("//root/foo/bar", SLower->getName());
   EXPECT_TRUE(S->equivalent(*SLower));
-  EXPECT_FALSE(SLower->IsVFSMapped);
   EXPECT_FALSE(SLower->ExposesExternalVFSPath);
 
   // file in remapped directory
   S = O->status("//root/mappeddir/a");
   ASSERT_FALSE(S.getError());
   EXPECT_FALSE(S->isDirectory());
-  EXPECT_TRUE(S->IsVFSMapped);
   EXPECT_TRUE(S->ExposesExternalVFSPath);
   EXPECT_EQ("//root/foo/bar/a", S->getName());
 
@@ -1613,7 +1607,6 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
   S = O->status("//root/mappeddir2/a");
   ASSERT_FALSE(S.getError());
   EXPECT_FALSE(S->isDirectory());
-  EXPECT_TRUE(S->IsVFSMapped);
   EXPECT_FALSE(S->ExposesExternalVFSPath);
   EXPECT_EQ("//root/mappeddir2/a", S->getName());
 
@@ -1623,7 +1616,6 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
   OpenedS = (*OpenedF)->status();
   ASSERT_FALSE(OpenedS.getError());
   EXPECT_EQ("//root/foo/bar/a", OpenedS->getName());
-  EXPECT_TRUE(OpenedS->IsVFSMapped);
   EXPECT_TRUE(OpenedS->ExposesExternalVFSPath);
 
   // file contents in remapped directory, with use-external-name=false
@@ -1632,7 +1624,6 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
   OpenedS = (*OpenedF)->status();
   ASSERT_FALSE(OpenedS.getError());
   EXPECT_EQ("//root/mappeddir2/a", OpenedS->getName());
-  EXPECT_TRUE(OpenedS->IsVFSMapped);
   EXPECT_FALSE(OpenedS->ExposesExternalVFSPath);
 
   // broken mapping
@@ -1665,13 +1656,11 @@ TEST_F(VFSFromYAMLTest, MappedRoot) {
   ErrorOr<vfs::Status> S = O->status("//mappedroot/a");
   ASSERT_FALSE(S.getError());
   EXPECT_EQ("//root/foo/bar/a", S->getName());
-  EXPECT_TRUE(S->IsVFSMapped);
   EXPECT_TRUE(S->ExposesExternalVFSPath);
 
   ErrorOr<vfs::Status> SLower = O->status("//root/foo/bar/a");
   EXPECT_EQ("//root/foo/bar/a", SLower->getName());
   EXPECT_TRUE(S->equivalent(*SLower));
-  EXPECT_FALSE(SLower->IsVFSMapped);
   EXPECT_FALSE(SLower->ExposesExternalVFSPath);
 
   // file after opening
@@ -1680,7 +1669,6 @@ TEST_F(VFSFromYAMLTest, MappedRoot) {
   auto OpenedS = (*OpenedF)->status();
   ASSERT_FALSE(OpenedS.getError());
   EXPECT_EQ("//root/foo/bar/a", OpenedS->getName());
-  EXPECT_TRUE(OpenedS->IsVFSMapped);
   EXPECT_TRUE(OpenedS->ExposesExternalVFSPath);
 
   EXPECT_EQ(0, NumDiagnostics);
@@ -1829,13 +1817,11 @@ TEST_F(VFSFromYAMLTest, ReturnsRequestedPathVFSMiss) {
   auto OpenedS = (*OpenedF)->status();
   ASSERT_FALSE(OpenedS.getError());
   EXPECT_EQ("a", OpenedS->getName());
-  EXPECT_FALSE(OpenedS->IsVFSMapped);
   EXPECT_FALSE(OpenedS->ExposesExternalVFSPath);
 
   auto DirectS = RemappedFS->status("a");
   ASSERT_FALSE(DirectS.getError());
   EXPECT_EQ("a", DirectS->getName());
-  EXPECT_FALSE(DirectS->IsVFSMapped);
   EXPECT_FALSE(DirectS->ExposesExternalVFSPath);
 
   EXPECT_EQ(0, NumDiagnostics);
@@ -1871,13 +1857,11 @@ TEST_F(VFSFromYAMLTest, ReturnsExternalPathVFSHit) {
   auto OpenedS = (*OpenedF)->status();
   ASSERT_FALSE(OpenedS.getError());
   EXPECT_EQ("realname", OpenedS->getName());
-  EXPECT_TRUE(OpenedS->IsVFSMapped);
   EXPECT_TRUE(OpenedS->ExposesExternalVFSPath);
 
   auto DirectS = FS->status("vfsname");
   ASSERT_FALSE(DirectS.getError());
   EXPECT_EQ("realname", DirectS->getName());
-  EXPECT_TRUE(DirectS->IsVFSMapped);
   EXPECT_TRUE(DirectS->ExposesExternalVFSPath);
 
   EXPECT_EQ(0, NumDiagnostics);
@@ -1976,13 +1960,11 @@ TEST_F(VFSFromYAMLTest, ReturnsInternalPathVFSHit) {
   auto OpenedS = (*OpenedF)->status();
   ASSERT_FALSE(OpenedS.getError());
   EXPECT_EQ("vfsname", OpenedS->getName());
-  EXPECT_TRUE(OpenedS->IsVFSMapped);
   EXPECT_FALSE(OpenedS->ExposesExternalVFSPath);
 
   auto DirectS = FS->status("vfsname");
   ASSERT_FALSE(DirectS.getError());
   EXPECT_EQ("vfsname", DirectS->getName());
-  EXPECT_TRUE(DirectS->IsVFSMapped);
   EXPECT_FALSE(DirectS->ExposesExternalVFSPath);
 
   EXPECT_EQ(0, NumDiagnostics);

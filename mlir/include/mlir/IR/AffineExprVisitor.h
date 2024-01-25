@@ -30,6 +30,9 @@ namespace mlir {
 /// functions in your class. This class is defined in terms of statically
 /// resolved overloading, not virtual functions.
 ///
+/// The visitor is templated on its return type (`RetTy`). With a WalkResult
+/// return type, the visitor supports interrupting walks.
+///
 /// For example, here is a visitor that counts the number of for AffineDimExprs
 /// in an AffineExpr.
 ///
@@ -65,7 +68,6 @@ namespace mlir {
 /// virtual function call overhead. Defining and using a AffineExprVisitor is
 /// just as efficient as having your own switch instruction over the instruction
 /// opcode.
-
 template <typename SubClass, typename RetTy>
 class AffineExprVisitorBase {
 public:
@@ -136,6 +138,8 @@ public:
   RetTy visitSymbolExpr(AffineSymbolExpr expr) { return RetTy(); }
 };
 
+/// See documentation for AffineExprVisitorBase. This visitor supports
+/// interrupting walks when a `WalkResult` is used for `RetTy`.
 template <typename SubClass, typename RetTy = void>
 class AffineExprVisitor : public AffineExprVisitorBase<SubClass, RetTy> {
   //===--------------------------------------------------------------------===//
@@ -150,27 +154,52 @@ public:
     switch (expr.getKind()) {
     case AffineExprKind::Add: {
       auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
-      walkOperandsPostOrder(binOpExpr);
+      if constexpr (std::is_same<RetTy, WalkResult>::value) {
+        if (walkOperandsPostOrder(binOpExpr).wasInterrupted())
+          return WalkResult::interrupt();
+      } else {
+        walkOperandsPostOrder(binOpExpr);
+      }
       return self->visitAddExpr(binOpExpr);
     }
     case AffineExprKind::Mul: {
       auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
-      walkOperandsPostOrder(binOpExpr);
+      if constexpr (std::is_same<RetTy, WalkResult>::value) {
+        if (walkOperandsPostOrder(binOpExpr).wasInterrupted())
+          return WalkResult::interrupt();
+      } else {
+        walkOperandsPostOrder(binOpExpr);
+      }
       return self->visitMulExpr(binOpExpr);
     }
     case AffineExprKind::Mod: {
       auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
-      walkOperandsPostOrder(binOpExpr);
+      if constexpr (std::is_same<RetTy, WalkResult>::value) {
+        if (walkOperandsPostOrder(binOpExpr).wasInterrupted())
+          return WalkResult::interrupt();
+      } else {
+        walkOperandsPostOrder(binOpExpr);
+      }
       return self->visitModExpr(binOpExpr);
     }
     case AffineExprKind::FloorDiv: {
       auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
-      walkOperandsPostOrder(binOpExpr);
+      if constexpr (std::is_same<RetTy, WalkResult>::value) {
+        if (walkOperandsPostOrder(binOpExpr).wasInterrupted())
+          return WalkResult::interrupt();
+      } else {
+        walkOperandsPostOrder(binOpExpr);
+      }
       return self->visitFloorDivExpr(binOpExpr);
     }
     case AffineExprKind::CeilDiv: {
       auto binOpExpr = cast<AffineBinaryOpExpr>(expr);
-      walkOperandsPostOrder(binOpExpr);
+      if constexpr (std::is_same<RetTy, WalkResult>::value) {
+        if (walkOperandsPostOrder(binOpExpr).wasInterrupted())
+          return WalkResult::interrupt();
+      } else {
+        walkOperandsPostOrder(binOpExpr);
+      }
       return self->visitCeilDivExpr(binOpExpr);
     }
     case AffineExprKind::Constant:
@@ -186,8 +215,19 @@ public:
 private:
   // Walk the operands - each operand is itself walked in post order.
   RetTy walkOperandsPostOrder(AffineBinaryOpExpr expr) {
-    walkPostOrder(expr.getLHS());
-    walkPostOrder(expr.getRHS());
+    if constexpr (std::is_same<RetTy, WalkResult>::value) {
+      if (walkPostOrder(expr.getLHS()).wasInterrupted())
+        return WalkResult::interrupt();
+    } else {
+      walkPostOrder(expr.getLHS());
+    }
+    if constexpr (std::is_same<RetTy, WalkResult>::value) {
+      if (walkPostOrder(expr.getLHS()).wasInterrupted())
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    } else {
+      return walkPostOrder(expr.getRHS());
+    }
   }
 };
 

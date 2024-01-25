@@ -73,16 +73,16 @@ bool Symbol::operator==(const Symbol &O) const {
 }
 
 SimpleSymbol parseSymbol(StringRef SymName, const SymbolFlags Flags) {
-  if (SymName.startswith(ObjC1ClassNamePrefix))
+  if (SymName.starts_with(ObjC1ClassNamePrefix))
     return {SymName.drop_front(ObjC1ClassNamePrefix.size()),
             SymbolKind::ObjectiveCClass};
-  if (SymName.startswith(ObjC2ClassNamePrefix))
+  if (SymName.starts_with(ObjC2ClassNamePrefix))
     return {SymName.drop_front(ObjC2ClassNamePrefix.size()),
             SymbolKind::ObjectiveCClass};
-  if (SymName.startswith(ObjC2MetaClassNamePrefix))
+  if (SymName.starts_with(ObjC2MetaClassNamePrefix))
     return {SymName.drop_front(ObjC2MetaClassNamePrefix.size()),
             SymbolKind::ObjectiveCClass};
-  if (SymName.startswith(ObjC2EHTypePrefix)) {
+  if (SymName.starts_with(ObjC2EHTypePrefix)) {
     // When classes without ehtype are used in try/catch blocks
     // a weak-defined symbol is exported. In those cases, treat these as a
     // global instead.
@@ -92,7 +92,7 @@ SimpleSymbol parseSymbol(StringRef SymName, const SymbolFlags Flags) {
             SymbolKind::ObjectiveCClassEHType};
   }
 
-  if (SymName.startswith(ObjC2IVarPrefix))
+  if (SymName.starts_with(ObjC2IVarPrefix))
     return {SymName.drop_front(ObjC2IVarPrefix.size()),
             SymbolKind::ObjectiveCInstanceVariable};
   return {SymName, SymbolKind::GlobalSymbol};

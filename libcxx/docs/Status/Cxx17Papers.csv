@@ -87,7 +87,7 @@
 "`P0513R0 <https://wg21.link/P0513R0>`__","LWG","Poisoning the Hash","Issaquah","|Complete|","5.0"
 "`P0516R0 <https://wg21.link/P0516R0>`__","LWG","Clarify That shared_future's Copy Operations have Wide Contracts","Issaquah","|Complete|","4.0"
 "`P0517R0 <https://wg21.link/P0517R0>`__","LWG","Make future_error Constructible","Issaquah","|Complete|","4.0"
-"`P0521R0 <https://wg21.link/P0521R0>`__","LWG","Proposed Resolution for CA 14 (shared_ptr use_count/unique)","Issaquah","|Nothing To Do|","n/a"
+"`P0521R0 <https://wg21.link/P0521R0>`__","LWG","Proposed Resolution for CA 14 (shared_ptr use_count/unique)","Issaquah","|Complete|","18.0"
 "","","","","",""
 "`P0156R2 <https://wg21.link/P0156R2>`__","LWG","Variadic Lock guard(rev 5)","Kona","|Complete|","5.0"
 "`P0270R3 <https://wg21.link/P0270R3>`__","CWG","Removing C dependencies from signal handler wording","Kona","",""

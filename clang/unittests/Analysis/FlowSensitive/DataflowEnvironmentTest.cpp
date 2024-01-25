@@ -25,6 +25,7 @@ namespace {
 using namespace clang;
 using namespace dataflow;
 using ::clang::dataflow::test::getFieldValue;
+using ::testing::Contains;
 using ::testing::IsNull;
 using ::testing::NotNull;
 
@@ -55,6 +56,52 @@ TEST_F(EnvironmentTest, FlowCondition) {
   auto &NotX = A.makeNot(X);
   EXPECT_FALSE(Env.proves(NotX));
   EXPECT_FALSE(Env.allows(NotX));
+}
+
+TEST_F(EnvironmentTest, SetAndGetValueOnCfgOmittedNodes) {
+  // Check that we can set a value on an expression that is omitted from the CFG
+  // (see `ignoreCFGOmittedNodes()`), then retrieve that same value from the
+  // expression. This is a regression test; `setValue()` and `getValue()`
+  // previously did not use `ignoreCFGOmittedNodes()` consistently.
+
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+    struct S {
+      int f();
+    };
+    void target() {
+      // Method call on a temporary produces an `ExprWithCleanups`.
+      S().f();
+      (1);
+    }
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const ExprWithCleanups *WithCleanups = selectFirst<ExprWithCleanups>(
+      "cleanups",
+      match(exprWithCleanups(hasType(isInteger())).bind("cleanups"), Context));
+  ASSERT_NE(WithCleanups, nullptr);
+
+  const ParenExpr *Paren = selectFirst<ParenExpr>(
+      "paren", match(parenExpr(hasType(isInteger())).bind("paren"), Context));
+  ASSERT_NE(Paren, nullptr);
+
+  Environment Env(DAContext);
+  IntegerValue *Val1 =
+      cast<IntegerValue>(Env.createValue(Unit->getASTContext().IntTy));
+  Env.setValue(*WithCleanups, *Val1);
+  EXPECT_EQ(Env.getValue(*WithCleanups), Val1);
+
+  IntegerValue *Val2 =
+      cast<IntegerValue>(Env.createValue(Unit->getASTContext().IntTy));
+  Env.setValue(*Paren, *Val2);
+  EXPECT_EQ(Env.getValue(*Paren), Val2);
 }
 
 TEST_F(EnvironmentTest, CreateValueRecursiveType) {
@@ -309,6 +356,57 @@ TEST_F(EnvironmentTest, InitGlobalVarsConstructor) {
   Environment Env(DAContext, *Ctor);
   Env.initialize();
   EXPECT_THAT(Env.getValue(*Var), NotNull());
+}
+
+// Pointers to Members are a tricky case of accessor calls, complicated further
+// when using templates where the pointer to the member is a template argument.
+// This is a repro of a failure case seen in the wild.
+TEST_F(EnvironmentTest,
+       ModelMemberForAccessorUsingMethodPointerThroughTemplate) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct S {
+        int accessor() {return member;}
+
+        int member = 0;
+      };
+
+      template <auto method>
+      int Target(S* S) {
+        return (S->*method)();
+      }
+
+     // We want to analyze the instantiation of Target for the accessor.
+     int Instantiator () {S S; return Target<&S::accessor>(&S); }
+  )cc";
+
+  auto Unit =
+      // C++17 for the simplifying use of auto in the template declaration.
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results = match(
+      decl(anyOf(functionDecl(hasName("Target"), isTemplateInstantiation())
+                     .bind("target"),
+                 fieldDecl(hasName("member")).bind("member"),
+                 recordDecl(hasName("S")).bind("struct"))),
+      Context);
+  const auto *Fun = selectFirst<FunctionDecl>("target", Results);
+  const auto *Struct = selectFirst<RecordDecl>("struct", Results);
+  const auto *Member = selectFirst<FieldDecl>("member", Results);
+  ASSERT_THAT(Fun, NotNull());
+  ASSERT_THAT(Struct, NotNull());
+  ASSERT_THAT(Member, NotNull());
+
+  // Verify that `member` is modeled for `S` when we analyze
+  // `Target<&S::accessor>`.
+  Environment Env(DAContext, *Fun);
+  Env.initialize();
+  EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
+              Contains(Member));
 }
 
 TEST_F(EnvironmentTest, RefreshRecordValue) {

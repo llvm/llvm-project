@@ -59,7 +59,7 @@ struct WithNonCopyableIterator : std::ranges::view_base {
     iterator(iterator&&);
     iterator& operator=(iterator&&);
     XYPoint& operator*() const;
-    iterator operator->() const;
+    XYPoint* operator->() const;
     iterator& operator++();
     iterator operator++(int);
 

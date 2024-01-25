@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -march=amdgcn  -run-pass mir-canonicalizer -verify-machineinstrs -o - %s
-# RUN: llc -march=amdgcn  -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs -o - %s
+# RUN: llc -mtriple=amdgcn -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn  -run-pass mir-canonicalizer -verify-machineinstrs -o - %s
+# RUN: llc -mtriple=amdgcn  -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs -o - %s
 
 # Previously getReservedRegs was called before parsing
 # machineFunctionInfo, but the AMDGPU implementation depends on

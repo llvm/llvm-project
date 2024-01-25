@@ -37,6 +37,15 @@ class MachineFunction;
 
 extern template class AnalysisManager<MachineFunction>;
 
+/// A CRTP mix-in that provides informational APIs needed for machine passes.
+///
+/// This provides some boilerplate for types that are machine passes. It
+/// automatically mixes in \c PassInfoMixin.
+template <typename DerivedT>
+struct MachinePassInfoMixin : public PassInfoMixin<DerivedT> {
+  // TODO: Add MachineFunctionProperties support.
+};
+
 /// An AnalysisManager<MachineFunction> that also exposes IR analysis results.
 class MachineFunctionAnalysisManager : public AnalysisManager<MachineFunction> {
 public:

@@ -18,7 +18,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -789,9 +788,10 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // VSX has 32b/64b load instructions. Legalization can handle loading of
   // 32b/64b to VSR correctly and cheaply. But BaseT::getMemoryOpCost and
   // PPCTargetLowering can't compute the cost appropriately. So here we
-  // explicitly check this case.
+  // explicitly check this case. There are also corresponding store
+  // instructions.
   unsigned MemBytes = Src->getPrimitiveSizeInBits();
-  if (Opcode == Instruction::Load && ST->hasVSX() && IsAltivecType &&
+  if (ST->hasVSX() && IsAltivecType &&
       (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32)))
     return 1;
 

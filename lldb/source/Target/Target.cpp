@@ -197,7 +197,7 @@ void Target::DeleteCurrentProcess() {
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
 
-    m_process_sp->Finalize();
+    m_process_sp->Finalize(false /* not destructing */);
 
     CleanupProcess();
 
@@ -1704,8 +1704,9 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
-    BroadcastEvent(eBroadcastBitModulesLoaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitModulesLoaded, data_sp);
   }
 }
 
@@ -1719,16 +1720,18 @@ void Target::SymbolsDidLoad(ModuleList &module_list) {
 
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
-    BroadcastEvent(eBroadcastBitSymbolsLoaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitSymbolsLoaded, data_sp);
   }
 }
 
 void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
   if (m_valid && module_list.GetSize()) {
     UnloadModuleSections(module_list);
-    BroadcastEvent(eBroadcastBitModulesUnloaded,
-                   new TargetEventData(this->shared_from_this(), module_list));
+    auto data_sp =
+        std::make_shared<TargetEventData>(shared_from_this(), module_list);
+    BroadcastEvent(eBroadcastBitModulesUnloaded, data_sp);
     m_breakpoint_list.UpdateBreakpoints(module_list, false, delete_locations);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, false,
                                                  delete_locations);

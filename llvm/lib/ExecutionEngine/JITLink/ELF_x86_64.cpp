@@ -349,11 +349,11 @@ identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
   constexpr StringRef EndSymbolPrefix = "__end";
 
   auto SymName = Sym.getName();
-  if (SymName.startswith(StartSymbolPrefix)) {
+  if (SymName.starts_with(StartSymbolPrefix)) {
     if (auto *Sec =
             G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
       return {*Sec, true};
-  } else if (SymName.startswith(EndSymbolPrefix)) {
+  } else if (SymName.starts_with(EndSymbolPrefix)) {
     if (auto *Sec =
             G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
       return {*Sec, false};

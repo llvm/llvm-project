@@ -47,3 +47,8 @@ bool lldb_private::operator!=(const lldb_private::CompilerDecl &lhs,
   return lhs.GetTypeSystem() != rhs.GetTypeSystem() ||
          lhs.GetOpaqueDecl() != rhs.GetOpaqueDecl();
 }
+
+std::vector<lldb_private::CompilerContext>
+CompilerDecl::GetCompilerContext() const {
+  return m_type_system->DeclGetCompilerContext(m_opaque_decl);
+}

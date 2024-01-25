@@ -35,7 +35,7 @@ declare i64 @llvm.x86.urdmsr(i64 %A)
 define void @test_int_x86_uwrmsr(i64 %A, i64 %B) nounwind {
 ; X64-LABEL: test_int_x86_uwrmsr:
 ; X64:       # %bb.0:
-; X64-NEXT:    uwrmsr %rdi, %rsi # encoding: [0xf3,0x0f,0x38,0xf8,0xfe]
+; X64-NEXT:    uwrmsr %rsi, %rdi # encoding: [0xf3,0x0f,0x38,0xf8,0xfe]
 ; X64-NEXT:    retq # encoding: [0xc3]
   call void @llvm.x86.uwrmsr(i64 %A, i64 %B)
   ret void
@@ -46,7 +46,7 @@ define void @test_int_x86_uwrmsr_const(i64 %A) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    uwrmsr %rdi, $123 # encoding: [0xc4,0xe7,0x7a,0xf8,0xc7,0x7b,0x00,0x00,0x00]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.uwrmsr(i64 %A, i64 123)
+  call void @llvm.x86.uwrmsr(i64 123, i64 %A)
   ret void
 }
 
@@ -55,9 +55,9 @@ define void @test_int_x86_uwrmsr_const_i64(i64 %A) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movabsq $8589934591, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0x01,0x00,0x00,0x00]
 ; X64-NEXT:    # imm = 0x1FFFFFFFF
-; X64-NEXT:    uwrmsr %rdi, %rax # encoding: [0xf3,0x0f,0x38,0xf8,0xf8]
+; X64-NEXT:    uwrmsr %rdi, %rax # encoding: [0xf3,0x0f,0x38,0xf8,0xc7]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.uwrmsr(i64 %A, i64 8589934591)
+  call void @llvm.x86.uwrmsr(i64 8589934591, i64 %A)
   ret void
 }
 

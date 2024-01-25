@@ -10,19 +10,62 @@
 #include "src/__support/UInt.h"
 
 #include "test/UnitTest/Test.h"
+#include <math.h> // HUGE_VALF, HUGE_VALF
 
-// We want to test LIBC_NAMESPACE::cpp::UInt<128> explicitly. So, for
+namespace LIBC_NAMESPACE {
+
+using LL_UInt64 = cpp::UInt<64>;
+// We want to test cpp::UInt<128> explicitly. So, for
 // convenience, we use a sugar which does not conflict with the UInt128 type
 // which can resolve to __uint128_t if the platform has it.
-using LL_UInt128 = LIBC_NAMESPACE::cpp::UInt<128>;
-using LL_UInt192 = LIBC_NAMESPACE::cpp::UInt<192>;
-using LL_UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
-using LL_UInt320 = LIBC_NAMESPACE::cpp::UInt<320>;
-using LL_UInt512 = LIBC_NAMESPACE::cpp::UInt<512>;
-using LL_UInt1024 = LIBC_NAMESPACE::cpp::UInt<1024>;
+using LL_UInt128 = cpp::UInt<128>;
+using LL_UInt192 = cpp::UInt<192>;
+using LL_UInt256 = cpp::UInt<256>;
+using LL_UInt320 = cpp::UInt<320>;
+using LL_UInt512 = cpp::UInt<512>;
+using LL_UInt1024 = cpp::UInt<1024>;
 
-using LL_Int128 = LIBC_NAMESPACE::cpp::Int<128>;
-using LL_Int192 = LIBC_NAMESPACE::cpp::Int<192>;
+using LL_Int128 = cpp::Int<128>;
+using LL_Int192 = cpp::Int<192>;
+
+TEST(LlvmLibcUIntClassTest, BitCastToFromDouble) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt64>::value);
+  static_assert(sizeof(LL_UInt64) == sizeof(double));
+  const double inf = HUGE_VAL;
+  const double max = DBL_MAX;
+  const double array[] = {0.0, 0.1, 1.0, max, inf};
+  for (double value : array) {
+    LL_UInt64 back = cpp::bit_cast<LL_UInt64>(value);
+    double forth = cpp::bit_cast<double>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+
+#ifdef __SIZEOF_INT128__
+TEST(LlvmLibcUIntClassTest, BitCastToFromNativeUint128) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt128>::value);
+  static_assert(sizeof(LL_UInt128) == sizeof(__uint128_t));
+  const __uint128_t array[] = {0, 1, ~__uint128_t(0)};
+  for (__uint128_t value : array) {
+    LL_UInt128 back = cpp::bit_cast<LL_UInt128>(value);
+    __uint128_t forth = cpp::bit_cast<__uint128_t>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+#endif
+
+#ifdef LIBC_COMPILER_HAS_FLOAT128
+TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
+  static_assert(cpp::is_trivially_copyable<LL_UInt128>::value);
+  static_assert(sizeof(LL_UInt128) == sizeof(float128));
+  const float128 array[] = {0, 0.1, 1};
+  for (float128 value : array) {
+    LL_UInt128 back = cpp::bit_cast<LL_UInt128>(value);
+    float128 forth = cpp::bit_cast<float128>(back);
+    EXPECT_TRUE(value == forth);
+  }
+}
+#endif
 
 TEST(LlvmLibcUIntClassTest, BasicInit) {
   LL_UInt128 half_val(12345);
@@ -634,3 +677,5 @@ TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
 }
 
 #endif // __SIZEOF_INT128__
+
+} // namespace LIBC_NAMESPACE

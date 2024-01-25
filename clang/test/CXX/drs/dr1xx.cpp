@@ -45,8 +45,8 @@ namespace dr102 { // dr102: yes
   namespace A {
     template<typename T> T f(T a, T b) { return a + b; }
     // expected-error@-1 {{call to function 'operator+' that is neither visible in the template definition nor found by argument-dependent lookup}}
-    // expected-note@#dr102-instantiation {{in instantiation of function template specialization 'dr102::A::f<dr102::B::S>' requested here}}
-    // expected-note@#dr102-operator-plus {{'operator+' should be declared prior to the call site or in namespace 'dr102::B'}}
+    //   expected-note@#dr102-instantiation {{in instantiation of function template specialization 'dr102::A::f<dr102::B::S>' requested here}}
+    //   expected-note@#dr102-operator-plus {{'operator+' should be declared prior to the call site or in namespace 'dr102::B'}}
   }
   namespace B {
     struct S {};
@@ -114,8 +114,8 @@ namespace dr111 { // dr111: dup 535
   const B b1;
   B b2(b1);
   // expected-error@-1 {{no matching constructor for initialization of 'B'}}
-  // expected-note@#dr111-B {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const B') would lose const qualifier}}
-  // expected-note@#dr111-B {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  //   expected-note@#dr111-B {{candidate constructor (the implicit copy constructor) not viable: 1st argument ('const B') would lose const qualifier}}
+  //   expected-note@#dr111-B {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
 }
 
 namespace dr112 { // dr112: yes
@@ -130,11 +130,11 @@ namespace dr112 { // dr112: yes
   // FIXME: Test this somehow in C++11 and on.
   X<a1> x1;
   // cxx98-error@-1 {{non-type template argument referring to object 'a1' with internal linkage is a C++11 extension}}
-  // cxx98-note@#dr112-a1 {{non-type template argument refers to object here}}
+  //   cxx98-note@#dr112-a1 {{non-type template argument refers to object here}}
   X<a2> x2;
   X<a3> x3;
   // cxx98-error@-1 {{non-type template argument referring to object 'a3' with internal linkage is a C++11 extension}}
-  // cxx98-note@#dr112-a3 {{non-type template argument refers to object here}}
+  //   cxx98-note@#dr112-a3 {{non-type template argument refers to object here}}
   X<a4> x4;
 }
 
@@ -158,7 +158,7 @@ namespace dr114 { // dr114: yes
     void g() { f(0); }
   } b;
   // expected-error@-1 {{variable type 'struct B' is an abstract class}}
-  // expected-note@#dr114-A-f {{unimplemented pure virtual method 'f' in 'B'}}
+  //   expected-note@#dr114-A-f {{unimplemented pure virtual method 'f' in 'B'}}
 }
 
 namespace dr115 { // dr115: 3.0
@@ -168,31 +168,31 @@ namespace dr115 { // dr115: 3.0
 
   int k1 = f(&f);
   // expected-error@-1 {{no matching function for call to 'f'}}
-  // expected-note@#dr115-f {{candidate template ignored: couldn't infer template argument 'T'}}
+  //   expected-note@#dr115-f {{candidate template ignored: couldn't infer template argument 'T'}}
   int k2 = f(&f<int>);
   int k3 = f(&g<int>);
   // expected-error@-1 {{no matching function for call to 'f'}}
-  // expected-note@#dr115-f {{candidate template ignored: couldn't infer template argument 'T'}}
+  //   expected-note@#dr115-f {{candidate template ignored: couldn't infer template argument 'T'}}
 
   void h() {
     (void)&f;
     // expected-error@-1 {{address of overloaded function 'f' cannot be cast to type 'void'}}
-    // expected-note@#dr115-f {{candidate function template}}
+    //   expected-note@#dr115-f {{candidate function template}}
     (void)&f<int>;
     (void)&g<int>;
     // expected-error@-1 {{address of overloaded function 'g' cannot be cast to type 'void'}}
-    // expected-note@#dr115-g-int {{candidate function template}}
-    // expected-note@#dr115-g {{candidate function template}}
+    //   expected-note@#dr115-g-int {{candidate function template}}
+    //   expected-note@#dr115-g {{candidate function template}}
 
     &f;
     // expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
-    // expected-note@#dr115-f {{possible target for call}}
+    //   expected-note@#dr115-f {{possible target for call}}
     &f<int>;
     // expected-warning@-1 {{expression result unused}}
     &g<int>;
     // expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
-    // expected-note@#dr115-g-int {{possible target for call}}
-    // expected-note@#dr115-g {{possible target for call}}
+    //   expected-note@#dr115-g-int {{possible target for call}}
+    //   expected-note@#dr115-g {{possible target for call}}
   }
 
   struct S {
@@ -254,16 +254,16 @@ namespace dr115 { // dr115: 3.0
   template<typename T=int> void with_default(); // #dr115-with-default
   int k10 = f(&with_default);
   // expected-error@-1 {{no matching function for call to 'f'}}
-  // expected-note@#dr115-f {{candidate template ignored: couldn't infer template argument 'T'}}
+  //   expected-note@#dr115-f {{candidate template ignored: couldn't infer template argument 'T'}}
   int k11 = f(&with_default<>);
   void k() {
     (void)&with_default;
     // expected-error@-1 {{address of overloaded function 'with_default' cannot be cast to type 'void'}}
-    // expected-note@#dr115-with-default {{candidate function template}}
+    //   expected-note@#dr115-with-default {{candidate function template}}
     (void)&with_default<>;
     &with_default;
     // expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
-    // expected-note@#dr115-with-default {{possible target for call}}
+    //   expected-note@#dr115-with-default {{possible target for call}}
     &with_default<>;
     // expected-warning@-1 {{expression result unused}}
   }
@@ -275,15 +275,15 @@ namespace dr116 { // dr116: yes
   template<int N> void f(A<N>) {} // #dr116-f-N
   template<int M> void f(A<M>) {}
   // expected-error@-1 {{redefinition of 'f'}}
-  // expected-note@#dr116-f-N {{previous definition is here}}
+  //   expected-note@#dr116-f-N {{previous definition is here}}
   template<typename T> void f(A<sizeof(T)>) {} // #dr116-f-T
   template<typename U> void f(A<sizeof(U)>) {}
   // expected-error@-1 {{redefinition of 'f'}}
-  // expected-note@#dr116-f-T {{previous definition is here}}
+  //   expected-note@#dr116-f-T {{previous definition is here}}
 }
 
 // dr117: na
-// dr118 is in its own file.
+// dr118 is in dr118.cpp
 // dr119: na
 // dr120: na
 
@@ -383,27 +383,27 @@ namespace dr126 { // dr126: partial
     virtual void dp() throw(D*);
     virtual void ep() throw(E*);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-ep {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-ep {{overridden virtual function is here}}
     virtual void fp() throw(F*);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-fp {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-fp {{overridden virtual function is here}}
     virtual void gp() throw(G*);
     virtual void hp() throw(H*);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-hp {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-hp {{overridden virtual function is here}}
 
     virtual void cr() throw(C&);
     virtual void dr() throw(D&);
     virtual void er() throw(E&);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-er {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-er {{overridden virtual function is here}}
     virtual void fr() throw(F&);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-fr {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-fr {{overridden virtual function is here}}
     virtual void gr() throw(G&);
     virtual void hr() throw(H&);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-hr {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-hr {{overridden virtual function is here}}
 
     virtual void pv() throw(C*);
 
@@ -413,7 +413,7 @@ namespace dr126 { // dr126: partial
     virtual void npm() throw(nullptr_t&);
     virtual void nr() throw(nullptr_t);
     // cxx11-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx11-14-note@#dr126-nr {{overridden virtual function is here}}
+    //   cxx11-14-note@#dr126-nr {{overridden virtual function is here}}
     virtual void ncr() throw(nullptr_t);
 #endif // __cplusplus >= 201103L
 
@@ -424,16 +424,16 @@ namespace dr126 { // dr126: partial
     virtual void w() throw(int);
     virtual void x() throw(const int*);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-x {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-x {{overridden virtual function is here}}
     virtual void y() throw(int*); // ok
     virtual void z() throw(long);
     // cxx98-14-error@-1 {{exception specification of overriding function is more lax than base version}}
-    // cxx98-14-note@#dr126-z {{overridden virtual function is here}}
+    //   cxx98-14-note@#dr126-z {{overridden virtual function is here}}
   };
 #endif // __cplusplus <= 201402L
   void f() throw(int);
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
+  //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
 }
 
 namespace dr127 { // dr127: 2.9
@@ -491,10 +491,10 @@ namespace dr136 { // dr136: 3.4
   struct A {
     friend void f(int, int = 0, int);
     // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
-    // expected-note@#dr136-f {{previous declaration is here}}
+    //   expected-note@#dr136-f {{previous declaration is here}}
     friend void g(int, int, int = 0);
     // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
-    // expected-note@#dr136-g {{previous declaration is here}}
+    //   expected-note@#dr136-g {{previous declaration is here}}
     friend void h(int, int, int = 0);
     // expected-error@-1 {{friend declaration specifying a default argument must be a definition}}
     friend void i(int, int, int = 0) {} // #dr136-A-i
@@ -503,7 +503,7 @@ namespace dr136 { // dr136: 3.4
   };
   void i(int, int, int);
   // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
-  // expected-note@#dr136-A-i {{previous declaration is here}}
+  //   expected-note@#dr136-A-i {{previous declaration is here}}
   void q() {
     j(A(), A()); // ok, has default argument
   }
@@ -512,7 +512,7 @@ namespace dr136 { // dr136: 3.4
   struct A {
     friend void dr136::k(int, int, int, int = 0);
     // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
-    // expected-note@#dr136-k {{previous declaration is here}}
+    //   expected-note@#dr136-k {{previous declaration is here}}
   };
   }
   namespace NSB {
@@ -529,7 +529,7 @@ namespace dr136 { // dr136: 3.4
   struct C {
     friend void B::f(int = 0);
     // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
-    // expected-note@#dr136-B-f {{previous declaration is here}}
+    //   expected-note@#dr136-B-f {{previous declaration is here}}
   };
 }
 
@@ -563,7 +563,7 @@ namespace dr139 { // dr139: yes
     struct A {
       friend void f(A &);
       // expected-error@-1 {{redefinition of 'f' as different kind of symbol}}
-      // expected-note@#dr139-typedef-f {{previous definition is here}}
+      //   expected-note@#dr139-typedef-f {{previous definition is here}}
     };
   }
 
@@ -583,7 +583,7 @@ namespace dr140 { // dr140: yes
   void f(int *const) {} // #dr140-f-first
   void f(int[3]) {}
   // expected-error@-1 {{redefinition of 'f'}}
-  // expected-note@#dr140-f-first {{previous definition is here}}
+  //   expected-note@#dr140-f-first {{previous definition is here}}
   void g(const int);
   void g(int n) { n = 2; }
 }
@@ -644,23 +644,23 @@ namespace dr142 { // dr142: 2.8
   void DD::f() {
     mi = 3;
     // expected-error@-1 {{'mi' is a private member of 'dr142::B'}}
-    // expected-note@#dr142-D {{constrained by private inheritance here}}
-    // expected-note@#dr142-B-mi {{member is declared here}}
+    //   expected-note@#dr142-D {{constrained by private inheritance here}}
+    //   expected-note@#dr142-B-mi {{member is declared here}}
     si = 3;
     // expected-error@-1 {{'si' is a private member of 'dr142::B'}}
-    // expected-note@#dr142-D {{constrained by private inheritance here}}
-    // expected-note@#dr142-B-si {{member is declared here}}
+    //   expected-note@#dr142-D {{constrained by private inheritance here}}
+    //   expected-note@#dr142-B-si {{member is declared here}}
     B b_old;
     // expected-error@-1 {{'B' is a private member of 'dr142::B'}}
-    // expected-note@#dr142-D {{constrained by private inheritance here}}
-    // expected-note@#dr142-B {{member is declared here}}
+    //   expected-note@#dr142-D {{constrained by private inheritance here}}
+    //   expected-note@#dr142-B {{member is declared here}}
     dr142::B b;
     b.mi = 3;
     b.si = 3;
     B::si = 3;
     // expected-error@-1 {{'B' is a private member of 'dr142::B'}}
-    // expected-note@#dr142-D {{constrained by private inheritance here}}
-    // expected-note@#dr142-B {{member is declared here}}
+    //   expected-note@#dr142-D {{constrained by private inheritance here}}
+    //   expected-note@#dr142-B {{member is declared here}}
     dr142::B::si = 3;
     B *bp1_old = this; // #dr142-bp1_old
     // expected-error@#dr142-bp1_old {{'B' is a private member of 'dr142::B'}}
@@ -670,7 +670,7 @@ namespace dr142 { // dr142: 2.8
     //   expected-note@#dr142-D {{declared private here}}
     dr142::B *bp1 = this;
     // expected-error@-1 {{cannot cast 'dr142::DD' to its private base class 'dr142::B'}}
-    // expected-note@#dr142-D {{declared private here}}
+    //   expected-note@#dr142-D {{declared private here}}
     B *bp2_old = (B*)this; // #dr142-bp2_old
     // expected-error@#dr142-bp2_old {{'B' is a private member of 'dr142::B'}}
     //   expected-note@#dr142-D {{constrained by private inheritance here}}
@@ -761,15 +761,15 @@ namespace dr152 { // dr152: yes
   };
   A a1 = A();
   // cxx98-14-error@-1 {{no matching constructor for initialization of 'A'}}
-  // cxx98-14-note@#dr152-A-explicit-ctor {{explicit constructor is not a candidate}}
-  // cxx98-14-note@#dr152-A-ctor {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  //   cxx98-14-note@#dr152-A-explicit-ctor {{explicit constructor is not a candidate}}
+  //   cxx98-14-note@#dr152-A-ctor {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
   A a2((A()));
 
   A &f();
   A a3 = f();
   // expected-error@-1 {{no matching constructor for initialization of 'A'}}
-  // expected-note@#dr152-A-explicit-ctor {{explicit constructor is not a candidate}}
-  // expected-note@#dr152-A-ctor {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  //   expected-note@#dr152-A-explicit-ctor {{explicit constructor is not a candidate}}
+  //   expected-note@#dr152-A-ctor {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
   A a4(f());
 }
 
@@ -789,7 +789,7 @@ namespace dr155 { // dr155: dup 632
   // expected-warning@-1 {{braces around scalar initializer}}
 }
 
-// dr158 is in its own file.
+// dr158 is in dr158.cpp
 
 namespace dr159 { // dr159: 3.5
   namespace X { void f(); }
@@ -817,17 +817,17 @@ namespace dr161 { // dr161: 3.1
       C::B b2; // ok, accessible as a member of A
       (void)&C::b;
       // expected-error@-1 {{'b' is a protected member of 'dr161::A'}}
-      // expected-note@#dr161-B {{declared protected here}}
+      //   expected-note@#dr161-B {{declared protected here}}
       (void)&C::bs;
       (void)c.b;
       // expected-error@-1 {{'b' is a protected member of 'dr161::A'}}
-      // expected-note@#dr161-B {{declared protected here}}
+      //   expected-note@#dr161-B {{declared protected here}}
       (void)c.bs;
       f();
       sf();
       c.f();
       // expected-error@-1 {{protected}}
-      // expected-note@#dr161-f {{declared protected here}}
+      //   expected-note@#dr161-f {{declared protected here}}
       c.sf();
       A::f();
       D::f();
@@ -887,8 +887,8 @@ namespace dr166 { // dr166: 2.9
   int g(A::X);
   template<typename T> int h(T t) { return t.n; }
   // expected-error@-1 {{'n' is a private member of 'dr166::A::X'}}
-  // expected-note@#dr166-h-instantiation {{in instantiation of function template specialization 'dr166::h<dr166::A::X>' requested here}}
-  // expected-note@#dr166-X-n {{implicitly declared private here}}
+  //   expected-note@#dr166-h-instantiation {{in instantiation of function template specialization 'dr166::h<dr166::A::X>' requested here}}
+  //   expected-note@#dr166-X-n {{implicitly declared private here}}
   int i(A::X);
 
   namespace A {
@@ -909,7 +909,7 @@ namespace dr166 { // dr166: 2.9
   template int h(A::X); // #dr166-h-instantiation
   int i(A::X x) { return x.n; }
   // expected-error@-1 {{'n' is a private member of 'dr166::A::X'}}
-  // expected-note@#dr166-X-n {{implicitly declared private here}}
+  //   expected-note@#dr166-X-n {{implicitly declared private here}}
 }
 
 // dr167: sup 1012
@@ -951,7 +951,7 @@ namespace dr171 {
   extern "C" void dr171a();
   extern "C" void dr171b();
   // expected-error@-1 {{declaration of 'dr171b' with C language linkage conflicts with declaration in global scope}}
-  // expected-note@#dr171b-int {{declared in global scope here}}
+  //   expected-note@#dr171b-int {{declared in global scope here}}
 }
 
 namespace dr172 { // dr172: yes
@@ -1002,8 +1002,8 @@ namespace dr175 { // dr175: 2.8
   struct C : B {
     A a;
     // expected-error@-1 {{'A' is a private member of 'dr175::A'}}
-    // expected-note@#dr175-B {{constrained by private inheritance here}}
-    // expected-note@#dr175-A {{member is declared here}}
+    //   expected-note@#dr175-B {{constrained by private inheritance here}}
+    //   expected-note@#dr175-A {{member is declared here}}
     dr175::A b;
   };
 }
@@ -1015,7 +1015,7 @@ namespace dr176 { // dr176: 3.1
       typedef Y A; // #dr176-A-first
       typedef Y<char> A;
       // expected-error@-1 {{typedef redefinition with different types ('Y<char>' vs 'Y<int>')}}
-      // expected-note@#dr176-A-first {{previous definition is here}}
+      //   expected-note@#dr176-A-first {{previous definition is here}}
     }
   };
 
@@ -1031,8 +1031,8 @@ namespace dr176 { // dr176: 3.1
   template<typename T> struct Derived2 : Base<int>, Base<char> {
     typename Derived2::Base b;
     // expected-error@-1 {{member 'Base' found in multiple base classes of different types}}
-    // expected-note@#dr176-Base {{member type 'dr176::Base<int>' found by ambiguous name lookup}}
-    // expected-note@#dr176-Base {{member type 'dr176::Base<char>' found by ambiguous name lookup}}
+    //   expected-note@#dr176-Base {{member type 'dr176::Base<int>' found by ambiguous name lookup}}
+    //   expected-note@#dr176-Base {{member type 'dr176::Base<char>' found by ambiguous name lookup}}
     typename Derived2::Base<double> d;
   };
 
@@ -1057,8 +1057,8 @@ namespace dr177 { // dr177: yes
   B b;
   A a = b;
   // cxx98-14-error@-1 {{no viable constructor copying variable of type 'A'}}
-  // cxx98-14-note@#dr177-A-copy-ctor {{candidate constructor not viable: expects an lvalue for 1st argument}}
-  // cxx98-14-note@#dr177-A-ctor-from-B {{candidate constructor not viable: no known conversion from 'A' to 'const B &' for 1st argument}}
+  //   cxx98-14-note@#dr177-A-copy-ctor {{candidate constructor not viable: expects an lvalue for 1st argument}}
+  //   cxx98-14-note@#dr177-A-ctor-from-B {{candidate constructor not viable: no known conversion from 'A' to 'const B &' for 1st argument}}
 
   struct C { C(C&); }; // #dr177-C-copy-ctor
   struct D : C {};
@@ -1066,7 +1066,7 @@ namespace dr177 { // dr177: yes
   E e;
   C c = e;
   // expected-error@-1 {{no viable constructor copying variable of type 'D'}}
-  // expected-note@#dr177-C-copy-ctor {{candidate constructor not viable: expects an lvalue for 1st argument}}
+  //   expected-note@#dr177-C-copy-ctor {{candidate constructor not viable: expects an lvalue for 1st argument}}
 }
 
 namespace dr178 { // dr178: yes
@@ -1157,7 +1157,7 @@ namespace dr184 { // dr184: yes
   template<template<typename TT> class T> void A<T>::f() { // #dr184-T
     T<> t;
     // expected-error@-1 {{too few template arguments for template template parameter 'T'}}
-    // expected-note@#dr184-T {{template is declared here}}
+    //   expected-note@#dr184-T {{template is declared here}}
   }
 
   template<template<typename TT = char> class T> void A<T>::g() {
@@ -1248,7 +1248,7 @@ namespace dr197 { // dr197: yes
     char &a = f(1);
     char &b = f(T(1));
     // expected-error@-1 {{non-const lvalue reference to type 'char' cannot bind to a value of unrelated type 'int'}}
-    // expected-note@#dr197-g-e-call {{in instantiation of function template specialization 'dr197::g<dr197::E>' requested here}}
+    //   expected-note@#dr197-g-e-call {{in instantiation of function template specialization 'dr197::g<dr197::E>' requested here}}
     char &c = f(t);
     // expected-error@-1 {{non-const lvalue reference to type 'char' cannot bind to a value of unrelated type 'int'}}
   }

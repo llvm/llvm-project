@@ -946,7 +946,7 @@ public:
           break;
         case llvm::sys::fs::file_type::regular_file: {
           // Only consider concrete files that can actually be included by PDLL.
-          if (filename.endswith(".pdll") || filename.endswith(".td"))
+          if (filename.ends_with(".pdll") || filename.ends_with(".td"))
             addIncludeCompletion(filename, /*isDirectory=*/false);
           break;
         }

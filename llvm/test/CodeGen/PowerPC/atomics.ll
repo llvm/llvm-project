@@ -29,7 +29,9 @@ define i32 @load_i32_acquire(ptr %mem) {
 ; PPC32-LABEL: load_i32_acquire:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    lwz r3, 0(r3)
-; PPC32-NEXT:    lwsync
+; PPC32-NEXT:    cmpw cr7, r3, r3
+; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    isync
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: load_i32_acquire:

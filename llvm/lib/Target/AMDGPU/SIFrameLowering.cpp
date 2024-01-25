@@ -95,7 +95,8 @@ static void getVGPRSpillLaneOrTempRegister(
                                          TargetStackID::SGPRSpill);
 
     if (TRI->spillSGPRToVGPR() &&
-        MFI->allocateSGPRSpillToVGPRLane(MF, FI, /* IsPrologEpilog */ true)) {
+        MFI->allocateSGPRSpillToVGPRLane(MF, FI, /*SpillToPhysVGPRLane=*/true,
+                                         /*IsPrologEpilog=*/true)) {
       // 2: There's no free lane to spill, and no free register to save the
       // SGPR, so we're forced to take another VGPR to use for the spill.
       MFI->addToPrologEpilogSGPRSpills(
@@ -188,7 +189,7 @@ static void buildGitPtr(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         .addImm(MFI->getGITPtrHigh())
         .addReg(TargetReg, RegState::ImplicitDefine);
   } else {
-    const MCInstrDesc &GetPC64 = TII->get(AMDGPU::S_GETPC_B64);
+    const MCInstrDesc &GetPC64 = TII->get(AMDGPU::S_GETPC_B64_pseudo);
     BuildMI(MBB, I, DL, GetPC64, TargetReg);
   }
   Register GitPtrLo = MFI->getGITPtrLoReg(*MF);
@@ -1560,6 +1561,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
     return;
 
+  MFI->shiftSpillPhysVGPRsToLowestRange(MF);
+
   TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
   if (MFI->isEntryFunction())
     return;
@@ -1723,6 +1726,7 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
   uint64_t EstStackSize = MFI.estimateStackSize(MF);
   uint64_t MaxOffset = EstStackSize - 1;
 
@@ -1734,12 +1738,11 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   // rather than allocating as close to possible. This could save a lot of space
   // on frames with alignment requirements.
   if (ST.enableFlatScratch()) {
-    const SIInstrInfo *TII = ST.getInstrInfo();
     if (TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
                                SIInstrFlags::FlatScratch))
       return false;
   } else {
-    if (SIInstrInfo::isLegalMUBUFImmOffset(MaxOffset))
+    if (TII->isLegalMUBUFImmOffset(MaxOffset))
       return false;
   }
 

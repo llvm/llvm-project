@@ -380,7 +380,7 @@ struct __nothrow_invokable_r_imp<true, false, _Ret, _Fp, _Args...> {
   static const bool value = false;
 #else
   static const bool value =
-      noexcept(_ThisT::__test_noexcept<_Ret>(_VSTD::__invoke(std::declval<_Fp>(), std::declval<_Args>()...)));
+      noexcept(_ThisT::__test_noexcept<_Ret>(std::__invoke(std::declval<_Fp>(), std::declval<_Args>()...)));
 #endif
 };
 
@@ -389,7 +389,7 @@ struct __nothrow_invokable_r_imp<true, true, _Ret, _Fp, _Args...> {
 #ifdef _LIBCPP_CXX03_LANG
   static const bool value = false;
 #else
-  static const bool value = noexcept(_VSTD::__invoke(std::declval<_Fp>(), std::declval<_Args>()...));
+  static const bool value = noexcept(std::__invoke(std::declval<_Fp>(), std::declval<_Args>()...));
 #endif
 };
 

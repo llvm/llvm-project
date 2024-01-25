@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -873,6 +875,82 @@ struct BBAddrMap {
 
   uint64_t Addr;                  // Function address
   std::vector<BBEntry> BBEntries; // Basic block entries for this function.
+};
+
+/// A feature extension of BBAddrMap that holds information relevant to PGO.
+struct PGOAnalysisMap {
+  /// Bitfield of optional features to include in the PGO extended map.
+  struct Features {
+    bool FuncEntryCount : 1;
+    bool BBFreq : 1;
+    bool BrProb : 1;
+
+    // True if at least one feature is enabled
+    bool anyEnabled() const { return FuncEntryCount || BBFreq || BrProb; }
+
+    // Encodes to minimum bit width representation.
+    uint8_t encode() const {
+      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
+             (static_cast<uint8_t>(BBFreq) << 1) |
+             (static_cast<uint8_t>(BrProb) << 2);
+    }
+
+    // Decodes from minimum bit width representation and validates no
+    // unnecessary bits are used.
+    static Expected<Features> decode(uint8_t Val) {
+      Features Feat{static_cast<bool>(Val & (1 << 0)),
+                    static_cast<bool>(Val & (1 << 1)),
+                    static_cast<bool>(Val & (1 << 2))};
+      if (Feat.encode() != Val)
+        return createStringError(
+            std::error_code(),
+            "invalid encoding for PGOAnalysisMap::Features: 0x%x", Val);
+      return Feat;
+    }
+
+    bool operator==(const Features &Other) const {
+      return std::tie(FuncEntryCount, BBFreq, BrProb) ==
+             std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb);
+    }
+  };
+
+  /// Extra basic block data with fields for block frequency and branch
+  /// probability.
+  struct PGOBBEntry {
+    /// Single successor of a given basic block that contains the tag and branch
+    /// probability associated with it.
+    struct SuccessorEntry {
+      /// Unique ID of this successor basic block.
+      uint32_t ID;
+      /// Branch Probability of the edge to this successor taken from MBPI.
+      BranchProbability Prob;
+
+      bool operator==(const SuccessorEntry &Other) const {
+        return std::tie(ID, Prob) == std::tie(Other.ID, Other.Prob);
+      }
+    };
+
+    /// Block frequency taken from MBFI
+    BlockFrequency BlockFreq;
+    /// List of successors of the current block
+    llvm::SmallVector<SuccessorEntry, 2> Successors;
+
+    bool operator==(const PGOBBEntry &Other) const {
+      return std::tie(BlockFreq, Successors) ==
+             std::tie(Other.BlockFreq, Other.Successors);
+    }
+  };
+
+  uint64_t FuncEntryCount;           // Prof count from IR function
+  std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
+
+  // Flags to indicate if each PGO related info was enabled in this function
+  Features FeatEnable;
+
+  bool operator==(const PGOAnalysisMap &Other) const {
+    return std::tie(FuncEntryCount, BBEntries, FeatEnable) ==
+           std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
+  }
 };
 
 } // end namespace object.

@@ -5,27 +5,14 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/d.cppm \
 // RUN:     -emit-module-interface -o %t/d.pcm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.cppm \
-// RUN:     -emit-module-interface -o %t/c.pcm -fmodule-file=%t/d.pcm
+// RUN:     -emit-module-interface -o %t/c.pcm -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.cppm \
-// RUN:     -emit-module-interface -o %t/b.pcm -fmodule-file=%t/d.pcm
+// RUN:     -emit-module-interface -o %t/b.pcm -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.cppm \
-// RUN:     -emit-module-interface -o %t/a.pcm -fmodule-file=%t/d.pcm \
-// RUN:     -fmodule-file=%t/c.pcm -fmodule-file=%t/b.pcm 
+// RUN:     -emit-module-interface -o %t/a.pcm -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.pcm \
-// RUN:     -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/a.cppm
-//
-// Use -fmodule-file=<module-name>=<BMI-path>
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/d.cppm \
-// RUN:     -emit-module-interface -o %t/d.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.cppm \
-// RUN:     -emit-module-interface -o %t/c.pcm -fmodule-file=%t/d.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.cppm \
-// RUN:     -emit-module-interface -o %t/b.pcm -fmodule-file=%t/d.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.cppm \
-// RUN:     -emit-module-interface -o %t/a.pcm -fmodule-file=%t/d.pcm \
-// RUN:     -fmodule-file=%t/c.pcm -fmodule-file=%t/b.pcm 
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/a.pcm \
-// RUN:     -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/a.cppm
+// RUN:     -S -emit-llvm -disable-llvm-passes -o - -fprebuilt-module-path=%t \
+// RUN:     | FileCheck %t/a.cppm
 
 //--- d.cppm
 export module d;
@@ -33,11 +20,11 @@ export module d;
 export template<typename>
 struct integer {
 	using type = int;
-	
+
 	static constexpr auto value() {
 		return 0;
 	}
-	
+
 	friend constexpr void f(integer const x) {
 		x.value();
 	}

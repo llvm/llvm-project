@@ -514,7 +514,7 @@ std::optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
     std::vector<std::unique_ptr<ELFYAML::Chunk>> &Sections) {
   DWARFYAML::Data DWARF;
   for (std::unique_ptr<ELFYAML::Chunk> &C : Sections) {
-    if (!C->Name.startswith(".debug_"))
+    if (!C->Name.starts_with(".debug_"))
       continue;
 
     if (ELFYAML::RawContentSection *RawSec =
