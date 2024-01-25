@@ -369,7 +369,9 @@ struct GenerateLoopNest {
 /// Returns an attribute list that excludes pre-defined attributes.
 template <typename OpTy>
 SmallVector<NamedAttribute> getPrunedAttributeList(OpTy op) {
-  auto elidedAttrs = llvm::to_vector(op.getAttributeNames());
+  // op.getAttributeNames() doesn't work when the op is linalg::LinalgOp.
+  // Instead use the static function to get attribute names.
+  auto elidedAttrs = llvm::to_vector(linalg::GenericOp::getAttributeNames());
   if (isa<linalg::LinalgOp>(op.getOperation()))
     elidedAttrs.push_back(LinalgDialect::kMemoizedIndexingMapsAttrName);
   return getPrunedAttributeList(op, elidedAttrs);
