@@ -9,15 +9,16 @@
 
 @implementation MyClass
 
-// WITHOUT:  +[MyClass load]{{.*}}#0
-// ASAN: +[MyClass load]{{.*}}#0
+// WITHOUT:  +[MyClass load]{{.*}}#[[ATTR0:[0-9]+]]
+// ASAN: +[MyClass load]{{.*}}#[[ATTR1:[0-9]+]]
 +(void) load { }
 
-// WITHOUT:  +[MyClass addressSafety:]{{.*}}#0
-// ASAN:  +[MyClass addressSafety:]{{.*}}#0
+// WITHOUT:  +[MyClass addressSafety:]{{.*}}#[[ATTR0]]
+// ASAN:  +[MyClass addressSafety:]{{.*}}#[[ATTR2:[0-9]+]]
 + (int) addressSafety:(int*)a { return *a; }
 
 @end
 
-// ASAN: attributes #0 = {{.*}}sanitize_address
-// WITHOUT-NOT: attributes #0 = {{.*}}sanitize_address
+// ASAN : attributes #[[ATTR1]] = {{.*}}sanitized_padded_global
+// ASAN : attributes #[[ATTR2]] = {{.*}}sanitize_address
+// WITHOUT-NOT: attributes #[[ATTR0]] = {{.*}}sanitize_address
