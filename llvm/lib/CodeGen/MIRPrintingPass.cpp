@@ -20,6 +20,17 @@
 
 using namespace llvm;
 
+PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
+  printMIR(OS, M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &) {
+  printMIR(OS, MF);
+  return PreservedAnalyses::all();
+}
+
 namespace {
 
 /// This pass prints out the LLVM IR to an output stream using the MIR
