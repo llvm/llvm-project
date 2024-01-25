@@ -12,12 +12,14 @@
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8mf8.i32.i8.i32(i32 3, i32 31, i32 31, i8 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 8, i32 5, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8mf8.i64.i8.i64(i64 3, i64 31, i64 31, i8 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 8, i64 5, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u8mf8(uint8_t rs1, size_t vl) {
@@ -26,12 +28,14 @@ void test_sf_vc_x_se_u8mf8(uint8_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8mf4.i32.i8.i32(i32 3, i32 31, i32 31, i8 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 8, i32 6, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8mf4.i64.i8.i64(i64 3, i64 31, i64 31, i8 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 8, i64 6, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u8mf4(uint8_t rs1, size_t vl) {
@@ -40,12 +44,14 @@ void test_sf_vc_x_se_u8mf4(uint8_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8mf2.i32.i8.i32(i32 3, i32 31, i32 31, i8 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 8, i32 7, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8mf2.i64.i8.i64(i64 3, i64 31, i64 31, i8 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 8, i64 7, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u8mf2(uint8_t rs1, size_t vl) {
@@ -54,12 +60,14 @@ void test_sf_vc_x_se_u8mf2(uint8_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m1.i32.i8.i32(i32 3, i32 31, i32 31, i8 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 8, i32 0, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m1.i64.i8.i64(i64 3, i64 31, i64 31, i8 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 8, i64 0, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u8m1(uint8_t rs1, size_t vl) {
@@ -68,12 +76,14 @@ void test_sf_vc_x_se_u8m1(uint8_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m2.i32.i8.i32(i32 3, i32 31, i32 31, i8 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 8, i32 1, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m2.i64.i8.i64(i64 3, i64 31, i64 31, i8 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 8, i64 1, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u8m2(uint8_t rs1, size_t vl) {
@@ -82,12 +92,14 @@ void test_sf_vc_x_se_u8m2(uint8_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u8m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m4.i32.i8.i32(i32 3, i32 31, i32 31, i8 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 8, i32 2, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u8m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m4.i64.i8.i64(i64 3, i64 31, i64 31, i8 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 8, i64 2, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u8m4(uint8_t rs1, size_t vl) {
@@ -96,12 +108,14 @@ void test_sf_vc_x_se_u8m4(uint8_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u8m8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m8.i32.i8.i32(i32 3, i32 31, i32 31, i8 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 8, i32 3, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u8m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e8m8.i64.i8.i64(i64 3, i64 31, i64 31, i8 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i8 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 8, i64 3, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u8m8(uint8_t rs1, size_t vl) {
@@ -110,12 +124,14 @@ void test_sf_vc_x_se_u8m8(uint8_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16mf4.i32.i16.i32(i32 3, i32 31, i32 31, i16 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 16, i32 6, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16mf4.i64.i16.i64(i64 3, i64 31, i64 31, i16 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 16, i64 6, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u16mf4(uint16_t rs1, size_t vl) {
@@ -124,12 +140,14 @@ void test_sf_vc_x_se_u16mf4(uint16_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16mf2.i32.i16.i32(i32 3, i32 31, i32 31, i16 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 16, i32 7, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16mf2.i64.i16.i64(i64 3, i64 31, i64 31, i16 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 16, i64 7, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u16mf2(uint16_t rs1, size_t vl) {
@@ -138,12 +156,14 @@ void test_sf_vc_x_se_u16mf2(uint16_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m1.i32.i16.i32(i32 3, i32 31, i32 31, i16 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 16, i32 0, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m1.i64.i16.i64(i64 3, i64 31, i64 31, i16 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 16, i64 0, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u16m1(uint16_t rs1, size_t vl) {
@@ -152,12 +172,14 @@ void test_sf_vc_x_se_u16m1(uint16_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m2.i32.i16.i32(i32 3, i32 31, i32 31, i16 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 16, i32 1, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m2.i64.i16.i64(i64 3, i64 31, i64 31, i16 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 16, i64 1, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u16m2(uint16_t rs1, size_t vl) {
@@ -166,12 +188,14 @@ void test_sf_vc_x_se_u16m2(uint16_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u16m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m4.i32.i16.i32(i32 3, i32 31, i32 31, i16 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 16, i32 2, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u16m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m4.i64.i16.i64(i64 3, i64 31, i64 31, i16 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 16, i64 2, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u16m4(uint16_t rs1, size_t vl) {
@@ -180,12 +204,14 @@ void test_sf_vc_x_se_u16m4(uint16_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u16m8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m8.i32.i16.i32(i32 3, i32 31, i32 31, i16 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[CONV]], i32 16, i32 3, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u16m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e16m8.i64.i16.i64(i64 3, i64 31, i64 31, i16 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i16 [[RS1:%.*]] to i32
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[CONV]], i64 16, i64 3, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u16m8(uint16_t rs1, size_t vl) {
@@ -194,12 +220,12 @@ void test_sf_vc_x_se_u16m8(uint16_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32mf2.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 32, i32 7, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32mf2.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 32, i64 7, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u32mf2(uint32_t rs1, size_t vl) {
@@ -208,12 +234,12 @@ void test_sf_vc_x_se_u32mf2(uint32_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m1.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 32, i32 0, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m1.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 32, i64 0, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u32m1(uint32_t rs1, size_t vl) {
@@ -222,12 +248,12 @@ void test_sf_vc_x_se_u32m1(uint32_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m2.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 32, i32 1, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m2.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 32, i64 1, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u32m2(uint32_t rs1, size_t vl) {
@@ -236,12 +262,12 @@ void test_sf_vc_x_se_u32m2(uint32_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u32m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m4.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 32, i32 2, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u32m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m4.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 32, i64 2, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u32m4(uint32_t rs1, size_t vl) {
@@ -250,12 +276,12 @@ void test_sf_vc_x_se_u32m4(uint32_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_x_se_u32m8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m8.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.x.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 [[RS1:%.*]], i32 32, i32 3, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_x_se_u32m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.e32m8.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.x.se.i64.i32.i64(i64 3, i64 31, i64 31, i32 [[RS1:%.*]], i64 32, i64 3, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_x_se_u32m8(uint32_t rs1, size_t vl) {
@@ -768,12 +794,12 @@ vuint32m8_t test_sf_vc_v_x_u32m8(uint32_t rs1, size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u8mf8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8mf8.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 8, i32 5, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u8mf8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8mf8.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 8, i64 5, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u8mf8(size_t vl) {
@@ -782,12 +808,12 @@ void test_sf_vc_i_se_u8mf8(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u8mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8mf4.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 8, i32 7, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u8mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8mf4.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 8, i64 7, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u8mf4(size_t vl) {
@@ -796,12 +822,12 @@ void test_sf_vc_i_se_u8mf4(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u8mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8mf2.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 8, i32 6, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u8mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8mf2.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 8, i64 6, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u8mf2(size_t vl) {
@@ -810,12 +836,12 @@ void test_sf_vc_i_se_u8mf2(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u8m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m1.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 8, i32 0, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u8m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m1.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 8, i64 0, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u8m1(size_t vl) {
@@ -824,12 +850,12 @@ void test_sf_vc_i_se_u8m1(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u8m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m2.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 8, i32 1, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u8m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m2.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 8, i64 1, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u8m2(size_t vl) {
@@ -838,12 +864,12 @@ void test_sf_vc_i_se_u8m2(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u8m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m4.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 8, i32 2, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u8m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m4.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 8, i64 2, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u8m4(size_t vl) {
@@ -852,12 +878,12 @@ void test_sf_vc_i_se_u8m4(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u8m8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m8.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 8, i32 3, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u8m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e8m8.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 8, i64 3, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u8m8(size_t vl) {
@@ -866,12 +892,12 @@ void test_sf_vc_i_se_u8m8(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u16mf4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16mf4.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 16, i32 6, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16mf4.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 16, i64 6, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u16mf4(size_t vl) {
@@ -880,12 +906,12 @@ void test_sf_vc_i_se_u16mf4(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u16mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16mf2.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 16, i32 7, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16mf2.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 16, i64 7, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u16mf2(size_t vl) {
@@ -894,12 +920,12 @@ void test_sf_vc_i_se_u16mf2(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u16m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m1.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 16, i32 0, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u16m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m1.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 16, i64 0, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u16m1(size_t vl) {
@@ -908,12 +934,12 @@ void test_sf_vc_i_se_u16m1(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u16m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m2.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 16, i32 1, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u16m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m2.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 16, i64 1, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u16m2(size_t vl) {
@@ -922,12 +948,12 @@ void test_sf_vc_i_se_u16m2(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u16m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m4.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 16, i32 2, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u16m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m4.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 16, i64 2, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u16m4(size_t vl) {
@@ -936,12 +962,12 @@ void test_sf_vc_i_se_u16m4(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u16m8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m8.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 16, i32 3, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u16m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e16m8.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 16, i64 3, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u16m8(size_t vl) {
@@ -950,12 +976,12 @@ void test_sf_vc_i_se_u16m8(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u32mf2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32mf2.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 32, i32 7, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32mf2.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 32, i64 7, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u32mf2(size_t vl) {
@@ -964,12 +990,12 @@ void test_sf_vc_i_se_u32mf2(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u32m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m1.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 32, i32 0, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m1.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 32, i64 0, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u32m1(size_t vl) {
@@ -978,12 +1004,12 @@ void test_sf_vc_i_se_u32m1(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u32m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m2.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 32, i32 1, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m2.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 32, i64 1, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u32m2(size_t vl) {
@@ -992,12 +1018,12 @@ void test_sf_vc_i_se_u32m2(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u32m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m4.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 32, i32 2, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u32m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m4.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 32, i64 2, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u32m4(size_t vl) {
@@ -1006,12 +1032,12 @@ void test_sf_vc_i_se_u32m4(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u32m8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m8.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 32, i32 3, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u32m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e32m8.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 32, i64 3, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u32m8(size_t vl) {
@@ -1020,12 +1046,12 @@ void test_sf_vc_i_se_u32m8(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u64m1(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m1.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 64, i32 0, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m1.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 64, i64 0, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u64m1(size_t vl) {
@@ -1034,12 +1060,12 @@ void test_sf_vc_i_se_u64m1(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u64m2(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m2.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 64, i32 1, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m2.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 64, i64 1, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u64m2(size_t vl) {
@@ -1048,12 +1074,12 @@ void test_sf_vc_i_se_u64m2(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u64m4(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m4.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 64, i32 2, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u64m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m4.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 64, i64 2, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u64m4(size_t vl) {
@@ -1062,12 +1088,12 @@ void test_sf_vc_i_se_u64m4(size_t vl) {
 
 // CHECK-RV32-LABEL: @test_sf_vc_i_se_u64m8(
 // CHECK-RV32-NEXT:  entry:
-// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m8.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 [[VL:%.*]])
+// CHECK-RV32-NEXT:    call void @llvm.riscv.sf.vc.i.se.i32.i32.i32(i32 3, i32 31, i32 31, i32 10, i32 64, i32 3, i32 [[VL:%.*]])
 // CHECK-RV32-NEXT:    ret void
 //
 // CHECK-RV64-LABEL: @test_sf_vc_i_se_u64m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.e64m8.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    call void @llvm.riscv.sf.vc.i.se.i64.i64.i64(i64 3, i64 31, i64 31, i64 10, i64 64, i64 3, i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret void
 //
 void test_sf_vc_i_se_u64m8(size_t vl) {
