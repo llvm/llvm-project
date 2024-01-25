@@ -1976,8 +1976,7 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F,
       }
       // Verify def-uses for full verify.
       if (VL == VerificationLevel::Full) {
-        assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
-                                            pred_begin(&B), pred_end(&B))) &&
+        assert(Phi->getNumOperands() == pred_size(&B) &&
                "Incomplete MemoryPhi Node");
         for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
           verifyUseInDefs(Phi->getIncomingValue(I), Phi);
