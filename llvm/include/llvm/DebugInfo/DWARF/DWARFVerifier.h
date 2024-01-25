@@ -30,6 +30,20 @@ class DWARFDebugAbbrev;
 class DataExtractor;
 struct DWARFSection;
 
+class OutputCategoryAggregator {
+private:
+  std::map<std::string, int> Aggregator;
+  bool Output;
+
+public:
+  OutputCategoryAggregator(bool DetailedOutput = false)
+      : Output(DetailedOutput) {}
+  void EnableDetail() { Output = true; }
+  void DisableDetail() { Output = false; }
+  void Report(StringRef s, std::function<void()> detailCallback);
+  void DumpAggregation(raw_ostream *o);
+};
+
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
 public:
@@ -76,48 +90,15 @@ public:
     bool intersects(const DieRangeInfo &RHS) const;
   };
 
-private:
-  class ErrorAggregator {
-  private:
-    DWARFVerifier &Verifier;
-    std::map<std::string, int> UniqueErrors;
-    raw_ostream *NextLineOverride;
-
-    static std::string Clean(const char *s);
-
-  public:
-    ErrorAggregator(DWARFVerifier &v) : Verifier(v), NextLineOverride(nullptr) {}
-    raw_ostream &operator<<(const char *s);
-    ErrorAggregator &NextLineStreamOverride(raw_ostream &o);
-    raw_ostream &Collect(const std::string &s);
-    void Dump();
-  };
-  friend class ErrorAggregator;
-
   raw_ostream &OS;
   DWARFContext &DCtx;
-  ErrorAggregator ErrAggregation;
+  OutputCategoryAggregator ErrorCategory;
   DIDumpOptions DumpOpts;
   uint32_t NumDebugLineErrors = 0;
   // Used to relax some checks that do not currently work portably
   bool IsObjectFile;
   bool IsMachOObject;
   using ReferenceMap = std::map<uint64_t, std::set<uint64_t>>;
-
-  // For errors that have sensible names as the first (or only) string
-  // you can just use aggregate() << "DIE is damaged: " << details...
-  // and it will get aggregated as "DIE is damaged".
-  ErrorAggregator &aggregate();
-  // For errors that have the useful aggregated category in a non-error stream
-  // you can do things like this (aggregated as 'Die size is wrong')
-  // aggregate(note()) << "DIE size is wrong.\n"
-  ErrorAggregator &aggregate(raw_ostream &);
-
-  // For errors that have valuable detail before text that is the appropriate
-  // aggregate category, you can provide the aggregated name for the error like
-  // this:
-  // aggregate("CU index is broken") << "CU index [" << n << "] is broken"
-  raw_ostream &aggregate(const char *);
 
   raw_ostream &error() const;
   raw_ostream &warn() const;
