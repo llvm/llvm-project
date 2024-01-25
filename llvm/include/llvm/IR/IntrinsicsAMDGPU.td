@@ -2777,6 +2777,10 @@ class AMDGPULoadTr<LLVMType ptr_ty>:
 
 def int_amdgcn_global_load_tr : AMDGPULoadTr<global_ptr_ty>;
 
+// i32 @llvm.amdgcn.wave.id()
+def int_amdgcn_wave_id :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
