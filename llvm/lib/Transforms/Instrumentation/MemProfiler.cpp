@@ -372,7 +372,6 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       return std::nullopt;
   }
 
-  const DataLayout &DL = I->getModule()->getDataLayout();
   return Access;
 }
 
