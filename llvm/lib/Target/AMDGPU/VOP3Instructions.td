@@ -570,19 +570,19 @@ def VOP3_CVT_PK_F8_F32_Profile : VOP3_Profile<VOP_I32_F32_F32, VOP3_OPSEL> {
                         FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
                         FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
                         VGPR_32:$vdst_in, op_sel0:$op_sel,
-                        dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                        bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+                        dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                        DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
 
   let InsVOP3DPP16 = (ins VGPR_32:$old,
                           FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
                           FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
                           VGPR_32:$vdst_in, op_sel0:$op_sel,
-                          dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                          bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+                          dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, DppFI:$fi);
   let InsVOP3DPP8 = (ins VGPR_32:$old,
                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, FI:$fi);
+                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, DppFI:$fi);
 
   let HasClamp = 0;
   let HasExtVOP3DPP = 1;
@@ -598,13 +598,13 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
                           FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
                           FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
                           FP32InputMods:$src2_modifiers, VGPR_32:$src2,
-                          op_sel0:$op_sel, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                          bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+                          op_sel0:$op_sel, dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, DppFI:$fi);
   let InsVOP3DPP8 = (ins VGPR_32:$old,
                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
                          FP32InputMods:$src2_modifiers, VGPR_32:$src2,
-                         op_sel0:$op_sel, dpp8:$dpp8, FI:$fi);
+                         op_sel0:$op_sel, dpp8:$dpp8, DppFI:$fi);
   let HasClamp = 0;
   let HasSrc2 = 0;
   let HasSrc2Mods = 1;
@@ -896,14 +896,14 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let InsVOP3DPP16 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
                           (ins bitop3_0:$bitop3),
                           !if (HasOpSel, (ins op_sel0:$op_sel), (ins)),
-                          (ins dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                               bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi));
+                          (ins dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                               DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, DppFI:$fi));
   let InsVOP3DPP = InsVOP3DPP16;
 
   let InsVOP3DPP8 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
                          (ins bitop3_0:$bitop3),
                          !if (HasOpSel, (ins op_sel0:$op_sel), (ins)),
-                         (ins dpp8:$dpp8, FI:$fi));
+                         (ins dpp8:$dpp8, DppFI:$fi));
 
   let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1VOPD3:$vsrc1Y, bitop3_0:$bitop3);
 

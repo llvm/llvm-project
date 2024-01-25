@@ -95,7 +95,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
 class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
-  (ins getLdStRegisterOperand<rc>.ret:$data0, offset:$offset, gds:$gds),
+  (ins getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
   " $data0$offset$gds"> {
 
   let has_addr = 0;
@@ -106,7 +106,7 @@ class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, getLdStRegisterOperand<rc>.ret:$data0, offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, getLdStRegisterOperand<rc>.ret:$data0, Offset:$offset, gds:$gds),
   " $addr, $data0$offset$gds"> {
 
   let has_data1 = 0;
@@ -135,7 +135,7 @@ class DS_1A2D_NORET<string opName, RegisterClass rc = VGPR_32,
                     RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, data_op:$data0, data_op:$data1, offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, data_op:$data0, data_op:$data1, Offset:$offset, gds:$gds),
   " $addr, $data0, $data1$offset$gds"> {
 
   let has_vdst = 0;
@@ -157,7 +157,7 @@ class DS_1A2D_Off8_NORET <string opName, RegisterClass rc = VGPR_32,
 : DS_Pseudo<opName,
   (outs),
   (ins VGPR_32:$addr, data_op:$data0, data_op:$data1,
-       offset0:$offset0, offset1:$offset1, gds:$gds),
+       Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_vdst = 0;
@@ -177,7 +177,7 @@ class DS_0A1D_RET_GDS<string opName, RegisterClass rc = VGPR_32, RegisterClass s
                   RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
 : DS_Pseudo<opName,
   (outs dst_op:$vdst),
-  (ins src_op:$data0, offset:$offset),
+  (ins src_op:$data0, Offset:$offset),
   " $vdst, $data0$offset gds"> {
 
   let has_addr = 0;
@@ -191,7 +191,7 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
                   RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
-  (ins VGPR_32:$addr, data_op:$data0, offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0$offset$gds"> {
 
   let hasPostISelHook = 1;
@@ -227,7 +227,7 @@ class DS_1A2D_RET<string opName,
                   RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
 : DS_Pseudo<opName,
   (outs dst_op:$vdst),
-  (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
   let hasPostISelHook = 1;
@@ -254,7 +254,7 @@ class DS_1A2D_Off8_RET<string opName,
                        RegisterOperand src_op = getLdStRegisterOperand<src>.ret>
 : DS_Pseudo<opName,
   (outs dst_op:$vdst),
-  (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, offset0:$offset0, offset1:$offset1, gds:$gds),
+  (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
@@ -277,7 +277,7 @@ class DS_BVH_STACK<string opName,
 : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<rc>.ret:$vdst, VGPR_32:$addr),
   (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
-   src:$data1, offset:$offset),
+   src:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let DisableEncoding = "$addr_in";
@@ -288,7 +288,7 @@ class DS_BVH_STACK<string opName,
   let SchedRW = [WriteLDS, WriteLDS];
 }
 
-class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = offset,
+class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = Offset,
                 RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
@@ -302,7 +302,7 @@ class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0
   let has_data1 = 0;
 }
 
-multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = offset> {
+multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = Offset> {
   def "" : DS_1A_RET<opName, rc, HasTiedOutput, ofs>;
 
   let has_m0_read = 0 in {
@@ -322,7 +322,7 @@ class DS_1A_RET_Tied<string opName, RegisterClass rc = VGPR_32> :
 class DS_1A_Off8_RET <string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<rc>.ret:$vdst),
-  (ins VGPR_32:$addr, offset0:$offset0, offset1:$offset1, gds:$gds),
+  (ins VGPR_32:$addr, Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $vdst, $addr$offset0$offset1$gds"> {
 
   let has_offset = 0;
@@ -340,7 +340,7 @@ multiclass DS_1A_Off8_RET_mc <string opName, RegisterClass rc = VGPR_32> {
 
 class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst),
-  (ins VGPR_32:$addr, offset:$offset),
+  (ins VGPR_32:$addr, Offset:$offset),
   " $vdst, $addr$offset gds"> {
 
   let has_data0 = 0;
@@ -351,7 +351,7 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
 
 class DS_0A_RET <string opName> : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst),
-  (ins offset:$offset, gds:$gds),
+  (ins Offset:$offset, gds:$gds),
   " $vdst$offset$gds"> {
 
   let mayLoad = 1;
@@ -364,7 +364,7 @@ class DS_0A_RET <string opName> : DS_Pseudo<opName,
 
 class DS_1A <string opName> : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, offset:$offset, gds:$gds),
+  (ins VGPR_32:$addr, Offset:$offset, gds:$gds),
   " $addr$offset$gds"> {
 
   let mayLoad = 1;
@@ -399,13 +399,13 @@ class DS_GWS <string opName, dag ins, string asmOps>
 
 class DS_GWS_0D <string opName>
 : DS_GWS<opName,
-  (ins offset:$offset), "$offset gds"> {
+  (ins Offset:$offset), "$offset gds"> {
   let hasSideEffects = 1;
 }
 
 class DS_GWS_1D <string opName>
 : DS_GWS<opName,
-  (ins getLdStRegisterOperand<VGPR_32>.ret:$data0, offset:$offset),
+  (ins getLdStRegisterOperand<VGPR_32>.ret:$data0, Offset:$offset),
   " $data0$offset gds"> {
 
   let has_gws_data0 = 1;
@@ -433,7 +433,7 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
                        RegisterOperand data_op = getLdStRegisterOperand<VGPR_32>.ret>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
-  (ins VGPR_32:$addr, data_op:$data0, offset:$offset),
+  (ins VGPR_32:$addr, data_op:$data0, Offset:$offset),
   " $vdst, $addr, $data0$offset",
   [(set i32:$vdst,
    (node (DS1Addr1Offset i32:$addr, i32:$offset), i32:$data0))] > {
@@ -448,7 +448,7 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
 
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
   bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, Offset:$offset, (i1 gds))> {
   let AddedComplexity = complexity;
 }
 
@@ -793,7 +793,7 @@ def : GCNPat <
 
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
-  (inst $ptr, offset:$offset, (i1 gds))
+  (inst $ptr, Offset:$offset, (i1 gds))
 >;
 
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -809,7 +809,7 @@ multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
 
 class DSReadPat_D16 <DS_Pseudo inst, PatFrag frag, ValueType vt> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$in),
-  (inst $ptr, offset:$offset, (i1 0), $in)
+  (inst $ptr, Offset:$offset, (i1 0), $in)
 >;
 
 defm : DSReadPat_mc <DS_READ_I8, i32, "sextloadi8_local">;
@@ -853,7 +853,7 @@ def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2f16>;
 
 class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, Offset:$offset, (i1 gds))
 >;
 
 multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
@@ -1048,7 +1048,7 @@ let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 class DSAtomicCmpXChgSwapped<DS_Pseudo inst, ValueType vt, PatFrag frag,
   int complexity = 0, bit gds=0> : GCNPat<
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$cmp, vt:$swap),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$cmp, getVregSrcForVT<vt>.ret:$swap, offset:$offset, (i1 gds))> {
+  (inst $ptr, getVregSrcForVT<vt>.ret:$cmp, getVregSrcForVT<vt>.ret:$swap, Offset:$offset, (i1 gds))> {
   let AddedComplexity = complexity;
 }
 
@@ -1082,7 +1082,7 @@ let SubtargetPredicate = isGFX11Plus in {
 class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag,
   int complexity = 0, bit gds=0> : GCNPat<
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$cmp, vt:$swap),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$swap, getVregSrcForVT<vt>.ret:$cmp, offset:$offset, (i1 gds))> {
+  (inst $ptr, getVregSrcForVT<vt>.ret:$swap, getVregSrcForVT<vt>.ret:$cmp, Offset:$offset, (i1 gds))> {
   let AddedComplexity = complexity;
 }
 
@@ -1162,7 +1162,7 @@ def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_64>;
 class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
   bit gds=0> : GCNPat <
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value)),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, Offset:$offset, (i1 gds))> {
 }
 
 def : DSAtomicRetPatIntrinsic<DS_ADD_RTN_F64, f64, int_amdgcn_flat_atomic_fadd_local_addrspace>;
@@ -1221,7 +1221,7 @@ def : GCNPat <
 
 class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPat <
   (vt (node (DS1Addr1Offset i32:$ptr, i32:$offset))),
-  (inst $ptr, offset:$offset, (i1 0))
+  (inst $ptr, Offset:$offset, (i1 0))
 >;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
