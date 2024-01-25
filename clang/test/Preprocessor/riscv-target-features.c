@@ -290,131 +290,131 @@
 // CHECK-M-EXT: __riscv_muldiv 1
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32ishcounterenw -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
+// RUN:   -march=rv32ishcounterenw -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64ishcounterenw -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
+// RUN:   -march=rv64ishcounterenw -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHCOUNTERENW-EXT %s
 // CHECK-SHCOUNTERENW-EXT: __riscv_shcounterenw 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32ishgatpa -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHGATPA-EXT %s
+// RUN:   -march=rv32ishgatpa -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHGATPA-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64ishgatpa -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHGATPA-EXT %s
+// RUN:   -march=rv64ishgatpa -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHGATPA-EXT %s
 // CHECK-SHGATPA-EXT: __riscv_shgatpa 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32ishtvala -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHTVALA-EXT %s
+// RUN:   -march=rv32ishtvala -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHTVALA-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64ishtvala -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHTVALA-EXT %s
+// RUN:   -march=rv64ishtvala -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHTVALA-EXT %s
 // CHECK-SHTVALA-EXT: __riscv_shtvala 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32ishvsatpa -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHVSATPA-EXT %s
+// RUN:   -march=rv32ishvsatpa -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHVSATPA-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64ishvsatpa -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHVSATPA-EXT %s
+// RUN:   -march=rv64ishvsatpa -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHVSATPA-EXT %s
 // CHECK-SHVSATPA-EXT: __riscv_shvsatpa 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32ishvstvala -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHVSTVALA-EXT %s
+// RUN:   -march=rv32ishvstvala -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHVSTVALA-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64ishvstvala -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHVSTVALA-EXT %s
+// RUN:   -march=rv64ishvstvala -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHVSTVALA-EXT %s
 // CHECK-SHVSTVALA-EXT: __riscv_shvstvala 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32ishvstvecd -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHVSTVECD-EXT %s
+// RUN:   -march=rv32ishvstvecd -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHVSTVECD-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64ishvstvecd -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SHVSTVECD-EXT %s
+// RUN:   -march=rv64ishvstvecd -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SHVSTVECD-EXT %s
 // CHECK-SHVSTVECD-EXT: __riscv_shvstvecd 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32issccptr -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSCCPTR-EXT %s
+// RUN:   -march=rv32issccptr -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCCPTR-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64issccptr -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSCCPTR-EXT %s
+// RUN:   -march=rv64issccptr -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCCPTR-EXT %s
 // CHECK-SSCCPTR-EXT: __riscv_ssccptr 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32isscounterenw -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSCOUNTERENW-EXT %s
+// RUN:   -march=rv32isscounterenw -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOUNTERENW-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64isscounterenw -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSCOUNTERENW-EXT %s
+// RUN:   -march=rv64isscounterenw -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOUNTERENW-EXT %s
 // CHECK-SSCOUNTERENW-EXT: __riscv_sscounterenw 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32issstateen -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSSTATEEN-EXT %s
+// RUN:   -march=rv32issstateen -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSSTATEEN-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64issstateen -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSSTATEEN-EXT %s
+// RUN:   -march=rv64issstateen -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSSTATEEN-EXT %s
 // CHECK-SSSTATEEN-EXT: __riscv_ssstateen 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32issstrict -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSSTRICT-EXT %s
+// RUN:   -march=rv32issstrict -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSSTRICT-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64issstrict -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSSTRICT-EXT %s
+// RUN:   -march=rv64issstrict -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSSTRICT-EXT %s
 // CHECK-SSSTRICT-EXT: __riscv_ssstrict 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32isstc -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSTC-EXT %s
+// RUN:   -march=rv32isstc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSTC-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64isstc -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSTC-EXT %s
+// RUN:   -march=rv64isstc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSTC-EXT %s
 // CHECK-SSTC-EXT: __riscv_sstc 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32isstvala -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSTVALA-EXT %s
+// RUN:   -march=rv32isstvala -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSTVALA-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64isstvala -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSTVALA-EXT %s
+// RUN:   -march=rv64isstvala -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSTVALA-EXT %s
 // CHECK-SSTVALA-EXT: __riscv_sstvala 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32isstvecd -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSTVECD-EXT %s
+// RUN:   -march=rv32isstvecd -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSTVECD-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64isstvecd -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSTVECD-EXT %s
+// RUN:   -march=rv64isstvecd -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSTVECD-EXT %s
 // CHECK-SSTVECD-EXT: __riscv_sstvecd 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32issu64xl -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSU64XL-EXT %s
+// RUN:   -march=rv32issu64xl -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSU64XL-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64issu64xl -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SSU64XL-EXT %s
+// RUN:   -march=rv64issu64xl -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSU64XL-EXT %s
 // CHECK-SSU64XL-EXT: __riscv_ssu64xl 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32isvade -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SVADE-EXT %s
+// RUN:   -march=rv32isvade -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVADE-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64isvade -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SVADE-EXT %s
+// RUN:   -march=rv64isvade -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVADE-EXT %s
 // CHECK-SVADE-EXT: __riscv_svade 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32isvadu -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SVADU-EXT %s
+// RUN:   -march=rv32isvadu -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVADU-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64isvadu -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SVADU-EXT %s
+// RUN:   -march=rv64isvadu -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVADU-EXT %s
 // CHECK-SVADU-EXT: __riscv_svadu 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
