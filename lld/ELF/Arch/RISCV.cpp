@@ -102,6 +102,26 @@ static uint32_t setLO12_S(uint32_t insn, uint32_t imm) {
          (extractBits(imm, 4, 0) << 7);
 }
 
+namespace {
+struct SymbolAnchor {
+  uint64_t offset;
+  Defined *d;
+  bool end; // true for the anchor of st_value+st_size
+};
+} // namespace
+
+struct elf::RISCVRelaxAux {
+  // This records symbol start and end offsets which will be adjusted according
+  // to the nearest relocDeltas element.
+  SmallVector<SymbolAnchor, 0> anchors;
+  // For relocations[i], the actual offset is
+  //   r_offset - (i ? relocDeltas[i-1] : 0).
+  std::unique_ptr<uint32_t[]> relocDeltas;
+  // For relocations[i], the actual type is relocTypes[i].
+  std::unique_ptr<RelType[]> relocTypes;
+  SmallVector<uint32_t, 0> writes;
+};
+
 RISCV::RISCV() {
   copyRel = R_RISCV_COPY;
   pltRel = R_RISCV_JUMP_SLOT;
@@ -520,14 +540,19 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
+static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX;
+}
+
 void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
-  for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
-    const Relocation &rel = sec.relocs()[i];
+  const ArrayRef<Relocation> relocs = sec.relocs();
+  for (size_t i = 0, size = relocs.size(); i != size; ++i) {
+    const Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
     const uint64_t val =
         sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
@@ -538,7 +563,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       break;
     case R_RISCV_LEB128:
       if (i + 1 < size) {
-        const Relocation &rel1 = sec.relocs()[i + 1];
+        const Relocation &rel1 = relocs[i + 1];
         if (rel.type == R_RISCV_SET_ULEB128 &&
             rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
           auto val = rel.sym->getVA(rel.addend) - rel1.sym->getVA(rel1.addend);
@@ -559,26 +584,6 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     }
   }
 }
-
-namespace {
-struct SymbolAnchor {
-  uint64_t offset;
-  Defined *d;
-  bool end; // true for the anchor of st_value+st_size
-};
-} // namespace
-
-struct elf::RISCVRelaxAux {
-  // This records symbol start and end offsets which will be adjusted according
-  // to the nearest relocDeltas element.
-  SmallVector<SymbolAnchor, 0> anchors;
-  // For relocations[i], the actual offset is r_offset - (i ? relocDeltas[i-1] :
-  // 0).
-  std::unique_ptr<uint32_t[]> relocDeltas;
-  // For relocations[i], the actual type is relocTypes[i].
-  std::unique_ptr<RelType[]> relocTypes;
-  SmallVector<uint32_t, 0> writes;
-};
 
 static void initSymbolAnchors() {
   SmallVector<InputSection *, 0> storage;
@@ -715,14 +720,15 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
 
 static bool relax(InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
+  const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
   bool changed = false;
   ArrayRef<SymbolAnchor> sa = ArrayRef(aux.anchors);
   uint64_t delta = 0;
 
-  std::fill_n(aux.relocTypes.get(), sec.relocs().size(), R_RISCV_NONE);
+  std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto [i, r] : llvm::enumerate(sec.relocs())) {
+  for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -743,23 +749,20 @@ static bool relax(InputSection &sec) {
     }
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT:
-      if (i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      if (relaxable(relocs, i))
         relaxCall(sec, i, loc, r, remove);
       break;
     case R_RISCV_TPREL_HI20:
     case R_RISCV_TPREL_ADD:
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
-      if (i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      if (relaxable(relocs, i))
         relaxTlsLe(sec, i, loc, r, remove);
       break;
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
-      if (i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      if (relaxable(relocs, i))
         relaxHi20Lo12(sec, i, loc, r, remove);
       break;
     }
