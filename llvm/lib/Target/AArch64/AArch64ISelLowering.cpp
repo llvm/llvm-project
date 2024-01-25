@@ -21513,8 +21513,8 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
 
   SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
                            DAG.getConstant(0, DL, MVT::i64));
-  Chain = DAG.getStore(Chain, DL, E0, ST->getBasePtr(), ST->getMemOperand());
-
+  Chain = DAG.getStore(Chain, DL, E0, ST->getBasePtr(),
+                       MF.getMachineMemOperand(MMO, 0, 1));
   return Chain;
 }
 
