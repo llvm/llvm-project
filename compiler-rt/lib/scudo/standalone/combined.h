@@ -283,7 +283,7 @@ public:
     return reinterpret_cast<void *>(addHeaderTag(reinterpret_cast<uptr>(Ptr)));
   }
 
-  NOINLINE u32 collectStackTrace() {
+  NOINLINE u32 collectStackTrace(StackDepot *Depot) {
 #ifdef HAVE_ANDROID_UNSAFE_FRAME_POINTER_CHASE
     // Discard collectStackTrace() frame and allocator function frame.
     constexpr uptr DiscardFrames = 2;
@@ -293,6 +293,7 @@ public:
     Size = Min<uptr>(Size, MaxTraceSize + DiscardFrames);
     return Depot->insert(Stack + Min<uptr>(DiscardFrames, Size), Stack + Size);
 #else
+    (void)(Depot);
     return 0;
 #endif
   }
@@ -1267,12 +1268,18 @@ private:
     storeEndMarker(RoundNewPtr, NewSize, BlockEnd);
   }
 
+  StackDepot *getDepotIfEnabled(const Options &Options) {
+    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
+      return nullptr;
+    return Depot;
+  }
+
   void storePrimaryAllocationStackMaybe(const Options &Options, void *Ptr) {
-    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)) ||
-        !RawRingBuffer)
+    auto *Depot = getDepotIfEnabled(Options);
+    if (!Depot)
       return;
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
-    Ptr32[MemTagAllocationTraceIndex] = collectStackTrace();
+    Ptr32[MemTagAllocationTraceIndex] = collectStackTrace(Depot);
     Ptr32[MemTagAllocationTidIndex] = getThreadID();
   }
 
@@ -1302,11 +1309,10 @@ private:
 
   void storeSecondaryAllocationStackMaybe(const Options &Options, void *Ptr,
                                           uptr Size) {
-    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)) ||
-        !RawRingBuffer)
+    auto *Depot = getDepotIfEnabled(Options);
+    if (!Depot)
       return;
-
-    u32 Trace = collectStackTrace();
+    u32 Trace = collectStackTrace(Depot);
     u32 Tid = getThreadID();
 
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
@@ -1318,15 +1324,14 @@ private:
 
   void storeDeallocationStackMaybe(const Options &Options, void *Ptr,
                                    u8 PrevTag, uptr Size) {
-    if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)) ||
-        !RawRingBuffer)
+    auto *Depot = getDepotIfEnabled(Options);
+    if (!Depot)
       return;
-
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
     u32 AllocationTrace = Ptr32[MemTagAllocationTraceIndex];
     u32 AllocationTid = Ptr32[MemTagAllocationTidIndex];
 
-    u32 DeallocationTrace = collectStackTrace();
+    u32 DeallocationTrace = collectStackTrace(Depot);
     u32 DeallocationTid = getThreadID();
 
     storeRingBufferEntry(addFixedTag(untagPointer(Ptr), PrevTag),
