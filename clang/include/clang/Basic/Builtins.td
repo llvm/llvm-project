@@ -1009,7 +1009,7 @@ def StrncpyChk : Builtin {
 def StpncpyChk : Builtin {
   let Spellings = ["__builtin___stpncpy_chk"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "int(char*, char*, char const*, size_t, size_t)";
+  let Prototype = "char*(char*, char const*, size_t, size_t)";
 }
 
 def SNPrintfChk : Builtin {
