@@ -7927,8 +7927,7 @@ SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
     return {};
   SDLoc SL(Op);
   MVT VT = MVT::i32;
-  SDValue TTMP8 = CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
-                                       AMDGPU::TTMP8, VT, SL);
+  SDValue TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT);
   return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
                      DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
 }

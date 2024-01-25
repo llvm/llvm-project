@@ -18,8 +18,29 @@ typedef __rvv_uint64m1_t vuint64m1_t;
 typedef __rvv_float32m1_t vfloat32m1_t;
 typedef __rvv_float64m1_t vfloat64m1_t;
 
+typedef __rvv_bool1_t vbool1_t;
+typedef __rvv_bool2_t vbool2_t;
+typedef __rvv_bool4_t vbool4_t;
+typedef __rvv_bool8_t vbool8_t;
+typedef __rvv_bool16_t vbool16_t;
+typedef __rvv_bool32_t vbool32_t;
+typedef __rvv_bool64_t vbool64_t;
+
 typedef vint64m1_t fixed_int64m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
 typedef vfloat64m1_t fixed_float64m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+typedef vbool1_t fixed_bool1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+typedef vbool2_t fixed_bool2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
+typedef vbool4_t fixed_bool4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
+typedef vbool8_t fixed_bool8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 8)));
+#if __riscv_v_fixed_vlen >= 128
+typedef vbool16_t fixed_bool16_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 16)));
+#endif
+#if __riscv_v_fixed_vlen >= 256
+typedef vbool32_t fixed_bool32_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 32)));
+#endif
+#if __riscv_v_fixed_vlen >= 512
+typedef vbool64_t fixed_bool64_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 64)));
+#endif
 
 #define DEFINE_STRUCT(ty)   \
   struct struct_##ty {      \
@@ -28,6 +49,19 @@ typedef vfloat64m1_t fixed_float64m1_t __attribute__((riscv_rvv_vector_bits(__ri
 
 DEFINE_STRUCT(int64m1)
 DEFINE_STRUCT(float64m1)
+DEFINE_STRUCT(bool1)
+DEFINE_STRUCT(bool2)
+DEFINE_STRUCT(bool4)
+DEFINE_STRUCT(bool8)
+#if __riscv_v_fixed_vlen >= 128
+DEFINE_STRUCT(bool16)
+#endif
+#if __riscv_v_fixed_vlen >= 256
+DEFINE_STRUCT(bool32)
+#endif
+#if __riscv_v_fixed_vlen >= 512
+DEFINE_STRUCT(bool64)
+#endif
 
 //===----------------------------------------------------------------------===//
 // int64
@@ -134,5 +168,71 @@ vfloat64m1_t read_float64m1(struct struct_float64m1 *s) {
 // CHECK-256-NEXT:    ret void
 //
 void write_float64m1(struct struct_float64m1 *s, vfloat64m1_t x) {
+  s->y[0] = x;
+}
+
+//===----------------------------------------------------------------------===//
+// bool
+//===----------------------------------------------------------------------===//
+
+// CHECK-64-LABEL: @read_bool1(
+// CHECK-64-NEXT:  entry:
+// CHECK-64-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    store <8 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+//
+// CHECK-128-LABEL: @read_bool1(
+// CHECK-128-NEXT:  entry:
+// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <16 x i8>, align 16
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    store <16 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+//
+// CHECK-256-LABEL: @read_bool1(
+// CHECK-256-NEXT:  entry:
+// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <32 x i8>, align 32
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    store <32 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+//
+vbool1_t read_bool1(struct struct_bool1 *s) {
+  return s->y[0];
+}
+
+// CHECK-64-LABEL: @write_bool1(
+// CHECK-64-NEXT:  entry:
+// CHECK-64-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 8
+// CHECK-64-NEXT:    store <vscale x 64 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA7:![0-9]+]]
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
+// CHECK-64-NEXT:    store <8 x i8> [[TMP0]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    ret void
+//
+// CHECK-128-LABEL: @write_bool1(
+// CHECK-128-NEXT:  entry:
+// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 16
+// CHECK-128-NEXT:    store <vscale x 64 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA7:![0-9]+]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
+// CHECK-128-NEXT:    store <16 x i8> [[TMP0]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-128-NEXT:    ret void
+//
+// CHECK-256-LABEL: @write_bool1(
+// CHECK-256-NEXT:  entry:
+// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 8
+// CHECK-256-NEXT:    store <vscale x 64 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA7:![0-9]+]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
+// CHECK-256-NEXT:    store <32 x i8> [[TMP0]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    ret void
+//
+void write_bool1(struct struct_bool1 *s, vbool1_t x) {
   s->y[0] = x;
 }
