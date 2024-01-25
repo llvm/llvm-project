@@ -754,6 +754,9 @@ void ErrorNonSelfAMDGPU::PrintMallocStack() {
               d.Location(), device_address[0],
               (int)(device_address[0] - (plo+offset)),
               d.Allocation(), ((int*)plo)[7], d.Default());
+      // TODO: The code object with the malloc call may not be the same
+      // code object trying the illegal access.  A mechanism is needed
+      // to obtain the former.
       PrintStack();
     }
 
