@@ -149,8 +149,6 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
-- ``__attribute__((rvv_vector_bits(N))) is now supported for RVV vbool*_t types.
-
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
