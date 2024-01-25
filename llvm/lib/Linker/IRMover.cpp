@@ -694,7 +694,6 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
                              SF->getAddressSpace(), SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
   F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
-  F->IsNewDbgInfoFormat = SF->IsNewDbgInfoFormat;
   return F;
 }
 
