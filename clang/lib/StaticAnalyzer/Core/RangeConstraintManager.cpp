@@ -3272,10 +3272,10 @@ void RangeConstraintManager::printValue(raw_ostream &Out, ProgramStateRef State,
   const RangeSet RS = getRange(State, Sym);
   if (RS.isEmpty()) {
     Out << "<empty rangeset>";
-  } else {
-    Out << RS.getBitWidth() << (RS.isUnsigned() ? "u:" : "s:");
-    RS.dump(Out);
+    return;
   }
+  Out << RS.getBitWidth() << (RS.isUnsigned() ? "u:" : "s:");
+  RS.dump(Out);
 }
 
 static std::string toString(const SymbolRef &Sym) {
