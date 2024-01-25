@@ -360,8 +360,8 @@ Releases
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues to make backport requests for the
-release branches.  This is done by making a comment containing one of the
-following commands on any issue that has been added to one of the "X.Y.Z Release"
+release branches.  This is done by making a comment containing the following
+command on any issue that has been added to one of the "X.Y.Z Release"
 milestones.
 
 ::
@@ -376,8 +376,6 @@ be created with the specified commits.
 
 ::
 
-  /branch <owner>/<repo>/<branch>
-
-This command will create a pull request against the latest release branch using
-the <branch> from the <owner>/<repo> repository.  <branch> cannot contain any
-forward slash '/' characters.
+If a commit you want to backport does not apply cleanly, you may resolve
+the conflicts locally and then create a pull request against the release
+branch.  Just make sure to add the release milestone to the pull request.
