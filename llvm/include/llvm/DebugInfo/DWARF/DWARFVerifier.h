@@ -32,16 +32,15 @@ struct DWARFSection;
 
 class OutputCategoryAggregator {
 private:
-  std::map<std::string, int> Aggregator;
-  bool Output;
+  std::map<std::string, unsigned> Aggregation;
+  bool CallDetail;
 
 public:
-  OutputCategoryAggregator(bool DetailedOutput = false)
-      : Output(DetailedOutput) {}
-  void EnableDetail() { Output = true; }
-  void DisableDetail() { Output = false; }
+  OutputCategoryAggregator(bool callDetail = false) : CallDetail(callDetail) {}
+  void EnableDetail() { CallDetail = true; }
+  void DisableDetail() { CallDetail = false; }
   void Report(StringRef s, std::function<void()> detailCallback);
-  void DumpAggregation(raw_ostream *o);
+  void HandleAggregate(std::function<void(StringRef, unsigned)> handleCounts);
 };
 
 /// A class that verifies DWARF debug information given a DWARF Context.

@@ -326,7 +326,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
-    DumpOpts.Verbose = true;
+    // DumpOpts.Verbose = true;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
