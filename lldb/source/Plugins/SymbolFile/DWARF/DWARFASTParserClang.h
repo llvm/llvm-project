@@ -414,6 +414,13 @@ private:
                        lldb_private::CompilerType &class_clang_type,
                        const lldb::AccessType default_accesibility,
                        lldb_private::ClangASTImporter::LayoutInfo &layout_info);
+
+  // BEGIN SWIFT
+  /// Returns true if the C++ type is a compiler-generated wrapper around a
+  /// Swift type.
+  bool IsSwiftInteropType(const lldb_private::plugin::dwarf::DWARFDIE &die);
+  // END SWIFT
+
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.
