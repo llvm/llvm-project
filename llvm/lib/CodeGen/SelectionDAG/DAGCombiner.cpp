@@ -23842,7 +23842,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
     }
 
     // concat_vectors(scalar, undef) -> scalar_to_vector(scalar)
-    if (!Scalar.getValueType().isVector()) {
+    if (!Scalar.getValueType().isVector() && In.hasOneUse()) {
       // If the bitcast type isn't legal, it might be a trunc of a legal type;
       // look through the trunc so we can still do the transform:
       //   concat_vectors(trunc(scalar), undef) -> scalar_to_vector(scalar)
