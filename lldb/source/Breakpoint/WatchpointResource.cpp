@@ -42,8 +42,6 @@ void WatchpointResource::SetType(bool read, bool write) {
 
 wp_resource_id_t WatchpointResource::GetID() const { return m_id; }
 
-void WatchpointResource::SetID(wp_resource_id_t id) { m_id = id; }
-
 bool WatchpointResource::Contains(addr_t addr) {
   if (addr >= m_addr && addr < m_addr + m_size)
     return true;

@@ -857,6 +857,8 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec Limits = HeaderSpec<"limits.h">;
+
   NamedType SigAtomicT = NamedType<"sig_atomic_t">;
   HeaderSpec Signal = HeaderSpec<
       "signal.h",
@@ -1160,6 +1162,7 @@ def StdC : StandardSpec<"stdc"> {
     Errno,
     Fenv,
     Float,
+    Limits,
     Math,
     String,
     StdIO,

@@ -89,6 +89,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
 
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
+      .Case("async", OpenACCClauseKind::Async)
       .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
       .Case("bind", OpenACCClauseKind::Bind)
@@ -459,6 +460,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Self:
     return DirKind == OpenACCDirectiveKind::Update ? ClauseParensKind::Required
                                                    : ClauseParensKind::Optional;
+  case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
     return ClauseParensKind::Optional;
@@ -784,6 +786,12 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
           return true;
         break;
       }
+      case OpenACCClauseKind::Async: {
+        ExprResult AsyncArg = ParseOpenACCAsyncArgument();
+        if (AsyncArg.isInvalid())
+          return true;
+        break;
+      }
       default:
         llvm_unreachable("Not an optional parens type?");
       }
@@ -791,6 +799,17 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
     }
   }
   return false;
+}
+
+/// OpenACC 3.3 section 2.16:
+/// In this section and throughout the specification, the term async-argument
+/// means a nonnegative scalar integer expression (int for C or C++, integer for
+/// Fortran), or one of the special values acc_async_noval or acc_async_sync, as
+/// defined in the C header file and the Fortran openacc module. The special
+/// values are negative values, so as not to conflict with a user-specified
+/// nonnegative async-argument.
+ExprResult Parser::ParseOpenACCAsyncArgument() {
+  return getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
 }
 
 /// OpenACC 3.3, section 2.16:
