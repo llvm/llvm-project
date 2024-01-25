@@ -24,7 +24,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

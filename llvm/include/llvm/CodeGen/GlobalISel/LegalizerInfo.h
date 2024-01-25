@@ -17,7 +17,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCInstrDesc.h"

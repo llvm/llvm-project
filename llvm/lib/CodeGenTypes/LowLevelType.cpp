@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 

@@ -17,7 +17,7 @@
 #include "GISelWorkList.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Alignment.h"

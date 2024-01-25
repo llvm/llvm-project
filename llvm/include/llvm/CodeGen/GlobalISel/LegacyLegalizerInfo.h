@@ -16,7 +16,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_LEGACYLEGALIZERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include <unordered_map>
 #include <vector>

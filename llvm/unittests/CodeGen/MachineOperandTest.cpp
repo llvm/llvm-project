@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"

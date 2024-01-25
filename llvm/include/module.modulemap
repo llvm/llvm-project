@@ -24,7 +24,7 @@ module LLVM_CodeGenTypes {
   requires cplusplus
 
   module LLT {
-    header "llvm/CodeGen/LowLevelType.h" export *
+    header "llvm/CodeGenTypes/LowLevelType.h" export *
   }
   module MVT {
     header "llvm/CodeGenTypes/MachineValueType.h" export *

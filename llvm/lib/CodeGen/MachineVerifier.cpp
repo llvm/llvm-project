@@ -38,7 +38,7 @@
 #include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
