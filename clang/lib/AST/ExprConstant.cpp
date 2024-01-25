@@ -13288,9 +13288,20 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
-      auto DiagComparison = [&] (unsigned DiagID, bool Reversed = false) {
-        std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
-        std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
+      auto DiagComparison = [&](unsigned DiagID, bool Reversed = false) {
+        static std::string LHS, RHS;
+        // FIXME: To prevent the use of variables beyond their lifetime, we have
+        // made them static. However, this approach may not fully address the
+        // underlying issue. StringRef objects (made from those strings) can
+        // potentially change their contents unexpectedly.
+        // Or potentially use of freed memory may happen. Therefore, further
+        // investigation is required to ensure that making those variables
+        // static effectively resolves the problem.
+        // We should investigate why buildbots were failing with ASan short
+        // string annotations turned on. Related PR:
+        // https://github.com/llvm/llvm-project/pull/79049
+        LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
+        RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
         Info.FFDiag(E, DiagID)
             << (Reversed ? RHS : LHS) << (Reversed ? LHS : RHS);
         return false;
