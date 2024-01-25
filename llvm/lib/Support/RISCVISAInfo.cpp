@@ -67,6 +67,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"ssccptr", {1, 0}},
     {"sscounterenw", {1, 0}},
     {"ssstateen", {1, 0}},
+    {"ssstrict", {1, 0}},
     {"sstc", {1, 0}},
     {"sstvala", {1, 0}},
     {"sstvecd", {1, 0}},

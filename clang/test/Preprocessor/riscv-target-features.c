@@ -31,6 +31,7 @@
 // CHECK-NOT: __riscv_ssccptr {{.*$}}
 // CHECK-NOT: __riscv_sscounterenw {{.*$}}
 // CHECK-NOT: __riscv_ssstateen {{.*$}}
+// CHECK-NOT: __riscv_ssstrict {{.*$}}
 // CHECK-NOT: __riscv_sstc {{.*$}}
 // CHECK-NOT: __riscv_sstvala {{.*$}}
 // CHECK-NOT: __riscv_sstvecd {{.*$}}
@@ -359,6 +360,14 @@
 // RUN: -march=rv64issstateen -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SSSTATEEN-EXT %s
 // CHECK-SSSTATEEN-EXT: __riscv_ssstateen 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN: -march=rv32issstrict -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SSSTRICT-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN: -march=rv64issstrict -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SSSTRICT-EXT %s
+// CHECK-SSSTRICT-EXT: __riscv_ssstrict 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN: -march=rv32isstc -x c -E -dM %s \

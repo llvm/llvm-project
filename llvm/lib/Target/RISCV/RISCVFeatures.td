@@ -818,6 +818,10 @@ def FeatureStdExtSsstateen
     : SubtargetFeature<"ssstateen", "HasStdExtSsstateen", "true",
                        "'Ssstateen' (Supervisor-mode view of the state-enable extension)", []>;
 
+def FeatureStdExtSsstrict
+    : SubtargetFeature<"ssstrict", "HasStdExtSsstrict", "true",
+                       "'Ssstrict' (No non-conforming extensions are present.", []>;
+
 def FeatureStdExtSstc
     : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
                        "'Sstc' (Supervisor-mode timer interrupts)", []>;

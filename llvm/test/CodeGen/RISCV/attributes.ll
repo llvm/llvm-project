@@ -44,6 +44,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCCPTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+sscounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCOUNTERENW %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssstateen %s -o - | FileCheck --check-prefixes=CHECK,RV32SSSTATEEN %s
+; RUN: llc -mtriple=riscv32 -mattr=+ssstrict %s -o - | FileCheck --check-prefixes=CHECK,RV32SSSTRICT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+sstc %s -o - | FileCheck --check-prefixes=CHECK,RV32SSTC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shtvala %s -o - | FileCheck --check-prefixes=CHECK,RV32SHTVALA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shvstvala %s -o - | FileCheck --check-prefixes=CHECK,RV32SHVSTVALA %s
@@ -161,6 +162,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCCPTR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sscounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCOUNTERENW %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssstateen %s -o - | FileCheck --check-prefixes=CHECK,RV64SSSTATEEN %s
+; RUN: llc -mtriple=riscv64 -mattr=+ssstrict %s -o - | FileCheck --check-prefixes=CHECK,RV64SSSTRICT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sstc %s -o - | FileCheck --check-prefixes=CHECK,RV64SSTC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shtvala %s -o - | FileCheck --check-prefixes=CHECK,RV64SHTVALA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shvstvala %s -o - | FileCheck --check-prefixes=CHECK,RV64SHVSTVALA %s
@@ -283,6 +285,7 @@
 ; RV32SSCCPTR: .attribute 5, "rv32i2p1_ssccptr1p0"
 ; RV32SSCOUNTERENW: .attribute 5, "rv32i2p1_sscounterenw1p0"
 ; RV32SSSTATEEN: .attribute 5, "rv32i2p1_ssstateen1p0"
+; RV32SSSTRICT: .attribute 5, "rv32i2p1_ssstrict1p0"
 ; RV32SSTC: .attribute 5, "rv32i2p1_sstc1p0"
 ; RV32SHTVALA: .attribute 5, "rv32i2p1_shtvala1p0"
 ; RV32SHVSTVALA: .attribute 5, "rv32i2p1_shvstvala1p0"
@@ -402,6 +405,7 @@
 ; RV64SSCCPTR: .attribute 5, "rv64i2p1_ssccptr1p0"
 ; RV64SSCOUNTERENW: .attribute 5, "rv64i2p1_sscounterenw1p0"
 ; RV64SSSTATEEN: .attribute 5, "rv64i2p1_ssstateen1p0"
+; RV64SSSTRICT: .attribute 5, "rv64i2p1_ssstrict1p0"
 ; RV64SSTC: .attribute 5, "rv64i2p1_sstc1p0"
 ; RV64SHTVALA: .attribute 5, "rv64i2p1_shtvala1p0"
 ; RV64SHVSTVALA: .attribute 5, "rv64i2p1_shvstvala1p0"

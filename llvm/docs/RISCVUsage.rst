@@ -91,24 +91,26 @@ on support follow.
      ``E``            Supported (`See note <#riscv-rve-note>`__)
      ``H``            Assembly Support
      ``M``            Supported
-     ``Shcounterenw`` Assembly Support
-     ``Shgatpa``      Assembly Support
-     ``Shtvala``      Assembly Support
-     ``Shvsatpa``    Assembly Support
-     ``Shvstvala``    Assembly Support
-     ``Shvstvecd``    Assembly Support
+     ``Shcounterenw`` Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shgatpa``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shtvala``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvsatpa``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvala``    Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Shvstvecd``    Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``        Supported
      ``Smepmp``       Supported
      ``Ssaia``        Supported
-     ``Ssccptr``      Assembly Support
-     ``Sscounterenw`` Assembly Support
+     ``Ssccptr``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscounterenw`` Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstateen``    Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssstrict``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sstc``         Assembly Support
-     ``Sstvala``      Assembly Support
-     ``Sstvecd``      Assembly Support
-     ``ssu64xl``      Assembly Support
-     ``Svade``        Assembly Support
+     ``Sstvala``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sstvecd``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ssu64xl``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Svade``        Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Svadu``        Assembly Support
-     ``Svbare``       Assembly Support
+     ``Svbare``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Svinval``      Assembly Support
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
@@ -231,7 +233,7 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``
+``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`_.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 Experimental Extensions
