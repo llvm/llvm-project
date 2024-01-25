@@ -60,8 +60,9 @@ jobs:
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
           --repo "$GITHUB_REPOSITORY" \
-          --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
+          --token ${{ github.token }} \
           release-workflow \
+          --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
           auto
 
@@ -91,7 +92,8 @@ jobs:
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
           --repo "$GITHUB_REPOSITORY" \
-          --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
+          --token ${{ github.token }} \
           release-workflow \
+          --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
           auto
