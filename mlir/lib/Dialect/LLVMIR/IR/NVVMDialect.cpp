@@ -1093,9 +1093,8 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
              << "'" << attrName
              << "' attribute must be present only on kernel arguments";
     }
-    if (!isa<UnitAttr>(argAttr.getValue())) {
+    if (!isa<UnitAttr>(argAttr.getValue()))
       return op->emitError() << "'" << attrName << "' must be a unit attribute";
-    }
     if (!funcOp.getArgAttr(argIndex, LLVM::LLVMDialect::getByValAttrName())) {
       return op->emitError()
              << "'" << attrName
