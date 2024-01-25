@@ -1084,9 +1084,9 @@ def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()"
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
-def TuneDontSinkSplatOperands
-    : SubtargetFeature<"dont-sink-splat-operands", "DontSinkSplatOperands",
-                       "true", "Don't sink splat operands to enable .vx, .vf,"
+def TuneNoSinkSplatOperands
+    : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
+                       "false", "Disable sink splat operands to enable .vx, .vf,"
                        ".wx, and .wf instructions">;
 
 def TuneConditionalCompressedMoveFusion

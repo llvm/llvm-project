@@ -2005,7 +2005,7 @@ bool RISCVTargetLowering::shouldSinkOperands(
   // repeatedly.
   // FIXME: It could still be worth doing if it would improve vector register
   // pressure and prevent a vector spill.
-  if (Subtarget.dontSinkSplatOperands())
+  if (!Subtarget.sinkSplatOperands())
     return false;
 
   for (auto OpIdx : enumerate(I->operands())) {
