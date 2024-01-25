@@ -1991,8 +1991,8 @@ template <> struct DenseMapInfo<clang::clangd::Range> {
     return R;
   }
   static unsigned getHashValue(const Range &Val) {
-    return llvm::hash_combine(
-        Val.start.line, Val.start.character, Val.end.line, Val.end.character);
+    return llvm::hash_combine(Val.start.line, Val.start.character, Val.end.line,
+                              Val.end.character);
   }
   static bool isEqual(const Range &LHS, const Range &RHS) {
     return std::tie(LHS.start, LHS.end) == std::tie(RHS.start, RHS.end);

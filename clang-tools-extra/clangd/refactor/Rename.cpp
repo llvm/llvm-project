@@ -545,8 +545,7 @@ std::optional<llvm::Error> checkName(const NamedDecl &RenameDecl,
     const auto Sel = MD->getSelector();
     if (Sel.getNumArgs() != NewName.count(':') &&
         NewName != "__clangd_rename_placeholder")
-      return makeError(
-          InvalidName{InvalidName::BadIdentifier, NewName.str()});
+      return makeError(InvalidName{InvalidName::BadIdentifier, NewName.str()});
   }
 
   auto &ASTCtx = RenameDecl.getASTContext();
@@ -573,10 +572,9 @@ std::optional<llvm::Error> checkName(const NamedDecl &RenameDecl,
   return std::nullopt;
 }
 
-bool isMatchingSelectorName(const syntax::Token &Cur,
-                                   const syntax::Token &Next,
-                                   const SourceManager &SM,
-                                   llvm::StringRef SelectorName) {
+bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
+                            const SourceManager &SM,
+                            llvm::StringRef SelectorName) {
   if (SelectorName.empty())
     return Cur.kind() == tok::colon;
   return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
@@ -588,18 +586,17 @@ bool isMatchingSelectorName(const syntax::Token &Cur,
          Cur.endLocation() == Next.location();
 }
 
-bool isSelectorLike(const syntax::Token &Cur,
-                           const syntax::Token &Next) {
+bool isSelectorLike(const syntax::Token &Cur, const syntax::Token &Next) {
   return Cur.kind() == tok::identifier && Next.kind() == tok::colon &&
          // We require the selector name and : to be contiguous.
          // e.g. support `foo:` but not `foo :`.
          Cur.endLocation() == Next.location();
 }
 
-bool parseMessageExpression(
-  llvm::ArrayRef<syntax::Token> Tokens, const SourceManager &SM,
-  unsigned Index, unsigned Last,
-  Selector Sel, std::vector<Range> &SelectorPieces) {
+bool parseMessageExpression(llvm::ArrayRef<syntax::Token> Tokens,
+                            const SourceManager &SM, unsigned Index,
+                            unsigned Last, Selector Sel,
+                            std::vector<Range> &SelectorPieces) {
 
   unsigned NumArgs = Sel.getNumArgs();
   llvm::SmallVector<char, 8> Closes;
@@ -610,20 +607,22 @@ bool parseMessageExpression(
     if (Closes.empty()) {
       auto PieceCount = SelectorPieces.size();
       if (PieceCount < NumArgs &&
-            isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
-                                   Sel.getNameForSlot(PieceCount))) {
+          isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
+                                 Sel.getNameForSlot(PieceCount))) {
         // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
         // token after the name.
         if (!Sel.getNameForSlot(PieceCount).empty()) {
           ++Index;
         }
-        SelectorPieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+        SelectorPieces.push_back(
+            halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
         continue;
       }
       // If we've found all pieces but the current token looks like another
       // selector piece, it means the method being renamed is a strict prefix of
       // the selector we've found - should be skipped.
-      if (SelectorPieces.size() >= NumArgs && isSelectorLike(Tok, Tokens[Index + 1]))
+      if (SelectorPieces.size() >= NumArgs &&
+          isSelectorLike(Tok, Tokens[Index + 1]))
         return false;
     }
 
@@ -679,7 +678,8 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
     const LangOptions &LangOpts, std::optional<Selector> Selector) {
   std::vector<SymbolRange> Ranges;
   if (!Selector) {
-    auto IdentifierRanges = collectIdentifierRanges(Identifier, Content, LangOpts);
+    auto IdentifierRanges =
+        collectIdentifierRanges(Identifier, Content, LangOpts);
     for (const auto &R : IdentifierRanges)
       Ranges.emplace_back(R);
     return Ranges;
@@ -705,14 +705,15 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
     if (BraceCount == 0 && ParenCount == 0) {
       auto PieceCount = SelectorPieces.size();
       if (PieceCount < NumArgs &&
-            isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
-                                   Selector->getNameForSlot(PieceCount))) {
+          isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
+                                 Selector->getNameForSlot(PieceCount))) {
         // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
         // token after the name.
         if (!Selector->getNameForSlot(PieceCount).empty()) {
           ++Index;
         }
-        SelectorPieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+        SelectorPieces.push_back(
+            halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
         continue;
       }
       // If we've found all pieces, we still need to try to consume more pieces
@@ -720,14 +721,16 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
       // name.
       if (PieceCount >= NumArgs && isSelectorLike(Tok, Tokens[Index + 1])) {
         ++Index;
-        SelectorPieces.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
+        SelectorPieces.push_back(
+            halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
         continue;
       }
     }
 
     switch (Tok.kind()) {
     case tok::l_square:
-      if (parseMessageExpression(Tokens, SM, Index + 1, Last, *Selector, SelectorPieces)) {
+      if (parseMessageExpression(Tokens, SM, Index + 1, Last, *Selector,
+                                 SelectorPieces)) {
         Ranges.emplace_back(std::move(SelectorPieces));
         SelectorPieces.clear();
       }
