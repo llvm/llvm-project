@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   size_t Count;
-  const char *CodeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all"};
+  const char *CodeGenOptions[] = {"-mllvm", "--color"};
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 

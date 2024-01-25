@@ -48,9 +48,6 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   size_t Count;
-  const char *CodeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all"};
-  size_t CodeGenOptionsCount =
-      sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 
   SizeSource1 = setBuf(TEST_OBJ_DIR "/nested-kernel1.cl", &BufSource1);
   SizeSource2 = setBuf(TEST_OBJ_DIR "/nested-kernel2.cl", &BufSource2);
@@ -94,9 +91,6 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_action_info_set_isa_name(DataAction,
                                               "amdgcn-amd-amdhsa--gfx803");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
-  Status = amd_comgr_action_info_set_option_list(DataAction, CodeGenOptions,
-                                                 CodeGenOptionsCount);
-  checkError(Status, "amd_comgr_action_info_set_option_list");
 
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");

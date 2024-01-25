@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
       DataSetLinked, DataSetAsm, DataSetReloc, DataSetExec;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
-  const char *CodeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all", "-mcode-object-version=4"};
+  const char *CodeGenOptions[] = {"-mcode-object-version=4"};
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
   const char *DevLibsOptions[] = {"unsafe_math", "code_object_v4"};

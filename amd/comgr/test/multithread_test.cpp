@@ -52,9 +52,6 @@ int compile_min(int index) {
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   size_t Count;
-  const char *CodeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all"};
-  size_t CodeGenOptionsCount =
-      sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 
   SizeSource1 = setBuf(TEST_OBJ_DIR "/source1.cl", &BufSource1);
   SizeSource2 = setBuf(TEST_OBJ_DIR "/source2.cl", &BufSource2);
@@ -98,9 +95,6 @@ int compile_min(int index) {
   Status = amd_comgr_action_info_set_isa_name(DataAction,
                                               "amdgcn-amd-amdhsa--gfx900");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
-  Status = amd_comgr_action_info_set_option_list(DataAction, CodeGenOptions,
-                                                 CodeGenOptionsCount);
-  checkError(Status, "amd_comgr_action_info_set_option_list");
 
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");

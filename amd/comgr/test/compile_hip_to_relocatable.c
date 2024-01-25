@@ -46,8 +46,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_data_set_t DataSetIn, DataSetReloc, DataSetExec;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
-  const char *CodeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all",
-                                  "-fno-slp-vectorize"};
+  const char *CodeGenOptions[] = {"-fno-slp-vectorize"};
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 

@@ -263,8 +263,7 @@ void testFlatSplitting() {
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");
 
-  Status = amd_comgr_action_info_set_options(DataAction,
-                                             "-mllvm -amdgpu-early-inline-all");
+  Status = amd_comgr_action_info_set_options(DataAction, "-mllvm --color");
   checkError(Status, "amd_comgr_action_info_set_options");
 
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
