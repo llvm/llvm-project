@@ -282,8 +282,8 @@ isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
   //    (i.e., computing the distance between two pointers); or ...
 
   auto CallArgMatcher =
-      callExpr(forEachArgumentWithParam(InnerMatcher,
-                  hasPointerType() /* array also decays to pointer type*/),
+      callExpr(forEachArgumentWithParamType(InnerMatcher,
+                  isAnyPointer() /* array also decays to pointer type*/),
           unless(callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)))));
 
   auto CastOperandMatcher =
