@@ -302,6 +302,70 @@ def LLVM_DIExpressionAttr : LLVM_Attr<"DIExpression", "di_expression"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DIRecursiveTypeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIRecursiveTypeAttr : LLVM_Attr<"DIRecursiveType", "di_recursive_type",
+                                    /*traits=*/[], "DITypeAttr"> {
+  let description = [{
+    This attribute enables recursive DITypes. There are two modes for this
+    attribute.
+
+    1. If `baseType` is present:
+      - This type is considered a recursive declaration (rec-decl).
+      - The `baseType` is a self-recursive type identified by the `id` field.
+
+    2. If `baseType` is not present:
+      - This type is considered a recursive self reference (rec-self).
+      - This DIRecursiveType itself is a placeholder type that should be
+        conceptually replaced with the closet parent DIRecursiveType with the
+        same `id` field.
+
+    e.g. To represent a linked list struct:
+
+      #rec_self = di_recursive_type<self_id = 0>
+      #ptr = di_derived_type<baseType: #rec_self, ...>
+      #field = di_derived_type<name = "next", baseType: #ptr, ...>
+      #struct = di_composite_type<name = "Node", elements: #field, ...>
+      #rec = di_recursive_type<self_id = 0, baseType: #struct>
+
+      #var = di_local_variable<type = #struct_type, ...>
+
+    Note that the a rec-self without an outer rec-decl with the same id is
+    conceptually the same as an "unbound" variable. The context needs to provide
+    meaning to the rec-self.
+
+    This can be avoided by calling the `getUnfoldedBaseType()` method on a
+    rec-decl, which returns the `baseType` with all matching rec-self instances
+    replaced with this rec-decl again. This is useful, for example, for fetching
+    a field out of a recursive struct and maintaining the legality of the field
+    type.
+  }];
+
+  let parameters = (ins
+    "DistinctAttr":$id,
+    OptionalParameter<"DITypeAttr">:$baseType
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "DistinctAttr":$id), [{
+      return $_get(id.getContext(), id, nullptr);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Whether this node represents a self-reference.
+    bool isRecSelf() { return !getBaseType(); }
+
+    /// Get the `baseType` with all instances of the corresponding rec-self
+    /// replaced with this attribute. This can only be called if `!isRecSelf()`.
+    DITypeAttr getUnfoldedBaseType();
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DINullTypeAttr
 //===----------------------------------------------------------------------===//
 
@@ -526,14 +590,15 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
     "DISubprogramFlags":$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type
+    OptionalParameter<"DIRecursiveTypeAttrOf<DISubroutineTypeAttr>">:$type
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
       "DIScopeAttr":$scope, "StringRef":$name, "StringRef":$linkageName,
       "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type
+      "DISubprogramFlags":$subprogramFlags,
+      "DIRecursiveTypeAttrOf<DISubroutineTypeAttr>":$type
     ), [{
       MLIRContext *ctx = file.getContext();
       return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),

@@ -68,8 +68,8 @@ bool DINodeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DIScopeAttr::classof(Attribute attr) {
-  return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(attr);
+  return llvm::isa<DICompileUnitAttr, DIFileAttr, DILocalScopeAttr,
+                   DIModuleAttr, DINamespaceAttr, DITypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -86,8 +86,9 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
-  return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+  return llvm::isa<DIRecursiveTypeAttr, DINullTypeAttr, DIBasicTypeAttr,
+                   DICompositeTypeAttr, DIDerivedTypeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -183,6 +184,19 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
     printer << operand;
     i++;
   });
+}
+
+//===----------------------------------------------------------------------===//
+// DIRecursiveTypeAttr
+//===----------------------------------------------------------------------===//
+DITypeAttr DIRecursiveTypeAttr::getUnfoldedBaseType() {
+  assert(!isRecSelf() && "cannot get baseType from a rec-self type");
+  return llvm::cast<DITypeAttr>(getBaseType().replace(
+      [&](DIRecursiveTypeAttr rec) -> std::optional<DIRecursiveTypeAttr> {
+        if (rec.getId() == getId())
+          return *this;
+        return std::nullopt;
+      }));
 }
 
 //===----------------------------------------------------------------------===//

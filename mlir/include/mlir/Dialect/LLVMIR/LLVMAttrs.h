@@ -52,9 +52,9 @@ public:
 };
 
 /// This class represents a LLVM attribute that describes a debug info type.
-class DITypeAttr : public DINodeAttr {
+class DITypeAttr : public DIScopeAttr {
 public:
-  using DINodeAttr::DINodeAttr;
+  using DIScopeAttr::DIScopeAttr;
 
   /// Support LLVM type casting.
   static bool classof(Attribute attr);
@@ -74,6 +74,10 @@ public:
   }
 };
 
+// Forward declare.
+template <typename BaseType>
+class DIRecursiveTypeAttrOf;
+
 // Inline the LLVM generated Linkage enum and utility.
 // This is only necessary to isolate the "enum generated code" from the
 // attribute definition itself.
@@ -86,5 +90,32 @@ using linkage::Linkage;
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc"
+
+namespace mlir {
+namespace LLVM {
+/// This class represents either a concrete attr, or a DIRecursiveTypeAttr
+/// containing such a concrete attr.
+template <typename BaseType>
+class DIRecursiveTypeAttrOf : public DITypeAttr {
+public:
+  static_assert(std::is_base_of_v<DITypeAttr, BaseType>);
+  using DITypeAttr::DITypeAttr;
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr) {
+    if (auto rec = llvm::dyn_cast<DIRecursiveTypeAttr>(attr))
+      return llvm::isa<BaseType>(rec.getBaseType());
+    return llvm::isa<BaseType>(attr);
+  }
+
+  DIRecursiveTypeAttrOf(BaseType baseType) : DITypeAttr(baseType) {}
+
+  BaseType getUnfoldedBaseType() {
+    if (auto rec = llvm::dyn_cast<DIRecursiveTypeAttr>(this))
+      return llvm::cast<BaseType>(rec.getUnfoldedBaseType());
+    return llvm::cast<BaseType>(this);
+  }
+};
+} // namespace LLVM
+} // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_LLVMATTRS_H_

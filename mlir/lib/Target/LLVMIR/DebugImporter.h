@@ -52,8 +52,15 @@ public:
   /// Infers the metadata type and translates it to MLIR.
   template <typename DINodeT>
   auto translate(DINodeT *node) {
-    // Infer the MLIR type from the LLVM metadata type.
-    using MLIRTypeT = decltype(translateImpl(node));
+    // Infer the result MLIR type from the LLVM metadata type.
+    // If the result is a DIType, it can also be wrapped in a recursive type,
+    // so the result is wrapped into a DIRecursiveTypeAttrOf.
+    // Otherwise, the exact result type is used.
+    constexpr bool isDIType = std::is_base_of_v<llvm::DIType, DINodeT>;
+    using RawMLIRTypeT = decltype(translateImpl(node));
+    using MLIRTypeT =
+        std::conditional_t<isDIType, DIRecursiveTypeAttrOf<RawMLIRTypeT>,
+                           RawMLIRTypeT>;
     return cast_or_null<MLIRTypeT>(
         translate(static_cast<llvm::DINode *>(node)));
   }
@@ -82,12 +89,27 @@ private:
   /// null attribute otherwise.
   StringAttr getStringAttrOrNull(llvm::MDString *stringNode);
 
+  DistinctAttr getOrCreateDistinctID(llvm::DINode *node);
+
   /// A mapping between LLVM debug metadata and the corresponding attribute.
   DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
+  /// A mapping between LLVM debug metadata and the distinct ID attr for DI
+  /// nodes that require distinction.
+  DenseMap<llvm::DINode *, DistinctAttr> nodeToDistinctAttr;
 
-  /// A stack that stores the metadata nodes that are being traversed. The stack
-  /// is used to detect cyclic dependencies during the metadata translation.
-  SetVector<llvm::DINode *> translationStack;
+  /// A stack that stores the metadata type nodes that are being traversed. The
+  /// stack is used to detect cyclic dependencies during the metadata
+  /// translation. Nodes are pushed with a null value. If it is ever seen twice,
+  /// it is given a DistinctAttr, indicating that it is a recursive node and
+  /// should take on that DistinctAttr as ID.
+  llvm::MapVector<llvm::DIType *, DistinctAttr> typeTranslationStack;
+  /// All the unbound recursive self references in the translation stack.
+  SmallVector<DenseSet<DistinctAttr>> unboundRecursiveSelfRefs;
+  /// A stack that stores the non-type metadata nodes that are being traversed.
+  /// Each node is associated with the size of the `typeTranslationStack` at the
+  /// time of push. This is used to identify a recursion purely in the non-type
+  /// metadata nodes, which is not supported yet.
+  SetVector<std::pair<llvm::DINode *, unsigned>> nonTypeTranslationStack;
 
   MLIRContext *context;
   ModuleOp mlirModule;

@@ -51,10 +51,9 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
   return DICompileUnitAttr::get(
-      context, DistinctAttr::create(UnitAttr::get(context)),
-      node->getSourceLanguage(), translate(node->getFile()),
-      getStringAttrOrNull(node->getRawProducer()), node->isOptimized(),
-      emissionKind.value());
+      context, getOrCreateDistinctID(node), node->getSourceLanguage(),
+      translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
+      node->isOptimized(), emissionKind.value());
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
@@ -64,11 +63,7 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
     assert(element && "expected a non-null element type");
     elements.push_back(translate(element));
   }
-  // Drop the elements parameter if a cyclic dependency is detected. We
-  // currently cannot model these cycles and thus drop the parameter if
-  // required. A cyclic dependency is detected if one of the element nodes
-  // translates to a nullptr since the node is already on the translation stack.
-  // TODO: Support debug metadata with cyclic dependencies.
+  // Drop the elements parameter if any of the elements are invalid.
   if (llvm::is_contained(elements, nullptr))
     elements.clear();
   DITypeAttr baseType = translate(node->getBaseType());
@@ -84,7 +79,7 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
-  // Return nullptr if the base type is a cyclic dependency.
+  // Return nullptr if the base type invalid.
   DITypeAttr baseType = translate(node->getBaseType());
   if (node->getBaseType() && !baseType)
     return nullptr;
@@ -179,14 +174,14 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   // Only definitions require a distinct identifier.
   mlir::DistinctAttr id;
   if (node->isDistinct())
-    id = DistinctAttr::create(UnitAttr::get(context));
+    id = getOrCreateDistinctID(node);
   std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
-  // Return nullptr if the scope or type is a cyclic dependency.
-  DIScopeAttr scope = translate(node->getScope());
+  // Return nullptr if the scope or type is invalid.
+  DIScopeAttr scope = cast<DIScopeAttr>(translate(node->getScope()));
   if (node->getScope() && !scope)
     return nullptr;
-  DISubroutineTypeAttr type = translate(node->getType());
+  DIRecursiveTypeAttrOf<DISubroutineTypeAttr> type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
   return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
@@ -229,7 +224,7 @@ DebugImporter::translateImpl(llvm::DISubroutineType *node) {
     }
     types.push_back(translate(type));
   }
-  // Return nullptr if any of the types is a cyclic dependency.
+  // Return nullptr if any of the types is invalid.
   if (llvm::is_contained(types, nullptr))
     return nullptr;
   return DISubroutineTypeAttr::get(context, node->getCC(), types);
@@ -247,12 +242,47 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   if (DINodeAttr attr = nodeToAttr.lookup(node))
     return attr;
 
-  // Return nullptr if a cyclic dependency is detected since the same node is
-  // being traversed twice. This check avoids infinite recursion if the debug
-  // metadata contains cycles.
-  if (!translationStack.insert(node))
-    return nullptr;
-  auto guard = llvm::make_scope_exit([&]() { translationStack.pop_back(); });
+  // If a cyclic dependency is detected since the same node is being traversed
+  // twice, emit a recursive self type, and mark the duplicate node on the
+  // translationStack so it can emit a recursive decl type.
+  auto *typeNode = dyn_cast<llvm::DIType>(node);
+  if (typeNode) {
+    auto [iter, inserted] = typeTranslationStack.try_emplace(typeNode, nullptr);
+    if (!inserted) {
+      // The original node may have already been assigned a recursive ID from
+      // a different self-reference. Use that if possible.
+      DistinctAttr recId = iter->second;
+      if (!recId) {
+        recId = DistinctAttr::create(UnitAttr::get(context));
+        iter->second = recId;
+      }
+      unboundRecursiveSelfRefs.back().insert(recId);
+      return DIRecursiveTypeAttr::get(recId);
+    }
+  } else {
+    bool inserted =
+        nonTypeTranslationStack.insert({node, typeTranslationStack.size()});
+    assert(inserted && "recursion is only supported via DITypes");
+  }
+
+  unboundRecursiveSelfRefs.emplace_back();
+
+  auto guard = llvm::make_scope_exit([&]() {
+    if (typeNode)
+      typeTranslationStack.pop_back();
+    else
+      nonTypeTranslationStack.pop_back();
+
+    // Copy unboundRecursiveSelfRefs down to the previous level.
+    if (unboundRecursiveSelfRefs.size() == 1)
+      assert(unboundRecursiveSelfRefs.back().empty() &&
+             "internal error: unbound recursive self reference at top level.");
+    else
+      unboundRecursiveSelfRefs[unboundRecursiveSelfRefs.size() - 2].insert(
+          unboundRecursiveSelfRefs.back().begin(),
+          unboundRecursiveSelfRefs.back().end());
+    unboundRecursiveSelfRefs.pop_back();
+  });
 
   // Convert the debug metadata if possible.
   auto translateNode = [this](llvm::DINode *node) -> DINodeAttr {
@@ -289,7 +319,21 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     return nullptr;
   };
   if (DINodeAttr attr = translateNode(node)) {
-    nodeToAttr.insert({node, attr});
+    // If this node was marked as recursive, wrap with a recursive type.
+    if (typeNode) {
+      if (DistinctAttr id = typeTranslationStack.lookup(typeNode)) {
+        DITypeAttr typeAttr = cast<DITypeAttr>(attr);
+        attr = DIRecursiveTypeAttr::get(context, id, typeAttr);
+
+        // Remove the unbound recursive attr.
+        AttrTypeReplacer replacer;
+        unboundRecursiveSelfRefs.back().erase(id);
+      }
+    }
+
+    // Only cache fully self-contained nodes.
+    if (unboundRecursiveSelfRefs.back().empty())
+      nodeToAttr.try_emplace(node, attr);
     return attr;
   }
   return nullptr;
@@ -345,4 +389,11 @@ StringAttr DebugImporter::getStringAttrOrNull(llvm::MDString *stringNode) {
   if (!stringNode)
     return StringAttr();
   return StringAttr::get(context, stringNode->getString());
+}
+
+DistinctAttr DebugImporter::getOrCreateDistinctID(llvm::DINode *node) {
+  DistinctAttr &id = nodeToDistinctAttr[node];
+  if (!id)
+    id = DistinctAttr::create(UnitAttr::get(context));
+  return id;
 }
