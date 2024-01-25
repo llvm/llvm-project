@@ -2598,9 +2598,6 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
     }
   }
 
-  if (HasArchitectedSGPRs && Info.hasWaveID())
-    CCInfo.AllocateReg(Info.addWaveID());
-
   if (Info.hasWorkGroupInfo()) {
     Register Reg = Info.addWorkGroupInfo();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
@@ -2805,7 +2802,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if (CallConv != CallingConv::AMDGPU_CS || !Subtarget->hasArchitectedSGPRs())
       assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
-             !Info->hasWorkGroupIDZ() && !Info->hasWaveID());
+             !Info->hasWorkGroupIDZ());
   }
 
   if (CallConv == CallingConv::AMDGPU_PS) {
@@ -8176,8 +8173,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_workgroup_id_z:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
-  case Intrinsic::amdgcn_wave_id:
-    return getPreloadedValue(DAG, *MFI, VT, AMDGPUFunctionArgInfo::WAVE_ID);
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);
