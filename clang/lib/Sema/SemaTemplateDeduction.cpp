@@ -4407,7 +4407,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
         // replaced with the corresponding deduced or default argument values
         //
         // If we have a trailing parameter pack, that has been deduced
-        // perviously we substitute the pack here in a similar fashion as seen
+        // previously we substitute the pack here in a similar fashion as seen
         // above with the trailing parameter packs. The main difference here is
         // that, in this case we are not processing all of the remaining
         // arguments. We are only process as many arguments as much we have in
