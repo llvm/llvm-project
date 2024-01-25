@@ -859,12 +859,9 @@ public:
       Info.PendingDeducedPacks[Pack.Index] = Pack.Outer;
   }
 
-  std::optional<unsigned> getSavedPackSize(unsigned Index,
-                                           TemplateArgument Pattern) const {
-
-    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-    S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
-    if (Unexpanded.size() == 0 ||
+  // Return the size of the saved packs if all of them has the same size.
+  std::optional<unsigned> getSavedPackSizeIfAllEqual() const {
+    if (Packs.size() == 0 ||
         Packs[0].Saved.getKind() != clang::TemplateArgument::Pack)
       return {};
     unsigned PackSize = Packs[0].Saved.pack_size();
@@ -4411,13 +4408,8 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
         // that, in this case we are not processing all of the remaining
         // arguments. We are only process as many arguments as much we have in
         // the already deduced parameter.
-        SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-        collectUnexpandedParameterPacks(ParamPattern, Unexpanded);
-        assert(Unexpanded.size() != 0 && "We must have an unexpanded pack\n");
-
         std::optional<unsigned> ArgPosAfterSubstitution =
-            PackScope.getSavedPackSize(getDepthAndIndex(Unexpanded[0]).second,
-                                       ParamPattern);
+            PackScope.getSavedPackSizeIfAllEqual();
         if (!ArgPosAfterSubstitution)
           continue;
 
