@@ -50,7 +50,32 @@ TODO
 
 Deprecations and Removals
 -------------------------
-TODO
+
+- TODO: The ``LIBCXX_EXECUTOR`` CMake variables have been removed.
+
+- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
+  it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
+  the ``_LIBCPP_ENABLE_ASSERTIONS`` macro has been deprecated (setting it to ``1`` still enables the extensive mode in
+  the LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
+  <using-hardening-modes>` for more details.
+
+- TODO: The base template for ``std::char_traits`` has been removed in LLVM 19. If you are using ``std::char_traits`` with
+  types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t`` or a custom character type for which you
+  specialized ``std::char_traits``, your code will stop working. The Standard does not mandate that a base template is
+  provided, and such a base template is bound to be incorrect for some types, which could currently cause unexpected behavior
+  while going undetected.
+
+- TODO: The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
+  in ``std::variant`` has been removed in LLVM 19.
+
+- TODO: The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` macro has been removed in LLVM 19.
+
+- TODO: The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have
+  been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
+
+- TODO: The macro ``_LIBCPP_INLINE_VISIBILITY`` has been removed in LLVM 19.
+
+- TODO: The macro ``_VSTD`` has been removed in LLVM 19.
 
 
 Upcoming Deprecations and Removals
@@ -58,7 +83,9 @@ Upcoming Deprecations and Removals
 
 LLVM 20
 ~~~~~~~
-TODO
+
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
+  the safe mode will be removed in LLVM 20.
 
 LLVM 21
 ~~~~~~~
