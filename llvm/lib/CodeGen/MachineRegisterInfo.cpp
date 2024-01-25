@@ -167,6 +167,17 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   return Reg;
 }
 
+/// createVirtualRegister - Create and return a new virtual register in the
+/// function with the specified register attributes.
+Register MachineRegisterInfo::createVirtualRegister(RegisterAttributes RegAttr,
+                                                    StringRef Name) {
+  Register Reg = createIncompleteVirtualRegister(Name);
+  VRegInfo[Reg].first = *RegAttr.RCOrRB;
+  setType(Reg, RegAttr.Ty);
+  noteNewVirtualRegister(Reg);
+  return Reg;
+}
+
 Register MachineRegisterInfo::cloneVirtualRegister(Register VReg,
                                                    StringRef Name) {
   Register Reg = createIncompleteVirtualRegister(Name);

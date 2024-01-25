@@ -752,6 +752,17 @@ public:
   Register createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
 
+  /// All avilable attributes a virtual register can have.
+  struct RegisterAttributes {
+    const RegClassOrRegBank *RCOrRB;
+    LLT Ty;
+  };
+
+  /// createVirtualRegister - Create and return a new virtual register in the
+  /// function with the specified register attributes.
+  Register createVirtualRegister(RegisterAttributes RegAttr,
+                                 StringRef Name = "");
+
   /// Create and return a new virtual register in the function with the same
   /// attributes as the given register.
   Register cloneVirtualRegister(Register VReg, StringRef Name = "");
