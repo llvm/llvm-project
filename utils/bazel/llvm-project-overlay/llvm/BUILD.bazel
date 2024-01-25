@@ -3259,6 +3259,7 @@ cc_binary(
         ":MC",
         ":Passes",
         ":Remarks",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
