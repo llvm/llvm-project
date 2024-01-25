@@ -731,7 +731,7 @@ template <> class FloatToString<long double> {
 public:
   LIBC_INLINE constexpr FloatToString(long double init_float)
       : float_bits(init_float) {
-    is_negative = float_bits.get_sign();
+    is_negative = float_bits.is_neg();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
 
