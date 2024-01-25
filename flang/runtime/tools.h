@@ -446,8 +446,7 @@ RT_API_ATTRS char *EnsureNullTerminated(
 
 RT_API_ATTRS bool IsValidCharDescriptor(const Descriptor *value);
 
-RT_API_ATTRS bool IsValidIntDescriptor(
-    const Descriptor *intVal, const int minIntKind = 1);
+RT_API_ATTRS bool IsValidIntDescriptor(const Descriptor *intVal);
 
 // Copy a null-terminated character array \p rawValue to descriptor \p value.
 // The copy starts at the given \p offset, if not present then start at 0.

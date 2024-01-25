@@ -122,22 +122,10 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait,
 
   if (exitstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(exitstat));
-    auto exitstatKind{exitstat->type().GetCategoryAndKind()->second};
-    if (exitstatKind < 4) {
-      terminator.Crash("exitstat must have an integer kind greater or equal to "
-                       "4 but have: %d",
-          exitstatKind);
-    }
   }
 
   if (cmdstat) {
-    RUNTIME_CHECK(terminator, IsValidIntDescriptor(cmdstat, 0));
-    auto cmdstatKind{cmdstat->type().GetCategoryAndKind()->second};
-    if (cmdstatKind < 2) {
-      terminator.Crash("cmdstat must have an integer kind greater or equal to "
-                       "2 but have: %d",
-          cmdstatKind);
-    }
+    RUNTIME_CHECK(terminator, IsValidIntDescriptor(cmdstat));
     // Assigned 0 as specifed in standard, if error then overwrite
     StoreIntToDescriptor(cmdstat, CMD_EXECUTED, terminator);
   }

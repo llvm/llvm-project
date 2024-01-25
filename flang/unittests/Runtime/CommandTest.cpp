@@ -422,44 +422,6 @@ TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectAsync) {
       *command.get(), false, nullptr, nullptr, nullptr));
 }
 
-TEST_F(ZeroArguments, ECLBadKindError) {
-  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
-  bool wait{true};
-  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor<sizeof(std::int16_t)>()};
-  OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor<sizeof(std::int8_t)>()};
-
-  EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   *command.get(), wait, exitStat.get(), nullptr, nullptr),
-      "exitstat must have an integer kind greater or equal to 4 but have: 2");
-  EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   *command.get(), wait, nullptr, cmdStat.get(), nullptr),
-      "cmdstat must have an integer kind greater or equal to 2 but have: 1");
-}
-
-TEST_F(ZeroArguments, ECLGoodKindEqual) {
-  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
-  bool wait{true};
-  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor<sizeof(std::int32_t)>()};
-  OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor<sizeof(std::int16_t)>()};
-
-  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-      *command.get(), wait, exitStat.get(), nullptr, nullptr));
-  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-      *command.get(), wait, nullptr, cmdStat.get(), nullptr));
-}
-
-TEST_F(ZeroArguments, ECLGoodKindGreater) {
-  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
-  bool wait{true};
-  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor<sizeof(std::int64_t)>()};
-  OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor<sizeof(std::int32_t)>()};
-
-  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-      *command.get(), wait, exitStat.get(), nullptr, nullptr));
-  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-      *command.get(), wait, nullptr, cmdStat.get(), nullptr));
-}
-
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {
 protected:
