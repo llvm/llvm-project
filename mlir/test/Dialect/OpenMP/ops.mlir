@@ -479,6 +479,36 @@ func.func @omp_simdloop_pretty_multiple(%lb1 : index, %ub1 : index, %step1 : ind
   return
 }
 
+// CHECK-LABEL: omp_distribute
+func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>) -> () {
+  // CHECK: omp.distribute
+  "omp.distribute" () ({
+    omp.terminator
+  }) {} : () -> ()
+  // CHECK: omp.distribute
+  omp.distribute {
+    omp.terminator
+  }
+  // CHECK: omp.distribute dist_schedule_static
+  omp.distribute dist_schedule_static {
+    omp.terminator
+  }
+  // CHECK: omp.distribute dist_schedule_static chunk_size(%{{.+}} : i32)
+  omp.distribute dist_schedule_static chunk_size(%chunk_size : i32) {
+    omp.terminator
+  }
+  // CHECK: omp.distribute order(concurrent)
+  omp.distribute order(concurrent) {
+    omp.terminator
+  }
+  // CHECK: omp.distribute allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
+  omp.distribute allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+    omp.terminator
+  }
+return
+}
+
+
 // CHECK-LABEL: omp_target
 func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
 

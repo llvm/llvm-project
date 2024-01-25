@@ -25,6 +25,8 @@ static_library("Basic") {
     "//clang/include/clang/Basic:AttrLeftSideMustPrintList",
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
+    "//clang/include/clang/Basic:Builtins",
+    "//clang/include/clang/Basic:BuiltinsBPF",
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:RegularKeywordAttrInfo",
     "//clang/include/clang/Basic:arm_cde_builtins",

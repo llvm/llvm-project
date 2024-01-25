@@ -13,7 +13,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
 #if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)

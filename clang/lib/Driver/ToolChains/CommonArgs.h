@@ -144,6 +144,9 @@ llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
 bool isUseSeparateSections(const llvm::Triple &Triple);
+// Parse -mtls-dialect=. Return true if the target supports both general-dynamic
+// and TLSDESC, and TLSDESC is requested.
+bool isTLSDESCEnabled(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
 /// \p EnvVar is split by system delimiter for environment variables.
 /// If \p ArgName is "-I", "-L", or an empty string, each entry from \p EnvVar

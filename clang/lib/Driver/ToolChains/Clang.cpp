@@ -5822,28 +5822,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mtls_dialect_EQ)) {
-    StringRef V = A->getValue();
-    bool SupportedArgument = false, EnableTLSDESC = false;
-    bool Unsupported = !Triple.isOSBinFormatELF();
-    if (Triple.isRISCV()) {
-      SupportedArgument = V == "desc" || V == "trad";
-      EnableTLSDESC = V == "desc";
-    } else if (Triple.isX86()) {
-      SupportedArgument = V == "gnu";
-    } else {
-      Unsupported = true;
-    }
-    if (Unsupported) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << TripleStr;
-    } else if (!SupportedArgument) {
-      D.Diag(diag::err_drv_unsupported_option_argument_for_target)
-          << A->getSpelling() << V << TripleStr;
-    } else if (EnableTLSDESC) {
-      CmdArgs.push_back("-enable-tlsdesc");
-    }
-  }
+  if (isTLSDESCEnabled(TC, Args))
+    CmdArgs.push_back("-enable-tlsdesc");
 
   // Add the target cpu
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
