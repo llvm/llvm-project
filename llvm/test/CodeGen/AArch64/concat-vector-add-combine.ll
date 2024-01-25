@@ -26,14 +26,10 @@ define i16 @combine_add_16xi16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i
 ; CHECK-NEXT:    mov v0.h[5], w5
 ; CHECK-NEXT:    ld1 { v1.h }[7], [x8]
 ; CHECK-NEXT:    mov v0.h[6], w6
-; CHECK-NEXT:    xtn v3.8b, v1.8h
-; CHECK-NEXT:    shrn v1.8b, v1.8h, #8
 ; CHECK-NEXT:    mov v0.h[7], w7
-; CHECK-NEXT:    uhadd v1.8b, v3.8b, v1.8b
-; CHECK-NEXT:    xtn v2.8b, v0.8h
-; CHECK-NEXT:    shrn v0.8b, v0.8h, #8
-; CHECK-NEXT:    uhadd v0.8b, v2.8b, v0.8b
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    uzp2 v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    uhadd v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    uaddlv h0, v0.16b
 ; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
@@ -72,14 +68,10 @@ define i32 @combine_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i3
 ; CHECK-NEXT:    mov v1.s[2], w2
 ; CHECK-NEXT:    mov v0.s[3], w7
 ; CHECK-NEXT:    mov v1.s[3], w3
-; CHECK-NEXT:    xtn v2.4h, v1.4s
-; CHECK-NEXT:    xtn v3.4h, v0.4s
-; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
-; CHECK-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-NEXT:    uhadd v1.4h, v2.4h, v1.4h
-; CHECK-NEXT:    uhadd v0.4h, v3.4h, v0.4h
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    uaddlv s0, v1.8h
+; CHECK-NEXT:    uzp2 v2.8h, v1.8h, v0.8h
+; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %a1 = insertelement <8 x i32> poison, i32 %a, i32 0
@@ -105,14 +97,10 @@ define i64 @combine_add_4xi64(i64 %a, i64 %b, i64 %c, i64 %d) local_unnamed_addr
 ; CHECK-NEXT:    fmov d1, x0
 ; CHECK-NEXT:    mov v0.d[1], x3
 ; CHECK-NEXT:    mov v1.d[1], x1
-; CHECK-NEXT:    xtn v2.2s, v1.2d
-; CHECK-NEXT:    xtn v3.2s, v0.2d
-; CHECK-NEXT:    shrn v1.2s, v1.2d, #32
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
-; CHECK-NEXT:    uhadd v1.2s, v2.2s, v1.2s
-; CHECK-NEXT:    uhadd v0.2s, v3.2s, v0.2s
-; CHECK-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-NEXT:    uaddlv d0, v1.4s
+; CHECK-NEXT:    uzp2 v2.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uhadd v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    uaddlv d0, v0.4s
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %a1 = insertelement <4 x i64> poison, i64 %a, i64 0

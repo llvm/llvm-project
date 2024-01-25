@@ -18291,6 +18291,19 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     return true;
   };
 
+  // concat(uhadd(a, b), uhadd(c, d)) -> uhadd(concat(a, c), concat(b, d))
+  if (N0Opc == ISD::AVGFLOORU && N1Opc == ISD::AVGFLOORU) {
+    SDValue N00 = N0->getOperand(0);
+    SDValue N01 = N0->getOperand(1);
+    SDValue N10 = N1->getOperand(0);
+    SDValue N11 = N1->getOperand(1);
+    EVT N00VT = N00.getValueType();
+    EVT PairVT = N00VT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    SDValue Concat0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, PairVT, N00, N10);
+    SDValue Concat1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, PairVT, N01, N11);
+    return DAG.getNode(ISD::AVGFLOORU, dl, PairVT, Concat0, Concat1);
+  }
+
   // concat(rshrn(x), rshrn(y)) -> rshrn(concat(x, y))
   if (N->getNumOperands() == 2 && IsRSHRN(N0) &&
       ((IsRSHRN(N1) &&
