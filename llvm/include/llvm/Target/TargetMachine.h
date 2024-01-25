@@ -457,9 +457,9 @@ public:
 
   virtual Error buildCodeGenPipeline(ModulePassManager &,
                                      MachineFunctionPassManager &,
-                                     MachineFunctionAnalysisManager &,
-                                     raw_pwrite_stream &, raw_pwrite_stream *,
-                                     CodeGenFileType, CGPassBuilderOption,
+                                     PassBuilder &, raw_pwrite_stream &,
+                                     raw_pwrite_stream *, CodeGenFileType,
+                                     CGPassBuilderOption,
                                      PassInstrumentationCallbacks *) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());

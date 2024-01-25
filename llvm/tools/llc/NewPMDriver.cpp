@@ -191,7 +191,7 @@ int llvm::compileModuleWithNewPM(
     ModulePassManager MPM;
     MachineFunctionPassManager MFPM;
 
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(MPM, MFPM, MFAM, *OS,
+    ExitOnErr(LLVMTM.buildCodeGenPipeline(MPM, MFPM, PB, *OS,
                                           DwoOut ? &DwoOut->os() : nullptr,
                                           FileType, Opt, &PIC));
 

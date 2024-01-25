@@ -370,6 +370,11 @@ public:
   Error parsePassPipeline(MachineFunctionPassManager &MFPM,
                           StringRef PipelineText);
 
+  /// Parse textual regalloc pass into the provided \c MachineFunctionPass
+  /// the PassText should contain only one regalloc pass text.
+  Error parseRegAllocPass(MachineFunctionPassManager &MFPM, StringRef PassText,
+                          bool Optimized);
+
   /// Parse a textual alias analysis pipeline into the provided AA manager.
   ///
   /// The format of the textual AA pipeline is a comma separated list of AA
@@ -575,6 +580,12 @@ public:
   }
   /// @}}
 
+  void registerRegAllocParsingCallback(
+      const std::function<bool(StringRef, MachineFunctionPassManager &, bool)>
+          &C) {
+    RegAllocPassParsingCallbacks.push_back(C);
+  }
+
   /// Register a callback for a top-level pipeline entry.
   ///
   /// If the PassManager type is not given at the top level of the pipeline
@@ -735,6 +746,9 @@ private:
       MachineFunctionAnalysisRegistrationCallbacks;
   SmallVector<std::function<bool(StringRef, MachineFunctionPassManager &)>, 2>
       MachinePipelineParsingCallbacks;
+  SmallVector<
+      std::function<bool(StringRef, MachineFunctionPassManager &, bool)>, 2>
+      RegAllocPassParsingCallbacks;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>

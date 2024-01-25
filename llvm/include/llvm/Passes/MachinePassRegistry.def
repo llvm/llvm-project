@@ -129,6 +129,23 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 // MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
 #undef MACHINE_FUNCTION_PASS
 
+#ifndef RA_PASS
+#define RA_PASS(NAME, PASS_NAME, CONSTRUCTOR)
+#endif
+// RA_PASS("ra-basic", RABasicPass, ())
+#undef RA_PASS
+
+#ifndef RA_PASS_WITH_PARAMS
+#define RA_PASS_WITH_PARAMS(NAME, PASS_NAME, CREATE_PASS, PARSER, PARAMS)
+#endif
+// RA_PASS_WITH_PARAMS("fast", RAFastPass,
+//   [](Option Opts){ return RAFastPass(Opts); }, parseRAFastPassOptions, "")
+// RA_PASS_WITH_PARAMS("greedy", RAGreedyPass,
+// [](Option Opts) { return RAGreedyPass(Opts); }, parseRAGreedyPassOptions, "")
+// RA_PASS_WITH_PARAMS("pbqp", RAPBQPPass,
+//   [](Option Opts) { return  RAPBQPPass(Opts); }, parseRAPBQPPassOptions, "")
+#undef RA_PASS_WITH_PARAMS
+
 // After a pass is converted to new pass manager, its entry should be moved from
 // dummy table to the normal one. For example, for a machine function pass,
 // DUMMY_MACHINE_FUNCTION_PASS to MACHINE_FUNCTION_PASS.
@@ -225,15 +242,10 @@ DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog", PrologEpilogInserterPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass,
                             ())
-DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass, ())
-DUMMY_MACHINE_FUNCTION_PASS("ra-fast", RAFastPass, ())
-DUMMY_MACHINE_FUNCTION_PASS("ra-greedy", RAGreedyPass, ())
-DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("reg-usage-collector", RegUsageInfoCollectorPass,
                             ())
 DUMMY_MACHINE_FUNCTION_PASS("reg-usage-propagation",
                             RegUsageInfoPropagationPass, ())
-DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("regbankselect", RegBankSelectPass, ())
 DUMMY_MACHINE_FUNCTION_PASS("removeredundantdebugvalues",

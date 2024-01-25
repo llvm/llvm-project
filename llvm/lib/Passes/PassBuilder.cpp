@@ -2081,6 +2081,43 @@ Error PassBuilder::parsePassPipeline(MachineFunctionPassManager &MFPM,
   return Error::success();
 }
 
+Error PassBuilder::parseRegAllocPass(MachineFunctionPassManager &MFPM,
+                                     StringRef PassText, bool Optimized) {
+  // Targets may have their own default pipeline.
+  for (const auto &C : RegAllocPassParsingCallbacks) {
+    if (C(PassText, MFPM, Optimized))
+      return Error::success();
+  }
+
+  if (PassText == "default") {
+    if (Optimized) {
+      // TODO: MFPM.addPass(GreedyRegisterAllocatorPass());
+    } else {
+      // TODO: MFPM.addPass(FastRegisterAllocatorPass());
+    }
+    return Error::success();
+  }
+
+#define RA_PASS(NAME, PASS_NAME, CONSTRUCTOR)                                  \
+  if (PassText == NAME) {                                                      \
+    MFPM.addPass(PASS_NAME CONSTRUCTOR);                                       \
+    return Error::success();                                                   \
+  }
+#define RA_PASS_WITH_PARAMS(NAME, PASS_NAME, CREATE_PASS, PARSER, PARAMS)      \
+  if (checkParametrizedPassName(PassText, NAME)) {                             \
+    auto Params = parsePassParameters(PARSER, PassText, NAME);                 \
+    if (!Params)                                                               \
+      return Params.takeError();                                               \
+    MFPM.addPass(CREATE_PASS(Params.get()));                                   \
+    return Error::success();                                                   \
+  }
+#include "llvm/Passes/MachinePassRegistry.def"
+
+  return make_error<StringError>(
+      formatv("invalid regalloc pass '{0}'", PassText).str(),
+      inconvertibleErrorCode());
+}
+
 Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   // If the pipeline just consists of the word 'default' just replace the AA
   // manager with our default one.
