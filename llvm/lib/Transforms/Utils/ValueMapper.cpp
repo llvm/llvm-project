@@ -1051,11 +1051,8 @@ void Mapper::remapFunction(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       remapInstruction(&I);
-      if (I.DbgMarker) {
-        for (DPValue &DPV : I.DbgMarker->getDbgValueRange()) {
-          remapDPValue(DPV);
-        }
-      }
+      for (DPValue &DPV : I.DbgMarker->getDbgValueRange())
+        remapDPValue(DPV);
     }
   }
 }
