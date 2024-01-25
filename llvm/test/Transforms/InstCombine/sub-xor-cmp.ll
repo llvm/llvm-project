@@ -5,11 +5,10 @@ define  i64 @absdiff(i64 %0, i64 %1) {
 ; CHECK-LABEL: define i64 @absdiff(
 ; CHECK-SAME: i64 [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    ret i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP3]], i64 [[TMP5]], i64 [[TMP4]]
+; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %3 = icmp ult i64 %0, %1
   %4 = sext i1 %3 to i64

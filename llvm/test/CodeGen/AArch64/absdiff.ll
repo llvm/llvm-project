@@ -5,9 +5,7 @@ define  i64 @absdiff(i64 %0, i64 %1) {
 ; CHECK-LABEL: absdiff:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x1
-; CHECK-NEXT:    csetm x9, lo
-; CHECK-NEXT:    cinv x8, x8, lo
-; CHECK-NEXT:    sub x0, x8, x9
+; CHECK-NEXT:    cneg x0, x8, lo
 ; CHECK-NEXT:    ret
   %3 = icmp ult i64 %0, %1
   %4 = sext i1 %3 to i64

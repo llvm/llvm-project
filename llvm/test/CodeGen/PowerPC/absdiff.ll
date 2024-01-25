@@ -4,11 +4,15 @@
 define  i64 @absdiff(i64 %0, i64 %1) {
 ; CHECK-LABEL: absdiff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subc 5, 3, 4
-; CHECK-NEXT:    subfe 5, 3, 3
-; CHECK-NEXT:    sub 3, 3, 4
-; CHECK-NEXT:    xor 3, 3, 5
-; CHECK-NEXT:    sub 3, 3, 5
+; CHECK-NEXT:    sub 5, 3, 4
+; CHECK-NEXT:    neg 6, 5
+; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    bc 12, 0, .LBB0_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ori 3, 5, 0
+; CHECK-NEXT:    blr
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    addi 3, 6, 0
 ; CHECK-NEXT:    blr
   %3 = icmp ult i64 %0, %1
   %4 = sext i1 %3 to i64
