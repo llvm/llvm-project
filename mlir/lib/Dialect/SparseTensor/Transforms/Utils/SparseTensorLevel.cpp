@@ -862,14 +862,13 @@ ValueRange FilterIterator::forward(OpBuilder &b, Location l) {
 
   SmallVector<Value> whileArgs(getItVals().begin(), getItVals().end());
   whileArgs.push_back(isFirst);
-
   auto whileOp = b.create<scf::WhileOp>(
       l, ValueRange(whileArgs).getTypes(), whileArgs,
       /*beforeBuilder=*/
       [this](OpBuilder &b, Location l, ValueRange ivs) {
         ValueRange isFirst = linkNewScope(ivs);
         assert(isFirst.size() == 1);
-        ValueRange cont =
+        scf::ValueVector cont =
             genWhenInBound(b, l, *wrap, C_FALSE,
                            [this, isFirst](OpBuilder &b, Location l,
                                            Value wrapCrd) -> scf::ValueVector {
