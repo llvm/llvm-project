@@ -105,9 +105,10 @@ std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 /// The ith relation corresponds to the activity region of the ith vertex set.
 /// Note that here, by disjoint, we mean that the intersection is not
 /// full-dimensional.
-std::vector<std::pair<PresburgerSet, std::vector<unsigned>>>
-computeChamberDecomposition(ArrayRef<PresburgerSet> activeRegions,
-                            ArrayRef<ParamPoint> vertices);
+std::vector<std::pair<PresburgerSet, GeneratingFunction>>
+computeChamberDecomposition(
+    unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
+                             regionsAndGeneratingFunctions);
 
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.

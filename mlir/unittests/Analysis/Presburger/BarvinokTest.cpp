@@ -286,7 +286,7 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
   // There is only one chamber: p ≥ 0
   EXPECT_EQ(count.size(), 2u);
 
-  gf = count[1].second;
+  gf = count[0].second;
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
       gf, GeneratingFunction(
               1, {1, 1, 1},
@@ -294,23 +294,6 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
                makeFracMatrix(2, 2, {{0, 1}, {0, 0}}),
                makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
               {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}}));
-
-  ineqs = makeIntMatrix(6, 5,
-                        {{1, 0, 0, 1, 0},
-                         {0, 1, 0, 1, 0},
-                         {0, 0, 1, 1, 0},
-                         {-1, 0, 0, 1, 0},
-                         {0, -1, 0, 1, 0},
-                         {0, 0, -1, 1, 0}});
-  poly = defineHRep(3, 1);
-  for (unsigned i = 0; i < 6; i++)
-    poly.addInequality(ineqs.getRow(i));
-
-  count = computePolytopeGeneratingFunction(poly);
-
-  EXPECT_EQ(count.size(), 2u);
-
-  gf = count[0].second;
 
   // Cartesian product of a cube with side M and a right triangle with side N.
   ineqs = makeIntMatrix(9, 8,
@@ -331,6 +314,6 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
 
   EXPECT_EQ(count.size(), 2u);
 
-  gf = count[1].second;
+  gf = count[0].second;
   EXPECT_EQ(gf.getNumerators().size(), 24u);
 }

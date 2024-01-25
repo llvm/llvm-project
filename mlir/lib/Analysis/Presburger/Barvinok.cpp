@@ -224,62 +224,70 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 
 /// This is an implementation of the Clauss-Loechner algorithm for chamber
 /// decomposition.
-/// We maintain a list of pairwise disjoint chambers and their vertex-sets;
-/// we iterate over the vertex list, each time appending the vertex to the
-/// chambers where it is active and separating the chambers where it is not.
+/// We maintain a list of pairwise disjoint chambers and their generating
+/// functions. We iterate over the list of regions, each time adding the
+/// generating function to the chambers where the corresponding vertex is
+/// active and separating the chambers where it is not.
 ///
 /// Given the region each vertex is active in, for each subset of vertices,
 /// the region that precisely this subset is in, is the intersection of the
 /// regions that these are active in, intersected with the complements of the
-/// remaining regions.
-std::vector<std::pair<PresburgerSet, std::vector<unsigned>>>
+/// remaining regions. The generating function for this region is the sum of
+/// generating functions for the vertices' tangent cones.
+std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 mlir::presburger::detail::computeChamberDecomposition(
-    ArrayRef<PresburgerSet> activeRegions, ArrayRef<ParamPoint> vertices) {
-  // We maintain a list of regions and their associated vertex sets,
-  // initialized with the universe and the empty list of vertices.
-  std::vector<std::pair<PresburgerSet, std::vector<unsigned>>> chambers = {
-      {PresburgerSet::getUniverse(activeRegions[0].getSpace()),
-       std::vector<unsigned>({})}};
-  // Note that instead of storing lists of actual vertices, we store lists
-  // of indices. Thus the set {2, 3, 4} represents the vertex set
-  // {vertices[2], vertices[3], vertices[4]}.
+    unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
+                             regionsAndGeneratingFunctions) {
+  assert(regionsAndGeneratingFunctions.size() > 0 &&
+         "there must be at least one chamber!");
+  // We maintain a list of regions and their associated generating function
+  // initialized with the universe and the empty generating function.
+  std::vector<std::pair<PresburgerSet, GeneratingFunction>> chambers = {
+      {PresburgerSet::getUniverse(
+           PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0)),
+       GeneratingFunction(numSymbols, {}, {}, {})}};
 
-  // We iterate over the vertex set.
-  // For each vertex v_j and its activity region R_j,
+  // We iterate over the region list.
+  // For each activity region R_j (corresponding to a vertex v_j, whose
+  // generating function is gf_j),
   // we examine all the current chambers R_i.
   // If R_j has a full-dimensional intersection with an existing chamber R_i,
   // then that chamber is replaced by two new ones:
-  // 1. the intersection R_i \cap R_j, where v_j is active;
-  // 2. the difference R_i - R_j, where v_j is inactive.
+  // 1. the intersection R_i \cap R_j, where the generating function is
+  //    gf_i + gf_j.
+  // 2. the difference R_i - R_j, where v_j is inactive and the generating
+  //    function is gf_i.
 
   // At each step, we define a new chamber list after considering vertex v_j,
-  // replacing and appending chambers as discussed above.
+  // and its generating function, replacing and appending chambers as
+  // discussed above.
   // The loop has the invariant that the union over all the chambers gives the
   // universe at every step (modulo lower-dimensional spaces).
-  for (unsigned j = 0, e = vertices.size(); j < e; j++) {
-    std::vector<std::pair<PresburgerSet, std::vector<unsigned>>> newChambers;
+  for (const auto &[region, generatingFunction] :
+       regionsAndGeneratingFunctions) {
+    std::vector<std::pair<PresburgerSet, GeneratingFunction>> newChambers;
 
-    for (auto [currentRegion, currentVertices] : chambers) {
+    for (auto [currentRegion, currentGeneratingFunction] : chambers) {
       // First, we check if the intersection of R_j and R_i.
-      PresburgerSet intersection = currentRegion.intersect(activeRegions[j]);
+      PresburgerSet intersection = currentRegion.intersect(region);
 
       // If the intersection is not full-dimensional, we do not modify
       // the chamber list.
       if (!intersection.isFullDim()) {
-        newChambers.emplace_back(currentRegion, currentVertices);
+        newChambers.emplace_back(currentRegion, currentGeneratingFunction);
         continue;
       }
 
       // If it is, we add the intersection as a chamber where this vertex is
-      // active. We also add the difference if it is full-dimensional.
-      PresburgerSet difference = currentRegion.subtract(activeRegions[j]);
+      // active.
+      newChambers.emplace_back(intersection,
+                               currentGeneratingFunction + generatingFunction);
+
+      // We also add the difference if it is full-dimensional.
+      PresburgerSet difference = currentRegion.subtract(region);
       if (difference.isFullDim())
-        newChambers.emplace_back(difference, currentVertices);
-
-      currentVertices.push_back(j);
-      newChambers.emplace_back(intersection, currentVertices);
+        newChambers.emplace_back(difference, currentGeneratingFunction);
     }
-
     chambers = std::move(newChambers);
   }
 
@@ -307,17 +315,15 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
   unsigned numSymbols = poly.getNumSymbolVars();
   unsigned numIneqs = poly.getNumInequalities();
 
-  // The generating function of the polytope is computed as a set of generating
-  // functions, each one associated with a region in parameter space (chamber).
-  std::vector<std::pair<PresburgerSet, GeneratingFunction>> gf({});
-
   // These vectors store lists of
   // subsets of inequalities,
-  // the vertices corresponding to them, and
-  // the active regions of the vertices, in order.
-  std::vector<IntMatrix> subsets;
+  // the vertices corresponding to them,
+  // the active regions of the vertices, and the generating functions of
+  // the tangent cones of the vertices, in order.
+  // std::vector<IntMatrix> subsets;
   std::vector<ParamPoint> vertices;
-  std::vector<PresburgerSet> activeRegions;
+  std::vector<std::pair<PresburgerSet, GeneratingFunction>>
+      regionsAndGeneratingFunctions;
 
   FracMatrix a2(numIneqs - numVars, numVars);
   FracMatrix b2c2(numIneqs - numVars, numSymbols + 1);
@@ -360,7 +366,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
       continue;
     // If this subset corresponds to a vertex, store it.
     vertices.push_back(*vertex);
-    subsets.push_back(subset);
+    // subsets.push_back(subset);
 
     // Let the current vertex be [X | y], where
     // X represents the coefficients of the parameters and
@@ -392,7 +398,38 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
         PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0));
     for (unsigned i = 0, e = activeRegion.getNumRows(); i < e; ++i)
       activeRegionRel.addInequality(activeRegionNorm.getRow(i));
-    activeRegions.push_back(PresburgerSet(activeRegionRel));
+    // TODO check for simplicial
+
+    // Now, we compute the generating function at this vertex.
+    // We collect the inequalities corresponding to each vertex to compute
+    // the tangent cone at that vertex.
+    SmallVector<MPInt> ineq(numVars + 1);
+
+    // We only need the coefficients of the variables (NOT the parameters)
+    // as the generating function only depends on these.
+    // We translate the cones to be pointed at the origin by making the
+    // constant terms zero.
+    ConeH tangentCone = defineHRep(numVars);
+    for (unsigned j = 0; j < numVars; ++j) {
+      for (unsigned k = 0; k < numVars; ++k)
+        ineq[k] = subset(j, k);
+      tangentCone.addInequality(ineq);
+    }
+    // We assume that the tangent cone is unimodular, so there is no need
+    // to decompose it.
+    // In the general case, the unimodular decomposition may have several
+    // cones.
+    GeneratingFunction vertexGf(numSymbols, {}, {}, {});
+    SmallVector<std::pair<int, ConeH>, 4> unimodCones = {{1, tangentCone}};
+    for (std::pair<int, ConeH> signedCone : unimodCones) {
+      auto [sign, cone] = signedCone;
+      vertexGf = vertexGf +
+                 computeUnimodularConeGeneratingFunction(*vertex, sign, cone);
+    }
+    // We store the vertex we computed with the generating function of its
+    // tangent cones.
+    regionsAndGeneratingFunctions.emplace_back(PresburgerSet(activeRegionRel),
+                                               vertexGf);
   }
 
   // Now, we use Clauss-Loechner decomposition to identify regions in parameter
@@ -400,46 +437,9 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
   // property that no two of them have a full-dimensional intersection, i.e.,
   // they may share "faces" or "edges", but their intersection can only have
   // up to numVars - 1 dimensions.
-  std::vector<std::pair<PresburgerSet, std::vector<unsigned>>> chambers =
-      computeChamberDecomposition(activeRegions, vertices);
-
-  // Now, we compute the generating function. For each chamber, we iterate over
-  // the vertices active in it, and compute the generating function for each
-  // of them. The sum of these generating functions is the GF corresponding to
-  // the entire polytope.
-  SmallVector<MPInt> ineq(numVars + 1);
-  for (const std::pair<PresburgerSet, std::vector<unsigned>> &chamber :
-       chambers) {
-    auto [currentRegion, currentVertices] = chamber;
-    GeneratingFunction chamberGf(numSymbols, {}, {}, {});
-    for (unsigned i : currentVertices) {
-      // We collect the inequalities corresponding to each vertex to compute
-      // the tangent cone at that vertex.
-      // We only need the coefficients of the variables (NOT the parameters)
-      // as the generating function only depends on these.
-      // We translate the cones to be pointed at the origin by making the
-      // constant terms zero.
-      ConeH tangentCone = defineHRep(numVars);
-      for (unsigned j = 0; j < numVars; ++j) {
-        for (unsigned k = 0; k < numVars; ++k)
-          ineq[k] = subsets[i](j, k);
-        tangentCone.addInequality(ineq);
-      }
-      // We assume that the tangent cone is unimodular, so there is no need
-      // to decompose it.
-      // In the general case, the unimodular decomposition may have several
-      // cones.
-      SmallVector<std::pair<int, ConeH>, 4> unimodCones = {
-          std::make_pair(1, tangentCone)};
-      for (std::pair<int, ConeH> signedCone : unimodCones) {
-        auto [sign, cone] = signedCone;
-        chamberGf = chamberGf + computeUnimodularConeGeneratingFunction(
-                                    vertices[i], sign, cone);
-      }
-    }
-    gf.emplace_back(currentRegion, chamberGf);
-  }
-  return gf;
+  // In each chamber, we sum up the generating functions of the active vertices
+  // to find the generating function of the polytope.
+  return computeChamberDecomposition(numSymbols, regionsAndGeneratingFunctions);
 }
 
 /// We use an iterative procedure to find a vector not orthogonal
