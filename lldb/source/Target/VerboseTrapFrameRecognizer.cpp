@@ -1,0 +1,98 @@
+#include "lldb/Target/VerboseTrapFrameRecognizer.h"
+
+#include "lldb/Core/Module.h"
+#include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Target.h"
+
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+
+using namespace llvm;
+using namespace lldb;
+using namespace lldb_private;
+
+VerboseTrapRecognizedStackFrame::VerboseTrapRecognizedStackFrame(
+    StackFrameSP most_relevant_frame_sp, std::string stop_desc)
+    : m_most_relevant_frame(most_relevant_frame_sp) {
+  m_stop_desc = std::move(stop_desc);
+}
+
+lldb::RecognizedStackFrameSP
+VerboseTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
+  if (frame_sp->GetFrameIndex())
+    return {};
+
+  ThreadSP thread_sp = frame_sp->GetThread();
+  ProcessSP process_sp = thread_sp->GetProcess();
+
+  StackFrameSP most_relevant_frame_sp = thread_sp->GetStackFrameAtIndex(1);
+
+  if (!most_relevant_frame_sp) {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOG(
+        log,
+        "Failed to find most relevant frame: Hit unwinding bound (1 frame)!");
+    return {};
+  }
+
+  SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextEverything);
+
+  if (!sc.block)
+    return {};
+
+  // The runtime error is set as the function name in the inlined function info
+  // of frame #0 by the compiler
+  const InlineFunctionInfo *inline_info = nullptr;
+  Block *inline_block = sc.block->GetContainingInlinedBlock();
+
+  if (!inline_block)
+    return {};
+
+  inline_info = sc.block->GetInlinedFunctionInfo();
+
+  if (!inline_info)
+    return {};
+
+  auto error_message = inline_info->GetName().GetString();
+  if (error_message.empty())
+    return {};
+
+  // Replaces "__llvm_verbose_trap: " with "Runtime Error: "
+  auto space_position = error_message.find(" ");
+  if (space_position == std::string::npos) {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "Unexpected function name format. Expected '<trap prefix>: "
+              "<trap message>' but got: '%s'.",
+              error_message.c_str());
+
+    return {};
+  }
+
+  error_message.replace(0, space_position, "Runtime Error:");
+
+  return lldb::RecognizedStackFrameSP(new VerboseTrapRecognizedStackFrame(
+      most_relevant_frame_sp, std::move(error_message)));
+}
+
+lldb::StackFrameSP VerboseTrapRecognizedStackFrame::GetMostRelevantFrame() {
+  return m_most_relevant_frame;
+}
+
+namespace lldb_private {
+
+void RegisterVerboseTrapFrameRecognizer(Process &process) {
+  RegularExpressionSP module_regex_sp = nullptr;
+  RegularExpressionSP symbol_regex_sp(
+      new RegularExpression("^__llvm_verbose_trap: "));
+
+  StackFrameRecognizerSP srf_recognizer_sp =
+      std::make_shared<VerboseTrapFrameRecognizer>();
+
+  process.GetTarget().GetFrameRecognizerManager().AddRecognizer(
+      srf_recognizer_sp, module_regex_sp, symbol_regex_sp, false);
+}
+
+} // namespace lldb_private
