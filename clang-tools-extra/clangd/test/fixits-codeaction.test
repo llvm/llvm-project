@@ -81,6 +81,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "isPreferred": true,
 # CHECK-NEXT:      "kind": "quickfix",
 # CHECK-NEXT:      "title": "place parentheses around the assignment to silence this warning"
 # CHECK-NEXT:    },
@@ -122,6 +123,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "isPreferred": true,
 # CHECK-NEXT:      "kind": "quickfix",
 # CHECK-NEXT:      "title": "use '==' to turn this assignment into an equality comparison"
 # CHECK-NEXT:    }
