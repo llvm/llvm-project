@@ -542,7 +542,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
     std::shared_ptr<CompilerInvocation> Invok, StringRef WorkingDir,
     const llvm::cas::CASID &CacheKey, cas::CompileJobCacheResult &CachedResult,
     SmallVectorImpl<char> &DiagText, bool WriteOutputAsCASID,
-    bool UseCASBackend, std::optional<llvm::cas::CASID> *OutMCOutputID) {
+    std::optional<llvm::cas::CASID> *OutMCOutputID) {
   CompilerInstance Clang;
   Clang.setInvocation(std::move(Invok));
   llvm::raw_svector_ostream DiagOS(DiagText);
@@ -573,7 +573,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   std::optional<llvm::cas::CASID> MCOutputID;
   ObjectStoreCachingOutputs CachingOutputs(
       Clang, WorkingDir, std::move(PrefixMapper), WriteOutputAsCASID,
-      UseCASBackend, MCOutputID,
+      Clang.getInvocation().getCodeGenOpts().UseCASBackend, MCOutputID,
       /*CAS*/ nullptr, /*Cache*/ nullptr);
   if (OutMCOutputID)
     *OutMCOutputID = std::move(MCOutputID);
