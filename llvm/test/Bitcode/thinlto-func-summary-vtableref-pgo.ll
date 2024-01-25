@@ -1,4 +1,8 @@
-; RUN: opt -module-summary %s -o %t.o
+; Promote at most one function and annotate at most one vtable.
+; As a result, only one value (of each relevant kind) shows up in the function
+; summary.
+
+; RUN: opt -module-summary -icp-max-num-vtables=1 -icp-max-prom=1 %s -o %t.o
 
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
 
@@ -11,15 +15,17 @@
 ; CHECK-NEXT:   <FLAGS op0=0/>
 ; The `VALUE_GUID` below represents the "_ZTV4Base" referenced by the instruction
 ; that loads vtable pointers.
-; CHECK-NEXT:   <VALUE_GUID op0=18 op1=1960855528937986108/>
+; CHECK-NEXT: <VALUE_GUID op0=21 op1=1960855528937986108/>
 ; The `VALUE_GUID` below represents the "_ZN4Base4funcEv" referenced by the
 ; indirect call instruction.
-; CHECK-NEXT:   <VALUE_GUID op0=17 op1=5459407273543877811/>
+; CHECK-NEXT:      <VALUE_GUID op0=20 op1=5459407273543877811/>
+; NOTE vtables and functions from Derived class is dropped because
+; `-icp-max-num-vtables` and `-icp-max-prom` are both set to one.
 ; <PERMODULE_PROFILE> has the format [valueid, flags, instcount, funcflags,
 ;                                     numrefs, rorefcnt, worefcnt,
 ;                                     m x valueid,
 ;                                     n x (valueid, hotness+tailcall)]
-; CHECK-NEXT:   <PERMODULE_PROFILE abbrevid=4 op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=18 op8=17 op9=3/>
+; CHECK-NEXT:   <PERMODULE_PROFILE abbrevid=4 op0=0 op1=0 op2=4 op3=256 op4=1 op5=1 op6=0 op7=21 op8=20 op9=3/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -35,7 +41,6 @@ define i32 @_Z4testP4Base(ptr %0) !prof !15 {
 }
 
 !llvm.module.flags = !{!1}
-
 
 !1 = !{i32 1, !"ProfileSummary", !2}
 !2 = !{!3, !4, !5, !6, !7, !8, !9, !10}
@@ -53,10 +58,12 @@ define i32 @_Z4testP4Base(ptr %0) !prof !15 {
 !14 = !{i32 999999, i64 1, i32 2}
 
 !15 = !{!"function_entry_count", i32 150}
-; 1960855528937986108 is the MD5 hash of _ZTV4Base
-!16 = !{!"VP", i32 2, i64 1600, i64 1960855528937986108, i64 1600}
-; 5459407273543877811 is the MD5 hash of _ZN4Base4funcEv
-!17 = !{!"VP", i32 0, i64 1600, i64 5459407273543877811, i64 1600}
+; 1960855528937986108 is the MD5 hash of _ZTV4Base, and
+; 13870436605473471591 is the MD5 hash of _ZTV7Derived
+!16 = !{!"VP", i32 2, i64 150, i64 1960855528937986108, i64 100, i64 13870436605473471591, i64 50}
+; 5459407273543877811 is the MD5 hash of _ZN4Base4funcEv, and
+; 6174874150489409711 is the MD5 hash of  _ZN7Derived4funcEv
+!17 = !{!"VP", i32 0, i64 150, i64 5459407273543877811, i64 100, i64 6174874150489409711, i64 50}
 
 ; ModuleSummaryIndex stores <guid, global-value summary> map in std::map; so
 ; global value summares are printed out in the order that gv's guid increases.

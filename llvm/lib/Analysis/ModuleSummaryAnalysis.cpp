@@ -82,6 +82,8 @@ static cl::opt<std::string> ModuleSummaryDotFile(
 
 extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
@@ -129,14 +131,10 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
   if (I) {
     uint32_t ActualNumValueData = 0;
     uint64_t TotalCount = 0;
-    // 24 is the maximum number of values preserved for one instrumented site,
-    // defined by INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE in
-    // compiler-rt/lib/profile/InstrProfilingValue.c; passing 24 as
-    // `MaxNumValueData` controls the max number of elements in the returned
-    // array. The actual number of values is gated by the number of ops in !prof
-    // metadata.
+    // MaxNumVTableAnnotations is the maximum number of vtables annotated on
+    // the instruction.
     auto ValueDataArray = getValueProfDataFromInst(
-        *I, IPVK_VTableTarget, 24 /* MaxNumValueData */, ActualNumValueData,
+        *I, IPVK_VTableTarget, MaxNumVTableAnnotations /* MaxNumValueData */, ActualNumValueData,
         TotalCount);
 
     if (ValueDataArray.get()) {
