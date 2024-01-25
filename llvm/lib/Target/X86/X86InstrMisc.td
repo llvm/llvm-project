@@ -1223,7 +1223,7 @@ multiclass Bls<string m, Format RegMRM, Format MemMRM, X86TypeInfo t, string Suf
                              (outs t.RegClass:$dst), []>, T8, VVVV;
 }
 
-let Predicates = [HasBMI], Defs = [EFLAGS] in {
+let Defs = [EFLAGS] in {
   defm BLSR32 : Bls<"blsr", MRM1r, MRM1m, Xi32>, VEX;
   defm BLSR64 : Bls<"blsr", MRM1r, MRM1m, Xi64>, VEX;
   defm BLSMSK32 : Bls<"blsmsk", MRM2r, MRM2m, Xi32>, VEX;
@@ -1232,13 +1232,22 @@ let Predicates = [HasBMI], Defs = [EFLAGS] in {
   defm BLSI64 : Bls<"blsi", MRM3r, MRM3m, Xi64>, VEX;
 }
 
-let Predicates = [HasBMI, In64BitMode], Defs = [EFLAGS] in {
+let Predicates = [In64BitMode], Defs = [EFLAGS] in {
   defm BLSR32 : Bls<"blsr", MRM1r, MRM1m, Xi32, "_EVEX">, EVEX;
   defm BLSR64 : Bls<"blsr", MRM1r, MRM1m, Xi64, "_EVEX">, EVEX;
   defm BLSMSK32 : Bls<"blsmsk", MRM2r, MRM2m, Xi32, "_EVEX">, EVEX;
   defm BLSMSK64 : Bls<"blsmsk", MRM2r, MRM2m, Xi64, "_EVEX">, EVEX;
   defm BLSI32 : Bls<"blsi", MRM3r, MRM3m, Xi32, "_EVEX">, EVEX;
   defm BLSI64 : Bls<"blsi", MRM3r, MRM3m, Xi64, "_EVEX">, EVEX;
+}
+
+let Predicates = [In64BitMode] in {
+  defm BLSR32 : Bls<"blsr", MRM1r, MRM1m, Xi32, "_NF">, EVEX, EVEX_NF;
+  defm BLSR64 : Bls<"blsr", MRM1r, MRM1m, Xi64, "_NF">, EVEX, EVEX_NF;
+  defm BLSMSK32 : Bls<"blsmsk", MRM2r, MRM2m, Xi32, "_NF">, EVEX, EVEX_NF;
+  defm BLSMSK64 : Bls<"blsmsk", MRM2r, MRM2m, Xi64, "_NF">, EVEX, EVEX_NF;
+  defm BLSI32 : Bls<"blsi", MRM3r, MRM3m, Xi32, "_NF">, EVEX, EVEX_NF;
+  defm BLSI64 : Bls<"blsi", MRM3r, MRM3m, Xi64, "_NF">, EVEX, EVEX_NF;
 }
 
 multiclass Bls_Pats<string suffix> {
@@ -1313,6 +1322,13 @@ let Predicates = [HasBMI, HasEGPR, In64BitMode], Defs = [EFLAGS] in {
 let Predicates = [HasBMI2, HasEGPR, In64BitMode], Defs = [EFLAGS] in {
   defm BZHI32 : Bmi4VOp3<0xF5, "bzhi", Xi32, X86bzhi, WriteBZHI, "_EVEX">, EVEX;
   defm BZHI64 : Bmi4VOp3<0xF5, "bzhi", Xi64, X86bzhi, WriteBZHI, "_EVEX">, EVEX;
+}
+
+let Predicates = [In64BitMode] in {
+  defm BEXTR32 : Bmi4VOp3<0xF7, "bextr", Xi32, null_frag, WriteBEXTR, "_NF">, EVEX, EVEX_NF;
+  defm BEXTR64 : Bmi4VOp3<0xF7, "bextr", Xi64, null_frag, WriteBEXTR, "_NF">, EVEX, EVEX_NF;
+  defm BZHI32 : Bmi4VOp3<0xF5, "bzhi", Xi32, null_frag, WriteBZHI, "_NF">, EVEX, EVEX_NF;
+  defm BZHI64 : Bmi4VOp3<0xF5, "bzhi", Xi64, null_frag, WriteBZHI, "_NF">, EVEX, EVEX_NF;
 }
 
 def CountTrailingOnes : SDNodeXForm<imm, [{

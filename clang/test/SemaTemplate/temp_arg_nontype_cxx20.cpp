@@ -336,3 +336,21 @@ template<int ...Ns> void bar(B b) {
   (b.operator Tbar<Ns>(), ...);
 }
 }
+
+namespace ReportedRegression1 {
+  const char kt[] = "dummy";
+
+  template <class T, const char id[]>
+    class SomeTempl { };
+
+  template <const char id[]>
+    class SomeTempl<int, id> {
+      public:
+        int exit_code() const { return 0; }
+    };
+
+  int use() {
+    SomeTempl<int, kt> dummy;
+    return dummy.exit_code();
+  }
+}
