@@ -22,6 +22,12 @@ static bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value) {
       ofrs, [&](OpFoldResult ofr) { return isConstantIntValue(ofr, value); });
 }
 
+/// Returns the number of shape sizes that is either dynamic or greater than 1.
+static int64_t getNumGtOneDims(ArrayRef<int64_t> shape) {
+  return llvm::count_if(
+      shape, [](int64_t v) { return ShapedType::isDynamic(v) || v > 1; });
+}
+
 /// Packing one-dimensional tensor can be expressed as an expand shape op.
 struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   using OpRewritePattern<PackOp>::OpRewritePattern;
@@ -34,11 +40,9 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
                                                   reassociation);
   }
 
-  LogicalResult matchAndRewrite(PackOp packOp,
-                                PatternRewriter &rewriter) const override {
-    if (packOp.getPaddingValue())
-      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
-
+  /// Returns success() if it is only packing on the innermost dimension.
+  LogicalResult isPackOnInnerMostDim(RewriterBase &rewriter,
+                                     PackOp packOp) const {
     auto outerDimsPerm = packOp.getOuterDimsPerm();
     if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
       return rewriter.notifyMatchFailure(
@@ -46,14 +50,50 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
           "expects outer_dims_perm is empty or an identity permutation");
     }
 
-    RankedTensorType sourceType = packOp.getSourceType();
-    RankedTensorType destType = packOp.getDestType();
+    int64_t srcRank = packOp.getSourceRank();
     ArrayRef<int64_t> dimsPos = packOp.getInnerDimsPos();
-    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != sourceType.getRank())) {
+    if (dimsPos.size() != 1 || (dimsPos[0] + 1 != srcRank)) {
       return rewriter.notifyMatchFailure(
           packOp, "expects packing at the innermost dimension");
     }
+    return success();
+  }
 
+  /// Returns success() if there is only 1 dimension size in source being
+  /// greater than 1 and packing only happens on the dimension. It assumes that
+  /// the pack op does not have padding value.
+  LogicalResult isPack1DSrc(RewriterBase &rewriter, PackOp packOp) const {
+    assert(!packOp.getPaddingValue() &&
+           "expect the op does not have padding value.");
+    ArrayRef<int64_t> srcShape = packOp.getSourceType().getShape();
+    if (getNumGtOneDims(srcShape) > 1) {
+      return rewriter.notifyMatchFailure(
+          packOp, "expects source to have at most one non-unit dims");
+    }
+
+    // The pack op does not have padding value. Non-unit inner tile size must be
+    // be used by the non-unit dimension.
+    SmallVector<int64_t> innerTiles = packOp.getStaticTiles();
+    if (getNumGtOneDims(innerTiles) > 1) {
+      return rewriter.notifyMatchFailure(
+          packOp, "expects at most one non-unit inner tiles");
+    }
+
+    return success();
+  }
+
+  LogicalResult matchAndRewrite(PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    if (packOp.getPaddingValue())
+      return rewriter.notifyMatchFailure(packOp, "expects no padding value");
+
+    if (failed(isPackOnInnerMostDim(rewriter, packOp)) &&
+        failed(isPack1DSrc(rewriter, packOp))) {
+      return failure();
+    }
+
+    RankedTensorType sourceType = packOp.getSourceType();
+    RankedTensorType destType = packOp.getDestType();
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
