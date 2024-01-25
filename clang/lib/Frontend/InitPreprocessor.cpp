@@ -858,20 +858,20 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case clang::LangOptions::STDLIB_HARDENING_MODE_NOT_SPECIFIED:
       llvm_unreachable("Unexpected libc++ hardening mode value");
     case clang::LangOptions::STDLIB_HARDENING_MODE_NONE:
-      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_NONE";
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_NONE";
       break;
     case clang::LangOptions::STDLIB_HARDENING_MODE_FAST:
-      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_FAST";
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_FAST";
       break;
     case clang::LangOptions::STDLIB_HARDENING_MODE_EXTENSIVE:
-      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_EXTENSIVE";
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_EXTENSIVE";
       break;
     case clang::LangOptions::STDLIB_HARDENING_MODE_DEBUG:
-      StdlibHardeningStr = "_STDLIB_HARDENING_MODE_DEBUG";
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_DEBUG";
       break;
     }
 
-    Builder.defineMacro("_STDLIB_HARDENING_MODE", StdlibHardeningStr);
+    Builder.defineMacro("_LIBCPP_HARDENING_MODE", StdlibHardeningStr);
   }
 
   // Standard conforming mode?

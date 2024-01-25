@@ -6,11 +6,11 @@
 // RUN: not %clang -x c++ -fstdlib-hardening=debug -stdlib=libstdc++ %s 2>&1 | FileCheck -check-prefix=ERROR %s
 // RUN: not %clang -x c -fstdlib-hardening=debug %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
-// UNSPECIFIED-NOT: _STDLIB_HARDENING_MODE
+// UNSPECIFIED-NOT: _LIBCPP_HARDENING_MODE
 
-// NONE: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_NONE
-// FAST: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_FAST
-// EXTENSIVE: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_EXTENSIVE
-// DEBUG: #define _STDLIB_HARDENING_MODE _STDLIB_HARDENING_MODE_DEBUG
+// NONE: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_NONE
+// FAST: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_FAST
+// EXTENSIVE: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_EXTENSIVE
+// DEBUG: #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEBUG
 
-// ERROR: standard library hardening is available only when libc++ is used
+// ERROR: libc++ hardening is available only when libc++ is used
