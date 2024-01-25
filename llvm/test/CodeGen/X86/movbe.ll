@@ -24,16 +24,16 @@ define void @test1(ptr nocapture %x, i16 %y) nounwind {
 ; SLM-NEXT:    movbew %si, (%rdi)
 ; SLM-NEXT:    retq
 ;
+; EGPR-LABEL: test1:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movbew %si, (%rdi) # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0xf1,0x37]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+;
 ; NOMOVBE-LABEL: test1:
 ; NOMOVBE:       # %bb.0:
 ; NOMOVBE-NEXT:    rolw $8, %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0xc6,0x08]
 ; NOMOVBE-NEXT:    movw %ax, (%rdi) # encoding: [0x66,0x89,0x07]
 ; NOMOVBE-NEXT:    retq # encoding: [0xc3]
-;
-; EGPR-LABEL: test1:
-; EGPR:       # %bb.0:
-; EGPR-NEXT:    movbew %si, (%rdi) # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0xf1,0x37]
-; EGPR-NEXT:    retq # encoding: [0xc3]
   %bswap = call i16 @llvm.bswap.i16(i16 %y)
   store i16 %bswap, ptr %x, align 2
   ret void
@@ -56,15 +56,15 @@ define i16 @test2(ptr %x) nounwind {
 ; SLM-NEXT:    movbew (%rdi), %ax
 ; SLM-NEXT:    retq
 ;
-; NOMOVBE-LABEL: test2:
-; NOMOVBE:       # %bb.0:
-; NOMOVBE-NEXT:    rolw $8, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x07,0x08]
-; NOMOVBE-NEXT:    retq # encoding: [0xc3]
-;
 ; EGPR-LABEL: test2:
 ; EGPR:       # %bb.0:
 ; EGPR-NEXT:    movbew (%rdi), %ax # EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0xf0,0x07]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
+;
+; NOMOVBE-LABEL: test2:
+; NOMOVBE:       # %bb.0:
+; NOMOVBE-NEXT:    rolw $8, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xc1,0x07,0x08]
+; NOMOVBE-NEXT:    retq # encoding: [0xc3]
   %load = load i16, ptr %x, align 2
   %bswap = call i16 @llvm.bswap.i16(i16 %load)
   ret i16 %bswap
@@ -87,16 +87,16 @@ define void @test3(ptr nocapture %x, i32 %y) nounwind {
 ; SLM-NEXT:    movbel %esi, (%rdi)
 ; SLM-NEXT:    retq
 ;
+; EGPR-LABEL: test3:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movbel %esi, (%rdi) # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xf1,0x37]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+;
 ; NOMOVBE-LABEL: test3:
 ; NOMOVBE:       # %bb.0:
 ; NOMOVBE-NEXT:    bswapl %esi # encoding: [0x0f,0xce]
 ; NOMOVBE-NEXT:    movl %esi, (%rdi) # encoding: [0x89,0x37]
 ; NOMOVBE-NEXT:    retq # encoding: [0xc3]
-;
-; EGPR-LABEL: test3:
-; EGPR:       # %bb.0:
-; EGPR-NEXT:    movbel %esi, (%rdi) # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xf1,0x37]
-; EGPR-NEXT:    retq # encoding: [0xc3]
   %bswap = call i32 @llvm.bswap.i32(i32 %y)
   store i32 %bswap, ptr %x, align 4
   ret void
@@ -119,16 +119,16 @@ define i32 @test4(ptr %x) nounwind {
 ; SLM-NEXT:    movbel (%rdi), %eax
 ; SLM-NEXT:    retq
 ;
+; EGPR-LABEL: test4:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movbel (%rdi), %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xf0,0x07]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+;
 ; NOMOVBE-LABEL: test4:
 ; NOMOVBE:       # %bb.0:
 ; NOMOVBE-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
 ; NOMOVBE-NEXT:    bswapl %eax # encoding: [0x0f,0xc8]
 ; NOMOVBE-NEXT:    retq # encoding: [0xc3]
-;
-; EGPR-LABEL: test4:
-; EGPR:       # %bb.0:
-; EGPR-NEXT:    movbel (%rdi), %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xf0,0x07]
-; EGPR-NEXT:    retq # encoding: [0xc3]
   %load = load i32, ptr %x, align 4
   %bswap = call i32 @llvm.bswap.i32(i32 %load)
   ret i32 %bswap
@@ -151,16 +151,16 @@ define void @test5(ptr %x, i64 %y) nounwind {
 ; SLM-NEXT:    movbeq %rsi, (%rdi)
 ; SLM-NEXT:    retq
 ;
+; EGPR-LABEL: test5:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movbeq %rsi, (%rdi) # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf1,0x37]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+;
 ; NOMOVBE-LABEL: test5:
 ; NOMOVBE:       # %bb.0:
 ; NOMOVBE-NEXT:    bswapq %rsi # encoding: [0x48,0x0f,0xce]
 ; NOMOVBE-NEXT:    movq %rsi, (%rdi) # encoding: [0x48,0x89,0x37]
 ; NOMOVBE-NEXT:    retq # encoding: [0xc3]
-;
-; EGPR-LABEL: test5:
-; EGPR:       # %bb.0:
-; EGPR-NEXT:    movbeq %rsi, (%rdi) # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf1,0x37]
-; EGPR-NEXT:    retq # encoding: [0xc3]
   %bswap = call i64 @llvm.bswap.i64(i64 %y)
   store i64 %bswap, ptr %x, align 8
   ret void
@@ -183,16 +183,16 @@ define i64 @test6(ptr %x) nounwind {
 ; SLM-NEXT:    movbeq (%rdi), %rax
 ; SLM-NEXT:    retq
 ;
+; EGPR-LABEL: test6:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movbeq (%rdi), %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf0,0x07]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+;
 ; NOMOVBE-LABEL: test6:
 ; NOMOVBE:       # %bb.0:
 ; NOMOVBE-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
 ; NOMOVBE-NEXT:    bswapq %rax # encoding: [0x48,0x0f,0xc8]
 ; NOMOVBE-NEXT:    retq # encoding: [0xc3]
-;
-; EGPR-LABEL: test6:
-; EGPR:       # %bb.0:
-; EGPR-NEXT:    movbeq (%rdi), %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf0,0x07]
-; EGPR-NEXT:    retq # encoding: [0xc3]
   %load = load i64, ptr %x, align 8
   %bswap = call i64 @llvm.bswap.i64(i64 %load)
   ret i64 %bswap
@@ -215,16 +215,16 @@ define i64 @test7(i64 %x) nounwind {
 ; SLM-NEXT:    bswapq %rax
 ; SLM-NEXT:    retq
 ;
+; EGPR-LABEL: test7:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movbeq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x08,0x61,0xf8]
+; EGPR-NEXT:    retq # encoding: [0xc3]
+;
 ; NOMOVBE-LABEL: test7:
 ; NOMOVBE:       # %bb.0:
 ; NOMOVBE-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
 ; NOMOVBE-NEXT:    bswapq %rax # encoding: [0x48,0x0f,0xc8]
 ; NOMOVBE-NEXT:    retq # encoding: [0xc3]
-;
-; EGPR-LABEL: test7:
-; EGPR:       # %bb.0:
-; EGPR-NEXT:    movbeq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x08,0x61,0xf8]
-; EGPR-NEXT:    retq # encoding: [0xc3]
   %bswap = call i64 @llvm.bswap.i64(i64 %x)
   ret i64 %bswap
 }
