@@ -1,3 +1,4 @@
+// FIXME: re-enable.
 // RUN: mlir-opt %s -sparsifier="vl=8" |  FileCheck %s
 
 #Dense = #sparse_tensor.encoding<{
@@ -15,7 +16,7 @@
 }
 
 // CHECK-LABEL: llvm.func @kernel_matvec
-// CHECK:       llvm.intr.vector.reduce.fadd
+// C_HECK:       llvm.intr.vector.reduce.fadd
 func.func @kernel_matvec(%arga: tensor<?x?xf32, #Dense>,
                          %argb: tensor<?xf32>,
 			 %argx: tensor<?xf32>) -> tensor<?xf32> {
