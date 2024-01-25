@@ -936,10 +936,15 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  if (Ty->getElementType()->isIntegerTy(1))
-    // vcpop sequences, see vreduction-mask.ll.  umax, smin actually only
-    // cost 2, but we don't have enough info here so we slightly over cost.
-    return (LT.first - 1) + 3;
+  if (Ty->getElementType()->isIntegerTy(1)) {
+    // InstCombine does following transform:
+    // vector_reduce_u{min,max}(<n x i1>) --> vector_reduce_{and,or}(<n x i1>)
+    // vector_reduce_s{min,max}(<n x i1>) --> vector_reduce_{or,and}(<n x i1>)
+    if ((IID == Intrinsic::umax) || (IID == Intrinsic::smin))
+      return getArithmeticReductionCost(Instruction::Or, Ty, FMF, CostKind);
+    else
+      return getArithmeticReductionCost(Instruction::And, Ty, FMF, CostKind);
+  }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
