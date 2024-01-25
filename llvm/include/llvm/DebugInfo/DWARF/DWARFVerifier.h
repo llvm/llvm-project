@@ -81,12 +81,15 @@ private:
   private:
     DWARFVerifier &Verifier;
     std::map<std::string, int> UniqueErrors;
+    raw_ostream *NextLineOverride;
+
     static std::string Clean(const char *s);
 
   public:
-    ErrorAggregator(DWARFVerifier &v) : Verifier(v) {}
+    ErrorAggregator(DWARFVerifier &v) : Verifier(v), NextLineOverride(nullptr) {}
     raw_ostream &operator<<(const char *s);
-    void Collect(const std::string &s);
+    ErrorAggregator &NextLineStreamOverride(raw_ostream &o);
+    raw_ostream &Collect(const std::string &s);
     void Dump();
   };
   friend class ErrorAggregator;
@@ -102,13 +105,20 @@ private:
   using ReferenceMap = std::map<uint64_t, std::set<uint64_t>>;
 
   // For errors that have sensible names as the first (or only) string
-  // you can just use aggregate() << "DIE looks stupid: " << details...
-  // and it will get aggregated as "DIE looks stupid".
+  // you can just use aggregate() << "DIE is damaged: " << details...
+  // and it will get aggregated as "DIE is damaged".
   ErrorAggregator &aggregate();
-  // For errors that have details before good 'categories', you'll need
-  // to provide the aggregated name, like this:
-  // aggregate("CU index is busted") << "CU index [" << n << "] is busted"
+  // For errors that have the useful aggregated category in a non-error stream
+  // you can do things like this (aggregated as 'Die size is wrong')
+  // aggregate(note()) << "DIE size is wrong.\n"
+  ErrorAggregator &aggregate(raw_ostream &);
+
+  // For errors that have valuable detail before text that is the appropriate
+  // aggregate category, you can provide the aggregated name for the error like
+  // this:
+  // aggregate("CU index is broken") << "CU index [" << n << "] is broken"
   raw_ostream &aggregate(const char *);
+
   raw_ostream &error() const;
   raw_ostream &warn() const;
   raw_ostream &note() const;
