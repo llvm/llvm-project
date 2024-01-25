@@ -1829,7 +1829,6 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   // Clone the terminator and hoist it into the pred, without any debug info.
   Instruction *NT = I1->clone();
   NT->insertInto(TIParent, TI->getIterator());
-
   if (!NT->getType()->isVoidTy()) {
     I1->replaceAllUsesWith(NT);
     for (Instruction *OtherSuccTI : OtherSuccTIs)
