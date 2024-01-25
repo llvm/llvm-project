@@ -972,10 +972,9 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
   // that leads to this block.
   // FIXME: Is this really needed? Is this a correctness issue?
   for (BasicBlock *Pred : predecessors(BB)) {
-    if (auto *CBI = dyn_cast<CallBrInst>((Pred)->getTerminator()))
-      for (unsigned i = 0, e = CBI->getNumSuccessors(); i != e; ++i)
-        if (DestBB == CBI->getSuccessor(i))
-          return false;
+    if (isa<CallBrInst>(Pred->getTerminator()) &&
+        llvm::is_contained(successors(Pred), DestBB))
+      return false;
   }
 
   // Try to skip merging if the unique predecessor of BB is terminated by a

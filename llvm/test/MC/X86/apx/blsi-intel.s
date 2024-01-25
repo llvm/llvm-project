@@ -1,5 +1,37 @@
 # RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -output-asm-variant=1 --show-encoding %s | FileCheck %s
 
+# CHECK: {nf}	blsi	edx, ecx
+# CHECK: encoding: [0x62,0xf2,0x6c,0x0c,0xf3,0xd9]
+         {nf}	blsi	edx, ecx
+
+# CHECK: {evex}	blsi	edx, ecx
+# CHECK: encoding: [0x62,0xf2,0x6c,0x08,0xf3,0xd9]
+         {evex}	blsi	edx, ecx
+
+# CHECK: {nf}	blsi	r15, r9
+# CHECK: encoding: [0x62,0xd2,0x84,0x0c,0xf3,0xd9]
+         {nf}	blsi	r15, r9
+
+# CHECK: {evex}	blsi	r15, r9
+# CHECK: encoding: [0x62,0xd2,0x84,0x08,0xf3,0xd9]
+         {evex}	blsi	r15, r9
+
+# CHECK: {nf}	blsi	ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0x74,0x0c,0xf3,0x5c,0x98,0x7b]
+         {nf}	blsi	ecx, dword ptr [rax + 4*rbx + 123]
+
+# CHECK: {evex}	blsi	ecx, dword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0x74,0x08,0xf3,0x5c,0x98,0x7b]
+         {evex}	blsi	ecx, dword ptr [rax + 4*rbx + 123]
+
+# CHECK: {nf}	blsi	r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0xb4,0x0c,0xf3,0x5c,0x98,0x7b]
+         {nf}	blsi	r9, qword ptr [rax + 4*rbx + 123]
+
+# CHECK: {evex}	blsi	r9, qword ptr [rax + 4*rbx + 123]
+# CHECK: encoding: [0x62,0xf2,0xb4,0x08,0xf3,0x5c,0x98,0x7b]
+         {evex}	blsi	r9, qword ptr [rax + 4*rbx + 123]
+
 # CHECK: blsi	r22d, r18d
 # CHECK: encoding: [0x62,0xfa,0x4c,0x00,0xf3,0xda]
          blsi	r22d, r18d

@@ -212,6 +212,7 @@ public:
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,

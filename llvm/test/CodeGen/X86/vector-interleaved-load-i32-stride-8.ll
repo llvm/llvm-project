@@ -153,7 +153,7 @@ define void @load_i32_stride8_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FAST-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512-FAST-NEXT:    vmovdqa 32(%rdi), %xmm1
 ; AVX512-FAST-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX512-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,5,1,5]
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm3 = [1,5,0,0]
 ; AVX512-FAST-NEXT:    vpermi2d %xmm1, %xmm0, %xmm3
 ; AVX512-FAST-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX512-FAST-NEXT:    vmovdqa 32(%rdi), %ymm1

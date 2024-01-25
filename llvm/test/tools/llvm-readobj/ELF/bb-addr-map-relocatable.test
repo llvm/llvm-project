@@ -1,9 +1,6 @@
 ## This test checks how we handle the --bb-addr-map option on relocatable
 ## object files.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 # RUN: yaml2obj %s -o %t1.o
 # RUN: llvm-readobj %t1.o --bb-addr-map | FileCheck %s
 

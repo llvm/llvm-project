@@ -56,7 +56,6 @@ add_llvm_component_library(LLVMCodeGen
   CFIInstrInserter.cpp
   CodeGen.cpp
   CodeGenCommonISel.cpp
-  CodeGenPassBuilder.cpp
   CodeGenPrepare.cpp
   CommandFlags.cpp
   ComplexDeinterleavingPass.cpp
@@ -79,6 +78,7 @@ add_llvm_component_library(LLVMCodeGen
   FEntryInserter.cpp
   FinalizeISel.cpp
   FixupStatepointCallerSaved.cpp
+  FreeMachineFunction.cpp
   FuncletLayout.cpp
   GCMetadata.cpp
   GCMetadataPrinter.cpp

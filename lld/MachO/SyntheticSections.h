@@ -336,7 +336,7 @@ public:
 private:
   std::vector<Defined *> symbols;
   std::vector<uint32_t> offsets;
-  int objcMsgSendGotIndex = 0;
+  Symbol *objcMsgSend = nullptr;
 };
 
 // Note that this section may also be targeted by non-lazy bindings. In

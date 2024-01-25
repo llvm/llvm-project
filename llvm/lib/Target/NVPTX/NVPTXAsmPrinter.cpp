@@ -1292,10 +1292,21 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
+  // Do not emit trailing zero initializers. They will be zero-initialized by
+  // ptxas. This saves on both space requirements for the generated PTX and on
+  // memory use by ptxas. (See:
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
+  unsigned int InitializerCount = size;
+  // TODO: symbols make this harder, but it would still be good to trim trailing
+  // 0s for aggs with symbols as well.
+  if (numSymbols() == 0)
+    while (InitializerCount >= 1 && !buffer[InitializerCount - 1])
+      InitializerCount--;
+
+  symbolPosInBuffer.push_back(InitializerCount);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
-  for (unsigned int pos = 0; pos < size;) {
+  for (unsigned int pos = 0; pos < InitializerCount;) {
     if (pos)
       os << ", ";
     if (pos != nextSymbolPos) {
