@@ -1146,17 +1146,13 @@ static LogicalResult printSupportCall(KokkosCppEmitter &emitter, func::CallOp ca
   // Declare the result (if any) in current scope
   bool hasResult = callOp.getResults().size() == 1;
   bool resultIsMemref = hasResult && isa<MemRefType>(callOp.getResult(0).getType());
-  // Register the space of the result as being HostSpace now
-  emitter.memrefSpaces[callOp.getResult(0)] = MemSpace::Host;
-  if(hasResult)
-  {
-    if(resultIsMemref)
-    {
+  if (hasResult) {
+    // Register the space of the result as being HostSpace now
+    emitter.memrefSpaces[callOp.getResult(0)] = MemSpace::Host;
+    if (resultIsMemref) {
       if(failed(emitter.emitMemrefType(callOp.getLoc(), dyn_cast<MemRefType>(callOp.getResult(0).getType()), MemSpace::Host)))
         return failure();
-    }
-    else
-    {
+    } else {
       if(failed(emitter.emitType(callOp.getLoc(), callOp.getResult(0).getType(), false)))
         return failure();
     }
@@ -1989,8 +1985,8 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
         return failure();
       }
       //If there will be any arg types, add an extra comma
-      if (functionOp.getArgumentTypes().size())
-      {
+      if (!(functionOp.getFunctionType().getResults().empty() ||
+            functionOp.getArgumentTypes().empty())) {
         os << ", ";
       }
     }
