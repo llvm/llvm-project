@@ -576,7 +576,7 @@ static void tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
       write32le(loc, itype(LW, X_A0, X_A0, lo12(val))); // lw a0,<lo12>(a0)
     break;
   default:
-    llvm_unreachable("unsupported relocation for TLSDESC to IE relaxation");
+    llvm_unreachable("unsupported relocation for TLSDESC to IE");
   }
 }
 
@@ -599,7 +599,7 @@ static void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
       write32le(loc, itype(ADDI, X_A0, X_A0, lo12(val))); // addi a0,a0,<lo12>
     return;
   default:
-    llvm_unreachable("unsupported relocation for TLSDESC to LE relaxation");
+    llvm_unreachable("unsupported relocation for TLSDESC to LE");
   }
 }
 
