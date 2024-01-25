@@ -599,7 +599,7 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
 
   // NOTE: we can also prepare for next dim here in advance
   // Pushes the loop into stack.
-  loopStack.emplace_back(tidLvls, l, builder.getInsertionBlock(), iv, loopTag);
+  loopStack.emplace_back(tls, l, builder.getInsertionBlock(), iv, loopTag);
   return l;
 }
 
