@@ -2896,8 +2896,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
-  } else if (name == "associated" || name == "reduce") {
-    // Now handled in Semantics/check-call.cpp
   } else if (name == "atomic_and" || name == "atomic_or" ||
       name == "atomic_xor") {
     return CheckForCoindexedObject(
@@ -2938,20 +2936,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
       context.messages().Say(
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
-    }
-  } else if (name == "present") {
-    const auto &arg{call.arguments[0]};
-    if (arg) {
-      if (const auto *expr{arg->UnwrapExpr()}) {
-        if (const Symbol *symbol{UnwrapWholeSymbolDataRef(*expr)}) {
-          ok = symbol->attrs().test(semantics::Attr::OPTIONAL);
-        }
-      }
-    }
-    if (!ok) {
-      context.messages().Say(
-          arg ? arg->sourceLocation() : context.messages().at(),
-          "Argument of PRESENT() must be the name of an OPTIONAL dummy argument"_err_en_US);
     }
   } else if (name == "ucobound") {
     return CheckDimAgainstCorank(call, context);
