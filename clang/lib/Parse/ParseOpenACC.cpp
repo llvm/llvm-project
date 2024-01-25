@@ -89,6 +89,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
 
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
+      .Case("async", OpenACCClauseKind::Async)
       .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
       .Case("bind", OpenACCClauseKind::Bind)
@@ -104,7 +105,9 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("device", OpenACCClauseKind::Device)
       .Case("device_num", OpenACCClauseKind::DeviceNum)
       .Case("device_resident", OpenACCClauseKind::DeviceResident)
+      .Case("device_type", OpenACCClauseKind::DeviceType)
       .Case("deviceptr", OpenACCClauseKind::DevicePtr)
+      .Case("dtype", OpenACCClauseKind::DType)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("firstprivate", OpenACCClauseKind::FirstPrivate)
       .Case("host", OpenACCClauseKind::Host)
@@ -457,6 +460,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Self:
     return DirKind == OpenACCDirectiveKind::Update ? ClauseParensKind::Required
                                                    : ClauseParensKind::Optional;
+  case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
     return ClauseParensKind::Optional;
@@ -488,6 +492,8 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::NumWorkers:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -580,6 +586,38 @@ bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
   }
   return false;
 }
+
+/// OpenACC 3.3 Section 2.4:
+/// The argument to the device_type clause is a comma-separated list of one or
+/// more device architecture name identifiers, or an asterisk.
+///
+/// The syntax of the device_type clause is
+/// device_type( * )
+/// device_type( device-type-list )
+///
+/// The device_type clause may be abbreviated to dtype.
+bool Parser::ParseOpenACCDeviceTypeList() {
+
+  if (expectIdentifierOrKeyword(*this)) {
+    SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return false;
+  }
+  ConsumeToken();
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    if (expectIdentifierOrKeyword(*this)) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
+      return false;
+    }
+    ConsumeToken();
+  }
+  return false;
+}
+
 // The OpenACC Clause List is a comma or space-delimited list of clauses (see
 // the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
 // really have its owner grammar and each individual one has its own definition.
@@ -709,6 +747,16 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         return true;
       break;
     }
+    case OpenACCClauseKind::DType:
+    case OpenACCClauseKind::DeviceType:
+      if (getCurToken().is(tok::star)) {
+        // FIXME: We want to mark that this is an 'everything else' type of
+        // device_type in Sema.
+        ConsumeToken();
+      } else if (ParseOpenACCDeviceTypeList()) {
+        return true;
+      }
+      break;
     default:
       llvm_unreachable("Not a required parens type?");
     }
@@ -738,6 +786,12 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
           return true;
         break;
       }
+      case OpenACCClauseKind::Async: {
+        ExprResult AsyncArg = ParseOpenACCAsyncArgument();
+        if (AsyncArg.isInvalid())
+          return true;
+        break;
+      }
       default:
         llvm_unreachable("Not an optional parens type?");
       }
@@ -745,6 +799,17 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
     }
   }
   return false;
+}
+
+/// OpenACC 3.3 section 2.16:
+/// In this section and throughout the specification, the term async-argument
+/// means a nonnegative scalar integer expression (int for C or C++, integer for
+/// Fortran), or one of the special values acc_async_noval or acc_async_sync, as
+/// defined in the C header file and the Fortran openacc module. The special
+/// values are negative values, so as not to conflict with a user-specified
+/// nonnegative async-argument.
+ExprResult Parser::ParseOpenACCAsyncArgument() {
+  return getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
 }
 
 /// OpenACC 3.3, section 2.16:

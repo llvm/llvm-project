@@ -1769,7 +1769,7 @@ define <4 x i32> @test_16xi32_to_4xi32_perm_mask9(<16 x i32> %vec) {
 ;
 ; CHECK-FAST-PERLANE-LABEL: test_16xi32_to_4xi32_perm_mask9:
 ; CHECK-FAST-PERLANE:       # %bb.0:
-; CHECK-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm1 = <4,1,u,2>
+; CHECK-FAST-PERLANE-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,1,u,2]
 ; CHECK-FAST-PERLANE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; CHECK-FAST-PERLANE-NEXT:    vpermd %ymm2, %ymm1, %ymm1
 ; CHECK-FAST-PERLANE-NEXT:    vextracti128 $1, %ymm0, %xmm2
