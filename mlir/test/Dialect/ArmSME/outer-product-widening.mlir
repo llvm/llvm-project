@@ -4,20 +4,10 @@
 // CHECK-SAME:    %[[A0:.*]]: vector<[4]xf16>, %[[B0:.*]]: vector<[4]xf16>, %[[A1:.*]]: vector<[4]xf16>, %[[B1:.*]]: vector<[4]xf16>,
 // CHECK-SAME:    %[[A0_MASK:.*]]: vector<[4]xi1>, %[[B0_MASK:.*]]: vector<[4]xi1>, %[[A1_MASK:.*]]: vector<[4]xi1>, %[[B1_MASK:.*]]: vector<[4]xi1>
 // CHECK-DAG: %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<[4]x[4]xf32>
-// CHECK-DAG: %[[VEC_UNDEF:.*]] = llvm.mlir.undef : vector<[8]xf16>
-// CHECK-DAG: %[[A0_INSERT:.*]] = vector.scalable.insert %[[A0]], %[[VEC_UNDEF]][0] : vector<[4]xf16> into vector<[8]xf16>
-// CHECK-DAG: %[[B0_INSERT:.*]] = vector.scalable.insert %[[B0]], %[[VEC_UNDEF]][0] : vector<[4]xf16> into vector<[8]xf16>
-// CHECK-DAG: %[[A1_INSERT:.*]] = vector.scalable.insert %[[A1]], %[[VEC_UNDEF]][0] : vector<[4]xf16> into vector<[8]xf16>
-// CHECK-DAG: %[[B1_INSERT:.*]] = vector.scalable.insert %[[B1]], %[[VEC_UNDEF]][0] : vector<[4]xf16> into vector<[8]xf16>
-// CHECK-DAG: %[[LHS:.*]] = "arm_sve.intr.zip1"(%[[A0_INSERT]], %[[A1_INSERT]]) : (vector<[8]xf16>, vector<[8]xf16>) -> vector<[8]xf16>
-// CHECK-DAG: %[[RHS:.*]] = "arm_sve.intr.zip1"(%[[B0_INSERT]], %[[B1_INSERT]]) : (vector<[8]xf16>, vector<[8]xf16>) -> vector<[8]xf16>
-// CHECK-DAG: %[[MASK_UNDEF:.*]] = llvm.mlir.undef : vector<[8]xi1>
-// CHECK-DAG: %[[A0_MASK_INSERT:.*]] = vector.scalable.insert %[[A0_MASK]], %[[MASK_UNDEF]][0] : vector<[4]xi1> into vector<[8]xi1>
-// CHECK-DAG: %[[B0_MASK_INSERT:.*]] = vector.scalable.insert %[[B0_MASK]], %[[MASK_UNDEF]][0] : vector<[4]xi1> into vector<[8]xi1>
-// CHECK-DAG: %[[A1_MASK_INSERT:.*]] = vector.scalable.insert %[[A1_MASK]], %[[MASK_UNDEF]][0] : vector<[4]xi1> into vector<[8]xi1>
-// CHECK-DAG: %[[B1_MASK_INSERT:.*]] = vector.scalable.insert %[[B1_MASK]], %[[MASK_UNDEF]][0] : vector<[4]xi1> into vector<[8]xi1>
-// CHECK-DAG: %[[LHS_MASK:.*]] = "arm_sve.intr.zip1"(%[[A0_MASK_INSERT]], %[[A1_MASK_INSERT]]) : (vector<[8]xi1>, vector<[8]xi1>) -> vector<[8]xi1>
-// CHECK-DAG: %[[RHS_MASK:.*]] = "arm_sve.intr.zip1"(%[[B0_MASK_INSERT]], %[[B1_MASK_INSERT]]) : (vector<[8]xi1>, vector<[8]xi1>) -> vector<[8]xi1>
+// CHECK-DAG: %[[LHS:.*]] = "llvm.intr.experimental.vector.interleave2"(%[[A0]], %[[A1]]) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+// CHECK-DAG: %[[RHS:.*]] = "llvm.intr.experimental.vector.interleave2"(%[[B0]], %[[B1]]) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+// CHECK-DAG: %[[LHS_MASK:.*]] = "llvm.intr.experimental.vector.interleave2"(%[[A0_MASK]], %[[A1_MASK]]) : (vector<[4]xi1>, vector<[4]xi1>) -> vector<[8]xi1>
+// CHECK-DAG: %[[RHS_MASK:.*]] = "llvm.intr.experimental.vector.interleave2"(%[[B0_MASK]], %[[B1_MASK]]) : (vector<[4]xi1>, vector<[4]xi1>) -> vector<[8]xi1>
 // CHECK-DAG: arm_sme.fmopa_wide_2way %[[LHS]], %[[RHS]] acc(%[[ACC]]) masks(%[[LHS_MASK]], %[[RHS_MASK]]) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
 func.func @outerproduct_add_widening_2way_f16f16f32(
     %a0 : vector<[4]xf16>, %b0 : vector<[4]xf16>,
