@@ -221,18 +221,38 @@ int allocaRegion(void) {
   return *mem;
 }
 
-int *unknownExtent(int arg) {
-  if (arg >= 2)
+int *symbolicExtent(int arg) {
+  // expected-note@+2 {{Assuming 'arg' is < 5}}
+  // expected-note@+1 {{Taking false branch}}
+  if (arg >= 5)
     return 0;
   int *mem = (int*)malloc(arg);
+
+  // TODO: without the following reference to 'arg', the analyzer would discard
+  // the range information about (the symbolic value of) 'arg'. This is
+  // incorrect because while the variable itself is inaccessible, it becomes
+  // the symbolic extent of 'mem', so we still want to reason about its
+  // potential values.
+  (void)arg;
+
   mem[8] = -2;
-  // FIXME: this should produce
-  //   {{Out of bound access to memory after the end of the heap area}}
-  //   {{Access of 'int' element in the heap area at index 8}}
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at index 8}}
   return mem;
 }
 
-void unknownIndex(int arg) {
+int *symbolicExtentDiscardedRangeInfo(int arg) {
+  // This is a copy of the case 'symbolicExtent' without the '(void)arg' hack.
+  // TODO: if the analyzer can detect the out-of-bounds access within this TC,
+  // then remove this TC and the `(void)arg` hack from `symbolicExtent`.
+  if (arg >= 5)
+    return 0;
+  int *mem = (int*)malloc(arg);
+  mem[8] = -2;
+  return mem;
+}
+
+void symbolicIndex(int arg) {
   // expected-note@+2 {{Assuming 'arg' is >= 12}}
   // expected-note@+1 {{Taking true branch}}
   if (arg >= 12)
@@ -245,10 +265,15 @@ int *nothingIsCertain(int x, int y) {
   if (x >= 2)
     return 0;
   int *mem = (int*)malloc(x);
+
+  // TODO: The next line is a temporary hack; see 'symbolicExtent()' for details.
+  (void)x;
+
   if (y >= 8)
     mem[y] = -2;
   // FIXME: this should produce
   //   {{Out of bound access to memory after the end of the heap area}}
   //   {{Access of 'int' element in the heap area at an overflowing index}}
+  // but apparently the analyzer isn't smart enough to deduce this.
   return mem;
 }
