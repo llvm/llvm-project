@@ -363,7 +363,7 @@ public:
       void (DWARFObject::*)(function_ref<void(const DWARFSection &)>) const);
 
   /// Emits any aggregate information collection, depending on the dump options
-  void finish();
+  void finish(bool Success);
 };
 
 static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,

@@ -276,6 +276,14 @@ static cl::opt<bool>
                 cat(DwarfDumpCategory));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
+static opt<bool> OnlyAggregateErrors(
+    "only-aggregate-errors",
+    desc("Only display the aggregate errors when verifying."),
+    cat(DwarfDumpCategory));
+static opt<bool> NoAggregateErrors(
+    "no-aggregate-errors",
+    desc("Do not display the aggregate errors when verifying."),
+    cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
 static opt<bool> DumpUUID("uuid", desc("Show the UUID for each architecture."),
@@ -326,7 +334,8 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
-    // DumpOpts.Verbose = true;
+    DumpOpts.Verbose = !OnlyAggregateErrors;
+    DumpOpts.ShowAggregateErrors = !NoAggregateErrors;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
@@ -810,6 +819,12 @@ int main(int argc, char **argv) {
   if (Diff && Verbose) {
     WithColor::error() << "incompatible arguments: specifying both -diff and "
                           "-verbose is currently not supported";
+    return 1;
+  }
+  if (Verify && NoAggregateErrors && OnlyAggregateErrors) {
+    WithColor::error() << "incompatible arguments: specifying both "
+                          " -no-aggregate-errors, and -only-aggregate-errors "
+                          "is not supported";
     return 1;
   }
 

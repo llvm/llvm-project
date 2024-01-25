@@ -1997,11 +1997,14 @@ void OutputCategoryAggregator::HandleAggregate(
   }
 }
 
-void DWARFVerifier::finish() {
-  if (DumpOpts.DumpAggregateErrors)
+void DWARFVerifier::finish(bool Success) {
+  if (!Success && DumpOpts.ShowAggregateErrors) {
+    error() << "Aggregated error category counts:\n";
     ErrorCategory.HandleAggregate([&](StringRef s, unsigned count) {
-      error() << s << ": " << count << '\n';
+      error() << "Error category '" << s << "' occurred " << count
+              << " time(s).\n";
     });
+  }
 }
 
 raw_ostream &DWARFVerifier::error() const { return WithColor::error(OS); }
