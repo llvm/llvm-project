@@ -671,7 +671,7 @@ def NVGPU_TmaAsyncStoreOp : NVGPU_Op<"tma.async.store", [AttrSizedOperandSegment
     tile shape. The descriptor is created by `nvgpu.tma.create.descriptor`
   }];  
   let arguments = (ins  Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$src,
-                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
+                        Arg<NVGPU_TensorMapDescriptor, "", [MemWriteAt<0, FullEffect>]>:$tensorMapDescriptor,
                         Variadic<Index>:$coordinates, 
                         Optional<I1>:$predicate);
   let assemblyFormat = [{
