@@ -1479,6 +1479,7 @@ Value *VPScalarCastRecipe ::generate(VPTransformState &State, unsigned Part) {
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::Trunc: {
+    // Note: SExt/ZExt not used yet.
     Value *Op = State.get(getOperand(0), VPIteration(Part, 0));
     return State.Builder.CreateCast(Instruction::CastOps(Opcode), Op, ResultTy);
   }

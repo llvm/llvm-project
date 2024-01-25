@@ -495,15 +495,15 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   auto IP = HeaderVPBB->getFirstNonPhi();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  VPValue *BaseIV = CanonicalIV;
-  VPTypeAnalysis TypeInfo(SE.getContext());
-  Type *StepTy = TypeInfo.inferScalarType(Step);
+  VPSingleDefRecipe *BaseIV = CanonicalIV;
   if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step)) {
     BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step);
-    HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
+    HeaderVPBB->insert(BaseIV, IP);
   }
 
   // Truncate base induction if needed.
+  VPTypeAnalysis TypeInfo(SE.getContext());
+  Type *StepTy = TypeInfo.inferScalarType(Step);
   if (TruncI) {
     Type *TruncTy = TruncI->getType();
     assert(TypeInfo.inferScalarType(BaseIV)->getScalarSizeInBits() >
@@ -515,12 +515,12 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
   }
 
   // Truncate step if needed.
-  Type *BaseIVTy = TypeInfo.inferScalarType(BaseIV);
-  if (BaseIVTy != StepTy) {
-    assert(StepTy->getScalarSizeInBits() > BaseIVTy->getScalarSizeInBits() &&
-           "Not truncating.");
+  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
+  if (ResultTy != StepTy) {
+    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
+           StepTy->isIntegerTy() && "Truncation requires an integer step");
 
-    Step = new VPScalarCastRecipe(Instruction::Trunc, Step, BaseIVTy);
+    Step = new VPScalarCastRecipe(Instruction::Trunc, Step, ResultTy);
     auto *VecPreheader =
         cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSinglePredecessor());
     VecPreheader->appendRecipe(Step->getDefiningRecipe());
