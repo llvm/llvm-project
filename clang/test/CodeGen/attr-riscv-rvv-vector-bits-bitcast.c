@@ -178,7 +178,7 @@ void write_float64m1(struct struct_float64m1 *s, vfloat64m1_t x) {
 // CHECK-64-LABEL: @read_bool1(
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL1:%.*]], ptr [[S:%.*]], i64 0, i32 1
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
 // CHECK-64-NEXT:    store <8 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
 // CHECK-64-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
@@ -187,7 +187,7 @@ void write_float64m1(struct struct_float64m1 *s, vfloat64m1_t x) {
 // CHECK-128-LABEL: @read_bool1(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <16 x i8>, align 16
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL1:%.*]], ptr [[S:%.*]], i64 0, i32 1
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
 // CHECK-128-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
 // CHECK-128-NEXT:    store <16 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA4]]
 // CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA4]]
@@ -196,7 +196,7 @@ void write_float64m1(struct struct_float64m1 *s, vfloat64m1_t x) {
 // CHECK-256-LABEL: @read_bool1(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <32 x i8>, align 32
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL1:%.*]], ptr [[S:%.*]], i64 0, i32 1
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[Y]], align 8, !tbaa [[TBAA4]]
 // CHECK-256-NEXT:    store <32 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4]]
 // CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4]]
@@ -211,7 +211,7 @@ vbool1_t read_bool1(struct struct_bool1 *s) {
 // CHECK-64-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 8
 // CHECK-64-NEXT:    store <vscale x 64 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
-// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL1:%.*]], ptr [[S:%.*]], i64 0, i32 1
+// CHECK-64-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 8
 // CHECK-64-NEXT:    store <8 x i8> [[TMP0]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
 // CHECK-64-NEXT:    ret void
 //
@@ -220,7 +220,7 @@ vbool1_t read_bool1(struct struct_bool1 *s) {
 // CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 16
 // CHECK-128-NEXT:    store <vscale x 64 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-128-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SAVED_VALUE]], align 16, !tbaa [[TBAA4]]
-// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL1:%.*]], ptr [[S:%.*]], i64 0, i32 1
+// CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 16
 // CHECK-128-NEXT:    store <16 x i8> [[TMP0]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
 // CHECK-128-NEXT:    ret void
 //
@@ -229,7 +229,7 @@ vbool1_t read_bool1(struct struct_bool1 *s) {
 // CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 8
 // CHECK-256-NEXT:    store <vscale x 64 x i1> [[X:%.*]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL1:%.*]], ptr [[S:%.*]], i64 0, i32 1
+// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 32
 // CHECK-256-NEXT:    store <32 x i8> [[TMP0]], ptr [[Y]], align 8, !tbaa [[TBAA4]]
 // CHECK-256-NEXT:    ret void
 //
