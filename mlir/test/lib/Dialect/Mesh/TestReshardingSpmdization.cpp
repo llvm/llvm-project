@@ -37,15 +37,15 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
     }
 
     SymbolTableCollection symbolTable;
-    mesh::ClusterOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
-        op, op.getShard().getCluster());
+    mesh::MeshOp mesh = symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
+        op, op.getShard().getMesh());
 
     bool foundUser = false;
     for (auto user : op->getUsers()) {
       if (auto targetShardOp = llvm::dyn_cast<ShardOp>(user)) {
         if (targetShardOp.getAnnotateForUsers() &&
-            mesh == symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
-                        targetShardOp, targetShardOp.getShard().getCluster())) {
+            mesh == symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
+                        targetShardOp, targetShardOp.getShard().getMesh())) {
           foundUser = true;
           break;
         }
@@ -59,8 +59,8 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
     for (auto user : op->getUsers()) {
       auto targetShardOp = llvm::dyn_cast<ShardOp>(user);
       if (!targetShardOp || !targetShardOp.getAnnotateForUsers() ||
-          symbolTable.lookupNearestSymbolFrom<mesh::ClusterOp>(
-              targetShardOp, targetShardOp.getShard().getCluster()) != mesh) {
+          symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
+              targetShardOp, targetShardOp.getShard().getMesh()) != mesh) {
         continue;
       }
 

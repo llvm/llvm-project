@@ -84,7 +84,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
   }
 }
 
-ShapedType shardShapedType(ShapedType shape, ClusterOp mesh,
+ShapedType shardShapedType(ShapedType shape, MeshOp mesh,
                            MeshShardingAttr sharding) {
   using Dim = std::decay_t<decltype(shape.getDimSize(0))>;
   SmallVector<Dim> resShapeArr(shape.getShape().size());
@@ -141,7 +141,7 @@ handlePartialAxesDuringResharding(OpBuilder &builder,
   TypedValue<ShapedType> resultValue =
       builder
           .create<AllReduceOp>(sourceShard.getLoc(), sourceShard.getType(),
-                               sourceSharding.getCluster().getLeafReference(),
+                               sourceSharding.getMesh().getLeafReference(),
                                allReduceMeshAxes, sourceShard,
                                sourceSharding.getPartialType())
           .getResult()
@@ -154,7 +154,7 @@ handlePartialAxesDuringResharding(OpBuilder &builder,
                   return targetShardingPartialAxesSet.contains(a);
                 });
   MeshShardingAttr resultSharding =
-      MeshShardingAttr::get(builder.getContext(), sourceSharding.getCluster(),
+      MeshShardingAttr::get(builder.getContext(), sourceSharding.getMesh(),
                             sourceSharding.getSplitAxes(), remainingPartialAxes,
                             sourceSharding.getPartialType());
   return {resultValue, resultSharding};
@@ -175,7 +175,7 @@ targetShardingInSplitLastAxis(MLIRContext *ctx, MeshShardingAttr sourceSharding,
   targetShardingSplitAxes[splitTensorAxis] =
       MeshAxesAttr::get(ctx, targetSplitAxes);
   return MeshShardingAttr::get(
-      ctx, sourceSharding.getCluster(), targetShardingSplitAxes,
+      ctx, sourceSharding.getMesh(), targetShardingSplitAxes,
       sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
 }
 
@@ -197,7 +197,7 @@ static ShapedType targetShapeInSplitLastAxis(ShapedType sourceShape,
 static std::tuple<TypedValue<ShapedType>, MeshShardingAttr>
 splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                           MeshShardingAttr sourceSharding,
-                          TypedValue<ShapedType> sourceShard, ClusterOp mesh,
+                          TypedValue<ShapedType> sourceShard, MeshOp mesh,
                           int64_t splitTensorAxis, MeshAxis splitMeshAxis) {
   MLIRContext *ctx = builder.getContext();
   builder.setInsertionPointAfterValue(sourceShard);
@@ -217,8 +217,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
 
   Value meshAxisSize =
       builder
-          .create<ClusterShapeOp>(mesh.getSymName(),
-                                  SmallVector<MeshAxis>({splitMeshAxis}))
+          .create<MeshShapeOp>(mesh.getSymName(),
+                               SmallVector<MeshAxis>({splitMeshAxis}))
           .getResult()[0];
 
   Value sourceAxisSize =
@@ -305,7 +305,7 @@ detectSplitLastAxisInResharding(MeshShardingAttr sourceSharding,
 }
 
 static std::optional<std::tuple<TypedValue<ShapedType>, MeshShardingAttr>>
-trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, ClusterOp mesh,
+trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
                              MeshShardingAttr sourceSharding,
                              MeshShardingAttr targetSharding,
                              TypedValue<ShapedType> sourceShard) {
@@ -366,7 +366,7 @@ targetShardingInUnsplitLastAxis(MLIRContext *ctx,
   targetShardingSplitAxes[splitTensorAxis] =
       MeshAxesAttr::get(ctx, targetSplitAxes);
   return MeshShardingAttr::get(
-      ctx, sourceSharding.getCluster(), targetShardingSplitAxes,
+      ctx, sourceSharding.getMesh(), targetShardingSplitAxes,
       sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
 }
 
@@ -382,7 +382,7 @@ static std::tuple<TypedValue<ShapedType>, MeshShardingAttr>
 unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                             MeshShardingAttr sourceSharding,
                             ShapedType sourceUnshardedShape,
-                            TypedValue<ShapedType> sourceShard, ClusterOp mesh,
+                            TypedValue<ShapedType> sourceShard, MeshOp mesh,
                             int64_t splitTensorAxis, MeshAxis splitMeshAxis) {
   MLIRContext *ctx = builder.getContext();
   builder.setInsertionPointAfterValue(sourceShard);
@@ -406,7 +406,7 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
 }
 
 static std::optional<std::tuple<TypedValue<ShapedType>, MeshShardingAttr>>
-tryUnsplitLastAxisInResharding(ImplicitLocOpBuilder &builder, ClusterOp mesh,
+tryUnsplitLastAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
                                MeshShardingAttr sourceSharding,
                                MeshShardingAttr targetSharding,
                                ShapedType sourceUnshardedShape,
@@ -495,7 +495,7 @@ targetShardingInMoveLastAxis(MLIRContext *ctx, MeshShardingAttr sourceSharding,
       MeshAxesAttr::get(ctx, targetSplitAxes);
 
   return MeshShardingAttr::get(
-      ctx, sourceSharding.getCluster(), targetShardingSplitAxes,
+      ctx, sourceSharding.getMesh(), targetShardingSplitAxes,
       sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
 }
 
@@ -512,7 +512,7 @@ static ShapedType allToAllResultShapeInMoveLastAxis(ShapedType sourceShape,
 }
 
 static std::tuple<TypedValue<ShapedType>, MeshShardingAttr>
-moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, ClusterOp mesh,
+moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
                               MeshShardingAttr sourceSharding,
                               ShapedType sourceUnshardedShape,
                               TypedValue<ShapedType> sourceShard,
@@ -541,7 +541,7 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, ClusterOp mesh,
 }
 
 static std::optional<std::tuple<TypedValue<ShapedType>, MeshShardingAttr>>
-tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, ClusterOp mesh,
+tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
                                  MeshShardingAttr sourceSharding,
                                  MeshShardingAttr targetSharding,
                                  ShapedType sourceUnshardedShape,
@@ -561,7 +561,7 @@ tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, ClusterOp mesh,
 // Currently the sharded tensor axes must be exactly divisible by the single
 // mesh axis size.
 static TypedValue<ShapedType>
-reshardOn1DMesh(ImplicitLocOpBuilder &builder, ClusterOp mesh,
+reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh,
                 MeshShardingAttr sourceSharding,
                 MeshShardingAttr targetSharding,
                 TypedValue<ShapedType> sourceUnshardedValue,
@@ -604,7 +604,7 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, ClusterOp mesh,
   return targetShard;
 }
 
-TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, ClusterOp mesh,
+TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, MeshOp mesh,
                                MeshShardingAttr sourceSharding,
                                MeshShardingAttr targetSharding,
                                TypedValue<ShapedType> sourceUnshardedValue,
@@ -616,8 +616,8 @@ TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, ClusterOp mesh,
                          sourceUnshardedValue, sourceShard);
 }
 
-TypedValue<ShapedType> reshard(OpBuilder &builder, ClusterOp mesh,
-                               ShardOp source, ShardOp target,
+TypedValue<ShapedType> reshard(OpBuilder &builder, MeshOp mesh, ShardOp source,
+                               ShardOp target,
                                TypedValue<ShapedType> sourceShardValue) {
   assert(!source.getAnnotateForUsers());
   assert(target.getAnnotateForUsers());
