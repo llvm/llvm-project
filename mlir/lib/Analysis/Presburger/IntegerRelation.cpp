@@ -2516,8 +2516,8 @@ bool IntegerRelation::isFullDim() {
   if (getNumEqualities() > 0)
     return false;
 
-  // If along the direction of any of the inequalities, the set is flat,
-  // optima are the same, then the region is not full-dimensional.
+  // The polytope is full-dimensional iff it is not flat along any of the
+  // inequality directions.
   Simplex simplex(*this);
   return llvm::none_of(llvm::seq<int>(getNumInequalities()), [&](int i) {
     return simplex.isFlatAlong(getInequality(i));
