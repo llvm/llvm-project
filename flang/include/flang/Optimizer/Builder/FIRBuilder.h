@@ -490,7 +490,11 @@ public:
   LLVM_DUMP_METHOD void dumpFunc();
 
   /// FirOpBuilder hook for creating new operation.
-  void notifyOperationInserted(mlir::Operation *op) override {
+  void notifyOperationInserted(mlir::Operation *op,
+                               mlir::OpBuilder::InsertPoint previous) override {
+    // We only care about newly created operations.
+    if (previous.isSet())
+      return;
     setCommonAttributes(op);
   }
 
