@@ -418,11 +418,11 @@
 // CHECK-SVADU-EXT: __riscv_svadu 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN: -march=rv32isvbare -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SVBARE-EXT %s
+// RUN:   -march=rv32isvbare -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVBARE-EXT %s
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN: -march=rv64isvbare -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-SVBARE-EXT %s
+// RUN:   -march=rv64isvbare -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SVBARE-EXT %s
 // CHECK-SVBARE-EXT: __riscv_svbare 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
