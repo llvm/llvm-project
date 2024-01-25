@@ -58,18 +58,32 @@ define <16 x i8> @lower_trunc_16xi8(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 
 ; CHECK-LABEL: lower_trunc_16xi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    add x8, sp, #56
-; CHECK-NEXT:    ld1r { v1.8h }, [x8]
+; CHECK-NEXT:    ldr h1, [sp]
+; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    ld1 { v1.h }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    add v3.8h, v1.8h, v1.8h
+; CHECK-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    mov v0.h[2], w2
+; CHECK-NEXT:    ld1 { v1.h }[3], [x8]
+; CHECK-NEXT:    add x8, sp, #32
 ; CHECK-NEXT:    mov v0.h[3], w3
+; CHECK-NEXT:    ld1 { v1.h }[4], [x8]
+; CHECK-NEXT:    add x8, sp, #40
+; CHECK-NEXT:    ld1 { v1.h }[5], [x8]
+; CHECK-NEXT:    add x8, sp, #48
 ; CHECK-NEXT:    mov v0.h[4], w4
+; CHECK-NEXT:    ld1 { v1.h }[6], [x8]
+; CHECK-NEXT:    add x8, sp, #56
 ; CHECK-NEXT:    mov v0.h[5], w5
+; CHECK-NEXT:    ld1 { v1.h }[7], [x8]
 ; CHECK-NEXT:    mov v0.h[6], w6
-; CHECK-NEXT:    add v2.8h, v0.8h, v0.8h
+; CHECK-NEXT:    add v2.8h, v1.8h, v1.8h
+; CHECK-NEXT:    mov v0.h[7], w7
+; CHECK-NEXT:    add v3.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    uzp1 v1.16b, v2.16b, v3.16b
+; CHECK-NEXT:    uzp1 v1.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a1 = insertelement <16 x i16> poison, i16 %a, i16 0
@@ -80,14 +94,14 @@ define <16 x i8> @lower_trunc_16xi8(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 
   %f1 = insertelement <16 x i16> %e1, i16 %f, i16 5
   %g1 = insertelement <16 x i16> %f1, i16 %g, i16 6
   %h1 = insertelement <16 x i16> %g1, i16 %h, i16 7
-  %i1 = insertelement <16 x i16> %f1, i16 %i, i16 8
-  %j1 = insertelement <16 x i16> %g1, i16 %j, i16 9
-  %k1 = insertelement <16 x i16> %f1, i16 %k, i16 10
-  %l1 = insertelement <16 x i16> %g1, i16 %l, i16 11
-  %m1 = insertelement <16 x i16> %f1, i16 %m, i16 12
-  %n1 = insertelement <16 x i16> %g1, i16 %n, i16 13
-  %o1 = insertelement <16 x i16> %f1, i16 %o, i16 14
-  %p1 = insertelement <16 x i16> %g1, i16 %p, i16 15
+  %i1 = insertelement <16 x i16> %h1, i16 %i, i16 8
+  %j1 = insertelement <16 x i16> %i1, i16 %j, i16 9
+  %k1 = insertelement <16 x i16> %j1, i16 %k, i16 10
+  %l1 = insertelement <16 x i16> %k1, i16 %l, i16 11
+  %m1 = insertelement <16 x i16> %l1, i16 %m, i16 12
+  %n1 = insertelement <16 x i16> %m1, i16 %n, i16 13
+  %o1 = insertelement <16 x i16> %n1, i16 %o, i16 14
+  %p1 = insertelement <16 x i16> %o1, i16 %p, i16 15
   %t = trunc <16 x i16> %p1 to <16 x i8>
   %s = add <16 x i16> %p1, %p1
   %t2 = trunc <16 x i16> %s to <16 x i8>
