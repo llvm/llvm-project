@@ -1688,6 +1688,16 @@ let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX12_10Plus] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_B128_TR_B6, int_amdgcn_global_load_tr_b6, v4i32>;
 }
 
+let OtherPredicates = [isGFX12_10Plus] in {
+  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
+  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
+  def  : FlatLoadPat <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
+
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+}
+
 let OtherPredicates = [isGFX10Plus] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMAX", "atomic_load_fmax_global", f32>;

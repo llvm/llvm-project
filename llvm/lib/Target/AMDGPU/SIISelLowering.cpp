@@ -1374,6 +1374,12 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
+  case Intrinsic::amdgcn_flat_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_load_monitor_b128:
+  case Intrinsic::amdgcn_global_load_monitor_b32:
+  case Intrinsic::amdgcn_global_load_monitor_b64:
+  case Intrinsic::amdgcn_global_load_monitor_b128:
   case Intrinsic::amdgcn_ds_load_tr_b6:
   case Intrinsic::amdgcn_ds_load_tr_b4:
   case Intrinsic::amdgcn_ds_load_tr:
@@ -1477,6 +1483,12 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
                                             SmallVectorImpl<Value*> &Ops,
                                             Type *&AccessTy) const {
   switch (II->getIntrinsicID()) {
+  case Intrinsic::amdgcn_flat_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_load_monitor_b64:
+  case Intrinsic::amdgcn_flat_load_monitor_b128:
+  case Intrinsic::amdgcn_global_load_monitor_b32:
+  case Intrinsic::amdgcn_global_load_monitor_b64:
+  case Intrinsic::amdgcn_global_load_monitor_b128:
   case Intrinsic::amdgcn_ds_load_tr_b6:
   case Intrinsic::amdgcn_ds_load_tr_b4:
   case Intrinsic::amdgcn_ds_load_tr:

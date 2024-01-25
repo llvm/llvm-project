@@ -5005,6 +5005,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_ds_load_tr:
     case Intrinsic::amdgcn_ds_load_tr_b4:
     case Intrinsic::amdgcn_ds_load_tr_b6:
+    case Intrinsic::amdgcn_flat_load_monitor_b32:
+    case Intrinsic::amdgcn_flat_load_monitor_b64:
+    case Intrinsic::amdgcn_flat_load_monitor_b128:
+    case Intrinsic::amdgcn_global_load_monitor_b32:
+    case Intrinsic::amdgcn_global_load_monitor_b64:
+    case Intrinsic::amdgcn_global_load_monitor_b128:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap:
