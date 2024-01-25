@@ -1167,6 +1167,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       Count += RecSize;
       Sig.Kind = wasm::WasmSignature::Placeholder;
       Signatures.push_back(std::move(Sig));
+      HasUnmodeledTypes = true;
       continue;
     }
     if (Form != wasm::WASM_TYPE_FUNC) {
@@ -1196,6 +1197,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       }
       Sig.Kind = wasm::WasmSignature::Placeholder;
       Signatures.push_back(std::move(Sig));
+      HasUnmodeledTypes = true;
       continue;
     }
 
