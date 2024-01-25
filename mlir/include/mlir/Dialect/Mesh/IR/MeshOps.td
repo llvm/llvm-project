@@ -27,7 +27,7 @@ class Mesh_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 def Mesh_MeshOp : Mesh_Op<"mesh", [Symbol]> {
-  let summary = "representing a device/process mesh";
+  let summary = "Description of a device/process mesh.";
   let description = [{
     The mesh.mesh operation is a symbol operation that identifies a specific
     mesh. The operation has three attributes:

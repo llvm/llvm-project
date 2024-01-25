@@ -79,7 +79,8 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
   let mnemonic = "shard";
 
   let parameters = (ins
-    AttrParameter<"::mlir::FlatSymbolRefAttr", "mesh placed">:$mesh,
+    AttrParameter<"::mlir::FlatSymbolRefAttr",
+     "The mesh on which tensors are sharded.">:$mesh,
     ArrayRefParameter<"MeshAxesAttr">:$split_axes,
     OptionalArrayRefParameter<"MeshAxis">:$partial_axes,
     OptionalParameter<"::mlir::mesh::Partial">:$partial_type
