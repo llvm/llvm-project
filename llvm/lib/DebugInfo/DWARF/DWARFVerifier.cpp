@@ -307,7 +307,7 @@ unsigned DWARFVerifier::verifyDebugInfoCallSite(const DWARFDie &Die) {
 
   if (!Curr.isValid()) {
     ErrorCategory.Report(
-        "Call site entry not nexted within valid subprogram", [&]() {
+        "Call site entry not nested within valid subprogram", [&]() {
           error() << "Call site entry not nested within a valid subprogram:";
           Die.dump(OS);
         });
@@ -339,9 +339,9 @@ unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
   Expected<const DWARFAbbreviationDeclarationSet *> AbbrDeclsOrErr =
       Abbrev->getAbbreviationDeclarationSet(0);
   if (!AbbrDeclsOrErr) {
-    ErrorCategory.Report("Abbreviation Declaration error", [&]() {
-      error() << toString(AbbrDeclsOrErr.takeError()) << "\n";
-    });
+    std::string ErrMsg = toString(AbbrDeclsOrErr.takeError());
+    ErrorCategory.Report("Abbreviation Declaration error",
+                         [&]() { error() << ErrMsg << "\n"; });
     return 1;
   }
 
@@ -863,8 +863,9 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   case DW_FORM_line_strp: {
     if (Error E = AttrValue.Value.getAsCString().takeError()) {
       ++NumErrors;
+      std::string ErrMsg = toString(std::move(E));
       ErrorCategory.Report("Invalid DW_FORM attribute", [&]() {
-        error() << toString(std::move(E)) << ":\n";
+        error() << ErrMsg << ":\n";
         dump(Die) << '\n';
       });
     }
@@ -916,7 +917,7 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
     if (LineTableOffset < DCtx.getDWARFObj().getLineSection().Data.size()) {
       if (!LineTable) {
         ++NumDebugLineErrors;
-        ErrorCategory.Report("Unparseable .debug_line entry", [&]() {
+        ErrorCategory.Report("Unparsable .debug_line entry", [&]() {
           error() << ".debug_line[" << format("0x%08" PRIx64, LineTableOffset)
                   << "] was not able to be parsed for CU:\n";
           dump(Die) << '\n';
@@ -1584,7 +1585,7 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
     uint64_t DIEOffset = CUOffset + *EntryOr->getDIEUnitOffset();
     DWARFDie DIE = DCtx.getDIEForOffset(DIEOffset);
     if (!DIE) {
-      ErrorCategory.Report("NameIndex references nonexisten DIE", [&]() {
+      ErrorCategory.Report("NameIndex references nonexistent DIE", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} references a "
                            "non-existing DIE @ {2:x}.\n",
                            NI.getUnitOffset(), EntryID, DIEOffset);
@@ -1986,21 +1987,21 @@ bool DWARFVerifier::verifyDebugStrOffsets(
 void OutputCategoryAggregator::Report(
     StringRef s, std::function<void(void)> detailCallback) {
   Aggregation[std::string(s)]++;
-  if (CallDetail)
+  if (IncludeDetail)
     detailCallback();
 }
 
-void OutputCategoryAggregator::HandleAggregate(
+void OutputCategoryAggregator::EnumerateResults(
     std::function<void(StringRef, unsigned)> handleCounts) {
   for (auto &&[name, count] : Aggregation) {
     handleCounts(name, count);
   }
 }
 
-void DWARFVerifier::finish(bool Success) {
+void DWARFVerifier::summarize(bool Success) {
   if (!Success && DumpOpts.ShowAggregateErrors) {
     error() << "Aggregated error category counts:\n";
-    ErrorCategory.HandleAggregate([&](StringRef s, unsigned count) {
+    ErrorCategory.EnumerateResults([&](StringRef s, unsigned count) {
       error() << "Error category '" << s << "' occurred " << count
               << " time(s).\n";
     });

@@ -33,14 +33,15 @@ struct DWARFSection;
 class OutputCategoryAggregator {
 private:
   std::map<std::string, unsigned> Aggregation;
-  bool CallDetail;
+  bool IncludeDetail;
 
 public:
-  OutputCategoryAggregator(bool callDetail = false) : CallDetail(callDetail) {}
-  void EnableDetail() { CallDetail = true; }
-  void DisableDetail() { CallDetail = false; }
+  OutputCategoryAggregator(bool includeDetail = false)
+      : IncludeDetail(includeDetail) {}
+  void EnableDetail() { IncludeDetail = true; }
+  void DisableDetail() { IncludeDetail = false; }
   void Report(StringRef s, std::function<void()> detailCallback);
-  void HandleAggregate(std::function<void(StringRef, unsigned)> handleCounts);
+  void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
 };
 
 /// A class that verifies DWARF debug information given a DWARF Context.
@@ -89,11 +90,12 @@ public:
     bool intersects(const DieRangeInfo &RHS) const;
   };
 
+private:
   raw_ostream &OS;
   DWARFContext &DCtx;
-  OutputCategoryAggregator ErrorCategory;
   DIDumpOptions DumpOpts;
   uint32_t NumDebugLineErrors = 0;
+  OutputCategoryAggregator ErrorCategory;
   // Used to relax some checks that do not currently work portably
   bool IsObjectFile;
   bool IsMachOObject;
@@ -362,8 +364,8 @@ public:
       StringRef SectionName, const DWARFSection &Section, StringRef StrData,
       void (DWARFObject::*)(function_ref<void(const DWARFSection &)>) const);
 
-  /// Emits any aggregate information collection, depending on the dump options
-  void finish(bool Success);
+  /// Emits any aggregate information collected, depending on the dump options
+  void summarize(bool Success);
 };
 
 static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,
