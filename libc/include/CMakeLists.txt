@@ -76,6 +76,22 @@ add_gen_header(
 )
 
 add_gen_header(
+  float
+  DEF_FILE float.h.def
+  GEN_HDR float.h
+  DEPENDS
+    .llvm-libc-macros.float_macros
+)
+
+add_gen_header(
+  limits
+  DEF_FILE limits.h.def
+  GEN_HDR limits.h
+  DEPENDS
+    .llvm-libc-macros.limits_macros
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h
@@ -345,6 +361,14 @@ add_gen_header(
     .llvm_libc_common_h
 )
 
+add_header(
+  sys_queue
+  HDR
+    sys/queue.h
+  DEPENDS
+    .llvm-libc-macros.sys_queue_macros
+)
+
 add_gen_header(
   sys_random
   DEF_FILE sys/random.h.def
@@ -590,3 +614,13 @@ foreach(target IN LISTS all_install_header_targets)
             COMPONENT libc-headers)
   endif()
 endforeach()
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_custom_target(install-libc-headers
+                    DEPENDS libc-headers
+                    COMMAND "${CMAKE_COMMAND}"
+                            -DCMAKE_INSTALL_COMPONENT=libc-headers
+                            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+  # Stripping is a no-op for headers
+  add_custom_target(install-libc-headers-stripped DEPENDS install-libc-headers)
+endif()

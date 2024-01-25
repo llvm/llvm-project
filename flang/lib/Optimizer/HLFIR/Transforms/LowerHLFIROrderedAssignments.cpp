@@ -421,6 +421,14 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
   }
   // Variable to Variable mismatch (e.g., fir.heap<T> vs fir.ref<T>), or value
   // to Value mismatch (e.g. i1 vs fir.logical<4>).
+  if (mlir::isa<fir::BaseBoxType>(mold.getType()) &&
+      !mlir::isa<fir::BaseBoxType>(input.getType())) {
+    // An entity may have have been saved without descriptor while the original
+    // value had a descriptor (e.g., it was not contiguous).
+    auto emboxed = hlfir::convertToBox(loc, builder, input, mold.getType());
+    assert(!emboxed.second && "temp should already be in memory");
+    input = hlfir::Entity{fir::getBase(emboxed.first)};
+  }
   return hlfir::Entity{builder.createConvert(loc, mold.getType(), input)};
 }
 

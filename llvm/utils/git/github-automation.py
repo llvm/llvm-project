@@ -251,85 +251,6 @@ def setup_llvmbot_git(git_dir="."):
         config.set_value("user", "email", "llvmbot@llvm.org")
 
 
-def phab_api_call(phab_token: str, url: str, args: dict) -> dict:
-    """
-    Make an API call to the Phabricator web service and return a dictionary
-    containing the json response.
-    """
-    data = {"api.token": phab_token}
-    data.update(args)
-    response = requests.post(url, data=data)
-    return response.json()
-
-
-def phab_login_to_github_login(
-    phab_token: str, repo: github.Repository.Repository, phab_login: str
-) -> Optional[str]:
-    """
-    Tries to translate a Phabricator login to a github login by
-    finding a commit made in Phabricator's Differential.
-    The commit's SHA1 is then looked up in the github repo and
-    the committer's login associated with that commit is returned.
-
-    :param str phab_token: The Conduit API token to use for communication with Pabricator
-    :param github.Repository.Repository repo: The github repo to use when looking for the SHA1 found in Differential
-    :param str phab_login: The Phabricator login to be translated.
-    """
-
-    args = {
-        "constraints[authors][0]": phab_login,
-        # PHID for "LLVM Github Monorepo" repository
-        "constraints[repositories][0]": "PHID-REPO-f4scjekhnkmh7qilxlcy",
-        "limit": 1,
-    }
-    # API documentation: https://reviews.llvm.org/conduit/method/diffusion.commit.search/
-    r = phab_api_call(
-        phab_token, "https://reviews.llvm.org/api/diffusion.commit.search", args
-    )
-    data = r["result"]["data"]
-    if len(data) == 0:
-        # Can't find any commits associated with this user
-        return None
-
-    commit_sha = data[0]["fields"]["identifier"]
-    committer = repo.get_commit(commit_sha).committer
-    if not committer:
-        # This committer had an email address GitHub could not recognize, so
-        # it can't link the user to a GitHub account.
-        print(f"Warning: Can't find github account for {phab_login}")
-        return None
-    return committer.login
-
-
-def phab_get_commit_approvers(phab_token: str, commit: github.Commit.Commit) -> list:
-    args = {"corpus": commit.commit.message}
-    # API documentation: https://reviews.llvm.org/conduit/method/differential.parsecommitmessage/
-    r = phab_api_call(
-        phab_token, "https://reviews.llvm.org/api/differential.parsecommitmessage", args
-    )
-    review_id = r["result"]["revisionIDFieldInfo"]["value"]
-    if not review_id:
-        # No Phabricator revision for this commit
-        return []
-
-    args = {"constraints[ids][0]": review_id, "attachments[reviewers]": True}
-    # API documentation: https://reviews.llvm.org/conduit/method/differential.revision.search/
-    r = phab_api_call(
-        phab_token, "https://reviews.llvm.org/api/differential.revision.search", args
-    )
-    reviewers = r["result"]["data"][0]["attachments"]["reviewers"]["reviewers"]
-    accepted = []
-    for reviewer in reviewers:
-        if reviewer["status"] != "accepted":
-            continue
-        phid = reviewer["reviewerPHID"]
-        args = {"constraints[phids][0]": phid}
-        # API documentation: https://reviews.llvm.org/conduit/method/user.search/
-        r = phab_api_call(phab_token, "https://reviews.llvm.org/api/user.search", args)
-        accepted.append(r["result"]["data"][0]["fields"]["username"])
-    return accepted
-
-
 def extract_commit_hash(arg: str):
     """
     Extract the commit hash from the argument passed to /action github
@@ -364,7 +285,6 @@ class ReleaseWorkflow:
         branch_repo_name: str,
         branch_repo_token: str,
         llvm_project_dir: str,
-        phab_token: str,
     ) -> None:
         self._token = token
         self._repo_name = repo
@@ -375,7 +295,6 @@ class ReleaseWorkflow:
         else:
             self._branch_repo_token = self.token
         self._llvm_project_dir = llvm_project_dir
-        self._phab_token = phab_token
 
     @property
     def token(self) -> str:
@@ -400,10 +319,6 @@ class ReleaseWorkflow:
     @property
     def llvm_project_dir(self) -> str:
         return self._llvm_project_dir
-
-    @property
-    def phab_token(self) -> str:
-        return self._phab_token
 
     @property
     def repo(self) -> github.Repository.Repository:
@@ -444,7 +359,7 @@ class ReleaseWorkflow:
 
     def issue_notify_pull_request(self, pull: github.PullRequest.PullRequest) -> None:
         self.issue.create_comment(
-            "/pull-request {}#{}".format(self.branch_repo_name, pull.number)
+            "/pull-request {}#{}".format(self.repo_name, pull.number)
         )
 
     def make_ignore_comment(self, comment: str) -> str:
@@ -496,29 +411,39 @@ class ReleaseWorkflow:
         if self.CHERRY_PICK_FAILED_LABEL in [l.name for l in self.issue.labels]:
             self.issue.remove_from_labels(self.CHERRY_PICK_FAILED_LABEL)
 
+    def get_main_commit(self, cherry_pick_sha: str) -> github.Commit.Commit:
+        commit = self.repo.get_commit(cherry_pick_sha)
+        message = commit.commit.message
+        m = re.search("\(cherry picked from commit ([0-9a-f]+)\)", message)
+        if not m:
+            return None
+        return self.repo.get_commit(m.group(1))
+
     def pr_request_review(self, pr: github.PullRequest.PullRequest):
         """
         This function will try to find the best reviewers for `commits` and
-        then add a comment requesting review of the backport and assign the
-        pull request to the selected reviewers.
+        then add a comment requesting review of the backport and add them as
+        reviewers.
 
-        The reviewers selected are those users who approved the patch in
-        Phabricator.
+        The reviewers selected are those users who approved the pull request
+        for the main branch.
         """
         reviewers = []
         for commit in pr.get_commits():
-            approvers = phab_get_commit_approvers(self.phab_token, commit)
-            for a in approvers:
-                login = phab_login_to_github_login(self.phab_token, self.repo, a)
-                if not login:
-                    continue
-                reviewers.append(login)
+            main_commit = self.get_main_commit(commit.sha)
+            if not main_commit:
+                continue
+            for pull in main_commit.get_pulls():
+                for review in pull.get_reviews():
+                    if review.state != "APPROVED":
+                        continue
+                reviewers.append(review.user.login)
         if len(reviewers):
             message = "{} What do you think about merging this PR to the release branch?".format(
                 " ".join(["@" + r for r in reviewers])
             )
             pr.create_issue_comment(message)
-            pr.add_to_assignees(*reviewers)
+            pr.create_review_request(reviewers)
 
     def create_branch(self, commits: List[str]) -> bool:
         """
@@ -559,7 +484,7 @@ class ReleaseWorkflow:
 
     def create_pull_request(self, owner: str, repo_name: str, branch: str) -> bool:
         """
-        reate a pull request in `self.branch_repo_name`.  The base branch of the
+        Create a pull request in `self.repo_name`.  The base branch of the
         pull request will be chosen based on the the milestone attached to
         the issue represented by `self.issue_number`  For example if the milestone
         is Release 13.0.1, then the base branch will be release/13.x. `branch`
@@ -567,39 +492,14 @@ class ReleaseWorkflow:
         https://docs.github.com/en/get-started/quickstart/github-glossary#base-branch
         https://docs.github.com/en/get-started/quickstart/github-glossary#compare-branch
         """
-        repo = github.Github(self.token).get_repo(self.branch_repo_name)
+        repo = github.Github(self.token).get_repo(self.repo_name)
         issue_ref = "{}#{}".format(self.repo_name, self.issue_number)
         pull = None
         release_branch_for_issue = self.release_branch_for_issue
         if release_branch_for_issue is None:
             return False
-        head_branch = branch
-        if not repo.fork:
-            # If the target repo is not a fork of llvm-project, we need to copy
-            # the branch into the target repo.  GitHub only supports cross-repo pull
-            # requests on forked repos.
-            head_branch = f"{owner}-{branch}"
-            local_repo = Repo(self.llvm_project_dir)
-            push_done = False
-            for _ in range(0, 5):
-                try:
-                    local_repo.git.fetch(
-                        f"https://github.com/{owner}/{repo_name}", f"{branch}:{branch}"
-                    )
-                    local_repo.git.push(
-                        self.push_url, f"{branch}:{head_branch}", force=True
-                    )
-                    push_done = True
-                    break
-                except Exception as e:
-                    print(e)
-                    time.sleep(30)
-                    continue
-            if not push_done:
-                raise Exception("Failed to mirror branch into {}".format(self.push_url))
-            owner = repo.owner.login
 
-        head = f"{owner}:{head_branch}"
+        head = f"{owner}:{branch}"
         if self.check_if_pull_request_exists(repo, head):
             print("PR already exists...")
             return True
@@ -612,9 +512,10 @@ class ReleaseWorkflow:
                 maintainer_can_modify=False,
             )
 
+            pull.as_issue().edit(milestone=self.issue.milestone)
+
             try:
-                if self.phab_token:
-                    self.pr_request_review(pull)
+                self.pr_request_review(pull)
             except Exception as e:
                 print("error: Failed while searching for reviewers", e)
 
@@ -698,11 +599,6 @@ release_workflow_parser.add_argument(
     "--issue-number", type=int, required=True, help="The issue number to update"
 )
 release_workflow_parser.add_argument(
-    "--phab-token",
-    type=str,
-    help="Phabricator conduit API token. See https://reviews.llvm.org/settings/user/<USER>/page/apitokens/",
-)
-release_workflow_parser.add_argument(
     "--branch-repo-token",
     type=str,
     help="GitHub authentication token to use for the repository where new branches will be pushed. Defaults to TOKEN.",
@@ -710,7 +606,7 @@ release_workflow_parser.add_argument(
 release_workflow_parser.add_argument(
     "--branch-repo",
     type=str,
-    default="llvm/llvm-project-release-prs",
+    default="llvmbot/llvm-project",
     help="The name of the repo where new branches will be pushed (e.g. llvm/llvm-project)",
 )
 release_workflow_parser.add_argument(
@@ -748,7 +644,6 @@ elif args.command == "release-workflow":
         args.branch_repo,
         args.branch_repo_token,
         args.llvm_project_dir,
-        args.phab_token,
     )
     if not release_workflow.release_branch_for_issue:
         release_workflow.issue_notify_no_milestone(sys.stdin.readlines())

@@ -755,36 +755,43 @@ FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   return failure();
 }
 
-LogicalResult isAllowedWGMMADataType(Type typeD, NVVM::WGMMATypes typeA,
+LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
+                                     NVVM::WGMMATypes typeA,
                                      NVVM::WGMMATypes typeB) {
   switch (typeA) {
   case NVVM::WGMMATypes::f16:
-    if ((typeD.isF32() || typeD.isF16()) && typeB == NVVM::WGMMATypes::f16)
+    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
+        typeB == NVVM::WGMMATypes::f16)
       return success();
     break;
   case NVVM::WGMMATypes::tf32:
-    if (typeD.isF32() && typeB == NVVM::WGMMATypes::tf32)
+    if (typeD == NVVM::WGMMATypes::f32 && typeB == NVVM::WGMMATypes::tf32)
       return success();
     break;
   case NVVM::WGMMATypes::u8:
   case NVVM::WGMMATypes::s8:
-    if (typeD.isInteger(32) &&
+    if (typeD == NVVM::WGMMATypes::s32 &&
         (typeB == NVVM::WGMMATypes::u8 || typeB == NVVM::WGMMATypes::s8))
       return success();
     break;
   case NVVM::WGMMATypes::b1:
-    if (typeD.isInteger(32) && typeB == NVVM::WGMMATypes::b1)
+    if (typeD == NVVM::WGMMATypes::s32 && typeB == NVVM::WGMMATypes::b1)
       return success();
     break;
   case NVVM::WGMMATypes::bf16:
-    if ((typeD.isF32() || typeD.isF16()) && typeB == NVVM::WGMMATypes::bf16)
+    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
+        typeB == NVVM::WGMMATypes::bf16)
       return success();
     break;
   case NVVM::WGMMATypes::e4m3:
   case NVVM::WGMMATypes::e5m2:
-    if ((typeD.isF32() || typeD.isF16()) &&
+    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
         (typeB == NVVM::WGMMATypes::e5m2 || typeB == NVVM::WGMMATypes::e4m3))
       return success();
+    break;
+  case WGMMATypes::f32:
+  case WGMMATypes::s32:
+    llvm_unreachable("unsupported input types");
     break;
   }
   return failure();
@@ -799,19 +806,24 @@ LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
                                     80,  96,  112, 128, 144, 160,
                                     176, 192, 208, 224, 240, 256};
   switch (typeA) {
-  case mlir::NVVM::WGMMATypes::f16:
-  case mlir::NVVM::WGMMATypes::tf32:
-  case mlir::NVVM::WGMMATypes::bf16:
-  case mlir::NVVM::WGMMATypes::e4m3:
-  case mlir::NVVM::WGMMATypes::e5m2:
+  case WGMMATypes::f16:
+  case WGMMATypes::tf32:
+  case WGMMATypes::bf16:
+  case WGMMATypes::e4m3:
+  case WGMMATypes::e5m2:
     if (llvm::is_contained(allowedN, sizeN))
       return success();
     break;
-  case mlir::NVVM::WGMMATypes::u8:
-  case mlir::NVVM::WGMMATypes::s8:
-  case mlir::NVVM::WGMMATypes::b1:
+  case WGMMATypes::u8:
+  case WGMMATypes::s8:
+  case WGMMATypes::b1:
     if (llvm::is_contained(allowedNshort, sizeN))
       return success();
+    break;
+  case WGMMATypes::f32:
+  case WGMMATypes::s32:
+    llvm_unreachable("unsupported input types");
+    break;
   }
   return failure();
 }
@@ -821,27 +833,29 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
   if (!stype)
     return emitOpError() << "expected results to be struct";
-  Type outputType = stype.getBody().front();
   int outputSize = stype.getBody().size();
+  WGMMATypes typeD = getTypeD();
+  WGMMATypes typeA = getTypeA();
+  WGMMATypes typeB = getTypeB();
+
   for (Type t : stype.getBody()) {
-    if (t != outputType)
+    if (t != stype.getBody().front())
       return emitOpError()
              << "all elements in struct must be same type but there is " << t;
   }
 
-  if (!outputType.isF32() && !outputType.isInteger(32) && !outputType.isF16()) {
+  if (typeD != WGMMATypes::f32 && typeD != WGMMATypes::f16 &&
+      typeD != WGMMATypes::s32) {
     return emitOpError() << "does not support the given output type "
-                         << outputType;
+                         << NVVM::stringifyWGMMATypes(typeD);
   }
-  if (outputType.isInteger(32) && (getScaleA() == NVVM::WGMMAScaleIn::neg ||
-                                   getScaleB() == NVVM::WGMMAScaleIn::neg)) {
+  if (typeD == WGMMATypes::s32 &&
+      (getScaleA() == WGMMAScaleIn::neg || getScaleB() == WGMMAScaleIn::neg)) {
     return emitOpError() << "has s32 output, scaleA and scaleB cannot be neg";
   }
 
-  mlir::NVVM::WGMMATypes typeA = getTypeA();
-  mlir::NVVM::WGMMATypes typeB = getTypeB();
-  if (failed(isAllowedWGMMADataType(outputType, typeA, typeB))) {
-    return emitOpError() << outputType
+  if (failed(isAllowedWGMMADataType(typeD, typeA, typeB))) {
+    return emitOpError() << NVVM::stringifyWGMMATypes(typeD)
                          << " += " << NVVM::stringifyWGMMATypes(typeA) << " * "
                          << NVVM::stringifyWGMMATypes(typeB)
                          << ", it is not supported.";
@@ -866,8 +880,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   }
 
   // Check transpose (only available for f16/bf16)
-  if ((typeA != mlir::NVVM::WGMMATypes::f16 &&
-       typeA != mlir::NVVM::WGMMATypes::bf16) &&
+  if ((typeA != WGMMATypes::f16 && typeA != WGMMATypes::bf16) &&
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
        getLayoutB() == mlir::NVVM::MMALayout::col)) {
     return emitOpError()
@@ -876,29 +889,29 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
            << " for input types " << stringifyWGMMATypes(typeA) << " and "
            << stringifyWGMMATypes(typeB)
            << " requires transpose. However, this is only supported for: "
-           << stringifyMMATypes(mlir::NVVM::MMATypes::f16) << " and "
-           << stringifyMMATypes(mlir::NVVM::MMATypes::bf16);
+           << stringifyMMATypes(MMATypes::f16) << " and "
+           << stringifyMMATypes(MMATypes::bf16);
   }
 
   // Check result registers
-  int expectedOutput;
-  if (outputType.isF32() || outputType.isInteger(32))
+  int expectedOutput = 0;
+  if (typeD == WGMMATypes::f32 || typeD == WGMMATypes::s32)
     expectedOutput = getShape().getN() / 2;
-  if (outputType.isF16())
+  if (typeD == WGMMATypes::f16)
     expectedOutput = getShape().getN() / 4;
   if (outputSize != expectedOutput) {
     return emitOpError() << "results " << expectedOutput
                          << ", however output struct has " << outputSize
                          << " elements";
   }
-  // Check satfinite (only availalbe for s32 accumulator)
-  if (!outputType.isInteger(32) &&
+  // Check satfinite (only available for s32 accumulator)
+  if (typeD != WGMMATypes::s32 &&
       getSatfinite().value_or(NVVM::MMAIntOverflow::wrapped) ==
           NVVM::MMAIntOverflow::satfinite) {
     return emitOpError()
            << " `satfinite` can be only used with s32 accumulator, however "
               "the current accumulator is "
-           << outputType;
+           << NVVM::stringifyWGMMATypes(typeD);
   }
 
   return success();
@@ -907,27 +920,15 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
 std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
 
   int m = getShape().getM(), n = getShape().getN(), k = getShape().getK();
-  bool isF16 = getTypeA() == mlir::NVVM::WGMMATypes::f16 ||
-               getTypeA() == mlir::NVVM::WGMMATypes::bf16;
+  bool isF16 = getTypeA() == WGMMATypes::f16 || getTypeA() == WGMMATypes::bf16;
 
-  Value outValue = getResults() ? getResults() : getInouts();
-  auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
-  Type outputType = stype.getBody().front();
-  std::string outputTypeName;
-  if (outputType.isF16())
-    outputTypeName = "f16";
-  else if (outputType.isF32())
-    outputTypeName = "f32";
-  else if (outputType.isInteger(32))
-    outputTypeName = "s32";
-  else
-    assert(false && "unsupported output type");
+  StringRef outputTypeName = stringifyWGMMATypes(getTypeD());
 
-  int expectedOutputRegisters;
-  if (outputType.isF32() || outputType.isInteger(32))
-    expectedOutputRegisters = getShape().getN() / 2;
-  if (outputType.isF16())
+  int expectedOutputRegisters = 0;
+  if (getTypeD() == WGMMATypes::f16)
     expectedOutputRegisters = getShape().getN() / 4;
+  else
+    expectedOutputRegisters = getShape().getN() / 2;
 
   std::string ptx;
   llvm::raw_string_ostream ss(ptx);
@@ -958,7 +959,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << " $" << (regCnt) << ","
      << " $" << (regCnt + 1) << ","
      << " p";
-  if (!outputType.isInteger(32)) {
+  if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
   // Don't add transpose parameters unless needed.
@@ -975,11 +976,7 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
     RewriterBase &rewriter,
     llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
         &asmValues) {
-  Value outValue = getResults() ? getResults() : getInouts();
-  auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
-  Type outputType = stype.getBody().front();
-  bool isF16 = getTypeA() == mlir::NVVM::WGMMATypes::f16 ||
-               getTypeA() == mlir::NVVM::WGMMATypes::bf16;
+  bool isF16 = getTypeA() == WGMMATypes::f16 || getTypeA() == WGMMATypes::bf16;
   if (getResults())
     asmValues.push_back({getResults(), mlir::NVVM::PTXRegisterMod::Write});
   if (getInouts())
@@ -988,7 +985,7 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
   asmValues.push_back({getDescriptorB(), mlir::NVVM::PTXRegisterMod::Read});
   asmValues.push_back({makeConstantI32(rewriter, static_cast<int>(getScaleD())),
                        mlir::NVVM::PTXRegisterMod::Read});
-  if (!outputType.isInteger(32)) {
+  if (getTypeD() != WGMMATypes::s32) {
     asmValues.push_back(
         {makeConstantI32(rewriter,
                          getScaleA() == NVVM::WGMMAScaleIn::neg ? -1 : 1),
@@ -1060,19 +1057,13 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   // If maxntid and reqntid exist, it must be an array with max 3 dim
   if (attrName == NVVMDialect::getMaxntidAttrName() ||
       attrName == NVVMDialect::getReqntidAttrName()) {
-    auto values = llvm::dyn_cast<ArrayAttr>(attr.getValue());
+    auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
     if (!values || values.empty() || values.size() > 3)
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
-    for (auto val : llvm::cast<ArrayAttr>(attr.getValue())) {
-      if (!llvm::dyn_cast<IntegerAttr>(val))
-        return op->emitError()
-               << "'" << attrName
-               << "' attribute must be integer array with maximum 3 index";
-    }
   }
-  // If minctasm and maxnreg exist, it must be an array with max 3 dim
+  // If minctasm and maxnreg exist, it must be an integer attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName()) {
     if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))

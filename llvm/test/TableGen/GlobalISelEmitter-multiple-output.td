@@ -82,5 +82,5 @@ def : Pat<(two_in GPR32:$i1, GPR32:$i2), (TWO_INS GPR32:$i2, GPR32:$i1)>;
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // DstI[out2]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/3, // i2
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // i1
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,

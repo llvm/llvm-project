@@ -122,6 +122,11 @@ public:
   /// current space; this will result in an assert failure.
   void setSpaceExceptLocals(const PresburgerSpace &oSpace);
 
+  /// Set the identifier for the ith variable of the specified kind of the
+  /// IntegerRelation's PresburgerSpace. The index is relative to the kind of
+  /// the variable.
+  void setId(VarKind kind, unsigned i, Identifier id);
+
   /// Returns a copy of the space without locals.
   PresburgerSpace getSpaceWithoutLocals() const {
     return PresburgerSpace::getRelationSpace(space.getNumDomainVars(),
@@ -220,6 +225,8 @@ public:
   inline SmallVector<int64_t, 8> getInequality64(unsigned idx) const {
     return getInt64Vec(inequalities.getRow(idx));
   }
+
+  inline IntMatrix getInequalities() const { return inequalities; }
 
   /// Get the number of vars of the specified kind.
   unsigned getNumVarKind(VarKind kind) const {

@@ -239,7 +239,10 @@ static uptr longjmp_xor_key = 0;
 void InitializePlatform() {
   DisableCoreDumperIfNecessary();
 #if !SANITIZER_GO
-  CheckAndProtect();
+  if (!CheckAndProtect(true, true, true)) {
+    Printf("FATAL: ThreadSanitizer: found incompatible memory layout.\n");
+    Die();
+  }
 
   InitializeThreadStateStorage();
 

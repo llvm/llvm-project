@@ -117,8 +117,10 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
             /*SkipTrailingWhitespaceAndNewLine=*/true));
     for (const auto *UsingShadow : Using->shadows()) {
       const auto *TargetDecl = UsingShadow->getTargetDecl()->getCanonicalDecl();
-      if (shouldCheckDecl(TargetDecl))
+      if (shouldCheckDecl(TargetDecl)) {
         Context.UsingTargetDecls.insert(TargetDecl);
+        UsingTargetDeclsCache.insert(TargetDecl);
+      }
     }
     if (!Context.UsingTargetDecls.empty())
       Contexts.push_back(Context);
@@ -201,13 +203,16 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
   if (!D)
     return;
+  const Decl *CanonicalDecl = D->getCanonicalDecl();
+  if (!UsingTargetDeclsCache.contains(CanonicalDecl))
+    return;
   // FIXME: Currently, we don't handle the using-decls being used in different
   // scopes (such as different namespaces, different functions). Instead of
   // giving an incorrect message, we mark all of them as used.
-  //
-  // FIXME: Use a more efficient way to find a matching context.
   for (auto &Context : Contexts) {
-    if (Context.UsingTargetDecls.contains(D->getCanonicalDecl()))
+    if (Context.IsUsed)
+      continue;
+    if (Context.UsingTargetDecls.contains(CanonicalDecl))
       Context.IsUsed = true;
   }
 }
@@ -224,6 +229,7 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
     }
   }
   Contexts.clear();
+  UsingTargetDeclsCache.clear();
 }
 
 } // namespace clang::tidy::misc

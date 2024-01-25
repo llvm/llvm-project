@@ -169,12 +169,8 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   // during expansion.
   if (Op == Instruction::IntToPtr) {
     auto *PtrTy = cast<PointerType>(Ty);
-    if (DL.isNonIntegralPointerType(PtrTy)) {
-      assert(DL.getTypeAllocSize(Builder.getInt8Ty()) == 1 &&
-             "alloc size of i8 must by 1 byte for the GEP to be correct");
-      return Builder.CreateGEP(
-          Builder.getInt8Ty(), Constant::getNullValue(PtrTy), V, "scevgep");
-    }
+    if (DL.isNonIntegralPointerType(PtrTy))
+      return Builder.CreatePtrAdd(Constant::getNullValue(PtrTy), V, "scevgep");
   }
   // Short-circuit unnecessary bitcasts.
   if (Op == Instruction::BitCast) {
@@ -321,7 +317,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))
     if (Constant *CRHS = dyn_cast<Constant>(Idx))
-      return Builder.CreateGEP(Builder.getInt8Ty(), CLHS, CRHS);
+      return Builder.CreatePtrAdd(CLHS, CRHS);
 
   // Do a quick scan to see if we have this GEP nearby.  If so, reuse it.
   unsigned ScanLimit = 6;
@@ -358,7 +354,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
   }
 
   // Emit a GEP.
-  return Builder.CreateGEP(Builder.getInt8Ty(), V, Idx, "scevgep");
+  return Builder.CreatePtrAdd(V, Idx, "scevgep");
 }
 
 /// PickMostRelevantLoop - Given two loops pick the one that's most relevant for
@@ -2123,9 +2119,9 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     if (isa<PointerType>(ARTy)) {
       Value *NegMulV = Builder.CreateNeg(MulV);
       if (NeedPosCheck)
-        Add = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, MulV);
+        Add = Builder.CreatePtrAdd(StartValue, MulV);
       if (NeedNegCheck)
-        Sub = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, NegMulV);
+        Sub = Builder.CreatePtrAdd(StartValue, NegMulV);
     } else {
       if (NeedPosCheck)
         Add = Builder.CreateAdd(StartValue, MulV);

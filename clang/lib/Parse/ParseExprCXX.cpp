@@ -1916,7 +1916,7 @@ ExprResult
 Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
   Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                             DeclaratorContext::FunctionalCast);
-  ParsedType TypeRep = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo).get();
+  ParsedType TypeRep = Actions.ActOnTypeName(DeclaratorInfo).get();
 
   assert((Tok.is(tok::l_paren) ||
           (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)))
@@ -2815,7 +2815,7 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
   ParseDeclaratorInternal(D, /*DirectDeclParser=*/nullptr);
 
   // Finish up the type.
-  TypeResult Ty = Actions.ActOnTypeName(getCurScope(), D);
+  TypeResult Ty = Actions.ActOnTypeName(D);
   if (Ty.isInvalid())
     return true;
 
@@ -3252,8 +3252,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
     ConstructorLParen = T.getOpenLocation();
     if (Tok.isNot(tok::r_paren)) {
       auto RunSignatureHelp = [&]() {
-        ParsedType TypeRep =
-            Actions.ActOnTypeName(getCurScope(), DeclaratorInfo).get();
+        ParsedType TypeRep = Actions.ActOnTypeName(DeclaratorInfo).get();
         QualType PreferredType;
         // ActOnTypeName might adjust DeclaratorInfo and return a null type even
         // the passing DeclaratorInfo is valid, e.g. running SignatureHelp on
@@ -4037,7 +4036,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
       if (DeclaratorInfo.isInvalidType())
         return ExprError();
 
-      TypeResult Ty = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+      TypeResult Ty = Actions.ActOnTypeName(DeclaratorInfo);
       return ParseCompoundLiteralExpression(Ty.get(),
                                             Tracker.getOpenLocation(),
                                             Tracker.getCloseLocation());

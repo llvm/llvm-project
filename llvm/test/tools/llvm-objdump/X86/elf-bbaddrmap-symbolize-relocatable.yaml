@@ -2,9 +2,6 @@
 ## --symbolize-operands can display <BB*> labels properly in a relocatable
 ## object file.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 ## Relocatable Object file.
 # RUN: yaml2obj %s -o %t1
 # RUN: llvm-objdump %t1 -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \

@@ -176,6 +176,8 @@ public:
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT) const override;
 
+  bool isScalarLoadLegal(const MachineInstr &MI) const;
+
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;
 

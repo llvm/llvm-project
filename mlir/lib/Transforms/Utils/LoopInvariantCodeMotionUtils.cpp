@@ -365,8 +365,8 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(RewriterBase &rewriter,
       iterArg = loopLike.getRegionIterArgs()[iterArgIdx];
       OpResult loopResult = loopLike.getTiedLoopResult(iterArg);
       OpResult newLoopResult = loopLike.getLoopResults()->back();
-      extractionOp->moveBefore(loopLike);
-      insertionOp->moveAfter(loopLike);
+      rewriter.moveOpBefore(extractionOp, loopLike);
+      rewriter.moveOpAfter(insertionOp, loopLike);
       rewriter.replaceAllUsesWith(insertionOp.getUpdatedDestination(),
                                   insertionOp.getDestinationOperand().get());
       extractionOp.getSourceOperand().set(

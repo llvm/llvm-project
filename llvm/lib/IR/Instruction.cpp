@@ -146,9 +146,9 @@ void Instruction::insertBefore(BasicBlock &BB,
   bool InsertAtHead = InsertPos.getHeadBit();
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
-    if (!SrcMarker)
-      SrcMarker = BB.createMarker(InsertPos);
-    DbgMarker->absorbDebugValues(*SrcMarker, false);
+    // If there's no source marker, InsertPos is very likely end().
+    if (SrcMarker)
+      DbgMarker->absorbDebugValues(*SrcMarker, false);
   }
 
   // If we're inserting a terminator, check if we need to flush out
@@ -241,18 +241,6 @@ Instruction::cloneDebugInfoFrom(const Instruction *From,
     getParent()->createMarker(this);
 
   return DbgMarker->cloneDebugInfoFrom(From->DbgMarker, FromHere, InsertAtHead);
-}
-
-iterator_range<DPValue::self_iterator>
-Instruction::getDbgValueRange() const {
-  BasicBlock *Parent = const_cast<BasicBlock *>(getParent());
-  assert(Parent && "Instruction must be inserted to have DPValues");
-  (void)Parent;
-
-  if (!DbgMarker)
-    return DPMarker::getEmptyDPValueRange();
-
-  return DbgMarker->getDbgValueRange();
 }
 
 std::optional<DPValue::self_iterator> Instruction::getDbgReinsertionPosition() {

@@ -2,7 +2,9 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.assert
     libc.include.ctype
     libc.include.string
+    libc.include.float
     libc.include.inttypes
+    libc.include.limits
     libc.include.math
     libc.include.fenv
     libc.include.time

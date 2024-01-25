@@ -14,19 +14,17 @@ static bool isKnownAndSupported(const char *name) {
 void __init_cpu_features_resolver(void) {
   // On Darwin platforms, this may be called concurrently by multiple threads
   // because the resolvers that use it are called lazily at runtime (unlike on
-  // ELF platforms, where IFuncs are resolved serially at load time).  This
-  // function's effect on __aarch64_cpu_features should be idempotent, but even
-  // so we need dispatch_once to resolve the race condition.  Dispatch is
-  // available through libSystem, which we need anyway for the sysctl, so this
-  // does not add a new dependency.
+  // ELF platforms, where IFuncs are resolved serially at load time). This
+  // function's effect on __aarch64_cpu_features must be idempotent.
 
-  static dispatch_once_t onceToken = 0;
-  dispatch_once(&onceToken, ^{
+  if (!__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED)) {
+    uint64_t features = 0;
+
     // https://developer.apple.com/documentation/kernel/1387446-sysctlbyname/determining_instruction_set_characteristics
-    static struct {
+    static const struct {
       const char *sysctl_name;
       enum CPUFeatures feature;
-    } features[] = {
+    } feature_checks[] = {
         {"hw.optional.arm.FEAT_FlagM", FEAT_FLAGM},
         {"hw.optional.arm.FEAT_FlagM2", FEAT_FLAGM2},
         {"hw.optional.arm.FEAT_FHM", FEAT_FP16FML},
@@ -58,12 +56,16 @@ void __init_cpu_features_resolver(void) {
         {"hw.optional.arm.FEAT_BTI", FEAT_BTI},
     };
 
-    for (size_t I = 0, E = sizeof(features) / sizeof(features[0]); I != E; ++I)
-      if (isKnownAndSupported(features[I].sysctl_name))
-        __aarch64_cpu_features.features |= (1ULL << features[I].feature);
+    for (size_t I = 0, E = sizeof(feature_checks) / sizeof(feature_checks[0]);
+         I != E; ++I)
+      if (isKnownAndSupported(feature_checks[I].sysctl_name))
+        features |= (1ULL << feature_checks[I].feature);
 
-    __aarch64_cpu_features.features |= (1ULL << FEAT_INIT);
-  });
+    features |= (1ULL << FEAT_INIT);
+
+    __atomic_store(&__aarch64_cpu_features.features, &features,
+                   __ATOMIC_RELAXED);
+  }
 }
 
 #endif // TARGET_OS_OSX || TARGET_OS_IPHONE

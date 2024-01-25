@@ -42,6 +42,7 @@ add_llvm_target(AArch64CodeGen
   GISel/AArch64RegisterBankInfo.cpp
   AArch64A57FPLoadBalancing.cpp
   AArch64AdvSIMDScalarPass.cpp
+  AArch64Arm64ECCallLowering.cpp
   AArch64AsmPrinter.cpp
   AArch64BranchTargets.cpp
   AArch64CallingConvention.cpp
@@ -64,6 +65,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
   AArch64LoadStoreOptimizer.cpp
+  AArch64LoopIdiomTransform.cpp
   AArch64LowerHomogeneousPrologEpilog.cpp
   AArch64MachineFunctionInfo.cpp
   AArch64MachineScheduler.cpp

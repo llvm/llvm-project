@@ -63,9 +63,8 @@ define <32 x i32> @insertelt_v32i32_31(<32 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v32i32_31:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v16, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vmv.s.x v16, a0
 ; CHECK-NEXT:    vslideup.vi v8, v16, 31
 ; CHECK-NEXT:    ret
   %b = insertelement <32 x i32> %a, i32 %y, i32 31
@@ -101,9 +100,8 @@ define <64 x i32> @insertelt_v64i32_63(<64 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v64i32_63:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v24, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vmv.s.x v24, a0
 ; CHECK-NEXT:    vslideup.vi v16, v24, 31
 ; CHECK-NEXT:    ret
   %b = insertelement <64 x i32> %a, i32 %y, i32 63

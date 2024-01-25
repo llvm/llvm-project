@@ -1445,7 +1445,7 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s s1, v8
 ; CHECK-NEXT:  .LBB24_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1467,7 +1467,7 @@ define void @test20(<vscale x 1 x i32> %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; NOREMOVAL-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; NOREMOVAL-NEXT:    mv s0, a0
-; NOREMOVAL-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NOREMOVAL-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; NOREMOVAL-NEXT:    vmv.x.s s1, v8
 ; NOREMOVAL-NEXT:  .LBB24_1: # %bb2
 ; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1

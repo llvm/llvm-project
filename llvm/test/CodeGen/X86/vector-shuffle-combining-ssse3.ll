@@ -766,12 +766,12 @@ define <16 x i8> @combine_and_pshufb_or_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @constant_fold_pshufb() {
 ; SSE-LABEL: constant_fold_pshufb:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = <14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9>
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: constant_fold_pshufb:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = <14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9>
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [14,0,0,0,u,u,0,0,0,0,0,0,0,0,8,9]
 ; AVX-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>, <16 x i8> <i8 1, i8 -1, i8 -1, i8 -1, i8 undef, i8 undef, i8 -1, i8 -1, i8 15, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 7, i8 6>)
   ret <16 x i8> %1

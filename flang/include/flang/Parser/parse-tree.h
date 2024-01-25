@@ -4072,8 +4072,8 @@ struct AccWaitArgument {
 };
 
 struct AccDeviceTypeExpr {
-  ENUM_CLASS(Device, Star, Default, Nvidia, Radeon, Host, Multicore)
-  WRAPPER_CLASS_BOILERPLATE(AccDeviceTypeExpr, Device);
+  WRAPPER_CLASS_BOILERPLATE(
+      AccDeviceTypeExpr, Fortran::common::OpenACCDeviceType);
   CharBlock source;
 };
 
