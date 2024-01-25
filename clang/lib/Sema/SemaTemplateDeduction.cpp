@@ -995,6 +995,7 @@ public:
         NewPack = Pack.DeferredDeduction;
         Result = checkDeducedTemplateArguments(S.Context, OldPack, NewPack);
       }
+
       NamedDecl *Param = TemplateParams->getParam(Pack.Index);
       if (Result.isNull()) {
         Info.Param = makeTemplateParameter(Param);
@@ -1028,10 +1029,8 @@ private:
   bool IsPartiallyExpanded = false;
   bool DeducePackIfNotAlreadyDeduced = false;
   bool DeducedFromEarlierParameter = false;
-
   /// The number of expansions, if we have a fully-expanded pack in this scope.
   std::optional<unsigned> FixedNumExpansions;
-
 
   SmallVector<DeducedPack, 2> Packs;
 };
