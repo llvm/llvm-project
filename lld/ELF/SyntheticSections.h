@@ -375,7 +375,7 @@ public:
   void writeTo(uint8_t *buf) override;
   void finalizeContents() override;
 
-  size_t getSizeReduction();
+  int32_t getSizeReduction();
   void addCMJTEntryCandidate(const Symbol *symbol, int csReduction);
   int getCMJTEntryIndex(const Symbol *symbol);
   void addCMJALTEntryCandidate(const Symbol *symbol, int csReduction);

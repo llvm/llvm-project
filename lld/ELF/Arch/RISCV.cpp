@@ -877,7 +877,7 @@ void elf::riscvFinalizeRelax(int passes) {
           case INTERNAL_R_RISCV_GPREL_S:
             break;
           case INTERNAL_R_RISCV_TBJAL:
-            assert(config->riscvTbljal);
+            assert(config->relaxTbljal);
             assert((aux.writes[writesIdx] & 0xfc03) == 0xA002);
             skip = 2;
             write16le(p, aux.writes[writesIdx++]);
@@ -896,8 +896,8 @@ void elf::riscvFinalizeRelax(int passes) {
           case R_RISCV_64:
             break;
           case R_RISCV_32:
-            // Used by relaxTlsLe to write a uint32_t then suppress the
-            // handling in relocateAlloc.
+            // Used by relaxTlsLe to write a uint32_t then suppress the handling
+            // in relocateAlloc.
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
             aux.relocTypes[i] = R_RISCV_NONE;
@@ -1225,6 +1225,11 @@ void TableJumpSection::finalizeContents() {
     // Stop relax to cm.jalt if there will be negative effect
     finalizedCMJALTEntries.clear();
   }
+  // if table jump still got negative effect, give up.
+  if (getSizeReduction() <= 0){
+    warn("Table Jump Relaxation didn't got any reduction for code size.");
+    finalizedCMJTEntries.clear();
+  }
 }
 
 // Sort the map in decreasing order of the amount of code reduction provided
@@ -1276,7 +1281,7 @@ size_t TableJumpSection::getSize() const {
   }
 }
 
-size_t TableJumpSection::getSizeReduction() {
+int32_t TableJumpSection::getSizeReduction() {
   // The total reduction in code size is J + JA - JTS - JAE.
   // Where:
   // J = number of bytes saved for all the cm.jt instructions emitted
@@ -1284,7 +1289,7 @@ size_t TableJumpSection::getSizeReduction() {
   // JTS = size of the part of the table for cm.jt jumps (i.e. 32 x wordsize)
   // JAE = number of entries emitted for the cm.jalt jumps x wordsize
 
-  size_t sizeReduction = -getSize();
+  int32_t sizeReduction = -getSize();
   for (auto entry : finalizedCMJTEntries) {
     sizeReduction += entry.second;
   }
@@ -1295,6 +1300,8 @@ size_t TableJumpSection::getSizeReduction() {
 }
 
 void TableJumpSection::writeTo(uint8_t *buf) {
+  if (getSizeReduction() <= 0)
+    return;
   target->writeTableJumpHeader(buf);
   writeEntries(buf + startCMJTEntryIdx * config->wordsize,
                finalizedCMJTEntries);
