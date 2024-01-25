@@ -4278,7 +4278,7 @@ unsigned ResourceSegments::getFirstAvailableAt(
 
   // Zero resource usage is allowed by TargetSchedule.td but we do not construct
   // a ResourceSegment interval for that situation.
-  if (AcquireAtCycle == Cycle)
+  if (AcquireAtCycle == ReleaseAtCycle)
     return CurrCycle;
 
   unsigned RetCycle = CurrCycle;
