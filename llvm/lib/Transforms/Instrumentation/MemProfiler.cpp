@@ -171,7 +171,6 @@ struct InterestingMemoryAccess {
   Value *Addr = nullptr;
   bool IsWrite;
   Type *AccessTy;
-  uint64_t TypeSize;
   Value *MaybeMask = nullptr;
 };
 
@@ -194,7 +193,7 @@ public:
   void instrumentMop(Instruction *I, const DataLayout &DL,
                      InterestingMemoryAccess &Access);
   void instrumentAddress(Instruction *OrigIns, Instruction *InsertBefore,
-                         Value *Addr, uint32_t TypeSize, bool IsWrite);
+                         Value *Addr, bool IsWrite);
   void instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                    Instruction *I, Value *Addr, Type *AccessTy,
                                    bool IsWrite);
@@ -375,7 +374,6 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   }
 
   const DataLayout &DL = I->getModule()->getDataLayout();
-  Access.TypeSize = DL.getTypeStoreSizeInBits(Access.AccessTy);
   return Access;
 }
 
@@ -383,7 +381,6 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                               Instruction *I, Value *Addr,
                                               Type *AccessTy, bool IsWrite) {
   auto *VTy = cast<FixedVectorType>(AccessTy);
-  uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto *Zero = ConstantInt::get(IntptrTy, 0);
   for (unsigned Idx = 0; Idx < Num; ++Idx) {
@@ -408,8 +405,7 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
     IRBuilder<> IRB(InsertBefore);
     InstrumentedAddress =
         IRB.CreateGEP(VTy, Addr, {Zero, ConstantInt::get(IntptrTy, Idx)});
-    instrumentAddress(I, InsertBefore, InstrumentedAddress, ElemTypeSize,
-                      IsWrite);
+    instrumentAddress(I, InsertBefore, InstrumentedAddress, IsWrite);
   }
 }
 
@@ -436,13 +432,13 @@ void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
     // Since the access counts will be accumulated across the entire allocation,
     // we only update the shadow access count for the first location and thus
     // don't need to worry about alignment and type size.
-    instrumentAddress(I, I, Access.Addr, Access.TypeSize, Access.IsWrite);
+    instrumentAddress(I, I, Access.Addr, Access.IsWrite);
   }
 }
 
 void MemProfiler::instrumentAddress(Instruction *OrigIns,
                                     Instruction *InsertBefore, Value *Addr,
-                                    uint32_t TypeSize, bool IsWrite) {
+                                    bool IsWrite) {
   IRBuilder<> IRB(InsertBefore);
   Value *AddrLong = IRB.CreatePointerCast(Addr, IntptrTy);
 
