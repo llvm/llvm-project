@@ -541,11 +541,7 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &Subtarget,
   if (!isa<GlobalAddressSDNode>(Operand))
     return ModuleModel;
 
-  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Operand);
-  if (!GA)
-    return ModuleModel;
-
-  const GlobalValue *GV = GA->getGlobal();
+  const GlobalValue *GV = cast<GlobalAddressSDNode>(Operand)->getGlobal();
   if (!GV || !isa<GlobalVariable>(GV))
     return ModuleModel;
 

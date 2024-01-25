@@ -477,9 +477,10 @@ static void collectTOCStats(PPCAsmPrinter::TOCEntryType Type) {
 static CodeModel::Model getCodeModel(const PPCSubtarget &S,
                                      const TargetMachine &TM,
                                      const MachineOperand &MO) {
-  assert(S.isAIXABI() && "ELF per global code model not supported yet");
-
   CodeModel::Model ModuleModel = TM.getCodeModel();
+  // Per global code model is only support on AIX.
+  if (!S.isAIXABI())
+    return ModuleModel;
 
   // If the operand is not a global address then there is no
   // global variable to carry an attribute.
@@ -493,7 +494,7 @@ static CodeModel::Model getCodeModel(const PPCSubtarget &S,
     return ModuleModel;
 
   std::optional<CodeModel::Model> MaybeCodeModel =
-      dyn_cast<GlobalVariable>(GV)->getCodeModel();
+      cast<GlobalVariable>(GV)->getCodeModel();
   if (MaybeCodeModel)
     return *MaybeCodeModel;
 
