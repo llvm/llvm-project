@@ -15,7 +15,10 @@ tablegen("RISCVGenCompressInstEmitter") {
 }
 
 tablegen("RISCVGenMacroFusion") {
-  visibility = [ ":LLVMRISCVCodeGen" ]
+  visibility = [
+    ":LLVMRISCVCodeGen",
+    "//llvm/unittests/Target/RISCV:RISCVTests",
+  ]
   args = [ "-gen-macro-fusion-pred" ]
   td_file = "RISCV.td"
 }
