@@ -33,6 +33,8 @@ jobs:
   backport-commits:
     name: Backport Commits
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
@@ -58,15 +60,18 @@ jobs:
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
           --repo "$GITHUB_REPOSITORY" \
-          --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
+          --token ${{ github.token }} \
           release-workflow \
+          --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
-          --phab-token ${{ secrets.RELEASE_WORKFLOW_PHAB_TOKEN }} \
           auto
 
   create-pull-request:
     name: Create Pull Request
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       !startswith(github.event.comment.body, '<!--IGNORE-->') &&
@@ -87,8 +92,8 @@ jobs:
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
           --repo "$GITHUB_REPOSITORY" \
-          --token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
+          --token ${{ github.token }} \
           release-workflow \
+          --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
-          --phab-token ${{ secrets.RELEASE_WORKFLOW_PHAB_TOKEN }} \
           auto

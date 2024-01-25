@@ -1134,6 +1134,27 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
   return 0;
 }
 
+static bool isNF(InternalInstruction *insn) {
+  if (!nfFromEVEX4of4(insn->vectorExtensionPrefix[3]))
+    return false;
+  if (insn->opcodeType == MAP4)
+    return true;
+  // Below NF instructions are not in map4.
+  if (insn->opcodeType == THREEBYTE_38 &&
+      ppFromEVEX3of4(insn->vectorExtensionPrefix[2]) == VEX_PREFIX_NONE) {
+    switch (insn->opcode) {
+    case 0xf2: // ANDN
+    case 0xf3: // BLSI, BLSR, BLSMSK
+    case 0xf5: // BZHI
+    case 0xf7: // BEXTR
+      return true;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
 // Determine the ID of an instruction, consuming the ModR/M byte as appropriate
 // for extended and escape opcodes. Determines the attributes and context for
 // the instruction before doing so.
@@ -1169,9 +1190,7 @@ static int getInstructionID(struct InternalInstruction *insn,
         attrMask |= ATTR_EVEXKZ;
       if (bFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXB;
-      // nf bit is the MSB of aaa
-      if (nfFromEVEX4of4(insn->vectorExtensionPrefix[3]) &&
-          insn->opcodeType == MAP4)
+      if (isNF(insn)) // NF bit is the MSB of aaa.
         attrMask |= ATTR_EVEXNF;
       else if (aaaFromEVEX4of4(insn->vectorExtensionPrefix[3]))
         attrMask |= ATTR_EVEXK;

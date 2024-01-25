@@ -1341,9 +1341,14 @@ def VCSrc_v2f16 : RegOrV2F16 <"VS_32", "OPERAND_REG_INLINE_C">;
 //  VISrc_* Operands with a VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
+def VISrc_64_f16 : RegOrF16 <"VReg_64", "OPERAND_REG_INLINE_C">;
+def VISrc_64_b32 : RegOrB32 <"VReg_64", "OPERAND_REG_INLINE_C">;
 def VISrc_64_f64 : RegOrF64 <"VReg_64", "OPERAND_REG_INLINE_C">;
+def VISrc_128_f16 : RegOrF16 <"VReg_128", "OPERAND_REG_INLINE_C">;
 def VISrc_128_b32 : RegOrB32 <"VReg_128", "OPERAND_REG_INLINE_C">;
 def VISrc_128_f32 : RegOrF32 <"VReg_128", "OPERAND_REG_INLINE_C">;
+def VISrc_256_b32 : RegOrB32 <"VReg_256", "OPERAND_REG_INLINE_C">;
+def VISrc_256_f32 : RegOrF32 <"VReg_256", "OPERAND_REG_INLINE_C">;
 def VISrc_256_f64 : RegOrF64 <"VReg_256", "OPERAND_REG_INLINE_C">;
 def VISrc_512_b32 : RegOrB32 <"VReg_512", "OPERAND_REG_INLINE_C">;
 def VISrc_512_f32 : RegOrF32 <"VReg_512", "OPERAND_REG_INLINE_C">;
@@ -1379,30 +1384,17 @@ def AVDst_512 : RegisterOperand<AV_512> {
   let EncoderMethod = "getAVOperandEncoding";
 }
 
-def AVLdSt_32 : RegisterOperand<AV_32> {
-  let DecoderMethod = "DecodeAVLdSt_32RegisterClass";
+class AVLdStOperand<RegisterClass regClass, string width>
+    : RegisterOperand<regClass> {
+  let DecoderMethod = "decodeAVLdSt<AMDGPUDisassembler::" # width # ">";
   let EncoderMethod = "getAVOperandEncoding";
 }
 
-def AVLdSt_64 : RegisterOperand<AV_64> {
-  let DecoderMethod = "DecodeAVLdSt_64RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
-
-def AVLdSt_96 : RegisterOperand<AV_96> {
-  let DecoderMethod = "DecodeAVLdSt_96RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
-
-def AVLdSt_128 : RegisterOperand<AV_128> {
-  let DecoderMethod = "DecodeAVLdSt_128RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
-
-def AVLdSt_160 : RegisterOperand<AV_160> {
-  let DecoderMethod = "DecodeAVLdSt_160RegisterClass";
-  let EncoderMethod = "getAVOperandEncoding";
-}
+def AVLdSt_32 : AVLdStOperand<AV_32, "OPW32">;
+def AVLdSt_64 : AVLdStOperand<AV_64, "OPW64">;
+def AVLdSt_96 : AVLdStOperand<AV_96, "OPW96">;
+def AVLdSt_128 : AVLdStOperand<AV_128, "OPW128">;
+def AVLdSt_160 : AVLdStOperand<AV_160, "OPW160">;
 
 //===----------------------------------------------------------------------===//
 //  ACSrc_* Operands with an AGPR or an inline constant

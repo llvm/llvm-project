@@ -10,7 +10,7 @@ declare void @func()
 define void @test(ptr addrspace(1) %b) gc "statepoint-example" {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[D:%.*]] = getelementptr i32, ptr addrspace(1) [[B:%.*]], i64 16
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(1) [[B:%.*]], i64 64
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[B]], ptr addrspace(1) [[D]]) ]
 ; CHECK-NEXT:    [[B_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[B_NEW_2:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
@@ -68,7 +68,7 @@ entry:
 define void @test_no_base_use(ptr addrspace(1) %b) gc "statepoint-example" {
 ; CHECK-LABEL: @test_no_base_use(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[D:%.*]] = getelementptr i32, ptr addrspace(1) [[B:%.*]], i64 16
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(1) [[B:%.*]], i64 64
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[B]], ptr addrspace(1) [[D]]) ]
 ; CHECK-NEXT:    [[D_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 1)
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[D_NEW_1]], align 4
@@ -90,7 +90,7 @@ entry:
 define void @test_invoke(ptr addrspace(1) %b) gc "statepoint-example" personality ptr @fake_personality_function {
 ; CHECK-LABEL: @test_invoke(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[D:%.*]] = getelementptr i32, ptr addrspace(1) [[B:%.*]], i64 16
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(1) [[B:%.*]], i64 64
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[B]], ptr addrspace(1) [[D]]) ]
 ; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
@@ -209,7 +209,7 @@ unwind_dest:
 define void @test_no_base_use_invoke(ptr addrspace(1) %b) gc "statepoint-example" personality ptr @fake_personality_function {
 ; CHECK-LABEL: @test_no_base_use_invoke(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[D:%.*]] = getelementptr i32, ptr addrspace(1) [[B:%.*]], i64 16
+; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(1) [[B:%.*]], i64 64
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[B]], ptr addrspace(1) [[D]]) ]
 ; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:

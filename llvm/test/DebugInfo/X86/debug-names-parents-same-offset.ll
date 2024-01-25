@@ -21,16 +21,30 @@
 ; CHECK-NEXT:        Abbrev: [[ABBREV:0x.*]]
 ; CHECK-NEXT:        Tag: DW_TAG_structure_type
 ; CHECK-NEXT:        DW_IDX_type_unit: 0x01
-; CHECK-NEXT:        DW_IDX_die_offset: [[DieOffset:0x.*]]
-; CHECK-NEXT:        DW_IDX_parent: [[Parent1:0x.*]]
+; CHECK-NEXT:        DW_IDX_die_offset: [[DieOffsetStruct:0x.*]]
+; CHECK-NEXT:        DW_IDX_parent: Entry @ [[Parent2:0x.*]]
+; CHECK:      String: {{.*}} "MyNamespace"
+; CHECK-NEXT:      Entry @ [[Parent1:0x.*]] {
+; CHECK-NEXT:        Abbrev: {{.*}}
+; CHECK-NEXT:        Tag: DW_TAG_namespace
+; CHECK-NEXT:        DW_IDX_type_unit: 0x00
+; CHECK-NEXT:        DW_IDX_die_offset: [[DieOffsetNamespace:0x.*]]
+; CHECK-NEXT:        DW_IDX_parent: <parent not indexed>
+; CHECK-NEXT:      }
+; CHECK-NEXT:      Entry @ [[Parent2]] {
+; CHECK-NEXT:        Abbrev: {{.*}}
+; CHECK-NEXT:        Tag: DW_TAG_namespace
+; CHECK-NEXT:        DW_IDX_type_unit: 0x01
+; CHECK-NEXT:        DW_IDX_die_offset: [[DieOffsetNamespace:0x.*]]
+; CHECK-NEXT:        DW_IDX_parent: <parent not indexed>
+; CHECK-NEXT:      }
 ; CHECK:      String: {{.*}} "MyStruct1"
 ; CHECK-NEXT:      Entry @ {{.*}} {
 ; CHECK-NEXT:        Abbrev: [[ABBREV]]
 ; CHECK-NEXT:        Tag: DW_TAG_structure_type
 ; CHECK-NEXT:        DW_IDX_type_unit: 0x00
-; CHECK-NEXT:        DW_IDX_die_offset: [[DieOffset:0x.*]]
-; CHECK-NOT:         DW_IDX_parent: [[Parent1]]
-; CHECK-NEXT:        DW_IDX_parent: 0x{{.*}}
+; CHECK-NEXT:        DW_IDX_die_offset: [[DieOffsetStruct:0x.*]]
+; CHECK-NEXT:        DW_IDX_parent: Entry @ [[Parent1]]
 
 
 %"struct.MyNamespace::MyStruct1" = type { i8 }
