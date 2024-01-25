@@ -7395,7 +7395,16 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Use))
       if (GEP->getPointerOperand() == I) {
-        if (!GEP->isInBounds() || !GEP->hasAllZeroIndices())
+        // The current base address is null, there are four cases to consider:
+        // getelementptr (TY, null, 0)                 -> null
+        // getelementptr (TY, null, not zero)          -> may be modified
+        // getelementptr inbounds (TY, null, 0)        -> null
+        // getelementptr inbounds (TY, null, not zero) -> poison iff null is
+        // undefined?
+        if (!GEP->hasAllZeroIndices() &&
+            (!GEP->isInBounds() ||
+             NullPointerIsDefined(GEP->getFunction(),
+                                  GEP->getPointerAddressSpace())))
           PtrValueMayBeModified = true;
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }

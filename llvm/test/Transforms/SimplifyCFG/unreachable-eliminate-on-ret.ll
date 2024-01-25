@@ -55,7 +55,26 @@ define nonnull noundef ptr @test_ret_ptr_nonnull_noundef_gep_nonzero(i1 %cond, p
 ; CHECK-LABEL: @test_ret_ptr_nonnull_noundef_gep_nonzero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND:%.*]], ptr [[X:%.*]], ptr null
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr [[SPEC_SELECT]], i64 12
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[SPEC_SELECT]], i64 12
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+entry:
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  br label %bb2
+
+bb2:
+  %phi = phi ptr [ null, %entry ], [ %x, %bb1 ]
+  %gep = getelementptr ptr, ptr %phi, i64 12
+  ret ptr %gep
+}
+
+define nonnull noundef ptr @test_ret_ptr_nonnull_noundef_gep_inbounds_nonzero(i1 %cond, ptr %x) {
+; CHECK-LABEL: @test_ret_ptr_nonnull_noundef_gep_inbounds_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND:%.*]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr [[X:%.*]], i64 12
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
 entry:
