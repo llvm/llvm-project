@@ -1226,7 +1226,7 @@ void TableJumpSection::finalizeContents() {
     finalizedCMJALTEntries.clear();
   }
   // if table jump still got negative effect, give up.
-  if (getSizeReduction() <= 0){
+  if (getSizeReduction() <= 0) {
     warn("Table Jump Relaxation didn't got any reduction for code size.");
     finalizedCMJTEntries.clear();
   }
