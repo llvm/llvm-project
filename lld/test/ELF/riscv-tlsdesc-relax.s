@@ -118,9 +118,9 @@
 # IE64-NEXT:  11018: auipc   a0, 0x1
 # IE64-NEXT:         ld      a0, 0xd0(a0)
 # IE64-NEXT:         c.add   a0, tp
-# IE64-NEXT:         addi    zero, zero, 0x0
-# IE64-NEXT:         addi    zero, zero, 0x0
 ## &.got[c]-. = 0x120e0+8 - 0x1102a = 0x10be
+# IE64-NEXT:         addi    zero, zero, 0x0
+# IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:  1102a: auipc   a0, 0x1
 # IE64-NEXT:         ld      a0, 0xbe(a0)
 # IE64-NEXT:         c.add   a0, tp
