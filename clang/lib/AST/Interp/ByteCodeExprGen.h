@@ -405,11 +405,11 @@ public:
   }
 
   void removeIfStoredOpaqueValue(const Scope::Local &Local) {
-    if (auto *OVE =
+    if (const auto *OVE =
             llvm::dyn_cast_if_present<OpaqueValueExpr>(Local.Desc->asExpr())) {
-      if (auto it = this->Ctx->OpaqueExprs.find(OVE);
-          it != this->Ctx->OpaqueExprs.end())
-        this->Ctx->OpaqueExprs.erase(it);
+      if (auto It = this->Ctx->OpaqueExprs.find(OVE);
+          It != this->Ctx->OpaqueExprs.end())
+        this->Ctx->OpaqueExprs.erase(It);
     };
   }
 
