@@ -896,11 +896,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   Exts = Exts.drop_front(ConsumeLength);
   Exts.consume_front("_");
 
-  std::vector<std::string> SplitedExts;
-  if (auto E = splitExtsByUnderscore(Exts, SplitedExts))
+  std::vector<std::string> SplittedExts;
+  if (auto E = splitExtsByUnderscore(Exts, SplittedExts))
     return std::move(E);
 
-  for (auto &Ext : SplitedExts) {
+  for (auto &Ext : SplittedExts) {
     StringRef CurrExt = Ext;
     while (!CurrExt.empty()) {
       if (AllStdExts.contains(CurrExt.front())) {
