@@ -959,8 +959,8 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     LLVM_DEBUG(dbgs() << "Multiply might overflow, versioning loop\n");
 
     // Version the loop. The overflow check isn't a runtime pointer check, so we
-    // pass an empty list of runtime pointer checks and add our own check
-    // afterwards.
+    // pass an empty list of runtime pointer checks, causing LoopVersioning to
+    // emit 'false' as the branch condition, and add our own check afterwards.
     BasicBlock *CheckBlock = FI.OuterLoop->getLoopPreheader();
     ArrayRef<RuntimePointerCheck> Checks(nullptr, nullptr);
     LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE);
@@ -971,6 +971,8 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     BranchInst *Br = cast<BranchInst>(CheckBlock->getTerminator());
     assert(Br->isConditional() &&
            "Expected LoopVersioning to generate a conditional branch");
+    assert(match(Br->getCondition(), m_Zero()) &&
+           "Expected branch condition to be false");
     IRBuilder<> Builder(Br);
     Function *F = Intrinsic::getDeclaration(M, Intrinsic::umul_with_overflow,
                                             FI.OuterTripCount->getType());
