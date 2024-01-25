@@ -7890,6 +7890,18 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   return Loads[0];
 }
 
+SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (!Subtarget->hasArchitectedSGPRs())
+    return {};
+  SDLoc SL(Op);
+  MVT VT = MVT::i32;
+  SDValue TTMP8 = CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
+                                       AMDGPU::TTMP8, VT, SL);
+  return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
+                     DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
+}
+
 SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                                           unsigned Dim,
                                           const ArgDescriptor &Arg) const {
@@ -8060,6 +8072,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_workgroup_id_z:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_wave_id:
+    return lowerWaveID(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);
