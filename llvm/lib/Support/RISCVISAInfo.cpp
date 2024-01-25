@@ -900,7 +900,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   if (auto E = splitExtsByUnderscore(Exts, SplitedExts))
     return std::move(E);
 
-  for (auto Ext : SplitedExts) {
+  for (auto &Ext : SplitedExts) {
     StringRef CurrExt = Ext;
     while (!CurrExt.empty()) {
       if (AllStdExts.contains(CurrExt.front())) {
@@ -935,8 +935,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   }
 
   // Check all Extensions are supported.
-  for (auto SeenExtAndVers : SeenExtMap) {
-    std::string ExtName = SeenExtAndVers.first;
+  for (auto &SeenExtAndVers : SeenExtMap) {
+    const std::string &ExtName = SeenExtAndVers.first;
     RISCVISAInfo::ExtensionVersion ExtVers = SeenExtAndVers.second;
 
     if (!RISCVISAInfo::isSupportedExtension(ExtName)) {
