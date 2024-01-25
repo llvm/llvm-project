@@ -694,7 +694,6 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     printBefore(T->getElementType(), OS);
     break;
   case VectorKind::RVVFixedLengthData:
-  case VectorKind::RVVFixedLengthMask:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -774,7 +773,6 @@ void TypePrinter::printDependentVectorBefore(
     printBefore(T->getElementType(), OS);
     break;
   case VectorKind::RVVFixedLengthData:
-  case VectorKind::RVVFixedLengthMask:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";

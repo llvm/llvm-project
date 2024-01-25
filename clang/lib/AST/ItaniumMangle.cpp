@@ -3994,8 +3994,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert((T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-          T->getVectorKind() == VectorKind::RVVFixedLengthMask) &&
+  assert(T->getVectorKind() == VectorKind::RVVFixedLengthData &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4010,10 +4009,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
     TypeNameOS << "int8";
     break;
   case BuiltinType::UChar:
-    if (T->getVectorKind() == VectorKind::RVVFixedLengthData)
-      TypeNameOS << "uint8";
-    else
-      TypeNameOS << "bool";
+    TypeNameOS << "uint8";
     break;
   case BuiltinType::Short:
     TypeNameOS << "int16";
@@ -4052,16 +4048,12 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
       getASTContext().getLangOpts());
   unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
+  TypeNameOS << 'm';
+  if (VecSizeInBits >= VLen)
+    TypeNameOS << (VecSizeInBits / VLen);
+  else
+    TypeNameOS << 'f' << (VLen / VecSizeInBits);
 
-  if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
-    TypeNameOS << 'm';
-    if (VecSizeInBits >= VLen)
-      TypeNameOS << (VecSizeInBits / VLen);
-    else
-      TypeNameOS << 'f' << (VLen / VecSizeInBits);
-  } else {
-    TypeNameOS << (VLen / VecSizeInBits);
-  }
   TypeNameOS << "_t";
 
   Out << "9__RVV_VLSI" << 'u' << TypeNameStr.size() << TypeNameStr << "Lj"
@@ -4101,8 +4093,7 @@ void CXXNameMangler::mangleType(const VectorType *T) {
              T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData ||
-             T->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
