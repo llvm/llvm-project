@@ -1194,16 +1194,6 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
   escape(handler);
 }
 
-- (void)test_termination:(int)cond
-                  withCompletion:(void (^)(void))handler {
-  // The code below was able to cause non-termination but should be
-  // fixed now:
-  do {
-    escape(handler);    
-    handler();    // expected-warning{{completion handler is called twice}} expected-note{{previous call is here; set to nil to indicate it cannot be called afterwards}}
-  } while (cond);
-}
-
 typedef void (^DeferredBlock)(void);
 static inline void DefferedCallback(DeferredBlock *inBlock) { (*inBlock)(); }
 #define _DEFERCONCAT(a, b) a##b

@@ -163,7 +163,7 @@ public:
     NotVisited = 0x8, /* 1000 */
     // We already reported a violation and stopped tracking calls for this
     // parameter.
-    Reported = 0xF, /* 1111 */
+    Reported = 0x15, /* 1111 */
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Reported)
   };
 
@@ -213,55 +213,6 @@ private:
   // unfortunately NumLowBitsAvailable for clang::Expr had been reduced to 2.
   Kind StatusKind = NotVisited;
   const Expr *Call = nullptr;
-};
-
-// Represents a set of `ParameterStatus`s collected in a single CFGBlock.
-class ParamStatusSet {
-private:
-  // The kinds of `States` spans from 0x0 to 0x15, so 16 bits are enough:
-  llvm::BitVector Set{16, false};
-  // Following the exisitng idea: if there are multiple calls of interest in one
-  // block, recording one of them is good enough.
-  const Expr *Call = nullptr;
-
-public:
-  ParamStatusSet() {}
-
-  // Add a new `ParameterStatus` to the set.  Returns true iff the adding status
-  // was new to the set.
-  bool add(ParameterStatus PS) {
-    assert(PS.getKind() != ParameterStatus::Kind::NotVisited &&
-           "the status cannot be NotVisited after visiting a block");
-    if (Set.test(PS.getKind()))
-      return false;
-    Set.set(PS.getKind());
-    if (PS.seenAnyCalls())
-      Call = &PS.getCall();
-    return true;
-  }
-
-  // Get one `ParameterStatus` to represent the set of them.  The idea is to
-  // take a join on them but let ESCAPE overrides error statuses.
-  ParameterStatus summaryStatus() {
-    unsigned Summary = 0x0;
-
-    for (unsigned Idx :
-         llvm::make_range(Set.set_bits_begin(), Set.set_bits_end()))
-      Summary |= Idx;
-    assert(Summary == 0x0 || Summary == 0x1 || Summary == 0x3 ||
-           Summary == 0x5 || Summary == 0x7 ||
-           Summary == 0xF && "expecting a defined value");
-
-    ParameterStatus::Kind SummaryKind = ParameterStatus::Kind(Summary);
-
-    if (SummaryKind > ParameterStatus::Kind::NON_ERROR_STATUS &&
-        Set.test(ParameterStatus::Kind::Escaped)) {
-      SummaryKind = ParameterStatus::Kind::Escaped;
-    }
-    if (ParameterStatus::seenAnyCalls(SummaryKind))
-      return {SummaryKind, Call};
-    return {SummaryKind};
-  }
 };
 
 /// State aggregates statuses of all tracked parameters.
@@ -323,53 +274,6 @@ public:
 
 private:
   ParamSizedVector<ParameterStatus> ParamData;
-
-  friend class CFGBlockOutputState;
-
-  State(ParamSizedVector<ParameterStatus> ParamData) : ParamData(ParamData) {}
-
-  unsigned size() const { return ParamData.size(); }
-};
-
-// A different kind of "state" in addition to `State`.  `CFGBlockOutputState`
-// are created for dealing with the non-termination issue due to `State`s are
-// not being updated monotonically at the output of each CFGBlock.
-// A `CFGBlockOutputState` is in fact a finite set of `State`s that
-// grows monotonically.  One can extract a `State` from a `CFGBlockOutputState`.
-// Note that the `State`-extraction  does NOT guarantee monotone but it
-// respects the existing semantics.  Specifically, ESCAPE is "greater than"
-// other error states in a single path but is "less than" them at JOIN.
-//
-// `CFGBlockOutputState` will be used to terminate the fix-point computation.
-class CFGBlockOutputState {
-private:
-  ParamSizedVector<ParamStatusSet> StatusSets;
-
-public:
-  CFGBlockOutputState(unsigned Size) : StatusSets{Size} {};
-
-  // Update this `CFGBlockOutputState` with a newly computed `State`.  Return
-  // true iff `CFGBlockOutputState` changed.
-  bool update(const State &NewState) {
-    bool Changed = false;
-
-    for (unsigned Idx = 0; Idx < NewState.size(); ++Idx) {
-      if (StatusSets[Idx].add(NewState.getStatusFor(Idx))) {
-        Changed = true;
-      }
-    }
-    return Changed;
-  }
-
-  // Return a `State` that represents the `CFGBlockOutputState`.
-  State getState() {
-    ParamSizedVector<ParameterStatus> ParamData{StatusSets.size()};
-
-    for (unsigned Idx = 0; Idx < ParamData.size(); ++Idx) {
-      ParamData[Idx] = StatusSets[Idx].summaryStatus();
-    }
-    return State{ParamData};
-  }
 };
 
 /// A simple class that finds DeclRefExpr in the given expression.
@@ -735,8 +639,6 @@ private:
     if (size() != 0) {
       States =
           CFGSizedVector<State>(FunctionCFG.getNumBlockIDs(), State(size()));
-      CFGBlockOutputStates = CFGSizedVector<CFGBlockOutputState>(
-          FunctionCFG.getNumBlockIDs(), CFGBlockOutputState(size()));
     }
   }
 
@@ -1403,17 +1305,17 @@ private:
   }
   /// \}
 
-  /// Update output state for the CFGBlock.
-  /// Returns true when the stored state changed.
+  /// Assign status to the given basic block.
+  ///
+  /// Returns true when the stored status changed.
   bool assignState(const CFGBlock *BB, const State &ToAssign) {
-    CFGBlockOutputState &OldOutputState =
-        CFGBlockOutputStates[BB->getBlockID()];
-
-    if (OldOutputState.update(ToAssign)) {
-      getState(BB) = OldOutputState.getState();
-      return true;
+    State &Current = getState(BB);
+    if (Current == ToAssign) {
+      return false;
     }
-    return false;
+
+    Current = ToAssign;
+    return true;
   }
 
   /// Join all incoming statuses for the given basic block.
@@ -1790,8 +1692,6 @@ private:
   State CurrentState;
   ParamSizedVector<const ParmVarDecl *> TrackedParams;
   CFGSizedVector<State> States;
-  // The mapping from each `CFGBlock` to its `CFGBlockOutputState`:
-  CFGSizedVector<CFGBlockOutputState> CFGBlockOutputStates;
 };
 
 } // end anonymous namespace
