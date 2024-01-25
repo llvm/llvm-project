@@ -485,7 +485,7 @@ class MUBUF_Load_Pseudo <string opName,
                          list<dag> pattern=[],
                          // Workaround bug bz30254
                          int addrKindCopy = addrKind,
-                         RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret,
+                         RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret.RegClass,
                          RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdata_rc, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
@@ -567,9 +567,17 @@ multiclass MUBUF_Pseudo_Loads<string opName, ValueType load_vt = i32,
   }
 }
 
-multiclass MUBUF_Pseudo_Loads_Lds<string opName, ValueType load_vt = i32> {
+multiclass MUBUF_Pseudo_Loads_Lds<string opName, ValueType load_vt = i32, Predicate LDSPred = TruePredicate> {
   defm NAME : MUBUF_Pseudo_Loads<opName, load_vt>;
-  defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, 0, 1>;
+
+  if !ne(LDSPred, TruePredicate) then {
+    let SubtargetPredicate = LDSPred in {
+      defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, 0, 1>;
+    }
+  } else {
+    defm _LDS : MUBUF_Pseudo_Loads<opName, load_vt, 0, 1>;
+  }
+
 }
 
 multiclass MUBUF_Pseudo_Loads_LDSOpc<string opName,
@@ -601,7 +609,7 @@ class MUBUF_Store_Pseudo <string opName,
                           int addrKindCopy = addrKind>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 getMUBUFIns<addrKindCopy, [getVregSrcForVT<store_vt>.ret], isTFE, hasGFX12Enc>.ret,
+                 getMUBUFIns<addrKindCopy, [getVregSrcForVT<store_vt>.ret.RegClass], isTFE, hasGFX12Enc>.ret,
                  getMUBUFAsmOps<addrKindCopy, 0, 0, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKindCopy> {
@@ -952,11 +960,11 @@ defm BUFFER_LOAD_DWORD : MUBUF_Pseudo_Loads_Lds <
 defm BUFFER_LOAD_DWORDX2 : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx2", v2i32
 >;
-defm BUFFER_LOAD_DWORDX3 : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx3", v3i32
+defm BUFFER_LOAD_DWORDX3 : MUBUF_Pseudo_Loads_Lds <
+  "buffer_load_dwordx3", v3i32, /*LDSPred=*/HasGFX950Insts
 >;
-defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads <
-  "buffer_load_dwordx4", v4i32
+defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads_Lds <
+  "buffer_load_dwordx4", v4i32, /*LDSPred=*/HasGFX950Insts
 >;
 
 defm BUFFER_LOAD_LDS_B32 : MUBUF_Pseudo_Loads_LDSOpc <
@@ -1569,27 +1577,28 @@ multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string
                                        # !if(!eq(RtnMode, "ret"), "", "_noret")
                                        # "_" # vt.Size);
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
+  defvar data_vt_RC = getVregSrcForVT<data_vt>.ret.RegClass;
 
   let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
   defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
-    getVregSrcForVT<data_vt>.ret:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
+    data_vt_RC:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
     offset:$offset);
   def : GCNPat<
     (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset), data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
-      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS OffsetResDag, getVregSrcForVT<data_vt>.ret)),
+      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS OffsetResDag, data_vt_RC)),
         !if(!eq(vt, i32), sub0, sub0_sub1)),
       OffsetResDag)
   >;
 
   defvar Addr64ResDag = (!cast<MUBUF_Pseudo>(Inst # "_ADDR64" # InstSuffix)
-    getVregSrcForVT<data_vt>.ret:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
+    data_vt_RC:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
     SCSrc_b32:$soffset, offset:$offset);
   def : GCNPat<
     (vt (Op (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
       data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
-      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS Addr64ResDag, getVregSrcForVT<data_vt>.ret)),
+      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS Addr64ResDag, data_vt_RC)),
         !if(!eq(vt, i32), sub0, sub0_sub1)),
       Addr64ResDag)
   >;
@@ -1721,8 +1730,6 @@ let SubtargetPredicate = isGFX12Plus in {
 
   let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["noret"]>;
-
-  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2i16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
@@ -1822,7 +1829,7 @@ multiclass SIBufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, stri
       (extract_cpol_set_glc $auxiliary),
       (extract_cpol $auxiliary));
     defvar SrcRC = getVregSrcForVT<vt>.ret;
-    defvar DataRC = getVregSrcForVT<data_vt>.ret;
+    defvar DataRC = getVregSrcForVT<data_vt>.ret.RegClass;
     defvar SubLo = !if(!eq(vt, i32), sub0, sub0_sub1);
     defvar SubHi = !if(!eq(vt, i32), sub1, sub2_sub3);
 
@@ -3274,8 +3281,8 @@ defm BUFFER_LOAD_USHORT         : MUBUF_Real_AllAddr_Lds_vi <0x12>;
 defm BUFFER_LOAD_SSHORT         : MUBUF_Real_AllAddr_Lds_vi <0x13>;
 defm BUFFER_LOAD_DWORD          : MUBUF_Real_AllAddr_Lds_vi <0x14>;
 defm BUFFER_LOAD_DWORDX2        : MUBUF_Real_AllAddr_vi <0x15>;
-defm BUFFER_LOAD_DWORDX3        : MUBUF_Real_AllAddr_vi <0x16>;
-defm BUFFER_LOAD_DWORDX4        : MUBUF_Real_AllAddr_vi <0x17>;
+defm BUFFER_LOAD_DWORDX3        : MUBUF_Real_AllAddr_Lds_vi <0x16>;
+defm BUFFER_LOAD_DWORDX4        : MUBUF_Real_AllAddr_Lds_vi <0x17>;
 defm BUFFER_STORE_BYTE          : MUBUF_Real_AllAddr_vi <0x18>;
 defm BUFFER_STORE_BYTE_D16_HI   : MUBUF_Real_AllAddr_vi <0x19>;
 defm BUFFER_STORE_SHORT         : MUBUF_Real_AllAddr_vi <0x1a>;

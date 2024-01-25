@@ -431,3 +431,6 @@ def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
 
 def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
   GISDNodeXFormEquiv<PrefetchLoc>;
+
+def gi_MFMALdScaleModifierOp : GICustomOperandRenderer<"renderScaledMAIIntrinsicOperand">,
+  GISDNodeXFormEquiv<MFMALdScaleXForm>;

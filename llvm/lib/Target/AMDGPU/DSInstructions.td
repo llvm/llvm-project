@@ -769,7 +769,6 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
 }
 
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
-
 } // let SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = isGFX12_10Plus in {

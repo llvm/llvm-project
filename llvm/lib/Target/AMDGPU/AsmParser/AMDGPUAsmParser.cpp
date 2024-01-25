@@ -367,7 +367,7 @@ public:
   }
 
   bool isVRegWithInputMods() const;
-  bool isT16VRegWithInputMods() const;
+  template <bool IsFake16> bool isT16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
   bool isSDWAFP16Operand() const;
@@ -2149,8 +2149,9 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
           AsmParser->getFeatureBits()[AMDGPU::FeatureDPALU_DPP]);
 }
 
-bool AMDGPUOperand::isT16VRegWithInputMods() const {
-  return isRegClass(AMDGPU::VGPR_32_Lo128RegClassID);
+template <bool IsFake16> bool AMDGPUOperand::isT16VRegWithInputMods() const {
+  return isRegClass(IsFake16 ? AMDGPU::VGPR_32_Lo128RegClassID
+                             : AMDGPU::VGPR_16_Lo128RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
@@ -8679,16 +8680,6 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  if (isVOP1Cvt_F32_Fp8_Bf8_e64(Opc) &&
-      Opc != AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 &&
-      Opc != AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I++]);
-    Op.addRegOrImmWithFPInputModsOperands(Inst, 1); // src0
-    // Add dummy src1
-    Inst.addOperand(MCOperand::createImm(0));
-    Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
-  }
-
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
@@ -9250,11 +9241,6 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   int OldIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::old);
   int Src2ModIdx =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
-  int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
-  bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
-                        Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
-                        Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
-                        Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12;
   bool IsMAC = OldIdx != -1 && Src2ModIdx != -1 &&
                Desc.getOperandConstraint(OldIdx, MCOI::TIED_TO) == -1;
 
@@ -9278,17 +9264,19 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       }
     }
 
-    if (VdstInIdx != -1) {
-      int NumOperands = Inst.getNumOperands();
-      if (VdstInIdx == NumOperands)
-        Inst.addOperand(Inst.getOperand(0));
+    int VdstInIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
+    if (VdstInIdx == static_cast<int>(Inst.getNumOperands())) {
+      Inst.addOperand(Inst.getOperand(0));
     }
 
+    bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
+                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12;
     if (IsVOP3CvtSrDpp) {
-      int NumOperands = Inst.getNumOperands();
-      if (Src2ModIdx == NumOperands) {
+      if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
         Inst.addOperand(MCOperand::createImm(0));
-        Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
+        Inst.addOperand(MCOperand::createReg(0));
       }
     }
 
@@ -9305,13 +9293,6 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       Fi = Op.getImm();
     } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
-      if (isVOP1Cvt_F32_Fp8_Bf8_e64(Inst.getOpcode()) &&
-          Inst.getOpcode() != AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 &&
-          Inst.getOpcode() != AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12) {
-        // Add dummy src1
-        Inst.addOperand(MCOperand::createImm(0));
-        Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
-      }
     } else if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
     } else if (Op.isImm() &&

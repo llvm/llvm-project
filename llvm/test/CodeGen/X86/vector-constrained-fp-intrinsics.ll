@@ -4379,7 +4379,7 @@ define <2 x i32> @constrained_vector_fptoui_v2i32_v2f32() #0 {
 ;
 ; AVX512-LABEL: constrained_vector_fptoui_v2i32_v2f32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4.2E+1,4.3E+1,0.0E+0,0.0E+0]
+; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,4.3E+1,0.0E+0,0.0E+0]
 ; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper

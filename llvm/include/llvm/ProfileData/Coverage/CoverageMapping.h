@@ -587,8 +587,9 @@ public:
   /// Return an MCDC record that indicates executed test vectors and condition
   /// pairs.
   Expected<MCDCRecord>
-  evaluateMCDCRegion(CounterMappingRegion Region, BitVector Bitmap,
-                     ArrayRef<CounterMappingRegion> Branches);
+  evaluateMCDCRegion(const CounterMappingRegion &Region,
+                     const BitVector &Bitmap,
+                     ArrayRef<const CounterMappingRegion *> Branches);
 
   unsigned getMaxCounterID(const Counter &C) const;
 };

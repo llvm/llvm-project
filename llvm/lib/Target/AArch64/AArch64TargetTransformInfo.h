@@ -412,6 +412,8 @@ public:
 
   bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
 
+  bool shouldTreatInstructionLikeSelect(const Instruction *I);
+
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const {
     // We can vectorize store v4i8.

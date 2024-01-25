@@ -509,7 +509,7 @@ using B::operator==;
 bool a = 0 == A::S();  // expected-error {{invalid operands to binary expression}}
 }
 
-} //namespace ADL_GH68901
+} // namespace ADL_GH68901
 
 namespace function_scope_operator_eqeq {
 // For non-members, we always lookup for matching operator!= in the namespace scope of

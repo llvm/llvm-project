@@ -9,7 +9,7 @@
 
 #
 # This file generates a Buildkite pipeline that triggers the various CI jobs for
-# the LLVM project during pre-commit CI (each time a Phabricator diff is uploaded).
+# the LLVM project during pre-commit CI.
 #
 # See https://buildkite.com/docs/agent/v3/cli-pipeline#pipeline-format.
 #
@@ -30,8 +30,6 @@ git fetch origin main:main
 : ${WINDOWS_AGENTS:='{"queue": "windows"}'}
 # Filter rules for generic linux tests
 : ${LINUX_AGENTS:='{"queue": "linux"}'}
-# Service agents, for interacting with Phabricator.
-: ${SERVICE_AGENTS:='{"queue": "service"}'}
 # Set by buildkite
 : ${BUILDKITE_COMMIT:=}
 : ${BUILDKITE_BRANCH:=}
@@ -282,30 +280,5 @@ if [[ "${windows_projects}" != "" ]]; then
   commands:
   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
-EOF
-fi
-
-# If build was triggered from a Phabricator review - send an update back.
-if [[ -n "${ph_target_phid:-}" ]]; then
-  cat << EOF
-- continue_on_failure: true
-  wait: '~'
-- label: ':phabricator: update build status on Phabricator'
-  agents: ${SERVICE_AGENTS}
-  artifact_paths:
-  - 'artifacts/**/*'
-  commands:
-  - export SRC=\$\${BUILDKITE_BUILD_PATH}/llvm-premerge-checks
-  - rm -rf \$\${SRC}
-  - git clone --depth 1 https://github.com/google/llvm-premerge-checks.git "\$\${SRC}"
-  - cd \$\${SRC}
-  - git fetch origin "main":x
-  - git checkout x
-  - echo "llvm-premerge-checks commit"
-  - git rev-parse HEAD
-  - pip install -q -r \$\${SRC}/scripts/requirements.txt
-  - cd "\$\$BUILDKITE_BUILD_CHECKOUT_PATH"
-  - \$\${SRC}/scripts/summary.py
-  timeout_in_minutes: 10
 EOF
 fi

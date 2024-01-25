@@ -49,7 +49,7 @@ template <> struct ExtraPrecision<long double> {
 template <typename T>
 static inline unsigned int get_precision(double ulp_tolerance) {
   if (ulp_tolerance <= 0.5) {
-    return LIBC_NAMESPACE::fputil::FPBits<T>::MANTISSA_PRECISION;
+    return LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN + 1;
   } else {
     return ExtraPrecision<T>::VALUE;
   }
@@ -451,7 +451,7 @@ public:
     if (is_nan()) {
       if (FPBits<T>(input).is_nan())
         return MPFRNumber(0.0);
-      return MPFRNumber(static_cast<T>(FPBits<T>::inf()));
+      return MPFRNumber(FPBits<T>::inf().get_val());
     }
 
     int thisExponent = FPBits<T>(thisAsT).get_exponent();
