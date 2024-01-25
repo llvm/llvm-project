@@ -503,7 +503,7 @@ public:
 
       cpp::UInt<MID_INT_SIZE> val;
 
-      const uint32_t pos_exp = idx * IDX_SIZE;
+      const uint32_t pos_exp = static_cast<uint32_t>(idx * IDX_SIZE);
 
 #if defined(LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT)
       // ----------------------- DYADIC FLOAT CALC MODE ------------------------
