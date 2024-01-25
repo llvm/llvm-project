@@ -71,28 +71,28 @@ class PatSRL<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
 
 let Predicates = [HasStdExtZalasr] in {
   def : PatLAQ<acquiring_load<atomic_load_8>, LB_AQ_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_8>, LB_AQ_AQ_RL>;
+  def : PatLAQ<seq_cst_load<atomic_load_8>, LB_AQ_AQ>; // these use lb.aq instead of lb.aqrl to match the psABI
 
   def : PatLAQ<acquiring_load<atomic_load_16>, LH_AQ_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_16>, LH_AQ_AQ_RL>;
+  def : PatLAQ<seq_cst_load<atomic_load_16>, LH_AQ_AQ>;
 
   def : PatLAQ<acquiring_load<atomic_load_32>, LW_AQ_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_32>, LW_AQ_AQ_RL>;
+  def : PatLAQ<seq_cst_load<atomic_load_32>, LW_AQ_AQ>;
 
   def : PatSRL<releasing_store<atomic_store_8>, SB_RL_RL>;
-  def : PatSRL<seq_cst_store<atomic_store_8>, SB_RL_AQ_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_8>, SB_RL_RL>; // these use sb.rl instead of sb.aqrl to match the psABI
 
   def : PatSRL<releasing_store<atomic_store_16>, SH_RL_RL>;
-  def : PatSRL<seq_cst_store<atomic_store_16>, SH_RL_AQ_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_16>, SH_RL_RL>;
 
   def : PatSRL<releasing_store<atomic_store_32>, SW_RL_RL>;
-  def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL_AQ_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL_RL>;
 } // Predicates HasStdExtZalasr
 
 let Predicates = [HasStdExtZalasr, IsRV64] in {
   def : PatLAQ<acquiring_load<atomic_load_64>, LD_AQ_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_64>, LD_AQ_AQ_RL>;
+  def : PatLAQ<seq_cst_load<atomic_load_64>, LD_AQ_AQ>;
 
   def : PatSRL<releasing_store<atomic_store_64>, SD_RL_RL>;
-  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL_AQ_RL>;
+  def : PatSRL<seq_cst_store<atomic_store_64>, SD_RL_RL>;
 } // Predicates HasStdExtZalasr, IsRV64

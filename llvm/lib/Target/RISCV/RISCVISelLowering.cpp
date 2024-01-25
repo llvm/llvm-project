@@ -20506,12 +20506,12 @@ unsigned RISCVTargetLowering::getCustomCtpopCost(EVT VT,
   return isCtpopFast(VT) ? 0 : 1;
 }
 
-bool RISCVTargetLowering::shouldInsertFencesForAtomic(const Instruction *I) const {
+bool RISCVTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
   if (Subtarget.hasStdExtZalasr()) {
     return false;
-  } else {
-    return isa<LoadInst>(I) || isa<StoreInst>(I);
   }
+  return isa<LoadInst>(I) || isa<StoreInst>(I);
 }
 
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
