@@ -125,7 +125,7 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
-MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
+// MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
 // MACHINE_FUNCTION_PASS("mir-printer", PrintMIRPass, ())
 #undef MACHINE_FUNCTION_PASS
 
