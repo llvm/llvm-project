@@ -461,13 +461,13 @@ def VOP3P_DOTF8_Profile : VOP3P_Profile<VOPProfile <[f32, i32, i32, f32]>,
 
   let InsVOP3DPP8 = (ins DstRC:$old, VGPR_32:$src0, VRegSrc_32:$src1,
                          PackedF16InputMods:$src2_modifiers, VRegSrc_32:$src2,
-                         neg_lo0:$neg_lo, neg_hi0:$neg_hi, dpp8:$dpp8, FI:$fi);
+                         neg_lo0:$neg_lo, neg_hi0:$neg_hi, dpp8:$dpp8, DppFI:$fi);
 
   let InsVOP3DPP16 = (ins DstRC:$old, VGPR_32:$src0, VRegSrc_32:$src1,
                           PackedF16InputMods:$src2_modifiers, VRegSrc_32:$src2,
                           neg_lo0:$neg_lo, neg_hi0:$neg_hi, dpp_ctrl:$dpp_ctrl,
-                          row_mask:$row_mask, bank_mask:$bank_mask,
-                          bound_ctrl:$bound_ctrl, FI:$fi);
+                          DppRowMask:$row_mask, DppBankMask:$bank_mask,
+                          DppBoundCtrl:$bound_ctrl, DppFI:$fi);
 }
 
 multiclass VOP3PDOTF8Inst <string OpName, SDPatternOperator intrinsic_node> {
@@ -547,7 +547,7 @@ class VOPProfileMAI<VOPProfile P, RegisterOperand _SrcRC, RegisterOperand _DstRC
   let HasOMod = 0;
   let HasModifiers = 0;
   let AsmVOP3Base = "$vdst, $src0, $src1, $src2$cbsz$abid$blgp";
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, cbsz:$cbsz, abid:$abid, blgp:$blgp);
+  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, CBSZ:$cbsz, ABID:$abid, blgp:$blgp);
   let InsVOP3Base = Ins64;
   // Dst and SrcC cannot partially overlap if SrcC/Dst is bigger than 4 VGPRs.
   // We then create two versions of the instruction: with tied dst and src2
@@ -564,7 +564,7 @@ class VOPProfileSMFMAC<VOPProfile P, RegisterOperand _DstRC,
   let Src2VT = DstVT;
   let Asm64 = " $vdst, $src0, $src1, $idx$cbsz$abid";
   let Outs64 = (outs DstRC:$vdst);
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, VRegSrc_32:$idx, cbsz:$cbsz, abid:$abid, Src2RC64:$src2);
+  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, VRegSrc_32:$idx, CBSZ:$cbsz, ABID:$abid, Src2RC64:$src2);
 }
 
 def VOPProfileMAI_F32_F32_X4    : VOPProfileMAI<VOP_V4F32_F32_F32_V4F32,       AISrc_128_f32,  ADst_128>;
@@ -998,39 +998,14 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   bit NegLoAny = !or(NegLo01, NegLo2);
   bit NegHiAny = !or(NegHi01, NegHi2);
 
-  let DstRC = !cond(!eq(ArgTy[0], v8f32): VDst_256,
-                    !eq(ArgTy[0], v8i32): VDst_256,
-                    !eq(ArgTy[0], v8f16): VDst_128,
-                    !eq(ArgTy[0], v8i16): VDst_128,
-                    !eq(ArgTy[0], v4f32): VDst_128,
-                    !eq(ArgTy[0], v4i32): VDst_128,
-                    !eq(ArgTy[0], v4f16): VDst_64,
-                    !eq(ArgTy[0], v4i16): VDst_64);
-  let Src0RC64 = !cond(!eq(ArgTy[1], v8f16): VRegSrc_128,
-                       !eq(ArgTy[1], v4f16): VRegSrc_64,
-                       !eq(ArgTy[1], v4i16): VRegSrc_64,
-                       !eq(ArgTy[1], v8i16): VRegSrc_128,
-                       !eq(ArgTy[1], v4i32): VRegSrc_128,
-                       !eq(ArgTy[1], v2i32): VRegSrc_64,
-                       !eq(ArgTy[1], i32)  : VRegSrc_32);
-  let Src1RC64 = !cond(!eq(ArgTy[2], v16f16): VRegSrc_256,
-                       !eq(ArgTy[2], v16i16): VRegSrc_256,
-                       !eq(ArgTy[2], v8f16): VRegSrc_128,
-                       !eq(ArgTy[2], v8i16): VRegSrc_128,
-                       !eq(ArgTy[2], v4i32): VRegSrc_128,
-                       !eq(ArgTy[1], v4i16): VRegSrc_64,
-                       !eq(ArgTy[1], v4f16): VRegSrc_64,
-                       !eq(ArgTy[2], v2i32): VRegSrc_64,
-                       !eq(ArgTy[2], i32)  : VRegSrc_32);
+  let DstRC = !cast<RegisterOperand>("VDst_"#ArgTy[0].Size);
+  let Src0RC64 = !cast<RegisterOperand>("VRegSrc_"#ArgTy[1].Size);
+  let Src1RC64 = !cast<RegisterOperand>("VRegSrc_"#ArgTy[2].Size);
   let Src2RC64 = !if(IsSWMMAC, DstRC,
-                               !cond(!eq(ArgTy[3], v8f32): VISrc_256_f32,
-                                     !eq(ArgTy[3], v8i32): VISrc_256_b32,
-                                     !eq(ArgTy[3], v8f16): VISrc_128_f16,
-                                     !eq(ArgTy[3], v8i16): VISrc_128_f32, // bf16
-                                     !eq(ArgTy[3], v4f16): VISrc_64_f16,
-                                     !eq(ArgTy[3], v4i16): VISrc_64_b32,
-                                     !eq(ArgTy[3], v4i32): VISrc_128_b32,
-                                     !eq(ArgTy[3], v4f32): VISrc_128_f32));
+                               !cast<RegisterOperand>("VISrc_"#ArgTy[3].Size#
+                                                      !cond(IsC_F32: "_f32",
+                                                            IsC_F16: "_f16",
+                                                            1: "_b32")));
 
   // For f16 and bf16 matrices A and B, each element can be modified by
   // fneg(neg_lo,neg_hi = 1). For iu4 and iu8 matrices A and B neg_lo is
@@ -1627,11 +1602,11 @@ multiclass VOP3P_Real_MFMA_gfx940_aliases<string NameFrom, string NameTo, string
     def : InstAlias <NameTo # " " # PS_ACD.AsmOperands,
                      (!cast<VOP3P_Real>(Op # "_gfx940_acd") Pfl_ACD.DstRC:$vdst,
                          Pfl_ACD.Src0RC64:$src0, Pfl_ACD.Src1RC64:$src1, Pfl_ACD.Src2RC64:$src2,
-                         cbsz:$cbsz, abid:$abid, blgp:$blgp)>, PredicateControl;
+                         CBSZ:$cbsz, ABID:$abid, blgp:$blgp)>, PredicateControl;
     def : InstAlias <NameTo # " " # PS_VCD.AsmOperands,
                      (!cast<VOP3P_Real>(Op # "_gfx940_vcd") Pfl_VCD.DstRC:$vdst,
                          Pfl_VCD.Src0RC64:$src0, Pfl_VCD.Src1RC64:$src1, Pfl_VCD.Src2RC64:$src2,
-                         cbsz:$cbsz, abid:$abid, blgp:$blgp)>, PredicateControl;
+                         CBSZ:$cbsz, ABID:$abid, blgp:$blgp)>, PredicateControl;
   }
 }
 
