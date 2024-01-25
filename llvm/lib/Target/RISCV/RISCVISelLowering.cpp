@@ -4936,8 +4936,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
 
-    if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
-      // On such a large vector we're unable to use i8 as the index type.
+    if (VT.getScalarSizeInBits() == 8 &&
+        any_of(enumerate(Mask), [&](const auto &Idx) {
+          return Idx.value() > 255;
+        })) {
+      // On such a vector we're unable to use i8 as the index type.
       // FIXME: We could promote the index to i16 and use vrgatherei16, but that
       // may involve vector splitting if we're already at LMUL=8, or our
       // user-supplied maximum fixed-length LMUL.
@@ -5012,14 +5015,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
     SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
-  }
-
-  if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
-    // On such a large vector we're unable to use i8 as the index type.
-    // FIXME: We could promote the index to i16 and use vrgatherei16, but that
-    // may involve vector splitting if we're already at LMUL=8, or our
-    // user-supplied maximum fixed-length LMUL.
-    return SDValue();
   }
 
   // As a backup, shuffles can be lowered via a vrgather instruction, possibly
