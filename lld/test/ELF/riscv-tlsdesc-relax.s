@@ -8,11 +8,13 @@
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o a.64.so -z separate-code
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.64.so | FileCheck %s --check-prefix=GD64
 
-# RUN: ld.lld -e 0 -z now a.64.o c.64.o -o a.64.le -z separate-code
-# RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.64.le | FileCheck %s --check-prefix=LE64
+## Test the TLSDESC to LE optimization. Also check --emit-relocs.
+# RUN: ld.lld -e 0 -z now a.64.o c.64.o -o a.64.le -z separate-code --emit-relocs
+# RUN: llvm-objdump --no-show-raw-insn -M no-aliases -hdr a.64.le | FileCheck %s --check-prefix=LE64
 # RUN: ld.lld -e 0 -z now aa.64.o c.64.o -o aa.64.le -z separate-code
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d aa.64.le | FileCheck %s --check-prefix=LE64A
 
+## Test the TLSDESC to IE optimization.
 # RUN: ld.lld -e 0 -z now a.64.o c.64.so -o a.64.ie -z separate-code
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -h -d a.64.ie | FileCheck %s --check-prefix=IE64
 
@@ -47,17 +49,38 @@
 # LE64-NEXT:         jal     {{.*}} <foo>
 # LE64-LABEL: <foo>:
 # LE64-NEXT:         c.add   a7, a7
+# LE64-NEXT:                 R_RISCV_TLSDESC_HI20 b
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
 # LE64-NEXT:         c.add   a7, a7
+# LE64-NEXT:                 R_RISCV_TLSDESC_LOAD_LO12 .Ltlsdesc_hi0
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
 # LE64-NEXT:  11008: c.add   a7, a7
+# LE64-NEXT:                 R_RISCV_TLSDESC_ADD_LO12 .Ltlsdesc_hi0
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
 # LE64-NEXT:         addi    a0, zero, 0x7ff
+# LE64-NEXT:                 R_RISCV_TLSDESC_CALL .Ltlsdesc_hi0
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
 # LE64-NEXT:         c.add   a0, tp
 # LE64-NEXT:         jal     {{.*}} <foo>
-# LE64-NEXT:         addi    zero, zero, 0x0
+# LE64-NEXT:                 R_RISCV_JAL foo
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
 # LE64-NEXT:         addi    a0, zero, 0x7ff
+# LE64-NEXT:                 R_RISCV_TLSDESC_HI20 b
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
+# LE64-NEXT:                 R_RISCV_TLSDESC_LOAD_LO12 .Ltlsdesc_hi1
+# LE64-NEXT:                 R_RISCV_TLSDESC_ADD_LO12 .Ltlsdesc_hi1
+# LE64-NEXT:                 R_RISCV_TLSDESC_CALL .Ltlsdesc_hi1
 # LE64-NEXT:         c.add   a0, tp
 # LE64-NEXT:         addi    zero, zero, 0x0
+# LE64-NEXT:                 R_RISCV_TLSDESC_HI20 b
 # LE64-NEXT:         addi    zero, zero, 0x0
+# LE64-NEXT:                 R_RISCV_TLSDESC_LOAD_LO12 .Ltlsdesc_hi2
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
+# LE64-NEXT:         addi    zero, zero, 0x0
+# LE64-NEXT:                 R_RISCV_TLSDESC_ADD_LO12 .Ltlsdesc_hi2
+# LE64-NEXT:                 R_RISCV_RELAX *ABS*
 # LE64-NEXT:         addi    a0, zero, 0x7ff
+# LE64-NEXT:                 R_RISCV_TLSDESC_CALL .Ltlsdesc_hi2
 # LE64-NEXT:         c.add   a0, tp
 
 # LE64A-LABEL: <_start>:
@@ -70,10 +93,10 @@
 # LE64A-NEXT:         addi    a0, a0, -0x479
 # LE64A-NEXT:         c.add   a0, tp
 # LE64A-NEXT:         jal     {{.*}} <foo>
-# LE64A-NEXT:         addi    zero, zero, 0x0
 # LE64A-NEXT:         lui     a0, 0x2
 # LE64A-NEXT:         addi    a0, a0, -0x479
 # LE64A-NEXT:         c.add   a0, tp
+# LE64A-NEXT:         addi    zero, zero, 0x0
 # LE64A-NEXT:         addi    zero, zero, 0x0
 # LE64A-NEXT:         lui     a0, 0x2
 # LE64A-NEXT:         addi    a0, a0, -0x479
@@ -91,11 +114,11 @@
 # IE64-NEXT:         ld      a0, 0xe0(a0)
 # IE64-NEXT:         c.add   a0, tp
 # IE64-NEXT:         jal     {{.*}} <foo>
-# IE64-NEXT:         addi    zero, zero, 0x0
-## &.got[c]-. = 0x120e0+8 - 0x1101c = 0x10cc
-# IE64-NEXT:  1101c: auipc   a0, 0x1
-# IE64-NEXT:         ld      a0, 0xcc(a0)
+## &.got[c]-. = 0x120e0+8 - 0x11018 = 0x10d0
+# IE64-NEXT:  11018: auipc   a0, 0x1
+# IE64-NEXT:         ld      a0, 0xd0(a0)
 # IE64-NEXT:         c.add   a0, tp
+# IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    zero, zero, 0x0
 ## &.got[c]-. = 0x120e0+8 - 0x1102a = 0x10be
 # IE64-NEXT:  1102a: auipc   a0, 0x1
@@ -131,23 +154,24 @@ foo:
 
 .Ltlsdesc_hi1:
 .option norelax
-## LD and ADDI has an R_RISCV_RELAX.
+## AUIPC has an R_RISCV_RELAX. We perform relaxation, ignoring whether other
+## instructions have R_RISCV_RELAX.
   auipc a4, %tlsdesc_hi(b)
+  .reloc .-4, R_RISCV_RELAX, 0
   ld    a5, %tlsdesc_load_lo(.Ltlsdesc_hi1)(a4)
-  .reloc .-4, R_RISCV_RELAX, 0
   addi  a0, a4, %tlsdesc_add_lo(.Ltlsdesc_hi1)
-  .reloc .-4, R_RISCV_RELAX, 0
   jalr  t0, 0(a5), %tlsdesc_call(.Ltlsdesc_hi1)
   add   a0, a0, tp
 .option relax
 
 .Ltlsdesc_hi2:
 .option norelax
-## AUIPC has an R_RISCV_RELAX.
+## AUIPC does not have R_RISCV_RELAX. No relaxation.
   auipc a6, %tlsdesc_hi(b)
-  .reloc .-4, R_RISCV_RELAX, 0
   ld    a7, %tlsdesc_load_lo(.Ltlsdesc_hi2)(a6)
+  .reloc .-4, R_RISCV_RELAX, 0
   addi  a0, a6, %tlsdesc_add_lo(.Ltlsdesc_hi2)
+  .reloc .-4, R_RISCV_RELAX, 0
   jalr  t0, 0(a7), %tlsdesc_call(.Ltlsdesc_hi2)
   add   a0, a0, tp
 .option relax

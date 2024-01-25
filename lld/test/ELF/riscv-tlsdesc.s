@@ -121,9 +121,9 @@
 # IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:         addi    a0, zero, 0x7ff
 # IE64-NEXT:         add     a0, a0, tp
-# IE64-NEXT:         addi    zero, zero, 0x0
-# IE64-NEXT:         addi    zero, zero, 0x0
 ## &.got[c]-. = 0x123a8+8 - 0x112b8 = 0x10f8
+# IE64-NEXT:         addi    zero, zero, 0x0
+# IE64-NEXT:         addi    zero, zero, 0x0
 # IE64-NEXT:  112b8: auipc   a0, 0x1
 # IE64-NEXT:         ld      a0, 0xf8(a0)
 # IE64-NEXT:         add     a0, a0, tp

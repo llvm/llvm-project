@@ -560,6 +560,10 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
+static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
+  return i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX;
+}
+
 static void tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   switch (rel.type) {
   case R_RISCV_TLSDESC_HI20:
@@ -610,7 +614,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
   uint64_t tlsdescVal = 0;
-  bool isToLe = false;
+  bool tlsdescRelax = false, isToLe = false;
   const ArrayRef<Relocation> relocs = sec.relocs();
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     const Relocation &rel = relocs[i];
@@ -638,7 +642,8 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       // before AUIPC.
       tlsdescVal = val + rel.offset;
       isToLe = false;
-      if (!(i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX))
+      tlsdescRelax = relaxable(relocs, i);
+      if (!tlsdescRelax)
         tlsdescToIe(loc, rel, val);
       continue;
     case R_RELAX_TLS_GD_TO_LE:
@@ -648,18 +653,18 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       if (rel.type == R_RISCV_TLSDESC_HI20) {
         tlsdescVal = val;
         isToLe = true;
+        tlsdescRelax = relaxable(relocs, i);
       } else {
         if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
           tlsdescVal -= rel.offset;
         val = tlsdescVal;
       }
-      // When NOP conversion is eligible and R_RISCV_RELAX is present, don't
-      // write a NOP in case an unrelated instruction follows the current
-      // instruction.
-      if ((rel.type == R_RISCV_TLSDESC_HI20 ||
+      // When NOP conversion is eligible and relaxation applies, don't write a
+      // NOP in case an unrelated instruction follows the current instruction.
+      if (tlsdescRelax &&
+          (rel.type == R_RISCV_TLSDESC_HI20 ||
            rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
-           (rel.type == R_RISCV_TLSDESC_ADD_LO12 && isToLe && !hi20(val))) &&
-          i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX)
+           (rel.type == R_RISCV_TLSDESC_ADD_LO12 && isToLe && !hi20(val))))
         continue;
       if (isToLe)
         tlsdescToLe(loc, rel, val);
@@ -668,7 +673,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       continue;
     case R_RISCV_LEB128:
       if (i + 1 < size) {
-        const Relocation &rel1 = sec.relocs()[i + 1];
+        const Relocation &rel1 = relocs[i + 1];
         if (rel.type == R_RISCV_SET_ULEB128 &&
             rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
           auto val = rel.sym->getVA(rel.addend) - rel1.sym->getVA(rel1.addend);
@@ -825,15 +830,16 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
 
 static bool relax(InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
+  const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
   bool changed = false;
   ArrayRef<SymbolAnchor> sa = ArrayRef(aux.anchors);
   uint64_t delta = 0;
-  bool toLeShortForm = false;
+  bool tlsdescRelax = false, toLeShortForm = false;
 
-  std::fill_n(aux.relocTypes.get(), sec.relocs().size(), R_RISCV_NONE);
+  std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto [i, r] : llvm::enumerate(sec.relocs())) {
+  for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -854,40 +860,35 @@ static bool relax(InputSection &sec) {
     }
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT:
-      if (i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      if (relaxable(relocs, i))
         relaxCall(sec, i, loc, r, remove);
       break;
     case R_RISCV_TPREL_HI20:
     case R_RISCV_TPREL_ADD:
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
-      if (i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      if (relaxable(relocs, i))
         relaxTlsLe(sec, i, loc, r, remove);
       break;
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
-      if (i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      if (relaxable(relocs, i))
         relaxHi20Lo12(sec, i, loc, r, remove);
       break;
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
-      toLeShortForm =
-          r.expr == R_RELAX_TLS_GD_TO_LE && !hi20(r.sym->getVA(r.addend));
+      tlsdescRelax = relaxable(relocs, i);
+      toLeShortForm = tlsdescRelax && r.expr == R_RELAX_TLS_GD_TO_LE &&
+                      !hi20(r.sym->getVA(r.addend));
       [[fallthrough]];
     case R_RISCV_TLSDESC_LOAD_LO12:
-      // For LE or IE optimization, AUIPC and L[DW] are converted to a removable
-      // NOP.
-      if (r.expr != R_TLSDESC_PC && i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      // For TLSDESC=>LE/IE, AUIPC and L[DW] are removed if relaxable.
+      if (tlsdescRelax && r.expr != R_TLSDESC_PC)
         remove = 4;
       break;
     case R_RISCV_TLSDESC_ADD_LO12:
-      if (toLeShortForm && i + 1 != sec.relocs().size() &&
-          sec.relocs()[i + 1].type == R_RISCV_RELAX)
+      if (toLeShortForm)
         remove = 4;
       break;
     }

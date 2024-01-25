@@ -1105,7 +1105,7 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
 
   const std::time_t seconds = ptr_sp->GetValueAsSigned(0);
   if (seconds < chrono_timestamp_min || seconds > chrono_timestamp_max)
-    stream.Printf("timestamp=%ld s", seconds);
+    stream.Printf("timestamp=%lld s", seconds);
   else {
     std::array<char, 128> str;
     std::size_t size =
@@ -1113,7 +1113,7 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
     if (size == 0)
       return false;
 
-    stream.Printf("date/time=%s timestamp=%ld s", str.data(), seconds);
+    stream.Printf("date/time=%s timestamp=%lld s", str.data(), seconds);
   }
 
   return true;

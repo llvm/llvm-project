@@ -1301,7 +1301,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
       !c.file->ppc64DisableTLSRelax;
 
   // If we are producing an executable and the symbol is non-preemptable, it
-  // must be defined and the code sequence can be relaxed to use Local-Exec.
+  // must be defined and the code sequence can be optimized to use Local-Exec.
   //
   // ARM and RISC-V do not support any relaxations for TLS relocations, however,
   // we can omit the DTPMOD dynamic relocations and resolve them at link time
@@ -1473,7 +1473,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
   }
 
-  // Process TLS relocations, including relaxing TLS relocations. Note that
+  // Process TLS relocations, including TLS optimizations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
   if (sym.isTls()) {
     if (unsigned processed =

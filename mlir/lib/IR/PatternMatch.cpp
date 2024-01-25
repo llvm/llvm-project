@@ -366,3 +366,31 @@ void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
 void RewriterBase::cloneRegionBefore(Region &region, Block *before) {
   cloneRegionBefore(region, *before->getParent(), before->getIterator());
 }
+
+void RewriterBase::moveOpBefore(Operation *op, Operation *existingOp) {
+  moveOpBefore(op, existingOp->getBlock(), existingOp->getIterator());
+}
+
+void RewriterBase::moveOpBefore(Operation *op, Block *block,
+                                Block::iterator iterator) {
+  Block *currentBlock = op->getBlock();
+  Block::iterator currentIterator = op->getIterator();
+  op->moveBefore(block, iterator);
+  if (listener)
+    listener->notifyOperationInserted(
+        op, /*previous=*/InsertPoint(currentBlock, currentIterator));
+}
+
+void RewriterBase::moveOpAfter(Operation *op, Operation *existingOp) {
+  moveOpAfter(op, existingOp->getBlock(), existingOp->getIterator());
+}
+
+void RewriterBase::moveOpAfter(Operation *op, Block *block,
+                               Block::iterator iterator) {
+  Block *currentBlock = op->getBlock();
+  Block::iterator currentIterator = op->getIterator();
+  op->moveAfter(block, iterator);
+  if (listener)
+    listener->notifyOperationInserted(
+        op, /*previous=*/InsertPoint(currentBlock, currentIterator));
+}
