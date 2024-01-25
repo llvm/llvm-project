@@ -1110,168 +1110,87 @@ class RegOrImmOperand <string RegisterClassName, string OperandTypeName,
     let DecoderMethod = "decodeOperand_" # RegisterClassName # decoderImmSize;
 }
 
-class RegOrB16 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
-                     "_Imm16">;
-
-class RegOrF16 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
-                     "_Imm16">;
-
-class RegOrB16T <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
-                     "_Imm16"> {
-  let EncoderMethod = "getMachineOpValueT16";
-}
-
-class RegOrF16T <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
-                     "_Imm16"> {
-  let EncoderMethod = "getMachineOpValueT16";
-}
-
-class RegOrB16_Lo128T <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
-                     "_Imm16"> {
-  let EncoderMethod = "getMachineOpValueT16Lo128";
-}
-
-class RegOrF16_Lo128T <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
-                     "_Imm16"> {
-  let EncoderMethod = "getMachineOpValueT16Lo128";
-}
-
-class RegOrB32 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT32",
-                     "_Imm32">;
-
-class RegOrF32 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP32",
-                     "_Imm32">;
-
-class RegOrV2B16 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT16",
-                     "_ImmV2I16">;
-
-class RegOrV2F16 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP16",
-                     "_ImmV2F16">;
-
-class RegOrF64 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP64",
-                     "_Imm64">;
-
-class RegOrB64 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT64",
-                     "_Imm64">;
-
-class RegOrV2F32 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2FP32",
-                     "_Imm32">;
-
-class RegOrV2B32 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_V2INT32",
-                     "_Imm32">;
-
-// For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
-class RegOrB16_Lo128 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
-                     "_Imm16">;
-
-class RegOrF16_Lo128 <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
-                     "_Imm16">;
-
-// Deferred operands
-class RegOrF16_Deferred <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16_DEFERRED",
-                     "_Deferred_Imm16">;
-
-class RegOrF32_Deferred <string RegisterClass, string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP32_DEFERRED",
-                     "_Deferred_Imm32">;
-
-class RegOrF16_Lo128_Deferred <string RegisterClass,
-                               string OperandTypePrefix>
-  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16_DEFERRED",
-                     "_Deferred_Imm16">;
-
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
-def SSrc_b16 : RegOrB16 <"SReg_32", "OPERAND_REG_IMM">;
-def SSrc_f16 : RegOrF16 <"SReg_32", "OPERAND_REG_IMM">;
-def SSrc_b32 : RegOrB32 <"SReg_32", "OPERAND_REG_IMM">;
-def SSrc_f32 : RegOrF32 <"SReg_32", "OPERAND_REG_IMM">;
-def SSrc_b64 : RegOrB64 <"SReg_64", "OPERAND_REG_IMM">;
+def SSrc_b16 : RegOrImmOperand <"SReg_32", "OPERAND_REG_IMM_INT16", "_Imm16">;
+def SSrc_f16 : RegOrImmOperand <"SReg_32", "OPERAND_REG_IMM_FP16", "_Imm16">;
+def SSrc_b32 : RegOrImmOperand <"SReg_32", "OPERAND_REG_IMM_INT32", "_Imm32">;
+def SSrc_f32 : RegOrImmOperand <"SReg_32", "OPERAND_REG_IMM_FP32", "_Imm32">;
+def SSrc_b64 : RegOrImmOperand <"SReg_64", "OPERAND_REG_IMM_INT64", "_Imm64">;
 
-def SSrcOrLds_b32 : RegOrB32 <"SRegOrLds_32", "OPERAND_REG_IMM">;
+def SSrcOrLds_b32 : RegOrImmOperand <"SRegOrLds_32", "OPERAND_REG_IMM_INT32", "_Imm32">;
 
 //===----------------------------------------------------------------------===//
 //  SSrc_32_Deferred Operands with an SGPR or a 32-bit immediate for use with
 //  FMAMK/FMAAK
 //===----------------------------------------------------------------------===//
 
-def SSrc_f32_Deferred : RegOrF32_Deferred<"SReg_32", "OPERAND_REG_IMM">;
+def SSrc_f32_Deferred : RegOrImmOperand<"SReg_32", "OPERAND_REG_IMM_FP32_DEFERRED", "_Deferred_Imm32">;
 
 //===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant
 //===----------------------------------------------------------------------===//
 
-def SCSrc_b32 : RegOrB32 <"SReg_32", "OPERAND_REG_INLINE_C">;
-def SCSrc_b64 : RegOrB64 <"SReg_64", "OPERAND_REG_INLINE_C">;
+def SCSrc_b32 : RegOrImmOperand <"SReg_32", "OPERAND_REG_INLINE_C_INT32", "_Imm32">;
+def SCSrc_b64 : RegOrImmOperand <"SReg_64", "OPERAND_REG_INLINE_C_INT64", "_Imm64">;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
 // The current and temporary future default used case for VOP3.
-def VSrc_b16 : RegOrB16 <"VS_32", "OPERAND_REG_IMM">;
-def VSrc_f16 : RegOrF16 <"VS_32", "OPERAND_REG_IMM">;
+def VSrc_b16 : RegOrImmOperand <"VS_32", "OPERAND_REG_IMM_INT16", "_Imm16">;
+def VSrc_f16 : RegOrImmOperand <"VS_32", "OPERAND_REG_IMM_FP16", "_Imm16">;
 
 // True16 VOP3 operands.
-def VSrcT_b16 : RegOrB16T <"VS_16", "OPERAND_REG_IMM"> {
+def VSrcT_b16 : RegOrImmOperand <"VS_16", "OPERAND_REG_IMM_INT16", "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16";
   let DecoderMethod = "decodeOperand_VSrcT16";
 }
-def VSrcT_f16 : RegOrF16T <"VS_16", "OPERAND_REG_IMM"> {
+def VSrcT_f16 : RegOrImmOperand <"VS_16", "OPERAND_REG_IMM_FP16", "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16";
   let DecoderMethod = "decodeOperand_VSrcT16";
 }
 
 // True16 VOP1/2/C operands.
-def VSrcT_b16_Lo128 : RegOrB16_Lo128T <"VS_16_Lo128", "OPERAND_REG_IMM"> {
+def VSrcT_b16_Lo128 : RegOrImmOperand <"VS_16_Lo128", "OPERAND_REG_IMM_INT16", "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "decodeOperand_VSrcT16_Lo128";
 }
-def VSrcT_f16_Lo128 : RegOrF16_Lo128T <"VS_16_Lo128", "OPERAND_REG_IMM"> {
+def VSrcT_f16_Lo128 : RegOrImmOperand <"VS_16_Lo128", "OPERAND_REG_IMM_FP16", "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "decodeOperand_VSrcT16_Lo128";
 }
 
 // The current and temporary future default used case for fake VOP1/2/C.
-def VSrcFake16_b16_Lo128 : RegOrB16_Lo128 <"VS_32_Lo128", "OPERAND_REG_IMM">;
-def VSrcFake16_f16_Lo128 : RegOrF16_Lo128 <"VS_32_Lo128", "OPERAND_REG_IMM">;
+// For VOP1,2,C True16 instructions. _Lo128 use first 128 32-bit VGPRs only.
+def VSrcFake16_b16_Lo128 : RegOrImmOperand <"VS_32_Lo128", "OPERAND_REG_IMM_INT16", "_Imm16">;
+def VSrcFake16_f16_Lo128 : RegOrImmOperand <"VS_32_Lo128", "OPERAND_REG_IMM_FP16", "_Imm16">;
 
-def VSrc_b32 : RegOrB32 <"VS_32", "OPERAND_REG_IMM">;
-def VSrc_f32 : RegOrF32 <"VS_32", "OPERAND_REG_IMM">;
-def VSrc_v2b16 : RegOrV2B16 <"VS_32", "OPERAND_REG_IMM">;
-def VSrc_v2f16 : RegOrV2F16 <"VS_32", "OPERAND_REG_IMM">;
-def VSrc_b64 : RegOrB64 <"VS_64", "OPERAND_REG_IMM">;
-def VSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM"> {
+def VSrc_b32 : RegOrImmOperand <"VS_32", "OPERAND_REG_IMM_INT32", "_Imm32">;
+def VSrc_f32 : RegOrImmOperand <"VS_32", "OPERAND_REG_IMM_FP32", "_Imm32">;
+def VSrc_v2b16 : RegOrImmOperand <"VS_32", "OPERAND_REG_IMM_V2INT16", "_ImmV2I16">;
+def VSrc_v2f16 : RegOrImmOperand <"VS_32", "OPERAND_REG_IMM_V2FP16", "_ImmV2F16">;
+def VSrc_b64 : RegOrImmOperand <"VS_64", "OPERAND_REG_IMM_INT64", "_Imm64">;
+def VSrc_f64 : RegOrImmOperand <"VS_64", "OPERAND_REG_IMM_FP64", "_Imm64"> {
   let DecoderMethod = "decodeOperand_VSrc_f64";
 }
-def VSrc_v2b32 : RegOrV2B32 <"VS_64", "OPERAND_REG_IMM">;
-def VSrc_v2f32 : RegOrV2F32 <"VS_64", "OPERAND_REG_IMM">;
+def VSrc_v2b32 : RegOrImmOperand <"VS_64", "OPERAND_REG_IMM_V2INT32", "_Imm32">;
+def VSrc_v2f32 : RegOrImmOperand <"VS_64", "OPERAND_REG_IMM_V2FP32", "_Imm32">;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
 //  with FMAMK/FMAAK
 //===----------------------------------------------------------------------===//
 
-def VSrc_f16_Deferred : RegOrF16_Deferred<"VS_32", "OPERAND_REG_IMM">;
-def VSrc_f32_Deferred : RegOrF32_Deferred<"VS_32", "OPERAND_REG_IMM">;
+def VSrc_f16_Deferred : RegOrImmOperand<"VS_32", "OPERAND_REG_IMM_FP16_DEFERRED", "_Deferred_Imm16">;
+def VSrc_f32_Deferred : RegOrImmOperand<"VS_32", "OPERAND_REG_IMM_FP32_DEFERRED", "_Deferred_Imm32">;
 
-def VSrcFake16_f16_Lo128_Deferred : RegOrF16_Lo128_Deferred<"VS_32_Lo128",
-                                                            "OPERAND_REG_IMM">;
+def VSrcFake16_f16_Lo128_Deferred : RegOrImmOperand<"VS_32_Lo128",
+                                                    "OPERAND_REG_IMM_FP16_DEFERRED",
+                                                    "_Deferred_Imm16">;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
@@ -1332,30 +1251,30 @@ def ARegSrc_32 : AVOperand<AGPR_32, "decodeSrcA9", "OPW32">;
 //  VCSrc_* Operands with an SGPR, VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VCSrc_b16 : RegOrB16 <"VS_32", "OPERAND_REG_INLINE_C">;
-def VCSrc_f16 : RegOrF16 <"VS_32", "OPERAND_REG_INLINE_C">;
-def VCSrc_b32 : RegOrB32 <"VS_32", "OPERAND_REG_INLINE_C">;
-def VCSrc_f32 : RegOrF32 <"VS_32", "OPERAND_REG_INLINE_C">;
-def VCSrc_v2b16 : RegOrV2B16 <"VS_32", "OPERAND_REG_INLINE_C">;
-def VCSrc_v2f16 : RegOrV2F16 <"VS_32", "OPERAND_REG_INLINE_C">;
+def VCSrc_b16 : RegOrImmOperand <"VS_32", "OPERAND_REG_INLINE_C_INT16", "_Imm16">;
+def VCSrc_f16 : RegOrImmOperand <"VS_32", "OPERAND_REG_INLINE_C_FP16", "_Imm16">;
+def VCSrc_b32 : RegOrImmOperand <"VS_32", "OPERAND_REG_INLINE_C_INT32", "_Imm32">;
+def VCSrc_f32 : RegOrImmOperand <"VS_32", "OPERAND_REG_INLINE_C_FP32", "_Imm32">;
+def VCSrc_v2b16 : RegOrImmOperand <"VS_32", "OPERAND_REG_INLINE_C_V2INT16", "_ImmV2I16">;
+def VCSrc_v2f16 : RegOrImmOperand <"VS_32", "OPERAND_REG_INLINE_C_V2FP16", "_ImmV2F16">;
 
 //===----------------------------------------------------------------------===//
 //  VISrc_* Operands with a VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VISrc_64_f16 : RegOrF16 <"VReg_64", "OPERAND_REG_INLINE_C">;
-def VISrc_64_b32 : RegOrB32 <"VReg_64", "OPERAND_REG_INLINE_C">;
-def VISrc_64_f64 : RegOrF64 <"VReg_64", "OPERAND_REG_INLINE_C">;
-def VISrc_128_f16 : RegOrF16 <"VReg_128", "OPERAND_REG_INLINE_C">;
-def VISrc_128_b32 : RegOrB32 <"VReg_128", "OPERAND_REG_INLINE_C">;
-def VISrc_128_f32 : RegOrF32 <"VReg_128", "OPERAND_REG_INLINE_C">;
-def VISrc_256_b32 : RegOrB32 <"VReg_256", "OPERAND_REG_INLINE_C">;
-def VISrc_256_f32 : RegOrF32 <"VReg_256", "OPERAND_REG_INLINE_C">;
-def VISrc_256_f64 : RegOrF64 <"VReg_256", "OPERAND_REG_INLINE_C">;
-def VISrc_512_b32 : RegOrB32 <"VReg_512", "OPERAND_REG_INLINE_C">;
-def VISrc_512_f32 : RegOrF32 <"VReg_512", "OPERAND_REG_INLINE_C">;
-def VISrc_1024_b32 : RegOrB32 <"VReg_1024", "OPERAND_REG_INLINE_C">;
-def VISrc_1024_f32 : RegOrF32 <"VReg_1024", "OPERAND_REG_INLINE_C">;
+def VISrc_64_f16 : RegOrImmOperand <"VReg_64", "OPERAND_REG_INLINE_C_FP16", "_Imm16">;
+def VISrc_64_b32 : RegOrImmOperand <"VReg_64", "OPERAND_REG_INLINE_C_INT32", "_Imm32">;
+def VISrc_64_f64 : RegOrImmOperand <"VReg_64", "OPERAND_REG_INLINE_C_FP64", "_Imm64">;
+def VISrc_128_f16 : RegOrImmOperand <"VReg_128", "OPERAND_REG_INLINE_C_FP16", "_Imm16">;
+def VISrc_128_b32 : RegOrImmOperand <"VReg_128", "OPERAND_REG_INLINE_C_INT32", "_Imm32">;
+def VISrc_128_f32 : RegOrImmOperand <"VReg_128", "OPERAND_REG_INLINE_C_FP32", "_Imm32">;
+def VISrc_256_b32 : RegOrImmOperand <"VReg_256", "OPERAND_REG_INLINE_C_INT32", "_Imm32">;
+def VISrc_256_f32 : RegOrImmOperand <"VReg_256", "OPERAND_REG_INLINE_C_FP32", "_Imm32">;
+def VISrc_256_f64 : RegOrImmOperand <"VReg_256", "OPERAND_REG_INLINE_C_FP64", "_Imm64">;
+def VISrc_512_b32 : RegOrImmOperand <"VReg_512", "OPERAND_REG_INLINE_C_INT32", "_Imm32">;
+def VISrc_512_f32 : RegOrImmOperand <"VReg_512", "OPERAND_REG_INLINE_C_FP32", "_Imm32">;
+def VISrc_1024_b32 : RegOrImmOperand <"VReg_1024", "OPERAND_REG_INLINE_C_INT32", "_Imm32">;
+def VISrc_1024_f32 : RegOrImmOperand <"VReg_1024", "OPERAND_REG_INLINE_C_FP32", "_Imm32">;
 
 //===----------------------------------------------------------------------===//
 //  AVSrc_*, AVDst_*, AVLdSt_* Operands with an AGPR or VGPR
@@ -1387,11 +1306,11 @@ def AVLdSt_160 : AVLdStOperand<AV_160, "OPW160">;
 //  ACSrc_* Operands with an AGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def AISrc_64_f64 : RegOrF64 <"AReg_64", "OPERAND_REG_INLINE_AC">;
-def AISrc_128_f32 : RegOrF32 <"AReg_128", "OPERAND_REG_INLINE_AC">;
-def AISrc_128_b32 : RegOrB32 <"AReg_128", "OPERAND_REG_INLINE_AC">;
-def AISrc_256_f64 : RegOrF64 <"AReg_256", "OPERAND_REG_INLINE_AC">;
-def AISrc_512_f32 : RegOrF32 <"AReg_512", "OPERAND_REG_INLINE_AC">;
-def AISrc_512_b32 : RegOrB32 <"AReg_512", "OPERAND_REG_INLINE_AC">;
-def AISrc_1024_f32 : RegOrF32 <"AReg_1024", "OPERAND_REG_INLINE_AC">;
-def AISrc_1024_b32 : RegOrB32 <"AReg_1024", "OPERAND_REG_INLINE_AC">;
+def AISrc_64_f64 : RegOrImmOperand <"AReg_64", "OPERAND_REG_INLINE_AC_FP64", "_Imm64">;
+def AISrc_128_f32 : RegOrImmOperand <"AReg_128", "OPERAND_REG_INLINE_AC_FP32", "_Imm32">;
+def AISrc_128_b32 : RegOrImmOperand <"AReg_128", "OPERAND_REG_INLINE_AC_INT32", "_Imm32">;
+def AISrc_256_f64 : RegOrImmOperand <"AReg_256", "OPERAND_REG_INLINE_AC_FP64", "_Imm64">;
+def AISrc_512_f32 : RegOrImmOperand <"AReg_512", "OPERAND_REG_INLINE_AC_FP32", "_Imm32">;
+def AISrc_512_b32 : RegOrImmOperand <"AReg_512", "OPERAND_REG_INLINE_AC_INT32", "_Imm32">;
+def AISrc_1024_f32 : RegOrImmOperand <"AReg_1024", "OPERAND_REG_INLINE_AC_FP32", "_Imm32">;
+def AISrc_1024_b32 : RegOrImmOperand <"AReg_1024", "OPERAND_REG_INLINE_AC_INT32", "_Imm32">;
