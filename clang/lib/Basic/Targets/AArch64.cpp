@@ -60,7 +60,6 @@ void AArch64TargetInfo::setArchFeatures() {
   if (*ArchInfo == llvm::AArch64::ARMV8R) {
     HasDIT = true;
     HasFlagM = true;
-    FPU |= NeonMode;
     HasCCPP = true;
     HasLSE = true;
   } else if (ArchInfo->Version.getMajor() == 8) {
