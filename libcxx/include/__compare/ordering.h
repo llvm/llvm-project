@@ -31,16 +31,15 @@ class weak_ordering;
 class strong_ordering;
 
 struct _CmpUnspecifiedParam {
-  template <class _Tp, class = __enable_if_t<is_same_v<_Tp, int>>>
-  _LIBCPP_HIDE_FROM_ABI consteval _CmpUnspecifiedParam(_Tp __zero) noexcept {
-    // If anything other than 0 is provided, the behavior is undefined.
-    // We catch this case by making this function consteval and making the program ill-formed if
-    // a value other than 0 is provided. This technically also accepts things that are not
-    // literal 0s like `1 - 1`. The alternative is to use the fact that a pointer can be
-    // constructed from literal 0, but this conflicts with `-Wzero-as-null-pointer-constant`.
-    if (__zero != 0)
-      __builtin_trap();
-  }
+  // If anything other than a literal 0 is provided, the behavior is undefined by the Standard.
+  //
+  // We handle this by making this function consteval and making the program ill-formed if
+  // a value other than 0 is provided. This technically also accepts things that are not
+  // literal 0s like `1 - 1`. The alternative is to use the fact that a pointer can be
+  // constructed from literal 0, but this conflicts with `-Wzero-as-null-pointer-constant`.
+  template <class _Tp, class = __enable_if_t<is_same_v<_Tp, int> > >
+  _LIBCPP_HIDE_FROM_ABI consteval _CmpUnspecifiedParam(_Tp __zero) noexcept _LIBCPP_DIAGNOSE_ERROR(
+      __zero != 0, "Only literal 0 is allowed as the operand of a comparison with one of the ordering types") {}
 };
 
 class partial_ordering {
