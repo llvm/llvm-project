@@ -40,7 +40,7 @@
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LowLevelType.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"

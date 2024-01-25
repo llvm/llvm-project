@@ -27,7 +27,7 @@
 #define LLVM_CODEGEN_LOWLEVELTYPE_H
 
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 

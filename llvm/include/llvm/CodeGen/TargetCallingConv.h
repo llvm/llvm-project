@@ -13,7 +13,7 @@
 #ifndef LLVM_CODEGEN_TARGETCALLINGCONV_H
 #define LLVM_CODEGEN_TARGETCALLINGCONV_H
 
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MathExtras.h"

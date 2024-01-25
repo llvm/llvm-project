@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
