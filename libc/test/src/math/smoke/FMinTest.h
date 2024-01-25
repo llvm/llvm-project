@@ -9,8 +9,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
-
 template <typename T> class FMinTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
@@ -56,11 +54,13 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
-      if (isnan(x) || isinf(x))
+      FPBits xbits(v), ybits(w);
+      if (xbits.is_inf_or_nan())
         continue;
-      if (isnan(y) || isinf(y))
+      if (ybits.is_inf_or_nan())
         continue;
+      T x = xbits.get_val();
+      T y = ybits.get_val();
       if ((x == 0) && (y == 0))
         continue;
 
