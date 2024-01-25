@@ -4814,8 +4814,8 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "opt",
+cc_library(
+    name = "opt-driver",
     srcs = glob([
         "tools/opt/*.cpp",
         "tools/opt/*.h",
@@ -4826,7 +4826,6 @@ cc_binary(
         "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -4851,6 +4850,12 @@ cc_binary(
         ":common_transforms",
         ":config",
     ],
+)
+
+cc_binary(
+    name = "opt",
+    stamp = 0,
+    deps = [":opt-driver"]
 )
 
 gentbl(
