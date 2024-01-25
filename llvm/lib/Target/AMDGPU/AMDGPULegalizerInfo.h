@@ -27,7 +27,6 @@ class MachineIRBuilder;
 namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
 }
-/// This class provides the information for the target register banks.
 class AMDGPULegalizerInfo final : public LegalizerInfo {
   const GCNSubtarget &ST;
 
@@ -213,6 +212,7 @@ public:
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,

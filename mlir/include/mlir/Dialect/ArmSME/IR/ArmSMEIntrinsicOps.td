@@ -187,4 +187,17 @@ def LLVM_aarch64_sme_write_vert : LLVM_aarch64_sme_write<"vert">;
 def LLVM_aarch64_sme_read_horiz : LLVM_aarch64_sme_read<"horiz">;
 def LLVM_aarch64_sme_read_vert : LLVM_aarch64_sme_read<"vert">;
 
+class ArmSME_IntrCountOp<string mnemonic>
+    : ArmSME_IntrOp<mnemonic,
+                    /*immArgPositions=*/[],
+                    /*immArgAttrNames=*/[],
+                    /*overloadedOperands=*/[],
+                    /*traits*/[PredOpTrait<"`res` is i64", TypeIsPred<"res", I64>>],
+                    /*numResults=*/1, /*overloadedResults=*/[]>;
+
+def LLVM_aarch64_sme_cntsb : ArmSME_IntrCountOp<"cntsb">;
+def LLVM_aarch64_sme_cntsh : ArmSME_IntrCountOp<"cntsh">;
+def LLVM_aarch64_sme_cntsw : ArmSME_IntrCountOp<"cntsw">;
+def LLVM_aarch64_sme_cntsd : ArmSME_IntrCountOp<"cntsd">;
+
 #endif // ARMSME_INTRINSIC_OPS

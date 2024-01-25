@@ -25,7 +25,6 @@ licenses(["notice"])
 
 PRINTF_COPTS = [
     "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
-    "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE",
     "LIBC_COPT_PRINTF_DISABLE_WRITE_INT",
 ]
 
@@ -210,6 +209,7 @@ libc_support_library(
     deps = [
         "__support_cpp_type_traits",
         "__support_macros_attributes",
+        ":llvm_libc_macros_limits_macros",
     ],
 )
 
@@ -416,7 +416,6 @@ libc_support_library(
         "src/__support/ryu_constants.h",
         "src/__support/ryu_long_double_constants.h",
     ],
-    defines = ["LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE"],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
@@ -540,6 +539,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
+        ":__support_cpp_string_view",
         ":__support_ctype_utils",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
@@ -590,6 +590,7 @@ libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -661,7 +662,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_fputil_fp_bits",
     hdrs = ["src/__support/FPUtil/FPBits.h"],
-    textual_hdrs = ["src/__support/FPUtil/x86_64/LongDoubleBits.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
@@ -708,6 +708,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
@@ -953,6 +954,11 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
     ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
 )
 
 ############################### errno targets ################################
@@ -1873,6 +1879,30 @@ libc_math_function(name = "llround")
 libc_math_function(name = "llroundf")
 
 libc_math_function(name = "llroundl")
+
+libc_math_function(
+    name = "nan",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanf",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanl",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
 
 libc_math_function(name = "nearbyint")
 

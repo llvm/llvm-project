@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking-pre-ra %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking-pre-ra %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: kill_all
 # GCN:      bb.0:

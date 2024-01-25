@@ -367,6 +367,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fabs", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"fabsf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"fabsl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"fabsf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>]>,
 
           FunctionSpec<"fdim", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fdimf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
@@ -479,6 +480,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"sqrt", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"sqrtf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"sqrtl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"sqrtf128", RetValSpec<Float128Type>, [ArgSpec<Float128Type>]>, 
 
           FunctionSpec<"trunc", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"truncf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -515,6 +517,10 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"scalbn", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<IntType>]>,
           FunctionSpec<"scalbnf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<IntType>]>,
           FunctionSpec<"scalbnl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>, ArgSpec<IntType>]>,
+
+          FunctionSpec<"nanf", RetValSpec<FloatType>, [ArgSpec<ConstCharPtr>]>,
+          FunctionSpec<"nan", RetValSpec<DoubleType>, [ArgSpec<ConstCharPtr>]>,
+          FunctionSpec<"nanl", RetValSpec<LongDoubleType>, [ArgSpec<ConstCharPtr>]>,
       ]
   >;
 
@@ -842,6 +848,17 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec Float = HeaderSpec<
+      "float.h",
+      [
+        Macro<"FLT_MANT_DIG">,
+        Macro<"DBL_MANT_DIG">,
+        Macro<"LDBL_MANT_DIG">,
+      ]
+  >;
+
+  HeaderSpec Limits = HeaderSpec<"limits.h">;
+
   NamedType SigAtomicT = NamedType<"sig_atomic_t">;
   HeaderSpec Signal = HeaderSpec<
       "signal.h",
@@ -1144,6 +1161,8 @@ def StdC : StandardSpec<"stdc"> {
     CType,
     Errno,
     Fenv,
+    Float,
+    Limits,
     Math,
     String,
     StdIO,

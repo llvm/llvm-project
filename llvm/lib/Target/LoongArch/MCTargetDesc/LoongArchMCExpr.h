@@ -61,6 +61,7 @@ public:
     VK_LoongArch_TLS_LD_HI20,
     VK_LoongArch_TLS_GD_PC_HI20,
     VK_LoongArch_TLS_GD_HI20,
+    VK_LoongArch_CALL36,
     VK_LoongArch_Invalid // Must be the last item.
   };
 

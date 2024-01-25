@@ -309,9 +309,9 @@ func.func @transfer_write_2d_transpose_with_mask_bf16(%vector : vector<[8]x[8]xb
 
 // CHECK-LABEL:   func.func @broadcast_vec2d_from_i32(
 // CHECK-SAME:                                        %[[SRC:.*]]: i32) {
-// CHECK: %[[C1:.*]] = arith.constant 1 : index
-// CHECK: %[[C4:.*]] = arith.constant 4 : index
-// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[SRC_1D:.*]] = vector.broadcast %[[SRC]] : i32 to vector<[4]xi32>
 // CHECK: %[[INIT_TILE:.*]] = arm_sme.get_tile : vector<[4]x[4]xi32>
 // CHECK: %[[VSCALE:.*]] = vector.vscale
@@ -393,8 +393,8 @@ func.func @splat_vec2d_from_f16(%arg0: f16) {
 
 // CHECK-LABEL:   func.func @transpose_i8(
 // CHECK-SAME:                            %[[TILE:.*]]: vector<[16]x[16]xi8>)
-// CHECK:           %[[C16:.*]] = arith.constant 16 : index
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C16:.*]] = arith.constant 16 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[VSCALE:.*]] = vector.vscale
 // CHECK:           %[[MIN_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C16]] : index
 // CHECK:           %[[NUM_TILE_SLICES:.*]] = memref.alloca(%[[MIN_TILE_SLICES]], %[[MIN_TILE_SLICES]]) : memref<?x?xi8>

@@ -61,6 +61,10 @@ public:
                              StringRef FunctionMapperer);
   void expandCheckImmOperandSimple(raw_ostream &OS, int OpIndex,
                                    StringRef FunctionMapper);
+  void expandCheckImmOperandLT(raw_ostream &OS, int OpIndex, int ImmVal,
+                               StringRef FunctionMapper);
+  void expandCheckImmOperandGT(raw_ostream &OS, int OpIndex, int ImmVal,
+                               StringRef FunctionMapper);
   void expandCheckRegOperand(raw_ostream &OS, int OpIndex, const Record *Reg,
                              StringRef FunctionMapper);
   void expandCheckRegOperandSimple(raw_ostream &OS, int OpIndex,
@@ -75,6 +79,7 @@ public:
                                bool IsCheckAll);
   void expandTIIFunctionCall(raw_ostream &OS, StringRef MethodName);
   void expandCheckIsRegOperand(raw_ostream &OS, int OpIndex);
+  void expandCheckIsVRegOperand(raw_ostream &OS, int OpIndex);
   void expandCheckIsImmOperand(raw_ostream &OS, int OpIndex);
   void expandCheckInvalidRegOperand(raw_ostream &OS, int OpIndex);
   void expandCheckFunctionPredicate(raw_ostream &OS, StringRef MCInstFn,

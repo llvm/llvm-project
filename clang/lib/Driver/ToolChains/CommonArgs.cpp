@@ -317,9 +317,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
       continue;
     }
 
-    bool IsNegative = Name.starts_with("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
@@ -736,6 +734,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
+  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
       llvm::sys::path::stem(Linker) != "ld.lld" &&
       !ToolChain.getTriple().isOSOpenBSD()) {
@@ -765,7 +765,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   } else {
     // Tell LLD to find and use .llvm.lto section in regular relocatable object
     // files
-    if (Args.hasArg(options::OPT_ffat_lto_objects))
+    if (IsFatLTO)
       CmdArgs.push_back("--fat-lto-objects");
   }
 
@@ -779,6 +779,28 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_gdwarf_aranges)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          "-generate-arange-section"));
+  }
+
+  // Pass vector library arguments to LTO.
+  Arg *ArgVecLib = Args.getLastArg(options::OPT_fveclib);
+  if (ArgVecLib && ArgVecLib->getNumValues() == 1) {
+    // Map the vector library names from clang front-end to opt front-end. The
+    // values are taken from the TargetLibraryInfo class command line options.
+    std::optional<StringRef> OptVal =
+        llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
+            .Case("Accelerate", "Accelerate")
+            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("MASSV", "MASSV")
+            .Case("SVML", "SVML")
+            .Case("SLEEF", "sleefgnuabi")
+            .Case("Darwin_libsystem_m", "Darwin_libsystem_m")
+            .Case("ArmPL", "ArmPL")
+            .Case("none", "none")
+            .Default(std::nullopt);
+
+    if (OptVal)
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine(PluginOptPrefix) + "-vector-library=" + OptVal.value()));
   }
 
   // Try to pass driver level flags relevant to LTO code generation down to
@@ -825,7 +847,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // Matrix intrinsic lowering happens at link time with ThinLTO. Enable
   // LowerMatrixIntrinsicsPass, which is transitively called by
   // buildThinLTODefaultPipeline under EnableMatrix.
-  if (IsThinLTO && Args.hasArg(options::OPT_fenable_matrix))
+  if ((IsThinLTO || IsFatLTO || IsUnifiedLTO) &&
+        Args.hasArg(options::OPT_fenable_matrix))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-matrix"));
 
@@ -1191,6 +1214,18 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   }
 
   // 2. GNU and similar
+  const Driver &D = TC.getDriver();
+  const char *FortranMainLinkFlag = "-lFortran_main";
+
+  // Warn if the user added `-lFortran_main` - this library is an implementation
+  // detail of Flang and should be handled automaticaly by the driver.
+  for (const char *arg : CmdArgs) {
+    if (strncmp(arg, FortranMainLinkFlag, strlen(FortranMainLinkFlag)) == 0)
+      D.Diag(diag::warn_drv_deprecated_custom)
+          << FortranMainLinkFlag
+          << "see the Flang driver documentation for correct usage";
+  }
+
   // The --whole-archive option needs to be part of the link line to make
   // sure that the main() function from Fortran_main.a is pulled in by the
   // linker. However, it shouldn't be used if it's already active.
@@ -1198,12 +1233,12 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
       !TC.getTriple().isOSAIX()) {
     CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lFortran_main");
+    CmdArgs.push_back(FortranMainLinkFlag);
     CmdArgs.push_back("--no-whole-archive");
     return;
   }
 
-  CmdArgs.push_back("-lFortran_main");
+  CmdArgs.push_back(FortranMainLinkFlag);
 }
 
 /// Add Fortran runtime libs

@@ -1,5 +1,5 @@
-; RUN: not llc -global-isel=0 -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: not llc -global-isel=1 -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: error: <unknown>:0:0: in function use_group_to_global_addrspacecast void (ptr addrspace(3)): invalid addrspacecast
 define amdgpu_kernel void @use_group_to_global_addrspacecast(ptr addrspace(3) %ptr) {

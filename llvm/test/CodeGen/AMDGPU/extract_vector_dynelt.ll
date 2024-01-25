@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}float4_extelt:
 ; GCN-NOT: buffer_

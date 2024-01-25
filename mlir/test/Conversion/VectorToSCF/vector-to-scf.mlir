@@ -533,9 +533,9 @@ func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?], offset: ?>>
 }
 
 // CHECK-SAME:      %[[ARG_0:.*]]: memref<?xf32, strided<[?], offset: ?>>,
-// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
-// CHECK:           %[[C_16:.*]] = arith.constant 16 : index
-// CHECK:           %[[STEP:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C_16:.*]] = arith.constant 16 : index
+// CHECK-DAG:       %[[STEP:.*]] = arith.constant 1 : index
 // CHECK:           %[[MASK_VEC:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : vector<[16]xi32>
 // CHECK:           %[[VSCALE:.*]] = vector.vscale
 // CHECK:           %[[UB:.*]] = arith.muli %[[VSCALE]], %[[C_16]] : index
@@ -556,8 +556,8 @@ func.func @vector_print_vector_0d(%arg0: vector<f32>) {
 }
 // CHECK-LABEL:   func.func @vector_print_vector_0d(
 // CHECK-SAME:                                      %[[VEC:.*]]: vector<f32>) {
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[FLAT_VEC:.*]] = vector.shape_cast %[[VEC]] : vector<f32> to vector<1xf32>
 // CHECK:           vector.print punctuation <open>
 // CHECK:           scf.for %[[IDX:.*]] = %[[C0]] to %[[C1]] step %[[C1]] {
@@ -581,9 +581,9 @@ func.func @vector_print_vector(%arg0: vector<2x2xf32>) {
 }
 // CHECK-LABEL:   func.func @vector_print_vector(
 // CHECK-SAME:                                   %[[VEC:.*]]: vector<2x2xf32>) {
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[C2:.*]] = arith.constant 2 : index
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[FLAT_VEC:.*]] = vector.shape_cast %[[VEC]] : vector<2x2xf32> to vector<4xf32>
 // CHECK:           vector.print punctuation <open>
 // CHECK:           scf.for %[[I:.*]] = %[[C0]] to %[[C2]] step %[[C1]] {
@@ -650,10 +650,10 @@ func.func @transfer_read_array_of_scalable(%arg0: memref<3x?xf32>) -> vector<3x[
 }
 // CHECK-LABEL:   func.func @transfer_read_array_of_scalable(
 // CHECK-SAME:                                               %[[ARG:.*]]: memref<3x?xf32>) -> vector<3x[4]xf32> {
-// CHECK:           %[[PADDING:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[C3:.*]] = arith.constant 3 : index
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[PADDING:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[ALLOCA_VEC:.*]] = memref.alloca() : memref<vector<3x[4]xf32>>
 // CHECK:           %[[ALLOCA_MASK:.*]] = memref.alloca() : memref<vector<3x[4]xi1>>
 // CHECK:           %[[DIM_SIZE:.*]] = memref.dim %[[ARG]], %[[C1]] : memref<3x?xf32>
@@ -684,9 +684,9 @@ func.func @transfer_write_array_of_scalable(%vec: vector<3x[4]xf32>, %arg0: memr
 // CHECK-LABEL:   func.func @transfer_write_array_of_scalable(
 // CHECK-SAME:                                                %[[VEC:.*]]: vector<3x[4]xf32>,
 // CHECK-SAME:                                                %[[MEMREF:.*]]: memref<3x?xf32>) {
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[C3:.*]] = arith.constant 3 : index
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[ALLOCA_VEC:.*]] = memref.alloca() : memref<vector<3x[4]xf32>>
 // CHECK:           %[[ALLOCA_MASK:.*]] = memref.alloca() : memref<vector<3x[4]xi1>>
 // CHECK:           %[[DIM_SIZE:.*]] = memref.dim %[[MEMREF]], %[[C1]] : memref<3x?xf32>

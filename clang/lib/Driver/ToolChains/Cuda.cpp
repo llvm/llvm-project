@@ -894,7 +894,7 @@ std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   // these particular file names.
   SmallString<256> Filename(ToolChain::getInputFilename(Input));
   llvm::sys::path::replace_extension(Filename, "cubin");
-  return std::string(Filename.str());
+  return std::string(Filename);
 }
 
 llvm::opt::DerivedArgList *

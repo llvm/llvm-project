@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass=postra-machine-sink -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=postra-machine-sink -verify-machineinstrs -o - %s | FileCheck %s
 
 # Don't sink copy that writes sub-register of another copy source register
 # CHECK-LABEL: name: donotsinkcopy

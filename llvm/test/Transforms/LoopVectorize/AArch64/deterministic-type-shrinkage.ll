@@ -459,7 +459,7 @@ define void @old_and_new_size_equalko(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

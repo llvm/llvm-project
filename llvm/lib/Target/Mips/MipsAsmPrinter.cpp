@@ -491,10 +491,7 @@ bool MipsAsmPrinter::isBlockOnlyReachableByFallthrough(const MachineBasicBlock*
     return false;
 
   // If there isn't exactly one predecessor, it can't be a fall through.
-  MachineBasicBlock::const_pred_iterator PI = MBB->pred_begin(), PI2 = PI;
-  ++PI2;
-
-  if (PI2 != MBB->pred_end())
+  if (MBB->pred_size() != 1)
     return false;
 
   // The predecessor has to be immediately before this block.

@@ -40,54 +40,14 @@ using namespace mlir;
 
 #if MLIR_CUDA_CONVERSIONS_ENABLED
 namespace {
-struct GPUToNVVMPipelineOptions
-    : public PassPipelineOptions<GPUToNVVMPipelineOptions> {
-  PassOptions::Option<int64_t> indexBitWidth{
-      *this, "index-bitwidth",
-      llvm::cl::desc("Bitwidth of the index type for the host (warning this "
-                     "should be 64 until the GPU layering is fixed)"),
-      llvm::cl::init(64)};
-  PassOptions::Option<std::string> cubinTriple{
-      *this, "cubin-triple",
-      llvm::cl::desc("Triple to use to serialize to cubin."),
-      llvm::cl::init("nvptx64-nvidia-cuda")};
-  PassOptions::Option<std::string> cubinChip{
-      *this, "cubin-chip", llvm::cl::desc("Chip to use to serialize to cubin."),
-      llvm::cl::init("sm_50")};
-  PassOptions::Option<std::string> cubinFeatures{
-      *this, "cubin-features",
-      llvm::cl::desc("Features to use to serialize to cubin."),
-      llvm::cl::init("+ptx60")};
-  PassOptions::Option<std::string> cubinFormat{
-      *this, "cubin-format",
-      llvm::cl::desc("Compilation format to use to serialize to cubin."),
-      llvm::cl::init("fatbin")};
-  PassOptions::Option<int> optLevel{
-      *this, "opt-level",
-      llvm::cl::desc("Optimization level for NVVM compilation"),
-      llvm::cl::init(2)};
-  PassOptions::Option<bool> kernelUseBarePtrCallConv{
-      *this, "kernel-bare-ptr-calling-convention",
-      llvm::cl::desc(
-          "Whether to use the bareptr calling convention on the kernel "
-          "(warning this should be false until the GPU layering is fixed)"),
-      llvm::cl::init(false)};
-  PassOptions::Option<bool> hostUseBarePtrCallConv{
-      *this, "host-bare-ptr-calling-convention",
-      llvm::cl::desc(
-          "Whether to use the bareptr calling convention on the host (warning "
-          "this should be false until the GPU layering is fixed)"),
-      llvm::cl::init(false)};
-};
 
 //===----------------------------------------------------------------------===//
 // Common pipeline
 //===----------------------------------------------------------------------===//
-void buildCommonPassPipeline(OpPassManager &pm,
-                             const GPUToNVVMPipelineOptions &options) {
+void buildCommonPassPipeline(
+    OpPassManager &pm, const mlir::gpu::GPUToNVVMPipelineOptions &options) {
   pm.addPass(createConvertNVGPUToNVVMPass());
   pm.addPass(createGpuKernelOutliningPass());
-  pm.addPass(createConvertLinalgToLoopsPass());
   pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createConvertNVVMToLLVMPass());
@@ -114,7 +74,7 @@ void buildCommonPassPipeline(OpPassManager &pm,
 // GPUModule-specific stuff.
 //===----------------------------------------------------------------------===//
 void buildGpuPassPipeline(OpPassManager &pm,
-                          const GPUToNVVMPipelineOptions &options) {
+                          const mlir::gpu::GPUToNVVMPipelineOptions &options) {
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   ConvertGpuOpsToNVVMOpsOptions opt;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
@@ -129,7 +89,7 @@ void buildGpuPassPipeline(OpPassManager &pm,
 // Host Post-GPU pipeline
 //===----------------------------------------------------------------------===//
 void buildHostPostPipeline(OpPassManager &pm,
-                           const GPUToNVVMPipelineOptions &options) {
+                           const mlir::gpu::GPUToNVVMPipelineOptions &options) {
   GpuToLLVMConversionPassOptions opt;
   opt.hostBarePtrCallConv = options.hostUseBarePtrCallConv;
   opt.kernelBarePtrCallConv = options.kernelUseBarePtrCallConv;
@@ -143,36 +103,28 @@ void buildHostPostPipeline(OpPassManager &pm,
   pm.addPass(createReconcileUnrealizedCastsPass());
 }
 
-void buildLowerToNVVMPassPipeline(OpPassManager &pm,
-                                  const GPUToNVVMPipelineOptions &options) {
-  //===----------------------------------------------------------------------===//
-  // Common pipeline
-  //===----------------------------------------------------------------------===//
-  buildCommonPassPipeline(pm, options);
-
-  //===----------------------------------------------------------------------===//
-  // GPUModule-specific stuff.
-  //===----------------------------------------------------------------------===//
-  buildGpuPassPipeline(pm, options);
-
-  //===----------------------------------------------------------------------===//
-  // Host post-GPUModule-specific stuff.
-  //===----------------------------------------------------------------------===//
-  buildHostPostPipeline(pm, options);
-}
 } // namespace
 
-namespace mlir {
-namespace gpu {
-void registerGPUToNVVMPipeline() {
+void mlir::gpu::buildLowerToNVVMPassPipeline(
+    OpPassManager &pm, const GPUToNVVMPipelineOptions &options) {
+  // Common pipelines
+  buildCommonPassPipeline(pm, options);
+
+  // GPUModule-specific stuff
+  buildGpuPassPipeline(pm, options);
+
+  // Host post-GPUModule-specific stuff
+  buildHostPostPipeline(pm, options);
+}
+
+void mlir::gpu::registerGPUToNVVMPipeline() {
   PassPipelineRegistration<GPUToNVVMPipelineOptions>(
-      "gpu-lower-to-nvvm",
-      "The default pipeline lowers main dialects (arith, linalg, memref, scf, "
+      "gpu-lower-to-nvvm-pipeline",
+      "The default pipeline lowers main dialects (arith, memref, scf, "
       "vector, gpu, and nvgpu) to NVVM. It starts by lowering GPU code to the "
       "specified compilation target (default is fatbin) then lowers the host "
       "code.",
       buildLowerToNVVMPassPipeline);
 }
-} // namespace gpu
-} // namespace mlir
+
 #endif // MLIR_CUDA_CONVERSIONS_ENABLED

@@ -64,10 +64,7 @@ struct _LIBCPP_TEMPLATE_VIS formatter<const _CharT*, _CharT> : public __formatte
 
   template <class _FormatContext>
   _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(const _CharT* __str, _FormatContext& __ctx) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __str,
-        "The basic_format_arg constructor should have "
-        "prevented an invalid pointer.");
+    _LIBCPP_ASSERT_INTERNAL(__str, "The basic_format_arg constructor should have prevented an invalid pointer.");
 
     __format_spec::__parsed_specifications<_CharT> __specs = _Base::__parser_.__get_parsed_std_specifications(__ctx);
 #  if _LIBCPP_STD_VER >= 23

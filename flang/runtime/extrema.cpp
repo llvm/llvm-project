@@ -19,6 +19,7 @@
 #include <cinttypes>
 #include <cmath>
 #include <optional>
+#include <type_traits>
 
 namespace Fortran::runtime {
 
@@ -28,7 +29,9 @@ template <typename T, bool IS_MAX, bool BACK> struct NumericCompare {
   using Type = T;
   explicit RT_API_ATTRS NumericCompare(std::size_t /*elemLen; ignored*/) {}
   RT_API_ATTRS bool operator()(const T &value, const T &previous) const {
-    if (value == previous) {
+    if (std::is_floating_point_v<T> && previous != previous) {
+      return BACK || value == value; // replace NaN
+    } else if (value == previous) {
       return BACK;
     } else if constexpr (IS_MAX) {
       return value > previous;
@@ -76,11 +79,10 @@ public:
   template <typename A>
   RT_API_ATTRS void GetResult(A *p, int zeroBasedDim = -1) {
     if (zeroBasedDim >= 0) {
-      *p = extremumLoc_[zeroBasedDim] -
-          array_.GetDimension(zeroBasedDim).LowerBound() + 1;
+      *p = extremumLoc_[zeroBasedDim];
     } else {
       for (int j{0}; j < argRank_; ++j) {
-        p[j] = extremumLoc_[j] - array_.GetDimension(j).LowerBound() + 1;
+        p[j] = extremumLoc_[j];
       }
     }
   }
@@ -90,7 +92,7 @@ public:
     if (!previous_ || compare_(value, *previous_)) {
       previous_ = &value;
       for (int j{0}; j < argRank_; ++j) {
-        extremumLoc_[j] = at[j];
+        extremumLoc_[j] = at[j] - array_.GetDimension(j).LowerBound() + 1;
       }
     }
     return true;
@@ -135,7 +137,7 @@ template <bool IS_MAX> struct CharacterMaxOrMinLocHelper {
     RT_API_ATTRS void operator()(const char *intrinsic, Descriptor &result,
         const Descriptor &x, int kind, const char *source, int line,
         const Descriptor *mask, bool back) const {
-      DoMaxOrMinLoc<TypeCategory::Character, KIND, IS_MAX, NumericCompare>(
+      DoMaxOrMinLoc<TypeCategory::Character, KIND, IS_MAX, CharacterCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
     }
   };
@@ -485,6 +487,7 @@ public:
   explicit RT_API_ATTRS NumericExtremumAccumulator(const Descriptor &array)
       : array_{array} {}
   RT_API_ATTRS void Reinitialize() {
+    any_ = false;
     extremum_ = MaxOrMinIdentity<CAT, KIND, IS_MAXVAL>::Value();
   }
   template <typename A>
@@ -492,7 +495,12 @@ public:
     *p = extremum_;
   }
   RT_API_ATTRS bool Accumulate(Type x) {
-    if constexpr (IS_MAXVAL) {
+    if (!any_) {
+      extremum_ = x;
+      any_ = true;
+    } else if (CAT == TypeCategory::Real && extremum_ != extremum_) {
+      extremum_ = x; // replace NaN
+    } else if constexpr (IS_MAXVAL) {
       if (x > extremum_) {
         extremum_ = x;
       }
@@ -508,6 +516,7 @@ public:
 
 private:
   const Descriptor &array_;
+  bool any_{false};
   Type extremum_{MaxOrMinIdentity<CAT, KIND, IS_MAXVAL>::Value()};
 };
 
@@ -598,9 +607,8 @@ public:
       std::memcpy(p, extremum_, byteSize);
     } else {
       // Empty array; fill with character 0 for MAXVAL.
-      // For MINVAL, fill with 127 if ASCII as required
-      // by the standard, otherwise set all of the bits.
-      std::memset(p, IS_MAXVAL ? 0 : KIND == 1 ? 127 : 255, byteSize);
+      // For MINVAL, set all of the bits.
+      std::memset(p, IS_MAXVAL ? 0 : 255, byteSize);
     }
   }
   RT_API_ATTRS bool Accumulate(const Type *x) {

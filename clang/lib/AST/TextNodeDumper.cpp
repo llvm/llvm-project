@@ -1094,6 +1094,16 @@ void clang::TextNodeDumper::VisitReturnStmt(const ReturnStmt *Node) {
   }
 }
 
+void clang::TextNodeDumper::VisitCoawaitExpr(const CoawaitExpr *Node) {
+  if (Node->isImplicit())
+    OS << " implicit";
+}
+
+void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
+  if (Node->isImplicit())
+    OS << " implicit";
+}
+
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->hasAPValueResult())
     AddChild("value",
@@ -1613,6 +1623,9 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
   case VectorKind::RVVFixedLengthData:
     OS << " fixed-length rvv data vector";
     break;
+  case VectorKind::RVVFixedLengthMask:
+    OS << " fixed-length rvv mask vector";
+    break;
   }
   OS << " " << T->getNumElements();
 }
@@ -1865,7 +1878,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (D->isModulePrivate())
     OS << " __module_private__";
 
-  if (D->isPure())
+  if (D->isPureVirtual())
     OS << " pure";
   if (D->isDefaulted()) {
     OS << " default";

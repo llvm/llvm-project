@@ -91,7 +91,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit VOP3_OPSEL = 0;
 
   // Is it possible for this instruction to be atomic?
-  field bit maybeAtomic = 0;
+  field bit maybeAtomic = 1;
 
   // This bit indicates that this is a VI instruction which is renamed
   // in GFX9. Required for correct mapping from pseudo to MC.
@@ -160,6 +160,9 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // ds_gws_* instructions.
   field bit GWS = 0;
+
+  // This bit indicates that this is one of SWMMAC instructions.
+  field bit IsSWMMAC = 0;
 
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
@@ -247,6 +250,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{61} = IsNeverUniform;
   
   let TSFlags{62} = GWS;
+
+  let TSFlags{63} = IsSWMMAC;
 
   let SchedRW = [Write32Bit];
 

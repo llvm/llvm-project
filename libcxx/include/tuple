@@ -141,7 +141,7 @@ template <class... Tuples> tuple<CTypes...> tuple_cat(Tuples&&... tpls); // cons
 
 // [tuple.apply], calling a function with a tuple of arguments:
 template <class F, class Tuple>
-  constexpr decltype(auto) apply(F&& f, Tuple&& t); // C++17
+  constexpr decltype(auto) apply(F&& f, Tuple&& t) noexcept(see below);  // C++17 noexcept since C++23
 template <class T, class Tuple>
   constexpr T make_from_tuple(Tuple&& t); // C++17
 
@@ -1416,25 +1416,27 @@ inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
 #    define _LIBCPP_NOEXCEPT_RETURN(...)                                                                               \
       noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }
 
+// The _LIBCPP_NOEXCEPT_RETURN macro breaks formatting.
+// clang-format off
 template <class _Fn, class _Tuple, size_t... _Id>
 inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto)
 __apply_tuple_impl(_Fn&& __f, _Tuple&& __t, __tuple_indices<_Id...>)
     _LIBCPP_NOEXCEPT_RETURN(std::__invoke(std::forward<_Fn>(__f), std::get<_Id>(std::forward<_Tuple>(__t))...))
 
-        template <class _Fn, class _Tuple>
-        inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) apply(_Fn&& __f, _Tuple&& __t) _LIBCPP_NOEXCEPT_RETURN(
-            std::__apply_tuple_impl(std::forward<_Fn>(__f),
-                                    std::forward<_Tuple>(__t),
-                                    typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
+template <class _Fn, class _Tuple>
+inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) apply(_Fn&& __f, _Tuple&& __t)
+    _LIBCPP_NOEXCEPT_RETURN(std::__apply_tuple_impl(
+        std::forward<_Fn>(__f),
+        std::forward<_Tuple>(__t),
+        typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
 
-            template <class _Tp, class _Tuple, size_t... _Idx>
-            inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp
-    __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>)
-        _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
+template <class _Tp, class _Tuple, size_t... _Idx>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>)
+    _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
 
-            template <class _Tp, class _Tuple>
-            inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp
-    make_from_tuple(_Tuple&& __t) _LIBCPP_NOEXCEPT_RETURN(std::__make_from_tuple_impl<_Tp>(
+template <class _Tp, class _Tuple>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
+    _LIBCPP_NOEXCEPT_RETURN(std::__make_from_tuple_impl<_Tp>(
         std::forward<_Tuple>(__t), typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
 
 #    undef _LIBCPP_NOEXCEPT_RETURN
@@ -1443,9 +1445,11 @@ __apply_tuple_impl(_Fn&& __f, _Tuple&& __t, __tuple_indices<_Id...>)
 
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
-        _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_NAMESPACE_STD
 
-    _LIBCPP_POP_MACROS
+_LIBCPP_POP_MACROS
+
+// clang-format on
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <exception>

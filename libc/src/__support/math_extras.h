@@ -10,11 +10,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 
+#include "src/__support/CPP/limits.h"        // CHAR_BIT
 #include "src/__support/CPP/type_traits.h"   // is_unsigned_v
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
-
-#include <limits.h> // CHAR_BIT
 
 namespace LIBC_NAMESPACE {
 
