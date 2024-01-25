@@ -54,7 +54,7 @@ protected:
 public:
   /// Initializes the compiler and the backend emitter.
   template <typename... Tys>
-  ByteCodeExprGen(Context &Ctx, Program &P, Tys &&...Args)
+  ByteCodeExprGen(Context &Ctx, Program &P, Tys &&... Args)
       : Emitter(Ctx, P, Args...), Ctx(Ctx), P(P) {}
 
   // Expression visitors - result returned on interp stack.
@@ -241,7 +241,8 @@ private:
                    llvm::function_ref<bool(PrimType)> Direct,
                    llvm::function_ref<bool(PrimType)> Indirect);
   bool dereferenceParam(const Expr *LV, PrimType T, const ParmVarDecl *PD,
-                        DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
+                        DerefKind AK,
+                        llvm::function_ref<bool(PrimType)> Direct,
                         llvm::function_ref<bool(PrimType)> Indirect);
   bool dereferenceVar(const Expr *LV, PrimType T, const VarDecl *PD,
                       DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
