@@ -296,7 +296,7 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -1013,7 +1013,7 @@ static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
 // but we would then have to make sure that we were in fact saving at least one
 // callee-save register in the prologue, which is additional complexity that
 // doesn't seem worth the benefit.
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
+static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   MachineFunction *MF = MBB->getParent();
 
   // If MBB is an entry block, use X9 as the scratch register
