@@ -554,7 +554,7 @@ namespace {
     bool matchBitExtract(SDNode *Node);
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
-    bool rightShiftUncloberFlags(SDNode *N);
+    bool rightShiftUnclobberFlags(SDNode *N);
     bool tryShiftAmountMod(SDNode *N);
     bool tryShrinkShlLogicImm(SDNode *N);
     bool tryVPTERNLOG(SDNode *N);
@@ -4225,7 +4225,7 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
 // the high bits in a useful state. There may be other situations where this
 // transformation is profitable given those conditions, but currently the
 // transformation is only made when it likely avoids spilling flags.
-bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
+bool X86DAGToDAGISel::rightShiftUnclobberFlags(SDNode *N) {
   EVT VT = N->getValueType(0);
 
   // Target has to have BMI2 for RORX
@@ -4251,7 +4251,6 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   unsigned TruncateSize = 0;
   // This only works when the result is truncated.
   for (const SDNode *User : N->uses()) {
-    auto name = User->getOperationName(CurDAG);
     if (!User->isMachineOpcode() ||
         User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
       return false;
@@ -4274,25 +4273,24 @@ bool X86DAGToDAGISel::rightShiftUncloberFlags(SDNode *N) {
   if (!ShiftAmount || ShiftAmount->getZExtValue() > OpSize - TruncateSize)
     return false;
 
-  // Only make the replacement when it avoids clobbering used flags. This is a
-  // similar heuristic as used in the conversion to LEA, namely looking at the
-  // operand for an instruction that creates flags where those flags are used.
-  // This will have both false positives and false negatives. Ideally, both of
-  // these happen later on. Perhaps in copy to flags lowering or in register
-  // allocation.
-  bool MightClobberFlags = false;
+  // If the shift argument has non-dead EFLAGS, then this shift probably
+  // clobbers those flags making the transformation to RORX useful. This may
+  // have false negatives or positives so ideally this transformation is made
+  // later on.
+  bool ArgProducesFlags = false;
   SDNode *Input = N->getOperand(0).getNode();
   for (auto Use : Input->uses()) {
     if (Use->getOpcode() == ISD::CopyToReg) {
       auto *RegisterNode =
           dyn_cast<RegisterSDNode>(Use->getOperand(1).getNode());
       if (RegisterNode && RegisterNode->getReg() == X86::EFLAGS) {
-        MightClobberFlags = true;
+        ArgProducesFlags = true;
         break;
       }
     }
   }
-  if (!MightClobberFlags)
+  // Don't transform if the argument to this shift has dead EFLAGS.
+  if (!ArgProducesFlags)
     return false;
 
   // Make the replacement.
@@ -5327,7 +5325,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       return;
     [[fallthrough]];
   case ISD::SRA:
-    if (rightShiftUncloberFlags(Node))
+    if (rightShiftUnclobberFlags(Node))
       return;
     [[fallthrough]];
   case ISD::SHL:
