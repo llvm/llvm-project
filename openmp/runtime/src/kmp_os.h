@@ -467,7 +467,7 @@ enum kmp_mem_fence_type {
 #pragma intrinsic(InterlockedExchangeAdd)
 #pragma intrinsic(InterlockedCompareExchange)
 #pragma intrinsic(InterlockedExchange)
-#if !(KMP_COMPILER_ICX && KMP_32_BIT_ARCH)
+#if !KMP_32_BIT_ARCH
 #pragma intrinsic(InterlockedExchange64)
 #endif
 #endif

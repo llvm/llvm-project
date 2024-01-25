@@ -1095,7 +1095,7 @@ private:
       if (auto *Def = Callee->getDefinition()) {
         auto I = std::distance(Callee->param_begin(),
                                llvm::find(Callee->parameters(), P));
-        if (I < Callee->getNumParams()) {
+        if (I < (int)Callee->getNumParams()) {
           return Def->getParamDecl(I);
         }
       }
