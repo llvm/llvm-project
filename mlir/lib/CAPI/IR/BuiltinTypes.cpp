@@ -16,6 +16,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 
+#include <algorithm>
+
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
@@ -424,6 +426,18 @@ MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type) {
 
 MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type) {
   return wrap(llvm::cast<MemRefType>(unwrap(type)).getMemorySpace());
+}
+
+void mlirMemRefTypeGetStridesAndOffset(MlirType type, int64_t *strides,
+                                       int64_t *offset) {
+  MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
+  std::pair<SmallVector<int64_t>, int64_t> stridesOffsets =
+      getStridesAndOffset(memrefType);
+  assert(stridesOffsets.first.size() == memrefType.getRank() &&
+         "Strides and rank don't match for memref");
+  (void)std::copy(stridesOffsets.first.begin(), stridesOffsets.first.end(),
+                  strides);
+  *offset = stridesOffsets.second;
 }
 
 MlirTypeID mlirUnrankedMemRefTypeGetTypeID() {

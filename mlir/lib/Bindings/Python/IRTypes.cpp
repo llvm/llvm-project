@@ -619,6 +619,15 @@ public:
             },
             "The layout of the MemRef type.")
         .def_property_readonly(
+            "strides_and_offset",
+            [](PyMemRefType &self) -> std::pair<std::vector<int64_t>, int64_t> {
+              std::vector<int64_t> strides(mlirShapedTypeGetRank(self));
+              int64_t offset;
+              mlirMemRefTypeGetStridesAndOffset(self, strides.data(), &offset);
+              return {strides, offset};
+            },
+            "The strides and offset of the MemRef type.")
+        .def_property_readonly(
             "affine_map",
             [](PyMemRefType &self) -> PyAffineMap {
               MlirAffineMap map = mlirMemRefTypeGetAffineMap(self);
