@@ -1,6 +1,6 @@
 .. include:: ReleaseNotes/19.rst
 
-.. Make sure to reference the 18 release notes in a toctree to avoid Sphinx errors.
+.. Make sure to reference the previous release notes in a toctree to avoid Sphinx errors.
 .. toctree::
     :hidden:
 
