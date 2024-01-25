@@ -217,13 +217,13 @@ define { <4 x i8>, <4 x i1> } @always_usub_const_vector() nounwind {
 define { <4 x i8>, <4 x i1> } @never_usub_const_vector() nounwind {
 ; SSE-LABEL: never_usub_const_vector:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [127,255,0,254,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [127,255,0,254,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: never_usub_const_vector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [127,255,0,254,127,255,0,254,127,255,0,254,127,255,0,254]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [127,255,0,254,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 255, i8 255, i8 255, i8 255>, <4 x i8> <i8 128, i8 0, i8 255, i8 1>)

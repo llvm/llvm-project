@@ -21,7 +21,7 @@ define <8 x i16> @pow2_mask_v16i8(i8 zeroext %0) {
 ; SSE41-NEXT:    movd %edi, %xmm0
 ; SSE41-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [128,64,32,16,8,4,2,1,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    movq {{.*#+}} xmm1 = [128,64,32,16,8,4,2,1,0,0,0,0,0,0,0,0]
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqb %xmm1, %xmm0
 ; SSE41-NEXT:    pmovsxbw %xmm0, %xmm0
@@ -97,7 +97,7 @@ define i64 @pow2_mask_v8i8(i8 zeroext %0) {
 ; SSE-NEXT:    movd %edi, %xmm0
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [128,64,32,16,8,4,2,1,u,u,u,u,u,u,u,u]
+; SSE-NEXT:    movq {{.*#+}} xmm1 = [128,64,32,16,8,4,2,1,0,0,0,0,0,0,0,0]
 ; SSE-NEXT:    pand %xmm1, %xmm0
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
 ; SSE-NEXT:    movq %xmm0, %rax
