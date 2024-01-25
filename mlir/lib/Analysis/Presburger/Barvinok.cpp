@@ -391,6 +391,22 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
       activeRegion.addToRow(i, b2c2.getRow(i), 1);
     }
 
+    // If any row of activeRegion is all-zero, that means that the
+    // corresponding inequality in `remaining` is *also* satisfied by the
+    // vertex for any values of the parameters. Thus we remove it from
+    // activeRegion and add that inequality to `subset`.
+    // Note that if the row is not all-zero, it is still possible for the
+    // inequality to be satisfied by the corresponding vertex *in some subset of
+    // the parameter space*. However, since this subset is defined by an
+    // equality, it is not full-dimensional and we can therefore ignore it.
+    for (int i = activeRegion.getNumRows() - 1; i >= 0; --i) {
+      if (llvm::any_of(activeRegion.getRow(i),
+                       [&](Fraction f) { return f != 0; }))
+        continue;
+      subset.appendExtraRow(remainder.getRow(i));
+      activeRegion.removeRow(i);
+    }
+
     // We convert the representation of the active region to an integers-only
     // form so as to store it as a PresburgerSet.
     IntMatrix activeRegionNorm = activeRegion.normalizeRows();
@@ -398,7 +414,6 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
         PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0));
     for (unsigned i = 0, e = activeRegion.getNumRows(); i < e; ++i)
       activeRegionRel.addInequality(activeRegionNorm.getRow(i));
-    // TODO check for simplicial
 
     // Now, we compute the generating function at this vertex.
     // We collect the inequalities corresponding to each vertex to compute
@@ -410,7 +425,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
     // We translate the cones to be pointed at the origin by making the
     // constant terms zero.
     ConeH tangentCone = defineHRep(numVars);
-    for (unsigned j = 0; j < numVars; ++j) {
+    for (unsigned j = 0, e = subset.getNumRows(); j < e; ++j) {
       for (unsigned k = 0; k < numVars; ++k)
         ineq[k] = subset(j, k);
       tangentCone.addInequality(ineq);
