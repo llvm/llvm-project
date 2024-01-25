@@ -310,7 +310,7 @@ class ReleaseWorkflow:
 
     @property
     def branch_repo_owner(self) -> str:
-        return self.branch_repo_name.split('/')[0]
+        return self.branch_repo_name.split("/")[0]
 
     @property
     def branch_repo_name(self) -> str:
@@ -477,7 +477,9 @@ class ReleaseWorkflow:
         local_repo.git.push(push_url, "HEAD:{}".format(branch_name), force=True)
 
         self.issue_remove_cherry_pick_failed_label()
-        return self.create_pull_request(self.branch_repo_owner, self.repo_name, branch_name)
+        return self.create_pull_request(
+            self.branch_repo_owner, self.repo_name, branch_name
+        )
 
     def check_if_pull_request_exists(
         self, repo: github.Repository.Repository, head: str
