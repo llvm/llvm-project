@@ -168,6 +168,15 @@ def FeatureStdExtZa64rs : SubtargetFeature<"za64rs", "HasStdExtZa64rs", "true",
 def FeatureStdExtZa128rs : SubtargetFeature<"za128rs", "HasStdExtZa128rs", "true",
                                             "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
 
+def FeatureStdExtZaamo
+    : SubtargetFeature<"experimental-zaamo", "HasStdExtZaamo", "true",
+                       "'Zaamo' (Atomic Memory Operations)">;
+def HasStdExtAOrZaamo
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZaamo()">,
+      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
+                         "'A' (Atomic Instructions) or "
+                         "'Zaamo' (Atomic Memory Operations)">;
+
 def FeatureStdExtZacas
     : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
                        "'Zacas' (Atomic Compare-And-Swap Instructions)">;
@@ -175,6 +184,15 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
                          "'Zacas' (Atomic Compare-And-Swap Instructions)">;
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
+
+def FeatureStdExtZalrsc
+    : SubtargetFeature<"experimental-zalrsc", "HasStdExtZalrsc", "true",
+                       "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+def HasStdExtAOrZalrsc
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc()">,
+      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZalrsc),
+                         "'A' (Atomic Instructions) or "
+                         "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
