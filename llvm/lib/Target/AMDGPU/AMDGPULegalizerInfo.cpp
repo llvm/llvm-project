@@ -6890,9 +6890,7 @@ bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
     return false;
   LLT S32 = LLT::scalar(32);
   Register DstReg = MI.getOperand(0).getReg();
-  Register TTMP8 =
-      getFunctionLiveInPhysReg(B.getMF(), B.getTII(), AMDGPU::TTMP8,
-                               AMDGPU::SReg_32RegClass, B.getDebugLoc(), S32);
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
   auto LSB = B.buildConstant(S32, 25);
   auto Width = B.buildConstant(S32, 5);
   B.buildUbfx(DstReg, TTMP8, LSB, Width);
