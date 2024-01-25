@@ -178,11 +178,10 @@ entry:
 ; return to the hardware. Tail-calling another function would probably break
 ; this.
 declare void @callee_irq()
-define void @caller_irq() #0 {
+define void @caller_irq() nounwind "interrupt"="machine" {
 ; CHECK-LABEL: caller_irq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw t0, 56(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw t1, 52(sp) # 4-byte Folded Spill
@@ -199,22 +198,6 @@ define void @caller_irq() #0 {
 ; CHECK-NEXT:    sw t4, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw t5, 4(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw t6, 0(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset ra, -4
-; CHECK-NEXT:    .cfi_offset t0, -8
-; CHECK-NEXT:    .cfi_offset t1, -12
-; CHECK-NEXT:    .cfi_offset t2, -16
-; CHECK-NEXT:    .cfi_offset a0, -20
-; CHECK-NEXT:    .cfi_offset a1, -24
-; CHECK-NEXT:    .cfi_offset a2, -28
-; CHECK-NEXT:    .cfi_offset a3, -32
-; CHECK-NEXT:    .cfi_offset a4, -36
-; CHECK-NEXT:    .cfi_offset a5, -40
-; CHECK-NEXT:    .cfi_offset a6, -44
-; CHECK-NEXT:    .cfi_offset a7, -48
-; CHECK-NEXT:    .cfi_offset t3, -52
-; CHECK-NEXT:    .cfi_offset t4, -56
-; CHECK-NEXT:    .cfi_offset t5, -60
-; CHECK-NEXT:    .cfi_offset t6, -64
 ; CHECK-NEXT:    call callee_irq
 ; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw t0, 56(sp) # 4-byte Folded Reload
@@ -238,7 +221,6 @@ entry:
   tail call void @callee_irq()
   ret void
 }
-attributes #0 = { "interrupt"="machine" }
 
 ; Byval parameters hand the function a pointer directly into the stack area
 ; we want to reuse during a tail call. Do not tail call optimize functions with
