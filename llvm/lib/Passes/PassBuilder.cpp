@@ -400,7 +400,7 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
   PIC->addClassToPassName(PASS_NAME::name(), NAME);
 #define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)                    \
   PIC->addClassToPassName(PASS_NAME::name(), NAME);
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
   }
 }
 
@@ -441,7 +441,7 @@ void PassBuilder::registerMachineFunctionAnalyses(
 
 #define MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)                \
   MFAM.registerPass([&] { return PASS_NAME(); });
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
   for (auto &C : MachineFunctionAnalysisRegistrationCallbacks)
     C(MFAM);
@@ -1868,7 +1868,7 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
     MFPM.addPass(PASS_NAME());                                                 \
     return Error::success();                                                   \
   }
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
   for (auto &C : MachinePipelineParsingCallbacks)
     if (C(Name, MFPM))
@@ -2179,17 +2179,17 @@ void PassBuilder::printPassNames(raw_ostream &OS) {
   OS << "Machine module passes (WIP):\n";
 #define MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                      \
   printPassName(NAME, OS);
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
   OS << "Machine function passes (WIP):\n";
 #define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)                    \
   printPassName(NAME, OS);
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 
   OS << "Machine function analyses (WIP):\n";
 #define MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)                \
   printPassName(NAME, OS);
-#include "llvm/CodeGen/MachinePassRegistry.def"
+#include "llvm/Passes/MachinePassRegistry.def"
 }
 
 void PassBuilder::registerParseTopLevelPipelineCallback(

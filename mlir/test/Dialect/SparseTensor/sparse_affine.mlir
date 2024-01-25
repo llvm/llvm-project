@@ -234,9 +234,9 @@ func.func @mul_affine_dense2d(%arga: tensor<32x16xf64, #CSR>,
 // CHECK:             %[[VAL_22:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_21]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_23:.*]] = %[[VAL_20]] to %[[VAL_22]] step %[[VAL_5]] {
 // CHECK:               %[[VAL_24:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_23]]] : memref<?xindex>
-// CHECK:               %[[VAL_25:.*]] = arith.addi %[[VAL_24]], %[[VAL_7]] : index
 // CHECK:               %[[VAL_26:.*]] = arith.muli %[[VAL_17]], %[[VAL_3]] : index
-// CHECK:               %[[VAL_27:.*]] = arith.addi %[[VAL_26]], %[[VAL_25]] : index
+// CHECK:               %[[VAL_25:.*]] = arith.addi %[[VAL_24]], %[[VAL_7]] : index
+// CHECK:               %[[VAL_27:.*]] = arith.addi %[[VAL_25]], %[[VAL_26]] : index
 // CHECK:               %[[VAL_28:.*]] = memref.load %[[VAL_14]]{{\[}}%[[VAL_18]], %[[VAL_24]]] : memref<32x16xf64>
 // CHECK:               %[[VAL_29:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_23]]] : memref<?xf64>
 // CHECK:               %[[VAL_30:.*]] = memref.load %[[VAL_13]]{{\[}}%[[VAL_27]]] : memref<?xf64>
