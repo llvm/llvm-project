@@ -764,6 +764,12 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     std::vector<BBAddrMap::BBEntry> BBEntries;
     if (FeatEnable.MultiBBRange) {
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+      if (!Cur || ULEBSizeErr)
+        break;
+      if (!NumBBRanges)
+        return createError("invalid zero number of BB ranges at offset " +
+                           Twine::utohexstr(Cur.tell()) + " in " +
+                           describe(EF, Sec));
     } else {
       auto AddressOrErr = ExtractAddress();
       if (!AddressOrErr)

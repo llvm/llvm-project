@@ -879,10 +879,11 @@ struct BBAddrMap {
       }
     };
 
-    uint32_t ID;     // Unique ID of this basic block.
-    uint32_t Offset; // Offset of basic block relative to the base address.
-    uint32_t Size;   // Size of the basic block.
-    Metadata MD;     // Metdata for this basic block.
+    uint32_t ID = 0;     // Unique ID of this basic block.
+    uint32_t Offset = 0; // Offset of basic block relative to the base address.
+    uint32_t Size = 0;   // Size of the basic block.
+    Metadata MD = {false, false, false, false,
+                   false}; // Metdata for this basic block.
 
     BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD)
         : ID(ID), Offset(Offset), Size(Size), MD(MD){};
@@ -902,7 +903,7 @@ struct BBAddrMap {
   // Struct representing the BBAddrMap information for a contiguous range of
   // basic blocks (a function or a basic block section).
   struct BBRangeEntry {
-    uint64_t BaseAddress;           // Base address of the range.
+    uint64_t BaseAddress = 0;       // Base address of the range.
     std::vector<BBEntry> BBEntries; // Basic block entries for this range.
 
     // Equality operator for unit testing.
@@ -913,16 +914,14 @@ struct BBAddrMap {
     }
   };
 
-  // All ranges for this function. The first range always corresponds to the
-  // function entry.
+  // All ranges for this function. Cannot be empty. The first range always
+  // corresponds to the function entry.
   std::vector<BBRangeEntry> BBRanges;
 
   // Returns the function address associated with this BBAddrMap, which is
-  // stored as the `BaseAddress` of its first BBRangeEntry. Returns 0 if
-  // BBRanges is empty.
+  // stored as the `BaseAddress` of its first BBRangeEntry.
   uint64_t getFunctionAddress() const {
-    if (BBRanges.empty())
-      return 0;
+    assert(!BBRanges.empty());
     return BBRanges.front().BaseAddress;
   }
 
@@ -944,10 +943,12 @@ struct BBAddrMap {
     return {};
   }
 
-  // Returns bb entries in the bb range indexed `BBRangeIndex`.
-  const std::vector<BBEntry> &getBBEntries(unsigned BBRangeIndex = 0) const {
-    return BBRanges.at(BBRangeIndex).BBEntries;
+  // Returns bb entries in the first range.
+  const std::vector<BBEntry> &getBBEntries() const {
+    return BBRanges.front().BBEntries;
   }
+
+  const std::vector<BBRangeEntry> &getBBRanges() const { return BBRanges; }
 
   // Equality operator for unit testing.
   bool operator==(const BBAddrMap &Other) const {

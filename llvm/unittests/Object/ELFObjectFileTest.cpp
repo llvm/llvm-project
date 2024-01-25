@@ -545,6 +545,19 @@ Sections:
             "unsupported SHT_LLVM_BB_ADDR_MAP version: 3");
   }
 
+  SmallString<128> ZeroBBRangesYamlString(CommonYamlString);
+  ZeroBBRangesYamlString += R"(
+      - Version: 2
+        Feature: 0x8
+        BBRanges: []
+)";
+  {
+    SCOPED_TRACE("zero bb ranges");
+    DoCheck(ZeroBBRangesYamlString,
+            "invalid zero number of BB ranges at offset 3 in "
+            "SHT_LLVM_BB_ADDR_MAP section with index 1");
+  }
+
   SmallString<128> CommonVersionedYamlString(CommonYamlString);
   CommonVersionedYamlString += R"(
       - Version: 2

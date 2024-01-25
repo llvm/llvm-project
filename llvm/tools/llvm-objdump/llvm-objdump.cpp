@@ -205,7 +205,7 @@ public:
     if (PGOMap.FeatEnable.hasPGOAnalysisBBData()) {
 
       assert(PGOBBEntryIndex < PGOMap.BBEntries.size() &&
-             "Expected PGOAnalysisMap and BBAddrMap to have the same entires");
+             "Expected PGOAnalysisMap and BBAddrMap to have the same entries");
       const PGOAnalysisMap::PGOBBEntry &PGOBBEntry =
           PGOMap.BBEntries[PGOBBEntryIndex];
 
@@ -243,6 +243,7 @@ public:
     FunctionAddrToMap.clear();
     RangeBaseAddrToFunctionAddr.clear();
   }
+
   bool empty() const { return FunctionAddrToMap.empty(); }
 
   void AddFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap) {
@@ -255,6 +256,10 @@ public:
     assert(R.second && "duplicate function address");
   }
 
+  // Returns the BBAddrMap entry for the function associated with `BaseAddress`.
+  // `BaseAddress` could be the function address or the address of a range
+  // associated with that function. Returns `nullptr` if `BaseAddress` is not
+  // mapped to any entry.
   const BBAddrMapFunctionEntry *getEntryForAddress(uint64_t BaseAddress) const {
     uint64_t FunctionAddr = BaseAddress;
     auto S = RangeBaseAddrToFunctionAddr.find(BaseAddress);

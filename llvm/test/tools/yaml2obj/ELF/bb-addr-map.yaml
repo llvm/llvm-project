@@ -56,8 +56,15 @@
 # Case 7: Specify empty BBRanges.
 # CHECK:        Name: .llvm_bb_addr_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 0200
+# CHECK-NEXT:     0000: 020000
 # CHECK-NEXT:   )
+
+# Case 8: Specify empty BBRanges with multi-bb-range.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 020800
+# CHECK-NEXT:   )
+
 
 
 
@@ -130,14 +137,22 @@ Sections:
                Size:          0x00000002
                Metadata:      0x00000003
 
-## 7) We can produce a SHT_LLVM_BB_ADDR_MAP section from a description with one entry with empty BBRanges.
+## 7) We can produce a SHT_LLVM_BB_ADDR_MAP section from a description
+##    with one entry with empty BBRanges.
   - Name: '.llvm_bb_addr_map (7)'
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version: 2
         BBRanges: []
 
-
+## 8) We can produce a SHT_LLVM_BB_ADDR_MAP section from a multi-bb-range
+##    description with one entry with empty BBRanges.
+  - Name: '.llvm_bb_addr_map (8)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        Feature: 0x8
+        BBRanges: []
 
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID

@@ -1427,8 +1427,8 @@ void ELFState<ELFT>::writeSectionContent(
       MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
     bool MultiBBRange =
         MultiBBRangeFeatureEnabled ||
-        (E.NumBBRanges.has_value() && E.NumBBRanges.value() > 1) ||
-        (E.BBRanges && E.BBRanges->size() > 1);
+        (E.NumBBRanges.has_value() && E.NumBBRanges.value() != 1) ||
+        (E.BBRanges && E.BBRanges->size() != 1);
     if (MultiBBRange && !MultiBBRangeFeatureEnabled)
       WithColor::warning() << "feature value(" << E.Feature
                            << ") does not support multiple BB ranges.";
