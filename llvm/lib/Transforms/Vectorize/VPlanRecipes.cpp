@@ -1461,6 +1461,11 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+/// Checks if \p C is uniform across all VFs and UFs. It is considered as such
+/// if it is either defined outside the vector region or its operand is known to
+/// be uniform across all VFs and UFs (e.g. VPDerivedIV or VPCanonicalIVPHI).
+/// TODO: Uniformity should be associated with a VPValue and there should be a
+/// generic way to check.
 static bool isUniformAcrossVFsAndUFs(VPScalarCastRecipe *C) {
   return C->isDefinedOutsideVectorRegions() ||
          isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
@@ -1625,10 +1630,10 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 bool VPCanonicalIVPHIRecipe::isCanonical(
-    InductionDescriptor::InductionKind Kind, VPValue *Start, VPValue *Step,
-    Type *Ty) const {
-  // The types must match and it must be an integer induction.
-  if (Ty != getScalarType() || Kind != InductionDescriptor::IK_IntInduction)
+    InductionDescriptor::InductionKind Kind, VPValue *Start,
+    VPValue *Step) const {
+  // Must be an integer induction.
+  if (Kind != InductionDescriptor::IK_IntInduction)
     return false;
   // Start must match the start value of this canonical induction.
   if (Start != getStartValue())

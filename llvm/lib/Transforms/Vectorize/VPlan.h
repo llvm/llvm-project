@@ -2283,10 +2283,9 @@ public:
   }
 
   /// Check if the induction described by \p Kind, /p Start and \p Step is
-  /// canonical, i.e.  has the same start, step (of 1), and type as the
-  /// canonical IV.
+  /// canonical, i.e.  has the same start and step (of 1) as the canonical IV.
   bool isCanonical(InductionDescriptor::InductionKind Kind, VPValue *Start,
-                   VPValue *Step, Type *Ty) const;
+                   VPValue *Step) const;
 };
 
 /// A recipe for generating the active lane mask for the vector loop that is
