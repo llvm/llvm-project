@@ -1042,10 +1042,9 @@ PresburgerRelation PresburgerRelation::simplify() const {
 }
 
 bool PresburgerRelation::isFullDim() const {
-  bool fullDim = llvm::any_of(getAllDisjuncts(), [&](IntegerRelation disjunct) {
+  return llvm::any_of(getAllDisjuncts(), [&](IntegerRelation disjunct) {
     return disjunct.isFullDim();
   });
-  return fullDim;
 }
 
 void PresburgerRelation::print(raw_ostream &os) const {

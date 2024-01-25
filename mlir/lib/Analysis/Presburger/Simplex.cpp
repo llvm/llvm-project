@@ -2114,7 +2114,6 @@ bool Simplex::isFlatAlong(ArrayRef<MPInt> coeffs) {
   if (!downOpt.isBounded())
     return false;
 
-  // Check if the upper and lower optima are equal.
   return *upOpt == *downOpt;
 }
 

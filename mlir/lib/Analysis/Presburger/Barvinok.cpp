@@ -266,9 +266,6 @@ mlir::presburger::detail::computeChamberDecomposition(
 
     for (auto [currentRegion, currentVertices] : chambers) {
       // First, we check if the intersection of R_j and R_i.
-      // It is a disjoint union of convex regions in the parameter space,
-      // and so we know that it is full-dimensional if any of the disjuncts
-      // is full-dimensional.
       PresburgerSet intersection = currentRegion.intersect(activeRegions[j]);
 
       // If the intersection is not full-dimensional, we do not modify
@@ -389,12 +386,12 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
     // and add each row of [B2 | c2].
     FracMatrix activeRegion(numIneqs - numVars, numSymbols + 1);
     for (unsigned i = 0; i < numIneqs - numVars; i++) {
-      activeRegion.setRow(i, (*vertex).preMultiplyWithRow(a2.getRow(i)));
+      activeRegion.setRow(i, vertex->preMultiplyWithRow(a2.getRow(i)));
       activeRegion.addToRow(i, b2c2.getRow(i), 1);
     }
 
     // We convert the representation of the active region to an integers-only
-    // form so as to store it as an PresburgerSet.
+    // form so as to store it as a PresburgerSet.
     IntMatrix activeRegionNorm = activeRegion.normalizeRows();
     IntegerPolyhedron activeRegionRel = IntegerPolyhedron(
         PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0));
@@ -407,7 +404,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
   // space where each vertex is active. These regions (chambers) have the
   // property that no two of them have a full-dimensional intersection, i.e.,
   // they may share "faces" or "edges", but their intersection can only have
-  // up to numVars-1 dimensions.
+  // up to numVars - 1 dimensions.
   std::vector<std::pair<PresburgerSet, std::vector<unsigned>>> chambers =
       computeChamberDecomposition(activeRegions, vertices);
 

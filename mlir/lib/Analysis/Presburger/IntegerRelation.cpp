@@ -2516,10 +2516,10 @@ bool IntegerRelation::isFullDim() {
   if (getNumEqualities() > 0)
     return false;
 
-  // If along the direction of any of the inequalities, the upper and lower
+  // If along the direction of any of the inequalities, the set is flat,
   // optima are the same, then the region is not full-dimensional.
   Simplex simplex(*this);
-  return llvm::none_of(llvm::seq<int>(0, getNumInequalities()), [&](int i) {
+  return llvm::none_of(llvm::seq<int>(getNumInequalities()), [&](int i) {
     return simplex.isFlatAlong(getInequality(i));
   });
 }
