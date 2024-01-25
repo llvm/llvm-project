@@ -2048,8 +2048,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns) {
-    recomputeLiveIns(*TBB);
-    recomputeLiveIns(*FBB);
+    recomputeLiveIns(*MBB->getParent());
   }
 
   ++NumHoist;
