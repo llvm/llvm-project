@@ -4413,8 +4413,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
         // the already deduced parameter.
         SmallVector<UnexpandedParameterPack, 2> Unexpanded;
         collectUnexpandedParameterPacks(ParamPattern, Unexpanded);
-        if (Unexpanded.size() == 0)
-          continue;
+        assert(Unexpanded.size() != 0 && "We must have an unexpanded pack\n");
 
         std::optional<unsigned> ArgPosAfterSubstitution =
             PackScope.getSavedPackSize(getDepthAndIndex(Unexpanded[0]).second,
