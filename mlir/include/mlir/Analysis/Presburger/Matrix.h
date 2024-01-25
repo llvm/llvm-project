@@ -143,6 +143,9 @@ public:
   /// Add `scale` multiples of the rowVec row to the specified row.
   void addToRow(unsigned row, ArrayRef<T> rowVec, const T &scale);
 
+  /// Multiply the specified row by a factor of `scale`.
+  void scaleRow(unsigned row, const T &scale);
+
   /// Add `scale` multiples of the source column to the target column.
   void addToColumn(unsigned sourceColumn, unsigned targetColumn,
                    const T &scale);
@@ -156,6 +159,9 @@ public:
 
   /// Negate the specified row.
   void negateRow(unsigned row);
+
+  /// Negate the entire matrix.
+  void negateMatrix();
 
   /// The given vector is interpreted as a row vector v. Post-multiply v with
   /// this matrix, say M, and return vM.

@@ -204,11 +204,8 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   }
 
   // Rescale diagonal elements to 1.
-  for (unsigned i = 0; i < d; ++i) {
-    Fraction diagElement = equations(i, i);
-    for (unsigned j = 0; j < numCols; ++j)
-      equations(i, j) = equations(i, j) / diagElement;
-  }
+  for (unsigned i = 0; i < d; ++i)
+    equations.scaleRow(i, 1 / equations(i, i));
 
   // Now we have reduced the equations to the form
   // x_i + b_1' m_1 + ... + b_p' m_p + c' = 0
@@ -221,9 +218,7 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   ParamPoint vertex =
       equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
                              /*fromColumn=*/d, /*toColumn=*/numCols - 1);
-  for (unsigned i = 0; i < d; ++i)
-    vertex.negateRow(i);
-
+  vertex.negateMatrix();
   return vertex;
 }
 

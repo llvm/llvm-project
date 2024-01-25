@@ -296,6 +296,12 @@ void Matrix<T>::addToRow(unsigned row, ArrayRef<T> rowVec, const T &scale) {
 }
 
 template <typename T>
+void Matrix<T>::scaleRow(unsigned row, const T &scale) {
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) *= scale;
+}
+
+template <typename T>
 void Matrix<T>::addToColumn(unsigned sourceColumn, unsigned targetColumn,
                             const T &scale) {
   if (scale == 0)
@@ -314,6 +320,12 @@ template <typename T>
 void Matrix<T>::negateRow(unsigned row) {
   for (unsigned column = 0, e = getNumColumns(); column < e; ++column)
     at(row, column) = -at(row, column);
+}
+
+template <typename T>
+void Matrix<T>::negateMatrix() {
+  for (unsigned row = 0; row < nRows; ++row)
+    negateRow(row);
 }
 
 template <typename T>
