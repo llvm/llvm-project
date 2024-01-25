@@ -993,7 +993,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
-      .lowerIf(isScalar(0));
+      .lower();
 
   // For fadd reductions we have pairwise operations available. We treat the
   // usual legal types as legal and handle the lowering to pairwise instructions
