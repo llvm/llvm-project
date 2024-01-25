@@ -1735,10 +1735,7 @@ public:
   }
 
   VPRecipeBase *clone() override {
-    auto *Res = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
-                                     getOperand(0));
-    Res->IncomingBlocks = IncomingBlocks;
-    return Res;
+    llvm_unreachable("cloning not implemented yet");
   }
 
   ~VPWidenPHIRecipe() override = default;
@@ -2851,9 +2848,6 @@ class VPlan {
   /// NOTE: This mapping is temporary and will be removed once all users have
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
-
-  /// Construct an uninitialized VPlan, should be used for cloning only.
-  explicit VPlan() = default;
 
 public:
   /// Construct a VPlan with original preheader \p Preheader, trip count \p TC

@@ -614,8 +614,7 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
   printSuccessors(O, Indent);
 }
 #endif
-static void cloneCFG(VPBlockBase *Entry,
-                     DenseMap<VPBlockBase *, VPBlockBase *> &Old2NewVPBlocks);
+static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
 
 static VPBlockBase *cloneVPB(VPBlockBase *BB) {
   if (auto *VPBB = dyn_cast<VPBasicBlock>(BB)) {
@@ -626,23 +625,21 @@ static VPBlockBase *cloneVPB(VPBlockBase *BB) {
   }
 
   auto *VPR = cast<VPRegionBlock>(BB);
-  DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
-  DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  cloneCFG(VPR->getEntry(), Old2NewVPBlocks);
-  VPBlockBase *NewEntry = Old2NewVPBlocks[VPR->getEntry()];
-  auto *NewRegion =
-      new VPRegionBlock(NewEntry, Old2NewVPBlocks[VPR->getExiting()],
-                        VPR->getName(), VPR->isReplicator());
+  const auto &[NewEntry, NewExiting] = cloneSESE(VPR->getEntry());
+  auto *NewRegion = new VPRegionBlock(NewEntry, NewExiting, VPR->getName(),
+                                      VPR->isReplicator());
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;
 }
 
-// Clone the CFG for all nodes reachable from \p Entry, this includes cloning
-// the blocks and their recipes. Operands of cloned recipes will NOT be updated.
-// Remapping of operands must be done separately.
-static void cloneCFG(VPBlockBase *Entry,
-                     DenseMap<VPBlockBase *, VPBlockBase *> &Old2NewVPBlocks) {
+// Clone the CFG for all nodes in the single-entry-single-exit region reachable
+// from \p Entry, this includes cloning the blocks and their recipes. Operands
+// of cloned recipes will NOT be updated. Remapping of operands must be done
+// separately. Returns a pair with the the new entry and exiting blocks of the
+// cloned region.
+static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
+  DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
   for (VPBlockBase *BB : RPOT) {
@@ -668,6 +665,9 @@ static void cloneCFG(VPBlockBase *Entry,
       assert(NewSucc == Old2NewVPBlocks[OldSucc] && "Different successors");
   }
 #endif
+
+  return std::make_pair(Old2NewVPBlocks[Entry],
+                        Old2NewVPBlocks[*reverse(RPOT).begin()]);
 }
 
 void VPRegionBlock::dropAllReferences(VPValue *NewValue) {
@@ -1077,13 +1077,15 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
 }
 
 VPlan *VPlan::clone() {
-  DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
 
-  auto *NewPlan = new VPlan();
+  // Clone blocks.
+  VPBlockBase *NewPreheader = cloneVPB(Preheader);
+  const auto &[NewEntry, __] = cloneSESE(getEntry());
 
-  // Clone live-ins.
-  SmallVector<VPValue *, 16> NewLiveIns;
+  // Create VPlan, clone live-ins and remap operands in the cloned blocks.
+  auto *NewPlan =
+      new VPlan(cast<VPBasicBlock>(NewPreheader), cast<VPBasicBlock>(NewEntry));
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
     VPValue *NewLiveIn = new VPValue(OldLiveIn->getLiveInIRValue());
     NewPlan->VPLiveInsToFree.push_back(NewLiveIn);
@@ -1098,29 +1100,25 @@ VPlan *VPlan::clone() {
   assert(TripCount && "trip count must be set");
   if (TripCount->isLiveIn())
     Old2NewVPValues[TripCount] = new VPValue(TripCount->getLiveInIRValue());
+  // else NewTripCount will be created and inserted into Old2NewVPValues when
+  // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
-  // Clone blocks.
-  cloneCFG(Preheader, Old2NewVPBlocks);
-  cloneCFG(getEntry(), Old2NewVPBlocks);
-
-  auto *NewPreheader = cast<VPBasicBlock>(Old2NewVPBlocks[Preheader]);
   remapOperands(Preheader, NewPreheader, Old2NewVPValues);
-  auto *NewEntry = cast<VPBasicBlock>(Old2NewVPBlocks[Entry]);
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Clone live-outs.
   for (const auto &[_, LO] : LiveOuts)
     NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
 
-  // Initialize fields of cloned VPlan.
-  NewPlan->Entry = NewEntry;
-  NewPlan->Preheader = NewPreheader;
+  // Initialize remaining fields of cloned VPlan.
   NewEntry->setPlan(NewPlan);
   NewPreheader->setPlan(NewPlan);
   NewPlan->VFs = VFs;
   NewPlan->UFs = UFs;
   // TODO: Adjust names.
   NewPlan->Name = Name;
+  assert(Old2NewVPValues.contains(TripCount) &&
+         "TripCount must have been added to Old2NewVPValues");
   NewPlan->TripCount = Old2NewVPValues[TripCount];
   return NewPlan;
 }
