@@ -63,6 +63,9 @@ public:
   /// results have to be changed.
   void rename(Value from, Value to);
 
+  /// Returns "true" if the given value is a terminal.
+  bool isTerminalBuffer(Value value) const;
+
 private:
   /// This function constructs a mapping from values to its immediate
   /// dependencies.
@@ -70,6 +73,9 @@ private:
 
   /// Maps values to all immediate dependencies this value can have.
   ValueMapT dependencies;
+
+  /// A set of all terminal values. I.e., values where the analysis stopped.
+  DenseSet<Value> terminals;
 };
 
 } // namespace mlir
