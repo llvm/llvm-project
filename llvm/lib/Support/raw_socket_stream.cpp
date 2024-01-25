@@ -170,10 +170,3 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 
 raw_socket_stream::~raw_socket_stream() {}
 
-//===----------------------------------------------------------------------===//
-//  raw_string_ostream
-//===----------------------------------------------------------------------===//
-
-void raw_string_ostream::write_impl(const char *Ptr, size_t Size) {
-  OS.append(Ptr, Size);
-}

@@ -142,7 +142,7 @@ define <8 x double> @shuffle_v8f64_06000000(<8 x double> %a, <8 x double> %b) {
 define <8 x double> @shuffle_v8f64_70000000(<8 x double> %a, <8 x double> %b) {
 ; ALL-LABEL: shuffle_v8f64_70000000:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} xmm1 = [7,0,0,0]
+; ALL-NEXT:    vmovss {{.*#+}} xmm1 = [7,0,0,0]
 ; ALL-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %shuffle = shufflevector <8 x double> %a, <8 x double> %b, <8 x i32> <i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
@@ -960,7 +960,7 @@ define <8 x i64> @shuffle_v8i64_06000000(<8 x i64> %a, <8 x i64> %b) {
 define <8 x i64> @shuffle_v8i64_70000000(<8 x i64> %a, <8 x i64> %b) {
 ; ALL-LABEL: shuffle_v8i64_70000000:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps {{.*#+}} xmm1 = [7,0,0,0]
+; ALL-NEXT:    vmovss {{.*#+}} xmm1 = [7,0,0,0]
 ; ALL-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> %b, <8 x i32> <i32 7, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>

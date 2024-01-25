@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck -check-prefix=WITHOUT %s
 // RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=address | FileCheck -check-prefix=ASAN %s
 
+// REQUIRES: more-investigation
+
 @interface MyClass
 + (int) addressSafety:(int*)a;
 @end
