@@ -61,7 +61,7 @@ multiclass RVVVCIXBuiltinSetWOSuffix<list<string> range, string prototype,
 }
 
 let SupportOverloading = false in {
-  defm sf_vc_x  : RVVVCIXBuiltinSetWOSuffix<["i"], "0KzKzKzUeKzKz", [0, 3], UseGPR=1>;
+  defm sf_vc_x  : RVVVCIXBuiltinSetWOSuffix<["c", "s", "i", "l"], "0KzKzKzUeKzKz", [0, 3], UseGPR=1>;
   defm sf_vc_i  : RVVVCIXBuiltinSetWOSuffix<["i"], "0KzKzKzKzKzKz", [2, 3], UseGPR=0>;
   defm sf_vc_xv    : RVVVCIXBuiltinSet<["csi", "l"], "0KzKzUvUe",  [0, 2, 3],  UseGPR=1>;
   defm sf_vc_iv    : RVVVCIXBuiltinSet<["csi", "l"], "0KzKzUvKz",  [0, 2, 3],  UseGPR=0>;
