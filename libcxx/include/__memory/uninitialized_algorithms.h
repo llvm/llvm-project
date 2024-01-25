@@ -42,6 +42,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __always_false {
@@ -647,5 +650,7 @@ __uninitialized_allocator_move_if_noexcept(_Alloc&, _Iter1 __first1, _Iter1 __la
 #endif // _LIBCPP_COMPILER_GCC
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
