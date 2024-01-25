@@ -374,8 +374,6 @@ apply cleanly, then a comment with a link to the failing job will be added to
 the issue.  If the commit(s) do apply cleanly, then a pull request will
 be created with the specified commits.
 
-::
-
 If a commit you want to backport does not apply cleanly, you may resolve
 the conflicts locally and then create a pull request against the release
 branch.  Just make sure to add the release milestone to the pull request.
