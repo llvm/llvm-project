@@ -515,8 +515,8 @@ define i32 @test32(i32 %A, i32 %B, i32 %C) {
 
 define i1 @test33(i32 %X) {
 ; CHECK-LABEL: @test33(
-; CHECK-NEXT:    [[I1_MASK:%.*]] = and i32 [[X:%.*]], 16777216
-; CHECK-NEXT:    [[I2:%.*]] = icmp ne i32 [[I1_MASK]], 0
+; CHECK-NEXT:    [[I1:%.*]] = shl i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[I2:%.*]] = icmp slt i32 [[I1]], -127
 ; CHECK-NEXT:    ret i1 [[I2]]
 ;
   %i1 = shl i32 %X, 7
@@ -526,8 +526,8 @@ define i1 @test33(i32 %X) {
 
 define <2 x i1> @test33vec(<2 x i32> %X) {
 ; CHECK-LABEL: @test33vec(
-; CHECK-NEXT:    [[I1_MASK:%.*]] = and <2 x i32> [[X:%.*]], <i32 16777216, i32 16777216>
-; CHECK-NEXT:    [[I2:%.*]] = icmp ne <2 x i32> [[I1_MASK]], zeroinitializer
+; CHECK-NEXT:    [[I1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[I2:%.*]] = icmp slt <2 x i32> [[I1]], <i32 -127, i32 -127>
 ; CHECK-NEXT:    ret <2 x i1> [[I2]]
 ;
   %i1 = shl <2 x i32> %X, <i32 7, i32 7>
@@ -658,8 +658,8 @@ define i8 @test39(i32 %a0) {
 ; CHECK-NEXT:    [[I51:%.*]] = xor i8 [[I50]], [[I5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr exact i8 [[I5]], 3
 ; CHECK-NEXT:    [[I54:%.*]] = and i8 [[TMP0]], 16
-; CHECK-NEXT:    [[I551:%.*]] = or disjoint i8 [[I54]], [[I51]]
-; CHECK-NEXT:    ret i8 [[I551]]
+; CHECK-NEXT:    [[I55:%.*]] = or disjoint i8 [[I54]], [[I51]]
+; CHECK-NEXT:    ret i8 [[I55]]
 ;
 entry:
   %i4 = trunc i32 %a0 to i8

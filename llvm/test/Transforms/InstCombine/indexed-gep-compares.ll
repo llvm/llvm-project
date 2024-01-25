@@ -11,7 +11,7 @@ define ptr@test1(ptr %A, i32 %Offset) {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 403
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[RHS_IDX]]
@@ -40,7 +40,7 @@ define ptr@test2(i32 %A, i32 %Offset) {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 403
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A:%.*]] to ptr
@@ -164,7 +164,7 @@ define ptr@test4(i16 %A, i32 %Offset) {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 403
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[A:%.*]] to i32
@@ -203,7 +203,7 @@ define ptr@test5(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[CONT]] ]
 ; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 403
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[RHS_IDX]]
@@ -248,7 +248,7 @@ define ptr@test6(i32 %Offset) personality ptr @__gxx_personality_v0 {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i32 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[TMP_IDX]], [[CONT]] ]
 ; CHECK-NEXT:    [[RHS_ADD]] = add nsw i32 [[RHS_IDX]], 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 400
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[RHS_IDX]], 403
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A_PTR:%.*]] = inttoptr i32 [[A]] to ptr

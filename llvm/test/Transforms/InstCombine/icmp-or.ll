@@ -308,7 +308,7 @@ define i1 @decrement_sgt_n1_commute_use1(i8 %px) {
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], 42
 ; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X]], -1
 ; CHECK-NEXT:    call void @use(i8 [[DEC]])
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %px, 42 ; thwart complexity-based canonicalization

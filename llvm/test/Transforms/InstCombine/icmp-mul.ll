@@ -969,7 +969,7 @@ define i1 @mul_of_pow2_no_lz_other_op(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[S:%.*]] = sext i8 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[B]], [[S]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[M]], 254
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[M]], 255
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %b = and i32 %x, 2

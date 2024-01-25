@@ -28,7 +28,7 @@ define void @foo(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 1648
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 1633
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void

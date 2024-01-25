@@ -9,8 +9,8 @@
 ; C2 Shift amount smaller than C1 trailing zeros.
 define i1 @scalar_i8_shl_ult_const_1(i8 %x) {
 ; CHECK-LABEL: @scalar_i8_shl_ult_const_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SHL]], 33
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i8 %x, 5
@@ -45,8 +45,8 @@ define i1 @scalar_i8_shl_ult_const_3(i8 %x) {
 ; C2 Shift amount smaller than C1 trailing zeros.
 define i1 @scalar_i16_shl_ult_const(i16 %x) {
 ; CHECK-LABEL: @scalar_i16_shl_ult_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[X:%.*]], 252
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[X:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[SHL]], 769
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i16 %x, 8
@@ -56,8 +56,8 @@ define i1 @scalar_i16_shl_ult_const(i16 %x) {
 
 define i1 @scalar_i32_shl_ult_const(i32 %x) {
 ; CHECK-LABEL: @scalar_i32_shl_ult_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2097088
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 11
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SHL]], 129025
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i32 %x, 11
@@ -67,8 +67,8 @@ define i1 @scalar_i32_shl_ult_const(i32 %x) {
 
 define i1 @scalar_i64_shl_ult_const(i64 %x) {
 ; CHECK-LABEL: @scalar_i64_shl_ult_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 549755813632
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], 25
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SHL]], 8556380161
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i64 %x, 25
@@ -91,8 +91,8 @@ define i1 @scalar_i8_shl_uge_const(i8 %x) {
 ; Check 'ule' predicate
 define i1 @scalar_i8_shl_ule_const(i8 %x) {
 ; CHECK-LABEL: @scalar_i8_shl_ule_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SHL]], 33
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i8 %x, 5
@@ -116,8 +116,8 @@ define i1 @scalar_i8_shl_ugt_const(i8 %x) {
 
 define <4 x i1> @vector_4xi32_shl_ult_const(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_ult_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], <i32 2097088, i32 2097088, i32 2097088, i32 2097088>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], <i32 11, i32 11, i32 11, i32 11>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 129025, i32 129025, i32 129025, i32 129025>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %shl = shl <4 x i32> %x, <i32 11, i32 11, i32 11, i32 11>
@@ -173,8 +173,8 @@ define <4 x i1> @vector_4xi32_shl_uge_const(<4 x i32> %x) {
 ; Check 'ule' predicate
 define <4 x i1> @vector_4xi32_shl_ule_const(<4 x i32> %x) {
 ; CHECK-LABEL: @vector_4xi32_shl_ule_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], <i32 2097088, i32 2097088, i32 2097088, i32 2097088>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], <i32 11, i32 11, i32 11, i32 11>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 129025, i32 129025, i32 129025, i32 129025>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %shl = shl <4 x i32> %x, <i32 11, i32 11, i32 11, i32 11>
@@ -201,7 +201,7 @@ define i1 @scalar_i8_shl_ult_const_extra_use_shl(i8 %x, ptr %p) {
 ; CHECK-LABEL: @scalar_i8_shl_ult_const_extra_use_shl(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 5
 ; CHECK-NEXT:    store i8 [[SHL]], ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SHL]], 64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SHL]], 33
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i8 %x, 5
@@ -216,7 +216,7 @@ define i1 @scalar_i8_shl_ult_const_extra_use_shl(i8 %x, ptr %p) {
 define i1 @scalar_i8_shl_slt_const(i8 %x) {
 ; CHECK-LABEL: @scalar_i8_shl_slt_const(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], 64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SHL]], 33
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i8 %x, 5
@@ -227,7 +227,7 @@ define i1 @scalar_i8_shl_slt_const(i8 %x) {
 define i1 @scalar_i8_shl_ugt_const_not_power_of_2(i8 %x) {
 ; CHECK-LABEL: @scalar_i8_shl_ugt_const_not_power_of_2(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SHL]], 66
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SHL]], 95
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i8 %x, 5

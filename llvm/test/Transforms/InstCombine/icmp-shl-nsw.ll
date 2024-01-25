@@ -136,7 +136,7 @@ define i1 @icmp_sgt6(i8 %x) {
 
 define i1 @icmp_sgt7(i8 %x) {
 ; CHECK-LABEL: @icmp_sgt7(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 62
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 1
@@ -224,7 +224,7 @@ define i1 @icmp_sle1(i8 %x) {
 
 define i1 @icmp_sle2(i8 %x) {
 ; CHECK-LABEL: @icmp_sle2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], -63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -64
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 1
