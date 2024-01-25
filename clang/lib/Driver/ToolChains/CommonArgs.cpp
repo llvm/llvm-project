@@ -727,7 +727,8 @@ bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.isPS();
 }
 
-bool tools::isTLSDESCEnabled(const ToolChain &TC, const llvm::opt::ArgList &Args) {
+bool tools::isTLSDESCEnabled(const ToolChain &TC,
+                             const llvm::opt::ArgList &Args) {
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   Arg *A = Args.getLastArg(options::OPT_mtls_dialect_EQ);
   if (!A)
