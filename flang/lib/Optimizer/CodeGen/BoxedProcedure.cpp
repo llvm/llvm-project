@@ -207,8 +207,8 @@ public:
         if (auto addr = mlir::dyn_cast<BoxAddrOp>(op)) {
           mlir::Type ty = addr.getVal().getType();
           mlir::Type resTy = addr.getResult().getType();
-          if (typeConverter.needsConversion(ty) ||
-              ty.isa<mlir::FunctionType>()) {
+          if (llvm::isa<mlir::FunctionType>(ty) ||
+              llvm::isa<fir::BoxProcType>(ty)) {
             // Rewrite all `fir.box_addr` ops on values of type `!fir.boxproc`
             // or function type to be `fir.convert` ops.
             rewriter.setInsertionPoint(addr);

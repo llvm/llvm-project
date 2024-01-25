@@ -2598,9 +2598,6 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
     }
   }
 
-  if (HasArchitectedSGPRs && Info.hasWaveID())
-    CCInfo.AllocateReg(Info.addWaveID());
-
   if (Info.hasWorkGroupInfo()) {
     Register Reg = Info.addWorkGroupInfo();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
@@ -2805,7 +2802,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if (CallConv != CallingConv::AMDGPU_CS || !Subtarget->hasArchitectedSGPRs())
       assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
-             !Info->hasWorkGroupIDZ() && !Info->hasWaveID());
+             !Info->hasWorkGroupIDZ());
   }
 
   if (CallConv == CallingConv::AMDGPU_PS) {
@@ -8006,6 +8003,18 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   return Loads[0];
 }
 
+SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (!Subtarget->hasArchitectedSGPRs())
+    return {};
+  SDLoc SL(Op);
+  MVT VT = MVT::i32;
+  SDValue TTMP8 = CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
+                                       AMDGPU::TTMP8, VT, SL);
+  return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
+                     DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
+}
+
 SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                                           unsigned Dim,
                                           const ArgDescriptor &Arg) const {
@@ -8177,7 +8186,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_wave_id:
-    return getPreloadedValue(DAG, *MFI, VT, AMDGPUFunctionArgInfo::WAVE_ID);
+    return lowerWaveID(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);

@@ -40,7 +40,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
       GlobalRegisterPSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
       WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
-      WaveID(false), LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
+      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
       WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
       ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
@@ -135,10 +135,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!IsKernel && !F.hasFnAttribute("amdgpu-no-lds-kernel-id"))
       LDSKernelId = true;
   }
-
-  // For GFX12+.
-  if (HasArchitectedSGPRs)
-    WaveID = true;
 
   if (isEntryFunction()) {
     // X, XY, and XYZ are the only supported combinations, so make sure Y is
