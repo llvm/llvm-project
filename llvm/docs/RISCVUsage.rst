@@ -91,9 +91,24 @@ on support follow.
      ``E``            Supported (`See note <#riscv-rve-note>`__)
      ``H``            Assembly Support
      ``M``            Supported
+     ``Shcounterenw`` Assembly Support
+     ``Shgatpa``      Assembly Support
+     ``Shtvala``      Assembly Support
+     ``Shvsatpa``    Assembly Support
+     ``Shvstvala``    Assembly Support
+     ``Shvstvecd``    Assembly Support
      ``Smaia``        Supported
      ``Smepmp``       Supported
      ``Ssaia``        Supported
+     ``Ssccptr``      Assembly Support
+     ``Sscounterenw`` Assembly Support
+     ``Sstc``         Assembly Support
+     ``Sstvala``      Assembly Support
+     ``Sstvecd``      Assembly Support
+     ``ssu64xl``      Assembly Support
+     ``Svade``        Assembly Support
+     ``Svadu``        Assembly Support
+     ``Svbare``       Assembly Support
      ``Svinval``      Assembly Support
      ``Svnapot``      Assembly Support
      ``Svpbmt``       Supported
