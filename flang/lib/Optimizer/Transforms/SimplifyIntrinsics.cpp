@@ -31,6 +31,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -243,8 +244,6 @@ static std::optional<mlir::Type> getArgElementType(mlir::Value val) {
 using BodyOpGeneratorTy = llvm::function_ref<mlir::Value(
     fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
     mlir::Value)>;
-using InitValGeneratorTy = llvm::function_ref<mlir::Value(
-    fir::FirOpBuilder &, mlir::Location, const mlir::Type &)>;
 using ContinueLoopGenTy = llvm::function_ref<llvm::SmallVector<mlir::Value>(
     fir::FirOpBuilder &, mlir::Location, mlir::Value)>;
 
@@ -266,7 +265,7 @@ using ContinueLoopGenTy = llvm::function_ref<llvm::SmallVector<mlir::Value>(
 template <typename OP, typename T, int resultIndex>
 static void
 genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
-                 InitValGeneratorTy initVal, ContinueLoopGenTy loopCond,
+                 fir::InitValGeneratorTy initVal, ContinueLoopGenTy loopCond,
                  T unorderedOrInitialLoopCond, BodyOpGeneratorTy genBody,
                  unsigned rank, mlir::Type elementType, mlir::Location loc) {
 
@@ -353,20 +352,14 @@ genReductionLoop(fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
   // Return the reduction value from the function.
   builder.create<mlir::func::ReturnOp>(loc, results[resultIndex]);
 }
-using MinMaxlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
-    fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,
-    mlir::Value, llvm::SmallVector<mlir::Value, Fortran::common::maxRank> &)>;
 
-static void genMinMaxlocReductionLoop(
-    fir::FirOpBuilder &builder, mlir::func::FuncOp &funcOp,
-    InitValGeneratorTy initVal, MinMaxlocBodyOpGeneratorTy genBody,
-    unsigned rank, mlir::Type elementType, mlir::Location loc, bool hasMask,
-    mlir::Type maskElemType, mlir::Value resultArr) {
-
+void fir::genMinMaxlocReductionLoop(
+    fir::FirOpBuilder &builder, mlir::Value array,
+    fir::InitValGeneratorTy initVal, fir::MinlocBodyOpGeneratorTy genBody,
+    fir::AddrGeneratorTy getAddrFn, unsigned rank, mlir::Type elementType,
+    mlir::Location loc, mlir::Type maskElemType, mlir::Value resultArr,
+    bool maskMayBeLogicalScalar) {
   mlir::IndexType idxTy = builder.getIndexType();
-
-  mlir::Block::BlockArgListType args = funcOp.front().getArguments();
-  mlir::Value arg = args[1];
 
   mlir::Value zeroIdx = builder.createIntegerConstant(loc, idxTy, 0);
 
@@ -374,20 +367,13 @@ static void genMinMaxlocReductionLoop(
                                      fir::SequenceType::getUnknownExtent());
   mlir::Type arrTy = fir::SequenceType::get(flatShape, elementType);
   mlir::Type boxArrTy = fir::BoxType::get(arrTy);
-  mlir::Value array = builder.create<fir::ConvertOp>(loc, boxArrTy, arg);
+  array = builder.create<fir::ConvertOp>(loc, boxArrTy, array);
 
   mlir::Type resultElemType = hlfir::getFortranElementType(resultArr.getType());
   mlir::Value flagSet = builder.createIntegerConstant(loc, resultElemType, 1);
   mlir::Value zero = builder.createIntegerConstant(loc, resultElemType, 0);
   mlir::Value flagRef = builder.createTemporary(loc, resultElemType);
   builder.create<fir::StoreOp>(loc, zero, flagRef);
-
-  mlir::Value mask;
-  if (hasMask) {
-    mlir::Type maskTy = fir::SequenceType::get(flatShape, maskElemType);
-    mlir::Type boxMaskTy = fir::BoxType::get(maskTy);
-    mask = builder.create<fir::ConvertOp>(loc, boxMaskTy, args[2]);
-  }
 
   mlir::Value init = initVal(builder, loc, elementType);
   llvm::SmallVector<mlir::Value, Fortran::common::maxRank> bounds;
@@ -431,44 +417,8 @@ static void genMinMaxlocReductionLoop(
   // Reverse the indices such that they are ordered as:
   //   <dim-0-idx, dim-1-idx, ...>
   std::reverse(indices.begin(), indices.end());
-  // We are in the innermost loop: generate the reduction body.
-  if (hasMask) {
-    mlir::Type logicalRef = builder.getRefType(maskElemType);
-    mlir::Value maskAddr =
-        builder.create<fir::CoordinateOp>(loc, logicalRef, mask, indices);
-    mlir::Value maskElem = builder.create<fir::LoadOp>(loc, maskAddr);
-
-    // fir::IfOp requires argument to be I1 - won't accept logical or any other
-    // Integer.
-    mlir::Type ifCompatType = builder.getI1Type();
-    mlir::Value ifCompatElem =
-        builder.create<fir::ConvertOp>(loc, ifCompatType, maskElem);
-
-    llvm::SmallVector<mlir::Type> resultsTy = {elementType, elementType};
-    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, ifCompatElem,
-                                               /*withElseRegion=*/true);
-    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  }
-
-  // Set flag that mask was true at some point
-  builder.create<fir::StoreOp>(loc, flagSet, flagRef);
-  mlir::Type eleRefTy = builder.getRefType(elementType);
-  mlir::Value addr =
-      builder.create<fir::CoordinateOp>(loc, eleRefTy, array, indices);
-  mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
-
   mlir::Value reductionVal =
-      genBody(builder, loc, elementType, elem, init, indices);
-
-  if (hasMask) {
-    fir::IfOp ifOp =
-        mlir::dyn_cast<fir::IfOp>(builder.getBlock()->getParentOp());
-    builder.create<fir::ResultOp>(loc, reductionVal);
-    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    builder.create<fir::ResultOp>(loc, init);
-    reductionVal = ifOp.getResult(0);
-    builder.setInsertionPointAfter(ifOp);
-  }
+      genBody(builder, loc, elementType, array, flagRef, init, indices);
 
   // Unwind the loop nest and insert ResultOp on each level
   // to return the updated value of the reduction to the enclosing
@@ -483,13 +433,15 @@ static void genMinMaxlocReductionLoop(
     builder.setInsertionPointAfter(loop.getOperation());
   }
   // End of loop nest. The insertion point is after the outermost loop.
-  if (fir::IfOp ifOp =
-          mlir::dyn_cast<fir::IfOp>(builder.getBlock()->getParentOp())) {
-    builder.create<fir::ResultOp>(loc, reductionVal);
-    builder.setInsertionPointAfter(ifOp);
-    // Redefine flagSet to escape scope of ifOp
-    flagSet = builder.createIntegerConstant(loc, resultElemType, 1);
-    reductionVal = ifOp.getResult(0);
+  if (maskMayBeLogicalScalar) {
+    if (fir::IfOp ifOp =
+            mlir::dyn_cast<fir::IfOp>(builder.getBlock()->getParentOp())) {
+      builder.create<fir::ResultOp>(loc, reductionVal);
+      builder.setInsertionPointAfter(ifOp);
+      // Redefine flagSet to escape scope of ifOp
+      flagSet = builder.createIntegerConstant(loc, resultElemType, 1);
+      reductionVal = ifOp.getResult(0);
+    }
   }
 
   // Check for case where array was full of max values.
@@ -521,28 +473,12 @@ static void genMinMaxlocReductionLoop(
 
   // Load output array with 1s instead of 0s
   for (unsigned int i = 0; i < rank; ++i) {
-    mlir::Type resultRefTy = builder.getRefType(resultElemType);
-    // mlir::Value one = builder.createIntegerConstant(loc, resultElemType, 1);
     mlir::Value index = builder.createIntegerConstant(loc, idxTy, i);
     mlir::Value resultElemAddr =
-        builder.create<fir::CoordinateOp>(loc, resultRefTy, resultArr, index);
+        getAddrFn(builder, loc, resultElemType, resultArr, index);
     builder.create<fir::StoreOp>(loc, flagSet, resultElemAddr);
   }
   builder.setInsertionPointAfter(ifMaskTrueOp);
-  // Store newly created output array to the reference passed in
-  fir::SequenceType::Shape resultShape(1, rank);
-  mlir::Type outputArrTy = fir::SequenceType::get(resultShape, resultElemType);
-  mlir::Type outputHeapTy = fir::HeapType::get(outputArrTy);
-  mlir::Type outputBoxTy = fir::BoxType::get(outputHeapTy);
-  mlir::Type outputRefTy = builder.getRefType(outputBoxTy);
-
-  mlir::Value outputArrNone = args[0];
-  mlir::Value outputArr =
-      builder.create<fir::ConvertOp>(loc, outputRefTy, outputArrNone);
-
-  // Store nearly created array to output array
-  builder.create<fir::StoreOp>(loc, resultArr, outputArr);
-  builder.create<mlir::func::ReturnOp>(loc);
 }
 
 static llvm::SmallVector<mlir::Value> nopLoopCond(fir::FirOpBuilder &builder,
@@ -791,6 +727,14 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
 
   mlir::Type resultRefTy = builder.getRefType(resultElemTy);
 
+  if (maskRank > 0) {
+    fir::SequenceType::Shape flatShape(rank,
+                                       fir::SequenceType::getUnknownExtent());
+    mlir::Type maskTy = fir::SequenceType::get(flatShape, maskElemType);
+    mlir::Type boxMaskTy = fir::BoxType::get(maskTy);
+    mask = builder.create<fir::ConvertOp>(loc, boxMaskTy, mask);
+  }
+
   for (unsigned int i = 0; i < rank; ++i) {
     mlir::Value index = builder.createIntegerConstant(loc, idxTy, i);
     mlir::Value resultElemAddr =
@@ -799,24 +743,51 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
   }
 
   auto genBodyOp =
-      [&rank, &resultArr,
-       isMax](fir::FirOpBuilder builder, mlir::Location loc,
-              mlir::Type elementType, mlir::Value elem1, mlir::Value elem2,
-              llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices)
-      -> mlir::Value {
+      [&rank, &resultArr, isMax, &mask, &maskElemType, &maskRank](
+          fir::FirOpBuilder builder, mlir::Location loc, mlir::Type elementType,
+          mlir::Value array, mlir::Value flagRef, mlir::Value reduction,
+          const llvm::SmallVectorImpl<mlir::Value> &indices) -> mlir::Value {
+    // We are in the innermost loop: generate the reduction body.
+    if (maskRank > 0) {
+      mlir::Type logicalRef = builder.getRefType(maskElemType);
+      mlir::Value maskAddr =
+          builder.create<fir::CoordinateOp>(loc, logicalRef, mask, indices);
+      mlir::Value maskElem = builder.create<fir::LoadOp>(loc, maskAddr);
+
+      // fir::IfOp requires argument to be I1 - won't accept logical or any
+      // other Integer.
+      mlir::Type ifCompatType = builder.getI1Type();
+      mlir::Value ifCompatElem =
+          builder.create<fir::ConvertOp>(loc, ifCompatType, maskElem);
+
+      llvm::SmallVector<mlir::Type> resultsTy = {elementType, elementType};
+      fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, ifCompatElem,
+                                                 /*withElseRegion=*/true);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    }
+
+    // Set flag that mask was true at some point
+    mlir::Value flagSet = builder.createIntegerConstant(
+        loc, mlir::cast<fir::ReferenceType>(flagRef.getType()).getEleTy(), 1);
+    builder.create<fir::StoreOp>(loc, flagSet, flagRef);
+    mlir::Type eleRefTy = builder.getRefType(elementType);
+    mlir::Value addr =
+        builder.create<fir::CoordinateOp>(loc, eleRefTy, array, indices);
+    mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
+
     mlir::Value cmp;
     if (elementType.isa<mlir::FloatType>()) {
       cmp = builder.create<mlir::arith::CmpFOp>(
           loc,
           isMax ? mlir::arith::CmpFPredicate::OGT
                 : mlir::arith::CmpFPredicate::OLT,
-          elem1, elem2);
+          elem, reduction);
     } else if (elementType.isa<mlir::IntegerType>()) {
       cmp = builder.create<mlir::arith::CmpIOp>(
           loc,
           isMax ? mlir::arith::CmpIPredicate::sgt
                 : mlir::arith::CmpIPredicate::slt,
-          elem1, elem2);
+          elem, reduction);
     } else {
       llvm_unreachable("unsupported type");
     }
@@ -841,11 +812,24 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
           builder.create<mlir::arith::AddIOp>(loc, convert, one);
       builder.create<fir::StoreOp>(loc, fortranIndex, resultElemAddr);
     }
-    builder.create<fir::ResultOp>(loc, elem1);
+    builder.create<fir::ResultOp>(loc, elem);
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    builder.create<fir::ResultOp>(loc, elem2);
+    builder.create<fir::ResultOp>(loc, reduction);
     builder.setInsertionPointAfter(ifOp);
-    return ifOp.getResult(0);
+    mlir::Value reductionVal = ifOp.getResult(0);
+
+    // Close the mask if needed
+    if (maskRank > 0) {
+      fir::IfOp ifOp =
+          mlir::dyn_cast<fir::IfOp>(builder.getBlock()->getParentOp());
+      builder.create<fir::ResultOp>(loc, reductionVal);
+      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      builder.create<fir::ResultOp>(loc, reduction);
+      reductionVal = ifOp.getResult(0);
+      builder.setInsertionPointAfter(ifOp);
+    }
+
+    return reductionVal;
   };
 
   // if mask is a logical scalar, we can check its value before the main loop
@@ -879,12 +863,30 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
 
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
+  auto getAddrFn = [](fir::FirOpBuilder builder, mlir::Location loc,
+                      const mlir::Type &resultElemType, mlir::Value resultArr,
+                      mlir::Value index) {
+    mlir::Type resultRefTy = builder.getRefType(resultElemType);
+    return builder.create<fir::CoordinateOp>(loc, resultRefTy, resultArr,
+                                             index);
+  };
 
-  // bit of a hack - maskRank is set to -1 for absent mask arg, so don't
-  // generate high level mask or element by element mask.
-  bool hasMask = maskRank > 0;
-  genMinMaxlocReductionLoop(builder, funcOp, init, genBodyOp, rank, elementType,
-                            loc, hasMask, maskElemType, resultArr);
+  genMinMaxlocReductionLoop(builder, funcOp.front().getArgument(1), init,
+                            genBodyOp, getAddrFn, rank, elementType, loc,
+                            maskElemType, resultArr, maskRank == 0);
+
+  // Store newly created output array to the reference passed in
+  fir::SequenceType::Shape resultShape(1, rank);
+  mlir::Type outputArrTy = fir::SequenceType::get(resultShape, resultElemTy);
+  mlir::Type outputHeapTy = fir::HeapType::get(outputArrTy);
+  mlir::Type outputBoxTy = fir::BoxType::get(outputHeapTy);
+  mlir::Type outputRefTy = builder.getRefType(outputBoxTy);
+  mlir::Value outputArr = builder.create<fir::ConvertOp>(
+      loc, outputRefTy, funcOp.front().getArgument(0));
+
+  // Store nearly created array to output array
+  builder.create<fir::StoreOp>(loc, resultArr, outputArr);
+  builder.create<mlir::func::ReturnOp>(loc);
 }
 
 /// Generate function type for the simplified version of RTNAME(DotProduct)
