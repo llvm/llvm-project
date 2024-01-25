@@ -239,7 +239,7 @@ define <2 x i64> @insert_i64_x(<2 x i64> %dest, i64 %arg, i32 %idx) {
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %x
 ;
 ; CHECK-P10-LABEL: 'insert_i64_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = insertelement <2 x i64> %dest, i64 %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = insertelement <2 x i64> %dest, i64 %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %x
 ;
   %x = insertelement <2 x i64> %dest, i64 %arg, i32 %idx
@@ -264,7 +264,7 @@ define <4 x i32> @insert_i32_x(<4 x i32> %dest, i32 %arg, i32 %idx) {
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %x
 ;
 ; CHECK-P10-LABEL: 'insert_i32_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = insertelement <4 x i32> %dest, i32 %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = insertelement <4 x i32> %dest, i32 %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %x
 ;
   %x = insertelement <4 x i32> %dest, i32 %arg, i32 %idx
@@ -289,7 +289,7 @@ define  <8 x i16> @insert_i16_x(<8 x i16> %dest, i16 %arg, i32 %idx) {
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %x
 ;
 ; CHECK-P10-LABEL: 'insert_i16_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = insertelement <8 x i16> %dest, i16 %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = insertelement <8 x i16> %dest, i16 %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %x
 ;
   %x = insertelement <8 x i16> %dest, i16 %arg, i32 %idx
@@ -314,7 +314,7 @@ define  <16 x i8> @insert_i8_x(<16 x i8> %dest, i8 %arg, i32 %idx) {
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %x
 ;
 ; CHECK-P10-LABEL: 'insert_i8_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = insertelement <16 x i8> %dest, i8 %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = insertelement <16 x i8> %dest, i8 %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %x
 ;
   %x = insertelement <16 x i8> %dest, i8 %arg, i32 %idx
@@ -331,15 +331,15 @@ define i64 @extract_i64_x(<2 x i64> %arg, i32 %idx) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %x
 ;
 ; CHECK-P9BE-LABEL: 'extract_i64_x'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <2 x i64> %arg, i32 %idx
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <2 x i64> %arg, i32 %idx
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %x
 ;
 ; CHECK-P9LE-LABEL: 'extract_i64_x'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <2 x i64> %arg, i32 %idx
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <2 x i64> %arg, i32 %idx
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %x
 ;
 ; CHECK-P10-LABEL: 'extract_i64_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = extractelement <2 x i64> %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <2 x i64> %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %x
 ;
   %x = extractelement <2 x i64> %arg, i32 %idx
@@ -356,15 +356,15 @@ define i32 @extract_i32_x(<4 x i32> %arg, i32 %idx) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %x
 ;
 ; CHECK-P9BE-LABEL: 'extract_i32_x'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <4 x i32> %arg, i32 %idx
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <4 x i32> %arg, i32 %idx
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %x
 ;
 ; CHECK-P9LE-LABEL: 'extract_i32_x'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <4 x i32> %arg, i32 %idx
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <4 x i32> %arg, i32 %idx
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %x
 ;
 ; CHECK-P10-LABEL: 'extract_i32_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = extractelement <4 x i32> %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <4 x i32> %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %x
 ;
   %x = extractelement <4 x i32> %arg, i32 %idx
@@ -381,15 +381,15 @@ define i16 @extract_i16_x(<8 x i16> %arg, i32 %idx) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %x
 ;
 ; CHECK-P9BE-LABEL: 'extract_i16_x'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <8 x i16> %arg, i32 %idx
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <8 x i16> %arg, i32 %idx
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %x
 ;
 ; CHECK-P9LE-LABEL: 'extract_i16_x'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <8 x i16> %arg, i32 %idx
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <8 x i16> %arg, i32 %idx
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %x
 ;
 ; CHECK-P10-LABEL: 'extract_i16_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = extractelement <8 x i16> %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <8 x i16> %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %x
 ;
   %x = extractelement <8 x i16> %arg, i32 %idx
@@ -406,15 +406,15 @@ define i8 @extract_i8_x(<16 x i8> %arg, i32 %idx) {
 ; CHECK-P8LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %x
 ;
 ; CHECK-P9BE-LABEL: 'extract_i8_x'
-; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <16 x i8> %arg, i32 %idx
+; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <16 x i8> %arg, i32 %idx
 ; CHECK-P9BE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %x
 ;
 ; CHECK-P9LE-LABEL: 'extract_i8_x'
-; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <16 x i8> %arg, i32 %idx
+; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %x = extractelement <16 x i8> %arg, i32 %idx
 ; CHECK-P9LE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %x
 ;
 ; CHECK-P10-LABEL: 'extract_i8_x'
-; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %x = extractelement <16 x i8> %arg, i32 %idx
+; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %x = extractelement <16 x i8> %arg, i32 %idx
 ; CHECK-P10-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %x
 ;
   %x = extractelement <16 x i8> %arg, i32 %idx
