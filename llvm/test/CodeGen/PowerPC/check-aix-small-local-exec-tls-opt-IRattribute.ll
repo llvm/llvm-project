@@ -6,7 +6,7 @@
 ; RUN:   < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-SUPPORTED
 ; RUN: not llc -mtriple powerpc64-ibm-aix-xcoff -ppc-asm-full-reg-names \
 ; RUN:   -data-sections=false < %s 2>&1 | \
-; RUN: FileCheck %s --check-prefix=CHECK-NOT-SUPPORTED-NO-DATASEC
+; RUN: FileCheck %s --check-prefix=CHECK-UNSUPPORTED-NO-DATASEC
 
 define dso_local signext i32 @testWithIRAttr() #0 {
 entry:
@@ -17,7 +17,7 @@ entry:
 
 ; Check that the aix-small-local-exec-tls attribute is only supported when
 ; data sections are enabled.
-; CHECK-NOT-SUPPORTED-NO-DATASEC: The aix-small-local-exec-tls attribute can only be specified with -data-sections.
+; CHECK-UNSUPPORTED-NO-DATASEC: The aix-small-local-exec-tls attribute can only be specified with -data-sections.
 
 ; Make sure that the test was actually compiled successfully after using the
 ; aix-small-local-exec-tls attribute.
