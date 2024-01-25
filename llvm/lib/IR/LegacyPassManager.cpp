@@ -530,8 +530,7 @@ bool PassManagerImpl::run(Module &M) {
 
   // RemoveDIs: if a command line flag is given, convert to the DPValue
   // representation of debug-info for the duration of these passes.
-  bool shouldConvertDbgInfo = UseNewDbgInfoFormat && !M.IsNewDbgInfoFormat;
-  if (shouldConvertDbgInfo)
+  if (UseNewDbgInfoFormat)
     M.convertToNewDbgValues();
 
   for (ImmutablePass *ImPass : getImmutablePasses())
@@ -546,8 +545,7 @@ bool PassManagerImpl::run(Module &M) {
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doFinalization(M);
 
-  if (shouldConvertDbgInfo)
-    M.convertFromNewDbgValues();
+  M.convertFromNewDbgValues();
 
   return Changed;
 }
