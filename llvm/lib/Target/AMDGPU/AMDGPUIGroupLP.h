@@ -17,11 +17,7 @@ namespace llvm {
 
 // Components of the mask that determines which instruction types may be may be
 // classified into a SchedGroup.
-enum class IGLPPhase {
-  Initial = 0u,
-  PreRAReentry = 1u << 0,
-  PostRA = 1u << 1
-};
+enum class IGLPPhase { Initial = 0u, PreRAReentry = 1u << 0, PostRA = 1u << 1 };
 
 std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(
     IGLPPhase Phase,
