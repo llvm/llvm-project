@@ -743,12 +743,17 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                       CudaArchToString(CudaArch::CudaDefault));
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
     auto GPUsOrErr = getSystemGPUArchs(Args);
-    if (!GPUsOrErr)
+    if (!GPUsOrErr) {
       getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
           << getArchName() << llvm::toString(GPUsOrErr.takeError()) << "-march";
-    else
+    } else {
+      if (GPUsOrErr->size() > 1)
+        getDriver().Diag(diag::warn_drv_multi_gpu_arch)
+            << llvm::Triple::getArchTypeName(getArch())
+            << llvm::join(*GPUsOrErr, ", ") << "-march";
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                         Args.MakeArgString(GPUsOrErr->front()));
+    }
   }
 
   return DAL;
