@@ -1091,15 +1091,15 @@ def ARPL16mr : I<0x63, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
 // MOVBE Instructions
 //
 multiclass Movbe<bits<8> o, X86TypeInfo t, string suffix = ""> {
-  let SchedRW = [WriteALULd] in
   def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
                       (ins t.MemOperand:$src1), "movbe", unaryop_ndd_args,
-                      [(set t.RegClass:$dst, (bswap (t.LoadNode addr:$src1)))]>;
-  let SchedRW = [WriteStore] in
+                      [(set t.RegClass:$dst, (bswap (t.LoadNode addr:$src1)))]>,
+                  Sched<[WriteALULd]>;
   def mr#suffix : ITy<!add(o, 1), MRMDestMem, t, (outs),
                       (ins t.MemOperand:$dst, t.RegClass:$src1),
                       "movbe", unaryop_ndd_args,
-                      [(store (bswap t.RegClass:$src1), addr:$dst)]>;
+                      [(store (bswap t.RegClass:$src1), addr:$dst)]>,
+                  Sched<[WriteStore]>;
 }
 
 let Predicates = [HasMOVBE, NoEGPR] in {

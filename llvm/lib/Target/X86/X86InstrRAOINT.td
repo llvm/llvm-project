@@ -27,24 +27,24 @@ def X86rao_and  : SDNode<"X86ISD::AAND", SDTRAOBinaryArith,
 
 multiclass RaoInt<string m, string suffix = ""> {
   let SchedRW = [WriteALURMW, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault] in {
-    def 32mr#suffix : BinOpMR<0xfc, "a"#m, binop_args, Xi32, (outs),
+    def 32mr#suffix : BinOpMR<0xfc, "a" # m, binop_args, Xi32, (outs),
                         [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR32:$src2)]>;
 
-    def 64mr#suffix : BinOpMR<0xfc, "a"#m, binop_args, Xi64, (outs),
+    def 64mr#suffix : BinOpMR<0xfc, "a" # m, binop_args, Xi64, (outs),
                         [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR64:$src2)]>, REX_W;
   }
 }
 
 let Predicates = [HasRAOINT, NoEGPR] in {
-defm AADD : RaoInt<"add">, T8;
-defm AAND : RaoInt<"and">, T8, PD;
-defm AOR  : RaoInt<"or" >, T8, XD;
-defm AXOR : RaoInt<"xor">, T8, XS;
+  defm AADD : RaoInt<"add">, T8;
+  defm AAND : RaoInt<"and">, T8, PD;
+  defm AOR  : RaoInt<"or" >, T8, XD;
+  defm AXOR : RaoInt<"xor">, T8, XS;
 }
 
 let Predicates = [HasRAOINT, HasEGPR, In64BitMode] in {
-defm AADD : RaoInt<"add", "_EVEX">, EVEX, T_MAP4;
-defm AAND : RaoInt<"and", "_EVEX">, EVEX, T_MAP4, PD;
-defm AOR  : RaoInt<"or",  "_EVEX">, EVEX, T_MAP4, XD;
-defm AXOR : RaoInt<"xor", "_EVEX">, EVEX, T_MAP4, XS;
+  defm AADD : RaoInt<"add", "_EVEX">, EVEX, T_MAP4;
+  defm AAND : RaoInt<"and", "_EVEX">, EVEX, T_MAP4, PD;
+  defm AOR  : RaoInt<"or",  "_EVEX">, EVEX, T_MAP4, XD;
+  defm AXOR : RaoInt<"xor", "_EVEX">, EVEX, T_MAP4, XS;
 }
