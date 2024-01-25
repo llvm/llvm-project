@@ -47,9 +47,9 @@ private:
   using CachedRanges =
       llvm::SmallVector<SourceRange, EXPECTED_NUMBER_OF_SUPPRESSIONS>;
 
-  llvm::DenseMap<const Decl *, CachedRanges> CachedSuppressionLocations{};
+  llvm::DenseMap<const Decl *, CachedRanges> CachedSuppressionLocations;
 
-  ASTContext &ACtx;
+  const ASTContext &ACtx;
 };
 
 } // end namespace ento
