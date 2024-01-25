@@ -27,7 +27,9 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
@@ -117,10 +119,9 @@ CodeAction toCodeAction(const Fix &F, const URIForFile &File,
     Edit.textDocument = VersionedTextDocumentIdentifier{{File}, Version};
     for (const auto &E : F.Edits)
       Edit.edits.push_back(
-          {E.range, E.newText,
-           SupportChangeAnnotation ? E.annotationId : ""});
+          {E.range, E.newText, SupportChangeAnnotation ? E.annotationId : ""});
     if (SupportChangeAnnotation) {
-      for (const auto &[AID, Annotation]: F.Annotations)
+      for (const auto &[AID, Annotation] : F.Annotations)
         Action.edit->changeAnnotations[AID] = Annotation;
     }
   }
@@ -861,24 +862,24 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
   if (!Server->getDraft(File))
     return Reply(llvm::make_error<LSPError>(
         "onRename called for non-added file", ErrorCode::InvalidParams));
-  Server->rename(File, Params.position, Params.newName, Opts.Rename,
-                 [File, Params, Reply = std::move(Reply),
-                  this](llvm::Expected<RenameResult> R) mutable {
-                   if (!R)
-                     return Reply(R.takeError());
-                   if (auto Err = validateEdits(*Server, R->GlobalChanges))
-                     return Reply(std::move(Err));
-                   WorkspaceEdit Result;
-                   // FIXME: use documentChanges if SupportDocumentChanges is
-                   // true.
-                   Result.changes.emplace();
-                   for (const auto &Rep : R->GlobalChanges) {
-                     (*Result
-                           .changes)[URI::createFile(Rep.first()).toString()] =
-                         Rep.second.asTextEdits();
-                   }
-                   Reply(Result);
-                 });
+  Server->rename(
+      File, Params.position, Params.newName, Opts.Rename,
+      [File, Params, Reply = std::move(Reply),
+       this](llvm::Expected<RenameResult> R) mutable {
+        if (!R)
+          return Reply(R.takeError());
+        if (auto Err = validateEdits(*Server, R->GlobalChanges))
+          return Reply(std::move(Err));
+        WorkspaceEdit Result;
+        // FIXME: use documentChanges if SupportDocumentChanges is
+        // true.
+        Result.changes.emplace();
+        for (const auto &Rep : R->GlobalChanges) {
+          (*Result.changes)[URI::createFile(Rep.first()).toString()] =
+              Rep.second.asTextEdits();
+        }
+        Reply(Result);
+      });
 }
 
 void ClangdLSPServer::onDocumentDidClose(
@@ -1014,7 +1015,7 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   std::map<ClangdServer::DiagRef, clangd::Diagnostic> ToLSPDiags;
   ClangdServer::CodeActionInputs Inputs;
 
-  for (const auto& LSPDiag : Params.context.diagnostics) {
+  for (const auto &LSPDiag : Params.context.diagnostics) {
     if (auto DiagRef = getDiagRef(File.file(), LSPDiag)) {
       ToLSPDiags[*DiagRef] = LSPDiag;
       Inputs.Diagnostics.push_back(*DiagRef);
@@ -1023,13 +1024,9 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   Inputs.File = File.file();
   Inputs.Selection = Params.range;
   Inputs.RequestedActionKinds = Params.context.only;
-  Inputs.TweakFilter = [this](const Tweak &T) {
-    return Opts.TweakFilter(T);
-  };
-  auto CB = [this,
-             Reply = std::move(Reply),
-             ToLSPDiags = std::move(ToLSPDiags), File,
-             Selection = Params.range](
+  Inputs.TweakFilter = [this](const Tweak &T) { return Opts.TweakFilter(T); };
+  auto CB = [this, Reply = std::move(Reply), ToLSPDiags = std::move(ToLSPDiags),
+             File, Selection = Params.range](
                 llvm::Expected<ClangdServer::CodeActionResult> Fixits) mutable {
     if (!Fixits)
       return Reply(Fixits.takeError());
@@ -1038,27 +1035,34 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
     for (const auto &QF : Fixits->QuickFixes) {
       CAs.push_back(toCodeAction(QF.F, File, Version, SupportsDocumentChanges,
                                  SupportsChangeAnnotation));
-      if (auto It = ToLSPDiags.find(QF.Diag);
-          It != ToLSPDiags.end()) {
+      if (auto It = ToLSPDiags.find(QF.Diag); It != ToLSPDiags.end()) {
         CAs.back().diagnostics = {It->second};
       }
     }
     for (const auto &TR : Fixits->TweakRefs)
       CAs.push_back(toCodeAction(TR, File, Selection));
 
-    // If there's exactly one quick-fix, call it "preferred".
+    // If there's exactly one quick-fix category, call it "preferred".
     // We never consider refactorings etc as preferred.
-    CodeAction *OnlyFix = nullptr;
+    llvm::SmallVector<CodeAction *, 1> OnlyFixes;
+    std::optional<std::string> OnlyFixCategory;
     for (auto &Action : CAs) {
+      std::string Code =
+          Action.diagnostics.has_value() && !Action.diagnostics->empty()
+              ? Action.diagnostics->front().code
+              : "";
       if (Action.kind && *Action.kind == CodeAction::QUICKFIX_KIND) {
-        if (OnlyFix) {
-          OnlyFix = nullptr;
+        if (OnlyFixCategory && *OnlyFixCategory != Code) {
+          OnlyFixCategory = std::nullopt;
           break;
         }
-        OnlyFix = &Action;
+        if (!OnlyFixCategory) {
+          OnlyFixCategory = Code;
+        }
+        OnlyFixes.emplace_back(&Action);
       }
     }
-    if (OnlyFix) {
+    for (const auto &OnlyFix : OnlyFixes) {
       OnlyFix->isPreferred = true;
       if (ToLSPDiags.size() == 1 &&
           ToLSPDiags.begin()->second.range == Selection)
