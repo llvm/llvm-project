@@ -125,6 +125,30 @@ for.end:
   ret void
 }
 
+; This has the same trip count as loop_with_profile_tc_64 but since the resulting interleaved group 
+; in this case may access memory out-of-bounds, it requires a scalar epilogue iteration for 
+; correctness, making at most 63 iterations available for interleaving.
+; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar remainder
+; than IC 2
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
+define void @loop_with_profile_tc_64_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %gep.src = getelementptr inbounds [3 x i8], ptr %p, i64 %i, i64 0
+  %l = load i8, ptr %gep.src, align 1
+  %gep.dst = getelementptr inbounds i8, ptr %q, i64 %i
+  store i8 %l, ptr %gep.dst, align 1
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp eq i64 %i.next, %n
+  br i1 %cond, label %for.end, label %for.body, !prof !4
+
+for.end:
+  ret void
+}
+
 ; For a loop with a profile-guided estimated TC of 100, when the auto-vectorizer chooses VF 16, 
 ; it should choose conservatively IC 2 so that the vector loop runs twice at least
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
@@ -165,6 +189,30 @@ for.body:
   %add = add i8 %tmp1, %tmp3
   %qi = getelementptr i8, ptr %q, i64 %i
   store i8 %add, ptr %qi, align 1
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp eq i64 %i.next, %n
+  br i1 %cond, label %for.end, label %for.body, !prof !6
+
+for.end:
+  ret void
+}
+
+; This has the same trip count as loop_with_profile_tc_128 but since the resulting interleaved group 
+; in this case may access memory out-of-bounds, it requires a scalar epilogue iteration for 
+; correctness, making at most 127 iterations available for interleaving.
+; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 2 to leave a smaller scalar remainder
+; than IC 4
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
+define void @loop_with_profile_tc_128_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
+  %gep.src = getelementptr inbounds [3 x i8], ptr %p, i64 %i, i64 0
+  %l = load i8, ptr %gep.src, align 1
+  %gep.dst = getelementptr inbounds i8, ptr %q, i64 %i
+  store i8 %l, ptr %gep.dst, align 1
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp eq i64 %i.next, %n
   br i1 %cond, label %for.end, label %for.body, !prof !6
