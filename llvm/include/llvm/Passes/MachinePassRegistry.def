@@ -36,14 +36,14 @@ MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis, ())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (PIC))
 FUNCTION_ANALYSIS("ssp-layout", SSPLayoutAnalysis, ())
-FUNCTION_ANALYSIS("targetir", TargetIRAnalysis,
+FUNCTION_ANALYSIS("target-ir", TargetIRAnalysis,
                   (std::move(TM.getTargetIRAnalysis())))
 #undef FUNCTION_ANALYSIS
 
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
-FUNCTION_PASS("callbrprepare", CallBrPreparePass, ())
+FUNCTION_PASS("callbr-prepare", CallBrPreparePass, ())
 FUNCTION_PASS("cfguard", CFGuardPass, ())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass, (TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass, ())
@@ -59,7 +59,7 @@ FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass, (TM))
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass, (TM))
 FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass, (TM))
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass, ())
-FUNCTION_PASS("lowerinvoke", LowerInvokePass, ())
+FUNCTION_PASS("lower-invoke", LowerInvokePass, ())
 FUNCTION_PASS("mergeicmps", MergeICmpsPass, ())
 FUNCTION_PASS("partially-inline-libcalls", PartiallyInlineLibCallsPass, ())
 FUNCTION_PASS("post-inline-ee-instrument", EntryExitInstrumenterPass, (true))

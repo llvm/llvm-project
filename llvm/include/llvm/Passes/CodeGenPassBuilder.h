@@ -94,7 +94,6 @@ namespace llvm {
                           MachineFunctionAnalysisManager &) {                  \
       llvm_unreachable("this api is to make new PM api happy");                \
     }                                                                          \
-    static MachinePassKey Key;                                                 \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)              \
   struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
@@ -103,7 +102,6 @@ namespace llvm {
                           MachineFunctionAnalysisManager &) {                  \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
-    static MachinePassKey Key;                                                 \
   };
 #define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)          \
   struct PASS_NAME : public AnalysisInfoMixin<PASS_NAME> {                     \
@@ -164,8 +162,6 @@ public:
   }
 
 protected:
-  template <typename PassT> using has_key_t = decltype(PassT::Key);
-
   template <typename PassT>
   using is_module_pass_t = decltype(std::declval<PassT &>().run(
       std::declval<Module &>(), std::declval<ModuleAnalysisManager &>()));
@@ -225,10 +221,6 @@ protected:
         : PM(PM), PB(PB) {}
 
     template <typename PassT> void operator()(PassT &&Pass) {
-      static_assert(
-          is_detected<has_key_t, PassT>::value,
-          "Machine function pass must define a static member variable `Key`.");
-
       if (!PB.runBeforeAdding(PassT::name()))
         return;
 
@@ -238,10 +230,10 @@ protected:
         C(PassT::name());
     }
 
-    template <typename PassT> void insertPass(MachinePassKey *ID, PassT Pass) {
+    template <typename PassT> void insertPass(StringRef PassName, PassT Pass) {
       PB.AfterCallbacks.emplace_back(
-          [this, ID, Pass = std::move(Pass)](MachinePassKey *PassID) {
-            if (PassID == ID)
+          [this, PassName, Pass = std::move(Pass)](StringRef Name) {
+            if (PassName == Name)
               this->PM.addPass(std::move(Pass));
           });
     }
