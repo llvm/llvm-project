@@ -374,7 +374,7 @@ func.func @parallel_loop_with_invariant() {
   // CHECK-NEXT: arith.addi
   // CHECK-NEXT: scf.parallel (%[[A:.*]],{{.*}}) =
   // CHECK-NEXT:   arith.addi %[[A]]
-  // CHECK-NEXT:   yield
+  // CHECK-NEXT:   reduce
   // CHECK-NEXT: }
   // CHECK-NEXT: return
 

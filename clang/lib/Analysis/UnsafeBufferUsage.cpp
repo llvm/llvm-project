@@ -721,6 +721,35 @@ public:
   DeclUseList getClaimedVarUseSites() const override { return {}; }
 };
 
+// Warning gadget for unsafe invocation of span::data method.
+// Triggers when the pointer returned by the invocation is immediately
+// cast to a larger type.
+
+class DataInvocationGadget : public WarningGadget {
+  constexpr static const char *const OpTag = "data_invocation_expr";
+  const ExplicitCastExpr *Op;
+
+public:
+  DataInvocationGadget(const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::DataInvocation),
+        Op(Result.Nodes.getNodeAs<ExplicitCastExpr>(OpTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::DataInvocation;
+  }
+
+  static Matcher matcher() {
+    Matcher callExpr = cxxMemberCallExpr(
+        callee(cxxMethodDecl(hasName("data"), ofClass(hasName("std::span")))));
+    return stmt(
+        explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
+            .bind(OpTag));
+  }
+  const Stmt *getBaseStmt() const override { return Op; }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+};
+
 // Represents expressions of the form `DRE[*]` in the Unspecified Lvalue
 // Context (see `isInUnspecifiedLvalueContext`).
 // Note here `[]` is the built-in subscript operator.
@@ -1028,6 +1057,46 @@ public:
   }
 };
 
+// Representing a pointer type expression of the form `Ptr += n` in an
+// Unspecified Untyped Context (UUC):
+class UUCAddAssignGadget : public FixableGadget {
+private:
+  static constexpr const char *const UUCAddAssignTag =
+      "PointerAddAssignUnderUUC";
+  static constexpr const char *const OffsetTag = "Offset";
+
+  const BinaryOperator *Node; // the `Ptr += n` node
+  const Expr *Offset = nullptr;
+
+public:
+  UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::UUCAddAssign),
+        Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
+        Offset(Result.Nodes.getNodeAs<Expr>(OffsetTag)) {
+    assert(Node != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UUCAddAssign;
+  }
+
+  static Matcher matcher() {
+    return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
+        binaryOperator(hasOperatorName("+="),
+                       hasLHS(declRefExpr(toSupportedVariable())),
+                       hasRHS(expr().bind(OffsetTag)))
+            .bind(UUCAddAssignTag)))));
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override { return Node; }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return {dyn_cast<DeclRefExpr>(Node->getLHS())};
+  }
+};
+
 // Representing a fixable expression of the form `*(ptr + 123)` or `*(123 +
 // ptr)`:
 class DerefSimplePtrArithFixableGadget : public FixableGadget {
@@ -1312,6 +1381,16 @@ PointerInitGadget::getFixits(const Strategy &S) const {
   return std::nullopt;
 }
 
+static bool isNonNegativeIntegerExpr(const Expr *Expr, const VarDecl *VD,
+                                     const ASTContext &Ctx) {
+  if (auto ConstVal = Expr->getIntegerConstantExpr(Ctx)) {
+    if (ConstVal->isNegative())
+      return false;
+  } else if (!Expr->getType()->isUnsignedIntegerType())
+    return false;
+  return true;
+}
+
 std::optional<FixItList>
 ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
   if (const auto *DRE =
@@ -1319,14 +1398,12 @@ ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       switch (S.lookup(VD)) {
       case Strategy::Kind::Span: {
+
         // If the index has a negative constant value, we give up as no valid
         // fix-it can be generated:
         const ASTContext &Ctx = // FIXME: we need ASTContext to be passed in!
             VD->getASTContext();
-        if (auto ConstVal = Node->getIdx()->getIntegerConstantExpr(Ctx)) {
-          if (ConstVal->isNegative())
-            return std::nullopt;
-        } else if (!Node->getIdx()->getType()->isUnsignedIntegerType())
+        if (!isNonNegativeIntegerExpr(Node->getIdx(), VD, Ctx))
           return std::nullopt;
         // no-op is a good fix-it, otherwise
         return FixItList{};
@@ -1405,10 +1482,8 @@ static std::optional<SourceLocation> getPastLoc(const NodeTy *Node,
                                                 const LangOptions &LangOpts) {
   SourceLocation Loc =
       Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
-
   if (Loc.isValid())
     return Loc;
-
   return std::nullopt;
 }
 
@@ -1488,7 +1563,7 @@ static bool hasUnsupportedSpecifiers(const VarDecl *VD,
 // returned by this function is the last location of the last token.
 static SourceRange getSourceRangeToTokenEnd(const Decl *D,
                                             const SourceManager &SM,
-                                            LangOptions LangOpts) {
+                                            const LangOptions &LangOpts) {
   SourceLocation Begin = D->getBeginLoc();
   SourceLocation
     End = // `D->getEndLoc` should always return the starting location of the
@@ -1766,6 +1841,47 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
       FixItHint::CreateReplacement(Node->getSourceRange(), SS.str())};
 }
 
+std::optional<FixItList>
+UUCAddAssignGadget::getFixits(const Strategy &S) const {
+  DeclUseList DREs = getClaimedVarUseSites();
+
+  if (DREs.size() != 1)
+    return std::nullopt; // In cases of `Ptr += n` where `Ptr` is not a DRE, we
+                         // give up
+  if (const VarDecl *VD = dyn_cast<VarDecl>(DREs.front()->getDecl())) {
+    if (S.lookup(VD) == Strategy::Kind::Span) {
+      FixItList Fixes;
+
+      const Stmt *AddAssignNode = getBaseStmt();
+      StringRef varName = VD->getName();
+      const ASTContext &Ctx = VD->getASTContext();
+
+      if (!isNonNegativeIntegerExpr(Offset, VD, Ctx))
+        return std::nullopt;
+
+      // To transform UUC(p += n) to UUC(p = p.subspan(..)):
+      bool NotParenExpr =
+          (Offset->IgnoreParens()->getBeginLoc() == Offset->getBeginLoc());
+      std::string SS = varName.str() + " = " + varName.str() + ".subspan";
+      if (NotParenExpr)
+        SS += "(";
+
+      std::optional<SourceLocation> AddAssignLocation = getEndCharLoc(
+          AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
+      if (!AddAssignLocation)
+        return std::nullopt;
+
+      Fixes.push_back(FixItHint::CreateReplacement(
+          SourceRange(AddAssignNode->getBeginLoc(), Node->getOperatorLoc()),
+          SS));
+      if (NotParenExpr)
+        Fixes.push_back(FixItHint::CreateInsertion(
+            Offset->getEndLoc().getLocWithOffset(1), ")"));
+      return Fixes;
+    }
+  }
+  return std::nullopt; // Not in the cases that we can handle for now, give up.
+}
 
 std::optional<FixItList> UPCPreIncrementGadget::getFixits(const Strategy &S) const {
   DeclUseList DREs = getClaimedVarUseSites();
@@ -2570,8 +2686,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     // every problematic operation and consider it done. No need to deal
     // with fixable gadgets, no need to group operations by variable.
     for (const auto &G : WarningGadgets) {
-      Handler.handleUnsafeOperation(G->getBaseStmt(),
-                                    /*IsRelatedToDecl=*/false);
+      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false,
+                                    D->getASTContext());
     }
 
     // This return guarantees that most of the machine doesn't run when
@@ -2806,7 +2922,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                   Tracker, Handler, VarGrpMgr);
 
   for (const auto &G : UnsafeOps.noVar) {
-    Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
+    Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false,
+                                  D->getASTContext());
   }
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
@@ -2817,7 +2934,8 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                       : FixItList{},
                                       D);
     for (const auto &G : WarningGadgets) {
-      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true);
+      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true,
+                                    D->getASTContext());
     }
   }
 }

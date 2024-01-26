@@ -1821,6 +1821,14 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
+  // If we are using any values provided by Glibc at fixed addresses,
+  // we need to ensure that the Glibc used at link time actually provides
+  // those values. All versions of Glibc that do will define the symbol
+  // named "__parse_hwcap_and_convert_at_platform".
+  if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
+    OutStreamer->emitSymbolValue(
+        GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
+        MAI->getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {
@@ -2519,7 +2527,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
-  assert(!GV->getName().startswith("llvm.") &&
+  assert(!GV->getName().starts_with("llvm.") &&
          "Unhandled intrinsic global variable.");
 
   if (GV->hasComdat())

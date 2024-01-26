@@ -58,8 +58,8 @@ struct ExpectedHint {
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
   if (arg.label != ExpectedView.trim(" ") ||
-      arg.paddingLeft != ExpectedView.startswith(" ") ||
-      arg.paddingRight != ExpectedView.endswith(" ")) {
+      arg.paddingLeft != ExpectedView.starts_with(" ") ||
+      arg.paddingRight != ExpectedView.ends_with(" ")) {
     *result_listener << "label is '" << arg.label << "'";
     return false;
   }
@@ -2203,6 +2203,19 @@ TEST(BlockEndHints, Macro) {
     RBRACE;
   )cpp",
                       ExpectedHint{" // struct S1", "S1"});
+}
+
+TEST(BlockEndHints, PointerToMemberFunction) {
+  // Do not crash trying to summarize `a->*p`.
+  assertBlockEndHints(R"cpp(
+    class A {};
+    using Predicate = bool(A::*)();
+    void foo(A* a, Predicate p) {
+      if ((a->*p)()) {
+      $ptrmem[[}]]
+    } // suppress
+  )cpp",
+                      ExpectedHint{" // if", "ptrmem"});
 }
 
 // FIXME: Low-hanging fruit where we could omit a type hint:

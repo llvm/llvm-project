@@ -164,6 +164,8 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
   case X:                                                                      \
     return Ret<X>(S, OpPC, Result);
   switch (*T) {
+    RET_CASE(PT_Ptr);
+    RET_CASE(PT_FnPtr);
     RET_CASE(PT_Float);
     RET_CASE(PT_Bool);
     RET_CASE(PT_Sint8);
@@ -579,15 +581,68 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// rotateleft(value, amount)
+static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call,
+                                   bool Right) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+
+  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
+  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+
+  APSInt Result;
+  if (Right)
+    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+  else // Left.
+    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+
+  pushAPSInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Value = peekToAPSInt(S.Stk, ArgT);
+
+  uint64_t N = Value.countr_zero();
+  pushInt(S, N == Value.getBitWidth() ? 0 : N + 1);
+  return true;
+}
+
+static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType PtrT =
+      S.getContext().classify(Call->getArg(0)->getType()).value_or(PT_Ptr);
+
+  if (PtrT == PT_FnPtr) {
+    const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
+    S.Stk.push<FunctionPointer>(Arg);
+  } else if (PtrT == PT_Ptr) {
+    const Pointer &Arg = S.Stk.peek<Pointer>();
+    S.Stk.push<Pointer>(Arg);
+  } else {
+    assert(false && "Unsupported pointer type passed to __builtin_addressof()");
+  }
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
-  QualType ReturnType = Call->getCallReturnType(S.getCtx());
-  std::optional<PrimType> ReturnT = S.getContext().classify(ReturnType);
+  std::optional<PrimType> ReturnT = S.getContext().classify(Call->getType());
+
   // If classify failed, we assume void.
-  assert(ReturnT || ReturnType->isVoidType());
+  assert(ReturnT || Call->getType()->isVoidType());
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -751,6 +806,45 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:
     if (!interp__builtin_expect(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/false))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/true))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    if (!interp__builtin_ffs(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BI__builtin_addressof:
+    if (!interp__builtin_addressof(S, OpPC, Frame, F, Call))
       return false;
     break;
 

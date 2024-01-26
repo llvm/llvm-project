@@ -1658,4 +1658,83 @@ func.func @omp_target_exit_data(%map1: memref<?xi32>) {
   return
 }
 
+// -----
+
+func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_type_2(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_2(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(close, to) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_3(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, to) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{present, mapper and iterator map type modifiers are permitted}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_4(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{either to or from map types can be specified, not both}}
+  omp.target_update_data motion_entries(%mapv : memref<?xi32>)
+  return
+}
+
+// -----
+
+func.func @omp_target_update_invalid_motion_modifier_5(%map1 : memref<?xi32>) {
+  %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) -> memref<?xi32> {name = ""}
+  %mapv2 = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(from) capture(ByRef) -> memref<?xi32> {name = ""}
+
+  // expected-error @below {{either to or from map types can be specified, not both}}
+  omp.target_update_data motion_entries(%mapv, %mapv2 : memref<?xi32>, memref<?xi32>)
+  return
+}
 llvm.mlir.global internal @_QFsubEx() : i32
+
+// -----
+
+func.func @omp_distribute(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+  "omp.distribute"(%data_var) <{operandSegmentSizes = array<i32: 0, 1, 0>}> ({
+      "omp.terminator"() : () -> ()
+    }) : (memref<i32>) -> ()
+}

@@ -1744,7 +1744,7 @@ bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
     ParseDirectiveAbiVersion(DirectiveID.getLoc());
   else if (IDVal == ".localentry")
     ParseDirectiveLocalEntry(DirectiveID.getLoc());
-  else if (IDVal.startswith(".gnu_attribute"))
+  else if (IDVal.starts_with(".gnu_attribute"))
     ParseGNUAttribute(DirectiveID.getLoc());
   else
     return true;

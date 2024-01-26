@@ -100,6 +100,13 @@ static cl::opt<int>
                                "of delta passes (default=5)"),
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 static codegen::RegisterCodeGenFlags CGF;
 
 /// Turn off crash debugging features
@@ -143,6 +150,17 @@ int main(int Argc, char **Argv) {
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
 
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format, if it's built in.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (TryUseNewDbgInfoFormat) {
+    // If LLVM was built with support for this, turn the new debug-info format
+    // on.
+    UseNewDbgInfoFormat = true;
+  }
+#endif
+  (void)TryUseNewDbgInfoFormat;
+
   if (Argc == 1) {
     cl::PrintHelpMessage();
     return 0;
@@ -157,7 +175,7 @@ int main(int Argc, char **Argv) {
   if (InputLanguage != InputLanguages::None) {
     if (InputLanguage == InputLanguages::MIR)
       ReduceModeMIR = true;
-  } else if (StringRef(InputFilename).endswith(".mir")) {
+  } else if (StringRef(InputFilename).ends_with(".mir")) {
     ReduceModeMIR = true;
   }
 

@@ -603,6 +603,8 @@ ExprDependence clang::computeDependence(PredefinedExpr *E) {
 ExprDependence clang::computeDependence(CallExpr *E,
                                         llvm::ArrayRef<Expr *> PreArgs) {
   auto D = E->getCallee()->getDependence();
+  if (E->getType()->isDependentType())
+    D |= ExprDependence::Type;
   for (auto *A : llvm::ArrayRef(E->getArgs(), E->getNumArgs())) {
     if (A)
       D |= A->getDependence();

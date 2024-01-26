@@ -170,25 +170,22 @@ public:
     if (seen.contains(typeInfoSym))
       return;
     seen.insert(typeInfoSym);
-    if (!skipRegistration) {
-      registeredTypeInfo.emplace_back(
-          TypeInfo{typeInfoSym, typeSpec, type, loc});
-      return;
-    }
-    // Once the registration is closed, symbols cannot be added to the
-    // registeredTypeInfoSymbols list because it may be iterated over.
-    // However, after registration is closed, it is safe to directly generate
-    // the globals because all FuncOps whose addresses may be required by the
-    // initializers have been generated.
-    createTypeInfoOpAndGlobal(converter,
-                              TypeInfo{typeInfoSym, typeSpec, type, loc});
+    currentTypeInfoStack->emplace_back(
+        TypeInfo{typeInfoSym, typeSpec, type, loc});
+    return;
   }
 
   void createTypeInfo(Fortran::lower::AbstractConverter &converter) {
-    skipRegistration = true;
-    for (const TypeInfo &info : registeredTypeInfo)
-      createTypeInfoOpAndGlobal(converter, info);
-    registeredTypeInfo.clear();
+    while (!registeredTypeInfoA.empty()) {
+      currentTypeInfoStack = &registeredTypeInfoB;
+      for (const TypeInfo &info : registeredTypeInfoA)
+        createTypeInfoOpAndGlobal(converter, info);
+      registeredTypeInfoA.clear();
+      currentTypeInfoStack = &registeredTypeInfoA;
+      for (const TypeInfo &info : registeredTypeInfoB)
+        createTypeInfoOpAndGlobal(converter, info);
+      registeredTypeInfoB.clear();
+    }
   }
 
 private:
@@ -249,11 +246,12 @@ private:
   }
 
   /// Store the front-end data that will be required to generate the type info
-  /// for the derived types that have been converted to fir.type<>.
-  llvm::SmallVector<TypeInfo> registeredTypeInfo;
-  /// Create derived type info immediately without storing the
-  /// symbol in registeredTypeInfo.
-  bool skipRegistration = false;
+  /// for the derived types that have been converted to fir.type<>. There are
+  /// two stacks since the type info may visit new types, so the new types must
+  /// be added to a new stack.
+  llvm::SmallVector<TypeInfo> registeredTypeInfoA;
+  llvm::SmallVector<TypeInfo> registeredTypeInfoB;
+  llvm::SmallVector<TypeInfo> *currentTypeInfoStack = &registeredTypeInfoA;
   /// Track symbols symbols processed during and after the registration
   /// to avoid infinite loops between type conversions and global variable
   /// creation.
@@ -602,6 +600,11 @@ public:
         std::nullopt);
   }
 
+  Fortran::lower::TypeConstructionStack &
+  getTypeConstructionStack() override final {
+    return typeConstructionStack;
+  }
+
   bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) override final {
     return bool(shallowLookupSymbol(sym));
   }
@@ -837,6 +840,11 @@ public:
         sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
       builder->restoreInsertionPoint(insPt);
     }
+  }
+
+  void genEval(Fortran::lower::pft::Evaluation &eval,
+               bool unstructuredContext) override final {
+    genFIR(eval, unstructuredContext);
   }
 
   //===--------------------------------------------------------------------===//
@@ -2383,13 +2391,43 @@ private:
     localSymbols.pushScope();
     mlir::Value exitCond = genOpenACCConstruct(
         *this, bridge.getSemanticsContext(), getEval(), acc);
-    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
+
+    const Fortran::parser::OpenACCLoopConstruct *accLoop =
+        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
+    const Fortran::parser::OpenACCCombinedConstruct *accCombined =
+        std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
+
+    Fortran::lower::pft::Evaluation *curEval = &getEval();
+
+    if (accLoop || accCombined) {
+      int64_t collapseValue;
+      if (accLoop) {
+        const Fortran::parser::AccBeginLoopDirective &beginLoopDir =
+            std::get<Fortran::parser::AccBeginLoopDirective>(accLoop->t);
+        const Fortran::parser::AccClauseList &clauseList =
+            std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
+        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+      } else if (accCombined) {
+        const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
+            std::get<Fortran::parser::AccBeginCombinedDirective>(
+                accCombined->t);
+        const Fortran::parser::AccClauseList &clauseList =
+            std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
+        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+      }
+
+      if (curEval->lowerAsStructured()) {
+        curEval = &curEval->getFirstNestedEvaluation();
+        for (int64_t i = 1; i < collapseValue; i++)
+          curEval = &*std::next(curEval->getNestedEvaluations().begin());
+      }
+    }
+
+    for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
-    const Fortran::parser::OpenACCLoopConstruct *accLoop =
-        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
     if (accLoop && exitCond) {
       Fortran::lower::pft::FunctionLikeUnit *funit =
           getEval().getOwningProcedure();
@@ -2416,48 +2454,8 @@ private:
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    localSymbols.pushScope();
-    genOpenMPConstruct(*this, bridge.getSemanticsContext(), getEval(), omp);
-
-    const Fortran::parser::OpenMPLoopConstruct *ompLoop =
-        std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
-    const Fortran::parser::OpenMPBlockConstruct *ompBlock =
-        std::get_if<Fortran::parser::OpenMPBlockConstruct>(&omp.u);
-
-    // If loop is part of an OpenMP Construct then the OpenMP dialect
-    // workshare loop operation has already been created. Only the
-    // body needs to be created here and the do_loop can be skipped.
-    // Skip the number of collapsed loops, which is 1 when there is a
-    // no collapse requested.
-
-    Fortran::lower::pft::Evaluation *curEval = &getEval();
-    const Fortran::parser::OmpClauseList *loopOpClauseList = nullptr;
-    if (ompLoop) {
-      loopOpClauseList = &std::get<Fortran::parser::OmpClauseList>(
-          std::get<Fortran::parser::OmpBeginLoopDirective>(ompLoop->t).t);
-      int64_t collapseValue =
-          Fortran::lower::getCollapseValue(*loopOpClauseList);
-
-      curEval = &curEval->getFirstNestedEvaluation();
-      for (int64_t i = 1; i < collapseValue; i++) {
-        curEval = &*std::next(curEval->getNestedEvaluations().begin());
-      }
-    }
-
-    for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-      genFIR(e);
-
-    if (ompLoop) {
-      genOpenMPReduction(*this, *loopOpClauseList);
-    } else if (ompBlock) {
-      const auto &blockStart =
-          std::get<Fortran::parser::OmpBeginBlockDirective>(ompBlock->t);
-      const auto &blockClauses =
-          std::get<Fortran::parser::OmpClauseList>(blockStart.t);
-      genOpenMPReduction(*this, blockClauses);
-    }
-
-    localSymbols.popScope();
+    genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
+                       getEval(), omp);
     builder->restoreInsertionPoint(insertPt);
 
     // Register if a target region was found
@@ -2472,9 +2470,8 @@ private:
     ompDeviceCodeFound =
         ompDeviceCodeFound ||
         Fortran::lower::isOpenMPDeviceDeclareTarget(*this, getEval(), ompDecl);
-    genOpenMPDeclarativeConstruct(*this, getEval(), ompDecl);
-    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
-      genFIR(e);
+    genOpenMPDeclarativeConstruct(
+        *this, localSymbols, bridge.getSemanticsContext(), getEval(), ompDecl);
     builder->restoreInsertionPoint(insertPt);
   }
 
@@ -3125,6 +3122,10 @@ private:
   }
 
   //===--------------------------------------------------------------------===//
+
+  void genFIR(const Fortran::parser::NotifyWaitStmt &stmt) {
+    genNotifyWaitStatement(*this, stmt);
+  }
 
   void genFIR(const Fortran::parser::EventPostStmt &stmt) {
     genEventPostStatement(*this, stmt);
@@ -4238,15 +4239,8 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
-    if (var.hasSymbol()) {
-      if (var.getSymbol().test(
-              Fortran::semantics::Symbol::Flag::OmpThreadprivate))
-        Fortran::lower::genThreadprivateOp(*this, var);
-
-      if (var.getSymbol().test(
-              Fortran::semantics::Symbol::Flag::OmpDeclareTarget))
-        Fortran::lower::genDeclareTargetIntGlobal(*this, var);
-    }
+    if (var.hasSymbol())
+      genOpenMPSymbolProperties(*this, var);
   }
 
   /// Where applicable, save the exception state and halting and rounding
@@ -5052,6 +5046,13 @@ private:
   bool ompDeviceCodeFound = false;
 
   const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
+
+  /// Stack of derived type under construction to avoid infinite loops when
+  /// dealing with recursive derived types. This is held in the bridge because
+  /// the state needs to be maintained between data and function type lowering
+  /// utilities to deal with procedure pointer components whose arguments have
+  /// the type of the containing derived type.
+  Fortran::lower::TypeConstructionStack typeConstructionStack;
 };
 
 } // namespace

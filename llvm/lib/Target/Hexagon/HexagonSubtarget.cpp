@@ -116,13 +116,13 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   if (!llvm::count_if(Features.getFeatures(), IsQFloatFS)) {
     auto getHvxVersion = [&Features](StringRef FS) -> StringRef {
       for (StringRef F : llvm::reverse(Features.getFeatures())) {
-        if (F.startswith("+hvxv"))
+        if (F.starts_with("+hvxv"))
           return F;
       }
       for (StringRef F : llvm::reverse(Features.getFeatures())) {
         if (F == "-hvx")
           return StringRef();
-        if (F.startswith("+hvx") || F == "-hvx")
+        if (F.starts_with("+hvx") || F == "-hvx")
           return F.take_front(4);  // Return "+hvx" or "-hvx".
       }
       return StringRef();
@@ -130,7 +130,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
     bool AddQFloat = false;
     StringRef HvxVer = getHvxVersion(FS);
-    if (HvxVer.startswith("+hvxv")) {
+    if (HvxVer.starts_with("+hvxv")) {
       int Ver = 0;
       if (!HvxVer.drop_front(5).consumeInteger(10, Ver) && Ver >= 68)
         AddQFloat = true;

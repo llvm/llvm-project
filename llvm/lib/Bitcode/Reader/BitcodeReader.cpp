@@ -100,6 +100,9 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
+// Declare external flag for whether we're using the new debug-info format.
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 enum {
@@ -2098,6 +2101,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Writable;
   case bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE:
     return Attribute::CoroDestroyOnlyWhenComplete;
+  case bitc::ATTR_KIND_DEAD_ON_UNWIND:
+    return Attribute::DeadOnUnwind;
   }
 }
 
@@ -4216,6 +4221,9 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 
   // Check whether we have enough values to read a partition name.
   if (OpNum + 1 < Record.size()) {
+    // Check Strtab has enough values for the partition.
+    if (Record[OpNum] + Record[OpNum + 1] > Strtab.size())
+      return error("Malformed partition, too large.");
     NewGA->setPartition(
         StringRef(Strtab.data() + Record[OpNum], Record[OpNum + 1]));
     OpNum += 2;
@@ -5248,7 +5256,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error(
             "Invalid record: operand number exceeded available operands");
 
-      unsigned PredVal = Record[OpNum];
+      CmpInst::Predicate PredVal = CmpInst::Predicate(Record[OpNum]);
       bool IsFP = LHS->getType()->isFPOrFPVectorTy();
       FastMathFlags FMF;
       if (IsFP && Record.size() > OpNum+1)
@@ -5257,10 +5265,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (OpNum+1 != Record.size())
         return error("Invalid record");
 
-      if (LHS->getType()->isFPOrFPVectorTy())
-        I = new FCmpInst((FCmpInst::Predicate)PredVal, LHS, RHS);
-      else
-        I = new ICmpInst((ICmpInst::Predicate)PredVal, LHS, RHS);
+      if (IsFP) {
+        if (!CmpInst::isFPPredicate(PredVal))
+          return error("Invalid fcmp predicate");
+        I = new FCmpInst(PredVal, LHS, RHS);
+      } else {
+        if (!CmpInst::isIntPredicate(PredVal))
+          return error("Invalid icmp predicate");
+        I = new ICmpInst(PredVal, LHS, RHS);
+      }
 
       ResTypeID = getVirtualTypeID(I->getType()->getScalarType());
       if (LHS->getType()->isVectorTy())
@@ -5363,6 +5376,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       Type *TokenTy = Type::getTokenTy(Context);
       Value *ParentPad = getValue(Record, Idx++, NextValueNo, TokenTy,
                                   getVirtualTypeID(TokenTy), CurBB);
+      if (!ParentPad)
+        return error("Invalid record");
 
       unsigned NumHandlers = Record[Idx++];
 
@@ -5404,6 +5419,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       Type *TokenTy = Type::getTokenTy(Context);
       Value *ParentPad = getValue(Record, Idx++, NextValueNo, TokenTy,
                                   getVirtualTypeID(TokenTy), CurBB);
+      if (!ParentPad)
+        return error("Invald record");
 
       unsigned NumArgOperands = Record[Idx++];
 
@@ -5957,6 +5974,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("alloca of unsized type");
       if (!Align)
         Align = DL.getPrefTypeAlign(Ty);
+
+      if (!Size->getType()->isIntegerTy())
+        return error("alloca element count must have integer type");
 
       AllocaInst *AI = new AllocaInst(Ty, AS, Size, *Align);
       AI->setUsedWithInAlloca(InAlloca);
@@ -6612,6 +6632,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error Err = materializeMetadata())
     return Err;
 
+  bool NewDebugInfoRequested = F->IsNewDbgInfoFormat;
+  F->IsNewDbgInfoFormat = false;
+
   // Move the bit stream to the saved position of the deferred function body.
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
@@ -6686,6 +6709,14 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
 
   // Look for functions that rely on old function attribute behavior.
   UpgradeFunctionAttributes(*F);
+
+  // If we've materialized a function set up in "new" debug-info mode, the
+  // contents just loaded will still be in dbg.value mode. Switch to the new
+  // mode now. NB: we can add more complicated logic here in the future to
+  // correctly identify when we do and don't need to autoupgrade.
+  if (NewDebugInfoRequested) {
+    F->convertToNewDbgValues();
+  }
 
   // Bring in any functions that this function forward-referenced via
   // blockaddresses.
@@ -8010,6 +8041,15 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
     if (Error Err = R->materializeForwardReferencedFunctions())
       return std::move(Err);
   }
+
+  // If we are operating in a "new debug-info" context, upgrade the debug-info
+  // in the loaded module. This is a transitional approach as we enable "new"
+  // debug-info in LLVM, which will eventually be pushed down into the
+  // autoupgrade path once the bitcode-encoding is finalised. Non-materialised
+  // functions will be upgraded in the materialize method.
+  if (UseNewDbgInfoFormat && !M->IsNewDbgInfoFormat)
+    M->convertToNewDbgValues();
+
   return std::move(M);
 }
 

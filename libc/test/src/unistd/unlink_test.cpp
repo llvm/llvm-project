@@ -13,11 +13,13 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 TEST(LlvmLibcUnlinkTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/unlink.test";
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));

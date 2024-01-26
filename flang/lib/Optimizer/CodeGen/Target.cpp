@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeRange.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "flang-codegen-target"
 
@@ -58,6 +59,63 @@ static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,
   }
 }
 
+/// Return the size and alignment of FIR types.
+/// TODO: consider moving this to a DataLayoutTypeInterface implementation
+/// for FIR types. It should first be ensured that it is OK to open the gate of
+/// target dependent type size inquiries in lowering. It would also not be
+/// straightforward given the need for a kind map that would need to be
+/// converted in terms of mlir::DataLayoutEntryKey.
+static std::pair<std::uint64_t, unsigned short>
+getSizeAndAlignment(mlir::Location loc, mlir::Type ty,
+                    const mlir::DataLayout &dl,
+                    const fir::KindMapping &kindMap) {
+  if (mlir::isa<mlir::IntegerType, mlir::FloatType, mlir::ComplexType>(ty)) {
+    llvm::TypeSize size = dl.getTypeSize(ty);
+    unsigned short alignment = dl.getTypeABIAlignment(ty);
+    return {size, alignment};
+  }
+  if (auto firCmplx = mlir::dyn_cast<fir::ComplexType>(ty)) {
+    auto [floatSize, floatAlign] =
+        getSizeAndAlignment(loc, firCmplx.getEleType(kindMap), dl, kindMap);
+    return {llvm::alignTo(floatSize, floatAlign) + floatSize, floatAlign};
+  }
+  if (auto real = mlir::dyn_cast<fir::RealType>(ty))
+    return getSizeAndAlignment(loc, real.getFloatType(kindMap), dl, kindMap);
+
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    auto [eleSize, eleAlign] =
+        getSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
+
+    std::uint64_t size =
+        llvm::alignTo(eleSize, eleAlign) * seqTy.getConstantArraySize();
+    return {size, eleAlign};
+  }
+  if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
+    std::uint64_t size = 0;
+    unsigned short align = 1;
+    for (auto component : recTy.getTypeList()) {
+      auto [compSize, compAlign] =
+          getSizeAndAlignment(loc, component.second, dl, kindMap);
+      size =
+          llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
+      align = std::max(align, compAlign);
+    }
+    return {size, align};
+  }
+  if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
+    mlir::Type intTy = mlir::IntegerType::get(
+        logical.getContext(), kindMap.getLogicalBitsize(logical.getFKind()));
+    return getSizeAndAlignment(loc, intTy, dl, kindMap);
+  }
+  if (auto character = mlir::dyn_cast<fir::CharacterType>(ty)) {
+    mlir::Type intTy = mlir::IntegerType::get(
+        character.getContext(),
+        kindMap.getCharacterBitsize(character.getFKind()));
+    return getSizeAndAlignment(loc, intTy, dl, kindMap);
+  }
+  TODO(loc, "computing size of a component");
+}
+
 namespace {
 template <typename S>
 struct GenericTarget : public CodeGenSpecifics {
@@ -93,6 +151,12 @@ struct GenericTarget : public CodeGenSpecifics {
     marshal.emplace_back(idxTy, AT{/*alignment=*/0, /*byval=*/false,
                                    /*sret=*/sret, /*append=*/!sret});
     return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType,
+                     const Marshalling &) const override {
+    TODO(loc, "passing VALUE BIND(C) derived type for this target");
   }
 
   CodeGenSpecifics::Marshalling
@@ -316,6 +380,329 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     } else {
       typeTodo(sem, loc, "return");
     }
+    return marshal;
+  }
+
+  /// X86-64 argument classes from System V ABI version 1.0 section 3.2.3.
+  enum ArgClass {
+    Integer = 0,
+    SSE,
+    SSEUp,
+    X87,
+    X87Up,
+    ComplexX87,
+    NoClass,
+    Memory
+  };
+
+  /// Classify an argument type or a field of an aggregate type argument.
+  /// See System V ABI version 1.0 section 3.2.3.
+  /// The Lo and Hi class are set to the class of the lower eight eightbytes
+  /// and upper eight eightbytes on return.
+  /// If this is called for an aggregate field, the caller is responsible to
+  /// do the post-merge.
+  void classify(mlir::Location loc, mlir::Type type, std::uint64_t byteOffset,
+                ArgClass &Lo, ArgClass &Hi) const {
+    Hi = Lo = ArgClass::NoClass;
+    ArgClass &current = byteOffset < 8 ? Lo : Hi;
+    // System V AMD64 ABI 3.2.3. version 1.0
+    llvm::TypeSwitch<mlir::Type>(type)
+        .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
+          if (intTy.getWidth() == 128)
+            Hi = Lo = ArgClass::Integer;
+          else
+            current = ArgClass::Integer;
+        })
+        .template Case<mlir::FloatType, fir::RealType>([&](mlir::Type floatTy) {
+          const auto *sem = &floatToSemantics(kindMap, floatTy);
+          if (sem == &llvm::APFloat::x87DoubleExtended()) {
+            Lo = ArgClass::X87;
+            Hi = ArgClass::X87Up;
+          } else if (sem == &llvm::APFloat::IEEEquad()) {
+            Lo = ArgClass::SSE;
+            Hi = ArgClass::SSEUp;
+          } else {
+            current = ArgClass::SSE;
+          }
+        })
+        .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+          const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
+          if (sem == &llvm::APFloat::x87DoubleExtended()) {
+            current = ArgClass::ComplexX87;
+          } else {
+            fir::SequenceType::Shape shape{2};
+            classifyArray(loc,
+                          fir::SequenceType::get(shape, cmplx.getElementType()),
+                          byteOffset, Lo, Hi);
+          }
+        })
+        .template Case<fir::LogicalType>([&](fir::LogicalType logical) {
+          if (kindMap.getLogicalBitsize(logical.getFKind()) == 128)
+            Hi = Lo = ArgClass::Integer;
+          else
+            current = ArgClass::Integer;
+        })
+        .template Case<fir::CharacterType>(
+            [&](fir::CharacterType character) { current = ArgClass::Integer; })
+        .template Case<fir::SequenceType>([&](fir::SequenceType seqTy) {
+          // Array component.
+          classifyArray(loc, seqTy, byteOffset, Lo, Hi);
+        })
+        .template Case<fir::RecordType>([&](fir::RecordType recTy) {
+          // Component that is a derived type.
+          classifyStruct(loc, recTy, byteOffset, Lo, Hi);
+        })
+        .template Case<fir::VectorType>([&](fir::VectorType vecTy) {
+          // Previously marshalled SSE eight byte for a previous struct
+          // argument.
+          auto *sem = fir::isa_real(vecTy.getEleTy())
+                          ? &floatToSemantics(kindMap, vecTy.getEleTy())
+                          : nullptr;
+          // Not expecting to hit this todo in standard code (it would
+          // require some vector type extension).
+          if (!(sem == &llvm::APFloat::IEEEsingle() && vecTy.getLen() <= 2) &&
+              !(sem == &llvm::APFloat::IEEEhalf() && vecTy.getLen() <= 4))
+            TODO(loc, "passing vector argument to C by value");
+          current = SSE;
+        })
+        .Default([&](mlir::Type ty) {
+          if (fir::conformsWithPassByRef(ty))
+            current = ArgClass::Integer; // Pointers.
+          else
+            TODO(loc, "unsupported component type for BIND(C), VALUE derived "
+                      "type argument");
+        });
+  }
+
+  // Classify fields of a derived type starting at \p offset. Returns the new
+  // offset. Post-merge is left to the caller.
+  std::uint64_t classifyStruct(mlir::Location loc, fir::RecordType recTy,
+                               std::uint64_t byteOffset, ArgClass &Lo,
+                               ArgClass &Hi) const {
+    for (auto component : recTy.getTypeList()) {
+      if (byteOffset > 16) {
+        // See 3.2.3 p. 1 and note 15. Note that when the offset is bigger
+        // than 16 bytes here, it is not a single _m256 and or _m512 entity
+        // that could fit in AVX registers.
+        Lo = Hi = ArgClass::Memory;
+        return byteOffset;
+      }
+      mlir::Type compType = component.second;
+      auto [compSize, compAlign] =
+          getSizeAndAlignment(loc, compType, getDataLayout(), kindMap);
+      byteOffset = llvm::alignTo(byteOffset, compAlign);
+      ArgClass LoComp, HiComp;
+      classify(loc, compType, byteOffset, LoComp, HiComp);
+      Lo = mergeClass(Lo, LoComp);
+      Hi = mergeClass(Hi, HiComp);
+      byteOffset = byteOffset + llvm::alignTo(compSize, compAlign);
+      if (Lo == ArgClass::Memory || Hi == ArgClass::Memory)
+        return byteOffset;
+    }
+    return byteOffset;
+  }
+
+  // Classify fields of a constant size array type starting at \p offset.
+  // Returns the new offset. Post-merge is left to the caller.
+  void classifyArray(mlir::Location loc, fir::SequenceType seqTy,
+                     std::uint64_t byteOffset, ArgClass &Lo,
+                     ArgClass &Hi) const {
+    mlir::Type eleTy = seqTy.getEleTy();
+    const std::uint64_t arraySize = seqTy.getConstantArraySize();
+    auto [eleSize, eleAlign] =
+        getSizeAndAlignment(loc, eleTy, getDataLayout(), kindMap);
+    std::uint64_t eleStorageSize = llvm::alignTo(eleSize, eleAlign);
+    for (std::uint64_t i = 0; i < arraySize; ++i) {
+      byteOffset = llvm::alignTo(byteOffset, eleAlign);
+      if (byteOffset > 16) {
+        // See 3.2.3 p. 1 and note 15. Same as in classifyStruct.
+        Lo = Hi = ArgClass::Memory;
+        return;
+      }
+      ArgClass LoComp, HiComp;
+      classify(loc, eleTy, byteOffset, LoComp, HiComp);
+      Lo = mergeClass(Lo, LoComp);
+      Hi = mergeClass(Hi, HiComp);
+      byteOffset = byteOffset + eleStorageSize;
+      if (Lo == ArgClass::Memory || Hi == ArgClass::Memory)
+        return;
+    }
+  }
+
+  // Goes through the previously marshalled arguments and count the
+  // register occupancy to check if there are enough registers left.
+  bool hasEnoughRegisters(mlir::Location loc, int neededIntRegisters,
+                          int neededSSERegisters,
+                          const Marshalling &previousArguments) const {
+    int availIntRegisters = 6;
+    int availSSERegisters = 8;
+    for (auto typeAndAttr : previousArguments) {
+      const auto &attr = std::get<Attributes>(typeAndAttr);
+      if (attr.isByVal())
+        continue; // Previous argument passed on the stack.
+      ArgClass Lo, Hi;
+      Lo = Hi = ArgClass::NoClass;
+      classify(loc, std::get<mlir::Type>(typeAndAttr), 0, Lo, Hi);
+      // post merge is not needed here since previous aggregate arguments
+      // were marshalled into simpler arguments.
+      if (Lo == ArgClass::Integer)
+        --availIntRegisters;
+      else if (Lo == SSE)
+        --availSSERegisters;
+      if (Hi == ArgClass::Integer)
+        --availIntRegisters;
+      else if (Hi == ArgClass::SSE)
+        --availSSERegisters;
+    }
+    return availSSERegisters >= neededSSERegisters &&
+           availIntRegisters >= neededIntRegisters;
+  }
+
+  /// Argument class merging as described in System V ABI 3.2.3 point 4.
+  ArgClass mergeClass(ArgClass accum, ArgClass field) const {
+    assert((accum != ArgClass::Memory && accum != ArgClass::ComplexX87) &&
+           "Invalid accumulated classification during merge.");
+    if (accum == field || field == NoClass)
+      return accum;
+    if (field == ArgClass::Memory)
+      return ArgClass::Memory;
+    if (accum == NoClass)
+      return field;
+    if (accum == Integer || field == Integer)
+      return ArgClass::Integer;
+    if (field == ArgClass::X87 || field == ArgClass::X87Up ||
+        field == ArgClass::ComplexX87 || accum == ArgClass::X87 ||
+        accum == ArgClass::X87Up)
+      return Memory;
+    return SSE;
+  }
+
+  /// Argument class post merging as described in System V ABI 3.2.3 point 5.
+  void postMerge(std::uint64_t byteSize, ArgClass &Lo, ArgClass &Hi) const {
+    if (Hi == ArgClass::Memory)
+      Lo = ArgClass::Memory;
+    if (Hi == ArgClass::X87Up && Lo != ArgClass::X87)
+      Lo = ArgClass::Memory;
+    if (byteSize > 16 && (Lo != ArgClass::SSE || Hi != ArgClass::SSEUp))
+      Lo = ArgClass::Memory;
+    if (Hi == ArgClass::SSEUp && Lo != ArgClass::SSE)
+      Hi = SSE;
+  }
+
+  /// When \p recTy is a one field record type that can be passed
+  /// like the field on its own, returns the field type. Returns
+  /// a null type otherwise.
+  mlir::Type passAsFieldIfOneFieldStruct(fir::RecordType recTy) const {
+    auto typeList = recTy.getTypeList();
+    if (typeList.size() != 1)
+      return {};
+    mlir::Type fieldType = typeList[0].second;
+    if (mlir::isa<mlir::FloatType, mlir::IntegerType, fir::RealType,
+                  fir::CharacterType, fir::LogicalType>(fieldType))
+      return fieldType;
+    // Complex field that needs to be split, or array.
+    return {};
+  }
+
+  mlir::Type pickLLVMArgType(mlir::Location loc, mlir::MLIRContext *context,
+                             ArgClass argClass,
+                             std::uint64_t partByteSize) const {
+    if (argClass == ArgClass::SSE) {
+      if (partByteSize > 16)
+        TODO(loc, "passing struct as a real > 128 bits in register");
+      // Clang uses vector type when several fp fields are marshalled
+      // into a single SSE register (like  <n x smallest fp field> ).
+      // It should make no difference from an ABI point of view to just
+      // select an fp type of the right size, and it makes things simpler
+      // here.
+      if (partByteSize > 8)
+        return mlir::FloatType::getF128(context);
+      if (partByteSize > 4)
+        return mlir::FloatType::getF64(context);
+      if (partByteSize > 2)
+        return mlir::FloatType::getF32(context);
+      return mlir::FloatType::getF16(context);
+    }
+    assert(partByteSize <= 8 &&
+           "expect integer part of aggregate argument to fit into eight bytes");
+    if (partByteSize > 4)
+      return mlir::IntegerType::get(context, 64);
+    if (partByteSize > 2)
+      return mlir::IntegerType::get(context, 32);
+    if (partByteSize > 1)
+      return mlir::IntegerType::get(context, 16);
+    return mlir::IntegerType::get(context, 8);
+  }
+
+  /// Marshal a derived type passed by value like a C struct.
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType recTy,
+                     const Marshalling &previousArguments) const override {
+    std::uint64_t byteOffset = 0;
+    ArgClass Lo, Hi;
+    Lo = Hi = ArgClass::NoClass;
+    byteOffset = classifyStruct(loc, recTy, byteOffset, Lo, Hi);
+    postMerge(byteOffset, Lo, Hi);
+    if (Lo == ArgClass::Memory || Lo == ArgClass::X87 ||
+        Lo == ArgClass::ComplexX87)
+      return passOnTheStack(loc, recTy);
+    int neededIntRegisters = 0;
+    int neededSSERegisters = 0;
+    if (Lo == ArgClass::SSE)
+      ++neededSSERegisters;
+    else if (Lo == ArgClass::Integer)
+      ++neededIntRegisters;
+    if (Hi == ArgClass::SSE)
+      ++neededSSERegisters;
+    else if (Hi == ArgClass::Integer)
+      ++neededIntRegisters;
+    // C struct should not be split into LLVM registers if LLVM codegen is not
+    // able to later assign actual registers to all of them (struct passing is
+    // all in registers or all on the stack).
+    if (!hasEnoughRegisters(loc, neededIntRegisters, neededSSERegisters,
+                            previousArguments))
+      return passOnTheStack(loc, recTy);
+
+    if (auto fieldType = passAsFieldIfOneFieldStruct(recTy)) {
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(fieldType, AT{});
+      return marshal;
+    }
+    if (Hi == ArgClass::NoClass || Hi == ArgClass::SSEUp) {
+      // Pass a single integer or floating point argument.
+      mlir::Type lowType =
+          pickLLVMArgType(loc, recTy.getContext(), Lo, byteOffset);
+      CodeGenSpecifics::Marshalling marshal;
+      marshal.emplace_back(lowType, AT{});
+      return marshal;
+    }
+    // Split into two integer or floating point arguments.
+    // Note that for the first argument, this will always pick i64 or f64 which
+    // may be bigger than needed if some struct padding ends the first eight
+    // byte (e.g. for `{i32, f64}`). It is valid from an X86-64 ABI and
+    // semantic point of view, but it may not match the LLVM IR interface clang
+    // would produce for the equivalent C code (the assembly will still be
+    // compatible).  This allows keeping the logic simpler here since it
+    // avoids computing the "data" size of the Lo part.
+    mlir::Type lowType = pickLLVMArgType(loc, recTy.getContext(), Lo, 8u);
+    mlir::Type hiType =
+        pickLLVMArgType(loc, recTy.getContext(), Hi, byteOffset - 8u);
+    CodeGenSpecifics::Marshalling marshal;
+    marshal.emplace_back(lowType, AT{});
+    marshal.emplace_back(hiType, AT{});
+    return marshal;
+  }
+
+  /// Marshal an argument that must be passed on the stack.
+  CodeGenSpecifics::Marshalling passOnTheStack(mlir::Location loc,
+                                               mlir::Type ty) const {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign = getSizeAndAlignment(loc, ty, getDataLayout(), kindMap);
+    // The stack is always 8 byte aligned (note 14 in 3.2.3).
+    unsigned short align =
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8));
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{align, /*byval=*/true, /*sret=*/false});
     return marshal;
   }
 };
@@ -726,51 +1113,51 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
 fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
-                           KindMapping &&kindMap) {
+                           KindMapping &&kindMap, const mlir::DataLayout &dl) {
   switch (trp.getArch()) {
   default:
     break;
   case llvm::Triple::ArchType::x86:
     if (trp.isOSWindows())
       return std::make_unique<TargetI386Win>(ctx, std::move(trp),
-                                             std::move(kindMap));
+                                             std::move(kindMap), dl);
     else
       return std::make_unique<TargetI386>(ctx, std::move(trp),
-                                          std::move(kindMap));
+                                          std::move(kindMap), dl);
   case llvm::Triple::ArchType::x86_64:
     if (trp.isOSWindows())
       return std::make_unique<TargetX86_64Win>(ctx, std::move(trp),
-                                               std::move(kindMap));
+                                               std::move(kindMap), dl);
     else
       return std::make_unique<TargetX86_64>(ctx, std::move(trp),
-                                            std::move(kindMap));
+                                            std::move(kindMap), dl);
   case llvm::Triple::ArchType::aarch64:
     return std::make_unique<TargetAArch64>(ctx, std::move(trp),
-                                           std::move(kindMap));
+                                           std::move(kindMap), dl);
   case llvm::Triple::ArchType::ppc64:
     return std::make_unique<TargetPPC64>(ctx, std::move(trp),
-                                         std::move(kindMap));
+                                         std::move(kindMap), dl);
   case llvm::Triple::ArchType::ppc64le:
     return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
-                                           std::move(kindMap));
+                                           std::move(kindMap), dl);
   case llvm::Triple::ArchType::sparc:
     return std::make_unique<TargetSparc>(ctx, std::move(trp),
-                                         std::move(kindMap));
+                                         std::move(kindMap), dl);
   case llvm::Triple::ArchType::sparcv9:
     return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
-                                           std::move(kindMap));
+                                           std::move(kindMap), dl);
   case llvm::Triple::ArchType::riscv64:
     return std::make_unique<TargetRISCV64>(ctx, std::move(trp),
-                                           std::move(kindMap));
+                                           std::move(kindMap), dl);
   case llvm::Triple::ArchType::amdgcn:
     return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
-                                          std::move(kindMap));
+                                          std::move(kindMap), dl);
   case llvm::Triple::ArchType::nvptx64:
     return std::make_unique<TargetNVPTX>(ctx, std::move(trp),
-                                         std::move(kindMap));
+                                         std::move(kindMap), dl);
   case llvm::Triple::ArchType::loongarch64:
     return std::make_unique<TargetLoongArch64>(ctx, std::move(trp),
-                                               std::move(kindMap));
+                                               std::move(kindMap), dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }

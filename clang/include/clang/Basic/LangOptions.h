@@ -381,6 +381,28 @@ public:
     All,
   };
 
+  enum class VisibilityForcedKinds {
+    /// Force hidden visibility
+    ForceHidden,
+    /// Force protected visibility
+    ForceProtected,
+    /// Force default visibility
+    ForceDefault,
+    /// Don't alter the visibility
+    Source,
+  };
+
+  enum class VisibilityFromDLLStorageClassKinds {
+    /// Keep the IR-gen assigned visibility.
+    Keep,
+    /// Override the IR-gen assigned visibility with default visibility.
+    Default,
+    /// Override the IR-gen assigned visibility with hidden visibility.
+    Hidden,
+    /// Override the IR-gen assigned visibility with protected visibility.
+    Protected,
+  };
+
   enum class StrictFlexArraysLevelKind {
     /// Any trailing array member is a FAM.
     Default = 0,
@@ -391,6 +413,8 @@ public:
     /// Any trailing array member of undefined size is a FAM.
     IncompleteOnly = 3,
   };
+
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran, CX_None };
 
 public:
   /// The used language standard.
@@ -660,6 +684,26 @@ public:
            DefaultVisiblityExportMapping::All;
   }
 
+  bool hasGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() !=
+           VisibilityForcedKinds::Source;
+  }
+
+  bool hasDefaultGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceDefault;
+  }
+
+  bool hasProtectedGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceProtected;
+  }
+
+  bool hasHiddenGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceHidden;
+  }
+
   /// Remap path prefix according to -fmacro-prefix-path option.
   void remapPathPrefix(SmallVectorImpl<char> &Path) const;
 
@@ -741,6 +785,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setComplexRange(LO.getComplexRange());
   }
 
   bool allowFPContractWithinStatement() const {

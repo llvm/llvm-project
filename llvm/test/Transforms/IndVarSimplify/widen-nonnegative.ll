@@ -331,9 +331,7 @@ define void @zext_nneg_add_nsw(ptr %A, i32 %offset, i32 %M) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -658,9 +656,7 @@ define void @zext_nneg_mul_nsw(ptr %A, i32 %multiple, i32 %M) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[INDVARS_IV]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[IDXPROM_US:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]

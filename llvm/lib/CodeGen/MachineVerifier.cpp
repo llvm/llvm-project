@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -57,6 +56,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -1808,6 +1808,29 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     int64_t Test = TestMO.getImm();
     if (Test < 0 || Test > fcAllFlags) {
       report("Incorrect floating-point class set (operand 2)", MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_PREFETCH: {
+    const MachineOperand &AddrOp = MI->getOperand(0);
+    if (!AddrOp.isReg() || !MRI->getType(AddrOp.getReg()).isPointer()) {
+      report("addr operand must be a pointer", &AddrOp, 0);
+      break;
+    }
+    const MachineOperand &RWOp = MI->getOperand(1);
+    if (!RWOp.isImm() || (uint64_t)RWOp.getImm() >= 2) {
+      report("rw operand must be an immediate 0-1", &RWOp, 1);
+      break;
+    }
+    const MachineOperand &LocalityOp = MI->getOperand(2);
+    if (!LocalityOp.isImm() || (uint64_t)LocalityOp.getImm() >= 4) {
+      report("locality operand must be an immediate 0-3", &LocalityOp, 2);
+      break;
+    }
+    const MachineOperand &CacheTypeOp = MI->getOperand(3);
+    if (!CacheTypeOp.isImm() || (uint64_t)CacheTypeOp.getImm() >= 2) {
+      report("cache type operand must be an immediate 0-1", &CacheTypeOp, 3);
       break;
     }
     break;

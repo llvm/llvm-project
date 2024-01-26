@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 auto f(); // expected-note {{previous}}
 int f(); // expected-error {{differ only in their return type}}
@@ -640,3 +640,87 @@ namespace PR46637 {
   template<typename T> struct Y { T x; };
   Y<auto() -> auto> y; // expected-error {{'auto' not allowed in template argument}}
 }
+
+namespace GH71015 {
+
+// Check that there is no error in case a templated function is recursive and
+// has a placeholder return type.
+struct Node {
+  int value;
+  Node* left;
+  Node* right;
+};
+
+bool parse(const char*);
+Node* parsePrimaryExpr();
+
+auto parseMulExpr(auto node) { // cxx14-error {{'auto' not allowed in function prototype}} \
+                               // cxx14-note {{not viable}}
+  if (node == nullptr) node = parsePrimaryExpr();
+  if (!parse("*")) return node;
+  return parseMulExpr(new Node{.left = node, .right = parsePrimaryExpr()});
+}
+
+template <typename T>
+auto parseMulExpr2(T node) {
+  if (node == nullptr) node = parsePrimaryExpr();
+  if (!parse("*")) return node;
+  return parseMulExpr2(new Node{.left = node, .right = parsePrimaryExpr()});
+}
+
+template <typename T>
+auto parseMulExpr3(T node) { // expected-note {{declared here}}
+  if (node == nullptr) node = parsePrimaryExpr();
+  return parseMulExpr3(new Node{.left = node, .right = parsePrimaryExpr()}); // expected-error {{cannot be used before it is defined}}
+}
+
+void foo() {
+  parseMulExpr(new Node{}); // cxx14-error {{no matching function}}
+  parseMulExpr2(new Node{});
+  parseMulExpr3(new Node{}); // expected-note {{in instantiation}}
+}
+
+auto f(auto x) { // cxx14-error {{'auto' not allowed in function prototype}}
+  if (x == 0) return 0;
+  return f(1) + 1;
+}
+
+}
+
+#if __cplusplus >= 202002L
+template <typename T>
+concept C = true;
+#endif
+
+struct DeducedTargetTypeOfConversionFunction {
+  operator auto() const { return char(); }
+  operator const auto() const { return float(); }
+  operator const auto&() const { return int(); }
+  // expected-warning@-1 {{returning reference to local temporary object}}
+  operator decltype(auto)() const { return double(); }
+#if __cplusplus >= 202002L
+  operator C auto() const { return unsigned(); }
+  operator C decltype(auto)() const { return long(); }
+#endif
+
+  template <typename T>
+  operator auto() const { return short(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto() const { return int(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator const auto&() const { return char(); }
+  // since-cxx14-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator decltype(auto)() const { return unsigned(); }
+  // since-cxx14-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#if __cplusplus >= 202002L
+  template <typename T>
+  operator C auto() const { return float(); }
+  // since-cxx20-error@-1 {{'auto' not allowed in declaration of conversion function template}}
+  template <typename T>
+  operator C decltype(auto)() const { return double(); }
+  // since-cxx20-error@-1 {{'decltype(auto)' not allowed in declaration of conversion function template}}
+#endif
+};

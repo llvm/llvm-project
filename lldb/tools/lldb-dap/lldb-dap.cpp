@@ -37,6 +37,7 @@
 #endif
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <map>
@@ -47,6 +48,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -105,6 +107,14 @@ public:
 typedef void (*RequestCallback)(const llvm::json::Object &command);
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
+
+/// Prints a welcome message on the editor if the preprocessor variable
+/// LLDB_DAP_WELCOME_MESSAGE is defined.
+static void PrintWelcomeMessage() {
+#ifdef LLDB_DAP_WELCOME_MESSAGE
+  g_dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
+#endif
+}
 
 lldb::SBValueList *GetTopLevelScope(int64_t variablesReference) {
   switch (variablesReference) {
@@ -644,8 +654,7 @@ void request_attach(const llvm::json::Object &request) {
   const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
   g_dap.stop_at_entry =
       core_file.empty() ? GetBoolean(arguments, "stopOnEntry", false) : true;
-  std::vector<std::string> postRunCommands =
-      GetStrings(arguments, "postRunCommands");
+  g_dap.post_run_commands = GetStrings(arguments, "postRunCommands");
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
   g_dap.enable_auto_variable_summaries =
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
@@ -656,6 +665,8 @@ void request_attach(const llvm::json::Object &request) {
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
   g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
+  PrintWelcomeMessage();
+
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
   // the lldb-dap binary to have its working directory set to that relative
@@ -664,7 +675,12 @@ void request_attach(const llvm::json::Object &request) {
     llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
-  g_dap.RunInitCommands();
+  if (llvm::Error err = g_dap.RunInitCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   SetSourceMapFromArguments(*arguments);
 
@@ -678,7 +694,12 @@ void request_attach(const llvm::json::Object &request) {
   }
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  g_dap.RunPreRunCommands();
+  if (llvm::Error err = g_dap.RunPreRunCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   if (pid == LLDB_INVALID_PROCESS_ID && wait_for) {
     char attach_msg[256];
@@ -703,7 +724,12 @@ void request_attach(const llvm::json::Object &request) {
     // We have "attachCommands" that are a set of commands that are expected
     // to execute the commands after which a process should be created. If there
     // is no valid process after running these commands, we have failed.
-    g_dap.RunLLDBCommands("Running attachCommands:", attachCommands);
+    if (llvm::Error err = g_dap.RunAttachCommands(attachCommands)) {
+      response["success"] = false;
+      EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_dap.target = g_dap.debugger.GetSelectedTarget();
@@ -727,7 +753,7 @@ void request_attach(const llvm::json::Object &request) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
   } else {
-    g_dap.RunLLDBCommands("Running postRunCommands:", postRunCommands);
+    g_dap.RunPostRunCommands();
   }
 
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
@@ -1111,21 +1137,33 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  if (g_dap.DetectExpressionContext(frame, text) ==
-      ExpressionContext::Variable) {
-    char command[] = "expression -- ";
-    text = command + text;
-    offset += strlen(command);
+  if (!text.empty() &&
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
+    text = text.substr(g_dap.command_escape_prefix.size());
   }
-  lldb::SBStringList matches;
-  lldb::SBStringList descriptions;
 
-  if (g_dap.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
-          text.c_str(), offset, 0, 100, matches, descriptions)) {
+  // While the user is typing then we likely have an incomplete input and cannot
+  // reliably determine the precise intent (command vs variable), try completing
+  // the text as both a command and variable expression, if applicable.
+  const std::string expr_prefix = "expression -- ";
+  std::array<std::tuple<ReplMode, std::string, uint64_t>, 2> exprs = {
+      {std::make_tuple(ReplMode::Command, text, offset),
+       std::make_tuple(ReplMode::Variable, expr_prefix + text,
+                       offset + expr_prefix.size())}};
+  for (const auto &[mode, line, cursor] : exprs) {
+    if (g_dap.repl_mode != ReplMode::Auto && g_dap.repl_mode != mode)
+      continue;
+
+    lldb::SBStringList matches;
+    lldb::SBStringList descriptions;
+    if (!g_dap.debugger.GetCommandInterpreter()
+             .HandleCompletionWithDescriptions(line.c_str(), cursor, 0, 100,
+                                               matches, descriptions))
+      continue;
+
     // The first element is the common substring after the cursor position for
     // all the matches. The rest of the elements are the matches so ignore the
     // first result.
-    targets.reserve(matches.GetSize() - 1);
     for (size_t i = 1; i < matches.GetSize(); i++) {
       std::string match = matches.GetStringAtIndex(i);
       std::string description = descriptions.GetStringAtIndex(i);
@@ -1270,7 +1308,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (frame.IsValid()) {
       g_dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result = RunLLDBCommands(llvm::StringRef(), {std::string(expression)});
+    auto result =
+        RunLLDBCommandsVerbatim(llvm::StringRef(), {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1301,10 +1340,9 @@ void request_evaluate(const llvm::json::Object &request) {
       else
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
-      SetValueForKey(value, body, "result");
-      auto value_typename = value.GetType().GetDisplayTypeName();
-      EmplaceSafeString(body, "type",
-                        value_typename ? value_typename : NO_TYPENAME);
+      VariableDescription desc(value);
+      EmplaceSafeString(body, "result", desc.GetResult(context));
+      EmplaceSafeString(body, "type", desc.display_type_name);
       if (value.MightHaveChildren()) {
         auto variableReference = g_dap.variables.InsertExpandableVariable(
             value, /*is_permanent=*/context == "repl");
@@ -1740,7 +1778,8 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     // Set the launch info so that run commands can access the configured
     // launch details.
     g_dap.target.SetLaunchInfo(launch_info);
-    g_dap.RunLLDBCommands("Running launchCommands:", launchCommands);
+    if (llvm::Error err = g_dap.RunLaunchCommands(launchCommands))
+      error.SetErrorString(llvm::toString(std::move(err)).c_str());
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
     g_dap.target = g_dap.debugger.GetSelectedTarget();
@@ -1797,8 +1836,7 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.stop_commands = GetStrings(arguments, "stopCommands");
   g_dap.exit_commands = GetStrings(arguments, "exitCommands");
   g_dap.terminate_commands = GetStrings(arguments, "terminateCommands");
-  std::vector<std::string> postRunCommands =
-      GetStrings(arguments, "postRunCommands");
+  g_dap.post_run_commands = GetStrings(arguments, "postRunCommands");
   g_dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
   g_dap.enable_auto_variable_summaries =
@@ -1810,17 +1848,24 @@ void request_launch(const llvm::json::Object &request) {
   g_dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
   g_dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
 
+  PrintWelcomeMessage();
+
   // This is a hack for loading DWARF in .o files on Mac where the .o files
-  // in the debug map of the main executable have relative paths which require
-  // the lldb-dap binary to have its working directory set to that relative
-  // root for the .o files in order to be able to load debug info.
+  // in the debug map of the main executable have relative paths which
+  // require the lldb-dap binary to have its working directory set to that
+  // relative root for the .o files in order to be able to load debug info.
   if (!debuggerRoot.empty())
     llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
-  g_dap.RunInitCommands();
+  if (llvm::Error err = g_dap.RunInitCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   SetSourceMapFromArguments(*arguments);
 
@@ -1834,7 +1879,12 @@ void request_launch(const llvm::json::Object &request) {
   }
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  g_dap.RunPreRunCommands();
+  if (llvm::Error err = g_dap.RunPreRunCommands()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
+    g_dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   status = LaunchProcess(request);
 
@@ -1842,7 +1892,7 @@ void request_launch(const llvm::json::Object &request) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(status.GetCString()));
   } else {
-    g_dap.RunLLDBCommands("Running postRunCommands:", postRunCommands);
+    g_dap.RunPostRunCommands();
   }
 
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
@@ -3069,7 +3119,7 @@ void request_setVariable(const llvm::json::Object &request) {
     lldb::SBValue container = g_dap.variables.GetVariable(variablesReference);
     variable = container.GetChildMemberWithName(name.data());
     if (!variable.IsValid()) {
-      if (name.startswith("[")) {
+      if (name.starts_with("[")) {
         llvm::StringRef index_str(name.drop_front(1));
         uint64_t index = 0;
         if (!index_str.consumeInteger(0, index)) {
@@ -3084,8 +3134,9 @@ void request_setVariable(const llvm::json::Object &request) {
     lldb::SBError error;
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
-      SetValueForKey(variable, body, "value");
-      EmplaceSafeString(body, "type", variable.GetType().GetDisplayTypeName());
+      VariableDescription desc(variable);
+      EmplaceSafeString(body, "result", desc.display_value);
+      EmplaceSafeString(body, "type", desc.display_type_name);
 
       // We don't know the index of the variable in our g_dap.variables
       // so always insert a new one to get its variablesReference.
@@ -3708,7 +3759,8 @@ int SetupStdoutStderrRedirection() {
 
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
-  llvm::PrettyStackTraceProgram X(argc, argv);
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash backtrace.\n");
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);

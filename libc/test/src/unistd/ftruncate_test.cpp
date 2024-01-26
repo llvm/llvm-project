@@ -17,6 +17,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcFtruncateTest, CreateAndTruncate) {
@@ -33,14 +35,14 @@ TEST(LlvmLibcFtruncateTest, CreateAndTruncate) {
   //   4. Try to read more than 1 byte and fail.
   libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_EQ(ssize_t(WRITE_SIZE),
             LIBC_NAMESPACE::write(fd, WRITE_DATA, WRITE_SIZE));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_EQ(ssize_t(WRITE_SIZE), LIBC_NAMESPACE::read(fd, buf, WRITE_SIZE));
   ASSERT_EQ(cpp::string_view(buf), cpp::string_view(WRITE_DATA));
@@ -50,12 +52,12 @@ TEST(LlvmLibcFtruncateTest, CreateAndTruncate) {
   // writing.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::ftruncate(fd, off_t(1)), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_EQ(ssize_t(1), LIBC_NAMESPACE::read(fd, buf, WRITE_SIZE));
   ASSERT_EQ(buf[0], WRITE_DATA[0]);

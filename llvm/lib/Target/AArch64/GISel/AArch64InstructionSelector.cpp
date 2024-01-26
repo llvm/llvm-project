@@ -5610,7 +5610,7 @@ MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImmFP(
 
 bool AArch64InstructionSelector::selectIndexedExtLoad(
     MachineInstr &MI, MachineRegisterInfo &MRI) {
-  auto &ExtLd = cast<GIndexedExtLoad>(MI);
+  auto &ExtLd = cast<GIndexedAnyExtLoad>(MI);
   Register Dst = ExtLd.getDstReg();
   Register WriteBack = ExtLd.getWritebackReg();
   Register Base = ExtLd.getBaseReg();
@@ -5697,10 +5697,6 @@ bool AArch64InstructionSelector::selectIndexedExtLoad(
 
 bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
                                                    MachineRegisterInfo &MRI) {
-  // TODO: extending loads.
-  if (isa<GIndexedExtLoad>(MI))
-    return false;
-
   auto &Ld = cast<GIndexedLoad>(MI);
   Register Dst = Ld.getDstReg();
   Register WriteBack = Ld.getWritebackReg();
@@ -5709,6 +5705,9 @@ bool AArch64InstructionSelector::selectIndexedLoad(MachineInstr &MI,
   assert(MRI.getType(Dst).getSizeInBits() <= 128 &&
          "Unexpected type for indexed load");
   unsigned MemSize = Ld.getMMO().getMemoryType().getSizeInBytes();
+
+  if (MemSize < MRI.getType(Dst).getSizeInBytes())
+    return selectIndexedExtLoad(MI, MRI);
 
   unsigned Opc = 0;
   if (Ld.isPre()) {
@@ -6715,68 +6714,6 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     }
 
     I.eraseFromParent();
-    return true;
-  }
-  case Intrinsic::ptrauth_sign: {
-    Register DstReg = I.getOperand(0).getReg();
-    Register ValReg = I.getOperand(2).getReg();
-    uint64_t Key = I.getOperand(3).getImm();
-    Register DiscReg = I.getOperand(4).getReg();
-    auto DiscVal = getIConstantVRegVal(DiscReg, MRI);
-    bool IsDiscZero = DiscVal && DiscVal->isZero();
-
-    if (Key > AArch64PACKey::LAST)
-      return false;
-
-    unsigned Opcodes[][4] = {
-        {AArch64::PACIA, AArch64::PACIB, AArch64::PACDA, AArch64::PACDB},
-        {AArch64::PACIZA, AArch64::PACIZB, AArch64::PACDZA, AArch64::PACDZB}};
-    unsigned Opcode = Opcodes[IsDiscZero][Key];
-
-    auto PAC = MIB.buildInstr(Opcode, {DstReg}, {ValReg});
-
-    if (!IsDiscZero) {
-      PAC.addUse(DiscReg);
-      RBI.constrainGenericRegister(DiscReg, AArch64::GPR64spRegClass, MRI);
-    }
-
-    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
-    I.eraseFromParent();
-    return true;
-  }
-  case Intrinsic::ptrauth_strip: {
-    Register DstReg = I.getOperand(0).getReg();
-    Register ValReg = I.getOperand(2).getReg();
-    uint64_t Key = I.getOperand(3).getImm();
-
-    if (Key > AArch64PACKey::LAST)
-      return false;
-    unsigned Opcode = getXPACOpcodeForKey((AArch64PACKey::ID)Key);
-
-    MIB.buildInstr(Opcode, {DstReg}, {ValReg});
-
-    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
-    RBI.constrainGenericRegister(ValReg, AArch64::GPR64RegClass, MRI);
-    I.eraseFromParent();
-    return true;
-  }
-  case Intrinsic::ptrauth_blend: {
-    MachineFunction &MF = *I.getParent()->getParent();
-    auto RHS = getIConstantVRegVal(I.getOperand(3).getReg(), MRI);
-    if (RHS && (RHS->getZExtValue() <= 0xffff)) {
-      I.setDesc(TII.get(AArch64::MOVKXi));
-      I.removeOperand(3);
-      I.removeOperand(1);
-      MachineInstrBuilder(MF, I)
-          .addImm(RHS->getZExtValue() & 0xffff)
-          .addImm(48)
-          .constrainAllUses(TII, TRI, RBI);
-    } else {
-      I.setDesc(TII.get(AArch64::BFMXri));
-      I.removeOperand(1);
-      MachineInstrBuilder(MF, I).addImm(16).addImm(15).constrainAllUses(
-          TII, TRI, RBI);
-    }
     return true;
   }
   case Intrinsic::frameaddress:

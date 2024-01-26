@@ -2226,8 +2226,8 @@ public:
   UnsafeBufferUsageReporter(Sema &S, bool SuggestSuggestions)
     : S(S), SuggestSuggestions(SuggestSuggestions) {}
 
-  void handleUnsafeOperation(const Stmt *Operation,
-                             bool IsRelatedToDecl) override {
+  void handleUnsafeOperation(const Stmt *Operation, bool IsRelatedToDecl,
+                             ASTContext &Ctx) override {
     SourceLocation Loc;
     SourceRange Range;
     unsigned MsgParam = 0;
@@ -2261,6 +2261,21 @@ public:
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
+      } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
+        QualType destType = ECE->getType();
+        if (!isa<PointerType>(destType))
+          return;
+
+        const uint64_t dSize =
+            Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
+
+        QualType srcType = ECE->getSubExpr()->getType();
+        const uint64_t sSize =
+            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+        if (sSize >= dSize)
+          return;
+
+        MsgParam = 4;
       }
       Loc = Operation->getBeginLoc();
       Range = Operation->getSourceRange();

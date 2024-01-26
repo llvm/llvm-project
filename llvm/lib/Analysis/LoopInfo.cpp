@@ -969,7 +969,9 @@ LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
 
 PreservedAnalyses LoopPrinterPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
-  AM.getResult<LoopAnalysis>(F).print(OS);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  OS << "Loop info for function '" << F.getName() << "':\n";
+  LI.print(OS);
   return PreservedAnalyses::all();
 }
 
@@ -1143,7 +1145,7 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
         if (S)
           IsVectorMetadata =
               llvm::any_of(RemovePrefixes, [S](StringRef Prefix) -> bool {
-                return S->getString().startswith(Prefix);
+                return S->getString().starts_with(Prefix);
               });
       }
       if (!IsVectorMetadata)

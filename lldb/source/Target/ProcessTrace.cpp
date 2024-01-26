@@ -20,6 +20,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+LLDB_PLUGIN_DEFINE(ProcessTrace)
+
 llvm::StringRef ProcessTrace::GetPluginDescriptionStatic() {
   return "Trace process plug-in.";
 }

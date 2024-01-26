@@ -280,7 +280,7 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                          operandDimPos)))
       return failure();
 
-    Value dynamicDim = linalgOp.hasTensorSemantics()
+    Value dynamicDim = linalgOp.hasPureTensorSemantics()
                            ? (Value)rewriter.create<tensor::DimOp>(
                                  linalgOp.getLoc(), operand, operandDimPos)
                            : (Value)rewriter.create<memref::DimOp>(
@@ -894,10 +894,16 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   return result;
 }
 
-/// Check whether \p extractOp would be a gather or a contiguous load Op after
-/// vectorising \p linalgOp. Note that it is always safe to use gather load
-/// operations for contiguous loads (albeit slow), but not vice-versa. When in
-/// doubt, bail out and assume that \p extractOp is a gather load.
+/// Infer the memory access pattern for the input ExtractOp
+///
+/// Based on the operation shapes and indices (usually based on the iteration
+/// space of the parent `linalgOp` operation), decides whether the input
+/// ExtractOp is a contiguous load (including a broadcast of a scalar) or a
+/// gather load.
+///
+/// Note that it is always safe to use gather load operations for contiguous
+/// loads (albeit slow), but not vice-versa. When in doubt, bail out and assume
+/// that `extractOp` is a gather load.
 static VectorMemoryAccessKind
 getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
                                     LinalgOp &linalgOp) {
@@ -916,8 +922,8 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
     return VectorMemoryAccessKind::Gather;
 
   // 1. Assume that it's a gather load when reading _into_:
-  //    * an n-D vector, like`tensor<1x2x4xi32` or`tensor<2x1x4xi32>`, or
-  //    * a 1-D vector with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
+  //    * an n-D "vector", like `tensor<1x2x4xi32` or `tensor<2x1x4xi32>`, or
+  //    * a 1-D "vector" with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
   // TODO: Relax these conditions.
   // FIXME: This condition assumes non-dynamic sizes.
   if ((llvm::count_if(targetShape,
@@ -1946,7 +1952,7 @@ struct PadOpVectorizationWithTransferReadPattern
     if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
       return failure();
 
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
       xferOp->setAttr(xferOp.getInBoundsAttrName(),
                       rewriter.getBoolArrayAttr(inBounds));
@@ -2426,11 +2432,11 @@ bool isCastOfBlockArgument(Operation *op) {
 bool isSupportedPoolKind(vector::CombiningKind kind) {
   switch (kind) {
   case vector::CombiningKind::ADD:
-  case vector::CombiningKind::MAXF:
+  case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
-  case vector::CombiningKind::MINF:
+  case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
@@ -2493,8 +2499,8 @@ struct Conv1DGenerator
       return;
     // (LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC) OR
     // (non-channeled convolution -> LHS and RHS both have single dimensions).
-    if (!((lhsShapedType.getRank() == 3 && resShapedType.getRank() == 3) ||
-          (lhsShapedType.getRank() == 1 && resShapedType.getRank() == 1)))
+    if ((lhsShapedType.getRank() != 3 || resShapedType.getRank() != 3) &&
+        (lhsShapedType.getRank() != 1 || resShapedType.getRank() != 1))
       return;
 
     Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));
@@ -2910,17 +2916,16 @@ struct Conv1DGenerator
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         Value lhsVal = lhsVals[linearIndex(kw, w)];
         Value resVal = resVals[w];
-        ShapedType filterBCastTy = cast<ShapedType>(resVal.getType());
         if (flatten) {
-          // Flatten the input and filter vectors (collapse the channel
+          // Flatten the input and output vectors (collapse the channel
           // dimension)
           lhsVal = rewriter.create<vector::ShapeCastOp>(
               loc, lhsCastType, lhsVals[linearIndex(kw, w)]);
           resVal = rewriter.create<vector::ShapeCastOp>(loc, resCastType,
                                                         resVals[w]);
         }
-        resVals[w] = depthwiseConv1dSliceAsMulAcc(
-            rewriter, loc, lhsVal, rhsVals[kw], resVal, filterBCastTy, flatten);
+        resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc, lhsVal,
+                                                  rhsVals[kw], resVal, flatten);
         if (flatten) {
           // Un-flatten the output vector (restore the channel dimension)
           resVals[w] = rewriter.create<vector::ShapeCastOp>(
@@ -2964,20 +2969,32 @@ struct Conv1DGenerator
   /// to MulAcc.
   Value depthwiseConv1dSliceAsMulAcc(RewriterBase &rewriter, Location loc,
                                      Value lhs, Value rhs, Value res,
-                                     ShapedType bcastTy, bool flatten) {
+                                     bool flatten) {
     auto rhsTy = cast<ShapedType>(rhs.getType());
     auto resTy = cast<ShapedType>(res.getType());
 
     // TODO(suderman): Change this to use a vector.ima intrinsic.
     lhs = promote(rewriter, loc, lhs, resTy);
 
-    rhs = rewriter.create<vector::BroadcastOp>(
-        loc, bcastTy.clone(rhsTy.getElementType()), rhs);
     if (flatten) {
-      // Flatten the channel dimension
-      rhs = rewriter.create<vector::ShapeCastOp>(
-          loc, resTy.clone(rhsTy.getElementType()), rhs);
+      // There are two options for handling the filter:
+      //  * shape_cast(broadcast(filter))
+      //  * broadcast(shuffle(filter))
+      // Opt for the option without shape_cast to simplify the codegen.
+      auto rhsSize = rhs.getType().cast<VectorType>().getShape()[0];
+      auto resSize = res.getType().cast<VectorType>().getShape()[1];
+
+      SmallVector<int64_t, 16> indicies;
+      for (int i = 0; i < resSize / rhsSize; ++i) {
+        for (int j = 0; j < rhsSize; ++j)
+          indicies.push_back(j);
+      }
+
+      rhs = rewriter.create<vector::ShuffleOp>(loc, rhs, rhs, indicies);
     }
+    // Broadcast the filter to match the output vector
+    rhs = rewriter.create<vector::BroadcastOp>(
+        loc, resTy.clone(rhsTy.getElementType()), rhs);
 
     rhs = promote(rewriter, loc, rhs, resTy);
 

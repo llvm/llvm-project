@@ -393,39 +393,6 @@ ValueObjectSP ValueObject::GetChildAtIndex(size_t idx, bool can_create) {
 }
 
 lldb::ValueObjectSP
-ValueObject::GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
-                                 size_t *index_of_error) {
-  if (idxs.size() == 0)
-    return GetSP();
-  ValueObjectSP root(GetSP());
-  for (size_t idx : idxs) {
-    root = root->GetChildAtIndex(idx);
-    if (!root) {
-      if (index_of_error)
-        *index_of_error = idx;
-      return root;
-    }
-  }
-  return root;
-}
-
-lldb::ValueObjectSP ValueObject::GetChildAtIndexPath(
-  llvm::ArrayRef<std::pair<size_t, bool>> idxs, size_t *index_of_error) {
-  if (idxs.size() == 0)
-    return GetSP();
-  ValueObjectSP root(GetSP());
-  for (std::pair<size_t, bool> idx : idxs) {
-    root = root->GetChildAtIndex(idx.first, idx.second);
-    if (!root) {
-      if (index_of_error)
-        *index_of_error = idx.first;
-      return root;
-    }
-  }
-  return root;
-}
-
-lldb::ValueObjectSP
 ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   if (names.size() == 0)
     return GetSP();
@@ -846,8 +813,7 @@ static bool CopyStringDataToBufferSP(const StreamString &source,
 
 std::pair<size_t, bool>
 ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
-                               Status &error, uint32_t max_length,
-                               bool honor_array, Format item_format) {
+                               Status &error, bool honor_array) {
   bool was_capped = false;
   StreamString s;
   ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -860,8 +826,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     return {0, was_capped};
   }
 
-  if (max_length == 0)
-    max_length = target->GetMaximumSizeOfStringSummary();
+  const auto max_length = target->GetMaximumSizeOfStringSummary();
 
   size_t bytes_read = 0;
   size_t total_bytes_read = 0;
@@ -1182,9 +1147,10 @@ bool ValueObject::DumpPrintableRepresentation(
       {
         Status error;
         lldb::WritableDataBufferSP buffer_sp;
-        std::pair<size_t, bool> read_string = ReadPointedString(
-            buffer_sp, error, 0, (custom_format == eFormatVectorOfChar) ||
-                                     (custom_format == eFormatCharArray));
+        std::pair<size_t, bool> read_string =
+            ReadPointedString(buffer_sp, error,
+                              (custom_format == eFormatVectorOfChar) ||
+                                  (custom_format == eFormatCharArray));
         lldb_private::formatters::StringPrinter::
             ReadBufferAndDumpToStreamOptions options(*this);
         options.SetData(DataExtractor(
@@ -2105,7 +2071,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
         return ValueObjectSP();
       }
-      if (!temp_expression.startswith(">")) {
+      if (!temp_expression.starts_with(">")) {
         *reason_to_stop =
             ValueObject::eExpressionPathScanEndReasonUnexpectedSymbol;
         *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;

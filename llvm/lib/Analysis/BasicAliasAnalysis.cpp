@@ -69,7 +69,7 @@ static cl::opt<bool> EnableRecPhiAnalysis("basic-aa-recphi", cl::Hidden,
                                           cl::init(true));
 
 static cl::opt<bool> EnableSeparateStorageAnalysis("basic-aa-separate-storage",
-                                                   cl::Hidden, cl::init(false));
+                                                   cl::Hidden, cl::init(true));
 
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
@@ -215,7 +215,7 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   auto Iter = EarliestEscapes.insert({Object, nullptr});
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
-        Object, *const_cast<Function *>(I->getFunction()),
+        Object, *const_cast<Function *>(DT.getRoot()->getParent()),
         /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
     if (EarliestCapture) {
       auto Ins = Inst2Obj.insert({EarliestCapture, {}});
@@ -227,6 +227,10 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   // No capturing instruction.
   if (!Iter.first->second)
     return true;
+
+  // No context instruction means any use is capturing.
+  if (!I)
+    return false;
 
   if (I == Iter.first->second) {
     if (OrAt)
@@ -393,10 +397,8 @@ static LinearExpression GetLinearExpression(
         // further.
         return Val;
       case Instruction::Or:
-        // X|C == X+C if all the bits in C are unset in X.  Otherwise we can't
-        // analyze it.
-        if (!MaskedValueIsZero(BOp->getOperand(0), RHSC->getValue(),
-                               SimplifyQuery(DL, DT, AC, BOp)))
+        // X|C == X+C if it is disjoint.  Otherwise we can't analyze it.
+        if (!cast<PossiblyDisjointInst>(BOp)->isDisjoint())
           return Val;
 
         [[fallthrough]];
@@ -639,7 +641,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           continue;
 
         // Don't attempt to analyze GEPs if the scalable index is not zero.
-        TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+        TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
         if (AllocTypeSize.isScalable()) {
           Decomposed.Base = V;
           return Decomposed;
@@ -650,7 +652,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         continue;
       }
 
-      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      TypeSize AllocTypeSize = GTI.getSequentialElementStride(DL);
       if (AllocTypeSize.isScalable()) {
         Decomposed.Base = V;
         return Decomposed;
@@ -1504,11 +1506,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     if (isIdentifiedObject(O1) && isIdentifiedObject(O2))
       return AliasResult::NoAlias;
 
-    // Constant pointers can't alias with non-const isIdentifiedObject objects.
-    if ((isa<Constant>(O1) && isIdentifiedObject(O2) && !isa<Constant>(O2)) ||
-        (isa<Constant>(O2) && isIdentifiedObject(O1) && !isa<Constant>(O1)))
-      return AliasResult::NoAlias;
-
     // Function arguments can't alias with things that are known to be
     // unambigously identified at the function level.
     if ((isa<Argument>(O1) && isIdentifiedFunctionLocal(O2)) ||
@@ -1524,11 +1521,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) &&
-        AAQI.CI->isNotCapturedBefore(O2, cast<Instruction>(O1), /*OrAt*/ true))
+    if (isEscapeSource(O1) && AAQI.CI->isNotCapturedBefore(
+                                  O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) &&
-        AAQI.CI->isNotCapturedBefore(O1, cast<Instruction>(O2), /*OrAt*/ true))
+    if (isEscapeSource(O2) && AAQI.CI->isNotCapturedBefore(
+                                  O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
       return AliasResult::NoAlias;
   }
 
@@ -1543,28 +1540,45 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
           TLI, NullIsValidLocation)))
     return AliasResult::NoAlias;
 
-  if (CtxI && EnableSeparateStorageAnalysis) {
-    for (auto &AssumeVH : AC.assumptions()) {
-      if (!AssumeVH)
+  if (EnableSeparateStorageAnalysis) {
+    for (AssumptionCache::ResultElem &Elem : AC.assumptionsFor(O1)) {
+      if (!Elem || Elem.Index == AssumptionCache::ExprResultIdx)
         continue;
 
-      AssumeInst *Assume = cast<AssumeInst>(AssumeVH);
+      AssumeInst *Assume = cast<AssumeInst>(Elem);
+      OperandBundleUse OBU = Assume->getOperandBundleAt(Elem.Index);
+      if (OBU.getTagName() == "separate_storage") {
+        assert(OBU.Inputs.size() == 2);
+        const Value *Hint1 = OBU.Inputs[0].get();
+        const Value *Hint2 = OBU.Inputs[1].get();
+        // This is often a no-op; instcombine rewrites this for us. No-op
+        // getUnderlyingObject calls are fast, though.
+        const Value *HintO1 = getUnderlyingObject(Hint1);
+        const Value *HintO2 = getUnderlyingObject(Hint2);
 
-      for (unsigned Idx = 0; Idx < Assume->getNumOperandBundles(); Idx++) {
-        OperandBundleUse OBU = Assume->getOperandBundleAt(Idx);
-        if (OBU.getTagName() == "separate_storage") {
-          assert(OBU.Inputs.size() == 2);
-          const Value *Hint1 = OBU.Inputs[0].get();
-          const Value *Hint2 = OBU.Inputs[1].get();
-          // This is often a no-op; instcombine rewrites this for us. No-op
-          // getUnderlyingObject calls are fast, though.
-          const Value *HintO1 = getUnderlyingObject(Hint1);
-          const Value *HintO2 = getUnderlyingObject(Hint2);
+        auto ValidAssumeForPtrContext = [&](const Value *Ptr) {
+          if (const Instruction *PtrI = dyn_cast<Instruction>(Ptr)) {
+            return isValidAssumeForContext(Assume, PtrI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          if (const Argument *PtrA = dyn_cast<Argument>(Ptr)) {
+            const Instruction *FirstI =
+                &*PtrA->getParent()->getEntryBlock().begin();
+            return isValidAssumeForContext(Assume, FirstI, DT,
+                                           /* AllowEphemerals */ true);
+          }
+          return false;
+        };
 
-          if (((O1 == HintO1 && O2 == HintO2) ||
-               (O1 == HintO2 && O2 == HintO1)) &&
-              isValidAssumeForContext(Assume, CtxI, DT))
+        if ((O1 == HintO1 && O2 == HintO2) || (O1 == HintO2 && O2 == HintO1)) {
+          // Note that we go back to V1 and V2 for the
+          // ValidAssumeForPtrContext checks; they're dominated by O1 and O2,
+          // so strictly more assumptions are valid for them.
+          if ((CtxI && isValidAssumeForContext(Assume, CtxI, DT,
+                                               /* AllowEphemerals */ true)) ||
+              ValidAssumeForPtrContext(V1) || ValidAssumeForPtrContext(V2)) {
             return AliasResult::NoAlias;
+          }
         }
       }
     }

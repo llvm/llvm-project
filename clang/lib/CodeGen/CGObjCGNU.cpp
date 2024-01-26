@@ -18,6 +18,8 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenTypes.h"
+#include "SanitizerMetadata.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -168,6 +170,8 @@ protected:
   /// Does the current target use SEH-based exceptions? False implies
   /// Itanium-style DWARF unwinding.
   bool usesSEHExceptions;
+  /// Does the current target uses C++-based exceptions?
+  bool usesCxxExceptions;
 
   /// Helper to check if we are targeting a specific runtime version or later.
   bool isRuntime(ObjCRuntime::Kind kind, unsigned major, unsigned minor=0) {
@@ -595,6 +599,10 @@ public:
 
   llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                  const ObjCContainerDecl *CD) override;
+
+  // Map to unify direct method definitions.
+  llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *>
+      DirectMethodDefinitions;
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
                                     const ObjCContainerDecl *CD) override;
@@ -819,12 +827,18 @@ class CGObjCGNUstep : public CGObjCGNU {
       SlotLookupSuperFn.init(&CGM, "objc_slot_lookup_super", SlotTy,
                              PtrToObjCSuperTy, SelectorTy);
       // If we're in ObjC++ mode, then we want to make
-      if (usesSEHExceptions) {
-          llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
-          // void objc_exception_rethrow(void)
-          ExceptionReThrowFn.init(&CGM, "objc_exception_rethrow", VoidTy);
+      llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
+      if (usesCxxExceptions) {
+        // void *__cxa_begin_catch(void *e)
+        EnterCatchFn.init(&CGM, "__cxa_begin_catch", PtrTy, PtrTy);
+        // void __cxa_end_catch(void)
+        ExitCatchFn.init(&CGM, "__cxa_end_catch", VoidTy);
+        // void objc_exception_rethrow(void*)
+        ExceptionReThrowFn.init(&CGM, "__cxa_rethrow", PtrTy);
+      } else if (usesSEHExceptions) {
+        // void objc_exception_rethrow(void)
+        ExceptionReThrowFn.init(&CGM, "objc_exception_rethrow", VoidTy);
       } else if (CGM.getLangOpts().CPlusPlus) {
-        llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
         // void *__cxa_begin_catch(void *e)
         EnterCatchFn.init(&CGM, "__cxa_begin_catch", PtrTy, PtrTy);
         // void __cxa_end_catch(void)
@@ -833,7 +847,6 @@ class CGObjCGNUstep : public CGObjCGNU {
         ExceptionReThrowFn.init(&CGM, "_Unwind_Resume_or_Rethrow", VoidTy,
                                 PtrTy);
       } else if (R.getVersion() >= VersionTuple(1, 7)) {
-        llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
         // id objc_begin_catch(void *e)
         EnterCatchFn.init(&CGM, "objc_begin_catch", IdTy, PtrTy);
         // void objc_end_catch(void)
@@ -841,7 +854,6 @@ class CGObjCGNUstep : public CGObjCGNU {
         // void _Unwind_Resume_or_Rethrow(void*)
         ExceptionReThrowFn.init(&CGM, "objc_exception_rethrow", VoidTy, PtrTy);
       }
-      llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
       SetPropertyAtomic.init(&CGM, "objc_setProperty_atomic", VoidTy, IdTy,
                              SelectorTy, IdTy, PtrDiffTy);
       SetPropertyAtomicCopy.init(&CGM, "objc_setProperty_atomic_copy", VoidTy,
@@ -911,6 +923,14 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     ClassAliasSection,
     ConstantStringSection
   };
+  /// The subset of `objc_class_flags` used at compile time.
+  enum ClassFlags {
+    /// This is a metaclass
+    ClassFlagMeta = (1 << 0),
+    /// This class has been initialised by the runtime (+initialize has been
+    /// sent if necessary).
+    ClassFlagInitialized = (1 << 8),
+  };
   static const char *const SectionsBaseNames[8];
   static const char *const PECOFFSectionsBaseNames[8];
   template<SectionKind K>
@@ -926,6 +946,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   /// structure describing the receiver and the class, and a selector as
   /// arguments.  Returns the IMP for the corresponding method.
   LazyRuntimeFunction MsgLookupSuperFn;
+  /// Function to ensure that +initialize is sent to a class.
+  LazyRuntimeFunction SentInitializeFn;
   /// A flag indicating if we've emitted at least one protocol.
   /// If we haven't, then we need to emit an empty protocol, to ensure that the
   /// __start__objc_protocols and __stop__objc_protocols sections exist.
@@ -1425,12 +1447,24 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
                                 const std::string &TypeEncoding) override {
     return GetConstantSelector(Sel, TypeEncoding);
   }
+  std::string GetSymbolNameForTypeEncoding(const std::string &TypeEncoding) {
+    std::string MangledTypes = std::string(TypeEncoding);
+    // @ is used as a special character in ELF symbol names (used for symbol
+    // versioning), so mangle the name to not include it.  Replace it with a
+    // character that is not a valid type encoding character (and, being
+    // non-printable, never will be!)
+    if (CGM.getTriple().isOSBinFormatELF())
+      std::replace(MangledTypes.begin(), MangledTypes.end(), '@', '\1');
+    // = in dll exported names causes lld to fail when linking on Windows.
+    if (CGM.getTriple().isOSWindows())
+      std::replace(MangledTypes.begin(), MangledTypes.end(), '=', '\2');
+    return MangledTypes;
+  }
   llvm::Constant  *GetTypeString(llvm::StringRef TypeEncoding) {
     if (TypeEncoding.empty())
       return NULLPtr;
-    std::string MangledTypes = std::string(TypeEncoding);
-    std::replace(MangledTypes.begin(), MangledTypes.end(),
-      '@', '\1');
+    std::string MangledTypes =
+        GetSymbolNameForTypeEncoding(std::string(TypeEncoding));
     std::string TypesVarName = ".objc_sel_types_" + MangledTypes;
     auto *TypesGlobal = TheModule.getGlobalVariable(TypesVarName);
     if (!TypesGlobal) {
@@ -1447,13 +1481,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   }
   llvm::Constant *GetConstantSelector(Selector Sel,
                                       const std::string &TypeEncoding) override {
-    // @ is used as a special character in symbol names (used for symbol
-    // versioning), so mangle the name to not include it.  Replace it with a
-    // character that is not a valid type encoding character (and, being
-    // non-printable, never will be!)
-    std::string MangledTypes = TypeEncoding;
-    std::replace(MangledTypes.begin(), MangledTypes.end(),
-      '@', '\1');
+    std::string MangledTypes = GetSymbolNameForTypeEncoding(TypeEncoding);
     auto SelVarName = (StringRef(".objc_selector_") + Sel.getAsString() + "_" +
       MangledTypes).str();
     if (auto *GV = TheModule.getNamedGlobal(SelVarName))
@@ -1665,9 +1693,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
                                         const ObjCIvarDecl *Ivar) override {
     std::string TypeEncoding;
     CGM.getContext().getObjCEncodingForType(Ivar->getType(), TypeEncoding);
-    // Prevent the @ from being interpreted as a symbol version.
-    std::replace(TypeEncoding.begin(), TypeEncoding.end(),
-      '@', '\1');
+    TypeEncoding = GetSymbolNameForTypeEncoding(TypeEncoding);
     const std::string Name = "__objc_ivar_offset_" + ID->getNameAsString()
       + '.' + Ivar->getNameAsString() + '.' + TypeEncoding;
     return Name;
@@ -1709,7 +1735,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     metaclassFields.addInt(LongTy, 0);
     // unsigned long info;
     // objc_class_flag_meta
-    metaclassFields.addInt(LongTy, 1);
+    metaclassFields.addInt(LongTy, ClassFlags::ClassFlagMeta);
     // long instance_size;
     // Setting this to zero is consistent with the older ABI, but it might be
     // more sensible to set this to sizeof(struct objc_class)
@@ -1851,6 +1877,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
                     llvm::GlobalValue::HiddenVisibility :
                     llvm::GlobalValue::DefaultVisibility;
         OffsetVar->setVisibility(ivarVisibility);
+        if (ivarVisibility != llvm::GlobalValue::HiddenVisibility)
+          CGM.setGVProperties(OffsetVar, OID->getClassInterface());
         ivarBuilder.add(OffsetVar);
         // Ivar size
         ivarBuilder.addInt(Int32Ty,
@@ -1981,6 +2009,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     CGObjCGNUstep2(CodeGenModule &Mod) : CGObjCGNUstep(Mod, 10, 4, 2) {
       MsgLookupSuperFn.init(&CGM, "objc_msg_lookup_super", IMPTy,
                             PtrToObjCSuperTy, SelectorTy);
+      SentInitializeFn.init(&CGM, "objc_send_initialize",
+                            llvm::Type::getVoidTy(VMContext), IdTy);
       // struct objc_property
       // {
       //   const char *name;
@@ -1994,6 +2024,106 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
             { PtrToInt8Ty, PtrToInt8Ty, PtrToInt8Ty, PtrToInt8Ty, PtrToInt8Ty });
     }
 
+    void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
+                                      const ObjCMethodDecl *OMD,
+                                      const ObjCContainerDecl *CD) override {
+      auto &Builder = CGF.Builder;
+      bool ReceiverCanBeNull = true;
+      auto selfAddr = CGF.GetAddrOfLocalVar(OMD->getSelfDecl());
+      auto selfValue = Builder.CreateLoad(selfAddr);
+
+      // Generate:
+      //
+      // /* unless the receiver is never NULL */
+      // if (self == nil) {
+      //     return (ReturnType){ };
+      // }
+      //
+      // /* for class methods only to force class lazy initialization */
+      // if (!__objc_{class}_initialized)
+      // {
+      //   objc_send_initialize(class);
+      //   __objc_{class}_initialized = 1;
+      // }
+      //
+      // _cmd = @selector(...)
+      // ...
+
+      if (OMD->isClassMethod()) {
+        const ObjCInterfaceDecl *OID = cast<ObjCInterfaceDecl>(CD);
+
+        // Nullable `Class` expressions cannot be messaged with a direct method
+        // so the only reason why the receive can be null would be because
+        // of weak linking.
+        ReceiverCanBeNull = isWeakLinkedClass(OID);
+      }
+
+      llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+      if (ReceiverCanBeNull) {
+        llvm::BasicBlock *SelfIsNilBlock =
+            CGF.createBasicBlock("objc_direct_method.self_is_nil");
+        llvm::BasicBlock *ContBlock =
+            CGF.createBasicBlock("objc_direct_method.cont");
+
+        // if (self == nil) {
+        auto selfTy = cast<llvm::PointerType>(selfValue->getType());
+        auto Zero = llvm::ConstantPointerNull::get(selfTy);
+
+        Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero),
+                             SelfIsNilBlock, ContBlock,
+                             MDHelper.createBranchWeights(1, 1 << 20));
+
+        CGF.EmitBlock(SelfIsNilBlock);
+
+        //   return (ReturnType){ };
+        auto retTy = OMD->getReturnType();
+        Builder.SetInsertPoint(SelfIsNilBlock);
+        if (!retTy->isVoidType()) {
+          CGF.EmitNullInitialization(CGF.ReturnValue, retTy);
+        }
+        CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+        // }
+
+        // rest of the body
+        CGF.EmitBlock(ContBlock);
+        Builder.SetInsertPoint(ContBlock);
+      }
+
+      if (OMD->isClassMethod()) {
+        // Prefix of the class type.
+        auto *classStart =
+            llvm::StructType::get(PtrTy, PtrTy, PtrTy, LongTy, LongTy);
+        auto &astContext = CGM.getContext();
+        auto flags = Builder.CreateLoad(
+            Address{Builder.CreateStructGEP(classStart, selfValue, 4), LongTy,
+                    CharUnits::fromQuantity(
+                        astContext.getTypeAlign(astContext.UnsignedLongTy))});
+        auto isInitialized =
+            Builder.CreateAnd(flags, ClassFlags::ClassFlagInitialized);
+        llvm::BasicBlock *notInitializedBlock =
+            CGF.createBasicBlock("objc_direct_method.class_uninitialized");
+        llvm::BasicBlock *initializedBlock =
+            CGF.createBasicBlock("objc_direct_method.class_initialized");
+        Builder.CreateCondBr(Builder.CreateICmpEQ(isInitialized, Zeros[0]),
+                             notInitializedBlock, initializedBlock,
+                             MDHelper.createBranchWeights(1, 1 << 20));
+        CGF.EmitBlock(notInitializedBlock);
+        Builder.SetInsertPoint(notInitializedBlock);
+        CGF.EmitRuntimeCall(SentInitializeFn, selfValue);
+        Builder.CreateBr(initializedBlock);
+        CGF.EmitBlock(initializedBlock);
+        Builder.SetInsertPoint(initializedBlock);
+      }
+
+      // only synthesize _cmd if it's referenced
+      if (OMD->getCmdDecl()->isUsed()) {
+        // `_cmd` is not a parameter to direct methods, so storage must be
+        // explicitly declared for it.
+        CGF.EmitVarDecl(*OMD->getCmdDecl());
+        Builder.CreateStore(GetSelector(CGF, OMD),
+                            CGF.GetAddrOfLocalVar(OMD->getCmdDecl()));
+      }
+    }
 };
 
 const char *const CGObjCGNUstep2::SectionsBaseNames[8] =
@@ -2124,6 +2254,9 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
   msgSendMDKind = VMContext.getMDKindID("GNUObjCMessageSend");
   usesSEHExceptions =
       cgm.getContext().getTargetInfo().getTriple().isWindowsMSVCEnvironment();
+  usesCxxExceptions =
+      cgm.getContext().getTargetInfo().getTriple().isOSCygMing() &&
+      isRuntime(ObjCRuntime::GNUstep, 2);
 
   CodeGenTypes &Types = CGM.getTypes();
   IntTy = cast<llvm::IntegerType>(
@@ -2210,7 +2343,10 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
 
   // void objc_exception_throw(id);
   ExceptionThrowFn.init(&CGM, "objc_exception_throw", VoidTy, IdTy);
-  ExceptionReThrowFn.init(&CGM, "objc_exception_throw", VoidTy, IdTy);
+  ExceptionReThrowFn.init(&CGM,
+                          usesCxxExceptions ? "objc_exception_rethrow"
+                                            : "objc_exception_throw",
+                          VoidTy, IdTy);
   // int objc_sync_enter(id);
   SyncEnterFn.init(&CGM, "objc_sync_enter", IntTy, IdTy);
   // int objc_sync_exit(id);
@@ -2387,7 +2523,7 @@ llvm::Constant *CGObjCGNUstep::GetEHType(QualType T) {
   if (usesSEHExceptions)
     return CGM.getCXXABI().getAddrOfRTTIDescriptor(T);
 
-  if (!CGM.getLangOpts().CPlusPlus)
+  if (!CGM.getLangOpts().CPlusPlus && !usesCxxExceptions)
     return CGObjCGNU::GetEHType(T);
 
   // For Objective-C++, we want to provide the ability to catch both C++ and
@@ -2631,13 +2767,18 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
     }
   }
 
+  bool isDirect = Method && Method->isDirectMethod();
+
   IdTy = cast<llvm::PointerType>(CGM.getTypes().ConvertType(ASTIdTy));
   llvm::Value *cmd;
-  if (Method)
-    cmd = GetSelector(CGF, Method);
-  else
-    cmd = GetSelector(CGF, Sel);
-  cmd = EnforceType(Builder, cmd, SelectorTy);
+  if (!isDirect) {
+    if (Method)
+      cmd = GetSelector(CGF, Method);
+    else
+      cmd = GetSelector(CGF, Sel);
+    cmd = EnforceType(Builder, cmd, SelectorTy);
+  }
+
   Receiver = EnforceType(Builder, Receiver, IdTy);
 
   llvm::Metadata *impMD[] = {
@@ -2649,7 +2790,8 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
 
   CallArgList ActualArgs;
   ActualArgs.add(RValue::get(Receiver), ASTIdTy);
-  ActualArgs.add(RValue::get(cmd), CGF.getContext().getObjCSelType());
+  if (!isDirect)
+    ActualArgs.add(RValue::get(cmd), CGF.getContext().getObjCSelType());
   ActualArgs.addFrom(CallArgs);
 
   MessageSendInfo MSI = getMessageSendInfo(Method, ResultType, ActualArgs);
@@ -2668,7 +2810,7 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   // Rather than doing a whole target-specific analysis, we assume it
   // only works for void, integer, and pointer types, and in all
   // other cases we do an explicit nil check is emitted code.  In
-  // addition to ensuring we produe a zero value for other types, this
+  // addition to ensuring we produce a zero value for other types, this
   // sidesteps the few outright CC incompatibilities we know about that
   // could otherwise lead to crashes, like when a method is expected to
   // return on the x87 floating point stack or adjust the stack pointer
@@ -2702,8 +2844,9 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
         // FIXME: we probably need a size limit here, but we've
         // never imposed one before
       } else {
-        // Otherwise, use an explicit check just to be sure.
-        requiresExplicitZeroResult = true;
+        // Otherwise, use an explicit check just to be sure, unless we're
+        // calling a direct method, where the implementation does this for us.
+        requiresExplicitZeroResult = !isDirect;
       }
     }
 
@@ -2747,10 +2890,14 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   // Get the IMP to call
   llvm::Value *imp;
 
-  // If we have non-legacy dispatch specified, we try using the objc_msgSend()
-  // functions.  These are not supported on all platforms (or all runtimes on a
-  // given platform), so we
-  switch (CGM.getCodeGenOpts().getObjCDispatchMethod()) {
+  // If this is a direct method, just emit it here.
+  if (isDirect)
+    imp = GenerateMethod(Method, Method->getClassInterface());
+  else
+    // If we have non-legacy dispatch specified, we try using the
+    // objc_msgSend() functions.  These are not supported on all platforms
+    // (or all runtimes on a given platform), so we
+    switch (CGM.getCodeGenOpts().getObjCDispatchMethod()) {
     case CodeGenOptions::Legacy:
       imp = LookupIMP(CGF, Receiver, cmd, node, MSI);
       break;
@@ -2773,7 +2920,7 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
                      llvm::FunctionType::get(IdTy, IdTy, true), "objc_msgSend")
                   .getCallee();
       }
-  }
+    }
 
   // Reset the receiver in case the lookup modified it
   ActualArgs[0] = CallArg(RValue::get(Receiver), ASTIdTy);
@@ -2783,7 +2930,8 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   llvm::CallBase *call;
   CGCallee callee(CGCalleeInfo(), imp);
   RValue msgRet = CGF.EmitCall(MSI.CallInfo, callee, Return, ActualArgs, &call);
-  call->setMetadata(msgSendMDKind, node);
+  if (!isDirect)
+    call->setMetadata(msgSendMDKind, node);
 
   if (requiresNilReceiverCheck) {
     llvm::BasicBlock *nonNilPathBB = CGF.Builder.GetInsertBlock();
@@ -3906,14 +4054,50 @@ llvm::Function *CGObjCGNU::GenerateMethod(const ObjCMethodDecl *OMD,
   CodeGenTypes &Types = CGM.getTypes();
   llvm::FunctionType *MethodTy =
     Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
-  std::string FunctionName = getSymbolNameForMethod(OMD);
 
-  llvm::Function *Method
-    = llvm::Function::Create(MethodTy,
-                             llvm::GlobalValue::InternalLinkage,
-                             FunctionName,
-                             &TheModule);
-  return Method;
+  bool isDirect = OMD->isDirectMethod();
+  std::string FunctionName =
+      getSymbolNameForMethod(OMD, /*include category*/ !isDirect);
+
+  if (!isDirect)
+    return llvm::Function::Create(MethodTy,
+                                  llvm::GlobalVariable::InternalLinkage,
+                                  FunctionName, &TheModule);
+
+  auto *COMD = OMD->getCanonicalDecl();
+  auto I = DirectMethodDefinitions.find(COMD);
+  llvm::Function *OldFn = nullptr, *Fn = nullptr;
+
+  if (I == DirectMethodDefinitions.end()) {
+    auto *F =
+        llvm::Function::Create(MethodTy, llvm::GlobalVariable::ExternalLinkage,
+                               FunctionName, &TheModule);
+    DirectMethodDefinitions.insert(std::make_pair(COMD, F));
+    return F;
+  }
+
+  // Objective-C allows for the declaration and implementation types
+  // to differ slightly.
+  //
+  // If we're being asked for the Function associated for a method
+  // implementation, a previous value might have been cached
+  // based on the type of the canonical declaration.
+  //
+  // If these do not match, then we'll replace this function with
+  // a new one that has the proper type below.
+  if (!OMD->getBody() || COMD->getReturnType() == OMD->getReturnType())
+    return I->second;
+
+  OldFn = I->second;
+  Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage, "",
+                              &CGM.getModule());
+  Fn->takeName(OldFn);
+  OldFn->replaceAllUsesWith(Fn);
+  OldFn->eraseFromParent();
+
+  // Replace the cached function in the map.
+  I->second = Fn;
+  return Fn;
 }
 
 void CGObjCGNU::GenerateDirectMethodPrologue(CodeGenFunction &CGF,
@@ -3993,7 +4177,7 @@ void CGObjCGNU::EmitThrowStmt(CodeGenFunction &CGF,
     ExceptionAsObject = CGF.ObjCEHValueStack.back();
     isRethrow = true;
   }
-  if (isRethrow && usesSEHExceptions) {
+  if (isRethrow && (usesSEHExceptions || usesCxxExceptions)) {
     // For SEH, ExceptionAsObject may be undef, because the catch handler is
     // not passed it for catchalls and so it is not visible to the catch
     // funclet.  The real thrown object will still be live on the stack at this
@@ -4003,8 +4187,7 @@ void CGObjCGNU::EmitThrowStmt(CodeGenFunction &CGF,
     // argument.
     llvm::CallBase *Throw = CGF.EmitRuntimeCallOrInvoke(ExceptionReThrowFn);
     Throw->setDoesNotReturn();
-  }
-  else {
+  } else {
     ExceptionAsObject = CGF.Builder.CreateBitCast(ExceptionAsObject, IdTy);
     llvm::CallBase *Throw =
         CGF.EmitRuntimeCallOrInvoke(ExceptionThrowFn, ExceptionAsObject);

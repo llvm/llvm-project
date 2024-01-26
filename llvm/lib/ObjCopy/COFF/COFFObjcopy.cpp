@@ -29,7 +29,7 @@ using namespace object;
 using namespace COFF;
 
 static bool isDebugSection(const Section &Sec) {
-  return Sec.Name.startswith(".debug");
+  return Sec.Name.starts_with(".debug");
 }
 
 static uint64_t getNextRVA(const Object &Obj) {
