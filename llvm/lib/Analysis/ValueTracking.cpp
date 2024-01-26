@@ -4053,10 +4053,10 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     return {Src, fcNan, ~fcNan};
 
   if (Pred == FCmpInst::FCMP_TRUE)
-    return {LHS, fcAllFlags};
+    return {LHS, fcAllFlags, fcAllFlags};
 
   if (Pred == FCmpInst::FCMP_FALSE)
-    return {LHS, fcNone};
+    return {LHS, fcNone, fcNone};
 
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   if (IsFabs)
@@ -4221,7 +4221,7 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OLE:
     case FCmpInst::FCMP_UGT: {
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         Mask = IsFabs ? fcNone : fcNegInf;
         break;
       }
@@ -4233,16 +4233,6 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
       Mask = ~fcNan;
       break;
     }
-    case FCmpInst::FCMP_OGE:
-    case FCmpInst::FCMP_ULT: {
-      // fcmp oge x, smallest_normal -> fcPosNormal | fcPosInf
-      // fcmp oge fabs(x), smallest_normal -> fcInf | fcNormal
-      // fcmp ult x, smallest_normal -> ~(fcPosNormal | fcPosInf)
-      // fcmp ult fabs(x), smallest_normal -> ~(fcInf | fcNormal)
-      Mask = fcPosInf | fcPosNormal;
-      if (IsFabs)
-        Mask |= fcNegInf | fcNegNormal;
-      break;
     default:
       llvm_unreachable("all compare types are handled");
     }
@@ -4250,8 +4240,6 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     // Invert the comparison for the unordered cases.
     if (FCmpInst::isUnordered(Pred))
       Mask = ~Mask;
-      break;
-    }
 
     return exactClass(Src, Mask);
   }

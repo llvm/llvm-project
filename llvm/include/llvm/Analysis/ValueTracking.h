@@ -217,7 +217,7 @@ std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
 /// Compute the possible floating-point classes that \p LHS could be based on
 /// fcmp \Pred \p LHS, \p RHS.
 ///
-/// Returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
+/// \returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
 ///
 /// If the compare returns an exact class test, ClassesIfTrue == ~ClassesIfFalse
 ///

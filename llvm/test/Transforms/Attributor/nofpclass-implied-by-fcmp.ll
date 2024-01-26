@@ -2578,8 +2578,8 @@ define float @assume_false_ninf(float %arg) {
 }
 
 define float @clamp_false_pinf_0.0(float %arg) {
-; CHECK-LABEL: define float @clamp_false_pinf_0.0(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_pinf_0.0(
+; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, 0x7FF0000000000000
@@ -2588,8 +2588,8 @@ define float @clamp_false_pinf_0.0(float %arg) {
 }
 
 define float @clamp_false_ninf_0.0(float %arg) {
-; CHECK-LABEL: define float @clamp_false_ninf_0.0(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_ninf_0.0(
+; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, 0xFFF0000000000000
@@ -2598,8 +2598,8 @@ define float @clamp_false_ninf_0.0(float %arg) {
 }
 
 define float @clamp_false_smallest_normal_0.0(float %arg) {
-; CHECK-LABEL: define float @clamp_false_smallest_normal_0.0(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_smallest_normal_0.0(
+; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, 0x3810000000000000
@@ -2641,8 +2641,8 @@ define float @assume_false_smallest_normal(float %arg) {
 }
 
 define float @clamp_false_nan(float %arg) {
-; CHECK-LABEL: define float @clamp_false_nan(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_nan(
+; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, 0x7FF8000000000000
@@ -2651,8 +2651,8 @@ define float @clamp_false_nan(float %arg) {
 }
 
 define float @clamp_false_p0(float %arg) {
-; CHECK-LABEL: define float @clamp_false_p0(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_p0(
+; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, 0.0
@@ -2661,8 +2661,8 @@ define float @clamp_false_p0(float %arg) {
 }
 
 define float @clamp_false_n0(float %arg) {
-; CHECK-LABEL: define float @clamp_false_n0(
-; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @clamp_false_n0(
+; CHECK-SAME: float returned nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
   %fcmp = fcmp false float %arg, -0.0
@@ -2755,7 +2755,7 @@ define float @assume_true_smallest_normal(float %arg) {
 
 define float @clamp_true_pinf_0.0(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @clamp_true_pinf_0.0(
-; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp true float %arg, 0x7FF0000000000000
@@ -2765,7 +2765,7 @@ define float @clamp_true_pinf_0.0(float %arg) {
 
 define float @clamp_true_ninf_0.0(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @clamp_true_ninf_0.0(
-; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp true float %arg, 0xFFF0000000000000
@@ -2775,7 +2775,7 @@ define float @clamp_true_ninf_0.0(float %arg) {
 
 define float @clamp_true_smallest_normal_0.0(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @clamp_true_smallest_normal_0.0(
-; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp true float %arg, 0x3810000000000000
@@ -2795,7 +2795,7 @@ define float @clamp_true_nan(float %arg) {
 
 define float @clamp_true_p0(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @clamp_true_p0(
-; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp true float %arg, 0.0
@@ -2805,7 +2805,7 @@ define float @clamp_true_p0(float %arg) {
 
 define float @clamp_true_n0(float %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) float @clamp_true_n0(
-; CHECK-SAME: float nofpclass(nan inf nzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %fcmp = fcmp true float %arg, -0.0
