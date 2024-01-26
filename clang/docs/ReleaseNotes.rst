@@ -1025,7 +1025,7 @@ Bug Fixes to AST Handling
 - Fixed a bug where Template Instantiation failed to handle Lambda Expressions
   with certain types of Attributes.
   (`#76521 <https://github.com/llvm/llvm-project/issues/76521>`_)
-- Fixed a bug where variables referenced by requires-clauses inside 
+- Fixed a bug where variables referenced by requires-clauses inside
   nested generic lambdas were not properly injected into the constraint scope.
   (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
 

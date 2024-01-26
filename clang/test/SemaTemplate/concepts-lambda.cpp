@@ -160,7 +160,7 @@ void foo() {
           sizeof...(params);
           [](auto... pack) {
             return sizeof...(pack);
-          }(params);
+          }(params...);
         }
       { return false; }(y);
     }(x);
