@@ -95,7 +95,8 @@ createReplacement(const BinaryOperator::Opcode Op, const Expr *CondLhs,
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
   return (AssignLhsStr + " = " + FunctionName +
-          ((CondLhs->getType() != CondRhs->getType())
+          ((CondLhs->getType()->getUnqualifiedDesugaredType() !=
+            CondRhs->getType()->getUnqualifiedDesugaredType())
                ? "<" + GlobalImplicitCastType.getCanonicalType().getAsString() +
                      ">("
                : "(") +
@@ -154,14 +155,19 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &Source = Context.getSourceManager();
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
-  bool found = false;
+  bool Found = false;
   clang::QualType GlobalImplicitCastType;
 
   ExprVisitor Visitor(Result.Context);
-  Visitor.visitStmt(If, found, GlobalImplicitCastType);
+  Visitor.visitStmt(If, Found, GlobalImplicitCastType);
 
   // Ignore Macros
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
+    return;
+
+  // Ignore Dependent types
+  if (CondLhs->getType()->isDependentType() ||
+      CondRhs->getType()->isDependentType())
     return;
 
   auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {

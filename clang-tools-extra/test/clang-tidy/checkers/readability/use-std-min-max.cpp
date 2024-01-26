@@ -20,11 +20,15 @@ public:
   int member2;
 };
 
-void foo() {
+template<typename T>
+
+void foo(T value7) {
   int value1,value2,value3;
   short value4;
   unsigned int value5;
   unsigned char value6;
+  const int value8 = 5;
+  volatile int value9 = 6;
   MyClass obj;
 
 
@@ -209,4 +213,19 @@ void foo() {
   if(value5<value6){
     value6 = value5;
   }
+
+  //No suggestion needed here
+  if(value7<value6){
+    value6 = value7;
+  }
+
+  //CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  //CHECK-FIXES: value1 = std::min(value8, value1);
+  if(value8<value1)
+    value1 = value8;
+  
+  //CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  //CHECK-FIXES: value1 = std::min(value9, value1);
+  if(value9<value1)
+    value1 = value9;
 }
