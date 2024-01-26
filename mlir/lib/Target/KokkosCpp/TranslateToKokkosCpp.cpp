@@ -2480,6 +2480,7 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
   registerCIface(false, "expInsertF64");
   // Now the functions _not_ prefixed with _mlir_ciface_
   registerNonPrefixed(false, "endInsert");
+  registerNonPrefixed(false, "sparseDimSize");
 }
 
 /// Return the existing or a new name for a Value.
