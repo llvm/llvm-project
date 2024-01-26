@@ -575,9 +575,9 @@ void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     report_fatal_error("Can't load this register from stack slot");
 }
 
-bool VEInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool VEInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
-  LLVM_DEBUG(dbgs() << "FoldImmediate\n");
+  LLVM_DEBUG(dbgs() << "foldImmediate\n");
 
   LLVM_DEBUG(dbgs() << "checking DefMI\n");
   int64_t ImmVal;

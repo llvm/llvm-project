@@ -2,7 +2,7 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// UNSUPPORTED: system-linux
+// REQUIRES: system-linux
 
 // An externally visible variable so static libraries extract.
 __attribute__((visibility("protected"), used)) int x;
@@ -171,3 +171,15 @@ __attribute__((visibility("protected"), used)) int x;
 
 // AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
 // AMD-TARGET-ID: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack- -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
+
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld -- -r --whole-archive %t.a --no-whole-archive \
+// RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK
+
+// RELOCATABLE-LINK-NOT: clang{{.*}} -o {{.*}}.img --target=x86_64-unknown-linux-gnu
+// RELOCATABLE-LINK: /usr/bin/ld.lld{{.*}}-r

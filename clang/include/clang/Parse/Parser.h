@@ -3584,6 +3584,14 @@ private:
   /// Parses the clause of the 'bind' argument, which can be a string literal or
   /// an ID expression.
   ExprResult ParseOpenACCBindClauseArgument();
+  /// Parses the clause kind of 'int-expr', which can be any integral
+  /// expression.
+  ExprResult ParseOpenACCIntExpr();
+  /// Parses the 'device-type-list', which is a list of identifiers.
+  bool ParseOpenACCDeviceTypeList();
+  /// Parses the 'async-argument', which is an integral value with two
+  /// 'special' values that are likely negative (but come from Macros).
+  ExprResult ParseOpenACCAsyncArgument();
 
 private:
   //===--------------------------------------------------------------------===//

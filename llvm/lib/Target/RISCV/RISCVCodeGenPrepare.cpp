@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -67,20 +68,13 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   if (!BO.getType()->isIntegerTy(64))
     return false;
 
-  auto canBeSignExtend = [](Instruction *I) {
-    if (isa<SExtInst>(I))
-      return true;
-    if (isa<ZExtInst>(I))
-      return I->hasNonNeg();
-    return false;
-  };
+  using namespace PatternMatch;
 
-  // Left hand side should be a sext or zext nneg.
-  Instruction *LHS = dyn_cast<Instruction>(BO.getOperand(0));
-  if (!LHS || !canBeSignExtend(LHS))
+  // Left hand side should be a zext nneg.
+  Value *LHSSrc;
+  if (!match(BO.getOperand(0), m_NNegZExt(m_Value(LHSSrc))))
     return false;
 
-  Value *LHSSrc = LHS->getOperand(0);
   if (!LHSSrc->getType()->isIntegerTy(32))
     return false;
 
@@ -100,7 +94,7 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 
   // Sign extend the constant and replace the And operand.
   C = SignExtend64<32>(C);
-  BO.setOperand(1, ConstantInt::get(LHS->getType(), C));
+  BO.setOperand(1, ConstantInt::get(RHS->getType(), C));
 
   return true;
 }

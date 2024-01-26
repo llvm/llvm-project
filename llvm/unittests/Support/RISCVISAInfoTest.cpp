@@ -760,6 +760,7 @@ R"(All available -march extensions for RISC-V
     zhinx               1.0
     zhinxmin            1.0
     smaia               1.0
+    smepmp              1.0
     ssaia               1.0
     svinval             1.0
     svnapot             1.0
@@ -794,7 +795,9 @@ Experimental extensions
     zicfiss             0.4
     zicond              1.0
     zimop               0.1
+    zaamo               0.2
     zacas               1.0
+    zalrsc              0.2
     zfbfmin             1.0
     zcmop               0.2
     ztso                0.1

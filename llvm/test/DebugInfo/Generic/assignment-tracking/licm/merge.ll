@@ -1,4 +1,5 @@
 ; RUN: opt -passes=licm %s -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=licm %s -S | FileCheck %s
 
 ;; Ensure that we correctly merge the DIAssignID's from the sunk stores, add it
 ;; to the new new store instruction, and update the dbg.assign intrinsics using

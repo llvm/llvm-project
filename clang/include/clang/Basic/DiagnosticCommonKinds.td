@@ -70,6 +70,10 @@ def warn_pragma_debug_missing_argument : Warning<
 def warn_pragma_debug_unexpected_argument : Warning<
   "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 
+def warn_fp_nan_inf_when_disabled : Warning<
+  "use of %select{infinity|NaN}0%select{| via a macro}1 is undefined behavior "
+  "due to the currently enabled floating-point options">,
+  InGroup<DiagGroup<"nan-infinity-disabled">>;
 }
 
 // Parse && Sema

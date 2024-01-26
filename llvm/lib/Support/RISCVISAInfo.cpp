@@ -55,6 +55,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"m", {2, 0}},
 
     {"smaia", {1, 0}},
+    {"smepmp", {1, 0}},
     {"ssaia", {1, 0}},
     {"svinval", {1, 0}},
     {"svnapot", {1, 0}},
@@ -189,8 +190,11 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 };
 
 // NOTE: This table should be sorted alphabetically by extension name.
+// clang-format off
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+    {"zaamo", {0, 2}},
     {"zacas", {1, 0}},
+    {"zalrsc", {0, 2}},
 
     {"zcmop", {0, 2}},
 
@@ -208,6 +212,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zvfbfmin", {1, 0}},
     {"zvfbfwma", {1, 0}},
 };
+// clang-format on
 
 static void verifyTables() {
 #ifndef NDEBUG
@@ -971,8 +976,8 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
 
-  if ((Exts.count("zvkg") || Exts.count("zvkned") || Exts.count("zvknha") ||
-       Exts.count("zvksed") || Exts.count("zvksh")) &&
+  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkned") ||
+       Exts.count("zvknha") || Exts.count("zvksed") || Exts.count("zvksh")) &&
       !HasVector)
     return createStringError(
         errc::invalid_argument,

@@ -3188,12 +3188,16 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
   if (!GA)
     return false;
 
-  std::optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
-  if (!CR)
-    return Width == 32 && TM.getCodeModel() == CodeModel::Small;
-
-  return CR->getSignedMin().sge(-1ull << Width) &&
-         CR->getSignedMax().slt(1ull << Width);
+  auto *GV = GA->getGlobal();
+  std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange();
+  if (CR)
+    return CR->getSignedMin().sge(-1ull << Width) &&
+           CR->getSignedMax().slt(1ull << Width);
+  // In the kernel code model, globals are in the negative 2GB of the address
+  // space, so globals can be a sign extended 32-bit immediate.
+  // In other code models, small globals are in the low 2GB of the address
+  // space, so sign extending them is equivalent to zero extending them.
+  return Width == 32 && !TM.isLargeGlobalValue(GV);
 }
 
 X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {
@@ -5031,14 +5035,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       unsigned Opcode;
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
-      case Intrinsic::x86_encodekey128: Opcode = X86::ENCODEKEY128; break;
-      case Intrinsic::x86_encodekey256: Opcode = X86::ENCODEKEY256; break;
+      case Intrinsic::x86_encodekey128:
+        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128);
+        break;
+      case Intrinsic::x86_encodekey256:
+        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256);
+        break;
       }
 
       SDValue Chain = Node->getOperand(0);
       Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM0, Node->getOperand(3),
                                    SDValue());
-      if (Opcode == X86::ENCODEKEY256)
+      if (Opcode == X86::ENCODEKEY256 || Opcode == X86::ENCODEKEY256_EVEX)
         Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM1, Node->getOperand(4),
                                      Chain.getValue(1));
 
@@ -5510,7 +5518,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       LoReg = UseMULX ? X86::RDX : X86::RAX;
       HiReg = X86::RDX;
       break;
-#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
@@ -6390,17 +6397,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unexpected opcode!");
     case X86ISD::AESENCWIDE128KL:
-      Opcode = X86::AESENCWIDE128KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE128KL);
       break;
     case X86ISD::AESDECWIDE128KL:
-      Opcode = X86::AESDECWIDE128KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE128KL);
       break;
     case X86ISD::AESENCWIDE256KL:
-      Opcode = X86::AESENCWIDE256KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE256KL);
       break;
     case X86ISD::AESDECWIDE256KL:
-      Opcode = X86::AESDECWIDE256KL;
+      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE256KL);
       break;
+#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Chain = Node->getOperand(0);

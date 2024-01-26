@@ -6690,13 +6690,10 @@ validateSwiftFunctionName(Sema &S, const ParsedAttr &AL, SourceLocation Loc,
 
   // Check whether this will be mapped to a getter or setter of a property.
   bool IsGetter = false, IsSetter = false;
-  if (Name.starts_with("getter:")) {
+  if (Name.consume_front("getter:"))
     IsGetter = true;
-    Name = Name.substr(7);
-  } else if (Name.starts_with("setter:")) {
+  else if (Name.consume_front("setter:"))
     IsSetter = true;
-    Name = Name.substr(7);
-  }
 
   if (Name.back() != ')') {
     S.Diag(Loc, diag::warn_attr_swift_name_function) << AL;
@@ -8994,6 +8991,7 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   bool HasZA = false;
+  bool HasZT0 = false;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
     StringRef StateName;
     SourceLocation LiteralLoc;
@@ -9002,16 +9000,16 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
     if (StateName == "za")
       HasZA = true;
+    else if (StateName == "zt0")
+      HasZT0 = true;
     else {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
       AL.setInvalid();
       return;
     }
 
-    if (std::find(NewState.begin(), NewState.end(), StateName) ==
-        NewState.end()) { // Avoid adding duplicates.
+    if (!llvm::is_contained(NewState, StateName)) // Avoid adding duplicates.
       NewState.push_back(StateName);
-    }
   }
 
   if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
@@ -9019,6 +9017,11 @@ static void handleArmNewAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         FunctionType::getArmZAState(FPT->getAArch64SMEAttributes());
     if (HasZA && ZAState != FunctionType::ARM_None &&
         checkArmNewAttrMutualExclusion(S, AL, FPT, ZAState, "za"))
+      return;
+    FunctionType::ArmStateValue ZT0State =
+        FunctionType::getArmZT0State(FPT->getAArch64SMEAttributes());
+    if (HasZT0 && ZT0State != FunctionType::ARM_None &&
+        checkArmNewAttrMutualExclusion(S, AL, FPT, ZT0State, "zt0"))
       return;
   }
 
