@@ -313,8 +313,8 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
           Value loopHi = loopHighs[loop];
           size = ADDI(size, MULI(loopHi, C_IDX(stride)));
         }
-        it = makeNonEmptySubSectIterator(builder, loc, parent, std::move(lvlIt),
-                                         size, curDep.second);
+        it = makeNonEmptySubSectIterator(builder, loc, parent, loopHighs[loop],
+                                         std::move(lvlIt), size, curDep.second);
       } else {
         Value size = loopHighs[loop];
         const SparseIterator &subSectIter = *iters[t][lvl].back();
