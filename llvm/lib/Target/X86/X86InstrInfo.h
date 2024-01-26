@@ -161,6 +161,10 @@ class X86InstrInfo final : public X86GenInstrInfo {
                          SmallVectorImpl<MachineInstr *> &CondBranches,
                          bool AllowModify) const;
 
+  bool foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI, Register Reg,
+                         int64_t ImmVal, MachineRegisterInfo *MRI,
+                         bool MakeChange) const;
+
 public:
   explicit X86InstrInfo(X86Subtarget &STI);
 
@@ -575,13 +579,9 @@ public:
                                   Register &FoldAsLoadDefReg,
                                   MachineInstr *&DefMI) const override;
 
-  bool FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI, Register Reg,
-                         int64_t ImmVal, MachineRegisterInfo *MRI,
-                         bool MakeChange) const;
-
   /// Reg is known to be defined by a move immediate instruction, try to fold
   /// the immediate into the use instruction.
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
   std::pair<unsigned, unsigned>
