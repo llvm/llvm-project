@@ -1049,6 +1049,68 @@ void AsyncArgument() {
 #pragma acc parallel async(acc_async_sync)
 }
 
+void Tile() {
+
+  int* Foo;
+  // expected-error@+2{{expected '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile
+  for(;;){}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(
+  for(;;){}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile()
+  for(;;){}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(,
+  for(;;){}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(,)
+  for(;;){}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(returns_int(), *, invalid, *)
+  for(;;){}
+
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(returns_int() *, Foo, *)
+  for(;;){}
+
+  // expected-error@+2{{indirection requires pointer operand ('int' invalid)}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(* returns_int() , *)
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(*)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(*Foo, *Foo)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(5)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(*, 5)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(5, *)
+  for(;;){}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc loop tile(5, *, 3, *)
+  for(;;){}
+}
+
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();
