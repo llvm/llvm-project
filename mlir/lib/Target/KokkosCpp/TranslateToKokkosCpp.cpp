@@ -2460,30 +2460,19 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
       sparseSupportFunctions.insert({name, {pointerResult, name}});
     };
   registerCIface(false, "newSparseTensor");
-  for(std::string funcName : {
-      "sparseCoordinates0",
-      "sparseCoordinates8",
-      "sparseCoordinates16",
-      "sparseCoordinates32",
-      "sparseCoordinates64",
-      "sparsePositions0",
-      "sparsePositions8",
-      "sparsePositions16",
-      "sparsePositions32",
-      "sparsePositions64",
-      "sparseValuesBF16",
-      "sparseValuesC32",
-      "sparseValuesC64",
-      "sparseValuesF16",
-      "sparseValuesF32",
-      "sparseValuesF64",
-      "sparseValuesI8",
-      "sparseValuesI16",
-      "sparseValuesI32",
-      "sparseValuesI64"
-  })
-  {
+  for (std::string funcName :
+       {"getPartitions",       "updateSlice",         "sparseCoordinates0",
+        "sparseCoordinates8",  "sparseCoordinates16", "sparseCoordinates32",
+        "sparseCoordinates64", "sparsePositions0",    "sparsePositions8",
+        "sparsePositions16",   "sparsePositions32",   "sparsePositions64",
+        "sparseValuesBF16",    "sparseValuesC32",     "sparseValuesC64",
+        "sparseValuesF16",     "sparseValuesF32",     "sparseValuesF64",
+        "sparseValuesI8",      "sparseValuesI16",     "sparseValuesI32",
+        "sparseValuesI64"}) {
     registerCIface(true, funcName);
+  }
+  for (std::string funcName : {"getSlice"}) {
+    registerCIface(false, funcName);
   }
   registerCIface(false, "lexInsertF32");
   registerCIface(false, "lexInsertF64");
