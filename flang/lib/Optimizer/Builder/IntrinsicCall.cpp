@@ -140,8 +140,6 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
-    // {"atan", &I::genAtan},
-    // {"atan2", &I::genAtan},
     {"atan2d", &I::genAtand},
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
@@ -2195,29 +2193,6 @@ void static atanNoneZeroCheck(mlir::Value y, mlir::Value x,
       .end();
 }
 
-// ATAN, ATAN2
-mlir::Value IntrinsicLibrary::genAtan(mlir::Type resultType,
-                                      llvm::ArrayRef<mlir::Value> args) {
-  // assert for: atan(X), atan(Y,X), atan2(Y,X)
-  assert(args.size() >= 1 && args.size() <= 2);
-
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::FunctionType ftype =
-        mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  mlir::Value atan;
-
-  // atan(Y,X) atan2(Y,X) == atan2(Y,X)
-  if (args.size() == 2) {
-    mlir::Value y = fir::getBase(args[0]);
-    mlir::Value x = fir::getBase(args[1]);
-    atanNoneZeroCheck(y, x, builder, loc);
-    atan = builder.create<mlir::math::Atan2Op>(loc, y, x);
-  } else {
-    atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
-  }
-  return atan;
-}
-
 // ATAND, ATAN2D
 mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -2234,8 +2209,8 @@ mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
     atanNoneZeroCheck(y, x, builder, loc);
     atan = builder.create<mlir::math::Atan2Op>(loc, y, x);
   } else {
-      mlir::FunctionType ftype =
-  mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+    mlir::FunctionType ftype =
+        mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
     atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
   }
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
