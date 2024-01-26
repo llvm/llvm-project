@@ -776,16 +776,16 @@ struct OuterProductOpConversion
   }
 };
 
-/// Lower 2-way and 4-way outer products to intrinsics.
-template <class OuterProductWideOp, class OuterProductWideIntrOp>
-struct OuterProductWideOpConversion
-    : public ConvertArmSMEOpToLLVMPattern<OuterProductWideOp> {
+/// Lower 2-way and 4-way widening outer products to intrinsics.
+template <class OuterProductWideningOp, class OuterProductWideningIntrOp>
+struct OuterProductWideningOpConversion
+    : public ConvertArmSMEOpToLLVMPattern<OuterProductWideningOp> {
   using ConvertArmSMEOpToLLVMPattern<
-      OuterProductWideOp>::ConvertArmSMEOpToLLVMPattern;
+      OuterProductWideningOp>::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(OuterProductWideOp op,
-                  typename OuterProductWideOp::Adaptor adaptor,
+  matchAndRewrite(OuterProductWideningOp op,
+                  typename OuterProductWideningOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto tileId = getTileIdOrError(op);
     if (!tileId)
@@ -807,9 +807,9 @@ struct OuterProductWideOpConversion
       rhsMask = allActiveMask;
     }
 
-    rewriter.create<OuterProductWideIntrOp>(op.getLoc(), tileId, lhsMask,
-                                            rhsMask, adaptor.getLhs(),
-                                            adaptor.getRhs());
+    rewriter.create<OuterProductWideningIntrOp>(op.getLoc(), tileId, lhsMask,
+                                                rhsMask, adaptor.getLhs(),
+                                                adaptor.getRhs());
 
     // The outerproduct intrinsics have no result, replace
     // 'arm_sme.outerproduct' with the input tile to preserve dataflow.
@@ -927,18 +927,18 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
       LoadTileSliceConversion, MoveTileSliceToVectorConversion,
       MoveVectorToTileSliceConversion, StoreTileSliceConversion,
       StreamingVLOpConversion, OuterProductOpConversion,
-      OuterProductWideOpConversion<arm_sme::FMopaWide2WayOp,
-                                   arm_sme::aarch64_sme_mopa_wide>,
-      OuterProductWideOpConversion<arm_sme::FMopsWide2WayOp,
-                                   arm_sme::aarch64_sme_mops_wide>,
-      OuterProductWideOpConversion<arm_sme::SMopaWide2WayOp,
-                                   arm_sme::aarch64_sme_smopa_za32>,
-      OuterProductWideOpConversion<arm_sme::SMopsWide2WayOp,
-                                   arm_sme::aarch64_sme_smops_za32>,
-      OuterProductWideOpConversion<arm_sme::UMopaWide2WayOp,
-                                   arm_sme::aarch64_sme_umopa_za32>,
-      OuterProductWideOpConversion<arm_sme::UMopsWide2WayOp,
-                                   arm_sme::aarch64_sme_umops_za32>,
+      OuterProductWideningOpConversion<arm_sme::FMopa2WayOp,
+                                       arm_sme::aarch64_sme_mopa_wide>,
+      OuterProductWideningOpConversion<arm_sme::FMops2WayOp,
+                                       arm_sme::aarch64_sme_mops_wide>,
+      OuterProductWideningOpConversion<arm_sme::SMopa2WayOp,
+                                       arm_sme::aarch64_sme_smopa_za32>,
+      OuterProductWideningOpConversion<arm_sme::SMops2WayOp,
+                                       arm_sme::aarch64_sme_smops_za32>,
+      OuterProductWideningOpConversion<arm_sme::UMopa2WayOp,
+                                       arm_sme::aarch64_sme_umopa_za32>,
+      OuterProductWideningOpConversion<arm_sme::UMops2WayOp,
+                                       arm_sme::aarch64_sme_umops_za32>,
       ZeroOpConversion, GetTileConversion>(patterns, converter);
 }
 

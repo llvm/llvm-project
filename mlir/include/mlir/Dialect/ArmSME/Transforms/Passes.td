@@ -122,11 +122,11 @@ def TileAllocation
   let dependentDialects = ["func::FuncDialect"];
 }
 
-def OuterProductWidening
-    : Pass<"arm-sme-outer-product-widening", "mlir::func::FuncOp"> {
-  let summary = "Fold 'arm_sme.outerproduct' operations into widening variants";
+def OuterProductFusion
+    : Pass<"arm-sme-outer-product-fusion", "mlir::func::FuncOp"> {
+  let summary = "Fuse 'arm_sme.outerproduct' operations into 2-way or 4-way widening variants";
   let description = [{
-    This pass folds 'arm_sme.outerproduct' operations that are chained via the
+    This pass fuses 'arm_sme.outerproduct' operations that are chained via the
     accumulator into 2-way or 4-way ArmSME outer product operations.
 
     For example:
@@ -145,14 +145,14 @@ def OuterProductWidening
     ```mlir
     %a_packed = "llvm.intr.experimental.vector.interleave2"(%a0, %a1) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
     %b_packed = "llvm.intr.experimental.vector.interleave2"(%b0, %b1) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
-    %0 = arm_sme.fmopa_wide_2way %a_packed, %b_packed : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+    %0 = arm_sme.fmopa_2way %a_packed, %b_packed : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
     ```
 
-    For further information on the widening ops see:
-    https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smefmopa_wide_2way-arm_smefmopa_wide_2wayop
-    https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smesmopa_wide_4way-arm_smesmopa_wide_4wayop
+    For further information on the 2-way or 4-way widening ops see:
+    https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smefmopa_2way-arm_smefmopa_2wayop
+    https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smesmopa_4way-arm_smesmopa_4wayop
   }];
-  let constructor = "mlir::arm_sme::createOuterProductWideningPass()";
+  let constructor = "mlir::arm_sme::createOuterProductFusionPass()";
   let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect", "arm_sve::ArmSVEDialect", "LLVM::LLVMDialect"];
 }
 

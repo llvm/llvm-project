@@ -814,10 +814,10 @@ let arguments = (ins
   }];
 }
 
-class OuterProductWideBase<string mnemonic,
-                           list<Type> allowedInputVectorTypes,
-                           list<Type> allowedResultVectorTypes,
-                           int numOuterProducts> :
+class OuterProductWideningBase<string mnemonic,
+                               list<Type> allowedInputVectorTypes,
+                               list<Type> allowedResultVectorTypes,
+                               int numOuterProducts> :
   ArmSME_Op<mnemonic, [
     ArmSMETileOpInterface,
     AttrSizedOperandSegments,
@@ -869,14 +869,14 @@ class OuterProductWideBase<string mnemonic,
   }];
 }
 
-class OuterProductWide2Way<string mnemonic,
-                           list<Type> allowedInputVectorTypes,
-                           list<Type> allowedResultVectorTypes>
-  : OuterProductWideBase<mnemonic, allowedInputVectorTypes,
-                         allowedResultVectorTypes, /*numOuterProducts=*/2>;
+class OuterProduct2Way<string mnemonic,
+                       list<Type> allowedInputVectorTypes,
+                       list<Type> allowedResultVectorTypes>
+  : OuterProductWideningBase<mnemonic, allowedInputVectorTypes,
+                             allowedResultVectorTypes, /*numOuterProducts=*/2>;
 
-def FMopaWide2WayOp
-  : OuterProductWide2Way<"fmopa_wide_2way",
+def FMopa2WayOp
+  : OuterProduct2Way<"fmopa_2way",
       [ScalableVectorOfRankAndLengthAndType<[1], [8], [F16, BF16]>],
       [nxnxv4f32]> {
   let summary = "Floating-point sum of 2 outer products and accumulate";
@@ -888,14 +888,14 @@ def FMopaWide2WayOp
     For example (fp16 to fp32):
 
     ```mlir
-    %result = arm_sme.fmopa_wide_2way %lhs, %rhs :
+    %result = arm_sme.fmopa_2way %lhs, %rhs :
       vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
     ```
 
     The `lhs` encodes a matrix of shape SVLSx2 and the `rhs` a matrix of
     2xSVLS, where SVLS (spec [1], section B2.1) is the number of 32-bit
     elements in a vector of SVL bits. To illustrate, below is a breakdown of
-    this operation for SVL=128 (i.e., vscale=1):
+    this operation for fp16 to fp32, SVL=128 (i.e., vscale=1):
 
     ```
                           LHS                          RHS
@@ -960,19 +960,19 @@ def FMopaWide2WayOp
 	```mlir
     %a_packed = "llvm.intr.experimental.vector.interleave2"(%a0, %a1) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
     %b_packed = "llvm.intr.experimental.vector.interleave2"(%b0, %b1) : (vector<[4]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
-    %0 = arm_sme.fmopa_wide_2way %a_packed, %b_packed : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+    %0 = arm_sme.fmopa_2way %a_packed, %b_packed : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
 	```
 
-    This is implemented in the `-arm-sme-outer-product-widening` pass.
+    This is implemented in the `-arm-sme-outer-product-fusion` pass.
 
     Example: FP16 to FP32
     ```mlir
-    %result = arm_sme.fmopa_wide_2way $lhs, $rhs : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+    %result = arm_sme.fmopa_2way $lhs, $rhs : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
     ```
 
     Example: BF16 to FP32
     ```mlir
-    %result = arm_sme.fmopa_wide_2way $lhs, $rhs : vector<[8]xbf16>, vector<[8]xbf16> into vector<[4]x[4]xf32>
+    %result = arm_sme.fmopa_2way $lhs, $rhs : vector<[8]xbf16>, vector<[8]xbf16> into vector<[4]x[4]xf32>
     ```
 
     | Spec | Features |
@@ -989,27 +989,27 @@ def FMopaWide2WayOp
 // - FMOPA 4-way FP16 to FP32
 // once intrinsic support lands in the backend.
 
-def FMopsWide2WayOp
-  : OuterProductWide2Way<"fmops_wide_2way",
+def FMops2WayOp
+  : OuterProduct2Way<"fmops_2way",
       [ScalableVectorOfRankAndLengthAndType<[1], [8], [F16, BF16]>],
       [nxnxv4f32]> {
   let summary = "Floating-point sum of 2 outer products and subtract";
   let description = [{
-    Equivalent to `fmopa_wide_2way` but outer products are subtracted from
+    Equivalent to `fmopa_2way` but outer products are subtracted from
     destination `result`.
 
     Example: FP16 to FP32
     ```mlir
-    %result = arm_sme.fmops_wide_2way $lhs, $rhs : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+    %result = arm_sme.fmops_2way $lhs, $rhs : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
     ```
 
     Example: BF16 to FP32
     ```mlir
-    %result = arm_sme.fmops_wide_2way $lhs, $rhs : vector<[8]xbf16>, vector<[8]xbf16> into vector<[4]x[4]xf32>
+    %result = arm_sme.fmops_2way $lhs, $rhs : vector<[8]xbf16>, vector<[8]xbf16> into vector<[4]x[4]xf32>
 
     Refer to
-    [fmopa_wide_2way](#arm_smefmopa_wide_2way-arm_smefmopa_wide_2wayop) for a
-    detailed description of 2-way outer products.
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    description of 2-way outer products.
 
     | Spec | Features |
     | ---- | -------- |
@@ -1019,19 +1019,19 @@ def FMopsWide2WayOp
   }];
 }
 
-def SMopaWide2WayOp
-  : OuterProductWide2Way<"smopa_wide_2way",
+def SMopa2WayOp
+  : OuterProduct2Way<"smopa_2way",
       [ScalableVectorOfRankAndLengthAndType<[1], [8], [I16]>],
       [nxnxv4i32]> {
   let summary = "Signed integer sum of 2 outer products and accumulate";
   let description = [{
     Example:
     ```mlir
-    %result = arm_sme.smopa_wide_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    %result = arm_sme.smopa_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
 
     Refer to
-    [fmopa_wide_2way](#arm_smefmopa_wide_2way-arm_smefmopa_wide_2wayop) for a
-    detailed description of 2-way outer products.
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    description of 2-way outer products.
 
     | Spec | Features |
     | ---- | -------- |
@@ -1040,19 +1040,19 @@ def SMopaWide2WayOp
   }];
 }
 
-def SMopsWide2WayOp
-  : OuterProductWide2Way<"smops_wide_2way",
+def SMops2WayOp
+  : OuterProduct2Way<"smops_2way",
       [ScalableVectorOfRankAndLengthAndType<[1], [8], [I16]>],
       [nxnxv4i32]> {
   let summary = "Signed integer sum of 2 outer products and subtract";
   let description = [{
     Example:
     ```mlir
-    %result = arm_sme.smops_wide_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    %result = arm_sme.smops_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
 
     Refer to
-    [fmopa_wide_2way](#arm_smefmopa_wide_2way-arm_smefmopa_wide_2wayop) for a
-    detailed description of 2-way outer products.
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    description of 2-way outer products.
 
     | Spec | Features |
     | ---- | -------- |
@@ -1061,19 +1061,19 @@ def SMopsWide2WayOp
   }];
 }
 
-def UMopaWide2WayOp
-  : OuterProductWide2Way<"umopa_wide_2way",
+def UMopa2WayOp
+  : OuterProduct2Way<"umopa_2way",
       [ScalableVectorOfRankAndLengthAndType<[1], [8], [I16]>],
       [nxnxv4i32]> {
   let summary = "Unsiged integer sum of 2 outer products and accumulate";
   let description = [{
     Example:
     ```mlir
-    %result = arm_sme.umopa_wide_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    %result = arm_sme.umopa_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
 
     Refer to
-    [fmopa_wide_2way](#arm_smefmopa_wide_2way-arm_smefmopa_wide_2wayop) for a
-    detailed description of 2-way outer products.
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    description of 2-way outer products.
 
     | Spec | Features |
     | ---- | -------- |
@@ -1082,19 +1082,19 @@ def UMopaWide2WayOp
   }];
 }
 
-def UMopsWide2WayOp
-  : OuterProductWide2Way<"umops_wide_2way",
+def UMops2WayOp
+  : OuterProduct2Way<"umops_2way",
       [ScalableVectorOfRankAndLengthAndType<[1], [8], [I16]>],
       [nxnxv4i32]> {
   let summary = "Unsiged integer sum of 2 outer products and subtract";
   let description = [{
     Example:
     ```mlir
-    %result = arm_sme.umops_wide_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+    %result = arm_sme.umops_2way $lhs, $rhs : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
 
     Refer to
-    [fmopa_wide_2way](#arm_smefmopa_wide_2way-arm_smefmopa_wide_2wayop) for a
-    detailed description of 2-way outer products.
+    [fmopa_2way](#arm_smefmopa_2way-arm_smefmopa_2wayop) for a detailed
+    description of 2-way outer products.
 
     | Spec | Features |
     | ---- | -------- |

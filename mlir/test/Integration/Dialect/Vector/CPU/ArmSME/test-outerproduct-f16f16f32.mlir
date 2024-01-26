@@ -1,8 +1,8 @@
 // DEFINE: %{entry} = test_outerproduct_f16f16f32
-// DEFINE: %{widening_opts} = -arm-sme-outer-product-widening
+// DEFINE: %{fusion_opts} = -arm-sme-outer-product-fusion
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme %{widening_opts} \
+// DEFINE:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme %{fusion_opts} \
 // DEFINE:   -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
 // DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
 // DEFINE:   -test-lower-to-llvm -o %t
@@ -18,8 +18,14 @@
 // Check result is the same when outerproducts are not combined into widening
 // variant.
 
-// REDEFINE: %{widening_opts} =
+// REDEFINE: %{fusion_opts} =
 // RUN: %{run} | FileCheck %s
+
+// TODO: Add run line for masked test once QEMU is fixed.
+// REDEFINE: %{entry} = test_masked_outerproduct_f16f16f32
+
+// TODO: Add run line for masked test once QEMU is fixed.
+// REDEFINE: %{fusion_opts} =
 
 func.func @test_outerproduct_f16f16f32() {
   %undef = llvm.mlir.undef : vector<[4]xf16>
