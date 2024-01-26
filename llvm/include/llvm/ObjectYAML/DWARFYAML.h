@@ -118,6 +118,28 @@ struct Unit {
   std::vector<Entry> Entries;
 };
 
+struct IdxForm {
+  llvm::dwarf::Index Idx;
+  llvm::dwarf::Form Form;
+};
+
+struct DebugNameAbbreviation {
+  llvm::yaml::Hex64 Code;
+  llvm::dwarf::Tag Tag;
+  std::vector<IdxForm> Indices;
+};
+
+struct DebugNameEntry {
+  llvm::yaml::Hex32 NameStrp;
+  llvm::yaml::Hex64 Code;
+  std::vector<llvm::yaml::Hex64> Values;
+};
+
+struct DebugNamesSection {
+  std::vector<DebugNameAbbreviation> Abbrevs;
+  std::vector<DebugNameEntry> Entries;
+};
+
 struct File {
   StringRef Name;
   uint64_t DirIdx;
@@ -228,6 +250,7 @@ struct Data {
   std::vector<LineTable> DebugLines;
   std::optional<std::vector<ListTable<RnglistEntry>>> DebugRnglists;
   std::optional<std::vector<ListTable<LoclistEntry>>> DebugLoclists;
+  std::optional<DebugNamesSection> DebugNames;
 
   bool isEmpty() const;
 
@@ -276,9 +299,25 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(
     llvm::DWARFYAML::ListEntries<DWARFYAML::LoclistEntry>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LoclistEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DWARFOperation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DebugNameEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DebugNameAbbreviation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::IdxForm)
 
 namespace llvm {
 namespace yaml {
+
+template <> struct MappingTraits<DWARFYAML::DebugNamesSection> {
+  static void mapping(IO &IO, DWARFYAML::DebugNamesSection &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameEntry> {
+  static void mapping(IO &IO, DWARFYAML::DebugNameEntry &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameAbbreviation> {
+  static void mapping(IO &IO, DWARFYAML::DebugNameAbbreviation &);
+};
+template <> struct MappingTraits<DWARFYAML::IdxForm> {
+  static void mapping(IO &IO, DWARFYAML::IdxForm &);
+};
 
 template <> struct MappingTraits<DWARFYAML::Data> {
   static void mapping(IO &IO, DWARFYAML::Data &DWARF);
@@ -432,6 +471,16 @@ template <> struct ScalarEnumerationTraits<dwarf::Attribute> {
 
 template <> struct ScalarEnumerationTraits<dwarf::Form> {
   static void enumeration(IO &io, dwarf::Form &value) {
+#include "llvm/BinaryFormat/Dwarf.def"
+    io.enumFallback<Hex16>(value);
+  }
+};
+
+#define HANDLE_DW_IDX(unused, name)                                            \
+  io.enumCase(value, "DW_IDX_" #name, dwarf::DW_IDX_##name);
+
+template <> struct ScalarEnumerationTraits<dwarf::Index> {
+  static void enumeration(IO &io, dwarf::Index &value) {
 #include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex16>(value);
   }
