@@ -3214,6 +3214,13 @@ unsigned CastInst::isEliminableCastPair(
         return secondOp;
       return 0;
     case 6:
+      // In cast pairs bfloat and half float shouldn't be treated as equivalent
+      // if the first operation is a bitcast i.e. if we have
+      // bitcast bfloat to half + fpext half to double we shouldn't reduce to
+      // fpext bfloat to double as this isn't equal to fpext half to double.
+      // This has been generalised for all float pairs that have the same width.
+      if(SrcTy->isFloatingPointTy() && MidTy->isFloatingPointTy())
+        return 0;
       // No-op cast in first op implies secondOp as long as the SrcTy
       // is a floating point.
       if (SrcTy->isFloatingPointTy())
