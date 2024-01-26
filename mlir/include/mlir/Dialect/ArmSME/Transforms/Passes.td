@@ -165,6 +165,10 @@ def VectorLegalization
     than a single SME tile (e.g. `vector<[8]x[8]xf32>`) into multiple SME
     tile-sized operations, as well as rewrites needed to get operations into
     forms compatible with SME lowerings.
+
+    Note: Decomposition is currently limited to vector types that are an exact
+    multiple of SME tiles. That is scalable in two dimensions, with both the
+    rows and columns divisible by the SVE vector length for the element type.
   }];
   let constructor = "mlir::arm_sme::createVectorLegalizationPass()";
   let dependentDialects = [

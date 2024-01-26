@@ -244,8 +244,9 @@ struct AssignTileIDsPattern
 
     // Set all operations dependent on `tileOp` to use the same tile ID.
     // This is a naive tile allocation scheme, but works for common cases. For
-    // example, as this only allocates tile IDs to existing ops, it can't solve
-    // cases like this (%tileA and %tileB come from different root operations):
+    // example, as this only allocates tile IDs to existing ops, it can't
+    // solve cases like this (%tileA and %tileB come from different root
+    // operations):
     //
     // %tile = scf.if %some_cond -> vector<[4]x[4]xi32> {
     //   scf.yield %tileA {tile_id = 0} : vector<[4]x[4]xi32>
@@ -254,9 +255,9 @@ struct AssignTileIDsPattern
     // }
     //
     // This case would require allocating a new tile for the result of the
-    // scf.if, and moving the contents of %tileA or %tileB to result tile (based
-    // on the %some_cond).
-    // Find all the ops that (transitively) depend on this tile.
+    // scf.if, and moving the contents of %tileA or %tileB to result tile
+    // (based on the %some_cond). Find all the ops that (transitively) depend
+    // on this tile.
     SetVector<Operation *> dependantOps;
     findDependantOps(tileOp->getResult(0), dependantOps);
     auto tileIDAttr = rewriter.getI32IntegerAttr(*tileId);
