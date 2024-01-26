@@ -671,14 +671,6 @@ bool PPCTargetInfo::initFeatureMap(
     return false;
   }
 
-  if (llvm::is_contained(FeaturesVec, "+aix-small-local-exec-tls")) {
-    if (!getTriple().isOSAIX() || !getTriple().isArch64Bit()) {
-      Diags.Report(diag::err_opt_not_valid_on_target)
-         << "-maix-small-local-exec-tls";
-      return false;
-    }
-  }
-
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 
