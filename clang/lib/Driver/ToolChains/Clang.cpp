@@ -5965,6 +5965,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
   }
 
+  if (isTLSDESCEnabled(TC, Args))
+    CmdArgs.push_back("-enable-tlsdesc");
+
   // Add the target cpu
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
   if (!CPU.empty()) {
