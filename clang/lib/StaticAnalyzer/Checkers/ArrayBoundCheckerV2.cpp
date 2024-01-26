@@ -33,35 +33,48 @@ using namespace taint;
 using llvm::formatv;
 
 namespace {
+/// If `E` is a "clean" array subscript expression, return the type of the
+/// accessed element. If the base of the subscript expression is modified by
+/// pointer arithmetic (and not the beginning of a "full" memory region), this
+/// always returns nullopt because that's the right (or the least bad) thing to
+/// do for the diagnostic output that's relying on this.
+static std::optional<QualType> determineElementType(const Expr *E, const CheckerContext &C) {
+  const auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
+  if (!ASE)
+    return std::nullopt;
+
+  const MemRegion *SubscriptBaseReg = C.getSVal(ASE->getBase()).getAsRegion();
+  if (!SubscriptBaseReg)
+    return std::nullopt;
+
+  // The base of the subscript expression is affected by pointer arithmetics,
+  // so we want to report byte offsets instead of indices.
+  if (isa<ElementRegion>(SubscriptBaseReg->StripCasts()))
+    return std::nullopt;
+
+  return ASE->getType();
+}
+
+
+static std::optional<int64_t> determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
+  if (!T)
+    return std::nullopt;
+  return C.getASTContext().getTypeSizeInChars(*T).getQuantity();
+}
+
 class StateUpdateReporter {
   const SubRegion *Reg;
-  NonLoc ByteOffsetVal;
-  std::optional<QualType> ElementType = std::nullopt;
-  std::optional<int64_t> ElementSize = std::nullopt;
+  const NonLoc ByteOffsetVal;
+  const std::optional<QualType> ElementType;
+  const std::optional<int64_t> ElementSize;
   bool AssumedNonNegative = false;
   std::optional<NonLoc> AssumedUpperBound = std::nullopt;
 
 public:
   StateUpdateReporter(const SubRegion *R, NonLoc ByteOffsVal, const Expr *E,
                       CheckerContext &C)
-      : Reg(R), ByteOffsetVal(ByteOffsVal) {
-    initializeElementInfo(E, C);
-  }
+      : Reg(R), ByteOffsetVal(ByteOffsVal), ElementType(determineElementType(E, C)), ElementSize(determineElementSize(ElementType, C)) {}
 
-  void initializeElementInfo(const Expr *E, CheckerContext &C) {
-    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-      const MemRegion *SubscriptBaseReg =
-          C.getSVal(ASE->getBase()).getAsRegion();
-      if (!SubscriptBaseReg)
-        return;
-      SubscriptBaseReg = SubscriptBaseReg->StripCasts();
-      if (!isa_and_nonnull<ElementRegion>(SubscriptBaseReg)) {
-        ElementType = ASE->getType();
-        ElementSize =
-            C.getASTContext().getTypeSizeInChars(*ElementType).getQuantity();
-      }
-    }
-  }
   void recordNonNegativeAssumption() { AssumedNonNegative = true; }
   void recordUpperBoundAssumption(NonLoc UpperBoundVal) {
     AssumedUpperBound = UpperBoundVal;
