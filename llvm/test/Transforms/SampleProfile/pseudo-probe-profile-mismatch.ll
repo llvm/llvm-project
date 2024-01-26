@@ -11,12 +11,11 @@
 
 ; CHECK: (1/3) of functions' profile are invalid and (10/50) of samples are discarded due to function hash mismatch.
 ; CHECK: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch.
-; CHECK: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch after stale profile matching.
+; CHECK: Out of 0 callsites used for profile matching, 0 callsites have been recovered. After the matching, (2/3) of callsites are still invalid (20/50) of samples are still discarded.
 
-; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 20, !"TotalFuncHashSamples", i64 50, !"TotalProfiledFunc", i64 3, !"NumMismatchedFuncHash", i64 1, !"MismatchedFuncHashSamples", i64 10, !"PostMatchNumMismatchedCallsites", i64 2, !"PostMatchMismatchedCallsiteSamples", i64 20}
+; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 20, !"TotalProfiledFunc", i64 3, !"TotalFunctionSamples", i64 50, !"NumMismatchedFuncHash", i64 1, !"MismatchedFuncHashSamples", i64 10, !"PostMatchNumMismatchedCallsites", i64 0, !"NumCallsitesForMatching", i64 0, !"PostMatchMismatchedCallsiteSamples", i64 20}
 
 ; CHECK-OBJ: .llvm_stats
-
 
 ; CHECK-ASM: .section	.llvm_stats,"",@progbits
 ; CHECK-ASM: .byte	22
@@ -31,14 +30,14 @@
 ; CHECK-ASM: .ascii	"MismatchedCallsiteSamples"
 ; CHECK-ASM: .byte	4
 ; CHECK-ASM: .ascii	"MjA="
-; CHECK-ASM: .byte	20
-; CHECK-ASM: .ascii	"TotalFuncHashSamples"
-; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"NTA="
 ; CHECK-ASM: .byte	17
 ; CHECK-ASM: .ascii	"TotalProfiledFunc"
 ; CHECK-ASM: .byte	4
 ; CHECK-ASM: .ascii	"Mw=="
+; CHECK-ASM: .byte	20
+; CHECK-ASM: .ascii	"TotalFunctionSamples"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"NTA="
 ; CHECK-ASM: .byte	21
 ; CHECK-ASM: .ascii	"NumMismatchedFuncHash"
 ; CHECK-ASM: .byte	4
@@ -50,7 +49,11 @@
 ; CHECK-ASM: .byte	31
 ; CHECK-ASM: .ascii	"PostMatchNumMismatchedCallsites"
 ; CHECK-ASM: .byte	4
-; CHECK-ASM: .ascii	"Mg=="
+; CHECK-ASM: .ascii	"MA=="
+; CHECK-ASM: .byte	23
+; CHECK-ASM: .ascii	"NumCallsitesForMatching"
+; CHECK-ASM: .byte	4
+; CHECK-ASM: .ascii	"MA=="
 ; CHECK-ASM: .byte	34
 ; CHECK-ASM: .ascii	"PostMatchMismatchedCallsiteSamples"
 ; CHECK-ASM: .byte	4

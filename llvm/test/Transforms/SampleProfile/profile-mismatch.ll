@@ -8,7 +8,7 @@
 
 ; CHECK: (2/4) of callsites' profile are invalid and (15/50) of samples are discarded due to callsite location mismatch.
 
-; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 4, !"MismatchedCallsiteSamples", i64 15, !"TotalFuncHashSamples", i64 50}
+; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 4, !"MismatchedCallsiteSamples", i64 15, !"TotalProfiledFunc", i64 3, !"TotalFunctionSamples", i64 50}
 
 ; CHECK-OBJ: .llvm_stats
 
@@ -26,7 +26,7 @@
 ; CHECK-ASM: .byte 4
 ; CHECK-ASM: .ascii  "MTU="
 ; CHECK-ASM: .byte 20
-; CHECK-ASM: .ascii  "TotalFuncHashSamples"
+; CHECK-ASM: .ascii  "TotalFunctionSamples"
 ; CHECK-ASM: .byte 4
 ; CHECK-ASM: .ascii  "NTA="
 

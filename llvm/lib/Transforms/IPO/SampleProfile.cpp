@@ -433,8 +433,43 @@ using CandidateQueue =
     PriorityQueue<InlineCandidate, std::vector<InlineCandidate>,
                   CandidateComparer>;
 
-using IRAnchorMap = std::map<LineLocation, StringRef>;
-using ProfileAnchorMap = std::map<LineLocation, std::unordered_set<FunctionId>>;
+// Profile matching statstics.
+class ProfileMatchStats {
+  const Module &M;
+  SampleProfileReader &Reader;
+  const PseudoProbeManager *ProbeManager;
+
+public:
+  ProfileMatchStats(const Module &M, SampleProfileReader &Reader,
+                    const PseudoProbeManager *ProbeManager)
+      : M(M), Reader(Reader), ProbeManager(ProbeManager) {}
+
+  uint64_t NumMismatchedCallsites = 0;
+  uint64_t TotalProfiledCallsites = 0;
+  uint64_t MismatchedCallsiteSamples = 0;
+  uint64_t NumMismatchedFuncHash = 0;
+  uint64_t TotalProfiledFunc = 0;
+  uint64_t MismatchedFuncHashSamples = 0;
+  uint64_t TotalFunctionSamples = 0;
+
+  // A map from function name to a set of mismatched callsite locations.
+  StringMap<std::set<LineLocation>> FuncMismatchedCallsites;
+
+  void countMismatchedSamples(const FunctionSamples &FS);
+  void countProfileMismatches(
+      const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
+      const std::map<LineLocation, std::unordered_set<FunctionId>>
+          &ProfileAnchors);
+  void countMismatchedCallsites(
+      const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
+      const std::map<LineLocation, std::unordered_set<FunctionId>>
+          &ProfileAnchors,
+      const LocToLocMap &IRToProfileLocationMap);
+  void countMismatchedCallsiteSamples(const FunctionSamples &FS);
+  void countMismatchedCallsiteSamples();
+  void copyUnchangedCallsiteMismatches(
+      const StringMap<std::set<LineLocation>> &InputMismatchedCallsites);
+};
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
@@ -442,36 +477,26 @@ class SampleProfileMatcher {
   SampleProfileReader &Reader;
   const PseudoProbeManager *ProbeManager;
   SampleProfileMap FlattenedProfiles;
-
-  std::unordered_map<const Function *, IRAnchorMap> FuncIRAnchors;
-  std::unordered_map<const Function *, ProfileAnchorMap> FuncProfileAnchors;
-
   // For each function, the matcher generates a map, of which each entry is a
   // mapping from the source location of current build to the source location in
   // the profile.
   StringMap<LocToLocMap> FuncMappings;
 
-  // Profile mismatching statstics.
-  uint64_t TotalProfiledCallsites = 0;
-  uint64_t NumMismatchedCallsites = 0;
-  uint64_t MismatchedCallsiteSamples = 0;
-  uint64_t PostMatchNumMismatchedCallsites = 0;
-  uint64_t PostMatchMismatchedCallsiteSamples = 0;
-  uint64_t TotalProfiledFunc = 0;
-  uint64_t NumMismatchedFuncHash = 0;
-  uint64_t MismatchedFuncHashSamples = 0;
-  uint64_t TotalFuncHashSamples = 0;
+  ProfileMatchStats PreMatchStats;
+  ProfileMatchStats PostMatchStats;
+
+public:
+  SampleProfileMatcher(Module &M, SampleProfileReader &Reader,
+                       const PseudoProbeManager *ProbeManager)
+      : M(M), Reader(Reader), ProbeManager(ProbeManager),
+        PreMatchStats(M, Reader, ProbeManager),
+        PostMatchStats(M, Reader, ProbeManager){};
+  void runOnModule();
 
   // A dummy name for unknown indirect callee, used to differentiate from a
   // non-call instruction that also has an empty callee name.
   static constexpr const char *UnknownIndirectCallee =
       "unknown.indirect.callee";
-
-public:
-  SampleProfileMatcher(Module &M, SampleProfileReader &Reader,
-                       const PseudoProbeManager *ProbeManager)
-      : M(M), Reader(Reader), ProbeManager(ProbeManager){};
-  void runOnModule();
 
 private:
   FunctionSamples *getFlattenedSamplesFor(const Function &F) {
@@ -482,22 +507,11 @@ private:
     return nullptr;
   }
   void runOnFunction(const Function &F);
-  void findFuncAnchors();
-  void UpdateIRAnchors();
-  void findIRAnchors(const Function &F, IRAnchorMap &IRAnchors);
-  void findProfileAnchors(const FunctionSamples &FS,
-                          ProfileAnchorMap &ProfileAnchors);
-  void countMismatchedHashSamples(const FunctionSamples &FS);
-  void countProfileMismatches(bool IsPreMatch);
-  void countMismatchedHashes(const Function &F, const FunctionSamples &FS);
-  void countMismatchedCallsites(
-      const Function &F,
-      StringMap<std::set<LineLocation>> &FuncToMismatchCallsites,
-      uint64_t &FuncProfiledCallsites, uint64_t &FuncMismatchedCallsites) const;
-  void countMismatchedCallsiteSamples(
+  void findIRAnchors(const Function &F,
+                     std::map<LineLocation, StringRef> &IRAnchors);
+  void findProfileAnchors(
       const FunctionSamples &FS,
-      StringMap<std::set<LineLocation>> &FuncToMismatchCallsites,
-      uint64_t &FuncMismatchedCallsiteSamples) const;
+      std::map<LineLocation, std::unordered_set<FunctionId>> &ProfileAnchors);
   LocToLocMap &getIRToProfileLocationMap(const Function &F) {
     auto Ret = FuncMappings.try_emplace(
         FunctionSamples::getCanonicalFnName(F.getName()), LocToLocMap());
@@ -505,10 +519,12 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
-  void runStaleProfileMatching();
-  void runStaleProfileMatching(const Function &F, const IRAnchorMap &IRAnchors,
-                               const ProfileAnchorMap &ProfileAnchors,
-                               LocToLocMap &IRToProfileLocationMap);
+  void runStaleProfileMatching(
+      const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
+      const std::map<LineLocation, std::unordered_set<FunctionId>>
+          &ProfileAnchors,
+      LocToLocMap &IRToProfileLocationMap);
+  void reportOrPersistProfileStats();
 };
 
 /// Sample profile pass.
@@ -694,6 +710,10 @@ void SampleProfileLoaderBaseImpl<Function>::computeDominanceAndLoopInfo(
   LI->analyze(*DT);
 }
 } // namespace llvm
+
+bool ShouldSkipProfileLoading(const Function &F) {
+  return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
 
 ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (FunctionSamples::ProfileIsProbeBased)
@@ -2128,8 +2148,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
   return true;
 }
 
-void SampleProfileMatcher::findIRAnchors(const Function &F,
-                                         IRAnchorMap &IRAnchors) {
+void SampleProfileMatcher::findIRAnchors(
+    const Function &F, std::map<LineLocation, StringRef> &IRAnchors) {
   // For inlined code, recover the original callsite and callee by finding the
   // top-level inline frame. e.g. For frame stack "main:1 @ foo:2 @ bar:3", the
   // top-level frame is "main:1", the callsite is "1" and the callee is "foo".
@@ -2195,8 +2215,7 @@ void SampleProfileMatcher::findIRAnchors(const Function &F,
   }
 }
 
-void SampleProfileMatcher::countMismatchedHashSamples(
-    const FunctionSamples &FS) {
+void ProfileMatchStats::countMismatchedSamples(const FunctionSamples &FS) {
   const auto *FuncDesc = ProbeManager->getDesc(FS.getGUID());
   // Skip the function that is external or renamed.
   if (!FuncDesc)
@@ -2208,11 +2227,144 @@ void SampleProfileMatcher::countMismatchedHashSamples(
   }
   for (const auto &I : FS.getCallsiteSamples())
     for (const auto &CS : I.second)
-      countMismatchedHashSamples(CS.second);
+      countMismatchedSamples(CS.second);
+}
+
+void ProfileMatchStats::countMismatchedCallsites(
+    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
+    const std::map<LineLocation, std::unordered_set<FunctionId>>
+        &ProfileAnchors,
+    const LocToLocMap &IRToProfileLocationMap) {
+  auto &MismatchedCallsites =
+      FuncMismatchedCallsites[FunctionSamples::getCanonicalFnName(F.getName())];
+
+  auto MapIRLocToProfileLoc = [&](const LineLocation &IRLoc) {
+    const auto &ProfileLoc = IRToProfileLocationMap.find(IRLoc);
+    if (ProfileLoc != IRToProfileLocationMap.end())
+      return ProfileLoc->second;
+    else
+      return IRLoc;
+  };
+
+  std::set<LineLocation> MatchedCallsites;
+  for (const auto &I : IRAnchors) {
+    // In post-match, use the matching result to remap the current IR callsite.
+    const auto &Loc = MapIRLocToProfileLoc(I.first);
+    const auto &IRCalleeName = I.second;
+    const auto &It = ProfileAnchors.find(Loc);
+    if (It == ProfileAnchors.end())
+      continue;
+    const auto &Callees = It->second;
+
+    // Since indirect call does not have CalleeName, check conservatively if
+    // callsite in the profile is a callsite location. This is to reduce num of
+    // false positive since otherwise all the indirect call samples will be
+    // reported as mismatching.
+    if (IRCalleeName == SampleProfileMatcher::UnknownIndirectCallee)
+      MatchedCallsites.insert(Loc);
+    else if (Callees.count(getRepInFormat(IRCalleeName)))
+      MatchedCallsites.insert(Loc);
+  }
+
+  // Check if there are any callsites in the profile that does not match to any
+  // IR callsites, those callsite samples will be discarded.
+  for (const auto &I : ProfileAnchors) {
+    const auto &Loc = I.first;
+    [[maybe_unused]] const auto &Callees = I.second;
+    assert(!Callees.empty() && "Callees should not be empty");
+    TotalProfiledCallsites++;
+    if (!MatchedCallsites.count(Loc)) {
+      NumMismatchedCallsites++;
+      MismatchedCallsites.insert(Loc);
+    }
+  }
+}
+
+void ProfileMatchStats::countProfileMismatches(
+    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
+    const std::map<LineLocation, std::unordered_set<FunctionId>>
+        &ProfileAnchors) {
+  [[maybe_unused]] bool IsFuncHashMismatch = false;
+  // Use top-level nested FS for counting profile mismatch metrics since
+  // currently once a callsite is mismatched, all its children profiles are
+  // dropped.
+  if (const auto *FS = Reader.getSamplesFor(F)) {
+    TotalProfiledFunc++;
+    TotalFunctionSamples += FS->getTotalSamples();
+    if (FunctionSamples::ProfileIsProbeBased) {
+      const auto *FuncDesc = ProbeManager->getDesc(F);
+      if (FuncDesc) {
+        if (ProbeManager->profileIsHashMismatched(*FuncDesc, *FS)) {
+          NumMismatchedFuncHash++;
+          IsFuncHashMismatch = true;
+        }
+        countMismatchedSamples(*FS);
+      }
+    }
+  }
+
+  countMismatchedCallsites(F, IRAnchors, ProfileAnchors, LocToLocMap());
+  LLVM_DEBUG({
+    auto It = FuncMismatchedCallsites.find(
+        FunctionSamples::getCanonicalFnName(F.getName()));
+    if (FunctionSamples::ProfileIsProbeBased && !IsFuncHashMismatch &&
+        It != FuncMismatchedCallsites.end() && !It->second.empty())
+      dbgs() << "Function checksum is matched but there are "
+             << It->second.size() << " mismatched callsites.\n";
+  });
+}
+
+void ProfileMatchStats::countMismatchedCallsiteSamples(
+    const FunctionSamples &FS) {
+  auto It = FuncMismatchedCallsites.find(FS.getFuncName());
+  // Skip it if no mismatched callsite or this is an external function.
+  if (It == FuncMismatchedCallsites.end() || It->second.empty())
+    return;
+  const auto &MismatchCallsites = It->second;
+
+  for (const auto &I : FS.getBodySamples()) {
+    if (MismatchCallsites.count(I.first))
+      MismatchedCallsiteSamples += I.second.getSamples();
+  }
+
+  for (const auto &I : FS.getCallsiteSamples()) {
+    const auto &Loc = I.first;
+    if (MismatchCallsites.count(Loc)) {
+      for (const auto &CS : I.second)
+        MismatchedCallsiteSamples += CS.second.getTotalSamples();
+      continue;
+    }
+
+    // Count mismatched samples for inlined functions.
+    for (const auto &CS : I.second)
+      countMismatchedCallsiteSamples(CS.second);
+  }
+}
+
+void ProfileMatchStats::countMismatchedCallsiteSamples() {
+  if (FuncMismatchedCallsites.empty())
+    return;
+  for (const auto &F : M) {
+    if (ShouldSkipProfileLoading(F))
+      continue;
+    if (const auto *FS = Reader.getSamplesFor(F))
+      countMismatchedCallsiteSamples(*FS);
+  }
+}
+
+void ProfileMatchStats::copyUnchangedCallsiteMismatches(
+    const StringMap<std::set<LineLocation>> &InputMismatchedCallsites) {
+  for (const auto &I : InputMismatchedCallsites) {
+    auto It = FuncMismatchedCallsites.find(I.first());
+    if (It != FuncMismatchedCallsites.end())
+      continue;
+    FuncMismatchedCallsites.try_emplace(I.first(), I.second);
+  }
 }
 
 void SampleProfileMatcher::findProfileAnchors(
-    const FunctionSamples &FS, ProfileAnchorMap &ProfileAnchors) {
+    const FunctionSamples &FS,
+    std::map<LineLocation, std::unordered_set<FunctionId>> &ProfileAnchors) {
   auto isInvalidLineOffset = [](uint32_t LineOffset) {
     return LineOffset & 0x8000;
   };
@@ -2259,8 +2411,9 @@ void SampleProfileMatcher::findProfileAnchors(
 //   [1, 2, 3(foo), 4,  7,  8(bar), 9]
 // The output mapping: [2->3, 3->4, 5->7, 6->8, 7->9].
 void SampleProfileMatcher::runStaleProfileMatching(
-    const Function &F, const IRAnchorMap &IRAnchors,
-    const ProfileAnchorMap &ProfileAnchors,
+    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
+    const std::map<LineLocation, std::unordered_set<FunctionId>>
+        &ProfileAnchors,
     LocToLocMap &IRToProfileLocationMap) {
   LLVM_DEBUG(dbgs() << "Run stale profile matching for " << F.getName()
                     << "\n");
@@ -2341,249 +2494,79 @@ void SampleProfileMatcher::runStaleProfileMatching(
   }
 }
 
-void SampleProfileMatcher::runStaleProfileMatching() {
-  for (const auto &F : M) {
-    if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
-      continue;
-    const auto *FSFlattened = getFlattenedSamplesFor(F);
-    if (!FSFlattened)
-      continue;
-    auto IR = FuncIRAnchors.find(&F);
-    auto P = FuncProfileAnchors.find(&F);
-    if (IR == FuncIRAnchors.end() || P == FuncProfileAnchors.end())
-      continue;
-
-    // Run profile matching for checksum mismatched profile, currently only
-    // support for pseudo-probe.
-    if (FunctionSamples::ProfileIsProbeBased &&
-        !ProbeManager->profileIsValid(F, *FSFlattened)) {
-      runStaleProfileMatching(F, IR->second, P->second,
-                              getIRToProfileLocationMap(F));
-    }
-  }
-
-  distributeIRToProfileLocationMap();
-}
-
-void SampleProfileMatcher::findFuncAnchors() {
-  ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
-                                   FunctionSamples::ProfileIsCS);
-  for (const auto &F : M) {
-    if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
-      continue;
-    // We need to use flattened function samples for matching.
-    // Unlike IR, which includes all callsites from the source code, the
-    // callsites in profile only show up when they are hit by samples, i,e. the
-    // profile callsites in one context may differ from those in another
-    // context. To get the maximum number of callsites, we merge the function
-    // profiles from all contexts, aka, the flattened profile to find profile
-    // anchors.
-    const auto *FSFlattened = getFlattenedSamplesFor(F);
-    if (!FSFlattened)
-      continue;
-
-    // Anchors for IR. It's a map from IR location to callee name, callee name
-    // is empty for non-call instruction and use a dummy
-    // name(UnknownIndirectCallee) for unknown indrect callee name.
-    auto IR = FuncIRAnchors.emplace(&F, IRAnchorMap());
-    findIRAnchors(F, IR.first->second);
-
-    // Anchors for profile. It's a map from callsite location to a set of callee
-    // name.
-    auto P = FuncProfileAnchors.emplace(&F, ProfileAnchorMap());
-    findProfileAnchors(*FSFlattened, P.first->second);
-  }
-}
-
-void SampleProfileMatcher::countMismatchedCallsiteSamples(
-    const FunctionSamples &FS,
-    StringMap<std::set<LineLocation>> &FuncToMismatchCallsites,
-    uint64_t &FuncMismatchedCallsiteSamples) const {
-  auto It = FuncToMismatchCallsites.find(FS.getFuncName());
-  // Skip it if no mismatched callsite or this is an external function.
-  if (It == FuncToMismatchCallsites.end() || It->second.empty())
-    return;
-  const auto &MismatchCallsites = It->second;
-  for (const auto &I : FS.getBodySamples()) {
-    if (MismatchCallsites.count(I.first))
-      FuncMismatchedCallsiteSamples += I.second.getSamples();
-  }
-
-  for (const auto &I : FS.getCallsiteSamples()) {
-    const auto &Loc = I.first;
-    if (MismatchCallsites.count(Loc)) {
-      for (const auto &CS : I.second)
-        FuncMismatchedCallsiteSamples += CS.second.getTotalSamples();
-      continue;
-    }
-
-    // count mismatched samples for inlined samples.
-    for (const auto &CS : I.second)
-      countMismatchedCallsiteSamples(CS.second, FuncToMismatchCallsites,
-                                     FuncMismatchedCallsiteSamples);
-  }
-}
-
-void SampleProfileMatcher::countMismatchedCallsites(
-    const Function &F,
-    StringMap<std::set<LineLocation>> &FuncToMismatchCallsites,
-    uint64_t &FuncProfiledCallsites, uint64_t &FuncMismatchedCallsites) const {
-  auto IR = FuncIRAnchors.find(&F);
-  auto P = FuncProfileAnchors.find(&F);
-  if (IR == FuncIRAnchors.end() || P == FuncProfileAnchors.end())
-    return;
-  const auto &IRAnchors = IR->second;
-  const auto &ProfileAnchors = P->second;
-
-  auto &MismatchCallsites =
-      FuncToMismatchCallsites[FunctionSamples::getCanonicalFnName(F.getName())];
-
-  // Check if there are any callsites in the profile that does not match to any
-  // IR callsites, those callsite samples will be discarded.
-  for (const auto &I : ProfileAnchors) {
-    const auto &Loc = I.first;
-    const auto &Callees = I.second;
-    assert(!Callees.empty() && "Callees should not be empty");
-
-    StringRef IRCalleeName;
-    const auto &IR = IRAnchors.find(Loc);
-    if (IR != IRAnchors.end())
-      IRCalleeName = IR->second;
-    bool CallsiteIsMatched = false;
-    // Since indirect call does not have CalleeName, check conservatively if
-    // callsite in the profile is a callsite location. This is to reduce num of
-    // false positive since otherwise all the indirect call samples will be
-    // reported as mismatching.
-    if (IRCalleeName == UnknownIndirectCallee)
-      CallsiteIsMatched = true;
-    else if (Callees.count(FunctionId(IRCalleeName)))
-      CallsiteIsMatched = true;
-
-    FuncProfiledCallsites++;
-    if (!CallsiteIsMatched) {
-      FuncMismatchedCallsites++;
-      MismatchCallsites.insert(Loc);
-    }
-  }
-}
-
-void SampleProfileMatcher::countMismatchedHashes(const Function &F,
-                                                 const FunctionSamples &FS) {
-  if (!FunctionSamples::ProfileIsProbeBased)
-    return;
-  const auto *FuncDesc = ProbeManager->getDesc(F);
-  if (FuncDesc) {
-    if (ProbeManager->profileIsHashMismatched(*FuncDesc, FS)) {
-      NumMismatchedFuncHash++;
-    }
-    countMismatchedHashSamples(FS);
-  }
-}
-
-void SampleProfileMatcher::UpdateIRAnchors() {
-  for (auto &I : FuncIRAnchors) {
-    const auto *F = I.first;
-    auto &IRAnchors = I.second;
-    const auto Mapping =
-        FuncMappings.find(FunctionSamples::getCanonicalFnName(F->getName()));
-    if (Mapping == FuncMappings.end())
-      continue;
-    IRAnchorMap UpdatedIRAnchors;
-    const auto &LocToLocMapping = Mapping->second;
-    for (const auto L : LocToLocMapping) {
-      UpdatedIRAnchors[L.second] = IRAnchors[L.first];
-      IRAnchors.erase(L.first);
-    }
-
-    for (const auto &IR : UpdatedIRAnchors) {
-      IRAnchors[IR.first] = IR.second;
-    }
-  }
-}
-
-void SampleProfileMatcher::countProfileMismatches(bool IsPreMatch) {
-  if (!ReportProfileStaleness && !PersistProfileStaleness)
+void SampleProfileMatcher::runOnFunction(const Function &F) {
+  // We need to use flattened function samples for matching.
+  // Unlike IR, which includes all callsites from the source code, the callsites
+  // in profile only show up when they are hit by samples, i,e. the profile
+  // callsites in one context may differ from those in another context. To get
+  // the maximum number of callsites, we merge the function profiles from all
+  // contexts, aka, the flattened profile to find profile anchors.
+  const auto *FSFlattened = getFlattenedSamplesFor(F);
+  if (!FSFlattened)
     return;
 
-  if (!IsPreMatch) {
-    // Use the profile matching results to update to the IR anchors.
-    UpdateIRAnchors();
+  // Anchors for IR. It's a map from IR location to callee name, callee name is
+  // empty for non-call instruction and use a dummy name(UnknownIndirectCallee)
+  // for unknown indrect callee name.
+  std::map<LineLocation, StringRef> IRAnchors;
+  findIRAnchors(F, IRAnchors);
+  // Anchors for profile. It's a map from callsite location to a set of callee
+  // name.
+  std::map<LineLocation, std::unordered_set<FunctionId>> ProfileAnchors;
+  findProfileAnchors(*FSFlattened, ProfileAnchors);
+
+  // Detect profile mismatch for profile staleness metrics report.
+  // Skip reporting the metrics for imported functions.
+  if (!GlobalValue::isAvailableExternallyLinkage(F.getLinkage()) &&
+      (ReportProfileStaleness || PersistProfileStaleness)) {
+    PreMatchStats.countProfileMismatches(F, IRAnchors, ProfileAnchors);
   }
 
-  uint64_t UnusedCounter = 0;
-  uint64_t *TotalProfiledCallsitesPtr =
-      IsPreMatch ? &TotalProfiledCallsites : &UnusedCounter;
-  uint64_t *NumMismatchedCallsitesPtr =
-      IsPreMatch ? &NumMismatchedCallsites : &PostMatchNumMismatchedCallsites;
-  uint64_t *MismatchedCallsiteSamplesPtr =
-      IsPreMatch ? &MismatchedCallsiteSamples
-                 : &PostMatchMismatchedCallsiteSamples;
-
-  auto SkipFunctionForReport = [](const Function &F) {
-    if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
-      return true;
-    // Skip reporting the metrics for imported functions.
-    if (GlobalValue::isAvailableExternallyLinkage(F.getLinkage()))
-      return true;
-    return false;
-  };
-
-  StringMap<std::set<LineLocation>> FuncToMismatchCallsites;
-  for (const auto &F : M) {
-    if (SkipFunctionForReport(F))
-      continue;
-    const auto *FS = Reader.getSamplesFor(F);
-    if (FS && IsPreMatch) {
-      // Only count the total function metrics once in pre-match time.
-      TotalFuncHashSamples += FS->getTotalSamples();
-      TotalProfiledFunc++;
-      countMismatchedHashes(F, *FS);
-    }
-    countMismatchedCallsites(F, FuncToMismatchCallsites,
-                             *TotalProfiledCallsitesPtr,
-                             *NumMismatchedCallsitesPtr);
-  }
-
-  for (const auto &F : M) {
-    if (SkipFunctionForReport(F))
-      continue;
-    if (const auto *FS = Reader.getSamplesFor(F))
-      countMismatchedCallsiteSamples(*FS, FuncToMismatchCallsites,
-                                     *MismatchedCallsiteSamplesPtr);
+  // Run profile matching for checksum mismatched profile, currently only
+  // support for pseudo-probe.
+  if (SalvageStaleProfile && FunctionSamples::ProfileIsProbeBased &&
+      !ProbeManager->profileIsValid(F, *FSFlattened)) {
+    // The matching result will be saved to IRToProfileLocationMap, create a new
+    // map for each function.
+    auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
+    runStaleProfileMatching(F, IRAnchors, ProfileAnchors,
+                            IRToProfileLocationMap);
+    PostMatchStats.countMismatchedCallsites(F, IRAnchors, ProfileAnchors,
+                                            IRToProfileLocationMap);
   }
 }
 
-void SampleProfileMatcher::runOnModule() {
-  findFuncAnchors();
-  countProfileMismatches(true);
-
-  if (SalvageStaleProfile) {
-    runStaleProfileMatching();
-    countProfileMismatches(false);
-  }
-
+void SampleProfileMatcher::reportOrPersistProfileStats() {
   if (ReportProfileStaleness) {
     if (FunctionSamples::ProfileIsProbeBased) {
-      errs() << "(" << NumMismatchedFuncHash << "/" << TotalProfiledFunc << ")"
+      errs() << "(" << PreMatchStats.NumMismatchedFuncHash << "/"
+             << PreMatchStats.TotalProfiledFunc << ")"
              << " of functions' profile are invalid and "
-             << " (" << MismatchedFuncHashSamples << "/" << TotalFuncHashSamples
-             << ")"
+             << " (" << PreMatchStats.MismatchedFuncHashSamples << "/"
+             << PreMatchStats.TotalFunctionSamples << ")"
              << " of samples are discarded due to function hash mismatch.\n";
     }
-    errs() << "(" << NumMismatchedCallsites << "/" << TotalProfiledCallsites
-           << ")"
+    errs() << "(" << PreMatchStats.NumMismatchedCallsites << "/"
+           << PreMatchStats.TotalProfiledCallsites << ")"
            << " of callsites' profile are invalid and "
-           << "(" << MismatchedCallsiteSamples << "/" << TotalFuncHashSamples
-           << ")"
+           << "(" << PreMatchStats.MismatchedCallsiteSamples << "/"
+           << PreMatchStats.TotalFunctionSamples << ")"
            << " of samples are discarded due to callsite location mismatch.\n";
     if (SalvageStaleProfile) {
-      errs() << "(" << PostMatchNumMismatchedCallsites << "/"
-             << TotalProfiledCallsites << ")"
-             << " of callsites' profile are invalid and "
-             << "(" << PostMatchMismatchedCallsiteSamples << "/"
-             << TotalFuncHashSamples << ")"
-             << " of samples are discarded due to callsite location mismatch "
-                "after stale profile matching.\n";
+      uint64_t NumRecoveredCallsites = PostMatchStats.TotalProfiledCallsites -
+                                       PostMatchStats.NumMismatchedCallsites;
+      uint64_t NumMismatchedCallsites =
+          PreMatchStats.NumMismatchedCallsites - NumRecoveredCallsites;
+      errs() << "Out of " << PostMatchStats.TotalProfiledCallsites
+             << " callsites used for profile matching, "
+             << NumRecoveredCallsites
+             << " callsites have been recovered. After the matching, ("
+             << NumMismatchedCallsites << "/"
+             << PreMatchStats.TotalProfiledCallsites
+             << ") of callsites are still invalid ("
+             << PostMatchStats.MismatchedCallsiteSamples << "/"
+             << PreMatchStats.TotalFunctionSamples << ")"
+             << " of samples are still discarded.\n";
     }
   }
 
@@ -2592,28 +2575,59 @@ void SampleProfileMatcher::runOnModule() {
     MDBuilder MDB(Ctx);
 
     SmallVector<std::pair<StringRef, uint64_t>> ProfStatsVec;
-    ProfStatsVec.emplace_back("NumMismatchedCallsites", NumMismatchedCallsites);
-    ProfStatsVec.emplace_back("TotalProfiledCallsites", TotalProfiledCallsites);
+    ProfStatsVec.emplace_back("NumMismatchedCallsites",
+                              PreMatchStats.NumMismatchedCallsites);
+    ProfStatsVec.emplace_back("TotalProfiledCallsites",
+                              PreMatchStats.TotalProfiledCallsites);
     ProfStatsVec.emplace_back("MismatchedCallsiteSamples",
-                              MismatchedCallsiteSamples);
-    ProfStatsVec.emplace_back("TotalFuncHashSamples", TotalFuncHashSamples);
+                              PreMatchStats.MismatchedCallsiteSamples);
+    ProfStatsVec.emplace_back("TotalProfiledFunc",
+                              PreMatchStats.TotalProfiledFunc);
+    ProfStatsVec.emplace_back("TotalFunctionSamples",
+                              PreMatchStats.TotalFunctionSamples);
     if (FunctionSamples::ProfileIsProbeBased) {
-      ProfStatsVec.emplace_back("TotalProfiledFunc", TotalProfiledFunc);
-      ProfStatsVec.emplace_back("NumMismatchedFuncHash", NumMismatchedFuncHash);
+      ProfStatsVec.emplace_back("NumMismatchedFuncHash",
+                                PreMatchStats.NumMismatchedFuncHash);
       ProfStatsVec.emplace_back("MismatchedFuncHashSamples",
-                                MismatchedFuncHashSamples);
+                                PreMatchStats.MismatchedFuncHashSamples);
     }
     if (SalvageStaleProfile) {
       ProfStatsVec.emplace_back("PostMatchNumMismatchedCallsites",
-                                PostMatchNumMismatchedCallsites);
+                                PostMatchStats.NumMismatchedCallsites);
+      ProfStatsVec.emplace_back("NumCallsitesForMatching",
+                                PostMatchStats.TotalProfiledCallsites);
       ProfStatsVec.emplace_back("PostMatchMismatchedCallsiteSamples",
-                                PostMatchMismatchedCallsiteSamples);
+                                PostMatchStats.MismatchedCallsiteSamples);
     }
 
     auto *MD = MDB.createLLVMStats(ProfStatsVec);
     auto *NMD = M.getOrInsertNamedMetadata("llvm.stats");
     NMD->addOperand(MD);
   }
+}
+
+void SampleProfileMatcher::runOnModule() {
+  ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
+                                   FunctionSamples::ProfileIsCS);
+  for (auto &F : M) {
+    if (ShouldSkipProfileLoading(F))
+      continue;
+    runOnFunction(F);
+  }
+
+  if (SalvageStaleProfile)
+    distributeIRToProfileLocationMap();
+
+  PreMatchStats.countMismatchedCallsiteSamples();
+  if (SalvageStaleProfile) {
+    // If a function doesn't run the matching but has mismatched callsites, this
+    // won't be any data for that function in post-match stats, so just reuse
+    // the pre-match stats.
+    PostMatchStats.copyUnchangedCallsiteMismatches(
+        PreMatchStats.FuncMismatchedCallsites);
+    PostMatchStats.countMismatchedCallsiteSamples();
+  }
+  reportOrPersistProfileStats();
 }
 
 void SampleProfileMatcher::distributeIRToProfileLocationMap(
