@@ -1,4 +1,5 @@
 ; RUN: opt < %s -tiny-trip-count-interleave-threshold=16 -force-target-max-vector-interleave=8 -p loop-vectorize -S -pass-remarks=loop-vectorize -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -tiny-trip-count-interleave-threshold=16 -force-target-max-vector-interleave=8 -p loop-vectorize -S 2>&1 | FileCheck %s -check-prefix=CHECK-IR
 ; TODO: remove -tiny-trip-count-interleave-threshold once the interleave threshold is removed
 
 target triple = "aarch64-linux-gnu"
@@ -177,6 +178,15 @@ for.end:
 ; it should choose conservatively IC 4 so that the vector loop runs twice at least
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
 define void @loop_with_profile_tc_128(ptr noalias %p, ptr noalias %q, i64 %n) {
+; CHECK-IR-LABEL: define void @loop_with_profile_tc_128(
+; CHECK-IR-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]], i64 [[N:%.*]]) {
+; CHECK-IR-NEXT:  iter.check:
+; CHECK-IR-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-IR-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]], !prof [[PROF6:![0-9]+]]
+; CHECK-IR:       vector.main.loop.iter.check:
+; CHECK-IR-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 64
+; CHECK-IR-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]], !prof [[PROF6]]
+;
 entry:
   br label %for.body
 
@@ -205,6 +215,15 @@ for.end:
 ; remainder than IC 4
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
 define void @loop_with_profile_tc_128_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q, i64 %n) {
+; CHECK-IR-LABEL: define void @loop_with_profile_tc_128_scalar_epilogue_reqd(
+; CHECK-IR-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]], i64 [[N:%.*]]) {
+; CHECK-IR-NEXT:  iter.check:
+; CHECK-IR-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[N]], 8
+; CHECK-IR-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]], !prof [[PROF6]]
+; CHECK-IR:       vector.main.loop.iter.check:
+; CHECK-IR-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ule i64 [[N]], 64
+; CHECK-IR-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]], !prof [[PROF6]]
+;
 entry:
   br label %for.body
 
