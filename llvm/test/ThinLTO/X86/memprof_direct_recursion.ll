@@ -105,15 +105,15 @@ attributes #2 = { builtin allocsize(0) }
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 18.0.0git (https://github.com/lifengxiang1025/llvm-project.git dcdb1f632aaca33be8959f28c14e5d3bba06cfd2)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
-!1 = !DIFile(filename: "b.cpp", directory: "/data00/lifengxiang.1025/test/memprof", checksumkind: CSK_MD5, checksum: "8fa6c585f9d2c35f1a82b920e64bbda2")
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 18.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
+!1 = !DIFile(filename: "b.cpp", directory: "/", checksumkind: CSK_MD5, checksum: "8fa6c585f9d2c35f1a82b920e64bbda2")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 8, !"PIC Level", i32 2}
 !6 = !{i32 7, !"PIE Level", i32 2}
 !7 = !{i32 7, !"uwtable", i32 2}
-!8 = !{!"clang version 18.0.0git (https://github.com/lifengxiang1025/llvm-project.git dcdb1f632aaca33be8959f28c14e5d3bba06cfd2)"}
+!8 = !{!"clang version 18.0.0"}
 !9 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi", scope: !1, file: !1, line: 4, type: !10, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !10 = !DISubroutineType(types: !11)
 !11 = !{}
@@ -200,15 +200,15 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 18.0.0git (https://github.com/lifengxiang1025/llvm-project.git dcdb1f632aaca33be8959f28c14e5d3bba06cfd2)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
-!1 = !DIFile(filename: "a.cpp", directory: "/data00/lifengxiang.1025/test/memprof", checksumkind: CSK_MD5, checksum: "16ecbfa723a07d69c0374cfc704a7c44")
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 18.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
+!1 = !DIFile(filename: "a.cpp", directory: "/", checksumkind: CSK_MD5, checksum: "16ecbfa723a07d69c0374cfc704a7c44")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 8, !"PIC Level", i32 2}
 !6 = !{i32 7, !"PIE Level", i32 2}
 !7 = !{i32 7, !"uwtable", i32 2}
-!8 = !{!"clang version 18.0.0git (https://github.com/lifengxiang1025/llvm-project.git dcdb1f632aaca33be8959f28c14e5d3bba06cfd2)"}
+!8 = !{!"clang version 18.0.0"}
 !9 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 4, type: !10, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !10 = !DISubroutineType(types: !11)
 !11 = !{}
