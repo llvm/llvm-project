@@ -511,6 +511,7 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
     assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
     BaseIV = new VPScalarCastRecipe(Instruction::Trunc, BaseIV, TruncTy);
     HeaderVPBB->insert(BaseIV, IP);
+    ResultTy = TruncTy;
   }
 
   // Truncate step if needed.
