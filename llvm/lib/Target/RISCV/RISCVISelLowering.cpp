@@ -2002,6 +2002,14 @@ bool RISCVTargetLowering::shouldSinkOperands(
   if (!I->getType()->isVectorTy() || !Subtarget.hasVInstructions())
     return false;
 
+  // Don't sink splat operands if the target prefers it. Some targets requires
+  // S2V transfer buffers and we can run out of them copying the same value
+  // repeatedly.
+  // FIXME: It could still be worth doing if it would improve vector register
+  // pressure and prevent a vector spill.
+  if (!Subtarget.sinkSplatOperands())
+    return false;
+
   for (auto OpIdx : enumerate(I->operands())) {
     if (!canSplatOperand(I, OpIdx.index()))
       continue;
@@ -4616,6 +4624,26 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
   return Res;
 }
 
+static bool isLegalBitRotate(ShuffleVectorSDNode *SVN,
+                             SelectionDAG &DAG,
+                             const RISCVSubtarget &Subtarget,
+                             MVT &RotateVT, unsigned &RotateAmt) {
+  SDLoc DL(SVN);
+
+  EVT VT = SVN->getValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  unsigned NumSubElts;
+  if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,
+                                          NumElts, NumSubElts, RotateAmt))
+    return false;
+  RotateVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits * NumSubElts),
+                                  NumElts / NumSubElts);
+
+  // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
+  return Subtarget.getTargetLowering()->isTypeLegal(RotateVT);
+}
+
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
 // reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
 // as a vror.vi if we have Zvkb, or otherwise as a vsll, vsrl and vor.
@@ -4625,17 +4653,9 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
   SDLoc DL(SVN);
 
   EVT VT = SVN->getValueType(0);
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned EltSizeInBits = VT.getScalarSizeInBits();
-  unsigned NumSubElts, RotateAmt;
-  if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,
-                                          NumElts, NumSubElts, RotateAmt))
-    return SDValue();
-  MVT RotateVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits * NumSubElts),
-                                  NumElts / NumSubElts);
-
-  // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
-  if (!Subtarget.getTargetLowering()->isTypeLegal(RotateVT))
+  unsigned RotateAmt;
+  MVT RotateVT;
+  if (!isLegalBitRotate(SVN, DAG, Subtarget, RotateVT, RotateAmt))
     return SDValue();
 
   SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
@@ -4670,6 +4690,13 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   const unsigned MinVLen = Subtarget.getRealMinVLen();
   const unsigned MaxVLen = Subtarget.getRealMaxVLen();
   if (MinVLen != MaxVLen || VT.getSizeInBits().getFixedValue() <= MinVLen)
+    return SDValue();
+
+  // Avoid picking up bitrotate patterns which we have a linear-in-lmul
+  // expansion for.
+  unsigned RotateAmt;
+  MVT RotateVT;
+  if (isLegalBitRotate(SVN, DAG, Subtarget, RotateVT, RotateAmt))
     return SDValue();
 
   MVT ElemVT = VT.getVectorElementType();
@@ -4718,7 +4745,7 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
     if (SrcVecIdx == -1)
       continue;
     unsigned ExtractIdx = (SrcVecIdx % VRegsPerSrc) * NumOpElts;
-    SDValue SrcVec = (unsigned)SrcVecIdx > VRegsPerSrc ? V2 : V1;
+    SDValue SrcVec = (unsigned)SrcVecIdx >= VRegsPerSrc ? V2 : V1;
     SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, SrcVec,
                                  DAG.getVectorIdxConstant(ExtractIdx, DL));
     SubVec = convertFromScalableVector(OneRegVT, SubVec, DAG, Subtarget);
@@ -4926,15 +4953,63 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
 
-  // Detect shuffles which can be re-expressed as vector selects; these are
-  // shuffles in which each element in the destination is taken from an element
-  // at the corresponding index in either source vectors.
-  bool IsSelect = all_of(enumerate(Mask), [&](const auto &MaskIdx) {
-    int MaskIndex = MaskIdx.value();
-    return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
-  });
 
+  // Handle any remaining single source shuffles
   assert(!V1.isUndef() && "Unexpected shuffle canonicalization");
+  if (V2.isUndef()) {
+    // We might be able to express the shuffle as a bitrotate. But even if we
+    // don't have Zvkb and have to expand, the expanded sequence of approx. 2
+    // shifts and a vor will have a higher throughput than a vrgather.
+    if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+      return V;
+
+    if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
+      // On such a large vector we're unable to use i8 as the index type.
+      // FIXME: We could promote the index to i16 and use vrgatherei16, but that
+      // may involve vector splitting if we're already at LMUL=8, or our
+      // user-supplied maximum fixed-length LMUL.
+      return SDValue();
+    }
+
+    // Base case for the two operand recursion below - handle the worst case
+    // single source shuffle.
+    unsigned GatherVVOpc = RISCVISD::VRGATHER_VV_VL;
+    MVT IndexVT = VT.changeTypeToInteger();
+    // Since we can't introduce illegal index types at this stage, use i16 and
+    // vrgatherei16 if the corresponding index type for plain vrgather is greater
+    // than XLenVT.
+    if (IndexVT.getScalarType().bitsGT(XLenVT)) {
+      GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
+      IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+    }
+
+    // If the mask allows, we can do all the index computation in 16 bits.  This
+    // requires less work and less register pressure at high LMUL, and creates
+    // smaller constants which may be cheaper to materialize.
+    if (IndexVT.getScalarType().bitsGT(MVT::i16) && isUInt<16>(NumElts - 1) &&
+        (IndexVT.getSizeInBits() / Subtarget.getRealMinVLen()) > 1) {
+      GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
+      IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+    }
+
+    MVT IndexContainerVT =
+      ContainerVT.changeVectorElementType(IndexVT.getScalarType());
+
+    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+    SmallVector<SDValue> GatherIndicesLHS;
+    for (int MaskIndex : Mask) {
+      bool IsLHSIndex = MaskIndex < (int)NumElts && MaskIndex >= 0;
+      GatherIndicesLHS.push_back(IsLHSIndex
+                                 ? DAG.getConstant(MaskIndex, DL, XLenVT)
+                                 : DAG.getUNDEF(XLenVT));
+    }
+    SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
+    LHSIndices = convertToScalableVector(IndexContainerVT, LHSIndices, DAG,
+                                         Subtarget);
+    SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
+                                 DAG.getUNDEF(ContainerVT), TrueMask, VL);
+    return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+  }
 
   // By default we preserve the original operand order, and use a mask to
   // select LHS as true and RHS as false. However, since RVV vector selects may
@@ -4942,6 +5017,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // instead select between RHS and LHS.
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
 
+  // Detect shuffles which can be re-expressed as vector selects; these are
+  // shuffles in which each element in the destination is taken from an element
+  // at the corresponding index in either source vectors.
+  bool IsSelect = all_of(enumerate(Mask), [&](const auto &MaskIdx) {
+    int MaskIndex = MaskIdx.value();
+    return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
+  });
   if (IsSelect) {
     // Now construct the mask that will be used by the vselect operation.
     SmallVector<SDValue> MaskVals;
@@ -4959,12 +5041,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
   }
 
-  // We might be able to express the shuffle as a bitrotate. But even if we
-  // don't have Zvkb and have to expand, the expanded sequence of approx. 2
-  // shifts and a vor will have a higher throughput than a vrgather.
-  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
-    return V;
-
   if (VT.getScalarSizeInBits() == 8 && VT.getVectorNumElements() > 256) {
     // On such a large vector we're unable to use i8 as the index type.
     // FIXME: We could promote the index to i16 and use vrgatherei16, but that
@@ -4975,12 +5051,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   // As a backup, shuffles can be lowered via a vrgather instruction, possibly
   // merged with a second vrgather.
-  SmallVector<SDValue> GatherIndicesLHS, GatherIndicesRHS;
-
-  // Keep a track of which non-undef indices are used by each LHS/RHS shuffle
-  // half.
-  DenseMap<int, unsigned> LHSIndexCounts, RHSIndexCounts;
-
+  SmallVector<int> ShuffleMaskLHS, ShuffleMaskRHS;
   SmallVector<SDValue> MaskVals;
 
   // Now construct the mask that will be used by the blended vrgather operation.
@@ -4989,107 +5060,27 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ !SwapOps;
     MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
-    GatherIndicesLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
-                               ? DAG.getConstant(MaskIndex, DL, XLenVT)
-                               : DAG.getUNDEF(XLenVT));
-    GatherIndicesRHS.push_back(
-                               IsLHSOrUndefIndex ? DAG.getUNDEF(XLenVT)
-                               : DAG.getConstant(MaskIndex - NumElts, DL, XLenVT));
-    if (IsLHSOrUndefIndex && MaskIndex >= 0)
-      ++LHSIndexCounts[MaskIndex];
-    if (!IsLHSOrUndefIndex)
-      ++RHSIndexCounts[MaskIndex - NumElts];
+    ShuffleMaskLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
+                             ? MaskIndex : -1);
+    ShuffleMaskRHS.push_back(IsLHSOrUndefIndex ? -1 : (MaskIndex - NumElts));
   }
 
   if (SwapOps) {
     std::swap(V1, V2);
-    std::swap(GatherIndicesLHS, GatherIndicesRHS);
+    std::swap(ShuffleMaskLHS, ShuffleMaskRHS);
   }
 
   assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
   MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
   SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
 
-  unsigned GatherVXOpc = RISCVISD::VRGATHER_VX_VL;
-  unsigned GatherVVOpc = RISCVISD::VRGATHER_VV_VL;
-  MVT IndexVT = VT.changeTypeToInteger();
-  // Since we can't introduce illegal index types at this stage, use i16 and
-  // vrgatherei16 if the corresponding index type for plain vrgather is greater
-  // than XLenVT.
-  if (IndexVT.getScalarType().bitsGT(XLenVT)) {
-    GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
-    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
-  }
-
-  // If the mask allows, we can do all the index computation in 16 bits.  This
-  // requires less work and less register pressure at high LMUL, and creates
-  // smaller constants which may be cheaper to materialize.
-  if (IndexVT.getScalarType().bitsGT(MVT::i16) && isUInt<16>(NumElts - 1) &&
-      (IndexVT.getSizeInBits() / Subtarget.getRealMinVLen()) > 1) {
-    GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
-    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
-  }
-
-  MVT IndexContainerVT =
-      ContainerVT.changeVectorElementType(IndexVT.getScalarType());
-
-  // Base case for the recursion just below - handle the worst case
-  // single source permutation.  Note that all the splat variants
-  // are handled above.
-  if (V2.isUndef()) {
-    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
-    SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
-    LHSIndices = convertToScalableVector(IndexContainerVT, LHSIndices, DAG,
-                                         Subtarget);
-    SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
-                                 DAG.getUNDEF(ContainerVT), TrueMask, VL);
-    return convertFromScalableVector(VT, Gather, DAG, Subtarget);
-  }
-
-  // Translate the gather index we computed above (and possibly swapped)
-  // back to a shuffle mask.  This step should disappear once we complete
-  // the migration to recursive design.
-  SmallVector<int> ShuffleMaskLHS;
-  ShuffleMaskLHS.reserve(GatherIndicesLHS.size());
-  for (SDValue GatherIndex : GatherIndicesLHS) {
-    if (GatherIndex.isUndef()) {
-      ShuffleMaskLHS.push_back(-1);
-      continue;
-    }
-    auto *IdxC = cast<ConstantSDNode>(GatherIndex);
-    ShuffleMaskLHS.push_back(IdxC->getZExtValue());
-  }
-
-  // Recursively invoke lowering for the LHS as if there were no RHS.
-  // This allows us to leverage all of our single source permute tricks.
-  SDValue Gather =
-    DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
-  Gather = convertToScalableVector(ContainerVT, Gather, DAG, Subtarget);
-
-  // Blend in second vector source with an additional vrgather.
-  V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
-
-  MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
-  SelectMask =
-    convertToScalableVector(MaskContainerVT, SelectMask, DAG, Subtarget);
-
-  // If only one index is used, we can use a "splat" vrgather.
-  // TODO: We can splat the most-common index and fix-up any stragglers, if
-  // that's beneficial.
-  if (RHSIndexCounts.size() == 1) {
-    int SplatIndex = RHSIndexCounts.begin()->getFirst();
-    Gather = DAG.getNode(GatherVXOpc, DL, ContainerVT, V2,
-                         DAG.getConstant(SplatIndex, DL, XLenVT), Gather,
-                         SelectMask, VL);
-  } else {
-    SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
-    RHSIndices =
-      convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
-    Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices, Gather,
-                         SelectMask, VL);
-  }
-
-  return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+  // Recursively invoke lowering for each operand if we had two
+  // independent single source shuffles, and then combine the result via a
+  // vselect.  Note that the vselect will likely be folded back into the
+  // second permute (vrgather, or other) by the post-isel combine.
+  V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
+  V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), ShuffleMaskRHS);
+  return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V2, V1);
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
@@ -6992,8 +6983,8 @@ SDValue RISCVTargetLowering::getTLSDescAddr(GlobalAddressSDNode *N,
   // This generates the pattern (PseudoLA_TLSDESC sym), which expands to
   //
   // auipc tX, %tlsdesc_hi(symbol)         // R_RISCV_TLSDESC_HI20(symbol)
-  // lw    tY, tX, %tlsdesc_lo_load(label) // R_RISCV_TLSDESC_LOAD_LO12_I(label)
-  // addi  a0, tX, %tlsdesc_lo_add(label)  // R_RISCV_TLSDESC_ADD_LO12_I(label)
+  // lw    tY, tX, %tlsdesc_load_lo(label) // R_RISCV_TLSDESC_LOAD_LO12(label)
+  // addi  a0, tX, %tlsdesc_add_lo(label)  // R_RISCV_TLSDESC_ADD_LO12(label)
   // jalr  t0, tY                          // R_RISCV_TLSDESC_CALL(label)
   SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
   return SDValue(DAG.getMachineNode(RISCV::PseudoLA_TLSDESC, DL, Ty, Addr), 0);
@@ -9045,94 +9036,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
         FixedIntrinsic->getMemoryVT(), FixedIntrinsic->getMemOperand());
   }
-  case Intrinsic::riscv_sf_vc_x_se_e8mf8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF8);
-  case Intrinsic::riscv_sf_vc_x_se_e8mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF4);
-  case Intrinsic::riscv_sf_vc_x_se_e8mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e8m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M1);
-  case Intrinsic::riscv_sf_vc_x_se_e8m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M2);
-  case Intrinsic::riscv_sf_vc_x_se_e8m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M4);
-  case Intrinsic::riscv_sf_vc_x_se_e8m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M8);
-  case Intrinsic::riscv_sf_vc_x_se_e16mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF4);
-  case Intrinsic::riscv_sf_vc_x_se_e16mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e16m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M1);
-  case Intrinsic::riscv_sf_vc_x_se_e16m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M2);
-  case Intrinsic::riscv_sf_vc_x_se_e16m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M4);
-  case Intrinsic::riscv_sf_vc_x_se_e16m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M8);
-  case Intrinsic::riscv_sf_vc_x_se_e32mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e32m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M1);
-  case Intrinsic::riscv_sf_vc_x_se_e32m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M2);
-  case Intrinsic::riscv_sf_vc_x_se_e32m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M4);
-  case Intrinsic::riscv_sf_vc_x_se_e32m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M8);
-  case Intrinsic::riscv_sf_vc_x_se_e64m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M1);
-  case Intrinsic::riscv_sf_vc_x_se_e64m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M2);
-  case Intrinsic::riscv_sf_vc_x_se_e64m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M4);
-  case Intrinsic::riscv_sf_vc_x_se_e64m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M8);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF8);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF4);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e8m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M1);
-  case Intrinsic::riscv_sf_vc_i_se_e8m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M2);
-  case Intrinsic::riscv_sf_vc_i_se_e8m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M4);
-  case Intrinsic::riscv_sf_vc_i_se_e8m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M8);
-  case Intrinsic::riscv_sf_vc_i_se_e16mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF4);
-  case Intrinsic::riscv_sf_vc_i_se_e16mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e16m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M1);
-  case Intrinsic::riscv_sf_vc_i_se_e16m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M2);
-  case Intrinsic::riscv_sf_vc_i_se_e16m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M4);
-  case Intrinsic::riscv_sf_vc_i_se_e16m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M8);
-  case Intrinsic::riscv_sf_vc_i_se_e32mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e32m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M1);
-  case Intrinsic::riscv_sf_vc_i_se_e32m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M2);
-  case Intrinsic::riscv_sf_vc_i_se_e32m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M4);
-  case Intrinsic::riscv_sf_vc_i_se_e32m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M8);
-  case Intrinsic::riscv_sf_vc_i_se_e64m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M1);
-  case Intrinsic::riscv_sf_vc_i_se_e64m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M2);
-  case Intrinsic::riscv_sf_vc_i_se_e64m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M4);
-  case Intrinsic::riscv_sf_vc_i_se_e64m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M8);
   case Intrinsic::riscv_sf_vc_xv_se:
     return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_XV_SE);
   case Intrinsic::riscv_sf_vc_iv_se:
@@ -20492,7 +20395,6 @@ RISCVTargetLowering::getTargetMMOFlags(const MemSDNode &Node) const {
   MachineMemOperand::Flags TargetFlags = MachineMemOperand::MONone;
   TargetFlags |= (NodeFlags & MONontemporalBit0);
   TargetFlags |= (NodeFlags & MONontemporalBit1);
-
   return TargetFlags;
 }
 

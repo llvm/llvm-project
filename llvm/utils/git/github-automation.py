@@ -309,6 +309,10 @@ class ReleaseWorkflow:
         return self._issue_number
 
     @property
+    def branch_repo_owner(self) -> str:
+        return self.branch_repo_name.split("/")[0]
+
+    @property
     def branch_repo_name(self) -> str:
         return self._branch_repo_name
 
@@ -394,7 +398,7 @@ class ReleaseWorkflow:
         action_url = self.action_url
         if action_url:
             message += action_url + "\n\n"
-        message += "Please manually backport the fix and push it to your github fork.  Once this is done, please add a comment like this:\n\n`/branch <user>/<repo>/<branch>`"
+        message += "Please manually backport the fix and push it to your github fork.  Once this is done, please create a [pull request](https://github.com/llvm/llvm-project/compare)"
         issue = self.issue
         comment = issue.create_comment(message)
         issue.add_to_labels(self.CHERRY_PICK_FAILED_LABEL)
@@ -472,9 +476,10 @@ class ReleaseWorkflow:
         print("Pushing to {} {}".format(push_url, branch_name))
         local_repo.git.push(push_url, "HEAD:{}".format(branch_name), force=True)
 
-        self.issue_notify_branch()
         self.issue_remove_cherry_pick_failed_label()
-        return True
+        return self.create_pull_request(
+            self.branch_repo_owner, self.repo_name, branch_name
+        )
 
     def check_if_pull_request_exists(
         self, repo: github.Repository.Repository, head: str
@@ -498,33 +503,8 @@ class ReleaseWorkflow:
         release_branch_for_issue = self.release_branch_for_issue
         if release_branch_for_issue is None:
             return False
-        head_branch = branch
-        if not repo.fork:
-            # If the target repo is not a fork of llvm-project, we need to copy
-            # the branch into the target repo.  GitHub only supports cross-repo pull
-            # requests on forked repos.
-            head_branch = f"{owner}-{branch}"
-            local_repo = Repo(self.llvm_project_dir)
-            push_done = False
-            for _ in range(0, 5):
-                try:
-                    local_repo.git.fetch(
-                        f"https://github.com/{owner}/{repo_name}", f"{branch}:{branch}"
-                    )
-                    local_repo.git.push(
-                        self.push_url, f"{branch}:{head_branch}", force=True
-                    )
-                    push_done = True
-                    break
-                except Exception as e:
-                    print(e)
-                    time.sleep(30)
-                    continue
-            if not push_done:
-                raise Exception("Failed to mirror branch into {}".format(self.push_url))
-            owner = repo.owner.login
 
-        head = f"{owner}:{head_branch}"
+        head = f"{owner}:{branch}"
         if self.check_if_pull_request_exists(repo, head):
             print("PR already exists...")
             return True
@@ -576,14 +556,6 @@ class ReleaseWorkflow:
                 arg_list = args.split()
                 commits = list(map(lambda a: extract_commit_hash(a), arg_list))
                 return self.create_branch(commits)
-
-            if command == "branch":
-                m = re.match("([^/]+)/([^/]+)/(.+)", args)
-                if m:
-                    owner = m.group(1)
-                    repo = m.group(2)
-                    branch = m.group(3)
-                    return self.create_pull_request(owner, repo, branch)
 
         print("Do not understand input:")
         print(sys.stdin.readlines())

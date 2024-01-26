@@ -174,11 +174,6 @@
 // The implementation moved to the header, but we still export the symbols from
 // the dylib for backwards compatibility.
 #    define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
-// Save memory by providing the allocator more freedom to allocate the most
-// efficient size class by dropping the alignment requirements for std::string's
-// pointer from 16 to 8. This changes the output of std::string::max_size,
-// which makes it ABI breaking
-#    define _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
 #  elif _LIBCPP_ABI_VERSION == 1
 #    if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -1280,8 +1275,8 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
 // clang-format off
-#  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh()\")") _Pragma("push_macro(\"move(int, int)\")") _Pragma("push_macro(\"erase()\")")
-#  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")") _Pragma("pop_macro(\"refresh()\")") _Pragma("pop_macro(\"move(int, int)\")") _Pragma("pop_macro(\"erase()\")")
+#  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh\")") _Pragma("push_macro(\"move\")") _Pragma("push_macro(\"erase\")")
+#  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")") _Pragma("pop_macro(\"refresh\")") _Pragma("pop_macro(\"move\")") _Pragma("pop_macro(\"erase\")")
 // clang-format on
 
 #  ifndef _LIBCPP_NO_AUTO_LINK

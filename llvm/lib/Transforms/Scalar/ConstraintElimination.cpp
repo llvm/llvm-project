@@ -231,8 +231,8 @@ struct ConstraintTy {
 
   ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq,
                bool IsNe)
-      : Coefficients(Coefficients), IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {
-  }
+      : Coefficients(std::move(Coefficients)), IsSigned(IsSigned), IsEq(IsEq),
+        IsNe(IsNe) {}
 
   unsigned size() const { return Coefficients.size(); }
 

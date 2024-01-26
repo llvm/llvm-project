@@ -45,8 +45,6 @@ public:
   // TODO: This should take a const BreakpointID.
   bool FindBreakpointID(BreakpointID &bp_id, size_t *position) const;
 
-  bool FindBreakpointID(const char *bp_id, size_t *position) const;
-
   // Returns a pair consisting of the beginning and end of a breakpoint
   // ID range expression.  If the input string is not a valid specification,
   // returns an empty pair.
