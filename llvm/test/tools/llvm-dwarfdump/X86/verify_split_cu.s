@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-linux-gnu -o - \
-# RUN: | not llvm-dwarfdump --no-aggregate-errors -v -verify - 2>&1 \
+# RUN: | not llvm-dwarfdump -v -verify - 2>&1 \
 # RUN: | FileCheck %s --implicit-check-not=error --implicit-check-not=warning
 
 # CHECK: Verifying dwo Units...
@@ -8,6 +8,11 @@
 # CHECK: error: Unsupported DW_AT_location encoding: DW_FORM_data1
 # FIXME: This should read "type unit" or just "unit" to be correct for this case/in general
 # CHECK: error: DIE has DW_AT_decl_file that references a file with index 1 and the compile unit has no line table
+# CHECK: error: Aggregated error category counts:
+# CHECK: error: Error category 'Compilation unit root DIE is not a unit DIE' occurred 1 time(s).
+# CHECK: error: Error category 'File index in DW_AT_decl_file reference CU with no line table' occurred 1 time(s).
+# CHECK: error: Error category 'Invalid DW_AT_location' occurred 1 time(s).
+# CHECK: error: Error category 'Mismatched unit type' occurred 1 time(s).
 # CHECK: Errors detected
 	.section	.debug_info.dwo,"e",@progbits
 	.long	.Ldebug_info_dwo_end1-.Ldebug_info_dwo_start1 # Length of Unit
