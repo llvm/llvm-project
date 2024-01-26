@@ -4406,7 +4406,7 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
         // previously we substitute the pack here in a similar fashion as
         // above with the trailing parameter packs. The main difference here is
         // that, in this case we are not processing all of the remaining
-        // arguments. We are only process as many arguments as much we have in
+        // arguments. We are only process as many arguments as we have in
         // the already deduced parameter.
         std::optional<unsigned> ArgPosAfterSubstitution =
             PackScope.getSavedPackSizeIfAllEqual();
