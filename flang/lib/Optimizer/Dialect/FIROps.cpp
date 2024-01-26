@@ -1935,7 +1935,7 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
-llvm::MutableArrayRef<mlir::OpOperand>
+std::optional<llvm::MutableArrayRef<mlir::OpOperand>>
 fir::IterWhileOp::getYieldedValuesMutable() {
   auto *term = getRegion().front().getTerminator();
   return getFinalValue() ? term->getOpOperands().drop_front()
@@ -2247,7 +2247,7 @@ mlir::Value fir::DoLoopOp::blockArgToSourceOp(unsigned blockArgNum) {
   return {};
 }
 
-llvm::MutableArrayRef<mlir::OpOperand>
+std::optional<llvm::MutableArrayRef<mlir::OpOperand>>
 fir::DoLoopOp::getYieldedValuesMutable() {
   auto *term = getRegion().front().getTerminator();
   return getFinalValue() ? term->getOpOperands().drop_front()

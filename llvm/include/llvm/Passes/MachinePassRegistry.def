@@ -127,6 +127,7 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis,
 #endif
 // MACHINE_FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass, ())
 // MACHINE_FUNCTION_PASS("mir-printer", PrintMIRPass, ())
+MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass, ())
 #undef MACHINE_FUNCTION_PASS
 
 // After a pass is converted to new pass manager, its entry should be moved from

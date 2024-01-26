@@ -17,8 +17,6 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// UNSUPPORTED: target={{.*}}
-
 // RUN: %{compile} | %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.

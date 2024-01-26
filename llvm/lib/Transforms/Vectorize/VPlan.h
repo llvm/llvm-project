@@ -859,6 +859,7 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
+    case VPRecipeBase::VPScalarCastSC:
       return true;
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -1333,6 +1334,34 @@ public:
 #endif
 
   Instruction::CastOps getOpcode() const { return Opcode; }
+
+  /// Returns the result type of the cast.
+  Type *getResultType() const { return ResultTy; }
+};
+
+/// VPScalarCastRecipe is a recipe to create scalar cast instructions.
+class VPScalarCastRecipe : public VPSingleDefRecipe {
+  Instruction::CastOps Opcode;
+
+  Type *ResultTy;
+
+  Value *generate(VPTransformState &State, unsigned Part);
+
+public:
+  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
+      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}), Opcode(Opcode),
+        ResultTy(ResultTy) {}
+
+  ~VPScalarCastRecipe() override = default;
+
+  VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 
   /// Returns the result type of the cast.
   Type *getResultType() const { return ResultTy; }
@@ -2254,10 +2283,9 @@ public:
   }
 
   /// Check if the induction described by \p Kind, /p Start and \p Step is
-  /// canonical, i.e.  has the same start, step (of 1), and type as the
-  /// canonical IV.
+  /// canonical, i.e.  has the same start and step (of 1) as the canonical IV.
   bool isCanonical(InductionDescriptor::InductionKind Kind, VPValue *Start,
-                   VPValue *Step, Type *Ty) const;
+                   VPValue *Step) const;
 };
 
 /// A recipe for generating the active lane mask for the vector loop that is
@@ -2320,10 +2348,6 @@ public:
 /// an IV with different start and step values, using Start + CanonicalIV *
 /// Step.
 class VPDerivedIVRecipe : public VPSingleDefRecipe {
-  /// If not nullptr, the result of the induction will get truncated to
-  /// TruncResultTy.
-  Type *TruncResultTy;
-
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
@@ -2332,10 +2356,9 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
-                    Type *TruncResultTy)
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
       : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        TruncResultTy(TruncResultTy), Kind(IndDesc.getKind()),
+        Kind(IndDesc.getKind()),
         FPBinOp(dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())) {
   }
 
@@ -2354,8 +2377,7 @@ public:
 #endif
 
   Type *getScalarType() const {
-    return TruncResultTy ? TruncResultTy
-                         : getStartValue()->getLiveInIRValue()->getType();
+    return getStartValue()->getLiveInIRValue()->getType();
   }
 
   VPValue *getStartValue() const { return getOperand(0); }
