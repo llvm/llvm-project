@@ -9036,94 +9036,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
         FixedIntrinsic->getMemoryVT(), FixedIntrinsic->getMemOperand());
   }
-  case Intrinsic::riscv_sf_vc_x_se_e8mf8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF8);
-  case Intrinsic::riscv_sf_vc_x_se_e8mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF4);
-  case Intrinsic::riscv_sf_vc_x_se_e8mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e8m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M1);
-  case Intrinsic::riscv_sf_vc_x_se_e8m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M2);
-  case Intrinsic::riscv_sf_vc_x_se_e8m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M4);
-  case Intrinsic::riscv_sf_vc_x_se_e8m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M8);
-  case Intrinsic::riscv_sf_vc_x_se_e16mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF4);
-  case Intrinsic::riscv_sf_vc_x_se_e16mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e16m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M1);
-  case Intrinsic::riscv_sf_vc_x_se_e16m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M2);
-  case Intrinsic::riscv_sf_vc_x_se_e16m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M4);
-  case Intrinsic::riscv_sf_vc_x_se_e16m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M8);
-  case Intrinsic::riscv_sf_vc_x_se_e32mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e32m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M1);
-  case Intrinsic::riscv_sf_vc_x_se_e32m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M2);
-  case Intrinsic::riscv_sf_vc_x_se_e32m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M4);
-  case Intrinsic::riscv_sf_vc_x_se_e32m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M8);
-  case Intrinsic::riscv_sf_vc_x_se_e64m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M1);
-  case Intrinsic::riscv_sf_vc_x_se_e64m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M2);
-  case Intrinsic::riscv_sf_vc_x_se_e64m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M4);
-  case Intrinsic::riscv_sf_vc_x_se_e64m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M8);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF8);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF4);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e8m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M1);
-  case Intrinsic::riscv_sf_vc_i_se_e8m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M2);
-  case Intrinsic::riscv_sf_vc_i_se_e8m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M4);
-  case Intrinsic::riscv_sf_vc_i_se_e8m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M8);
-  case Intrinsic::riscv_sf_vc_i_se_e16mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF4);
-  case Intrinsic::riscv_sf_vc_i_se_e16mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e16m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M1);
-  case Intrinsic::riscv_sf_vc_i_se_e16m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M2);
-  case Intrinsic::riscv_sf_vc_i_se_e16m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M4);
-  case Intrinsic::riscv_sf_vc_i_se_e16m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M8);
-  case Intrinsic::riscv_sf_vc_i_se_e32mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e32m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M1);
-  case Intrinsic::riscv_sf_vc_i_se_e32m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M2);
-  case Intrinsic::riscv_sf_vc_i_se_e32m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M4);
-  case Intrinsic::riscv_sf_vc_i_se_e32m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M8);
-  case Intrinsic::riscv_sf_vc_i_se_e64m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M1);
-  case Intrinsic::riscv_sf_vc_i_se_e64m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M2);
-  case Intrinsic::riscv_sf_vc_i_se_e64m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M4);
-  case Intrinsic::riscv_sf_vc_i_se_e64m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M8);
   case Intrinsic::riscv_sf_vc_xv_se:
     return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_XV_SE);
   case Intrinsic::riscv_sf_vc_iv_se:
@@ -20483,7 +20395,6 @@ RISCVTargetLowering::getTargetMMOFlags(const MemSDNode &Node) const {
   MachineMemOperand::Flags TargetFlags = MachineMemOperand::MONone;
   TargetFlags |= (NodeFlags & MONontemporalBit0);
   TargetFlags |= (NodeFlags & MONontemporalBit1);
-
   return TargetFlags;
 }
 
