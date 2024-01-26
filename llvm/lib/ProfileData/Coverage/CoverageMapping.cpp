@@ -589,7 +589,8 @@ class MCDCDecisionRecorder {
 private:
   /// This holds the DecisionRegion and MCDCBranches under it.
   /// Also traverses Expansion(s).
-  /// The Decision has the number of MCDCBranches and
+  /// The Decision has the number of MCDCBranches and will complete
+  /// when it is filled with unique ConditionID of MCDCBranches.
   struct DecisionRecord {
     const CounterMappingRegion *DecisionRegion;
 
