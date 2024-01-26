@@ -113,7 +113,7 @@ computeChamberDecomposition(
 /// Compute the generating function corresponding to a polytope.
 /// All tangent cones of the polytope must be unimodular.
 std::vector<std::pair<PresburgerSet, GeneratingFunction>>
-computePolytopeGeneratingFunction(PolyhedronH poly);
+computePolytopeGeneratingFunction(const PolyhedronH &poly);
 
 /// Find a vector that is not orthogonal to any of the given vectors,
 /// i.e., has nonzero dot product with those of the given vectors

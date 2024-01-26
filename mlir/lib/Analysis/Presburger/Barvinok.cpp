@@ -238,25 +238,23 @@ std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 mlir::presburger::detail::computeChamberDecomposition(
     unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
                              regionsAndGeneratingFunctions) {
-  assert(regionsAndGeneratingFunctions.size() > 0 &&
+  assert(!regionsAndGeneratingFunctions.empty() &&
          "there must be at least one chamber!");
   // We maintain a list of regions and their associated generating function
   // initialized with the universe and the empty generating function.
   std::vector<std::pair<PresburgerSet, GeneratingFunction>> chambers = {
-      {PresburgerSet::getUniverse(
-           PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0)),
+      {PresburgerSet::getUniverse(PresburgerSpace::getSetSpace(numSymbols)),
        GeneratingFunction(numSymbols, {}, {}, {})}};
 
   // We iterate over the region list.
   // For each activity region R_j (corresponding to a vertex v_j, whose
-  // generating function is gf_j),
-  // we examine all the current chambers R_i.
+  // generating function is gf_j), we examine all the current chambers R_i.
   // If R_j has a full-dimensional intersection with an existing chamber R_i,
   // then that chamber is replaced by two new ones:
-  // 1. the intersection R_i \cap R_j, where the generating function is
-  //    gf_i + gf_j.
-  // 2. the difference R_i - R_j, where v_j is inactive and the generating
-  //    function is gf_i.
+  // 1. the intersection R_i \cap R_j (if it is full-dimensional), where the
+  // generating function is gf_i + gf_j.
+  // 2. the difference R_i - R_j (if it is full-dimensional), where v_j is
+  // inactive and the generating function is gf_i.
 
   // At each step, we define a new chamber list after considering vertex v_j,
   // and its generating function, replacing and appending chambers as
@@ -267,8 +265,7 @@ mlir::presburger::detail::computeChamberDecomposition(
        regionsAndGeneratingFunctions) {
     std::vector<std::pair<PresburgerSet, GeneratingFunction>> newChambers;
 
-    for (auto [currentRegion, currentGeneratingFunction] : chambers) {
-      // First, we check if the intersection of R_j and R_i.
+    for (const auto &[currentRegion, currentGeneratingFunction] : chambers) {
       PresburgerSet intersection = currentRegion.intersect(region);
 
       // If the intersection is not full-dimensional, we do not modify
@@ -294,14 +291,18 @@ mlir::presburger::detail::computeChamberDecomposition(
   return chambers;
 }
 
-/// For a polytope expressed as a set of inequalities, compute the generating
-/// function corresponding to the number of lattice points present. This
+/// For a polytope expressed as a set of n inequalities, compute the generating
+/// function corresponding to the lattice points included in the polytope. This
 /// algorithm has three main steps:
 /// 1. Enumerate the vertices, by iterating over subsets of inequalities and
-///    checking for satisfiability.
+///    checking for satisfiability. For each d-subset of inequalities (where d
+///    is the number of variables), we solve to obtain the vertex in terms of
+///    the parameters, and then check for the region in parameter space where
+///    this vertex satisfies the remaining (n - d) inequalities.
 /// 2. For each vertex, identify the tangent cone and compute the generating
-///    function corresponding to it. The sum of these GFs is the GF of the
-///    polytope.
+///    function corresponding to it. The generating function depends on the
+///    parametric expression of the vertex and the (non-parametric) generators
+///    of the tangent cone.
 /// 3. [Clauss-Loechner decomposition] Identify the regions in parameter space
 ///    (chambers) where each vertex is active, and accordingly compute the
 ///    GF of the polytope in each chamber.
@@ -310,23 +311,18 @@ mlir::presburger::detail::computeChamberDecomposition(
 /// polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
 /// 37-66.
 std::vector<std::pair<PresburgerSet, GeneratingFunction>>
-mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
+mlir::presburger::detail::computePolytopeGeneratingFunction(
+    const PolyhedronH &poly) {
   unsigned numVars = poly.getNumRangeVars();
   unsigned numSymbols = poly.getNumSymbolVars();
   unsigned numIneqs = poly.getNumInequalities();
 
-  // These vectors store lists of
-  // subsets of inequalities,
-  // the vertices corresponding to them,
-  // the active regions of the vertices, and the generating functions of
-  // the tangent cones of the vertices, in order.
-  // std::vector<IntMatrix> subsets;
+  // We store a list of the computed vertices.
   std::vector<ParamPoint> vertices;
+  // For each vertex, we store the corresponding active region and the
+  // generating functions of the tangent cone, in order.
   std::vector<std::pair<PresburgerSet, GeneratingFunction>>
       regionsAndGeneratingFunctions;
-
-  FracMatrix a2(numIneqs - numVars, numVars);
-  FracMatrix b2c2(numIneqs - numVars, numSymbols + 1);
 
   // We iterate over all subsets of inequalities with cardinality numVars,
   // using bitsets of numIneqs bits to enumerate.
@@ -352,6 +348,8 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
     // These are column-wise splits of the inequalities;
     // a2 stores the coefficients of the variables, and
     // b2c2 stores the coefficients of the parameters and the constant term.
+    FracMatrix a2(numIneqs - numVars, numVars);
+    FracMatrix b2c2(numIneqs - numVars, numSymbols + 1);
     a2 = FracMatrix(
         remainder.getSubMatrix(0, numIneqs - numVars - 1, 0, numVars - 1));
     b2c2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - numVars - 1, numVars,
@@ -366,7 +364,6 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
       continue;
     // If this subset corresponds to a vertex, store it.
     vertices.push_back(*vertex);
-    // subsets.push_back(subset);
 
     // Let the current vertex be [X | y], where
     // X represents the coefficients of the parameters and
@@ -398,10 +395,10 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
     // Note that if the row is not all-zero, it is still possible for the
     // inequality to be satisfied by the corresponding vertex *in some subset of
     // the parameter space*. However, since this subset is defined by an
-    // equality, it is not full-dimensional and we can therefore ignore it.
+    // equality, it is not full-dimensional; here and in the chamber
+    // decomposition, we ignore full-dimensional chambers.
     for (int i = activeRegion.getNumRows() - 1; i >= 0; --i) {
-      if (llvm::any_of(activeRegion.getRow(i),
-                       [&](Fraction f) { return f != 0; }))
+      if (!isRangeZero(activeRegion.getRow(i)))
         continue;
       subset.appendExtraRow(remainder.getRow(i));
       activeRegion.removeRow(i);
@@ -409,11 +406,9 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
 
     // We convert the representation of the active region to an integers-only
     // form so as to store it as a PresburgerSet.
-    IntMatrix activeRegionNorm = activeRegion.normalizeRows();
-    IntegerPolyhedron activeRegionRel = IntegerPolyhedron(
-        PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0));
-    for (unsigned i = 0, e = activeRegion.getNumRows(); i < e; ++i)
-      activeRegionRel.addInequality(activeRegionNorm.getRow(i));
+    IntegerPolyhedron activeRegionRel(
+        PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0),
+        activeRegion.normalizeRows());
 
     // Now, we compute the generating function at this vertex.
     // We collect the inequalities corresponding to each vertex to compute
@@ -450,7 +445,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(PolyhedronH poly) {
   // Now, we use Clauss-Loechner decomposition to identify regions in parameter
   // space where each vertex is active. These regions (chambers) have the
   // property that no two of them have a full-dimensional intersection, i.e.,
-  // they may share "faces" or "edges", but their intersection can only have
+  // they may share "facets" or "edges", but their intersection can only have
   // up to numVars - 1 dimensions.
   // In each chamber, we sum up the generating functions of the active vertices
   // to find the generating function of the polytope.
