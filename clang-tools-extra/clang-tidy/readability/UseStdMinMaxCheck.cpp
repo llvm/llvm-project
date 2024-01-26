@@ -12,12 +12,52 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
-#include <iostream>
-using namespace std;
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
+
+static bool isImplicitCastType(const clang::CastKind castKind) {
+  switch (castKind) {
+  case clang::CK_CPointerToObjCPointerCast:
+  case clang::CK_BlockPointerToObjCPointerCast:
+  case clang::CK_BitCast:
+  case clang::CK_AnyPointerToBlockPointerCast:
+  case clang::CK_NullToMemberPointer:
+  case clang::CK_NullToPointer:
+  case clang::CK_IntegralToPointer:
+  case clang::CK_PointerToIntegral:
+  case clang::CK_IntegralCast:
+  case clang::CK_BooleanToSignedIntegral:
+  case clang::CK_IntegralToFloating:
+  case clang::CK_FloatingToIntegral:
+  case clang::CK_FloatingCast:
+  case clang::CK_ObjCObjectLValueCast:
+  case clang::CK_FloatingRealToComplex:
+  case clang::CK_FloatingComplexToReal:
+  case clang::CK_FloatingComplexCast:
+  case clang::CK_FloatingComplexToIntegralComplex:
+  case clang::CK_IntegralRealToComplex:
+  case clang::CK_IntegralComplexToReal:
+  case clang::CK_IntegralComplexCast:
+  case clang::CK_IntegralComplexToFloatingComplex:
+  case clang::CK_FloatingToFixedPoint:
+  case clang::CK_FixedPointToFloating:
+  case clang::CK_FixedPointCast:
+  case clang::CK_FixedPointToIntegral:
+  case clang::CK_IntegralToFixedPoint:
+  case clang::CK_MatrixCast:
+  case clang::CK_PointerToBoolean:
+  case clang::CK_IntegralToBoolean:
+  case clang::CK_FloatingToBoolean:
+  case clang::CK_MemberPointerToBoolean:
+  case clang::CK_FloatingComplexToBoolean:
+  case clang::CK_IntegralComplexToBoolean:
+    return true;
+  default:
+    return false;
+  }
+}
 
 class ExprVisitor : public clang::RecursiveASTVisitor<ExprVisitor> {
 public:
@@ -26,12 +66,15 @@ public:
                  clang::QualType &GlobalImplicitCastType) {
 
     if (isa<clang::ImplicitCastExpr>(S) && !found) {
-      found = true;
-      const clang::ImplicitCastExpr *ImplicitCast =
-          cast<clang::ImplicitCastExpr>(S);
-      GlobalImplicitCastType = ImplicitCast->getType();
-      // Stop visiting children.
-      return false;
+      const auto CastKind = cast<clang::ImplicitCastExpr>(S)->getCastKind();
+      if (isImplicitCastType(CastKind)) {
+        found = true;
+        const clang::ImplicitCastExpr *ImplicitCast =
+            cast<clang::ImplicitCastExpr>(S);
+        GlobalImplicitCastType = ImplicitCast->getType();
+        // Stop visiting children.
+        return false;
+      }
     }
     // Continue visiting children.
     for (const clang::Stmt *Child : S->children()) {
