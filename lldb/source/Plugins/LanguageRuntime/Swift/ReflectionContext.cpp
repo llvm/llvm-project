@@ -151,28 +151,28 @@ public:
     if (log && log->GetVerbose()) {
       std::stringstream ss;
       type_ref->dump(ss);
-      LLDB_LOGF(log,
-                "[TargetReflectionContext::getTypeInfo] Getting "
-                "type info for typeref:\n%s",
-                ss.str().c_str());
+      LLDB_LOG(log,
+               "[TargetReflectionContext::getTypeInfo] Getting "
+               "type info for typeref:\n{0}", ss.str());
     }
 
     auto type_info = m_reflection_ctx.getTypeInfo(type_ref, provider);
     if (log && !type_info) {
       std::stringstream ss;
       type_ref->dump(ss);
-      LLDB_LOGF(log,
-                "[TargetReflectionContext::getTypeInfo] Could not get "
-                "type info for typeref:\n%s",
-                ss.str().c_str());
+      LLDB_LOG(log,
+               "[TargetReflectionContext::getTypeInfo] Could not get "
+               "type info for typeref:\n{0}",
+               ss.str());
     }
 
     if (type_info && log && log->GetVerbose()) {
       std::stringstream ss;
       type_info->dump(ss);
-      log->Printf("[TargetReflectionContext::getTypeInfo] Found "
-                  "type info:\n%s",
-                  ss.str().c_str());
+      LLDB_LOG(log,
+               "[TargetReflectionContext::getTypeInfo] Found "
+               "type info:\n{0}",
+                  ss.str());
     }
     return type_info;
   }
@@ -271,9 +271,9 @@ public:
     auto metadata_address =
         m_reflection_ctx.readMetadataFromInstance(instance_address);
     if (!metadata_address) {
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "could not read heap metadata for object at %llu\n",
-                instance_address);
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "could not read heap metadata for object at {0:x}",
+               instance_address);
       return nullptr;
     }
 
