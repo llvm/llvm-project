@@ -739,6 +739,33 @@ bool tools::isUseSeparateSections(const llvm::Triple &Triple) {
   return Triple.isPS();
 }
 
+bool tools::isTLSDESCEnabled(const ToolChain &TC,
+                             const llvm::opt::ArgList &Args) {
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+  Arg *A = Args.getLastArg(options::OPT_mtls_dialect_EQ);
+  if (!A)
+    return Triple.hasDefaultTLSDESC();
+  StringRef V = A->getValue();
+  bool SupportedArgument = false, EnableTLSDESC = false;
+  bool Unsupported = !Triple.isOSBinFormatELF();
+  if (Triple.isRISCV()) {
+    SupportedArgument = V == "desc" || V == "trad";
+    EnableTLSDESC = V == "desc";
+  } else if (Triple.isX86()) {
+    SupportedArgument = V == "gnu";
+  } else {
+    Unsupported = true;
+  }
+  if (Unsupported) {
+    TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << Triple.getTriple();
+  } else if (!SupportedArgument) {
+    TC.getDriver().Diag(diag::err_drv_unsupported_option_argument_for_target)
+        << A->getSpelling() << V << Triple.getTriple();
+  }
+  return EnableTLSDESC;
+}
+
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
@@ -1024,6 +1051,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-emulated-tls"));
   }
+  if (isTLSDESCEnabled(ToolChain, Args))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-enable-tlsdesc"));
 
   if (Args.hasFlag(options::OPT_fstack_size_section,
                    options::OPT_fno_stack_size_section, false))

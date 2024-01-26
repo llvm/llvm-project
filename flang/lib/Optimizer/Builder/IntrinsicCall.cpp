@@ -550,6 +550,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
     {"sign", &I::genSign},
+    {"signal",
+     &I::genSignalSubroutine,
+     {{{"number", asValue}, {"handler", asAddr}, {"status", asAddr}}},
+     /*isElemental=*/false},
     {"size",
      &I::genSize,
      {{{"array", asBox},
@@ -5577,6 +5581,18 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
       builder.create<mlir::arith::ShRSIOp>(loc, args[0], shift);
   return builder.create<mlir::arith::SelectOp>(loc, shiftEqBitSize, specialRes,
                                                shifted);
+}
+
+// SIGNAL
+void IntrinsicLibrary::genSignalSubroutine(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2 || args.size() == 3);
+  mlir::Value number = fir::getBase(args[0]);
+  mlir::Value handler = fir::getBase(args[1]);
+  mlir::Value status;
+  if (args.size() == 3)
+    status = fir::getBase(args[2]);
+  fir::runtime::genSignal(builder, loc, number, handler, status);
 }
 
 // SIGN
