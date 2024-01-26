@@ -614,24 +614,8 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
   printSuccessors(O, Indent);
 }
 #endif
+
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
-
-static VPBlockBase *cloneVPB(VPBlockBase *BB) {
-  if (auto *VPBB = dyn_cast<VPBasicBlock>(BB)) {
-    auto *NewBlock = new VPBasicBlock(VPBB->getName());
-    for (VPRecipeBase &R : *VPBB)
-      NewBlock->appendRecipe(R.clone());
-    return NewBlock;
-  }
-
-  auto *VPR = cast<VPRegionBlock>(BB);
-  const auto &[NewEntry, NewExiting] = cloneSESE(VPR->getEntry());
-  auto *NewRegion = new VPRegionBlock(NewEntry, NewExiting, VPR->getName(),
-                                      VPR->isReplicator());
-  for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
-    Block->setParent(NewRegion);
-  return NewRegion;
-}
 
 // Clone the CFG for all nodes in the single-entry-single-exit region reachable
 // from \p Entry, this includes cloning the blocks and their recipes. Operands
@@ -643,7 +627,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Entry);
   for (VPBlockBase *BB : RPOT) {
-    VPBlockBase *NewBB = cloneVPB(BB);
+    VPBlockBase *NewBB = BB->clone();
     for (VPBlockBase *Pred : BB->getPredecessors())
       VPBlockUtils::connectBlocks(Old2NewVPBlocks[Pred], NewBB);
 
@@ -668,6 +652,15 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
 
   return std::make_pair(Old2NewVPBlocks[Entry],
                         Old2NewVPBlocks[*reverse(RPOT).begin()]);
+}
+
+VPRegionBlock *VPRegionBlock::clone() {
+  const auto &[NewEntry, NewExiting] = cloneSESE(getEntry());
+  auto *NewRegion =
+      new VPRegionBlock(NewEntry, NewExiting, getName(), isReplicator());
+  for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
+    Block->setParent(NewRegion);
+  return NewRegion;
 }
 
 void VPRegionBlock::dropAllReferences(VPValue *NewValue) {
@@ -1053,7 +1046,6 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
            VPBlockUtils::blocksOnly<VPBasicBlock>(NewDeepRPOT))) {
     assert(OldBB->getRecipeList().size() == NewBB->getRecipeList().size() &&
            "blocks must have the same number of recipes");
-
     for (const auto &[OldR, NewR] : zip(*OldBB, *NewBB)) {
       assert(OldR.getNumOperands() == NewR.getNumOperands() &&
              "recipes must have the same number of operands");
@@ -1076,16 +1068,14 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
   }
 }
 
-VPlan *VPlan::clone() {
-  DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-
+VPlan *VPlan::duplicate() {
   // Clone blocks.
-  VPBlockBase *NewPreheader = cloneVPB(Preheader);
-  const auto &[NewEntry, __] = cloneSESE(getEntry());
+  VPBasicBlock *NewPreheader = Preheader->clone();
+  const auto &[NewEntry, __] = cloneSESE(Entry);
 
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
-  auto *NewPlan =
-      new VPlan(cast<VPBasicBlock>(NewPreheader), cast<VPBasicBlock>(NewEntry));
+  auto *NewPlan = new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry));
+  DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
     VPValue *NewLiveIn = new VPValue(OldLiveIn->getLiveInIRValue());
     NewPlan->VPLiveInsToFree.push_back(NewLiveIn);
@@ -1111,8 +1101,6 @@ VPlan *VPlan::clone() {
     NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
 
   // Initialize remaining fields of cloned VPlan.
-  NewEntry->setPlan(NewPlan);
-  NewPreheader->setPlan(NewPlan);
   NewPlan->VFs = VFs;
   NewPlan->UFs = UFs;
   // TODO: Adjust names.
