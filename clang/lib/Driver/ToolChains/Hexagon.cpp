@@ -801,7 +801,6 @@ StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
     CpuArg = A;
 
   StringRef CPU = CpuArg ? CpuArg->getValue() : GetDefaultCPU();
-  if (CPU.starts_with("hexagon"))
-    return CPU.substr(sizeof("hexagon") - 1);
+  CPU.consume_front("hexagon");
   return CPU;
 }

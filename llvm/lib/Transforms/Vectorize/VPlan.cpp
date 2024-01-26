@@ -757,6 +757,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
                     return isa<VPScalarIVStepsRecipe>(U) ||
+                           isa<VPScalarCastRecipe>(U) ||
                            isa<VPDerivedIVRecipe>(U) ||
                            cast<VPInstruction>(U)->getOpcode() ==
                                Instruction::Add;

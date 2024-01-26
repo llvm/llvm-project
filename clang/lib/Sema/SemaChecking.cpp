@@ -2471,7 +2471,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case Builtin::BI##ID: \
     return SemaAtomicOpsOverloaded(TheCallResult, AtomicExpr::AO##ID);
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
   case Builtin::BI__annotation:
     if (SemaBuiltinMSVCAnnotation(*this, TheCall))
       return ExprError();
@@ -3013,6 +3013,11 @@ enum ArmSMEState : unsigned {
   ArmOutZA = 0b10,
   ArmInOutZA = 0b11,
   ArmZAMask = 0b11,
+
+  ArmInZT0 = 0b01 << 2,
+  ArmOutZT0 = 0b10 << 2,
+  ArmInOutZT0 = 0b11 << 2,
+  ArmZT0Mask = 0b11 << 2
 };
 
 bool Sema::ParseSVEImmChecks(
@@ -3206,6 +3211,13 @@ static bool hasArmZAState(const FunctionDecl *FD) {
          (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
 }
 
+static bool hasArmZT0State(const FunctionDecl *FD) {
+  const auto *T = FD->getType()->getAs<FunctionProtoType>();
+  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
+                   FunctionType::ARM_None) ||
+         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
+}
+
 static ArmSMEState getSMEState(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
@@ -3232,6 +3244,11 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
            diag::warn_attribute_arm_za_builtin_no_za_state)
+          << TheCall->getSourceRange();
+
+    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD))
+      Diag(TheCall->getBeginLoc(),
+           diag::warn_attribute_arm_zt0_builtin_no_zt0_state)
           << TheCall->getSourceRange();
   }
 
@@ -5424,33 +5441,13 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
            CheckInvalidVLENandLMUL(TI, TheCall, *this, Op3Type, ElemSize * 4);
   }
 
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16mf4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16mf2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32mf2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m8:
-    // bit_27_26, bit_24_20, bit_11_7, simm5
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se:
+    // bit_27_26, bit_24_20, bit_11_7, simm5, sew, log2lmul
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 31) ||
            SemaBuiltinConstantArgRange(TheCall, 2, 0, 31) ||
-           SemaBuiltinConstantArgRange(TheCall, 3, -16, 15);
+           SemaBuiltinConstantArgRange(TheCall, 3, -16, 15) ||
+           CheckRISCVLMUL(TheCall, 5);
   case RISCVVector::BI__builtin_rvv_sf_vc_iv_se:
     // bit_27_26, bit_11_7, vs2, simm5
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
@@ -5476,32 +5473,12 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     // bit_27_26, vd, vs2, simm5
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
            SemaBuiltinConstantArgRange(TheCall, 3, -16, 15);
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8mf8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8mf4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8mf2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16mf4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16mf2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32mf2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m8:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m1:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m2:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m4:
-  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m8:
-    // bit_27_26, bit_24_20, bit_11_7, xs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se:
+    // bit_27_26, bit_24_20, bit_11_7, xs1, sew, log2lmul
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 31) ||
-           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31) ||
+           CheckRISCVLMUL(TheCall, 5);
   case RISCVVector::BI__builtin_rvv_sf_vc_xv_se:
   case RISCVVector::BI__builtin_rvv_sf_vc_vv_se:
     // bit_27_26, bit_11_7, vs2, xs1/vs1
@@ -7852,18 +7829,18 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   static_assert(sizeof(NumArgs)/sizeof(NumArgs[0]) == NumForm
       && sizeof(NumVals)/sizeof(NumVals[0]) == NumForm,
       "need to update code for modified forms");
-  static_assert(AtomicExpr::AO__c11_atomic_init == 0 &&
-                    AtomicExpr::AO__c11_atomic_fetch_min + 1 ==
-                        AtomicExpr::AO__atomic_load,
+  static_assert(AtomicExpr::AO__atomic_add_fetch == 0 &&
+                    AtomicExpr::AO__atomic_xor_fetch + 1 ==
+                        AtomicExpr::AO__c11_atomic_compare_exchange_strong,
                 "need to update code for modified C11 atomics");
-  bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_init &&
-                  Op <= AtomicExpr::AO__opencl_atomic_fetch_max;
-  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_load &&
-               Op <= AtomicExpr::AO__hip_atomic_fetch_max;
-  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_load &&
-                  Op <= AtomicExpr::AO__scoped_atomic_fetch_max;
-  bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_init &&
-               Op <= AtomicExpr::AO__c11_atomic_fetch_min) ||
+  bool IsOpenCL = Op >= AtomicExpr::AO__opencl_atomic_compare_exchange_strong &&
+                  Op <= AtomicExpr::AO__opencl_atomic_store;
+  bool IsHIP = Op >= AtomicExpr::AO__hip_atomic_compare_exchange_strong &&
+               Op <= AtomicExpr::AO__hip_atomic_store;
+  bool IsScoped = Op >= AtomicExpr::AO__scoped_atomic_add_fetch &&
+                  Op <= AtomicExpr::AO__scoped_atomic_xor_fetch;
+  bool IsC11 = (Op >= AtomicExpr::AO__c11_atomic_compare_exchange_strong &&
+                Op <= AtomicExpr::AO__c11_atomic_store) ||
                IsOpenCL;
   bool IsN = Op == AtomicExpr::AO__atomic_load_n ||
              Op == AtomicExpr::AO__atomic_store_n ||

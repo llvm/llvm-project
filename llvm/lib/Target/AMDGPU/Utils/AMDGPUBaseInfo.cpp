@@ -529,6 +529,17 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANEX16_VAR_B32_e64_gfx12;
 }
 
+bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
+  return Opc == AMDGPU::V_CVT_F32_BF8_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_F32_FP8_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_F32_BF8_e64_dpp_gfx12 ||
+         Opc == AMDGPU::V_CVT_F32_FP8_e64_dpp_gfx12 ||
+         Opc == AMDGPU::V_CVT_F32_BF8_e64_dpp8_gfx12 ||
+         Opc == AMDGPU::V_CVT_F32_FP8_e64_dpp8_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_BF8_e64_gfx12 ||
+         Opc == AMDGPU::V_CVT_PK_F32_FP8_e64_gfx12;
+}
+
 bool isGenericAtomic(unsigned Opc) {
   return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
          Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||

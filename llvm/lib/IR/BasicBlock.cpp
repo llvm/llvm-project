@@ -60,12 +60,16 @@ DPMarker *BasicBlock::createMarker(InstListType::iterator It) {
   return DPM;
 }
 
-void BasicBlock::convertToNewDbgValues() {
+void BasicBlock::convertToNewDbgValues(bool HasNoDebugInfo) {
   // Is the command line option set?
   if (!UseNewDbgInfoFormat)
     return;
 
   IsNewDbgInfoFormat = true;
+
+  // If the caller knows there's no debug-info in this function, do nothing.
+  if (HasNoDebugInfo)
+    return;
 
   // Iterate over all instructions in the instruction list, collecting dbg.value
   // instructions and converting them to DPValues. Once we find a "real"
@@ -74,9 +78,6 @@ void BasicBlock::convertToNewDbgValues() {
   for (Instruction &I : make_early_inc_range(InstList)) {
     assert(!I.DbgMarker && "DbgMarker already set on old-format instrs?");
     if (DbgVariableIntrinsic *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-      if (isa<DbgAssignIntrinsic>(DVI))
-        continue;
-
       // Convert this dbg.value to a DPValue.
       DPValue *Value = new DPValue(DVI);
       DPVals.push_back(Value);
@@ -96,9 +97,13 @@ void BasicBlock::convertToNewDbgValues() {
   }
 }
 
-void BasicBlock::convertFromNewDbgValues() {
+void BasicBlock::convertFromNewDbgValues(bool HasNoDebugInfo) {
   invalidateOrders();
   IsNewDbgInfoFormat = false;
+
+  // If the caller knows there's no debug-info in this function, do nothing.
+  if (HasNoDebugInfo)
+    return;
 
   // Iterate over the block, finding instructions annotated with DPMarkers.
   // Convert any attached DPValues to dbg.values and insert ahead of the
@@ -240,12 +245,12 @@ void BasicBlock::insertInto(Function *NewParent, BasicBlock *InsertBefore) {
   assert(NewParent && "Expected a parent");
   assert(!Parent && "Already has a parent");
 
-  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
-
   if (InsertBefore)
     NewParent->insert(InsertBefore->getIterator(), this);
   else
     NewParent->insert(NewParent->end(), this);
+
+  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
 }
 
 BasicBlock::~BasicBlock() {
@@ -824,9 +829,15 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
 
   // There are instructions in this block; if the First iterator was
   // with begin() / getFirstInsertionPt() then the caller intended debug-info
-  // at the start of the block to be transferred.
-  if (!Src->empty() && First == Src->begin() && ReadFromHead)
-    Dest->DbgMarker->absorbDebugValues(*First->DbgMarker, InsertAtHead);
+  // at the start of the block to be transferred. Return otherwise.
+  if (Src->empty() || First != Src->begin() || !ReadFromHead)
+    return;
+
+  // Is there actually anything to transfer?
+  if (!First->hasDbgValues())
+    return;
+
+  createMarker(Dest)->absorbDebugValues(*First->DbgMarker, InsertAtHead);
 
   return;
 }

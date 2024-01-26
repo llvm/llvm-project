@@ -342,7 +342,7 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX2-SLOW-NEXT:    shrq $48, %rax
 ; AVX2-SLOW-NEXT:    vmovd %eax, %xmm1
 ; AVX2-SLOW-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,255,255,0,255,255,255,255,0]
+; AVX2-SLOW-NEXT:    vmovq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,0,0,0,0,0,0,0,0]
 ; AVX2-SLOW-NEXT:    vpblendvb %xmm3, %xmm0, %xmm1, %xmm0
 ; AVX2-SLOW-NEXT:    vmovq %xmm0, 32(%r9)
 ; AVX2-SLOW-NEXT:    vmovdqa %ymm2, (%r9)
@@ -374,7 +374,7 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX2-FAST-NEXT:    shrq $48, %rax
 ; AVX2-FAST-NEXT:    vmovd %eax, %xmm1
 ; AVX2-FAST-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,255,255,0,255,255,255,255,0]
+; AVX2-FAST-NEXT:    vmovq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,0,0,0,0,0,0,0,0]
 ; AVX2-FAST-NEXT:    vpblendvb %xmm3, %xmm0, %xmm1, %xmm0
 ; AVX2-FAST-NEXT:    vmovq %xmm0, 32(%r9)
 ; AVX2-FAST-NEXT:    vmovdqa %ymm2, (%r9)
@@ -406,7 +406,7 @@ define void @store_i8_stride5_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX2-FAST-PERLANE-NEXT:    shrq $48, %rax
 ; AVX2-FAST-PERLANE-NEXT:    vmovd %eax, %xmm1
 ; AVX2-FAST-PERLANE-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-FAST-PERLANE-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,255,255,0,255,255,255,255,0]
+; AVX2-FAST-PERLANE-NEXT:    vmovq {{.*#+}} xmm3 = [255,255,0,255,255,255,255,0,0,0,0,0,0,0,0,0]
 ; AVX2-FAST-PERLANE-NEXT:    vpblendvb %xmm3, %xmm0, %xmm1, %xmm0
 ; AVX2-FAST-PERLANE-NEXT:    vmovq %xmm0, 32(%r9)
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm2, (%r9)

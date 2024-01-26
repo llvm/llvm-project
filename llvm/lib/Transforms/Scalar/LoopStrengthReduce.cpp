@@ -7017,7 +7017,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       assert(Expander.isSafeToExpand(TermValueS) &&
              "Terminating value was checked safe in canFoldTerminatingCondition");
 
-      // Create new terminating value at loop header
+      // Create new terminating value at loop preheader
       Value *TermValue = Expander.expandCodeFor(TermValueS, ToHelpFold->getType(),
                                                 LoopPreheader->getTerminator());
 
