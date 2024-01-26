@@ -429,7 +429,7 @@ Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt,
   setInsertionPointToEnd(b);
 
   if (listener)
-    listener->notifyBlockCreated(b);
+    listener->notifyBlockInserted(b, /*previous=*/nullptr, /*previousIt=*/{});
   return b;
 }
 

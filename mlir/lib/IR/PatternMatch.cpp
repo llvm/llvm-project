@@ -343,7 +343,18 @@ Block *RewriterBase::splitBlock(Block *block, Block::iterator before) {
 /// region and pass it the correct block arguments.
 void RewriterBase::inlineRegionBefore(Region &region, Region &parent,
                                       Region::iterator before) {
-  parent.getBlocks().splice(before, region.getBlocks());
+  // Fast path: If no listener is attached, move all blocks at once.
+  if (!listener) {
+    parent.getBlocks().splice(before, region.getBlocks());
+    return;
+  }
+
+  // Move blocks from the beginning of the region one-by-one.
+  while (!region.empty()) {
+    Block *block = &region.front();
+    parent.getBlocks().splice(before, region.getBlocks(), block->getIterator());
+    listener->notifyBlockInserted(block, &region, region.begin());
+  }
 }
 void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
   inlineRegionBefore(region, *before->getParent(), before->getIterator());
