@@ -181,19 +181,62 @@ void f() {
 }
 
 namespace GH71976 {
+#ifdef AVOID
 struct A {
   int b = 5;
   int foo() {
-    return [b = b]() { return b; }(); // no diagnostic, init-capture does not shadow b
+    return [b = b]() { return b; }(); // no -Wshadow diagnostic, init-capture does not shadow b due to not capturing this
   }
 };
 
 struct B {
   int a;
   void foo() {
-    auto b = [a = this->a] { // no diagnostic, init-capture does not shadow a
-
-    };
+    auto b = [a = this->a] {}; // no -Wshadow diagnostic, init-capture does not shadow a due to not capturing his
   }
 };
+
+struct C {
+  int b = 5;
+  int foo() {
+    return [a = b]() {
+      return [=, b = a]() { // no -Wshadow diagnostic, init-capture does not shadow b due to outer lambda
+        return b;
+      }();
+    }();
+  }
+};
+#else
+struct A {
+  int b = 5; // expected-note {{previous}}
+  int foo() {
+    return [b = b]() { return b; }(); // expected-warning {{declaration shadows a field}}
+  }
+};
+
+struct B {
+  int a; // expected-note {{previous}}
+  void foo() {
+    auto b = [a = this->a] {}; // expected-warning {{declaration shadows a field}}
+  }
+};
+
+struct C {
+  int b = 5; // expected-note {{previous}}
+  int foo() {
+    return [a = b]() {
+      return [=, b = a]() { // expected-warning {{declaration shadows a field}}
+        return b;
+      }();
+    }();
+  }
+};
+
+struct D {
+  int b = 5; // expected-note {{previous}}
+  int foo() {
+    return [b = b, this]() { return b; }(); // expected-warning {{declaration shadows a field}}
+  }
+};
+#endif
 }
