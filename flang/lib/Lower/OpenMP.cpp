@@ -3334,20 +3334,6 @@ static void createSimdWsLoop(
                loc);
 }
 
-static bool isWorkshareSimdConstruct(llvm::omp::Directive ompDirective) {
-  switch (ompDirective) {
-  default:
-    return false;
-  case llvm::omp::OMPD_distribute_parallel_do_simd:
-  case llvm::omp::OMPD_do_simd:
-  case llvm::omp::OMPD_parallel_do_simd:
-  case llvm::omp::OMPD_target_parallel_do_simd:
-  case llvm::omp::OMPD_target_teams_distribute_parallel_do_simd:
-  case llvm::omp::OMPD_teams_distribute_parallel_do_simd:
-    return true;
-  }
-}
-
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::SymMap &symTable,
                    Fortran::semantics::SemanticsContext &semanticsContext,
@@ -3414,17 +3400,15 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                               ")");
   }
 
-  if (llvm::omp::allSimdSet.test(ompDirective)) {
-    if (isWorkshareSimdConstruct(ompDirective)) {
-      // 2.9.3.2 Workshare SIMD construct
-      createSimdWsLoop(converter, eval, ompDirective, loopOpClauseList,
-                       endClauseList, currentLocation);
+  if (llvm::omp::allDoSimdSet.test(ompDirective)) {
+    // 2.9.3.2 Workshare SIMD construct
+    createSimdWsLoop(converter, eval, ompDirective, loopOpClauseList,
+                     endClauseList, currentLocation);
 
-    } else {
-      // 2.9.3.1 SIMD construct
-      createSimdLoop(converter, eval, ompDirective, loopOpClauseList,
-                     currentLocation);
-    }
+  } else if (llvm::omp::allSimdSet.test(ompDirective)) {
+    // 2.9.3.1 SIMD construct
+    createSimdLoop(converter, eval, ompDirective, loopOpClauseList,
+                   currentLocation);
   } else {
     createWsLoop(converter, eval, ompDirective, loopOpClauseList, endClauseList,
                  currentLocation);
