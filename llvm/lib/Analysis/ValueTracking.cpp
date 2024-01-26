@@ -4064,11 +4064,11 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 
   const bool IsZero = (OrigClass & fcZero) == OrigClass;
   if (IsZero) {
+    assert(Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO);
     // Compares with fcNone are only exactly equal to fcZero if input denormals
     // are not flushed.
     // TODO: Handle DAZ by expanding masks to cover subnormal cases.
-    if (Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO &&
-        !inputDenormalIsIEEE(F, LHS->getType()))
+    if (!inputDenormalIsIEEE(F, LHS->getType()))
       return {nullptr, fcAllFlags, fcAllFlags};
 
     switch (Pred) {
