@@ -583,6 +583,8 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
   return MaxBitmapID + (SizeInBits / CHAR_BIT);
 }
 
+namespace {
+
 /// Collect Decisions, Branchs, and Expansions and associate them.
 class MCDCDecisionRecorder {
 
@@ -749,6 +751,8 @@ public:
     llvm_unreachable("Branch not found in Decisions");
   }
 };
+
+} // namespace
 
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
