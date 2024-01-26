@@ -1098,13 +1098,13 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // Produce an error if no expected-* directives could be found in the
     // source file(s) processed.
     if (Status == HasNoDirectives) {
-      std::string Directive;
+      std::string Err_Directive;
       if (Diags.getDiagnosticOptions().VerifyPrefixes.empty()) {
-        Directive = "expected";
+        Err_Directive = "expected";
       } else {
-        Directive = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+        Err_Directive = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
       }
-      Diags.Report(diag::err_verify_no_directives).setForceEmit() << Directive;
+      Diags.Report(diag::err_verify_no_directives).setForceEmit() << Err_Directive;
       ++NumErrors;
       Status = HasNoDirectivesReported;
     }
