@@ -1847,6 +1847,7 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
     OS << "\tAllocatable: " << RC.Allocatable << '\n';
     OS << "\tAllocationPriority: " << unsigned(RC.AllocationPriority) << '\n';
+    OS << "\tBaseClassOrder: " << RC.getBaseClassOrder() << '\n';
     OS << "\tRegs:";
     for (const CodeGenRegister *R : RC.getMembers()) {
       OS << " " << R->getName();
