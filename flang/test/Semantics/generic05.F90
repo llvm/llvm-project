@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Check for distinguishability of defined I/O procedures defined within
 ! and outside their types.
 module m1
@@ -6,7 +6,7 @@ module m1
     integer n
    contains
     procedure :: readt1a, readt1b
-    !ERROR: Generic 'read(unformatted)' may not have specific procedures 'readt1a' and 'readt1b' as their interfaces are not distinguishable
+    !PORTABILITY: Generic 'read(unformatted)' should not have specific procedures 'readt1a' and 'readt1b' as their interfaces are not distinguishable by the incomplete rules in the standard
     generic :: read(unformatted) => readt1a, readt1b
   end type
   type t2
@@ -15,7 +15,7 @@ module m1
   type t3
     integer n
   end type
-  !ERROR: Generic 'read(unformatted)' may not have specific procedures 'readt2a' and 'readt2b' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'read(unformatted)' should not have specific procedures 'readt2a' and 'readt2b' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface read(unformatted)
     module procedure :: readt1a, readt2a, readt2b, readt3
   end interface
