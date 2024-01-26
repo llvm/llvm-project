@@ -229,7 +229,7 @@ def PUSHA16  : I<0x60, RawFrm, (outs), (ins), "pushaw", []>,
                OpSize16, Requires<[Not64BitMode]>;
 }
 
-let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32] in {
+let Constraints = "$src = $dst", SchedRW = [WriteBSWAP32], Predicates = [NoNDD_Or_NoMOVBE] in {
 // This instruction is a consequence of BSWAP32r observing operand size. The
 // encoding is valid, but the behavior is undefined.
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
@@ -1090,35 +1090,43 @@ def ARPL16mr : I<0x63, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
 //===----------------------------------------------------------------------===//
 // MOVBE Instructions
 //
-let Predicates = [HasMOVBE] in {
-  let SchedRW = [WriteALULd] in {
-  def MOVBE16rm : I<0xF0, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
-                    "movbe{w}\t{$src, $dst|$dst, $src}",
-                    [(set GR16:$dst, (bswap (loadi16 addr:$src)))]>,
-                    OpSize16, T8;
-  def MOVBE32rm : I<0xF0, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
-                    "movbe{l}\t{$src, $dst|$dst, $src}",
-                    [(set GR32:$dst, (bswap (loadi32 addr:$src)))]>,
-                    OpSize32, T8;
-  def MOVBE64rm : RI<0xF0, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
-                     "movbe{q}\t{$src, $dst|$dst, $src}",
-                     [(set GR64:$dst, (bswap (loadi64 addr:$src)))]>,
-                     T8;
-  }
-  let SchedRW = [WriteStore] in {
-  def MOVBE16mr : I<0xF1, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src),
-                    "movbe{w}\t{$src, $dst|$dst, $src}",
-                    [(store (bswap GR16:$src), addr:$dst)]>,
-                    OpSize16, T8;
-  def MOVBE32mr : I<0xF1, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
-                    "movbe{l}\t{$src, $dst|$dst, $src}",
-                    [(store (bswap GR32:$src), addr:$dst)]>,
-                    OpSize32, T8;
-  def MOVBE64mr : RI<0xF1, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
-                     "movbe{q}\t{$src, $dst|$dst, $src}",
-                     [(store (bswap GR64:$src), addr:$dst)]>,
-                     T8;
-  }
+multiclass Movbe<bits<8> o, X86TypeInfo t, string suffix = ""> {
+  def rm#suffix : ITy<o, MRMSrcMem, t, (outs t.RegClass:$dst),
+                      (ins t.MemOperand:$src1), "movbe", unaryop_ndd_args,
+                      [(set t.RegClass:$dst, (bswap (t.LoadNode addr:$src1)))]>,
+                  Sched<[WriteALULd]>;
+  def mr#suffix : ITy<!add(o, 1), MRMDestMem, t, (outs),
+                      (ins t.MemOperand:$dst, t.RegClass:$src1),
+                      "movbe", unaryop_ndd_args,
+                      [(store (bswap t.RegClass:$src1), addr:$dst)]>,
+                  Sched<[WriteStore]>;
+}
+
+let Predicates = [HasMOVBE, NoEGPR] in {
+  defm MOVBE16 : Movbe<0xF0, Xi16>, OpSize16, T8;
+  defm MOVBE32 : Movbe<0xF0, Xi32>, OpSize32, T8;
+  defm MOVBE64 : Movbe<0xF0, Xi64>, T8;
+}
+
+let Predicates = [HasMOVBE, HasEGPR, In64BitMode] in {
+  defm MOVBE16 : Movbe<0x60, Xi16, "_EVEX">, EVEX, T_MAP4, PD;
+  defm MOVBE32 : Movbe<0x60, Xi32, "_EVEX">, EVEX, T_MAP4;
+  defm MOVBE64 : Movbe<0x60, Xi64, "_EVEX">, EVEX, T_MAP4;
+}
+
+multiclass Movberr<X86TypeInfo t> {
+  def rr : ITy<0x61, MRMDestReg, t, (outs t.RegClass:$dst),
+               (ins t.RegClass:$src1), "movbe", unaryop_ndd_args,
+               [(set t.RegClass:$dst, (bswap t.RegClass:$src1))]>,
+           EVEX, T_MAP4;
+  def rr_REV : ITy<0x60, MRMSrcReg, t, (outs t.RegClass:$dst),
+                   (ins t.RegClass:$src1), "movbe", unaryop_ndd_args, []>,
+               EVEX, T_MAP4, DisassembleOnly;
+}
+let SchedRW = [WriteALU], Predicates = [HasMOVBE, HasNDD, In64BitMode] in {
+  defm MOVBE16 : Movberr<Xi16>, PD;
+  defm MOVBE32 : Movberr<Xi32>;
+  defm MOVBE64 : Movberr<Xi64>;
 }
 
 //===----------------------------------------------------------------------===//
