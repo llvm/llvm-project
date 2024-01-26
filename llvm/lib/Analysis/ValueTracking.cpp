@@ -4437,17 +4437,9 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
       const APFloat *CRHS;
       if (match(RHS, m_APFloat(CRHS))) {
         auto [CmpVal, MaskIfTrue, MaskIfFalse] =
-          fcmpImpliesClass(Pred, *F, LHS, *CRHS, true); // XXX LHS != V
+            fcmpImpliesClass(Pred, *F, LHS, *CRHS, LHS != V);
         if (CmpVal == V)
           KnownFromAssume &= MaskIfTrue;
-        else {
-          // Try again without the lookthrough if we found a different source
-          // value.
-          auto [CmpVal, MaskIfTrue, MaskIfFalse] =
-              fcmpImpliesClass(Pred, *F, LHS, *CRHS, false);
-          if (CmpVal == V)
-            KnownFromAssume &= MaskIfTrue;
-        }
       }
     } else if (match(I->getArgOperand(0),
                      m_Intrinsic<Intrinsic::is_fpclass>(
