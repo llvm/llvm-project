@@ -840,8 +840,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
   StackAllocMI->eraseFromParent();
   if (DoneMBB != nullptr) {
     // Compute the live-in lists for the new blocks.
-    recomputeLiveIns(*DoneMBB);
-    recomputeLiveIns(*LoopMBB);
+    recomputeLiveIns(MF);
   }
 }
 
@@ -1439,8 +1438,7 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
   StackAllocMI->eraseFromParent();
 
   // Compute the live-in lists for the new blocks.
-  recomputeLiveIns(*NextMBB);
-  recomputeLiveIns(*StackExtMBB);
+  recomputeLiveIns(MF);
 }
 
 bool SystemZXPLINKFrameLowering::hasFP(const MachineFunction &MF) const {
