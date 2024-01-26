@@ -191,8 +191,8 @@ define <vscale x 32 x i1> @lane_mask_nxv32i1_i32(i32 %index, i32 %TC) {
 ; CHECK-NEXT:    uzp1 p3.h, p3.h, p4.h
 ; CHECK-NEXT:    cmphi p0.s, p0/z, z25.s, z1.s
 ; CHECK-NEXT:    uzp1 p4.h, p5.h, p6.h
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p2.h, p2.h, p0.h
 ; CHECK-NEXT:    uzp1 p0.b, p1.b, p3.b
 ; CHECK-NEXT:    uzp1 p1.b, p4.b, p2.b

@@ -3186,11 +3186,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     return MIB->getIterator();
   };
 
-  // SVE objects are always restored in reverse order.
-  for (const RegPairInfo &RPI : reverse(RegPairs))
-    if (RPI.isScalable())
-      EmitMI(RPI);
-
   if (homogeneousPrologEpilog(MF, &MBB)) {
     auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
                    .setMIFlag(MachineInstr::FrameDestroy);
@@ -3204,8 +3199,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   if (ReverseCSRRestoreSeq) {
     MachineBasicBlock::iterator First = MBB.end();
     for (const RegPairInfo &RPI : reverse(RegPairs)) {
-      if (RPI.isScalable())
-        continue;
       MachineBasicBlock::iterator It = EmitMI(RPI);
       if (First == MBB.end())
         First = It;
@@ -3214,8 +3207,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MBB.splice(MBBI, &MBB, First);
   } else {
     for (const RegPairInfo &RPI : RegPairs) {
-      if (RPI.isScalable())
-        continue;
       (void)EmitMI(RPI);
     }
   }
