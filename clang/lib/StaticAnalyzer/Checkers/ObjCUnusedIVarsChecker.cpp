@@ -161,7 +161,7 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
 
       PathDiagnosticLocation L =
           PathDiagnosticLocation::create(Ivar, BR.getSourceManager());
-      BR.EmitBasicReport(D, Checker, "Unused instance variable", "Optimization",
+      BR.EmitBasicReport(ID, Checker, "Unused instance variable", "Optimization",
                          os.str(), L);
     }
 }
