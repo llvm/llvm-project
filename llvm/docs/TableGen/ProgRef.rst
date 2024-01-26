@@ -931,8 +931,7 @@ template that expands into multiple records.
              : `ParentClassList`
              : "{" `MultiClassStatement`+ "}"
    MultiClassID: `TokIdentifier`
-   MultiClassStatement: `Assert` | `Def` | `Defm` | `Deftype` | `Defvar`
-                      :| `Foreach` | `If` | `Let`
+   MultiClassStatement: `Assert` | `Def` | `Defm` | `Defvar` | `Foreach` | `If` | `Let`
 
 As with regular classes, the multiclass has a name and can accept template
 arguments. A multiclass can inherit from other multiclasses, which causes
@@ -1219,14 +1218,17 @@ Anonymous records created inside initialization expressions using the
 ``deftype`` --- define a type
 --------------------------------
 
-A ``deftype`` statement defines a type. Its value can be used
-throughout the statements that follow the definition.
+A ``deftype`` statement defines a type. The type can be used throughout the
+statements that follow the definition.
 
 .. productionlist::
-   Deftype: "deftype" `TokIdentifier` "=" `Value` ";"
+   Deftype: "deftype" `TokIdentifier` "=" `Type` ";"
 
 The identifier on the left of the ``=`` is defined to be a type name
 whose actual type is given by the type expression on the right of the ``=``.
+
+Currently, only primitive types are supported and ``deftype`` statements can
+only appear at the top level.
 
 ``defvar`` --- define a variable
 --------------------------------
