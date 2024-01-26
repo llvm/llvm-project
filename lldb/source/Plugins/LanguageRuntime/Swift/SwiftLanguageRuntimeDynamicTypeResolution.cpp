@@ -609,6 +609,12 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
         root, {Kind::TypeMangling, Kind::Type, Kind::BuiltinTypeName});
     if (builtin_type)
       return 0;
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "{0}: unrecognized builtin type info or this is a Clang type with "
+             "DWARF debug info",
+             type.GetMangledTypeName());
+    return {};
+
   }
   // Structs and Tuples.
   if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
