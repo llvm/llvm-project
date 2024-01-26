@@ -82,6 +82,65 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 }
 #endif
 
+static bool isDirectionNegative(std::vector<Dependence::DVEntry> &DV,
+                                unsigned Levels) {
+  for (unsigned Level = 1; Level <= Levels; ++Level) {
+    unsigned char Direction = DV[Level - 1].Direction;
+    if (Direction == Dependence::DVEntry::EQ)
+      continue;
+    if (Direction == Dependence::DVEntry::GT ||
+        Direction == Dependence::DVEntry::GE)
+      return true;
+    return false;
+  }
+  return false;
+}
+
+static void dumpDirection(raw_ostream &OS, std::vector<Dependence::DVEntry> &DV,
+                          unsigned Levels) {
+  OS << " [";
+  for (unsigned II = 1; II <= Levels; ++II) {
+    unsigned Direction = DV[II - 1].Direction;
+    if (Direction == Dependence::DVEntry::ALL)
+      OS << "*";
+    else {
+      if (Direction & Dependence::DVEntry::LT)
+        OS << "<";
+      if (Direction & Dependence::DVEntry::EQ)
+        OS << "=";
+      if (Direction & Dependence::DVEntry::GT)
+        OS << ">";
+    }
+    if (II < Levels)
+      OS << " ";
+  }
+  OS << "]\n";
+}
+
+static bool normalize(std::vector<Dependence::DVEntry> &DV, unsigned Levels,
+                      ScalarEvolution *SE) {
+  if (!isDirectionNegative(DV, Levels))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
+             dumpDirection(dbgs(), DV, Levels););
+  for (unsigned Level = 1; Level <= Levels; ++Level) {
+    unsigned char Direction = DV[Level - 1].Direction;
+    // Reverse the direction vector, this means LT becomes GT
+    // and GT becomes LT.
+    unsigned char RevDirection = Direction & Dependence::DVEntry::EQ;
+    if (Direction & Dependence::DVEntry::LT)
+      RevDirection |= Dependence::DVEntry::GT;
+    if (Direction & Dependence::DVEntry::GT)
+      RevDirection |= Dependence::DVEntry::LT;
+    DV[Level - 1].Direction = RevDirection;
+  }
+
+  LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
+             dumpDirection(dbgs(), DV, Levels););
+  return true;
+}
+
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE) {
@@ -123,23 +182,27 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst, true)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+
+        unsigned Levels = D->getLevels();
+        std::vector<Dependence::DVEntry> DV(Levels);
+        for (unsigned II = 1; II <= Levels; ++II)
+          DV[II - 1].Direction = D->getDirection(II);
         // If the direction vector is negative, normalize it to
         // make it non-negative.
-        if (D->normalize(SE))
+        if (normalize(DV, Levels, SE))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
         LLVM_DEBUG(StringRef DepType =
                        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
                    dbgs() << "Found " << DepType
                           << " dependency between Src and Dst\n"
                           << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
-        unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
           if (D->isScalar(II)) {
             Direction = 'S';
             Dep.push_back(Direction);
           } else {
-            unsigned Dir = D->getDirection(II);
+            unsigned Dir = DV[II - 1].Direction;
             if (Dir == Dependence::DVEntry::LT ||
                 Dir == Dependence::DVEntry::LE)
               Direction = '<';
