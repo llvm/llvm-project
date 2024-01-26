@@ -2096,7 +2096,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
-    SetVector<MemoryAccess *> ToCheck;
+    SmallSetVector<MemoryAccess *, 8> ToCheck;
     ToCheck.insert(KillingDef->getDefiningAccess());
 
     bool Shortend = false;

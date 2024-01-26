@@ -45,6 +45,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #ifndef _LIBCPP_CXX03_LANG
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -1031,5 +1034,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(function<_Rp(_ArgTypes...)>& __x, functio
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FUNCTIONAL_FUNCTION_H
