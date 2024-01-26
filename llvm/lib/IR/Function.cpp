@@ -83,17 +83,15 @@ static cl::opt<unsigned> NonGlobalValueMaxNameSize(
 
 void Function::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;
-  bool HasNoDebugInfo = getSubprogram() == nullptr;
   for (auto &BB : *this) {
-    BB.convertToNewDbgValues(HasNoDebugInfo);
+    BB.convertToNewDbgValues();
   }
 }
 
 void Function::convertFromNewDbgValues() {
   IsNewDbgInfoFormat = false;
-  bool HasNoDebugInfo = getSubprogram() == nullptr;
   for (auto &BB : *this) {
-    BB.convertFromNewDbgValues(HasNoDebugInfo);
+    BB.convertFromNewDbgValues();
   }
 }
 
