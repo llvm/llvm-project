@@ -112,7 +112,7 @@ define i64 @adc64rm(i64 %a, ptr %ptr, i64 %x, i64 %y) nounwind {
 define i16 @adc16ri8(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: adc16ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subw %si, %dx, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    adcw $0, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xd7,0x00]
 ; CHECK-NEXT:    addl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x7b]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -127,7 +127,7 @@ define i16 @adc16ri8(i16 %a, i16 %x, i16 %y) nounwind {
 define i32 @adc32ri8(i32 %a, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: adc32ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl %esi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
 ; CHECK-NEXT:    adcl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xd7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = add i32 %a, 123
@@ -140,7 +140,7 @@ define i32 @adc32ri8(i32 %a, i32 %x, i32 %y) nounwind {
 define i64 @adc64ri8(i64 %a, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: adc64ri8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq %rsi, %rdx, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
 ; CHECK-NEXT:    adcq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xd7,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %s = add i64 %a, 123
@@ -166,7 +166,7 @@ define i8 @adc8ri(i8 %a, i8 %x, i8 %y) nounwind {
 define i16 @adc16ri(i16 %a, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: adc16ri:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subw %si, %dx, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    adcw $0, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xd7,0x00]
 ; CHECK-NEXT:    addl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x05,0xd2,0x04,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x4D2
@@ -266,7 +266,7 @@ define i64 @adc64mr(i64 %a, ptr %ptr, i64 %x, i64 %y) nounwind {
 define i16 @adc16mi8(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: adc16mi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subw %si, %dx, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    adcw $0, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x17,0x00]
 ; CHECK-NEXT:    addl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc0,0x7b]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -282,7 +282,7 @@ define i16 @adc16mi8(ptr %ptr, i16 %x, i16 %y) nounwind {
 define i32 @adc32mi8(ptr %ptr, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: adc32mi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subl %esi, %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpl %esi, %edx # encoding: [0x39,0xf2]
 ; CHECK-NEXT:    adcl $123, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0x17,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %ptr
@@ -296,7 +296,7 @@ define i32 @adc32mi8(ptr %ptr, i32 %x, i32 %y) nounwind {
 define i64 @adc64mi8(ptr %ptr, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: adc64mi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq %rsi, %rdx, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpq %rsi, %rdx # encoding: [0x48,0x39,0xf2]
 ; CHECK-NEXT:    adcq $123, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0x17,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %a = load i64, ptr %ptr
@@ -324,7 +324,7 @@ define i8 @adc8mi(ptr %ptr, i8 %x, i8 %y) nounwind {
 define i16 @adc16mi(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: adc16mi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subw %si, %dx, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    adcw $0, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x17,0x00]
 ; CHECK-NEXT:    addl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x05,0xd2,0x04,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x4D2
@@ -446,7 +446,7 @@ define void @adc8mi_legacy(ptr %ptr, i8 %x, i8 %y) nounwind {
 define void @adc16mi_legacy(ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: adc16mi_legacy:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subw %si, %dx, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0xf2]
+; CHECK-NEXT:    cmpw %si, %dx # encoding: [0x66,0x39,0xf2]
 ; CHECK-NEXT:    adcw $0, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x17,0x00]
 ; CHECK-NEXT:    addl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x05,0xd2,0x04,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x4D2
