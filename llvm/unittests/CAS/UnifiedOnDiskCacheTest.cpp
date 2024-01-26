@@ -151,6 +151,7 @@ TEST(UnifiedOnDiskCacheTest, Basic) {
   while (!UniDB->hasExceededSizeLimit()) {
     storeBigObject(Index++);
   }
+  PrevStoreSize = UniDB->getStorageSize();
   ASSERT_THAT_ERROR(UniDB->close(), Succeeded());
   EXPECT_TRUE(UniDB->needsGarbaseCollection());
 
