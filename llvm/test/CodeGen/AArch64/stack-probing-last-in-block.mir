@@ -82,7 +82,7 @@ body:             |
   ; CHECK-LABEL: name: f
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $fp, $lr
+  ; CHECK-NEXT:   liveins: $lr, $fp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.2), (store (s64) into %stack.1)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
