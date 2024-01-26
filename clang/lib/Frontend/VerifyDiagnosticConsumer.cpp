@@ -1104,7 +1104,8 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
       } else {
         Err_Directive = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
       }
-      Diags.Report(diag::err_verify_no_directives).setForceEmit() << Err_Directive;
+      Diags.Report(diag::err_verify_no_directives).setForceEmit()
+          << Err_Directive;
       ++NumErrors;
       Status = HasNoDirectivesReported;
     }
