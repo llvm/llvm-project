@@ -454,6 +454,12 @@ namespace deduction_after_explicit_pack {
     foo(args_tag<const int,const int, const int>{}, args_tag<int, int, int>{}, 4, 8, 9, 15, 16, 23, 1);
   }
 
+  template <typename... Y, typename... T>
+  void foo2(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., type_identity_t<T>...) {}
+  void call_foo2() {
+    foo2(args_tag<const int,const int, const int>{}, args_tag<int, int, int>{}, 4, 8, 9, 15, 16, 23);
+  }
+
   template <typename... Y, typename... T> void baz(args_tag<T...>, T..., T...) {}
   void call_baz() {
     baz(args_tag<int, int>{}, 1, 2, 3, 4);
