@@ -202,6 +202,8 @@ module attributes {transform.with_named_sequence} {
     %pad = transform.get_producer_of_operand %matmul_padded[2]
       : (!transform.any_op) -> !transform.op<"tensor.pad">
 
+    transform.apply_licm to %loops_l1#1 : !transform.any_op
+
     transform.structured.hoist_pad %pad by 1 loops
        : (!transform.op<"tensor.pad">) -> !transform.any_op
        transform.yield
