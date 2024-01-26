@@ -444,6 +444,15 @@ CString libc_make_test_file_path_func(const char *file_name);
 #define ASSERT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, return)
 
 ////////////////////////////////////////////////////////////////////////////////
+// Errno checks.
+
+#define EXPECT_ERRNO_EQ(VAL) EXPECT_EQ(VAL, static_cast<int>(libc_errno))
+#define ASSERT_ERRNO_EQ(VAL) ASSERT_EQ(VAL, static_cast<int>(libc_errno))
+
+#define EXPECT_ERRNO() EXPECT_NE(static_cast<int>(libc_errno), 0)
+#define ASSERT_ERRNO() ASSERT_NE(static_cast<int>(libc_errno), 0)
+
+////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
 
 #ifdef ENABLE_SUBPROCESS_TESTS

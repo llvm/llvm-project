@@ -45,10 +45,17 @@
       LIBC_NAMESPACE::quick_exit(127);                                         \
   }
 
+////////////////////////////////////////////////////////////////////////////////
+// Boolean checks are handled as comparison to the true / false values.
+
 #define EXPECT_TRUE(val) __CHECK_TRUE(__FILE__, __LINE__, val, false)
 #define ASSERT_TRUE(val) __CHECK_TRUE(__FILE__, __LINE__, val, true)
 #define EXPECT_FALSE(val) __CHECK_FALSE(__FILE__, __LINE__, val, false)
 #define ASSERT_FALSE(val) __CHECK_FALSE(__FILE__, __LINE__, val, true)
+
+////////////////////////////////////////////////////////////////////////////////
+// Binary equality / inequality.
+
 #define EXPECT_EQ(val1, val2)                                                  \
   __CHECK_EQ(__FILE__, __LINE__, (val1), (val2), false)
 #define ASSERT_EQ(val1, val2)                                                  \
@@ -57,6 +64,15 @@
   __CHECK_NE(__FILE__, __LINE__, (val1), (val2), false)
 #define ASSERT_NE(val1, val2)                                                  \
   __CHECK_NE(__FILE__, __LINE__, (val1), (val2), true)
+
+////////////////////////////////////////////////////////////////////////////////
+// Errno checks.
+
+#define EXPECT_ERRNO_EQ(VAL) EXPECT_EQ(VAL, static_cast<int>(libc_errno))
+#define ASSERT_ERRNO_EQ(VAL) ASSERT_EQ(VAL, static_cast<int>(libc_errno))
+
+#define EXPECT_ERRNO() EXPECT_NE(static_cast<int>(libc_errno), 0)
+#define ASSERT_ERRNO() ASSERT_NE(static_cast<int>(libc_errno), 0)
 
 // Integration tests are compiled with -ffreestanding which stops treating
 // the main function as a non-overloadable special function. Hence, we use a
