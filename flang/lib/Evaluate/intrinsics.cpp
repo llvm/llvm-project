@@ -339,6 +339,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"atand", {{"x", SameFloating}}, SameFloating},
     {"atand", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atan2", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
+    {"atan2d", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atanpi", {{"x", OperandReal}}, OperandReal},
     {"atanpi", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
     {"atan2pi", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
