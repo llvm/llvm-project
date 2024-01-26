@@ -1,5 +1,14 @@
+//===-- ProgressReportTest.cpp --------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Host/FileSystem.h"
@@ -11,23 +20,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
 class ProgressReportTest : public ::testing::Test {
-public:
-  void SetUp() override {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-    PlatformMacOSX::Initialize();
-    Debugger::Initialize(nullptr);
-  }
-  void TearDown() override {
-    Debugger::Terminate();
-    PlatformMacOSX::Terminate();
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
+  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
+
+  // The debugger's initialization function can't be called with no arguments
+  // so calling it using SubsystemRAII will cause the test build to fail as
+  // SubsystemRAII will call Initialize with no arguments. As such we set it up
+  // here the usual way.
+  void SetUp() override { Debugger::Initialize(nullptr); }
+  void TearDown() override { Debugger::Terminate(); }
 };
-} // namespace
+
 TEST_F(ProgressReportTest, TestReportCreation) {
   std::chrono::milliseconds timeout(100);
 
@@ -75,28 +78,23 @@ TEST_F(ProgressReportTest, TestReportCreation) {
 
     data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
     ASSERT_EQ(data->GetDetails(), "Starting report 3");
-
-    std::this_thread::sleep_for(timeout);
   }
 
   // Progress report objects should be destroyed at this point so
   // get each report from the queue and check that they've been
   // destroyed in reverse order
-  std::this_thread::sleep_for(timeout);
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
 
   ASSERT_EQ(data->GetTitle(), "Progress report 3");
   ASSERT_TRUE(data->GetCompleted());
 
-  std::this_thread::sleep_for(timeout);
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
 
   ASSERT_EQ(data->GetTitle(), "Progress report 2");
   ASSERT_TRUE(data->GetCompleted());
 
-  std::this_thread::sleep_for(timeout);
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
 
