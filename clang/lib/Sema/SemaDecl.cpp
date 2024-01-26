@@ -128,10 +128,13 @@ class TypeNameValidatorCCC final : public CorrectionCandidateCallback {
 } // end anonymous namespace
 
 /// Determine whether the token kind starts a simple-type-specifier.
-bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
-  switch (Kind) {
-  // FIXME: Take into account the current language when deciding whether a
-  // token kind is a valid type specifier
+bool Sema::isSimpleTypeSpecifier(const Token &Tok) const {
+  switch (Tok.getKind()) {
+  case tok::annot_typename:
+  case tok::annot_decltype:
+  case tok::annot_pack_indexing_type:
+    return true;
+
   case tok::kw_short:
   case tok::kw_long:
   case tok::kw___int64:
@@ -150,31 +153,23 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw___ibm128:
   case tok::kw_wchar_t:
   case tok::kw_bool:
+  case tok::kw__Bool:
   case tok::kw__Accum:
   case tok::kw__Fract:
   case tok::kw__Sat:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
   case tok::kw___auto_type:
-    return true;
-
-  case tok::annot_typename:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_typeof:
-  case tok::annot_decltype:
-  case tok::annot_pack_indexing_type:
   case tok::kw_decltype:
-    return getLangOpts().CPlusPlus;
-
   case tok::kw_char8_t:
-    return getLangOpts().Char8;
+    return Tok.getIdentifierInfo()->isKeyword(getLangOpts());
 
   default:
-    break;
+    return false;
   }
-
-  return false;
 }
 
 namespace {
