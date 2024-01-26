@@ -171,6 +171,16 @@ define i32 @shl_nuw_add_nuw(i32 %x) {
   ret i32 %r
 }
 
+define i32 @shl_nsw_add_nuw(i32 %x) {
+; CHECK-LABEL: @shl_nsw_add_nuw(
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i32 -2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nuw i32 %x, 1
+  %r = shl nsw i32 -1, %a
+  ret i32 %r
+}
+
 define i32 @lshr_exact_add_nuw(i32 %x) {
 ; CHECK-LABEL: @lshr_exact_add_nuw(
 ; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 2, [[X:%.*]]
