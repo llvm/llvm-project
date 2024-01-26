@@ -2942,3 +2942,35 @@ libc_function(
         ":vfprintf_internal",
     ],
 )
+
+############################## sys/epoll targets ###############################
+
+libc_function(
+    name = "epoll_wait",
+    srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_wait.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_pwait",
+    srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_pwait2",
+    srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
+    hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
