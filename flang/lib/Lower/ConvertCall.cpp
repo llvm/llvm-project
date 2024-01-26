@@ -373,8 +373,14 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
         // TODO: remove this TODO once the old lowering is gone.
         TODO(loc, "derived type argument passed by value");
       } else {
+        // With the lowering to HLFIR, box arguments have already been built
+        // according to the attributes, rank, bounds, and type they should have.
+        // Do not attempt any reboxing here that could break this.
+        bool legacyLowering =
+            !converter.getLoweringOptions().getLowerToHighLevelFIR();
         cast = builder.convertWithSemantics(loc, snd, fst,
-                                            callingImplicitInterface);
+                                            callingImplicitInterface,
+                                            /*allowRebox=*/legacyLowering);
       }
     }
     operands.push_back(cast);
@@ -944,8 +950,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
   }
 
+  const bool ignoreTKRtype = arg.testTKR(Fortran::common::IgnoreTKR::Type);
   const bool passingPolymorphicToNonPolymorphic =
-      actual.isPolymorphic() && !fir::isPolymorphicType(dummyType);
+      actual.isPolymorphic() && !fir::isPolymorphicType(dummyType) &&
+      !ignoreTKRtype;
 
   // When passing a CLASS(T) to TYPE(T), only the "T" part must be
   // passed. Unless the entity is a scalar passed by raw address, a
@@ -964,17 +972,24 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       (passingPolymorphicToNonPolymorphic ||
        !Fortran::evaluate::IsSimplyContiguous(expr, foldingContext));
 
+  const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
   // rank. That way, all the operation to create dummy descriptors are ranked if
   // the actual argument is ranked, which allows simple code generation.
-  bool actualIsAssumedRank = actual.isAssumedRank();
-
   mlir::Type dummyTypeWithActualRank = dummyType;
   if (auto baseBoxDummy = mlir::dyn_cast<fir::BaseBoxType>(dummyType))
     if (baseBoxDummy.isAssumedRank() ||
         arg.testTKR(Fortran::common::IgnoreTKR::Rank))
       dummyTypeWithActualRank =
           baseBoxDummy.getBoxTypeWithNewShape(actual.getType());
+  // Preserve the actual type in the argument preparation in case IgnoreTKR(t)
+  // is set (descriptors must be created with the actual type in this case, and
+  // copy-in/copy-out should be driven by the contiguity with regard to the
+  // actual type).
+  if (ignoreTKRtype)
+    dummyTypeWithActualRank = fir::changeElementType(
+        dummyTypeWithActualRank, actual.getFortranElementType(),
+        actual.isPolymorphic());
 
   // Step 2: prepare the storage for the dummy arguments, ensuring that it
   // matches the dummy requirements (e.g., must be contiguous or must be
@@ -1315,10 +1330,20 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
-        mlir::Type dataTy = fir::unwrapRefType(argTy);
+        auto dataTy = llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(argTy));
         fir::ExtendedValue actualExv = Fortran::lower::convertToAddress(
             loc, callContext.converter, actual, callContext.stmtCtx,
             hlfir::getFortranElementType(dataTy));
+        // If the dummy is an assumed-rank pointer, allocate a pointer
+        // descriptor with the actual argument rank (if it is not assumed-rank
+        // itself).
+        if (dataTy.isAssumedRank()) {
+          dataTy =
+              dataTy.getBoxTypeWithNewShape(fir::getBase(actualExv).getType());
+          if (dataTy.isAssumedRank())
+            TODO(loc, "associating assumed-rank target to pointer assumed-rank "
+                      "argument");
+        }
         mlir::Value irBox = builder.createTemporary(loc, dataTy);
         fir::MutableBoxValue ptrBox(irBox,
                                     /*nonDeferredParams=*/mlir::ValueRange{},

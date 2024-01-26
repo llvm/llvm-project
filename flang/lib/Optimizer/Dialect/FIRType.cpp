@@ -588,6 +588,33 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
   return name.str();
 }
 
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass) {
+  return llvm::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
+        return fir::SequenceType::get(seqTy.getShape(), newElementType);
+      })
+      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
+            fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        return FIRT::get(
+            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
+      })
+      .Case<fir::BoxType>([&](fir::BoxType t) -> mlir::Type {
+        mlir::Type newInnerType =
+            changeElementType(t.getEleTy(), newElementType, false);
+        if (turnBoxIntoClass)
+          return fir::ClassType::get(newInnerType);
+        return fir::BoxType::get(newInnerType);
+      })
+      .Default([&](mlir::Type t) -> mlir::Type {
+        assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
+                llvm::isa<mlir::NoneType>(t)) &&
+               "unexpected FIR leaf type");
+        return newElementType;
+      });
+}
+
 } // namespace fir
 
 namespace {

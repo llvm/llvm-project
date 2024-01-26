@@ -435,6 +435,13 @@ inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
   return ty;
 }
 
+/// Replace the element type of \p type by \p newElementType, preserving
+/// all other layers of the type (fir.ref/ptr/heap/array/box/class).
+/// If \p turnBoxIntoClass and the input is a fir.box, it will be turned into
+/// a fir.class in the result.
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass);
+
 /// Is `t` an address to fir.box or class type?
 inline bool isBoxAddress(mlir::Type t) {
   return fir::isa_ref_type(t) && fir::unwrapRefType(t).isa<fir::BaseBoxType>();
