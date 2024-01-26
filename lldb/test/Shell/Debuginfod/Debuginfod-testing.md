@@ -48,18 +48,17 @@ underspecified for some variations of symbol file deployment. The protocol
 itself is quite simple: query an HTTP server with the path
 `buildid/{.note.gnu.build-id hash}/debuginfo` or
 `buildid/{.note.gnu.build-id hash}/executable` to acquire "symbol data" or "the
-executable". Where there is lack of clarity, I prefer requesting `debuginfo`
-first, then falling back to `executable` (Scenarios #1 & #2). For Scenario #5,
-I've chosen to expect the stripped (i.e. not full) executable, which contains a
-number of sections necessary to correctly symbolicate will be hosted from the
-`executable` API. Depending upon how Debuginfod hosting services choose to
-support `.dwp` paired with stripped files, these assumptions may need to be
-revisited.
+executable". Where there is lack of clarity, `debuginfo` is requested first,
+falling back to `executable` (Scenarios #1 & #2). For Scenario #5, the stripped
+(i.e. not full) executable, which contains a number of sections necessary to
+correctly symbolicate, is hosted from the `executable` API. Depending upon how
+Debuginfod hosting services choose to support `.dwp` paired with stripped files,
+these assumptions may need to be revisited.
 
-I've also chosen to simply treat the `.dwp` file as `debuginfo` and the
-"only-keep-debug" stripped binary as `executable`. This scenario doesn't appear
-to work at all in GDB. Supporting it how I did seems more straight forward than
-trying to extend the protocol. The protocol _does_ support querying for section
-contents by name for a given build ID, but adding support for that in LLDB
-looks...well beyond my current capability (and LLVM's Debuginfod library doesn't
-support it at this writing, anyway).
+The `.dwp` file is treated as `debuginfo`, and the "only-keep-debug" stripped
+binary is treated as `executable`. This scenario does not appear to work at all
+in GDB. It seems more straightforward to support it in this manner, rather than
+attempting to extend the protocol. While the protocol does support querying for
+section contents by name for a given build ID, support for that capability in
+LLDB is not implemented (and LLVM's Debuginfod library does not support it at
+this time).
