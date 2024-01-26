@@ -1227,7 +1227,7 @@ RISC-V Support
 - Default ABI with F but without D was changed to ilp32f for RV32 and to lp64f
   for RV64.
 
-- ``__attribute__((rvv_vector_bits(N))) is now supported for RVV vbool*_t types.
+- ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
