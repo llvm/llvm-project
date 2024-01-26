@@ -361,7 +361,7 @@ public:
   }
 
   // We support __builtin_cpu_supports/__builtin_cpu_is on targets that
-  // have GLIBC since it is GLIBC that provides the HWCAP[2] in the auxv.
+  // have Glibc since it is Glibc that provides the HWCAP[2] in the auxv.
   bool supportsCpuSupports() const override { return getTriple().isOSGlibc(); }
   bool supportsCpuIs() const override { return getTriple().isOSGlibc(); }
   bool validateCpuSupports(StringRef Feature) const override;

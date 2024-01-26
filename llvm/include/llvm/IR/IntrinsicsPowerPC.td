@@ -216,8 +216,8 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
             [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_vararg_ty],
             [IntrNoMem]>;
   // Load of a value provided by the system library at a fixed address. Used for
-  // accessing things like HWCAP word provided by GLIBC. The immediate argument
-  // is not an address but a value defined in
+  // accessing things like the HWCAP word provided by Glibc. The immediate
+  // argument is not an address but a value defined in
   // include/llvm/TargetParser/PPCTargetParser.def. Each of the values provided
   // by Glibc is a 32-bit word.
   def int_ppc_fixed_addr_ld
