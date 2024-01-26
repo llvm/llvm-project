@@ -273,7 +273,7 @@ static ParallelComputeFunction createParallelComputeFunction(
   // Insert function into the module symbol table and assign it unique name.
   SymbolTable symbolTable(module);
   symbolTable.insert(func);
-  rewriter.getListener()->notifyOperationInserted(func);
+  rewriter.getListener()->notifyOperationInserted(func, /*previous=*/{});
 
   // Create function entry block.
   Block *block =
@@ -489,7 +489,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   // Insert function into the module symbol table and assign it unique name.
   SymbolTable symbolTable(module);
   symbolTable.insert(func);
-  rewriter.getListener()->notifyOperationInserted(func);
+  rewriter.getListener()->notifyOperationInserted(func, /*previous=*/{});
 
   // Create function entry block.
   Block *block = b.createBlock(&func.getBody(), func.begin(), type.getInputs(),
