@@ -18267,8 +18267,8 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     // For a concat of two [u]avgfloors with a 128-bit destination size, combine
     // into an avg of two contacts of the source vectors.
     // eg: concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c), concat(b, d))
-    if (N0Opc == ISD::AVGFLOORU && VT.is128BitVector() &&
-        N0->hasOneUse() && N1->hasOneUse()) {
+    if (N0Opc == ISD::AVGFLOORU && VT.is128BitVector() && N0->hasOneUse() &&
+        N1->hasOneUse()) {
       EVT PairVT = N00VT.getDoubleNumVectorElementsVT(*DAG.getContext());
       SDValue Concat0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, PairVT, N00, N10);
       SDValue Concat1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, PairVT, N01, N11);
