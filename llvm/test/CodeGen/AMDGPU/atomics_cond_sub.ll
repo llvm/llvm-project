@@ -2,9 +2,9 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12-GISEL %s
 
-declare i32 @llvm.amdgcn.flat.atomic.cond.sub.u32(ptr, i32)
-declare i32 @llvm.amdgcn.global.atomic.cond.sub.u32(ptr addrspace(1), i32)
-declare i32 @llvm.amdgcn.ds.cond.sub.u32(ptr addrspace(3), i32)
+declare i32 @llvm.amdgcn.atomic.cond.sub.u32.p3(ptr addrspace(3), i32)
+declare i32 @llvm.amdgcn.atomic.cond.sub.u32.p1(ptr addrspace(1), i32)
+declare i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr, i32)
 
 define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-SDAG-LABEL: flat_atomic_cond_sub_no_rtn_u32:
@@ -26,7 +26,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32(ptr %addr, i32 %in) {
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 -4
-  %unused = call i32 @llvm.amdgcn.flat.atomic.cond.sub.u32(ptr %gep, i32 %in)
+  %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr %gep, i32 %in)
   ret void
 }
 
@@ -50,7 +50,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_no_rtn_u32_forced(ptr %addr, i32
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 -4
-  %unused = call i32 @llvm.amdgcn.flat.atomic.cond.sub.u32(ptr %gep, i32 %in)
+  %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr %gep, i32 %in)
   ret void
 }
 
@@ -84,7 +84,7 @@ define amdgpu_kernel void @flat_atomic_cond_sub_rtn_u32(ptr %addr, i32 %in, ptr 
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr %addr, i32 4
-  %val = call i32 @llvm.amdgcn.flat.atomic.cond.sub.u32(ptr %gep, i32 %in)
+  %val = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p0(ptr %gep, i32 %in)
   store i32 %val, ptr %use
   ret void
 }
@@ -107,7 +107,7 @@ define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32(ptr addrspace(1) %a
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %addr, i32 -4
-  %unused = call i32 @llvm.amdgcn.global.atomic.cond.sub.u32(ptr addrspace(1) %gep, i32 %in)
+  %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p1(ptr addrspace(1) %gep, i32 %in)
   ret void
 }
 
@@ -133,7 +133,7 @@ define amdgpu_kernel void @global_atomic_cond_sub_no_rtn_u32_forced(ptr addrspac
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %addr, i32 -4
-  %unused = call i32 @llvm.amdgcn.global.atomic.cond.sub.u32(ptr addrspace(1) %gep, i32 %in)
+  %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p1(ptr addrspace(1) %gep, i32 %in)
   ret void
 }
 
@@ -167,7 +167,7 @@ define amdgpu_kernel void @global_atomic_cond_sub_rtn_u32(ptr addrspace(1) %addr
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %addr, i32 4
-  %val = call i32 @llvm.amdgcn.global.atomic.cond.sub.u32(ptr addrspace(1) %gep, i32 %in)
+  %val = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p1(ptr addrspace(1) %gep, i32 %in)
   store i32 %val, ptr addrspace(1) %use
   ret void
 }
@@ -194,7 +194,7 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32(ptr addrspace(3) %addr, i32 %i
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %addr, i32 -4
-  %unused = call i32 @llvm.amdgcn.ds.cond.sub.u32(ptr addrspace(3) %gep, i32 %in)
+  %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p3(ptr addrspace(3) %gep, i32 %in)
   ret void
 }
 
@@ -220,7 +220,7 @@ define amdgpu_kernel void @ds_cond_sub_no_rtn_u32_forced(ptr addrspace(3) %addr,
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %addr, i32 -4
-  %unused = call i32 @llvm.amdgcn.ds.cond.sub.u32(ptr addrspace(3) %gep, i32 %in)
+  %unused = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p3(ptr addrspace(3) %gep, i32 %in)
   ret void
 }
 
@@ -248,7 +248,7 @@ define amdgpu_kernel void @ds_cond_sub_rtn_u32(ptr addrspace(3) %addr, i32 %in, 
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %addr, i32 4
-  %val = call i32 @llvm.amdgcn.ds.cond.sub.u32(ptr addrspace(3) %gep, i32 %in)
+  %val = call i32 @llvm.amdgcn.atomic.cond.sub.u32.p3(ptr addrspace(3) %gep, i32 %in)
   store i32 %val, ptr addrspace(3) %use
   ret void
 }

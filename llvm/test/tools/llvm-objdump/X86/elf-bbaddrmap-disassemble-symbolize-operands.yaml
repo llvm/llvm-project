@@ -1,9 +1,6 @@
 ## Test that in the presence of SHT_LLVM_BB_ADDR_MAP sections,
 ## --symbolize-operands can display <BB*> labels.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 ## Executable object file.
 # RUN: yaml2obj --docnum=1 -DFOO_ADDR=0x4000 -DBAR_ADDR=0x5000 %s -o %t1
 # RUN: llvm-objdump %t1 -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr | \

@@ -300,7 +300,7 @@ def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64">;
 // PSEUDO includes a workaround for a hardware anomaly where some ASICs
 // zero-extend the result from 48 bits instead of sign-extending.
 let isReMaterializable = 1 in
-def S_GETPC_B64_PSEUDO : SOP1_64_0  <"s_getpc_b64",
+def S_GETPC_B64_pseudo : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
 
@@ -558,7 +558,6 @@ def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
-
 }
 } // End has_sdst = 0
 
@@ -1179,7 +1178,7 @@ class S_SETREG_B32_Pseudo <list<dag> pattern=[]> : SOPK_Pseudo <
   pattern>;
 
 def S_SETREG_B32 : S_SETREG_B32_Pseudo <
-  [(int_amdgcn_s_setreg (i32 timm:$simm16), i32:$sdst)]> {
+  [(int_amdgcn_s_setreg (i32 SIMM16bit:$simm16), i32:$sdst)]> {
   // Use custom inserter to optimize some cases to
   // S_DENORM_MODE/S_ROUND_MODE/S_SETREG_B32_mode.
   let usesCustomInserter = 1;
@@ -1725,6 +1724,11 @@ def S_SET_GPR_IDX_OFF : SOPP_Pseudo<"s_set_gpr_idx_off", (ins) > {
   let Defs = [MODE];
   let Uses = [MODE];
 }
+}
+
+def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_monitor_sleep timm:$simm16)]> {
+  let SubtargetPredicate = isGFX12_10Plus;
 }
 } // End hasSideEffects
 
@@ -2650,7 +2654,6 @@ defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12<0x047>;
 defm S_WAIT_LOADCNT_DSCNT   : SOPP_Real_32_gfx12<0x048>;
 defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 
-
 //===----------------------------------------------------------------------===//
 // SOPP - GFX1210 only.
 //===----------------------------------------------------------------------===//
@@ -2713,7 +2716,7 @@ multiclass SOPP_Real_With_Relaxation_gfx11_gfx12<bits<7>op> :
 defm S_SETKILL                    : SOPP_Real_32_gfx11_gfx12<0x001>;
 defm S_SETHALT                    : SOPP_Real_32_gfx11_gfx12<0x002>;
 defm S_SLEEP                      : SOPP_Real_32_gfx11_gfx12<0x003>;
-defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11_gfx12<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
+defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;
@@ -2752,6 +2755,7 @@ defm S_BARRIER                    : SOPP_Real_32_gfx11_gfx12<0x03d>;
 //===----------------------------------------------------------------------===//
 
 defm S_SINGLEUSE_VDST             : SOPP_Real_32_gfx11_gfx12<0x013>;
+defm S_MONITOR_SLEEP              : SOPP_Real_32_gfx12<0x004>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10

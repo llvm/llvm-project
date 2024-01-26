@@ -661,6 +661,28 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
 
 }
 
+def NVGPU_TmaAsyncStoreOp : NVGPU_Op<"tma.async.store", [AttrSizedOperandSegments]> {
+  let summary = "TMA asynchronous store";
+  let description = [{
+    The Op store a tile memory region from global memory to shared memory by 
+    Tensor Memory Access (TMA).
+    
+    `$tensorMapDescriptor` is tensor map descriptor which has information about
+    tile shape. The descriptor is created by `nvgpu.tma.create.descriptor`
+  }];  
+  let arguments = (ins  Arg<AnyMemRef, "", [MemReadAt<0, FullEffect>]>:$src,
+                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
+                        Variadic<Index>:$coordinates, 
+                        Optional<I1>:$predicate);
+  let assemblyFormat = [{
+      $src `to` $tensorMapDescriptor `[` $coordinates `]`
+      (`,` `predicate` `=` $predicate^)?
+      attr-dict `:` type($src)
+      `->` type($tensorMapDescriptor)
+  }];
+  let hasVerifier = 1;
+}
+
 def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
   let summary = "TMA create descriptor";
   let description = [{

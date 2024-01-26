@@ -22,7 +22,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; REGALLOC-GFX908-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
   ; REGALLOC-GFX908-NEXT:   [[V_MFMA_I32_4X4X4I8_e64_:%[0-9]+]]:areg_128 = V_MFMA_I32_4X4X4I8_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
-  ; REGALLOC-GFX908-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+  ; REGALLOC-GFX908-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX2 undef %16:vreg_64, [[SI_SPILL_V64_RESTORE]], 0, 0, implicit $exec :: (volatile store (s64) into `ptr addrspace(1) undef`, addrspace 1)
   ; REGALLOC-GFX908-NEXT:   [[COPY3:%[0-9]+]]:vreg_128 = COPY [[V_MFMA_I32_4X4X4I8_e64_]]
   ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef %18:vreg_64, [[COPY3]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
@@ -70,7 +70,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX90A-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; REGALLOC-GFX90A-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
   ; REGALLOC-GFX90A-NEXT:   [[V_MFMA_I32_4X4X4I8_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_I32_4X4X4I8_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-  ; REGALLOC-GFX90A-NEXT:   [[SI_SPILL_AV64_RESTORE:%[0-9]+]]:av_64_align2 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+  ; REGALLOC-GFX90A-NEXT:   [[SI_SPILL_AV64_RESTORE:%[0-9]+]]:av_64_align2 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
   ; REGALLOC-GFX90A-NEXT:   GLOBAL_STORE_DWORDX2 undef %16:vreg_64_align2, [[SI_SPILL_AV64_RESTORE]], 0, 0, implicit $exec :: (volatile store (s64) into `ptr addrspace(1) undef`, addrspace 1)
   ; REGALLOC-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef %18:vreg_64_align2, [[V_MFMA_I32_4X4X4I8_e64_]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
   ; REGALLOC-GFX90A-NEXT:   S_ENDPGM 0

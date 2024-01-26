@@ -159,8 +159,24 @@ public:
     OPC_CheckChild2Same,
     OPC_CheckChild3Same,
     OPC_CheckPatternPredicate,
+    OPC_CheckPatternPredicate0,
+    OPC_CheckPatternPredicate1,
     OPC_CheckPatternPredicate2,
+    OPC_CheckPatternPredicate3,
+    OPC_CheckPatternPredicate4,
+    OPC_CheckPatternPredicate5,
+    OPC_CheckPatternPredicate6,
+    OPC_CheckPatternPredicate7,
+    OPC_CheckPatternPredicateTwoByte,
     OPC_CheckPredicate,
+    OPC_CheckPredicate0,
+    OPC_CheckPredicate1,
+    OPC_CheckPredicate2,
+    OPC_CheckPredicate3,
+    OPC_CheckPredicate4,
+    OPC_CheckPredicate5,
+    OPC_CheckPredicate6,
+    OPC_CheckPredicate7,
     OPC_CheckPredicateWithOperands,
     OPC_CheckOpcode,
     OPC_SwitchOpcode,
@@ -207,6 +223,14 @@ public:
     OPC_CheckChild2CondCode,
     OPC_CheckValueType,
     OPC_CheckComplexPat,
+    OPC_CheckComplexPat0,
+    OPC_CheckComplexPat1,
+    OPC_CheckComplexPat2,
+    OPC_CheckComplexPat3,
+    OPC_CheckComplexPat4,
+    OPC_CheckComplexPat5,
+    OPC_CheckComplexPat6,
+    OPC_CheckComplexPat7,
     OPC_CheckAndImm,
     OPC_CheckOrImm,
     OPC_CheckImmAllOnesV,
@@ -286,20 +310,21 @@ public:
   };
 
   enum {
-    OPFL_None       = 0,  // Node has no chain or glue input and isn't variadic.
-    OPFL_Chain      = 1,     // Node has a chain input.
-    OPFL_GlueInput  = 2,     // Node has a glue input.
-    OPFL_GlueOutput = 4,     // Node has a glue output.
-    OPFL_MemRefs    = 8,     // Node gets accumulated MemRefs.
-    OPFL_Variadic0  = 1<<4,  // Node is variadic, root has 0 fixed inputs.
-    OPFL_Variadic1  = 2<<4,  // Node is variadic, root has 1 fixed inputs.
-    OPFL_Variadic2  = 3<<4,  // Node is variadic, root has 2 fixed inputs.
-    OPFL_Variadic3  = 4<<4,  // Node is variadic, root has 3 fixed inputs.
-    OPFL_Variadic4  = 5<<4,  // Node is variadic, root has 4 fixed inputs.
-    OPFL_Variadic5  = 6<<4,  // Node is variadic, root has 5 fixed inputs.
-    OPFL_Variadic6  = 7<<4,  // Node is variadic, root has 6 fixed inputs.
+    OPFL_None = 0,       // Node has no chain or glue input and isn't variadic.
+    OPFL_Chain = 1,      // Node has a chain input.
+    OPFL_GlueInput = 2,  // Node has a glue input.
+    OPFL_GlueOutput = 4, // Node has a glue output.
+    OPFL_MemRefs = 8,    // Node gets accumulated MemRefs.
+    OPFL_Variadic0 = 1 << 4, // Node is variadic, root has 0 fixed inputs.
+    OPFL_Variadic1 = 2 << 4, // Node is variadic, root has 1 fixed inputs.
+    OPFL_Variadic2 = 3 << 4, // Node is variadic, root has 2 fixed inputs.
+    OPFL_Variadic3 = 4 << 4, // Node is variadic, root has 3 fixed inputs.
+    OPFL_Variadic4 = 5 << 4, // Node is variadic, root has 4 fixed inputs.
+    OPFL_Variadic5 = 6 << 4, // Node is variadic, root has 5 fixed inputs.
+    OPFL_Variadic6 = 7 << 4, // Node is variadic, root has 6 fixed inputs.
+    OPFL_Variadic7 = 8 << 4, // Node is variadic, root has 7 fixed inputs.
 
-    OPFL_VariadicInfo = OPFL_Variadic6
+    OPFL_VariadicInfo = 15 << 4 // Mask for extracting the OPFL_VariadicN bits.
   };
 
   /// getNumFixedFromVariadicInfo - Transform an EmitNode flags word into the

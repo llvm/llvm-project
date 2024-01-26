@@ -712,7 +712,7 @@ void NonLocalizedStringChecker::setNonLocalizedState(const SVal S,
 
 
 static bool isDebuggingName(std::string name) {
-  return StringRef(name).lower().find("debug") != StringRef::npos;
+  return StringRef(name).contains_insensitive("debug");
 }
 
 /// Returns true when, heuristically, the analyzer may be analyzing debugging
@@ -1248,8 +1248,8 @@ bool PluralMisuseChecker::MethodCrawler::isCheckingPlurality(
           BO = B;
         }
       }
-      if (VD->getName().lower().find("plural") != StringRef::npos ||
-          VD->getName().lower().find("singular") != StringRef::npos) {
+      if (VD->getName().contains_insensitive("plural") ||
+          VD->getName().contains_insensitive("singular")) {
         return true;
       }
     }

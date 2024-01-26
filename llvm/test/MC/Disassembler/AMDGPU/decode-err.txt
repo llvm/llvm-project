@@ -10,7 +10,7 @@
 # GFX11: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x93,0xbf
 
-# this is s_waitcnt_vscnt exec_hi, 0x1234, which valid on gfx11, but not on gfx12
+# this is s_waitcnt_vscnt exec_hi, 0x1234, which is valid on gfx11, but not on gfx12
 # GFX12: [[@LINE+1]]:1: warning: invalid instruction encoding
 0x34,0x12,0x7f,0xbc
 

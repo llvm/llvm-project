@@ -68,7 +68,7 @@ body:             |
     successors:
     liveins: $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
-    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
 
   bb.3:
@@ -133,7 +133,7 @@ body:             |
     successors:
     liveins: $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
-    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
 
   bb.3:

@@ -138,7 +138,7 @@ jobs:
       - name: Build libcxx docs
         if: steps.docs-changed-subprojects.outputs.libcxx_any_changed == 'true'
         run: |
-          cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx;libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libcxx-build docs-libcxx-html
       - name: Build libc docs
         if: steps.docs-changed-subprojects.outputs.libc_any_changed == 'true'

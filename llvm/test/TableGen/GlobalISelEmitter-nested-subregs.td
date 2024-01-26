@@ -54,9 +54,9 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_AddTempSubRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(0), GIMT_Encode2(MyTarget::lo16),
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(MyTarget::A0wRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(MyTarget::A0RegClassID),
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 def : Pat<(i16 (anyext i8:$src)),
           (i16 (EXTRACT_SUBREG
                  (i32 (INSERT_SUBREG

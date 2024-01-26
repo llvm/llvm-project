@@ -697,6 +697,7 @@ MALLOC
 
 ### Library subroutine 
 ```
+CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 ```
 
@@ -759,7 +760,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | GETLOG|
+| Library subroutines | FDATE, GETLOG |
 
 
 ### Intrinsic Function Folding
@@ -841,3 +842,70 @@ TRIM, UBOUND, UNPACK, VERIFY.
 
 Coarray, non standard, IEEE and ISO_C_BINDINGS intrinsic functions that can be
 used in constant expressions have currently no folding support at all.
+
+### Standard Intrinsics: EXECUTE_COMMAND_LINE
+
+#### Usage and Info
+
+- **Standard:** Fortran 2008 and later, specified in subclause 16.9.73
+- **Class:** Subroutine
+- **Syntax:** `CALL EXECUTE_COMMAND_LINE(COMMAND [, WAIT, EXITSTAT, CMDSTAT, CMDMSG ])`
+- **Arguments:**
+
+  | Argument  | Description                                                  |
+  |-----------|--------------------------------------------------------------|
+  | `COMMAND` | Shall be a default CHARACTER scalar.                         |
+  | `WAIT`    | (Optional) Shall be a default LOGICAL scalar.                |
+  | `EXITSTAT`| (Optional) Shall be an INTEGER of the default kind.          |
+  | `CMDSTAT` | (Optional) Shall be an INTEGER of the default kind.          |
+  | `CMDMSG`  | (Optional) Shall be a CHARACTER scalar of the default kind.  |
+
+#### Implementation Specifics
+
+##### `COMMAND`:
+
+- Must be preset.
+
+##### `WAIT`:
+
+- If set to `false`, the command is executed asynchronously.
+- If not preset or set to `true`, it is executed synchronously.
+- Synchronous execution is achieved by passing the command into `std::system` on all systems.
+- Asynchronous execution is achieved by calling `fork()` on POSIX-compatible systems or `CreateProcess()` on Windows.
+
+##### `EXITSTAT`:
+
+- Synchronous execution:
+  - Inferred by the return value of `std::system(cmd)`.
+    - On POSIX-compatible systems: return value is first passed into `WEXITSTATUS(status)`, then assigned to `EXITSTAT`.
+    - On Windows, the value is directly assigned as the return value of `std::system()`.
+- Asynchronous execution:
+  - Value is not modified.
+
+##### `CMDSTAT`:
+
+- Synchronous execution:
+  - -2: No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
+  - -1: The processor does not support command line execution.
+  - \+ (positive value): An error condition occurs.
+    - 1: Fork Error (occurs only on POSIX-compatible systems).
+    - 2: Execution Error (command exits with status -1).
+    - 3: Invalid Command Error (determined by the exit code depending on the system).
+      - On Windows: exit code is 1.
+      - On POSIX-compatible systems: exit code is 127 or 126.
+    - 4: Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
+  - 0: Otherwise.
+- Asynchronous execution:
+  - 0 will always be assigned.
+
+##### `CMDMSG`:
+
+- Synchronous execution:
+  - If an error condition occurs, it is assigned an explanatory message; otherwise, it remains unchanged.
+  - If a condition occurs that would assign a nonzero value to `CMDSTAT` but the `CMDSTAT` variable is not present, error termination is initiated (applies to both POSIX-compatible systems and Windows).
+- Asynchronous execution:
+  - The value is unchanged.
+  - If a condition occurs that would assign a nonzero value to `CMDSTAT` but the `CMDSTAT` variable is not present, error termination is initiated.
+    - On POSIX-compatible systems, the child process (async process) will be terminated with no effect on the parent process (continues).
+    - On Windows, error termination is not initiated.
+

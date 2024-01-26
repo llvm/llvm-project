@@ -23,11 +23,13 @@ DWARF-NEXT:     Entry {{.*}} {
 DWARF-NEXT:       Abbrev: {{.*}}
 DWARF-NEXT:       Tag: DW_TAG_namespace
 DWARF:       DW_IDX_die_offset: [[NAMESPACE]]
+DWARF-NEXT:  DW_IDX_parent: Entry @ 0x{{.*}}
 DWARF-NEXT:     }
 DWARF-NEXT:     Entry {{.*}} {
 DWARF-NEXT:       Abbrev: {{.*}}
 DWARF:       Tag: DW_TAG_imported_declaration
 DWARF:       DW_IDX_die_offset: 0x0000005c
+DWARF-NEXT:  DW_IDX_parent: Entry @ 0x{{.*}}
 DWARF-NEXT:     }
 DWARF-NEXT:   }
 

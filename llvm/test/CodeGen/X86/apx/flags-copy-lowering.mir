@@ -1,0 +1,168 @@
+# RUN: llc -run-pass x86-flags-copy-lowering -mattr=+ndd -verify-machineinstrs -o - %s | FileCheck %s
+# Lower various interesting copy patterns of EFLAGS without using LAHF/SAHF.
+
+--- |
+  target triple = "x86_64-unknown-unknown"
+
+  declare void @foo()
+
+  define void @test_adc(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret void
+  }
+
+  define void @test_sbb(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret void
+  }
+
+  define void @test_rcl(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret void
+  }
+
+  define void @test_rcr(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret void
+  }
+...
+---
+name:            test_adc
+# CHECK-LABEL: name: test_adc
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = ADD64rr_ND %0, %1, implicit-def $eflags
+    %3:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %3
+    %4:gr64 = ADC64ri32_ND %2:gr64, 42, implicit-def $eflags, implicit $eflags
+    %5:gr64 = ADC64ri32_ND %4:gr64, 42, implicit-def $eflags, implicit $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         dead %{{[^:]*}}:gr8 = ADD8ri_ND %[[CF_REG]], 255, implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = ADC64ri32_ND %2, 42, implicit-def $eflags, implicit killed $eflags
+  ; CHECK-NEXT:    %5:gr64 = ADC64ri32_ND %4, 42, implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+
+    RET 0
+
+...
+---
+name:            test_sbb
+# CHECK-LABEL: name: test_sbb
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = SUB64rr_ND %0, %1, implicit-def $eflags
+    %3:gr64 = COPY killed $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %3
+    %4:gr64 = SBB64ri32_ND %2:gr64, 42, implicit-def $eflags, implicit killed $eflags
+    %5:gr64 = SBB64ri32_ND %4:gr64, 42, implicit-def dead $eflags, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         dead %{{[^:]*}}:gr8 = ADD8ri_ND %[[CF_REG]], 255, implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = SBB64ri32_ND %2, 42, implicit-def $eflags, implicit killed $eflags
+  ; CHECK-NEXT:    %5:gr64 = SBB64ri32_ND %4, 42, implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+
+    RET 0
+
+...
+---
+name:            test_rcl
+# CHECK-LABEL: name: test_rcl
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = ADD64rr_ND %0, %1, implicit-def $eflags
+    %3:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %3
+    %4:gr64 = RCL64r1_ND %2:gr64, implicit-def $eflags, implicit $eflags
+    %5:gr64 = RCL64r1_ND %4:gr64, implicit-def $eflags, implicit $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         dead %{{[^:]*}}:gr8 = ADD8ri_ND %[[CF_REG]], 255, implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = RCL64r1_ND %2, implicit-def $eflags, implicit killed $eflags
+  ; CHECK-NEXT:    %5:gr64 = RCL64r1_ND %4, implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+
+    RET 0
+
+...
+---
+name:            test_rcr
+# CHECK-LABEL: name: test_rcr
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = ADD64rr_ND %0, %1, implicit-def $eflags
+    %3:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %3
+    %4:gr64 = RCR64r1_ND %2:gr64, implicit-def $eflags, implicit $eflags
+    %5:gr64 = RCR64r1_ND %4:gr64, implicit-def $eflags, implicit $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         dead %{{[^:]*}}:gr8 = ADD8ri_ND %[[CF_REG]], 255, implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = RCR64r1_ND %2, implicit-def $eflags, implicit killed $eflags
+  ; CHECK-NEXT:    %5:gr64 = RCR64r1_ND %4, implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+
+    RET 0
+
+...

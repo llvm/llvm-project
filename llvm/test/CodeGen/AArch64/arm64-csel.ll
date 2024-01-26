@@ -468,6 +468,21 @@ entry:
   ret i32 %sel
 }
 
+define i32 @selor32_2(i32 %num, i32 %x) {
+; CHECK-LABEL: selor32_2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xff00
+; CHECK-NEXT:    cmp w1, #0
+; CHECK-NEXT:    orr w9, w8, #0x2
+; CHECK-NEXT:    csel w0, w9, w8, ne
+; CHECK-NEXT:    ret
+entry:
+  %and = and i32 %num, 65280
+  %tobool.not = icmp ne i32 %x, 0
+  %or = or disjoint i32 %and, 2
+  %sel = select i1 %tobool.not, i32 %or, i32 %and
+  ret i32 %sel
+}
 
 define i64 @selor64(i64 %num, i64 %x) {
 ; CHECK-LABEL: selor64:
@@ -482,5 +497,20 @@ entry:
   %tobool.not = icmp ne i64 %x, 0
   %or = or disjoint i64 %and, 1
   %sel = select i1 %tobool.not, i64 %or, i64 %and
+  ret i64 %sel
+}
+
+; Same as above with disjoint but without knowing haveNoCommonBitsSet.
+define i64 @selor64_disjoint(i64 %num, i64 %x) {
+; CHECK-LABEL: selor64_disjoint:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr x8, x0, #0x1
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    csel x0, x8, x0, ne
+; CHECK-NEXT:    ret
+entry:
+  %tobool.not = icmp ne i64 %x, 0
+  %or = or disjoint i64 %num, 1
+  %sel = select i1 %tobool.not, i64 %or, i64 %num
   ret i64 %sel
 }

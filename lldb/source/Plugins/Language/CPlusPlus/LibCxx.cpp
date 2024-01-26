@@ -1073,14 +1073,162 @@ bool lldb_private::formatters::LibcxxWStringViewSummaryProvider(
   bool success;
   ValueObjectSP dataobj;
   size_t size;
-  std::tie( success, dataobj, size ) = LibcxxExtractStringViewData(valobj);
+  std::tie(success, dataobj, size) = LibcxxExtractStringViewData(valobj);
 
   if (!success) {
     stream << "Summary Unavailable";
     return true;
   }
 
-
   return ::LibcxxWStringSummaryProvider(valobj, stream, summary_options,
                                         dataobj, size);
+}
+
+bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__rep_");
+  if (!ptr_sp)
+    return false;
+
+  // The date time in the chrono library is valid in the range
+  // [-32767-01-01T00:00:00Z, 32767-12-31T23:59:59Z]. A 64-bit time_t has a
+  // larger range, the function strftime is not able to format the entire range
+  // of time_t. The exact point has not been investigated; it's limited to
+  // chrono's range.
+  const std::time_t chrono_timestamp_min =
+      -1'096'193'779'200; // -32767-01-01T00:00:00Z
+  const std::time_t chrono_timestamp_max =
+      971'890'963'199; // 32767-12-31T23:59:59Z
+
+  const std::time_t seconds = ptr_sp->GetValueAsSigned(0);
+  if (seconds < chrono_timestamp_min || seconds > chrono_timestamp_max)
+    stream.Printf("timestamp=%" PRIu64 " s", static_cast<uint64_t>(seconds));
+  else {
+    std::array<char, 128> str;
+    std::size_t size =
+        std::strftime(str.data(), str.size(), "%FT%H:%M:%SZ", gmtime(&seconds));
+    if (size == 0)
+      return false;
+
+    stream.Printf("date/time=%s timestamp=%" PRIu64 " s", str.data(),
+                  static_cast<uint64_t>(seconds));
+  }
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__rep_");
+  if (!ptr_sp)
+    return false;
+
+  // The date time in the chrono library is valid in the range
+  // [-32767-01-01Z, 32767-12-31Z]. A 32-bit time_t has a larger range, the
+  // function strftime is not able to format the entire range of time_t. The
+  // exact point has not been investigated; it's limited to chrono's range.
+  const int chrono_timestamp_min = -12'687'428; // -32767-01-01Z
+  const int chrono_timestamp_max = 11'248'737;  // 32767-12-31Z
+
+  const int days = ptr_sp->GetValueAsSigned(0);
+  if (days < chrono_timestamp_min || days > chrono_timestamp_max)
+    stream.Printf("timestamp=%d days", days);
+
+  else {
+    const std::time_t seconds = std::time_t(86400) * days;
+
+    std::array<char, 128> str;
+    std::size_t size =
+        std::strftime(str.data(), str.size(), "%FZ", gmtime(&seconds));
+    if (size == 0)
+      return false;
+
+    stream.Printf("date=%s timestamp=%d days", str.data(), days);
+  }
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoMonthSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // FIXME: These are the names used in the C++20 ostream operator. Since LLVM
+  // uses C++17 it's not possible to use the ostream operator directly.
+  static const std::array<std::string_view, 12> months = {
+      "January", "February", "March",     "April",   "May",      "June",
+      "July",    "August",   "September", "October", "November", "December"};
+
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__m_");
+  if (!ptr_sp)
+    return false;
+
+  const unsigned month = ptr_sp->GetValueAsUnsigned(0);
+  if (month >= 1 && month <= 12)
+    stream << "month=" << months[month - 1];
+  else
+    stream.Printf("month=%u", month);
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // FIXME: These are the names used in the C++20 ostream operator. Since LLVM
+  // uses C++17 it's not possible to use the ostream operator directly.
+  static const std::array<std::string_view, 7> weekdays = {
+      "Sunday",   "Monday", "Tuesday", "Wednesday",
+      "Thursday", "Friday", "Saturday"};
+
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__wd_");
+  if (!ptr_sp)
+    return false;
+
+  const unsigned weekday = ptr_sp->GetValueAsUnsigned(0);
+  if (weekday >= 0 && weekday < 7)
+    stream << "weekday=" << weekdays[weekday];
+  else
+    stream.Printf("weekday=%u", weekday);
+
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoYearMonthDaySummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__y_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__y_");
+  if (!ptr_sp)
+    return false;
+  int year = ptr_sp->GetValueAsSigned(0);
+
+  ptr_sp = valobj.GetChildMemberWithName("__m_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__m_");
+  if (!ptr_sp)
+    return false;
+  const unsigned month = ptr_sp->GetValueAsUnsigned(0);
+
+  ptr_sp = valobj.GetChildMemberWithName("__d_");
+  if (!ptr_sp)
+    return false;
+  ptr_sp = ptr_sp->GetChildMemberWithName("__d_");
+  if (!ptr_sp)
+    return false;
+  const unsigned day = ptr_sp->GetValueAsUnsigned(0);
+
+  stream << "date=";
+  if (year < 0) {
+    stream << '-';
+    year = -year;
+  }
+  stream.Printf("%04d-%02u-%02u", year, month, day);
+
+  return true;
 }

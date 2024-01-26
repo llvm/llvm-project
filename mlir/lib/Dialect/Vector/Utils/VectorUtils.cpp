@@ -264,26 +264,31 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   if (!succeeded(getStridesAndOffset(memrefType, stridesFull, offset)))
     return false;
   auto strides = ArrayRef<int64_t>(stridesFull).take_back(vecRank);
+  memrefType.getLayout().isIdentity();
 
   // TODO: Add support for memref with trailing dynamic shapes. Memrefs
   // with leading dynamic dimensions are already supported.
   if (ShapedType::isDynamicShape(memrefShape))
     return false;
 
-  // Cond 1: A contiguous memref will always have a unit trailing stride.
-  if (strides.empty() || strides.back() != 1)
-    return false;
+  // Cond 1: Check whether `memrefType` is contiguous.
+  if (!strides.empty()) {
+    // Cond 1.1: A contiguous memref will always have a unit trailing stride.
+    if (strides.back() != 1)
+      return false;
 
-  // Cond 2: Strides of a contiguous memref have to match the flattened dims.
-  strides = strides.drop_back(1);
-  SmallVector<int64_t> flattenedDims;
-  for (size_t i = 1; i < memrefShape.size(); i++)
-    flattenedDims.push_back(mlir::computeProduct(memrefShape.take_back(i)));
+    // Cond 1.2: Strides of a contiguous memref have to match the flattened
+    // dims.
+    strides = strides.drop_back(1);
+    SmallVector<int64_t> flattenedDims;
+    for (size_t i = 1; i < memrefShape.size(); i++)
+      flattenedDims.push_back(mlir::computeProduct(memrefShape.take_back(i)));
 
-  if (!llvm::equal(strides, llvm::reverse(flattenedDims)))
-    return false;
+    if (!llvm::equal(strides, llvm::reverse(flattenedDims)))
+      return false;
+  }
 
-  // Cond 3: Compare the dims of `vectorType` against `memrefType` (in reverse).
+  // Cond 2: Compare the dims of `vectorType` against `memrefType` (in reverse).
   // In the most basic case, all dims will match.
   auto firstNonMatchingDim =
       std::mismatch(vectorShape.rbegin(), vectorShape.rend(),

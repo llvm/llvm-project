@@ -10,9 +10,9 @@ typedef float  v2f   __attribute__((ext_vector_type(2)));
 typedef half   v32h   __attribute__((ext_vector_type(32)));
 typedef half   v16h   __attribute__((ext_vector_type(16)));
 typedef half   v8h   __attribute__((ext_vector_type(8)));
-typedef short  v32s   __attribute__((ext_vector_type(32)));
-typedef short  v16s   __attribute__((ext_vector_type(16)));
-typedef short  v8s   __attribute__((ext_vector_type(8)));
+typedef __bf16 v32bf16 __attribute__((ext_vector_type(32)));
+typedef __bf16 v16bf16 __attribute__((ext_vector_type(16)));
+typedef __bf16 v8sbf16 __attribute__((ext_vector_type(8)));
 typedef int    v16i   __attribute__((ext_vector_type(16)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
 
@@ -62,11 +62,11 @@ void test_amdgcn_wmma_f32_16x16x16_xf32(global v8f* out, v8f a, v8f b, v8f c)
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_wmma_f32_16x16x32_bf16(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v16i16.v8f32(i1 false, <16 x i16> [[A:%.*]], i1 false, <16 x i16> [[B:%.*]], i16 0, <8 x float> [[C:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v16bf16.v8f32(i1 false, <16 x bfloat> [[A:%.*]], i1 false, <16 x bfloat> [[B:%.*]], i16 0, <8 x float> [[C:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
-void test_amdgcn_wmma_f32_16x16x32_bf16(global v8f* out, v16s a, v16s b, v8f c)
+void test_amdgcn_wmma_f32_16x16x32_bf16(global v8f* out, v16bf16 a, v16bf16 b, v8f c)
 {
   *out = __builtin_amdgcn_wmma_f32_16x16x32_bf16(0, a, 0, b, 0, c);
 }
@@ -95,22 +95,22 @@ void test_amdgcn_wmma_f16_16x16x32_f16(global v8h* out, v16h a, v16h b, v8h c)
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_wmma_bf16_16x16x32_bf16(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.v16i16.v8i16(i1 false, <16 x i16> [[A:%.*]], i1 false, <16 x i16> [[B:%.*]], i16 0, <8 x i16> [[C:%.*]])
-// CHECK-GFX1210-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.v16bf16.v8bf16(i1 false, <16 x bfloat> [[A:%.*]], i1 false, <16 x bfloat> [[B:%.*]], i16 0, <8 x bfloat> [[C:%.*]])
+// CHECK-GFX1210-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
-void test_amdgcn_wmma_bf16_16x16x32_bf16(global v8s* out, v16s a, v16s b, v8s c)
+void test_amdgcn_wmma_bf16_16x16x32_bf16(global v8sbf16* out, v16bf16 a, v16bf16 b, v8sbf16 c)
 {
   *out = __builtin_amdgcn_wmma_bf16_16x16x32_bf16(0, a, 0, b, 0, c);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_wmma_bf16f32_16x16x32_bf16(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8i16.v16i16.v8f32(i1 false, <16 x i16> [[A:%.*]], i1 false, <16 x i16> [[B:%.*]], i16 0, <8 x float> [[C:%.*]])
-// CHECK-GFX1210-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16.v8f32(i1 false, <16 x bfloat> [[A:%.*]], i1 false, <16 x bfloat> [[B:%.*]], i16 0, <8 x float> [[C:%.*]])
+// CHECK-GFX1210-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
-void test_amdgcn_wmma_bf16f32_16x16x32_bf16(global v8s* out, v16s a, v16s b, v8f c)
+void test_amdgcn_wmma_bf16f32_16x16x32_bf16(global v8sbf16* out, v16bf16 a, v16bf16 b, v8f c)
 {
   *out = __builtin_amdgcn_wmma_bf16f32_16x16x32_bf16(0, a, 0, b, 0, c);
 }
@@ -238,11 +238,11 @@ void test_amdgcn_swmmac_f32_16x16x64_f16(global v8f* out, v16h a, v32h b, v8f c,
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f32_16x16x64_bf16(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.bf16.v16i16.v32i16.v8f32.i16(i1 false, <16 x i16> [[A:%.*]], i1 false, <32 x i16> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.bf16.v16bf16.v32bf16.v8f32.i16(i1 false, <16 x bfloat> [[A:%.*]], i1 false, <32 x bfloat> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
-void test_amdgcn_swmmac_f32_16x16x64_bf16(global v8f* out, v16s a, v32s b, v8f c, short index)
+void test_amdgcn_swmmac_f32_16x16x64_bf16(global v8f* out, v16bf16 a, v32bf16 b, v8f c, short index)
 {
   *out = __builtin_amdgcn_swmmac_f32_16x16x64_bf16(0, a, 0, b, c, index);
 }
@@ -260,29 +260,29 @@ void test_amdgcn_swmmac_f16_16x16x64_f16(global v8h* out, v16h a, v32h b, v8h c,
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_bf16_16x16x64_bf16(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.swmmac.bf16.16x16x64.bf16.v16i16.v32i16.v8i16.i16(i1 false, <16 x i16> [[A:%.*]], i1 false, <32 x i16> [[B:%.*]], <8 x i16> [[C:%.*]], i16 [[INDEX:%.*]])
-// CHECK-GFX1210-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x64.bf16.v16bf16.v32bf16.v8bf16.i16(i1 false, <16 x bfloat> [[A:%.*]], i1 false, <32 x bfloat> [[B:%.*]], <8 x bfloat> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
-void test_amdgcn_swmmac_bf16_16x16x64_bf16(global v8s* out, v16s a, v32s b, v8s c, short index)
+void test_amdgcn_swmmac_bf16_16x16x64_bf16(global v8sbf16* out, v16bf16 a, v32bf16 b, v8sbf16 c, short index)
 {
   *out = __builtin_amdgcn_swmmac_bf16_16x16x64_bf16(0, a, 0, b, c, index);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_bf16f32_16x16x64_bf16(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.bf16f32.16x16x64.bf16.v16i16.v32i16.v8f32.i16(i1 false, <16 x i16> [[A:%.*]], i1 false, <32 x i16> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.bf16f32.16x16x64.bf16.v16bf16.v32bf16.v8f32.i16(i1 false, <16 x bfloat> [[A:%.*]], i1 false, <32 x bfloat> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
-void test_amdgcn_swmmac_bf16f32_16x16x64_bf16(global v8f* out, v16s a, v32s b, v8f c, short index)
+void test_amdgcn_swmmac_bf16f32_16x16x64_bf16(global v8f* out, v16bf16 a, v32bf16 b, v8f c, short index)
 {
   *out = __builtin_amdgcn_swmmac_bf16f32_16x16x64_bf16(0, a, 0, b, c, index);
 }
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f32_16x16x128_fp8_fp8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.fp8.fp8.v8i32.v16i32.v8f32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.fp8.fp8.v8f32.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
@@ -293,7 +293,7 @@ void test_amdgcn_swmmac_f32_16x16x128_fp8_fp8(global v8f* out, v8i a, v16i b, v8
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f32_16x16x128_fp8_bf8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.fp8.bf8.v8i32.v16i32.v8f32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.fp8.bf8.v8f32.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
@@ -304,7 +304,7 @@ void test_amdgcn_swmmac_f32_16x16x128_fp8_bf8(global v8f* out, v8i a, v16i b, v8
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f32_16x16x128_bf8_fp8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.bf8.fp8.v8i32.v16i32.v8f32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.bf8.fp8.v8f32.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
@@ -315,7 +315,7 @@ void test_amdgcn_swmmac_f32_16x16x128_bf8_fp8(global v8f* out, v8i a, v16i b, v8
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f32_16x16x128_bf8_bf8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.bf8.bf8.v8i32.v16i32.v8f32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x128.bf8.bf8.v8f32.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x float> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
@@ -326,7 +326,7 @@ void test_amdgcn_swmmac_f32_16x16x128_bf8_bf8(global v8f* out, v8i a, v16i b, v8
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f16_16x16x128_fp8_fp8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.fp8.fp8.v8i32.v16i32.v8f16.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.fp8.fp8.v8f16.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
@@ -337,7 +337,7 @@ void test_amdgcn_swmmac_f16_16x16x128_fp8_fp8(global v8h* out, v8i a, v16i b, v8
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f16_16x16x128_fp8_bf8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.fp8.bf8.v8i32.v16i32.v8f16.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.fp8.bf8.v8f16.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
@@ -348,7 +348,7 @@ void test_amdgcn_swmmac_f16_16x16x128_fp8_bf8(global v8h* out, v8i a, v16i b, v8
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f16_16x16x128_bf8_fp8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.fp8.v8i32.v16i32.v8f16.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.fp8.v8f16.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //
@@ -359,7 +359,7 @@ void test_amdgcn_swmmac_f16_16x16x128_bf8_fp8(global v8h* out, v8i a, v16i b, v8
 
 // CHECK-GFX1210-LABEL: @test_amdgcn_swmmac_f16_16x16x128_bf8_bf8(
 // CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.bf8.v8i32.v16i32.v8f16.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
+// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.bf8.v8f16.v8i32.v16i32.i16(<8 x i32> [[A:%.*]], <16 x i32> [[B:%.*]], <8 x half> [[C:%.*]], i16 [[INDEX:%.*]])
 // CHECK-GFX1210-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1210-NEXT:    ret void
 //

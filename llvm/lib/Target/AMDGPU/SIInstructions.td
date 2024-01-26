@@ -111,7 +111,6 @@ def ATOMIC_FENCE : SPseudoInstSI<
   [(atomic_fence (i32 timm:$ordering), (i32 timm:$scope))],
   "ATOMIC_FENCE $ordering, $scope"> {
   let hasSideEffects = 1;
-  let maybeAtomic = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
@@ -563,6 +562,7 @@ def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   let hasNoSchedulingInfo = 1;
   let FixedSize = 1;
   let isMeta = 1;
+  let maybeAtomic = 0;
 }
 
 // Used as an isel pseudo to directly emit initialization with an
@@ -677,36 +677,42 @@ def : GCNPat<
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
-// Pseudo for the llvm.amdgcn.cs.chain intrinsic.
-// This is essentially a tail call, but it also takes a mask to put in EXEC
-// right before jumping to the callee.
-class SI_CS_CHAIN_TC<
+// Pseudos for the llvm.amdgcn.cs.chain intrinsic.
+multiclass SI_CS_CHAIN_TC<
     ValueType execvt, Predicate wavesizepred,
-    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
-    : SPseudoInstSI <(outs),
-      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
-  let FixedSize = 0;
-  let isCall = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let isReturn = 1;
-  let UseNamedOperandTable = 1;
-  let SchedRW = [WriteBranch];
-  let isConvergent = 1;
+    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret> {
+  let FixedSize = 0,
+      isCall = 1,
+      isTerminator = 1,
+      isBarrier = 1,
+      isReturn = 1,
+      UseNamedOperandTable = 1,
+      SchedRW = [WriteBranch],
+      isConvergent = 1,
+      WaveSizePredicate = wavesizepred in {
+  // This is essentially a tail call, but it also takes a mask to put in EXEC
+  // right before jumping to the callee.
+  def NAME: SPseudoInstSI <(outs),
+      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
 
-  let WaveSizePredicate = wavesizepred;
+  // Same as above, but it will first try to reallocate the VGPRs, and choose an
+  // EXEC mask and a callee depending on the success of the reallocation attempt.
+  def _DVGPR : SPseudoInstSI <(outs),
+      (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
+           SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
+  } // End FixedSize = 0 etc
 }
 
-def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
-def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
+defm SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
+defm SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
 
 // Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
 multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
-def : GCNPat<
-  (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
-  (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
->;
+  def : GCNPat<
+    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
+    (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+  >;
 }
 
 multiclass si_cs_chain_tc_patterns<
@@ -720,6 +726,26 @@ multiclass si_cs_chain_tc_patterns<
 
 defm : si_cs_chain_tc_patterns<i32>;
 defm : si_cs_chain_tc_patterns<i64>;
+
+// Match dynamic VGPR case. This is always indirect since we choose the callee
+// dynamically based on the result of the VGPR reallocation, so make sure to
+// drop the callee info if there is any.
+multiclass si_cs_chain_tc_dvgpr_patterns<
+  ValueType execvt, RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
+  Instruction tc = SI_CS_CHAIN_TC_W32_DVGPR> {
+  let AddedComplexity = 90 in {
+  foreach callee = [ (i64 0), (tglobaladdr) ] in {
+  def : GCNPat<
+    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec,
+                           i32:$numvgprs, execvt:$fbexec, i64:$fbcallee),
+    (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
+        SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
+  >;
+  }
+  } // AddedComplexity
+}
+
+defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
 
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
@@ -905,7 +931,7 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
 
     def _RESTORE : PseudoInstSI <
       (outs sgpr_class:$data),
-      (ins i32imm:$addr, i32imm:$last_use)> {
+      (ins i32imm:$addr)> {
       let mayStore = 0;
       let mayLoad = 1;
     }
@@ -974,7 +1000,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
       (ins i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset, i32imm:$last_use)> {
+           SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -1641,6 +1667,37 @@ def : BitConvert <v2f64, v8i16, SReg_128>;
 def : BitConvert <v2i64, v8f16, SReg_128>;
 def : BitConvert <v2f64, v8f16, SReg_128>;
 
+def : BitConvert <v4i32, v8bf16, SReg_128>;
+def : BitConvert <v8bf16, v4i32, SReg_128>;
+def : BitConvert <v4i32, v8bf16, VReg_128>;
+def : BitConvert <v8bf16, v4i32, VReg_128>;
+
+def : BitConvert <v4f32, v8bf16, SReg_128>;
+def : BitConvert <v8bf16, v4f32, SReg_128>;
+def : BitConvert <v4f32, v8bf16, VReg_128>;
+def : BitConvert <v8bf16, v4f32, VReg_128>;
+
+def : BitConvert <v8i16, v8bf16, SReg_128>;
+def : BitConvert <v8bf16, v8i16, SReg_128>;
+def : BitConvert <v8i16, v8bf16, VReg_128>;
+def : BitConvert <v8bf16, v8i16, VReg_128>;
+
+def : BitConvert <v8f16, v8bf16, SReg_128>;
+def : BitConvert <v8bf16, v8f16, SReg_128>;
+def : BitConvert <v8f16, v8bf16, VReg_128>;
+def : BitConvert <v8bf16, v8f16, VReg_128>;
+
+def : BitConvert <v2f64, v8bf16, SReg_128>;
+def : BitConvert <v8bf16, v2f64, SReg_128>;
+def : BitConvert <v2f64, v8bf16, VReg_128>;
+def : BitConvert <v8bf16, v2f64, VReg_128>;
+
+def : BitConvert <v2i64, v8bf16, SReg_128>;
+def : BitConvert <v8bf16, v2i64, SReg_128>;
+def : BitConvert <v2i64, v8bf16, VReg_128>;
+def : BitConvert <v8bf16, v2i64, VReg_128>;
+
+
 // 160-bit bitcast
 def : BitConvert <v5i32, v5f32, SReg_160>;
 def : BitConvert <v5f32, v5i32, SReg_160>;
@@ -1705,6 +1762,31 @@ def : BitConvert <v4i64, v16i16, VReg_256>;
 def : BitConvert <v4f64, v16f16, VReg_256>;
 def : BitConvert <v4f64, v16i16, VReg_256>;
 
+
+def : BitConvert <v8i32, v16bf16, VReg_256>;
+def : BitConvert <v16bf16, v8i32, VReg_256>;
+def : BitConvert <v8f32, v16bf16, VReg_256>;
+def : BitConvert <v16bf16, v8f32, VReg_256>;
+def : BitConvert <v4i64, v16bf16, VReg_256>;
+def : BitConvert <v16bf16, v4i64, VReg_256>;
+def : BitConvert <v4f64, v16bf16, VReg_256>;
+def : BitConvert <v16bf16, v4f64, VReg_256>;
+
+
+
+def : BitConvert <v16i16, v16bf16, SReg_256>;
+def : BitConvert <v16bf16, v16i16, SReg_256>;
+def : BitConvert <v16i16, v16bf16, VReg_256>;
+def : BitConvert <v16bf16, v16i16, VReg_256>;
+
+def : BitConvert <v16f16, v16bf16, SReg_256>;
+def : BitConvert <v16bf16, v16f16, SReg_256>;
+def : BitConvert <v16f16, v16bf16, VReg_256>;
+def : BitConvert <v16bf16, v16f16, VReg_256>;
+
+
+
+
 // 288-bit bitcast
 def : BitConvert <v9i32, v9f32, SReg_288>;
 def : BitConvert <v9f32, v9i32, SReg_288>;
@@ -1752,6 +1834,38 @@ def : BitConvert <v8i64,  v16f32, VReg_512>;
 def : BitConvert <v8f64,  v16f32, VReg_512>;
 def : BitConvert <v16f32, v8i64,  VReg_512>;
 def : BitConvert <v16f32, v8f64,  VReg_512>;
+
+
+
+def : BitConvert <v32bf16, v32i16, VReg_512>;
+def : BitConvert <v32i16, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v32i16, SReg_512>;
+def : BitConvert <v32i16, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v32f16, VReg_512>;
+def : BitConvert <v32f16, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v32f16, SReg_512>;
+def : BitConvert <v32f16, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v16i32, VReg_512>;
+def : BitConvert <v16i32, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v16i32, SReg_512>;
+def : BitConvert <v16i32, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v16f32, VReg_512>;
+def : BitConvert <v16f32, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v16f32, SReg_512>;
+def : BitConvert <v16f32, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v8f64, VReg_512>;
+def : BitConvert <v8f64, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v8f64, SReg_512>;
+def : BitConvert <v8f64, v32bf16, SReg_512>;
+
+def : BitConvert <v32bf16, v8i64, VReg_512>;
+def : BitConvert <v8i64, v32bf16, VReg_512>;
+def : BitConvert <v32bf16, v8i64, SReg_512>;
+def : BitConvert <v8i64, v32bf16, SReg_512>;
 
 // 1024-bit bitcast
 def : BitConvert <v32i32, v32f32, VReg_1024>;
@@ -3249,18 +3363,6 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
-class SMPrefetchGetPcPat<string type, int cache_type> : GCNPat <
-    (prefetch (i64 imm:$offset), timm, timm, (i32 cache_type)),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) (S_ADD_U64_PSEUDO (S_GETPC_B64_PSEUDO), $offset),
-                                                   (i32 20), (i32 SGPR_NULL), (i8 0))
-    // Offset 20 should roughly adjust getpc sequence length.
-  > {
-  let AddedComplexity = 9;
-}
-
-def : SMPrefetchGetPcPat<"INST", 0>;
-def : SMPrefetchGetPcPat<"DATA", 1>;
-
 //===----------------------------------------------------------------------===//
 // Fract Patterns
 //===----------------------------------------------------------------------===//
@@ -3837,13 +3939,13 @@ def G_AMDGPU_S_BUFFER_LOAD_UBYTE : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_SSHORT : SBufferLoadInstruction;
 def G_AMDGPU_S_BUFFER_LOAD_USHORT : SBufferLoadInstruction;
 
-def G_AMDGPU_S_MUL_U64_U32_PSEUDO : AMDGPUGenericInstruction {
+def G_AMDGPU_S_MUL_U64_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;
 }
 
-def G_AMDGPU_S_MUL_I64_I32_PSEUDO : AMDGPUGenericInstruction {
+def G_AMDGPU_S_MUL_I64_I32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;

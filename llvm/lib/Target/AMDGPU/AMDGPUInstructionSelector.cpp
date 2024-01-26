@@ -1926,7 +1926,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
-  if (CPol & ~(IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12))
+  if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
+               AMDGPU::CPol::VOLATILE))
     return false;
 
   int NumVAddrRegs = 0;
@@ -3301,6 +3302,24 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
                     : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFEN
                                  : AMDGPU::BUFFER_LOAD_DWORD_LDS_OFFSET;
     break;
+  case 12:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+
+    Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_BOTHEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_IDXEN
+                    : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX3_LDS_OFFSET;
+    break;
+  case 16:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+
+    Opc = HasVIndex ? HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_BOTHEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_IDXEN
+                    : HasVOffset ? AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFEN
+                                 : AMDGPU::BUFFER_LOAD_DWORDX4_LDS_OFFSET;
+    break;
   }
 
   MachineBasicBlock *MBB = MI.getParent();
@@ -3438,6 +3457,16 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
     break;
   case 4:
     Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORD;
+    break;
+  case 12:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX3;
+    break;
+  case 16:
+    if (!Subtarget->hasLDSLoadB96_B128())
+      return false;
+    Opc = AMDGPU::GLOBAL_LOAD_LDS_DWORDX4;
     break;
   }
 
@@ -5201,7 +5230,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegal(Register Addr) const {
 
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(STI))
+  if (STI.hasSignedScratchOffsets())
     return true;
 
   Register LHS = AddrMI->getOperand(1).getReg();
@@ -5232,7 +5261,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSV(Register Addr) const {
 
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(STI))
+  if (STI.hasSignedScratchOffsets())
     return true;
 
   Register LHS = AddrMI->getOperand(1).getReg();
@@ -5246,7 +5275,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSVImm(
     Register Addr) const {
   // Starting with GFX12, VADDR and SADDR fields in VSCRATCH can use negative
   // values.
-  if (AMDGPU::isGFX12Plus(STI))
+  if (STI.hasSignedScratchOffsets())
     return true;
 
   MachineInstr *AddrMI = getDefIgnoringCopies(Addr, *MRI);
@@ -6152,11 +6181,13 @@ void AMDGPUInstructionSelector::renderExtractSWZ(MachineInstrBuilder &MIB,
   MIB.addImm(Swizzle);
 }
 
-void AMDGPUInstructionSelector::renderSetGLC(MachineInstrBuilder &MIB,
-                                             const MachineInstr &MI,
-                                             int OpIdx) const {
+void AMDGPUInstructionSelector::renderExtractCpolSetGLC(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm(MI.getOperand(OpIdx).getImm() | AMDGPU::CPol::GLC);
+  const uint32_t Cpol = MI.getOperand(OpIdx).getImm() &
+                        (AMDGPU::isGFX12Plus(STI) ? AMDGPU::CPol::ALL
+                                                  : AMDGPU::CPol::ALL_pregfx12);
+  MIB.addImm(Cpol | AMDGPU::CPol::GLC);
 }
 
 void AMDGPUInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
@@ -6172,6 +6203,26 @@ void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
   int ExpVal = APF.getExactLog2Abs();
   assert(ExpVal != INT_MIN);
   MIB.addImm(ExpVal);
+}
+
+void AMDGPUInstructionSelector::renderPrefetchLoc(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  uint32_t V = MI.getOperand(2).getImm();
+  MIB.addImm((AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK))
+             << AMDGPU::CPol::SCOPE_SHIFT);
+}
+
+/// Convert from 2-bit value to enum values used for op_sel* source modifiers.
+void AMDGPUInstructionSelector::renderScaledMAIIntrinsicOperand(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  unsigned Val = MI.getOperand(OpIdx).getImm();
+  unsigned New = 0;
+  if (Val & 0x1)
+    New |= SISrcMods::OP_SEL_0;
+  if (Val & 0x2)
+    New |= SISrcMods::OP_SEL_1;
+  MIB.addImm(New);
 }
 
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {

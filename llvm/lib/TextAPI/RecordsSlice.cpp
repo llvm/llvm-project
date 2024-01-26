@@ -332,9 +332,8 @@ llvm::MachO::convertToInterfaceFile(const Records &Slices) {
   }
 
   File = createInterfaceFile(Slices, *InstallNames.begin());
-  for (auto it = std::next(InstallNames.begin()); it != InstallNames.end();
-       ++it)
-    File->addDocument(createInterfaceFile(Slices, *it));
+  for (StringRef IN : llvm::drop_begin(InstallNames))
+    File->addDocument(createInterfaceFile(Slices, IN));
 
   return File;
 }

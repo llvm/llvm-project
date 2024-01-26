@@ -157,6 +157,7 @@ protected:
   bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
@@ -167,6 +168,8 @@ protected:
   bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
+  bool HasDefaultComponentZero = false;
+  bool HasDefaultComponentBroadcast = false;
   bool SupportsSRAMECC = false;
   bool DynamicVGPR = false;
 
@@ -791,6 +794,8 @@ public:
     return HasFP8Insts;
   }
 
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -820,6 +825,12 @@ public:
   }
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
+
+  bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
+
+  bool hasDefaultComponentBroadcast() const {
+    return HasDefaultComponentBroadcast;
+  }
 
   bool hasNoSdstCMPX() const {
     return HasNoSdstCMPX;
@@ -858,14 +869,12 @@ public:
   }
 
   bool hasInstPrefetch() const {
-    // GFX12 can still encode the s_set_inst_prefetch_distance instruction but
-    // it has no effect.
     return getGeneration() == GFX10 || getGeneration() == GFX11;
   }
 
   bool hasPrefetch() const { return GFX12Insts; }
 
-  bool hasVectorPrefetch() const { return false; }
+  bool hasVectorPrefetch() const { return GFX12_10Insts; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -1012,6 +1021,8 @@ public:
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
+
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
 
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
@@ -1206,6 +1217,17 @@ public:
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
+  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // hasGFX940Insts and hasGFX90AInsts are also true.
+  bool hasGFX950Insts() const { return GFX950Insts; }
+
+  /// Returns true if the target supports
+  /// global_load_lds_dwordx3/global_load_lds_dwordx4 or
+  /// buffer_load_dwordx3/buffer_load_dwordx4 with the lds bit.
+  bool hasLDSLoadB96_B128() const {
+    return hasGFX950Insts();
+  }
+
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
@@ -1287,6 +1309,16 @@ public:
     return hasKernargPreload() && !hasGFX940Insts();
   }
 
+  // \returns true if the target has split barriers feature
+  bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
+
+  // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
+  bool hasCvtFP8VOP1Bug() const { return true; }
+
+  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) atomics support a
+  // no-return form.
+  bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
+
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
   bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
 
@@ -1299,8 +1331,9 @@ public:
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
 
-  // \returns true if the target has split barriers feature
-  bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
+  /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
+  /// values.
+  bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX12_10Insts() const { return GFX12_10Insts; }
 
@@ -1327,13 +1360,6 @@ public:
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
-
-  // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
-  bool hasCvtFP8VOP1Bug() const { return true; }
-
-  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) and COND_SUB atomics
-  // support a no-return form.
-  bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1210 has not only fixed the bug but also

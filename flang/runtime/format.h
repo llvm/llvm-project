@@ -63,7 +63,7 @@ struct DataEdit {
 
   static constexpr char DefinedDerivedType{'d'}; // DT defined I/O
 
-  char variation{'\0'}; // N, S, or X for EN, ES, EX
+  char variation{'\0'}; // N, S, or X for EN, ES, EX; G/l for original G/list
   std::optional<int> width; // the 'w' field; optional for A
   std::optional<int> digits; // the 'm' or 'd' field
   std::optional<int> expoDigits; // 'Ee' field

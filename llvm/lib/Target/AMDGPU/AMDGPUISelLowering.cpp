@@ -387,18 +387,20 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v9i32,  MVT::v9f32,  MVT::v10i32, MVT::v10f32,
                       MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32},
                      Custom);
+
+  // FIXME: Why is v8f16/v8bf16 missing?
   setOperationAction(
       ISD::EXTRACT_SUBVECTOR,
-      {MVT::v2f16,  MVT::v2i16,  MVT::v2bf16, MVT::v4f16,  MVT::v4i16,
-       MVT::v4bf16, MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,
+      {MVT::v2f16,  MVT::v2bf16, MVT::v2i16,  MVT::v4f16,  MVT::v4bf16,
+       MVT::v4i16,  MVT::v2f32,  MVT::v2i32,  MVT::v3f32,  MVT::v3i32,
        MVT::v4f32,  MVT::v4i32,  MVT::v5f32,  MVT::v5i32,  MVT::v6f32,
        MVT::v6i32,  MVT::v7f32,  MVT::v7i32,  MVT::v8f32,  MVT::v8i32,
        MVT::v9f32,  MVT::v9i32,  MVT::v10i32, MVT::v10f32, MVT::v11i32,
-       MVT::v11f32, MVT::v12i32, MVT::v12f32, MVT::v16f16, MVT::v16i16,
-       MVT::v16f32, MVT::v16i32, MVT::v32f32, MVT::v32i32, MVT::v2f64,
-       MVT::v2i64,  MVT::v3f64,  MVT::v3i64,  MVT::v4f64,  MVT::v4i64,
-       MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64, MVT::v32i16,
-       MVT::v32f16},
+       MVT::v11f32, MVT::v12i32, MVT::v12f32, MVT::v16f16, MVT::v16bf16,
+       MVT::v16i16, MVT::v16f32, MVT::v16i32, MVT::v32f32, MVT::v32i32,
+       MVT::v2f64,  MVT::v2i64,  MVT::v3f64,  MVT::v3i64,  MVT::v4f64,
+       MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64,
+       MVT::v32i16, MVT::v32f16, MVT::v32bf16},
       Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
@@ -443,6 +445,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(
       {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},
       MVT::i64, Custom);
+
+  for (auto VT : {MVT::i8, MVT::i16})
+    setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, VT, Custom);
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
       MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32, MVT::v6i32, MVT::v7i32,
@@ -782,6 +787,7 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
+  // TODO: Update this for GFX12 which does have scalar sub-dword loads.
   if (OldSize >= 32 && NewSize < 32 && MN->getAlign() >= Align(4) &&
       (AS == AMDGPUAS::CONSTANT_ADDRESS ||
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
@@ -1393,6 +1399,11 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FEXP:
   case ISD::FEXP10:
     if (SDValue Lowered = lowerFEXP(SDValue(N, 0), DAG))
+      Results.push_back(Lowered);
+    return;
+  case ISD::CTLZ:
+  case ISD::CTLZ_ZERO_UNDEF:
+    if (auto Lowered = lowerCTLZResults(SDValue(N, 0u), DAG))
       Results.push_back(Lowered);
     return;
   default:
@@ -3060,6 +3071,26 @@ static bool isCttzOpc(unsigned Opc) {
   return Opc == ISD::CTTZ || Opc == ISD::CTTZ_ZERO_UNDEF;
 }
 
+SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  auto SL = SDLoc(Op);
+  auto Arg = Op.getOperand(0u);
+  auto ResultVT = Op.getValueType();
+
+  if (ResultVT != MVT::i8 && ResultVT != MVT::i16)
+    return {};
+
+  assert(isCtlzOpc(Op.getOpcode()));
+  assert(ResultVT == Arg.getValueType());
+
+  auto const LeadingZeroes = 32u - ResultVT.getFixedSizeInBits();
+  auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
+  auto ShiftVal = DAG.getConstant(LeadingZeroes, SL, MVT::i32);
+  NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, ShiftVal);
+  NewOp = DAG.getNode(Op.getOpcode(), SL, MVT::i32, NewOp);
+  return DAG.getNode(ISD::TRUNCATE, SL, ResultVT, NewOp);
+}
+
 SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
@@ -3859,14 +3890,6 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rsq_legacy:
   case Intrinsic::amdgcn_rsq_clamp:
   case Intrinsic::amdgcn_tanh:
-  case Intrinsic::amdgcn_tanh_bf16:
-  case Intrinsic::amdgcn_rcp_bf16:
-  case Intrinsic::amdgcn_sqrt_bf16:
-  case Intrinsic::amdgcn_rsq_bf16:
-  case Intrinsic::amdgcn_log_bf16:
-  case Intrinsic::amdgcn_exp_bf16:
-  case Intrinsic::amdgcn_sin_bf16:
-  case Intrinsic::amdgcn_cos_bf16:
   case Intrinsic::amdgcn_prng_b32: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
@@ -5900,15 +5923,7 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_rsq_clamp:
-    case Intrinsic::amdgcn_tanh:
-    case Intrinsic::amdgcn_tanh_bf16:
-    case Intrinsic::amdgcn_rcp_bf16:
-    case Intrinsic::amdgcn_sqrt_bf16:
-    case Intrinsic::amdgcn_rsq_bf16:
-    case Intrinsic::amdgcn_log_bf16:
-    case Intrinsic::amdgcn_exp_bf16:
-    case Intrinsic::amdgcn_sin_bf16:
-    case Intrinsic::amdgcn_cos_bf16: {
+    case Intrinsic::amdgcn_tanh: {
       if (SNaN)
         return true;
 

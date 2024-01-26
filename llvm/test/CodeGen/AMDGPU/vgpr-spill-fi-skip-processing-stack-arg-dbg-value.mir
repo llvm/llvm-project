@@ -52,5 +52,5 @@ body:             |
     DBG_VALUE %fixed-stack.0, 0, !1, !8, debug-location !9
 
   bb.1:
-    renamable $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, 0, implicit $exec :: (load (s32) from %stack.0, align 4, addrspace 5)
+    renamable $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0

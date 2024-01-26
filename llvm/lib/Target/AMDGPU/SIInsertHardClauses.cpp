@@ -49,7 +49,7 @@ namespace {
 constexpr unsigned MaxInstructionsInClause = 63;
 
 enum HardClauseType {
-  // For GFX10:
+  // For GFX10 and GFX1210:
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
@@ -108,7 +108,8 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
-      if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
+      if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
+          ST->hasGFX12_10Insts()) {
         if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
             const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
@@ -120,7 +121,6 @@ public:
         if (SIInstrInfo::isFLAT(MI))
           return HARDCLAUSE_FLAT;
       } else {
-        assert(ST->getGeneration() >= AMDGPUSubtarget::GFX11);
         if (SIInstrInfo::isMIMG(MI)) {
           const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
           const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =

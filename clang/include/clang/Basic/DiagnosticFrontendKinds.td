@@ -167,7 +167,7 @@ def err_verify_no_such_marker : Error<
 def err_verify_missing_start : Error<
     "cannot find start ('{{') of expected %0">;
 def err_verify_missing_end : Error<
-    "cannot find end ('}}') of expected %0">;
+    "cannot find end ('%1') of expected %0">;
 def err_verify_invalid_content : Error<
     "invalid expected %0: %1">;
 def err_verify_missing_regex : Error<

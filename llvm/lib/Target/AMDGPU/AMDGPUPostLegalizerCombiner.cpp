@@ -99,10 +99,10 @@ public:
 
   // Combine unsigned buffer load and signed extension instructions to generate
   // signed buffer laod instructions.
-  bool matchCombineSignExtendInReg(MachineInstr &MI,
-                                   MachineInstr *&MatchInfo) const;
-  void applyCombineSignExtendInReg(MachineInstr &MI,
-                                   MachineInstr *&MatchInfo) const;
+  bool matchCombineSignExtendInReg(
+      MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchInfo) const;
+  void applyCombineSignExtendInReg(
+      MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchInfo) const;
 
   // Find the s_mul_u64 instructions where the higher bits are either
   // zero-extended or sign-extended.
@@ -395,52 +395,42 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRemoveFcanonicalize(
 
 // Identify buffer_load_{u8, u16}.
 bool AMDGPUPostLegalizerCombinerImpl::matchCombineSignExtendInReg(
-    MachineInstr &MI, MachineInstr *&SubwordBufferLoad) const {
-  Register Op0Reg = MI.getOperand(1).getReg();
-  SubwordBufferLoad = MRI.getVRegDef(Op0Reg);
-
-  if (!MRI.hasOneNonDBGUse(Op0Reg))
+    MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchData) const {
+  Register LoadReg = MI.getOperand(1).getReg();
+  if (!MRI.hasOneNonDBGUse(LoadReg))
     return false;
 
   // Check if the first operand of the sign extension is a subword buffer load
   // instruction.
-  return SubwordBufferLoad->getOpcode() == AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE ||
-         SubwordBufferLoad->getOpcode() ==
-             AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT ||
-         SubwordBufferLoad->getOpcode() ==
-             AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE ||
-         SubwordBufferLoad->getOpcode() ==
-             AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT;
+  MachineInstr *LoadMI = MRI.getVRegDef(LoadReg);
+  int64_t Width = MI.getOperand(2).getImm();
+  switch (LoadMI->getOpcode()) {
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+    MatchData = {LoadMI, AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE};
+    return Width == 8;
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+    MatchData = {LoadMI, AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT};
+    return Width == 16;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+    MatchData = {LoadMI, AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE};
+    return Width == 8;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+    MatchData = {LoadMI, AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT};
+    return Width == 16;
+  }
+  return false;
 }
 
 // Combine buffer_load_{u8, u16} and the sign extension instruction to generate
 // buffer_load_{i8, i16}.
 void AMDGPUPostLegalizerCombinerImpl::applyCombineSignExtendInReg(
-    MachineInstr &MI, MachineInstr *&SubwordBufferLoad) const {
-  // Modify the opcode and the destination of buffer_load_{u8, u16}:
-  // Replace the opcode.
-  unsigned Opc = 0;
-  switch (SubwordBufferLoad->getOpcode()) {
-  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
-    Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE;
-    break;
-  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
-    Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT;
-    break;
-  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
-    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE;
-    break;
-  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
-    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT;
-    break;
-  default:
-    llvm_unreachable("Instruction should not have been matched.");
-  }
-  SubwordBufferLoad->setDesc(TII.get(Opc));
-  // Update the destination register of SubwordBufferLoad with the destination
-  // register of the sign extension.
+    MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchData) const {
+  auto [LoadMI, NewOpcode] = MatchData;
+  LoadMI->setDesc(TII.get(NewOpcode));
+  // Update the destination register of the load with the destination register
+  // of the sign extension.
   Register SignExtendInsnDst = MI.getOperand(0).getReg();
-  SubwordBufferLoad->getOperand(0).setReg(SignExtendInsnDst);
+  LoadMI->getOperand(0).setReg(SignExtendInsnDst);
   // Remove the sign extension.
   MI.eraseFromParent();
 }
@@ -449,19 +439,18 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     MachineInstr &MI, unsigned &NewOpcode) const {
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
-  KnownBits Op0KnownBits = KB->getKnownBits(Src0);
-  unsigned Op0LeadingZeros = Op0KnownBits.countMinLeadingZeros();
-  KnownBits Op1KnownBits = KB->getKnownBits(Src1);
-  unsigned Op1LeadingZeros = Op1KnownBits.countMinLeadingZeros();
-  if (Op0LeadingZeros >= 32 && Op1LeadingZeros >= 32) {
-    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO;
+  if (MRI.getType(Src0) != LLT::scalar(64))
+    return false;
+
+  if (KB->getKnownBits(Src1).countMinLeadingZeros() >= 32 &&
+      KB->getKnownBits(Src0).countMinLeadingZeros() >= 32) {
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32;
     return true;
   }
 
-  unsigned Op0SignBits = KB->computeNumSignBits(Src0);
-  unsigned Op1SignBits = KB->computeNumSignBits(Src1);
-  if (Op0SignBits >= 33 && Op1SignBits >= 33) {
-    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_I64_I32_PSEUDO;
+  if (KB->computeNumSignBits(Src1) >= 33 &&
+      KB->computeNumSignBits(Src0) >= 33) {
+    NewOpcode = AMDGPU::G_AMDGPU_S_MUL_I64_I32;
     return true;
   }
   return false;
@@ -469,7 +458,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
 
 void AMDGPUPostLegalizerCombinerImpl::applyCombine_s_mul_u64(
     MachineInstr &MI, unsigned &NewOpcode) const {
-  MI.setDesc(TII.get(NewOpcode));
+  Helper.replaceOpcodeWith(MI, NewOpcode);
 }
 
 // Pass boilerplate

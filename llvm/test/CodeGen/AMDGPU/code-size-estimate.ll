@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX9,NOT-GFX12 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX10,NOT-GFX12 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11,GFX1100,NOT-GFX12 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1150 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11,GFX1150,NOT-GFX12 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1210 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX12,GFX1210 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX9,NOT-GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX10,NOT-GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11,GFX1100,NOT-GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX11,GFX1150,NOT-GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 -show-mc-encoding < %s | FileCheck -check-prefixes=GFX12,GFX1210 %s
 
 declare float @llvm.fabs.f32(float)
 declare float @llvm.fma.f32(float, float, float)

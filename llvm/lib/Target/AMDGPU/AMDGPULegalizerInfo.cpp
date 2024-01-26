@@ -700,7 +700,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextMultipleOf(0, 32)
           .maxScalar(0, S32);
     }
-    if (ST.hasScalarSMulU64())
+
+    if (ST.hasScalarSMulU64()) {
       getActionDefinitionsBuilder(G_MUL)
           .legalFor({S64, S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -708,7 +709,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .minScalar(0, S16)
           .widenScalarToNextMultipleOf(0, 32)
           .custom();
-    else
+    } else {
       getActionDefinitionsBuilder(G_MUL)
           .legalFor({S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -716,14 +717,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .minScalar(0, S16)
           .widenScalarToNextMultipleOf(0, 32)
           .custom();
-
-    getActionDefinitionsBuilder(G_MUL)
-      .legalFor({S32, S16, V2S16})
-      .clampMaxNumElementsStrict(0, S16, 2)
-      .scalarize(0)
-      .minScalar(0, S16)
-      .widenScalarToNextMultipleOf(0, 32)
-      .custom();
+    }
     assert(ST.hasMad64_32());
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
@@ -2162,7 +2156,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
   // For code object version 5, private_base and shared_base are passed through
   // implicit kernargs.
-  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >=
+  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {
     AMDGPUTargetLowering::ImplicitParameter Param =
         AS == AMDGPUAS::LOCAL_ADDRESS ? AMDGPUTargetLowering::SHARED_BASE
@@ -4221,10 +4215,45 @@ bool AMDGPULegalizerInfo::loadInputValue(
     Register DstReg, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  const ArgDescriptor *Arg;
+  const ArgDescriptor *Arg = nullptr;
   const TargetRegisterClass *ArgRC;
   LLT ArgTy;
-  std::tie(Arg, ArgRC, ArgTy) = MFI->getPreloadedValue(ArgType);
+
+  CallingConv::ID CC = B.getMF().getFunction().getCallingConv();
+  const ArgDescriptor WorkGroupIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP9);
+  // If GridZ is not programmed in an entry function then the hardware will set
+  // it to all zeros, so there is no need to mask the GridY value in the low
+  // order bits.
+  const ArgDescriptor WorkGroupIDY = ArgDescriptor::createRegister(
+      AMDGPU::TTMP7,
+      AMDGPU::isEntryFunctionCC(CC) && !MFI->hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
+  const ArgDescriptor WorkGroupIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
+  if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+    switch (ArgType) {
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
+      Arg = &WorkGroupIDX;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
+      Arg = &WorkGroupIDY;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
+      Arg = &WorkGroupIDZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (!Arg)
+    std::tie(Arg, ArgRC, ArgTy) = MFI->getPreloadedValue(ArgType);
 
   if (!Arg) {
     if (ArgType == AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR) {
@@ -6509,13 +6538,15 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
                                               MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
+
   Register OrigDst = MI.getOperand(0).getReg();
   Register Dst;
   LLT Ty = B.getMRI()->getType(OrigDst);
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
   unsigned Opc = 0;
-  if ((Size == 8 || Size == 16) && ST.hasScalarSubwordLoads()) {
+  if (Size < 32 && ST.hasScalarSubwordLoads()) {
+    assert(Size == 8 || Size == 16);
     Opc = Size == 8 ? AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE
                     : AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT;
     // The 8-bit and 16-bit scalar buffer load instructions have 32-bit
@@ -6525,27 +6556,6 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
     Opc = AMDGPU::G_AMDGPU_S_BUFFER_LOAD;
     Dst = OrigDst;
   }
-
-  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
-  // TODO: Should this use datalayout alignment?
-  const unsigned MemSize = (Size + 7) / 8;
-  int AlignNum = 0;
-  switch (Size) {
-  case 8:
-    AlignNum = 1;
-    break;
-  case 16:
-    AlignNum = 2;
-    break;
-  default:
-    AlignNum = 4;
-  }
-  const Align MemAlign(AlignNum);
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-          MachineMemOperand::MOInvariant,
-      MemSize, MemAlign);
 
   Observer.changingInstr(MI);
 
@@ -6565,8 +6575,18 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   // allowed to add one.
   MI.setDesc(B.getTII().get(Opc));
   MI.removeOperand(1); // Remove intrinsic ID
+
+  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
+  // TODO: Should this use datalayout alignment?
+  const unsigned MemSize = (Size + 7) / 8;
+  const Align MemAlign(std::min(MemSize, 4u));
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      MemSize, MemAlign);
   MI.addMemOperand(MF, MMO);
-  if ((Size == 8 || Size == 16) && ST.hasScalarSubwordLoads()) {
+  if (Dst != OrigDst) {
     MI.getOperand(0).setReg(Dst);
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
     B.buildTrunc(OrigDst, Dst);
@@ -6634,7 +6654,7 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
 
   Register SGPR01(AMDGPU::SGPR0_SGPR1);
   // For code object version 5, queue_ptr is passed through implicit kernarg.
-  if (AMDGPU::getCodeObjectVersion(*MF.getFunction().getParent()) >=
+  if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {
     AMDGPUTargetLowering::ImplicitParameter Param =
         AMDGPUTargetLowering::QUEUE_PTR;
@@ -6959,6 +6979,21 @@ bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
+                                         MachineIRBuilder &B) const {
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (!ST.hasArchitectedSGPRs())
+    return false;
+  LLT S32 = LLT::scalar(32);
+  Register DstReg = MI.getOperand(0).getReg();
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+  auto LSB = B.buildConstant(S32, 25);
+  auto Width = B.buildConstant(S32, 5);
+  B.buildUbfx(DstReg, TTMP8, LSB, Width);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -7082,8 +7117,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_wave_id:
-    return legalizePreloadedArgIntrin(MI, MRI, B,
-                                      AMDGPUFunctionArgInfo::WAVE_ID);
+    return legalizeWaveID(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);

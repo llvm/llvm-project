@@ -160,7 +160,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let ClampLo = P.HasClampLo;
   let ClampHi = P.HasClampHi;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
@@ -217,8 +217,8 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
 
 class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :
   VOP3_Real <ps, Gen.Subtarget, asm_name> {
-  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate);
+  let AssemblerPredicate = Gen.AssemblerPredicate;
+  let OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []);
   let DecoderNamespace = Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
@@ -313,6 +313,11 @@ class VOP3OpSel_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
 
 class VOP3OpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3OpSel_gfx10<op, p>;
 
+class VOP3FP8OpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
+  let Inst{11} = !if(p.HasSrc0, src0_modifiers{2}, 0);
+  let Inst{12} = !if(p.HasSrc0, src0_modifiers{3}, 0);
+}
+
 class VOP3DotOpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3OpSel_gfx11_gfx12<op, p>{
   let Inst{11} = ?;
   let Inst{12} = ?;
@@ -402,7 +407,7 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
 
-  let Inst{7-0} = vdst;
+  let Inst{7-0} = !if(P.HasDst, vdst, 0);
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
   let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
   let Inst{10} = !if(P.HasSrc2Mods, src2_modifiers{1}, 0); // neg_hi src2
@@ -623,7 +628,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let VALU = 1;
   let SDWA = 1;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
@@ -761,7 +766,7 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // OPSEL must be set such that the low result only uses low inputs, and the high result only uses high inputs.
   let Inst{11} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{2}, 0),?);
-  let Inst{12} = !if(P.HasOpSel,!if(P.HasSrc1Mods, src1_modifiers{2}, 0),?);
+  let Inst{12} = !if(P.HasOpSel,!if(P.HasSrc1Mods, src1_modifiers{2}, !if((P.IsFP8), src0_modifiers{3}, 0)), ?);
   let Inst{13} = !if(P.HasOpSel,!if(P.HasSrc2Mods, src2_modifiers{2}, 0),?);
   let Inst{14} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{3}, 0),?);
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
@@ -835,7 +840,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let DPP = 1;
   let Size = 8;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
@@ -1260,6 +1265,25 @@ class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
                                             timm:$cbsz, timm:$abid))]);
 }
 
+class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
+  list<dag> ret = !if(!eq(P.Src0VT, P.Src1VT),
+                      // mfma
+                      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
+                                            timm:$cbsz, timm:$abid, timm:$blgp,
+                                            MFMALdScaleModifierOp:$ld_scale_src0_opsel,
+                                            i32:$ld_scale_src0,
+                                            MFMALdScaleModifierOp:$ld_scale_src1_opsel,
+                                            i32:$ld_scale_src1
+                                            ))],
+                      // smfmac
+                      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
+                                            timm:$cbsz, timm:$abid,
+                                            MFMALdScaleModifierOp:$ld_scale_src0_opsel,
+                                            i32:$ld_scale_src0,
+                                            MFMALdScaleModifierOp:$ld_scale_src1_opsel,
+                                            i32:$ld_scale_src1))]);
+}
+
 class VOP3Features<bit Clamp, bit OpSel, bit Packed, bit MAI> {
   bit HasClamp = Clamp;
   bit HasOpSel = OpSel;
@@ -1272,6 +1296,10 @@ def VOP3_CLAMP   : VOP3Features<1, 0, 0, 0>;
 def VOP3_OPSEL   : VOP3Features<1, 1, 0, 0>;
 def VOP3_PACKED  : VOP3Features<1, 1, 1, 0>;
 def VOP3_MAI     : VOP3Features<0, 0, 0, 1>;
+
+// Packed is misleading, but it enables the appropriate op_sel
+// modifiers.
+def VOP3P_LD_SCALE : VOP3Features<0, 1, 1, 0>;
 
 class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile<P.ArgVT> {
 
@@ -1295,7 +1323,7 @@ multiclass VOP3Inst_Pseudo_Wrapper<string opName, VOPProfile P, list<dag> patter
     def _e64 : VOP3_Pseudo<opName, P, pattern, VOP3Only>;
 }
 
-class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit IsVOP2 = 0> :
+class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit IsVOP2 = 0, bit MAIScaled = false> :
   VOP3_Pseudo<OpName, P,
     !if(P.HasOpSel,
         !if(P.HasModifiers,
@@ -1308,7 +1336,7 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
               !if(P.HasIntClamp,
                   getVOP3ClampPat<P, node>.ret,
                   !if (P.IsMAI,
-                      getVOP3MAIPat<P, node>.ret,
+                      !if(MAIScaled, getVOP3MAIScaledPat<P, node>.ret, getVOP3MAIPat<P, node>.ret),
                       getVOP3Pat<P, node>.ret))))),
     0, P.HasOpSel> {
 
@@ -1371,8 +1399,9 @@ class VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, int subtarget,
 class VOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
                      string opName = ps.OpName> :
   VOP3_DPP16 <op, ps, Gen.Subtarget, opName> {
-  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                               Gen.AssemblerPredicate);
+  let AssemblerPredicate = Gen.AssemblerPredicate;
+  let OtherPredicates = !listconcat(ps.OtherPredicates,
+      !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []));
   let DecoderNamespace = "DPP"#Gen.DecoderNamespace#
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
@@ -1463,14 +1492,20 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let AsmString = asmName # ps.AsmOperands,
       IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-  if ps.Pfl.HasOpSel then
-    def _e64#Gen.Suffix :
-      VOP3_Real_Gen<ps, Gen>,
-      VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
-  if !not(ps.Pfl.HasOpSel) then
-    def _e64#Gen.Suffix :
-      VOP3_Real_Gen<ps, Gen>,
-      VOP3e_gfx11_gfx12<op, ps.Pfl>;
+    if ps.Pfl.IsFP8 then {
+      def _e64#Gen.Suffix :
+        VOP3_Real_Gen<ps, Gen>,
+        VOP3FP8OpSel_gfx11_gfx12<op, ps.Pfl>;
+    } else {
+      if ps.Pfl.HasOpSel then
+        def _e64#Gen.Suffix :
+          VOP3_Real_Gen<ps, Gen>,
+          VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
+      if !not(ps.Pfl.HasOpSel) then
+        def _e64#Gen.Suffix :
+          VOP3_Real_Gen<ps, Gen>,
+          VOP3e_gfx11_gfx12<op, ps.Pfl>;
+    }
   }
   def Gen.Suffix#"_VOP3_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>, LetDummies;
 }
@@ -1531,8 +1566,8 @@ multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
     let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
         DecoderNamespace = "DPP8"#Gen.DecoderNamespace#
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
-        AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
-                                 Gen.AssemblerPredicate) in {
+        OtherPredicates = !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts],
+                              [TruePredicate]) in {
       defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
   }
 }

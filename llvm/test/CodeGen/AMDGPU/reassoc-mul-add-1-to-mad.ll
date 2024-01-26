@@ -4062,7 +4062,6 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX1210-LABEL: compute_mad:
 ; GFX1210:       ; %bb.0: ; %bb
 ; GFX1210-NEXT:    s_load_b96 s[4:6], s[0:1], 0x10
-; GFX1210-NEXT:    s_mov_b32 s7, ttmp9
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_add_co_i32 s2, s6, 1
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -4084,7 +4083,7 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX1210-NEXT:    v_add_nc_u32_e32 v2, v3, v2
-; GFX1210-NEXT:    v_mad_u32 v0, s7, s2, v0
+; GFX1210-NEXT:    v_mad_u32 v0, ttmp9, s2, v0
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1210-NEXT:    v_mul_lo_u32 v2, v2, v1
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, 0

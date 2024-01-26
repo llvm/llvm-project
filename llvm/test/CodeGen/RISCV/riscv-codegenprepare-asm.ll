@@ -8,16 +8,18 @@
 define void @test1(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    blez a1, .LBB0_2
-; CHECK-NEXT:  .LBB0_1: # %for.body
+; CHECK-NEXT:    blez a1, .LBB0_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a1, a0, a1
+; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lw a2, 0(a0)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    bnez a1, .LBB0_1
-; CHECK-NEXT:  .LBB0_2: # %for.cond.cleanup
+; CHECK-NEXT:    bne a0, a1, .LBB0_2
+; CHECK-NEXT:  .LBB0_3: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
   %cmp3 = icmp sgt i32 %n, 0

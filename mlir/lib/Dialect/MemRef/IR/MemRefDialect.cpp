@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -41,6 +42,7 @@ void mlir::memref::MemRefDialect::initialize() {
 #include "mlir/Dialect/MemRef/IR/MemRefOps.cpp.inc"
       >();
   addInterfaces<MemRefInlinerInterface>();
+  declarePromisedInterface<MemRefDialect, ConvertToLLVMPatternInterface>();
 }
 
 /// Finds the unique dealloc operation (if one exists) for `allocValue`.

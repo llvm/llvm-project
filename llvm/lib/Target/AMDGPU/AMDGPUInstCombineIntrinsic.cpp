@@ -508,15 +508,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_sqrt:
   case Intrinsic::amdgcn_rsq:
-  case Intrinsic::amdgcn_tanh:
-  case Intrinsic::amdgcn_tanh_bf16:
-  case Intrinsic::amdgcn_rcp_bf16:
-  case Intrinsic::amdgcn_sqrt_bf16:
-  case Intrinsic::amdgcn_rsq_bf16:
-  case Intrinsic::amdgcn_log_bf16:
-  case Intrinsic::amdgcn_exp_bf16:
-  case Intrinsic::amdgcn_sin_bf16:
-  case Intrinsic::amdgcn_cos_bf16: {
+  case Intrinsic::amdgcn_tanh: {
     Value *Src = II.getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
@@ -1179,10 +1171,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     APInt DemandedElts;
-    if (AMDGPU::isGFX12Plus(*ST))
+    if (ST->hasDefaultComponentBroadcast())
       DemandedElts = defaultComponentBroadcast(II.getArgOperand(0));
-    else
+    else if (ST->hasDefaultComponentZero())
       DemandedElts = trimTrailingZerosInVector(IC, II.getArgOperand(0), &II);
+    else
+      break;
 
     int DMaskIdx = getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID()) ? 1 : -1;
     if (simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts, DMaskIdx,

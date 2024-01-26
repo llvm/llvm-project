@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,GCN,SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,GCN,VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,GCN,GFX11 %s
-; RUN: not llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,R600 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,GCN,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,GCN,VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,GCN,GFX11 %s
+; RUN: not llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefixes=FUNC,R600 %s
 
 ; FUNC-LABEL: {{^}}s_fneg_f32:
 ; R600: -PV

@@ -420,11 +420,17 @@ def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
 def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
   GISDNodeXFormEquiv<extract_swz>;
 
-def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
-  GISDNodeXFormEquiv<set_glc>;
+def gi_extract_cpol_set_glc : GICustomOperandRenderer<"renderExtractCpolSetGLC">,
+  GISDNodeXFormEquiv<extract_cpol_set_glc>;
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;
 
 def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
   GISDNodeXFormEquiv<FPPow2ToExponentXForm>;
+
+def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
+  GISDNodeXFormEquiv<PrefetchLoc>;
+
+def gi_MFMALdScaleModifierOp : GICustomOperandRenderer<"renderScaledMAIIntrinsicOperand">,
+  GISDNodeXFormEquiv<MFMALdScaleXForm>;

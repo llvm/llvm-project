@@ -1318,6 +1318,13 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     InitBuiltinType(OMPArrayShapingTy, BuiltinType::OMPArrayShaping);
     InitBuiltinType(OMPIteratorTy, BuiltinType::OMPIterator);
   }
+  // Placeholder type for OpenACC array sections.
+  if (LangOpts.OpenACC) {
+    // FIXME: Once we implement OpenACC array sections in Sema, this will either
+    // be combined with the OpenMP type, or given its own type. In the meantime,
+    // just use the OpenMP type so that parsing can work.
+    InitBuiltinType(OMPArraySectionTy, BuiltinType::OMPArraySection);
+  }
   if (LangOpts.MatrixTypes)
     InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
 
@@ -1938,7 +1945,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     else if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       // Adjust the alignment for fixed-length SVE predicates.
       Align = 16;
-    else if (VT->getVectorKind() == VectorKind::RVVFixedLengthData)
+    else if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+             VT->getVectorKind() == VectorKind::RVVFixedLengthMask)
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
     break;
@@ -4477,10 +4485,11 @@ QualType ASTContext::getFunctionTypeInternal(
       EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
-      FunctionType::ExceptionType, Expr *, FunctionDecl *,
-      FunctionProtoType::ExtParameterInfo, Qualifiers>(
+      FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
-      ESH.NumExceptionType, ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
+      EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
+      ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
@@ -6745,6 +6754,11 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
 
     case TemplateArgument::Integral:
       return TemplateArgument(Arg, getCanonicalType(Arg.getIntegralType()));
+
+    case TemplateArgument::StructuralValue:
+      return TemplateArgument(*this,
+                              getCanonicalType(Arg.getStructuralValueType()),
+                              Arg.getAsStructuralValue());
 
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()),
@@ -9403,7 +9417,9 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       Second->getVectorKind() != VectorKind::SveFixedLengthData &&
       Second->getVectorKind() != VectorKind::SveFixedLengthPredicate &&
       First->getVectorKind() != VectorKind::RVVFixedLengthData &&
-      Second->getVectorKind() != VectorKind::RVVFixedLengthData)
+      Second->getVectorKind() != VectorKind::RVVFixedLengthData &&
+      First->getVectorKind() != VectorKind::RVVFixedLengthMask &&
+      Second->getVectorKind() != VectorKind::RVVFixedLengthMask)
     return true;
 
   return false;
@@ -9509,8 +9525,11 @@ static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
 
   ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(Ty);
 
-  uint64_t EltSize = Context.getTypeSize(Info.ElementType);
-  uint64_t MinElts = Info.EC.getKnownMinValue();
+  unsigned EltSize = Context.getTypeSize(Info.ElementType);
+  if (Info.ElementType == Context.BoolTy)
+    EltSize = 1;
+
+  unsigned MinElts = Info.EC.getKnownMinValue();
   return VScale->first * MinElts * EltSize;
 }
 
@@ -9524,6 +9543,12 @@ bool ASTContext::areCompatibleRVVTypes(QualType FirstType,
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
+        if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+          BuiltinVectorTypeInfo Info = getBuiltinVectorTypeInfo(BT);
+          return FirstType->isRVVVLSBuiltinType() &&
+                 Info.ElementType == BoolTy &&
+                 getTypeSize(SecondType) == getRVVTypeSize(*this, BT);
+        }
         if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
             VT->getVectorKind() == VectorKind::Generic)
           return FirstType->isRVVVLSBuiltinType() &&

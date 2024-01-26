@@ -396,11 +396,13 @@ enum CPol {
   TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
-  SCOPE = 0x3 << 3, // All Scope bits
-  SCOPE_CU = 0 << 3,
-  SCOPE_SE = 1 << 3,
-  SCOPE_DEV = 2 << 3,
-  SCOPE_SYS = 3 << 3,
+  SCOPE_SHIFT = 3,
+  SCOPE_MASK = 0x3,
+  SCOPE = SCOPE_MASK << SCOPE_SHIFT, // All Scope bits
+  SCOPE_CU = 0 << SCOPE_SHIFT,
+  SCOPE_SE = 1 << SCOPE_SHIFT,
+  SCOPE_DEV = 2 << SCOPE_SHIFT,
+  SCOPE_SYS = 3 << SCOPE_SHIFT,
 
   NV = 1 << 5, // Non-volatile bit
 
@@ -415,6 +417,10 @@ enum CPol {
   TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
   TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
   TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+
+  // Volatile (used to preserve/signal operation volatility for buffer
+  // operations not a real instruction bit)
+  VOLATILE = 1 << 31,
 };
 
 } // namespace CPol
