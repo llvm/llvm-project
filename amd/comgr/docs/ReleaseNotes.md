@@ -21,6 +21,8 @@ prevents other LLVM tools or instances from registering a -h option in the same
 process, which is an issue because -h is a common short form for -help.
 -  Updated default code object version used when linking code object specific
 device library from v4 to v5
+-  Updated shared library name on Windows 64-bit to include Comgr major version
+(libamd\_comgr.dll -> libamd\_comgr\_X.dll, where X is the major version)
 
 New Features
 ------------

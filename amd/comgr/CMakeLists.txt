@@ -214,6 +214,7 @@ include(bc2h)
 include(opencl_pch)
 include(DeviceLibs)
 
+# Add major version to the name on windows, including Win64
 if (WIN32)
   set_target_properties(amd_comgr PROPERTIES
     OUTPUT_NAME "amd_comgr_${amd_comgr_VERSION_MAJOR}")
@@ -235,6 +236,7 @@ if (NOT COMGR_BUILD_SHARED_LIBS)
   set_target_properties(amd_comgr PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
+# Overwrite the name on 32-bit Linux and Windows
 if (CMAKE_SIZEOF_VOID_P EQUAL 4)
   set_target_properties(amd_comgr PROPERTIES OUTPUT_NAME "amd_comgr32")
 endif()
