@@ -64,6 +64,10 @@ void genTransferSize(fir::FirOpBuilder &builder, mlir::Location loc,
 /// all intrinsic arguments are optional and may appear here as mlir::Value{}
 void genSystemClock(fir::FirOpBuilder &, mlir::Location, mlir::Value count,
                     mlir::Value rate, mlir::Value max);
+
+/// generate sleep runtime call
+void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
+              mlir::Value seconds);
 } // namespace runtime
 } // namespace fir
 

@@ -339,6 +339,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genStorageSize(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
