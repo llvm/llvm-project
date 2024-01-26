@@ -329,7 +329,7 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   // Don't break after very short return types (e.g. "void") as that is often
   // unexpected.
   if (Current.is(TT_FunctionDeclarationName) &&
-      State.Column <= Style.ShortReturnTypeColumn) {
+      State.Column - State.FirstIndent <= Style.ShortReturnTypeColumn) {
     if (Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None)
       return false;
   }

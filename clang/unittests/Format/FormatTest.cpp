@@ -12414,8 +12414,7 @@ TEST_F(FormatTest, BreaksLongDeclarations) {
                "    FunctionDeclaration();",
                ShortReturnType);
   verifyFormat("struct S {\n"
-               "  Type\n"
-               "  "
+               "  Type "
                "Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
                "oooooooooooong::\n"
                "      FunctionDeclaration();\n"
@@ -14392,9 +14391,9 @@ TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
                "        bbbbbbbbbbbbbbbbbbb()\n"
                "  {\n"
                "  }\n"
-               "  void\n"
-               "  m(int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "    int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
+               "  void m(\n"
+               "      int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "      int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
                "  {\n"
                "  }\n"
                "};",
