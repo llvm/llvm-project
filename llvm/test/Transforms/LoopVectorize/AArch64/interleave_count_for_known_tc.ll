@@ -32,6 +32,8 @@ for.end:
 ; This has the same trip count as loop_with_tc_32 but since the resulting interleaved group 
 ; in this case may access memory out-of-bounds, it requires a scalar epilogue iteration for 
 ; correctness, making at most 31 iterations available for interleaving.
+; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar remainder
+; than IC 2
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
 define void @loop_with_tc_32_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q) {
 entry:
