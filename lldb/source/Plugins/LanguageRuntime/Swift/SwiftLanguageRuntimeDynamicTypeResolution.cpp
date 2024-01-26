@@ -277,8 +277,8 @@ public:
     // TODO: Should we cache the mangled name -> compiler type lookup, too?
     Log *log(GetLog(LLDBLog::Types));
     if (log)
-      log->Printf("[LLDBTypeInfoProvider] Looking up debug type info for %s",
-                  mangledName.str().c_str());
+      LLDB_LOG(log, "[LLDBTypeInfoProvider] Looking up debug type info for {0}",
+               mangledName);
 
     // Materialize a Clang type from the debug info.
     assert(swift::Demangle::getManglingPrefixLength(mangledName) == 0);
@@ -312,8 +312,9 @@ public:
         ts->IsImportedType(swift_type.GetOpaqueQualType(), &clang_type);
     if (!is_imported || !clang_type) {
       if (log)
-        log->Printf("[LLDBTypeInfoProvider] Could not find clang debug type info for %s",
-                    mangledName.str().c_str());
+        LLDB_LOG(log,
+                 "[LLDBTypeInfoProvider] Could not find clang debug type info for {0}",
+                 mangledName);
       return nullptr;
     }
 
@@ -421,7 +422,7 @@ llvm::Optional<uint64_t>
 SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
     CompilerType instance_type, ValueObject *instance,
     llvm::StringRef member_name, Status *error) {
-  LLDB_LOGF(GetLog(LLDBLog::Types), "using remote mirrors");
+  LLDB_LOG(GetLog(LLDBLog::Types), "using remote mirrors");
   auto ts =
       instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts) {
@@ -483,9 +484,9 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   if (!instance_type.IsValid())
     return {};
 
-  LLDB_LOGF(GetLog(LLDBLog::Types),
-            "[GetMemberVariableOffset] asked to resolve offset for member %s",
-            member_name.str().c_str());
+  LLDB_LOG(GetLog(LLDBLog::Types),
+           "[GetMemberVariableOffset] asked to resolve offset for member {0}",
+           member_name);
 
   // Using the module context for RemoteAST is cheaper but only safe
   // when there is no dynamic type resolution involved.
@@ -525,12 +526,12 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
 #endif
   }
   if (offset) {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "[GetMemberVariableOffset] offset of %s is %lld",
-              member_name.str().c_str(), *offset);
+    LLDB_LOG(GetLog(LLDBLog::Types),
+             "[GetMemberVariableOffset] offset of {0} is {1}",
+             member_name, *offset);
   } else {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "[GetMemberVariableOffset] failed for %s",
-              member_name.str().c_str());
+    LLDB_LOG(GetLog(LLDBLog::Types), "[GetMemberVariableOffset] failed for {0}",
+             member_name);
     if (error)
       error->SetErrorStringWithFormat("could not resolve member offset");
   }
