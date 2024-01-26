@@ -285,8 +285,6 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     assert(CanonName.starts_with("gfx") && "Invalid amdgcn canonical name");
     Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
                         Twine("__"));
-  }
-  if (isAMDGCN(getTriple())) {
     Builder.defineMacro("__amdgcn_processor__",
                         Twine("\"") + Twine(CanonName) + Twine("\""));
     Builder.defineMacro("__amdgcn_target_id__",
