@@ -536,6 +536,11 @@ public:
 
       copyRecord(*LocSrc, *LocDst, Env);
       Env.setStorageLocation(*S, *LocDst);
+    } else {
+      // CXXOperatorCallExpr can be prvalues, in which case we must create a
+      // record for them in order for `Environment::getResultObjectLocation()`
+      // to be able to return a value.
+      VisitCallExpr(S);
     }
   }
 
