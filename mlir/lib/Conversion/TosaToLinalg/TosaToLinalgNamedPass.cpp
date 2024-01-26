@@ -61,6 +61,7 @@ public:
     target.addIllegalOp<tosa::MatMulOp>();
     target.addIllegalOp<tosa::FullyConnectedOp>();
     target.addIllegalOp<tosa::TransposeOp>();
+    target.addIllegalOp<tosa::TransposeConv2DOp>();
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 

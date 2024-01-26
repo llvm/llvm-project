@@ -1010,6 +1010,86 @@ public:
     return success();
   }
 };
+
+class TransposeConv2DConverter
+    : public OpConversionPattern<tosa::TransposeConv2DOp> {
+public:
+  using OpConversionPattern<tosa::TransposeConv2DOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::TransposeConv2DOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    ShapedType resultTy = cast<ShapedType>(op->getResult(0).getType());
+    if (!resultTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "tosa.transpose_conv2d requires static shapes for result");
+
+    ArrayRef<int64_t> outShape = op.getOutShapeAttr();
+    if (outShape[0] != resultTy.getDimSize(0) ||
+        outShape[1] != resultTy.getDimSize(1) ||
+        outShape[2] != resultTy.getDimSize(2) ||
+        outShape[3] != resultTy.getDimSize(3)) {
+      return rewriter.notifyMatchFailure(
+          op, "result shape is not aligned to out_shape attribute");
+    }
+
+    Location loc = op->getLoc();
+    Value input = op->getOperand(0);
+    Value weight = op->getOperand(1);
+    Value bias = op->getOperand(2);
+
+    ShapedType inputTy = cast<ShapedType>(input.getType());
+    Type inputETy = inputTy.getElementType();
+    Type resultETy = resultTy.getElementType();
+
+    if (inputETy.isUnsignedInteger())
+      return rewriter.notifyMatchFailure(
+          op, "tosa.transpose_conv2d does not support unsigned integer input");
+
+    // Broadcast the bias as the starting values for accumulation.
+    auto emptyTensor =
+        rewriter.create<tensor::EmptyOp>(loc, resultTy.getShape(), resultETy);
+
+    Value broadcastBias =
+        linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, emptyTensor);
+
+    auto *context = op->getContext();
+    AffineExpr n, ih, iw, oc, ic, kh, kw;
+    bindDims(context, n, ih, iw, oc, ic, kh, kw);
+
+    constexpr unsigned numDims = 7;
+    auto lhsMap = AffineMap::get(numDims, 0, {n, ih, iw, ic}, context);
+    auto rhsMap = AffineMap::get(numDims, 0, {oc, kh, kw, ic}, context);
+    /* outPad: top, bottom, left, right */
+    ArrayRef<int64_t> outPad = op.getOutPadAttr();
+    ArrayRef<int64_t> stride = op.getStrideAttr();
+    auto resultMap = AffineMap::get(numDims, 0,
+                                    {n, ih * stride[0] + outPad[0] + kh,
+                                     iw * stride[1] + outPad[2] + kw, oc},
+                                    context);
+
+    auto transposeConv2D =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, resultTy, ValueRange({input, weight}), broadcastBias,
+                ArrayRef<AffineMap>{lhsMap, rhsMap, resultMap},
+                tosa::getNParallelLoopsAttrs(numDims),
+                [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                    ValueRange args) {
+                  auto mul =
+                      nestedBuilder.create<arith::MulFOp>(loc, args[0], args[1])
+                          .getResult();
+                  auto acc =
+                      nestedBuilder.create<arith::AddFOp>(loc, mul, args[2])
+                          .getResult();
+                  nestedBuilder.create<linalg::YieldOp>(loc, acc);
+                })
+            .getResult(0);
+
+    rewriter.replaceOp(op, transposeConv2D);
+
+    return success();
+  }
+};
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
@@ -1031,7 +1111,8 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       MaxPool2dConverter,
       AvgPool2dConverter,
       FullyConnectedConverter,
-      TransposeConverter
+      TransposeConverter,
+      TransposeConv2DConverter
   >(patterns->getContext());
   // clang-format on
 }

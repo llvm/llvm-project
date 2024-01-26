@@ -781,3 +781,131 @@ func.func @test_transpose_dyn_multiple_3d(%arg0: tensor<?x?x?xf32>) {
   %1 = "tosa.transpose"(%arg0, %0) : (tensor<?x?x?xf32>, tensor<3xi32>) -> tensor<?x?x?xf32>
   return
 }
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d4)>
+// CHECK: #[[$MAP3:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d5, d6, d4)>
+// CHECK: #[[$MAP4:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6, d3)>
+
+// CHECK-LABEL: @transpose_conv2d
+func.func @transpose_conv2d(%arg0: tensor<1x1x2x1xf32>, %arg1: tensor<1x1x2x1xf32>, %arg2: tensor<1xf32>) -> tensor<1x1x3x1xf32> {
+  // CHECK-DAG:  %[[INIT:.+]] = tensor.empty() : tensor<1x1x3x1xf32>
+  // CHECK:      %[[BROADCAST:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg2 : tensor<1xf32>)
+  // CHECK-SAME: outs(%[[INIT]] : tensor<1x1x3x1xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        linalg.yield %[[IN]] : f32
+  // CHECK:      } -> tensor<1x1x3x1xf32>
+  // CHECK:      %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP2]], #[[$MAP3]], #[[$MAP4]]], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg0, %arg1 : tensor<1x1x2x1xf32>, tensor<1x1x2x1xf32>)
+  // CHECK-SAME: outs(%[[BROADCAST]] : tensor<1x1x3x1xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[IN_0:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        %[[S3:.+]] = arith.mulf %[[IN]], %[[IN_0]] : f32
+  // CHECK:        %[[S4:.+]] = arith.addf %[[S3]], %[[OUT]] : f32
+  // CHECK:        linalg.yield %[[S4]] : f32
+  // CHECK:      } -> tensor<1x1x3x1xf32>
+  // CHECK:      return %[[RESULT]] : tensor<1x1x3x1xf32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2 {out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 1, 3, 1>, stride = array<i64: 1, 1>} : (tensor<1x1x2x1xf32>, tensor<1x1x2x1xf32>, tensor<1xf32>) -> tensor<1x1x3x1xf32>
+  return %0 : tensor<1x1x3x1xf32>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d4)>
+// CHECK: #[[$MAP3:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d5, d6, d4)>
+// CHECK: #[[$MAP4:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5, d2 + d6, d3)>
+
+// CHECK-LABEL: @transpose_conv2d_dyn
+func.func @transpose_conv2d_dyn(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<?x?x?x?xf32>, %arg2: tensor<?xf32>) -> tensor<1x2x3x4xf32> {
+  // CHECK:      %[[INIT:.+]] = tensor.empty() : tensor<1x2x3x4xf32>
+  // CHECK:      %[[BROADCAST:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg2 : tensor<?xf32>)
+  // CHECK-SAME: outs(%[[INIT]] : tensor<1x2x3x4xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        linalg.yield %[[IN]] : f32
+  // CHECK:      } -> tensor<1x2x3x4xf32>
+  // CHECK:      %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP2]], #[[$MAP3]], #[[$MAP4]]], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg0, %arg1 : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+  // CHECK-SAME: outs(%[[BROADCAST]] : tensor<1x2x3x4xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[IN_0:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        %[[S3:.+]] = arith.mulf %[[IN]], %[[IN_0]] : f32
+  // CHECK:        %[[S4:.+]] = arith.addf %[[S3]], %[[OUT]] : f32
+  // CHECK:        linalg.yield %[[S4]] : f32
+  // CHECK:      } -> tensor<1x2x3x4xf32>
+  // CHECK:      return %[[RESULT]] : tensor<1x2x3x4xf32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2 {out_pad = array<i64: 0, 0, 0, 0>, out_shape = array<i64: 1, 2, 3, 4>, stride = array<i64: 1, 1>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?xf32>) -> tensor<1x2x3x4xf32>
+  return %0 : tensor<1x2x3x4xf32>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d4)>
+// CHECK: #[[$MAP3:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d5, d6, d4)>
+// CHECK: #[[$MAP4:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d5 + 2, d2 + d6 + 4, d3)>
+
+// CHECK-LABEL: @transpose_conv2d_dyn_with_padding
+func.func @transpose_conv2d_dyn_with_padding(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<?x?x?x?xf32>, %arg2: tensor<?xf32>) -> tensor<1x2x3x4xf32> {
+  // CHECK:      %[[INIT:.+]] = tensor.empty() : tensor<1x2x3x4xf32>
+  // CHECK:      %[[BROADCAST:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg2 : tensor<?xf32>)
+  // CHECK-SAME: outs(%[[INIT]] : tensor<1x2x3x4xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        linalg.yield %[[IN]] : f32
+  // CHECK:      } -> tensor<1x2x3x4xf32>
+  // CHECK:      %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP2]], #[[$MAP3]], #[[$MAP4]]], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg0, %arg1 : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+  // CHECK-SAME: outs(%[[BROADCAST]] : tensor<1x2x3x4xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[IN_0:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        %[[S3:.+]] = arith.mulf %[[IN]], %[[IN_0]] : f32
+  // CHECK:        %[[S4:.+]] = arith.addf %[[S3]], %[[OUT]] : f32
+  // CHECK:        linalg.yield %[[S4]] : f32
+  // CHECK:      } -> tensor<1x2x3x4xf32>
+  // CHECK:      return %[[RESULT]] : tensor<1x2x3x4xf32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2 {out_pad = array<i64: 2, 3, 4, 5>, out_shape = array<i64: 1, 2, 3, 4>, stride = array<i64: 1, 1>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?xf32>) -> tensor<1x2x3x4xf32>
+  return %0 : tensor<1x2x3x4xf32>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d4)>
+// CHECK: #[[$MAP3:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d3, d5, d6, d4)>
+// CHECK: #[[$MAP4:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 * 3 + d5 + 2, d2 * 3 + d6 + 4, d3)>
+
+// CHECK-LABEL: @transpose_conv2d_dyn_with_padding_and_stride
+func.func @transpose_conv2d_dyn_with_padding_and_stride(%arg0: tensor<?x?x?x?xf32>, %arg1: tensor<?x?x?x?xf32>, %arg2: tensor<?xf32>) -> tensor<1x2x3x4xf32> {
+  // CHECK:      %[[INIT:.+]] = tensor.empty() : tensor<1x2x3x4xf32>
+  // CHECK:      %[[BROADCAST:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg2 : tensor<?xf32>)
+  // CHECK-SAME: outs(%[[INIT]] : tensor<1x2x3x4xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        linalg.yield %[[IN]] : f32
+  // CHECK:      } -> tensor<1x2x3x4xf32>
+  // CHECK:      %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: {indexing_maps = [#[[$MAP2]], #[[$MAP3]], #[[$MAP4]]], iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%arg0, %arg1 : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+  // CHECK-SAME: outs(%[[BROADCAST]] : tensor<1x2x3x4xf32>) {
+  // CHECK:      ^bb0(%[[IN:.+]]: f32, %[[IN_0:.+]]: f32, %[[OUT:.+]]: f32):
+  // CHECK:        %[[S3:.+]] = arith.mulf %[[IN]], %[[IN_0]] : f32
+  // CHECK:        %[[S4:.+]] = arith.addf %[[S3]], %[[OUT]] : f32
+  // CHECK:        linalg.yield %[[S4]] : f32
+  // CHECK:      } -> tensor<1x2x3x4xf32>
+  // CHECK:      return %[[RESULT]] : tensor<1x2x3x4xf32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2 {out_pad = array<i64: 2, 3, 4, 5>, out_shape = array<i64: 1, 2, 3, 4>, stride = array<i64: 3, 3>} : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?xf32>) -> tensor<1x2x3x4xf32>
+  return %0 : tensor<1x2x3x4xf32>
+}
