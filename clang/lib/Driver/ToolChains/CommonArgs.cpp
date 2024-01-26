@@ -317,9 +317,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
       continue;
     }
 
-    bool IsNegative = Name.starts_with("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
@@ -783,6 +781,28 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                          "-generate-arange-section"));
   }
 
+  // Pass vector library arguments to LTO.
+  Arg *ArgVecLib = Args.getLastArg(options::OPT_fveclib);
+  if (ArgVecLib && ArgVecLib->getNumValues() == 1) {
+    // Map the vector library names from clang front-end to opt front-end. The
+    // values are taken from the TargetLibraryInfo class command line options.
+    std::optional<StringRef> OptVal =
+        llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
+            .Case("Accelerate", "Accelerate")
+            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("MASSV", "MASSV")
+            .Case("SVML", "SVML")
+            .Case("SLEEF", "sleefgnuabi")
+            .Case("Darwin_libsystem_m", "Darwin_libsystem_m")
+            .Case("ArmPL", "ArmPL")
+            .Case("none", "none")
+            .Default(std::nullopt);
+
+    if (OptVal)
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine(PluginOptPrefix) + "-vector-library=" + OptVal.value()));
+  }
+
   // Try to pass driver level flags relevant to LTO code generation down to
   // the plugin.
 
@@ -1194,6 +1214,18 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   }
 
   // 2. GNU and similar
+  const Driver &D = TC.getDriver();
+  const char *FortranMainLinkFlag = "-lFortran_main";
+
+  // Warn if the user added `-lFortran_main` - this library is an implementation
+  // detail of Flang and should be handled automaticaly by the driver.
+  for (const char *arg : CmdArgs) {
+    if (strncmp(arg, FortranMainLinkFlag, strlen(FortranMainLinkFlag)) == 0)
+      D.Diag(diag::warn_drv_deprecated_custom)
+          << FortranMainLinkFlag
+          << "see the Flang driver documentation for correct usage";
+  }
+
   // The --whole-archive option needs to be part of the link line to make
   // sure that the main() function from Fortran_main.a is pulled in by the
   // linker. However, it shouldn't be used if it's already active.
@@ -1201,12 +1233,12 @@ static void addFortranMain(const ToolChain &TC, const ArgList &Args,
   if (!isWholeArchivePresent(Args) && !TC.getTriple().isMacOSX() &&
       !TC.getTriple().isOSAIX()) {
     CmdArgs.push_back("--whole-archive");
-    CmdArgs.push_back("-lFortran_main");
+    CmdArgs.push_back(FortranMainLinkFlag);
     CmdArgs.push_back("--no-whole-archive");
     return;
   }
 
-  CmdArgs.push_back("-lFortran_main");
+  CmdArgs.push_back(FortranMainLinkFlag);
 }
 
 /// Add Fortran runtime libs

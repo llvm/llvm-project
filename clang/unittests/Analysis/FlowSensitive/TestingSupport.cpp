@@ -4,6 +4,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -18,7 +19,6 @@
 #include "gtest/gtest.h"
 #include <cassert>
 #include <functional>
-#include <memory>
 #include <string>
 #include <system_error>
 #include <utility>

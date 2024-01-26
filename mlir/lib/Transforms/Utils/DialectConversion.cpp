@@ -1602,11 +1602,13 @@ void ConversionPatternRewriter::cloneRegionBefore(Region &region,
     Block *cloned = mapping.lookup(&b);
     impl->notifyCreatedBlock(cloned);
     cloned->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
-        [&](Operation *op) { notifyOperationInserted(op); });
+        [&](Operation *op) { notifyOperationInserted(op, /*previous=*/{}); });
   }
 }
 
-void ConversionPatternRewriter::notifyOperationInserted(Operation *op) {
+void ConversionPatternRewriter::notifyOperationInserted(Operation *op,
+                                                        InsertPoint previous) {
+  assert(!previous.isSet() && "expected newly created op");
   LLVM_DEBUG({
     impl->logger.startLine()
         << "** Insert  : '" << op->getName() << "'(" << op << ")\n";
@@ -1649,6 +1651,18 @@ void ConversionPatternRewriter::cancelOpModification(Operation *op) {
 LogicalResult ConversionPatternRewriter::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   return impl->notifyMatchFailure(loc, reasonCallback);
+}
+
+void ConversionPatternRewriter::moveOpBefore(Operation *op, Block *block,
+                                             Block::iterator iterator) {
+  llvm_unreachable(
+      "moving single ops is not supported in a dialect conversion");
+}
+
+void ConversionPatternRewriter::moveOpAfter(Operation *op, Block *block,
+                                            Block::iterator iterator) {
+  llvm_unreachable(
+      "moving single ops is not supported in a dialect conversion");
 }
 
 detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {

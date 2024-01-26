@@ -124,6 +124,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let IsPacked = P.IsPacked;
   let IsMAI = P.IsMAI;
   let IsWMMA = P.IsWMMA;
+  let IsSWMMAC = P.IsSWMMAC;
 
   let AsmOperands = !if(isVop3OpSel,
                         P.AsmVOP3OpSel,
@@ -305,6 +306,11 @@ class VOP3OpSel_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
 
 class VOP3OpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3OpSel_gfx10<op, p>;
 
+class VOP3FP8OpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
+  let Inst{11} = !if(p.HasSrc0, src0_modifiers{2}, 0);
+  let Inst{12} = !if(p.HasSrc0, src0_modifiers{3}, 0);
+}
+
 class VOP3DotOpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3OpSel_gfx11_gfx12<op, p>{
   let Inst{11} = ?;
   let Inst{12} = ?;
@@ -378,6 +384,8 @@ class VOP3Pe <bits<7> op, VOPProfile P> : Enc64 {
   bits<4> src2_modifiers;
   bits<9> src2;
   bits<1> clamp;
+  bits<2> index_key_8bit;
+  bits<1> index_key_16bit;
 
   let Inst{7-0} = vdst;
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
@@ -738,7 +746,7 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // OPSEL must be set such that the low result only uses low inputs, and the high result only uses high inputs.
   let Inst{11} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{2}, 0),?);
-  let Inst{12} = !if(P.HasOpSel,!if(P.HasSrc1Mods, src1_modifiers{2}, 0),?);
+  let Inst{12} = !if(P.HasOpSel,!if(P.HasSrc1Mods, src1_modifiers{2}, !if((P.IsFP8), src0_modifiers{3}, 0)), ?);
   let Inst{13} = !if(P.HasOpSel,!if(P.HasSrc2Mods, src2_modifiers{2}, 0),?);
   let Inst{14} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{3}, 0),?);
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
@@ -1406,14 +1414,20 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let AsmString = asmName # ps.AsmOperands,
       IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-  if ps.Pfl.HasOpSel then
-    def _e64#Gen.Suffix :
-      VOP3_Real_Gen<ps, Gen>,
-      VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
-  if !not(ps.Pfl.HasOpSel) then
-    def _e64#Gen.Suffix :
-      VOP3_Real_Gen<ps, Gen>,
-      VOP3e_gfx11_gfx12<op, ps.Pfl>;
+    if ps.Pfl.IsFP8 then {
+      def _e64#Gen.Suffix :
+        VOP3_Real_Gen<ps, Gen>,
+        VOP3FP8OpSel_gfx11_gfx12<op, ps.Pfl>;
+    } else {
+      if ps.Pfl.HasOpSel then
+        def _e64#Gen.Suffix :
+          VOP3_Real_Gen<ps, Gen>,
+          VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
+      if !not(ps.Pfl.HasOpSel) then
+        def _e64#Gen.Suffix :
+          VOP3_Real_Gen<ps, Gen>,
+          VOP3e_gfx11_gfx12<op, ps.Pfl>;
+    }
   }
   def Gen.Suffix#"_VOP3_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>, LetDummies;
 }

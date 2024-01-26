@@ -6,6 +6,8 @@ permissions:
 on:
   workflow_dispatch:
   push:
+    branches:
+      - 'main'
     paths:
       - 'clang/bindings/python/**'
       - 'clang/tools/libclang/**'
@@ -30,6 +32,7 @@ jobs:
   check-clang-python:
     # Build libclang and then run the libclang Python binding's unit tests.
     name: Build and run Python unit tests
+    if: github.repository == 'llvm/llvm-project'
     strategy:
       fail-fast: false
       matrix:

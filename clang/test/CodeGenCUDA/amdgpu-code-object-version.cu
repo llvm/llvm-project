@@ -1,7 +1,7 @@
 // Create module flag for code object version.
 
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
-// RUN:   -o - %s | FileCheck %s -check-prefix=V4
+// RUN:   -o - %s | FileCheck %s -check-prefix=V5
 
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
 // RUN:   -mcode-object-version=4 -o - %s | FileCheck -check-prefix=V4 %s
