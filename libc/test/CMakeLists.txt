@@ -14,13 +14,13 @@ if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
   return()
 endif()
 
-add_subdirectory(include)
-add_subdirectory(src)
-add_subdirectory(utils)
-
 if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
   add_subdirectory(IntegrationTest)
 endif()
+
+add_subdirectory(include)
+add_subdirectory(src)
+add_subdirectory(utils) # uses IntegrationTest
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()

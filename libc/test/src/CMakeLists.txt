@@ -82,8 +82,7 @@ if(LLVM_RUNTIMES_BUILD OR LIBC_HDRGEN_EXE)
   return()
 endif()
 
-set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_api_test.cpp)
-
+# Generate api public entrypoints.
 set(entrypoints_name_list "")
 foreach(entry IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   get_target_property(entry_name ${entry} "ENTRYPOINT_NAME")
@@ -91,22 +90,30 @@ foreach(entry IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
 endforeach()
 
 # TODO: Remove these when they are added to the TableGen.
-list(REMOVE_ITEM entrypoints_name_list "__assert_fail" "__errno_location")
-list(TRANSFORM entrypoints_name_list PREPEND "-e=")
+list(REMOVE_ITEM entrypoints_name_list "prctl" "getauxval" "__stack_chk_fail")
+string(REPLACE ";" "," entrypoints_name_list "${entrypoints_name_list}")
 
-file(GLOB spec_files ${LIBC_SOURCE_DIR}/spec/*.td)
+set(public_entrypoints ${CMAKE_CURRENT_BINARY_DIR}/public_entrypoints.txt)
+file(WRITE ${public_entrypoints} "${entrypoints_name_list}")
 
 # Generate api test souce code.
+set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_api_test.cpp)
+file(GLOB spec_files ${LIBC_SOURCE_DIR}/spec/*.td)
 add_custom_command(
   OUTPUT ${public_test}
-  COMMAND $<TARGET_FILE:libc-prototype-testgen> -o ${public_test}
-          ${entrypoints_name_list}
-          -I ${LIBC_SOURCE_DIR}
-          ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-
-  DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td ${spec_files}
-          libc-prototype-testgen ${TARGET_PUBLIC_HEADERS}
-          ${LIBC_TARGET}
+  COMMAND
+    "$<TARGET_FILE:libc-prototype-testgen>"
+      -o ${public_test}
+      --entrypoints_file ${public_entrypoints}
+      -I ${LIBC_SOURCE_DIR}
+      ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+  DEPENDS
+    ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+    ${spec_files}
+    ${public_entrypoints}
+    libc-prototype-testgen
+    ${TARGET_PUBLIC_HEADERS}
+    ${LIBC_TARGET}
 )
 
 add_custom_target(libc-api-test)
