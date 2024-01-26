@@ -733,7 +733,7 @@ sizeof...($TemplateParameter[[Elements]]);
         @property(readonly, class) $Class[[Foo]] *$Field_decl_readonly_static[[sharedInstance]];
         @end
         @implementation $Class_def[[Foo]]
-        @synthesize someProperty = _someProperty;
+        @synthesize $Field[[someProperty]] = $Field[[_someProperty]];
         - (int)$Method_def[[otherMethod]] {
           return 0;
         }

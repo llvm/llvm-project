@@ -740,6 +740,22 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                   /*IsDecl=*/true,
                                   {OIMD}});
     }
+
+    void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *OPID) {
+      // Skiped compiler synthesized property impl decls - they will always
+      // have an invalid loc.
+      if (OPID->getLocation().isInvalid())
+        return;
+      if (OPID->isIvarNameSpecified())
+        Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                    OPID->getPropertyIvarDeclLoc(),
+                                    /*IsDecl=*/false,
+                                    {OPID->getPropertyIvarDecl()}});
+      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+                                  OPID->getLocation(),
+                                  /*IsDecl=*/false,
+                                  {OPID->getPropertyDecl()}});
+    }
   };
 
   Visitor V{Resolver};

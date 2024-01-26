@@ -21,6 +21,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/CharInfo.h"
@@ -153,8 +154,111 @@ const NamedDecl *pickInterestingTarget(const NamedDecl *D) {
   return D;
 }
 
-llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
-                                               SourceLocation TokenStartLoc) {
+// Some AST nodes are synthesized by the compiler based on other nodes. e.g.
+// ObjC methods and ivars can be synthesized based on an Objective-C property.
+//
+// We perform this check outside of canonicalization since we need to know which
+// decl the user has actually triggered the rename on in order to remap all
+// derived decls properly, since the naming patterns can slightly differ for
+// every decl that the compiler synthesizes.
+const NamedDecl *findOriginDecl(const NamedDecl *D) {
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    if (const auto *PD = MD->findPropertyDecl(/*CheckOverrides=*/false))
+      // FIXME(davg): We should only map to the protocol if the user hasn't
+      // explicitly given a setter/getter for the method - if they have we
+      // should either fail the rename or support basic 1 arg selector renames.
+      return canonicalRenameDecl(PD);
+  }
+  if (const auto *ID = dyn_cast<ObjCIvarDecl>(D)) {
+    for (const auto *PD : ID->getContainingInterface()->properties()) {
+      if (PD->getPropertyIvarDecl() == ID)
+        return canonicalRenameDecl(PD);
+    }
+  }
+  return D;
+}
+
+std::string propertySetterName(llvm::StringRef PropertyName) {
+  std::string Setter = PropertyName.str();
+  if (!Setter.empty())
+    Setter[0] = llvm::toUpper(Setter[0]);
+  return "set" + Setter + ":";
+}
+
+// Returns a non-empty string if valid.
+std::string setterToPropertyName(llvm::StringRef Setter) {
+  std::string Result;
+  if (!Setter.consume_front("set")) {
+    return Result;
+  }
+  Setter.consume_back(":"); // Optional.
+  Result = Setter.str();
+  if (!Result.empty())
+    Result[0] = llvm::toLower(Result[0]);
+  return Result;
+}
+
+llvm::DenseMap<const NamedDecl *, std::string>
+computeAllDeclsToNewName(const NamedDecl *Selected, llvm::StringRef NewName,
+                         const NamedDecl *Origin) {
+  llvm::DenseMap<const NamedDecl *, std::string> DeclToName;
+  DeclToName[Selected] = NewName.str();
+
+  if (const auto *PD = dyn_cast<ObjCPropertyDecl>(Origin)) {
+    // Need to derive the property/getter name, setter name, and ivar name based
+    // on which Decl the user triggered the rename on and their single input.
+    std::string PropertyName;
+    std::string SetterName;
+    std::string IvarName;
+
+    if (isa<ObjCIvarDecl>(Selected)) {
+      IvarName = NewName.str();
+      NewName.consume_front("_");
+      PropertyName = NewName.str();
+      SetterName = propertySetterName(PropertyName);
+    } else if (isa<ObjCPropertyDecl>(Selected)) {
+      PropertyName = NewName.str();
+      IvarName = "_" + PropertyName;
+      SetterName = propertySetterName(PropertyName);
+    } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(Selected)) {
+      if (MD->getReturnType()->isVoidType()) { // Setter selected.
+        SetterName = NewName.str();
+        PropertyName = setterToPropertyName(SetterName);
+        if (PropertyName.empty())
+          return DeclToName;
+        IvarName = "_" + PropertyName;
+      } else { // Getter selected.
+        PropertyName = NewName.str();
+        IvarName = "_" + PropertyName;
+        SetterName = propertySetterName(PropertyName);
+      }
+    } else {
+      return DeclToName;
+    }
+
+    DeclToName[PD] = PropertyName;
+    // We will only rename the getter/setter if the user didn't specify one
+    // explicitly in the property decl.
+    if (const auto *GD = PD->getGetterMethodDecl())
+      if (!PD->getGetterNameLoc().isValid())
+        DeclToName[GD] = PropertyName;
+    if (const auto *SD = PD->getSetterMethodDecl())
+      if (!PD->getSetterNameLoc().isValid())
+        DeclToName[SD] = SetterName;
+    // This is only visible in the impl, not the header. We only rename it if it
+    // follows the typical `foo` property => `_foo` ivar convention.
+    if (const auto *ID = PD->getPropertyIvarDecl())
+      if (ID->getNameAsString() == "_" + PD->getNameAsString())
+        DeclToName[ID] = IvarName;
+  }
+
+  return DeclToName;
+}
+
+llvm::DenseMap<const NamedDecl *, std::string>
+locateDeclAt(ParsedAST &AST, SourceLocation TokenStartLoc,
+             llvm::StringRef NewName) {
+  llvm::DenseMap<const NamedDecl *, std::string> Result;
   unsigned Offset =
       AST.getSourceManager().getDecomposedSpellingLoc(TokenStartLoc).second;
 
@@ -162,20 +266,34 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
       AST.getASTContext(), AST.getTokens(), Offset, Offset);
   const SelectionTree::Node *SelectedNode = Selection.commonAncestor();
   if (!SelectedNode)
-    return {};
+    return Result;
 
-  llvm::DenseSet<const NamedDecl *> Result;
+  std::string SetterName;
+  const NamedDecl *Setter;
+  if (const auto *D = SelectedNode->ASTNode.get<ObjCPropertyRefExpr>()) {
+    if (D->isImplicitProperty() && D->isMessagingSetter()) {
+      SetterName = propertySetterName(NewName);
+      Setter = canonicalRenameDecl(D->getImplicitPropertySetter());
+    }
+  }
+
   for (const NamedDecl *D :
        targetDecl(SelectedNode->ASTNode,
                   DeclRelation::Alias | DeclRelation::TemplatePattern,
                   AST.getHeuristicResolver())) {
     D = pickInterestingTarget(D);
-    Result.insert(canonicalRenameDecl(D));
+    D = canonicalRenameDecl(D);
+    if (D == Setter) {
+      Result[D] = SetterName;
+      continue;
+    }
+    Result[D] = NewName.str();
   }
   return Result;
 }
 
-void filterRenameTargets(llvm::DenseSet<const NamedDecl *> &Decls) {
+void filterRenameTargets(
+    llvm::DenseMap<const NamedDecl *, std::string> &Decls) {
   // For something like
   //     namespace ns { void foo(); }
   //     void bar() { using ns::f^oo; foo(); }
@@ -183,8 +301,8 @@ void filterRenameTargets(llvm::DenseSet<const NamedDecl *> &Decls) {
   // For renaming, we're only interested in foo's declaration, so drop the other
   // one. There should never be more than one UsingDecl here, otherwise the
   // rename would be ambiguos anyway.
-  auto UD = std::find_if(Decls.begin(), Decls.end(), [](const NamedDecl *D) {
-    return llvm::isa<UsingDecl>(D);
+  auto UD = std::find_if(Decls.begin(), Decls.end(), [](const auto &P) {
+    return llvm::isa<UsingDecl>(P.first);
   });
   if (UD != Decls.end()) {
     Decls.erase(UD);
@@ -206,6 +324,7 @@ enum class ReasonToReject {
   NonIndexable,
   UnsupportedSymbol,
   AmbiguousSymbol,
+  OnlyRenameableFromDefinition,
 
   // name validation. FIXME: reconcile with InvalidName
   SameName,
@@ -274,6 +393,8 @@ llvm::Error makeError(ReasonToReject Reason) {
       return "symbol is not a supported kind (e.g. namespace, macro)";
     case ReasonToReject::AmbiguousSymbol:
       return "there are multiple symbols at the given location";
+    case ReasonToReject::OnlyRenameableFromDefinition:
+      return "only renameable from the implementation";
     case ReasonToReject::SameName:
       return "new name is the same as the old name";
     }
@@ -289,12 +410,27 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
   assert(canonicalRenameDecl(&ND) == &ND &&
          "ND should be already canonicalized.");
 
+  bool IsSythesizedFromProperty = false;
+  if (const auto *ID = dyn_cast<ObjCIvarDecl>(&ND))
+    IsSythesizedFromProperty = ID->getSynthesize();
+  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND))
+    IsSythesizedFromProperty = MD->isPropertyAccessor() && MD->isImplicit();
+
   std::vector<SourceLocation> Results;
+  // TODO(davg): Is this actually needed?
+  if (isa<ObjCPropertyDecl>(&ND))
+    Results.push_back(ND.getLocation());
+
   for (Decl *TopLevelDecl : AST.getLocalTopLevelDecls()) {
     findExplicitReferences(
         TopLevelDecl,
         [&](ReferenceLoc Ref) {
           if (Ref.Targets.empty())
+            return;
+          // Some synthesized decls report their locations as the same as the
+          // decl they were derived from. We need to skip such decls but keep
+          // references otherwise we would rename the wrong decl.
+          if (IsSythesizedFromProperty && Ref.IsDecl)
             return;
           for (const auto *Target : Ref.Targets) {
             if (canonicalRenameDecl(Target) == &ND) {
@@ -784,49 +920,70 @@ renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
 
 // AST-based rename, it renames all occurrences in the main file.
 llvm::Expected<tooling::Replacements>
-renameWithinFile(ParsedAST &AST, const NamedDecl &RenameDecl,
-                 llvm::StringRef NewName) {
+renameWithinFile(ParsedAST &AST,
+                 const llvm::DenseMap<const NamedDecl *, std::string> &DeclToNewName) {
   trace::Span Tracer("RenameWithinFile");
   const SourceManager &SM = AST.getSourceManager();
 
   tooling::Replacements FilteredChanges;
-  std::vector<SourceLocation> Locs;
-  for (SourceLocation Loc : findOccurrencesWithinFile(AST, RenameDecl)) {
-    SourceLocation RenameLoc = Loc;
-    // We don't rename in any macro bodies, but we allow rename the symbol
-    // spelled in a top-level macro argument in the main file.
-    if (RenameLoc.isMacroID()) {
-      if (isInMacroBody(SM, RenameLoc))
-        continue;
-      RenameLoc = SM.getSpellingLoc(Loc);
+  for (const auto &Entry : DeclToNewName) {
+    std::string ImplicitPropName;
+    std::string NewImplicitPropName;
+    if (const auto *MD = llvm::dyn_cast<ObjCMethodDecl>(Entry.first)) {
+      if (MD->getReturnType()->isVoidType() &&
+          MD->getSelector().getNumArgs() == 1) {
+        llvm::StringRef Name = MD->getSelector().getNameForSlot(0);
+        ImplicitPropName = setterToPropertyName(Name);
+        NewImplicitPropName = setterToPropertyName(Entry.second);
+      }
     }
-    // Filter out locations not from main file.
-    // We traverse only main file decls, but locations could come from an
-    // non-preamble #include file e.g.
-    //   void test() {
-    //     int f^oo;
-    //     #include "use_foo.inc"
-    //   }
-    if (!isInsideMainFile(RenameLoc, SM))
-      continue;
-    Locs.push_back(RenameLoc);
-  }
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
-    // The custom ObjC selector logic doesn't handle the zero arg selector
-    // case, as it relies on parsing selectors via the trailing `:`.
-    // We also choose to use regular rename logic for the single-arg selectors
-    // as the AST/Index has the right locations in that case.
-    if (MD->getSelector().getNumArgs() > 1)
-      return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
 
-    // Eat trailing : for single argument methods since they're actually
-    // considered a separate token during rename.
-    NewName.consume_back(":");
-  }
-  for (const auto &Loc : Locs) {
-    if (auto Err = FilteredChanges.add(tooling::Replacement(
-            SM, CharSourceRange::getTokenRange(Loc), NewName)))
-      return std::move(Err);
+    std::vector<SourceLocation> Locs;
+    for (SourceLocation Loc : findOccurrencesWithinFile(AST, *Entry.first)) {
+      SourceLocation RenameLoc = Loc;
+      // We don't rename in any macro bodies, but we allow rename the symbol
+      // spelled in a top-level macro argument in the main file.
+      if (RenameLoc.isMacroID()) {
+        if (isInMacroBody(SM, RenameLoc))
+          continue;
+        RenameLoc = SM.getSpellingLoc(Loc);
+      }
+      // Filter out locations not from main file.
+      // We traverse only main file decls, but locations could come from an
+      // non-preamble #include file e.g.
+      //   void test() {
+      //     int f^oo;
+      //     #include "use_foo.inc"
+      //   }
+      if (!isInsideMainFile(RenameLoc, SM))
+        continue;
+      Locs.push_back(RenameLoc);
+    }
+    if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+      // The custom ObjC selector logic doesn't handle the zero arg selector
+      // case, as it relies on parsing selectors via the trailing `:`.
+      // We also choose to use regular rename logic for the single-arg selectors
+      // as the AST/Index has the right locations in that case.
+      if (MD->getSelector().getNumArgs() > 1)
+        return renameObjCMethodWithinFile(AST, MD, NewName, std::move(Locs));
+
+      // Eat trailing : for single argument methods since they're actually
+      // considered a separate token during rename.
+      NewName.consume_back(":");
+    }
+    for (const auto &Loc : Locs) {
+      llvm::StringRef NewName = Entry.second;
+      if (!ImplicitPropName.empty() && !NewImplicitPropName.empty()) {
+        const auto T = AST.getTokens().spelledTokenAt(Loc);
+        if (T && T->text(SM) == ImplicitPropName) {
+          NewName = NewImplicitPropName;
+        }
+      }
+
+      if (auto Err = FilteredChanges.add(tooling::Replacement(
+              SM, CharSourceRange::getTokenRange(Loc), NewName)))
+        return std::move(Err);
+    }
   }
   return FilteredChanges;
 }
@@ -1054,23 +1211,61 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (locateMacroAt(*IdentifierToken, AST.getPreprocessor()))
     return makeError(ReasonToReject::UnsupportedSymbol);
 
-  auto DeclsUnderCursor = locateDeclAt(AST, IdentifierToken->location());
+  auto DeclsUnderCursor =
+      locateDeclAt(AST, IdentifierToken->location(), RInputs.NewName);
   filterRenameTargets(DeclsUnderCursor);
   if (DeclsUnderCursor.empty())
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)
     return makeError(ReasonToReject::AmbiguousSymbol);
 
-  const auto &RenameDecl = **DeclsUnderCursor.begin();
-  std::string Placeholder = getName(RenameDecl);
-  auto Invalid = checkName(RenameDecl, RInputs.NewName, Placeholder);
-  if (Invalid)
-    return std::move(Invalid);
+  const auto &First = *DeclsUnderCursor.begin();
+  const auto &RenameDecl = *First.first;
+  const auto NewName = First.second;
+  const auto *Origin = findOriginDecl(&RenameDecl);
+  // We can only rename the property decl if we're able to find the property
+  // impl decl.
+  if (const auto *PD = dyn_cast<ObjCPropertyDecl>(Origin)) {
+    const auto &ASTCtx = PD->getASTContext();
+    const auto *DC = PD->getDeclContext();
+    if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(DC)) {
+      if (!ASTCtx.getObjCPropertyImplDeclForPropertyDecl(
+              PD, ID->getImplementation())) {
+        return makeError(ReasonToReject::OnlyRenameableFromDefinition);
+      }
+    }
+    if (const auto *CD = dyn_cast<ObjCCategoryDecl>(DC)) {
+      if (const auto *Impl = CD->getImplementation()) {
+        if (!ASTCtx.getObjCPropertyImplDeclForPropertyDecl(PD, Impl)) {
+          return makeError(ReasonToReject::OnlyRenameableFromDefinition);
+        }
+      } else if (const auto *ID = CD->getClassInterface()) {
+        if (!ASTCtx.getObjCPropertyImplDeclForPropertyDecl(
+              PD, ID->getImplementation())) {
+          return makeError(ReasonToReject::OnlyRenameableFromDefinition);
+        }
+      }
+    }
+  }
+  // If we the user is triggering a rename on a ObjC Method from an implicit
+  // property decl, we need to fix up the name to be in the `setX` form.
+  const auto DeclToNewName =
+      computeAllDeclsToNewName(&RenameDecl, NewName, Origin);
+  std::string Placeholder;
 
-  auto Reject =
-      renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index, Opts);
-  if (Reject)
-    return makeError(*Reject);
+  for (const auto &Entry : DeclToNewName) {
+    std::string Name = getName(*Entry.first);
+    auto Invalid = checkName(*Entry.first, Entry.second, Name);
+    if (Invalid)
+      return std::move(Invalid);
+    if (Entry.first == &RenameDecl)
+      Placeholder = Name;
+
+    auto Reject =
+      renameable(*Entry.first, RInputs.MainFilePath, RInputs.Index, Opts);
+    if (Reject)
+      return makeError(*Reject);
+  }
 
   // We have two implementations of the rename:
   //   - AST-based rename: used for renaming local symbols, e.g. variables
@@ -1081,7 +1276,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   // To make cross-file rename work for local symbol, we use a hybrid solution:
   //   - run AST-based rename on the main file;
   //   - run index-based rename on other affected files;
-  auto MainFileRenameEdit = renameWithinFile(AST, RenameDecl, RInputs.NewName);
+  auto MainFileRenameEdit = renameWithinFile(AST, DeclToNewName);
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
 
@@ -1137,14 +1332,27 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return Result;
   }
 
-  auto OtherFilesEdits = renameOutsideFile(
-      RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
-      Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
-                           : Opts.LimitFiles,
-      *RInputs.FS);
-  if (!OtherFilesEdits)
-    return OtherFilesEdits.takeError();
-  Result.GlobalChanges = *OtherFilesEdits;
+  FileEdits GlobalChanges;
+  for (const auto &Entry : DeclToNewName) {
+    auto OtherFilesEdits = renameOutsideFile(
+        *Entry.first, RInputs.MainFilePath, Entry.second, *RInputs.Index,
+        Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
+                            : Opts.LimitFiles,
+        *RInputs.FS);
+    if (!OtherFilesEdits)
+      return OtherFilesEdits.takeError();
+    // Merge all edits.
+    for (const auto &E : *OtherFilesEdits) {
+      auto It = GlobalChanges.find(E.getKey());
+      if (It == GlobalChanges.end()) {
+        GlobalChanges.try_emplace(E.getKey(), std::move(E.getValue()));
+        continue;
+      }
+      It->second.Replacements =
+          It->second.Replacements.merge(E.getValue().Replacements);
+    }
+  }
+  Result.GlobalChanges = GlobalChanges;
   // Attach the rename edits for the main file.
   Result.GlobalChanges.try_emplace(RInputs.MainFilePath,
                                    std::move(MainFileEdits));
