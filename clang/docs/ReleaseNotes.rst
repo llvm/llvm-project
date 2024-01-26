@@ -122,6 +122,8 @@ Bug Fixes in This Version
 - Clang now accepts elaborated-type-specifiers that explicitly specialize
   a member class template for an implicit instantiation of a class template.
 
+- Fixed missing warnings when doing bool-like conversions in C23 (`#79435 <https://github.com/llvm/llvm-project/issues/79435>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
