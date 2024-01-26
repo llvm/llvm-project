@@ -370,7 +370,9 @@ Expected<ExecutableFunction> ExecutableFunction::create(
     auto SymbolName = Pair.first.getName();
     if (SymbolName)
       return *SymbolName == FunctionID;
-    // Suppress the error.
+    // We should always succeed in finding the FunctionID, hence we suppress
+    // the error here and assert later on the search result, rather than
+    // propagating the Expected<> error back to the caller.
     llvm::consumeError(SymbolName.takeError());
     return false;
   });
