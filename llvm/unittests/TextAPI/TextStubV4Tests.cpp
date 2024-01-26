@@ -751,6 +751,35 @@ TEST(TBDv4, Target_i386_driverkit) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv4, Target_arm64_xros) {
+  static const char TBDv4ArchArm64e[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [ arm64e-xros, arm64e-xros-simulator ]\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4ArchArm64e, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, File->getFileType());
+  PlatformSet ExpectedSet;
+  ExpectedSet.insert(PLATFORM_XROS);
+  ExpectedSet.insert(PLATFORM_XROS_SIMULATOR);
+  EXPECT_EQ(File->getPlatforms().size(), 2U);
+  for (auto Platform : File->getPlatforms())
+    EXPECT_EQ(ExpectedSet.count(Platform), 1U);
+
+  EXPECT_EQ(ArchitectureSet(AK_arm64e), File->getArchitectures());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(TBDv4ArchArm64e), stripWhitespace(Buffer.c_str()));
+}
+
 TEST(TBDv4, Swift_1) {
   static const char TBDv4SwiftVersion1[] = "--- !tapi-tbd\n"
                                            "tbd-version: 4\n"

@@ -4304,9 +4304,9 @@ void Process::BroadcastAsyncProfileData(const std::string &one_profile_data) {
 
 void Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
                                       const StructuredDataPluginSP &plugin_sp) {
-  BroadcastEvent(
-      eBroadcastBitStructuredData,
-      new EventDataStructuredData(shared_from_this(), object_sp, plugin_sp));
+  auto data_sp = std::make_shared<EventDataStructuredData>(
+      shared_from_this(), object_sp, plugin_sp);
+  BroadcastEvent(eBroadcastBitStructuredData, data_sp);
 }
 
 StructuredDataPluginSP

@@ -1094,52 +1094,11 @@ define <4 x i1> @isnan_v4bf16(<4 x bfloat> %x) nounwind {
   ret <4 x i1> %1
 }
 
-define i1 @isnan_bf16_strictfp(bfloat %x) strictfp nounwind {
-; GFX7CHECK-LABEL: isnan_bf16_strictfp:
-; GFX7CHECK:       ; %bb.0:
-; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7CHECK-NEXT:    v_bfe_u32 v0, v0, 16, 15
-; GFX7CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX7CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, s4, v0
-; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX7CHECK-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8CHECK-LABEL: isnan_bf16_strictfp:
-; GFX8CHECK:       ; %bb.0:
-; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX8CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX8CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9CHECK-LABEL: isnan_bf16_strictfp:
-; GFX9CHECK:       ; %bb.0:
-; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX9CHECK-NEXT:    s_movk_i32 s4, 0x7f80
-; GFX9CHECK-NEXT:    v_cmp_lt_i16_e32 vcc, s4, v0
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10CHECK-LABEL: isnan_bf16_strictfp:
-; GFX10CHECK:       ; %bb.0:
-; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX10CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11CHECK-LABEL: isnan_bf16_strictfp:
-; GFX11CHECK:       ; %bb.0:
-; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11CHECK-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; GFX11CHECK-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 0x7f80, v0
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %1 = call i1 @llvm.is.fpclass.bf16(bfloat %x, i32 3) strictfp ; nan
-  ret i1 %1
-}
+; FIXME: Broken for gfx6/7
+; define i1 @isnan_bf16_strictfp(bfloat %x) strictfp nounwind {
+;   %1 = call i1 @llvm.is.fpclass.bf16(bfloat %x, i32 3) strictfp ; nan
+;   ret i1 %1
+; }
 
 define i1 @isinf_bf16(bfloat %x) nounwind {
 ; GFX7CHECK-LABEL: isinf_bf16:

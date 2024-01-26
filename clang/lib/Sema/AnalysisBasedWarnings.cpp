@@ -2263,15 +2263,18 @@ public:
         MsgParam = 3;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
+        if (!isa<PointerType>(destType))
+          return;
+
         const uint64_t dSize =
             Ctx.getTypeSize(destType.getTypePtr()->getPointeeType());
-        if (const auto *CE = dyn_cast<CXXMemberCallExpr>(ECE->getSubExpr())) {
-          QualType srcType = CE->getType();
-          const uint64_t sSize =
-              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
-          if (sSize >= dSize)
-            return;
-        }
+
+        QualType srcType = ECE->getSubExpr()->getType();
+        const uint64_t sSize =
+            Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+        if (sSize >= dSize)
+          return;
+
         MsgParam = 4;
       }
       Loc = Operation->getBeginLoc();

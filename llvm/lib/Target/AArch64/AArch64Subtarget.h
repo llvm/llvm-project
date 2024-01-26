@@ -434,13 +434,13 @@ public:
 
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
-      return "__chkstk_arm64ec";
+      return "#__chkstk_arm64ec";
     return "__chkstk";
   }
 
   const char* getSecurityCheckCookieName() const {
     if (isWindowsArm64EC())
-      return "__security_check_cookie_arm64ec";
+      return "#__security_check_cookie_arm64ec";
     return "__security_check_cookie";
   }
 

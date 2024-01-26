@@ -439,16 +439,22 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
-  if (auto *N = dyn_cast<MDNode>(&MD))
-    return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
+  if (auto *N = dyn_cast<MDNode>(&MD)) {
+    return !N->isResolved() || N->isAlwaysReplaceable()
+               ? N->Context.getOrCreateReplaceableUses()
+               : nullptr;
+  }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
-  if (auto *N = dyn_cast<MDNode>(&MD))
-    return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
+  if (auto *N = dyn_cast<MDNode>(&MD)) {
+    return !N->isResolved() || N->isAlwaysReplaceable()
+               ? N->Context.getReplaceableUses()
+               : nullptr;
+  }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
@@ -456,7 +462,7 @@ ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
 
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
-    return !N->isResolved();
+    return !N->isResolved() || N->isAlwaysReplaceable();
   return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
 }
 
@@ -524,7 +530,7 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(From && "Expected valid value");
   assert(To && "Expected valid value");
   assert(From != To && "Expected changed value");
-  assert(From->getType() == To->getType() && "Unexpected type change");
+  assert(&From->getContext() == &To->getContext() && "Expected same context");
 
   LLVMContext &Context = From->getType()->getContext();
   auto &Store = Context.pImpl->ValuesAsMetadata;
@@ -1527,6 +1533,21 @@ bool Value::eraseMetadata(unsigned KindID) {
   return Changed;
 }
 
+void Value::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
+  if (!HasMetadata)
+    return;
+
+  auto &MetadataStore = getContext().pImpl->ValueMetadata;
+  MDAttachments &Info = MetadataStore.find(this)->second;
+  assert(!Info.empty() && "bit out of sync with hash table");
+  Info.remove_if([Pred](const MDAttachments::Attachment &I) {
+    return Pred(I.MDKind, I.Node);
+  });
+
+  if (Info.empty())
+    clearMetadata();
+}
+
 void Value::clearMetadata() {
   if (!HasMetadata)
     return;
@@ -1550,6 +1571,13 @@ MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
   return Value::getMetadata(KindID);
 }
 
+void Instruction::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
+  if (DbgLoc && Pred(LLVMContext::MD_dbg, DbgLoc.getAsMDNode()))
+    DbgLoc = {};
+
+  Value::eraseMetadataIf(Pred);
+}
+
 void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
@@ -1560,17 +1588,9 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   // A DIAssignID attachment is debug metadata, don't drop it.
   KnownSet.insert(LLVMContext::MD_DIAssignID);
 
-  auto &MetadataStore = getContext().pImpl->ValueMetadata;
-  MDAttachments &Info = MetadataStore.find(this)->second;
-  assert(!Info.empty() && "bit out of sync with hash table");
-  Info.remove_if([&KnownSet](const MDAttachments::Attachment &I) {
-    return !KnownSet.count(I.MDKind);
+  Value::eraseMetadataIf([&KnownSet](unsigned MDKind, MDNode *Node) {
+    return !KnownSet.count(MDKind);
   });
-
-  if (Info.empty()) {
-    // Drop our entry at the store.
-    clearMetadata();
-  }
 }
 
 void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {

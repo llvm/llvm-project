@@ -70,6 +70,11 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   PP.addCommentHandler(CommentSemaHandler.get());
 
   PP.setCodeCompletionHandler(*this);
+
+  Actions.ParseTypeFromStringCallback =
+      [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
+        return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
+      };
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {

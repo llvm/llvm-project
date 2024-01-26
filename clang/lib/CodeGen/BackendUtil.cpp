@@ -1001,8 +1001,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
 
     if (CodeGenOpts.FatLTO) {
-      assert(CodeGenOpts.UnifiedLTO && "FatLTO requires UnifiedLTO");
-      MPM.addPass(PB.buildFatLTODefaultPipeline(Level));
+      MPM.addPass(PB.buildFatLTODefaultPipeline(
+          Level, PrepareForThinLTO,
+          PrepareForThinLTO || shouldEmitRegularLTOSummary()));
     } else if (PrepareForThinLTO) {
       MPM.addPass(PB.buildThinLTOPreLinkDefaultPipeline(Level));
     } else if (PrepareForLTO) {
@@ -1073,8 +1074,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
       TheModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
                                uint32_t(CodeGenOpts.EnableSplitLTOUnit));
-    // FatLTO always means UnifiedLTO
-    if (!TheModule->getModuleFlag("UnifiedLTO"))
+    if (CodeGenOpts.UnifiedLTO && !TheModule->getModuleFlag("UnifiedLTO"))
       TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 

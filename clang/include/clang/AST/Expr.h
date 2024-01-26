@@ -1136,7 +1136,6 @@ public:
     return ConstantExprBits.APValueKind != APValue::None;
   }
   APValue getAPValueResult() const;
-  APValue &getResultAsAPValue() const { return APValueResult(); }
   llvm::APSInt getResultAsAPSInt() const;
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
@@ -4756,6 +4755,17 @@ public:
     return T->getStmtClass() == SourceLocExprClass;
   }
 
+  static bool MayBeDependent(SourceLocIdentKind Kind) {
+    switch (Kind) {
+    case SourceLocIdentKind::Function:
+    case SourceLocIdentKind::FuncSig:
+    case SourceLocIdentKind::SourceLocStruct:
+      return true;
+    default:
+      return false;
+    }
+  }
+
 private:
   friend class ASTStmtReader;
 };
@@ -6400,7 +6410,7 @@ public:
   enum AtomicOp {
 #define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) AO ## ID,
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     // Avoid trailing comma
     BI_First = 0
   };
@@ -6466,7 +6476,7 @@ public:
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case AO##ID:                                                                 \
     return #ID;
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     }
     llvm_unreachable("not an atomic operator?");
   }
@@ -6495,8 +6505,8 @@ public:
   }
 
   bool isOpenCL() const {
-    return getOp() >= AO__opencl_atomic_init &&
-           getOp() <= AO__opencl_atomic_fetch_max;
+    return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
+           getOp() <= AO__opencl_atomic_store;
   }
 
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
@@ -6521,11 +6531,14 @@ public:
   /// \return empty atomic scope model if the atomic op code does not have
   ///   scope operand.
   static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
-    if (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
+    // FIXME: Allow grouping of builtins to be able to only check >= and <=
+    if (Op >= AO__opencl_atomic_compare_exchange_strong &&
+        Op <= AO__opencl_atomic_store && Op != AO__opencl_atomic_init)
       return AtomicScopeModel::create(AtomicScopeModelKind::OpenCL);
-    else if (Op >= AO__hip_atomic_load && Op <= AO__hip_atomic_fetch_max)
+    if (Op >= AO__hip_atomic_compare_exchange_strong &&
+        Op <= AO__hip_atomic_store)
       return AtomicScopeModel::create(AtomicScopeModelKind::HIP);
-    else if (Op >= AO__scoped_atomic_load && Op <= AO__scoped_atomic_fetch_max)
+    if (Op >= AO__scoped_atomic_add_fetch && Op <= AO__scoped_atomic_xor_fetch)
       return AtomicScopeModel::create(AtomicScopeModelKind::Generic);
     return AtomicScopeModel::create(AtomicScopeModelKind::None);
   }

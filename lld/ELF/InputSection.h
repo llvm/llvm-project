@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_INPUT_SECTION_H
 #define LLD_ELF_INPUT_SECTION_H
 
+#include "Config.h"
 #include "Relocations.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/LLVM.h"
@@ -413,7 +414,7 @@ class SyntheticSection : public InputSection {
 public:
   SyntheticSection(uint64_t flags, uint32_t type, uint32_t addralign,
                    StringRef name)
-      : InputSection(nullptr, flags, type, addralign, {}, name,
+      : InputSection(ctx.internalFile, flags, type, addralign, {}, name,
                      InputSectionBase::Synthetic) {}
 
   virtual ~SyntheticSection() = default;

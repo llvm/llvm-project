@@ -1087,8 +1087,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const std::optional<llvm::AArch64::ArchInfo> AI =
-          llvm::AArch64::parseArch(Split.first);
+      const llvm::AArch64::ArchInfo *AI = llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.

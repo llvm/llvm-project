@@ -3908,6 +3908,7 @@ public:
     case TemplateArgument::Null:
     case TemplateArgument::Integral:
     case TemplateArgument::Declaration:
+    case TemplateArgument::StructuralValue:
     case TemplateArgument::Pack:
     case TemplateArgument::TemplateExpansion:
     case TemplateArgument::NullPtr:
@@ -4577,7 +4578,8 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
 
   case TemplateArgument::Integral:
   case TemplateArgument::NullPtr:
-  case TemplateArgument::Declaration: {
+  case TemplateArgument::Declaration:
+  case TemplateArgument::StructuralValue: {
     // Transform a resolved template argument straight to a resolved template
     // argument. We get here when substituting into an already-substituted
     // template type argument during concept satisfaction checking.
@@ -4604,9 +4606,15 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
     else if (Arg.getKind() == TemplateArgument::NullPtr)
       Output = TemplateArgumentLoc(TemplateArgument(NewT, /*IsNullPtr=*/true),
                                    TemplateArgumentLocInfo());
-    else
+    else if (Arg.getKind() == TemplateArgument::Declaration)
       Output = TemplateArgumentLoc(TemplateArgument(NewD, NewT),
                                    TemplateArgumentLocInfo());
+    else if (Arg.getKind() == TemplateArgument::StructuralValue)
+      Output = TemplateArgumentLoc(
+          TemplateArgument(getSema().Context, NewT, Arg.getAsStructuralValue()),
+          TemplateArgumentLocInfo());
+    else
+      llvm_unreachable("unexpected template argument kind");
 
     return false;
   }
@@ -6081,12 +6089,11 @@ QualType
 TreeTransform<Derived>::TransformFunctionProtoType(TypeLocBuilder &TLB,
                                                    FunctionProtoTypeLoc TL) {
   SmallVector<QualType, 4> ExceptionStorage;
-  TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
   return getDerived().TransformFunctionProtoType(
       TLB, TL, nullptr, Qualifiers(),
       [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-        return This->getDerived().TransformExceptionSpec(
-            TL.getBeginLoc(), ESI, ExceptionStorage, Changed);
+        return getDerived().TransformExceptionSpec(TL.getBeginLoc(), ESI,
+                                                   ExceptionStorage, Changed);
       });
 }
 
@@ -6124,7 +6131,9 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
       //   "pointer to cv-qualifier-seq X" between the optional cv-qualifer-seq
       //   and the end of the function-definition, member-declarator, or
       //   declarator.
-      Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext, ThisTypeQuals);
+      auto *RD = dyn_cast<CXXRecordDecl>(SemaRef.getCurLexicalContext());
+      Sema::CXXThisScopeRAII ThisScope(
+          SemaRef, !ThisContext && RD ? RD : ThisContext, ThisTypeQuals);
 
       ResultType = getDerived().TransformType(TLB, TL.getReturnLoc());
       if (ResultType.isNull())
@@ -7081,10 +7090,10 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   // FIXME: dependent operand expressions?
   if (getDerived().AlwaysRebuild() ||
       modifiedType != oldType->getModifiedType()) {
-    // TODO: this is really lame; we should really be rebuilding the
-    // equivalent type from first principles.
-    QualType equivalentType
-      = getDerived().TransformType(oldType->getEquivalentType());
+    TypeLocBuilder AuxiliaryTLB;
+    AuxiliaryTLB.reserve(TL.getFullDataSize());
+    QualType equivalentType =
+        getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
     if (equivalentType.isNull())
       return QualType();
 
@@ -12148,7 +12157,7 @@ TreeTransform<Derived>::TransformCXXMemberCallExpr(CXXMemberCallExpr *E) {
 
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
-  bool NeedRebuildFunc = E->getIdentKind() == SourceLocIdentKind::Function &&
+  bool NeedRebuildFunc = SourceLocExpr::MayBeDependent(E->getIdentKind()) &&
                          getSema().CurContext != E->getParentContext();
 
   if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc)
@@ -13637,12 +13646,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     auto TransformFunctionProtoTypeLoc =
         [this](TypeLocBuilder &TLB, FunctionProtoTypeLoc FPTL) -> QualType {
       SmallVector<QualType, 4> ExceptionStorage;
-      TreeTransform *This = this; // Work around gcc.gnu.org/PR56135.
       return this->TransformFunctionProtoType(
           TLB, FPTL, nullptr, Qualifiers(),
           [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-            return This->TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
-                                                ExceptionStorage, Changed);
+            return TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
+                                          ExceptionStorage, Changed);
           });
     };
 

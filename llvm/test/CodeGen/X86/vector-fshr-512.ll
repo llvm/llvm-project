@@ -815,7 +815,7 @@ define <32 x i16> @constant_funnnel_v32i16(<32 x i16> %x, <32 x i16> %y) nounwin
 ; AVX512F-LABEL: constant_funnnel_v32i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = <u,32768,16384,8192,4096,2048,1024,512,256,128,64,32,16,8,4,2>
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [u,32768,16384,8192,4096,2048,1024,512,256,128,64,32,16,8,4,2]
 ; AVX512F-NEXT:    vpmulhuw %ymm3, %ymm2, %ymm4
 ; AVX512F-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm4[1,2,3,4,5,6,7]
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm4[4,5,6,7]
@@ -834,7 +834,7 @@ define <32 x i16> @constant_funnnel_v32i16(<32 x i16> %x, <32 x i16> %y) nounwin
 ; AVX512VL-LABEL: constant_funnnel_v32i16:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = <u,32768,16384,8192,4096,2048,1024,512,256,128,64,32,16,8,4,2>
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [u,32768,16384,8192,4096,2048,1024,512,256,128,64,32,16,8,4,2]
 ; AVX512VL-NEXT:    vpmulhuw %ymm3, %ymm2, %ymm4
 ; AVX512VL-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm4[1,2,3,4,5,6,7]
 ; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm4[4,5,6,7]

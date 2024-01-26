@@ -89,18 +89,25 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
 
   return llvm::StringSwitch<OpenACCClauseKind>(
              Tok.getIdentifierInfo()->getName())
+      .Case("async", OpenACCClauseKind::Async)
       .Case("attach", OpenACCClauseKind::Attach)
       .Case("auto", OpenACCClauseKind::Auto)
+      .Case("bind", OpenACCClauseKind::Bind)
       .Case("create", OpenACCClauseKind::Create)
+      .Case("collapse", OpenACCClauseKind::Collapse)
       .Case("copy", OpenACCClauseKind::Copy)
       .Case("copyin", OpenACCClauseKind::CopyIn)
       .Case("copyout", OpenACCClauseKind::CopyOut)
       .Case("default", OpenACCClauseKind::Default)
+      .Case("default_async", OpenACCClauseKind::DefaultAsync)
       .Case("delete", OpenACCClauseKind::Delete)
       .Case("detach", OpenACCClauseKind::Detach)
       .Case("device", OpenACCClauseKind::Device)
+      .Case("device_num", OpenACCClauseKind::DeviceNum)
       .Case("device_resident", OpenACCClauseKind::DeviceResident)
+      .Case("device_type", OpenACCClauseKind::DeviceType)
       .Case("deviceptr", OpenACCClauseKind::DevicePtr)
+      .Case("dtype", OpenACCClauseKind::DType)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("firstprivate", OpenACCClauseKind::FirstPrivate)
       .Case("host", OpenACCClauseKind::Host)
@@ -109,6 +116,8 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("independent", OpenACCClauseKind::Independent)
       .Case("link", OpenACCClauseKind::Link)
       .Case("no_create", OpenACCClauseKind::NoCreate)
+      .Case("num_gangs", OpenACCClauseKind::NumGangs)
+      .Case("num_workers", OpenACCClauseKind::NumWorkers)
       .Case("nohost", OpenACCClauseKind::NoHost)
       .Case("present", OpenACCClauseKind::Present)
       .Case("private", OpenACCClauseKind::Private)
@@ -117,6 +126,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("seq", OpenACCClauseKind::Seq)
       .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
+      .Case("vector_length", OpenACCClauseKind::VectorLength)
       .Case("worker", OpenACCClauseKind::Worker)
       .Default(OpenACCClauseKind::Invalid);
 }
@@ -151,6 +161,9 @@ enum class OpenACCSpecialTokenKind {
   DevNum,
   Queues,
   Zero,
+  Force,
+  Num,
+  Length,
 };
 
 bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
@@ -166,6 +179,12 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("queues");
   case OpenACCSpecialTokenKind::Zero:
     return Tok.getIdentifierInfo()->isStr("zero");
+  case OpenACCSpecialTokenKind::Force:
+    return Tok.getIdentifierInfo()->isStr("force");
+  case OpenACCSpecialTokenKind::Num:
+    return Tok.getIdentifierInfo()->isStr("num");
+  case OpenACCSpecialTokenKind::Length:
+    return Tok.getIdentifierInfo()->isStr("length");
   }
   llvm_unreachable("Unknown 'Kind' Passed");
 }
@@ -441,6 +460,10 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Self:
     return DirKind == OpenACCDirectiveKind::Update ? ClauseParensKind::Required
                                                    : ClauseParensKind::Optional;
+  case OpenACCClauseKind::Async:
+  case OpenACCClauseKind::Worker:
+  case OpenACCClauseKind::Vector:
+    return ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
   case OpenACCClauseKind::If:
@@ -462,6 +485,15 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Reduction:
+  case OpenACCClauseKind::Collapse:
+  case OpenACCClauseKind::Bind:
+  case OpenACCClauseKind::VectorLength:
+  case OpenACCClauseKind::NumGangs:
+  case OpenACCClauseKind::NumWorkers:
+  case OpenACCClauseKind::DeviceNum:
+  case OpenACCClauseKind::DefaultAsync:
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -471,8 +503,6 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Invalid:
   case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::Seq:
-  case OpenACCClauseKind::Worker:
-  case OpenACCClauseKind::Vector:
     return ClauseParensKind::None;
   }
   llvm_unreachable("Unhandled clause kind");
@@ -529,6 +559,12 @@ void Parser::ParseOpenACCClauseList(OpenACCDirectiveKind DirKind) {
   }
 }
 
+ExprResult Parser::ParseOpenACCIntExpr() {
+  // FIXME: this is required to be an integer expression (or dependent), so we
+  // should ensure that is the case by passing this to SEMA here.
+  return getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+}
+
 bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
   // FIXME: Future clauses will require 'special word' parsing, check for one,
   // then parse it based on whether it is a clause that requires a 'special
@@ -550,6 +586,38 @@ bool Parser::ParseOpenACCClauseVarList(OpenACCClauseKind Kind) {
   }
   return false;
 }
+
+/// OpenACC 3.3 Section 2.4:
+/// The argument to the device_type clause is a comma-separated list of one or
+/// more device architecture name identifiers, or an asterisk.
+///
+/// The syntax of the device_type clause is
+/// device_type( * )
+/// device_type( device-type-list )
+///
+/// The device_type clause may be abbreviated to dtype.
+bool Parser::ParseOpenACCDeviceTypeList() {
+
+  if (expectIdentifierOrKeyword(*this)) {
+    SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return false;
+  }
+  ConsumeToken();
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    if (expectIdentifierOrKeyword(*this)) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
+      return false;
+    }
+    ConsumeToken();
+  }
+  return false;
+}
+
 // The OpenACC Clause List is a comma or space-delimited list of clauses (see
 // the comment on ParseOpenACCClauseList).  The concept of a 'clause' doesn't
 // really have its owner grammar and each individual one has its own definition.
@@ -654,6 +722,41 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
       if (ParseOpenACCClauseVarList(Kind))
         return true;
       break;
+    case OpenACCClauseKind::Collapse: {
+      tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Force,
+                                         Kind);
+      ExprResult NumLoops =
+          getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
+      if (NumLoops.isInvalid())
+        return true;
+      break;
+    }
+    case OpenACCClauseKind::Bind: {
+      ExprResult BindArg = ParseOpenACCBindClauseArgument();
+      if (BindArg.isInvalid())
+        return true;
+      break;
+    }
+    case OpenACCClauseKind::NumGangs:
+    case OpenACCClauseKind::NumWorkers:
+    case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
+    case OpenACCClauseKind::VectorLength: {
+      ExprResult IntExpr = ParseOpenACCIntExpr();
+      if (IntExpr.isInvalid())
+        return true;
+      break;
+    }
+    case OpenACCClauseKind::DType:
+    case OpenACCClauseKind::DeviceType:
+      if (getCurToken().is(tok::star)) {
+        // FIXME: We want to mark that this is an 'everything else' type of
+        // device_type in Sema.
+        ConsumeToken();
+      } else if (ParseOpenACCDeviceTypeList()) {
+        return true;
+      }
+      break;
     default:
       llvm_unreachable("Not a required parens type?");
     }
@@ -671,6 +774,24 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
           return true;
         break;
       }
+      case OpenACCClauseKind::Vector:
+      case OpenACCClauseKind::Worker: {
+        tryParseAndConsumeSpecialTokenKind(*this,
+                                           Kind == OpenACCClauseKind::Vector
+                                               ? OpenACCSpecialTokenKind::Length
+                                               : OpenACCSpecialTokenKind::Num,
+                                           Kind);
+        ExprResult IntExpr = ParseOpenACCIntExpr();
+        if (IntExpr.isInvalid())
+          return true;
+        break;
+      }
+      case OpenACCClauseKind::Async: {
+        ExprResult AsyncArg = ParseOpenACCAsyncArgument();
+        if (AsyncArg.isInvalid())
+          return true;
+        break;
+      }
       default:
         llvm_unreachable("Not an optional parens type?");
       }
@@ -678,6 +799,17 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
     }
   }
   return false;
+}
+
+/// OpenACC 3.3 section 2.16:
+/// In this section and throughout the specification, the term async-argument
+/// means a nonnegative scalar integer expression (int for C or C++, integer for
+/// Fortran), or one of the special values acc_async_noval or acc_async_sync, as
+/// defined in the C header file and the Fortran openacc module. The special
+/// values are negative values, so as not to conflict with a user-specified
+/// nonnegative async-argument.
+ExprResult Parser::ParseOpenACCAsyncArgument() {
+  return getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
 }
 
 /// OpenACC 3.3, section 2.16:
@@ -744,7 +876,7 @@ bool Parser::ParseOpenACCWaitArgument() {
 ExprResult Parser::ParseOpenACCIDExpression() {
   ExprResult Res;
   if (getLangOpts().CPlusPlus) {
-    Res = ParseCXXIdExpression(/*isAddressOfOperand=*/false);
+    Res = ParseCXXIdExpression(/*isAddressOfOperand=*/true);
   } else {
     // There isn't anything quite the same as ParseCXXIdExpression for C, so we
     // need to get the identifier, then call into Sema ourselves.
@@ -769,6 +901,25 @@ ExprResult Parser::ParseOpenACCIDExpression() {
   }
 
   return getActions().CorrectDelayedTyposInExpr(Res);
+}
+
+ExprResult Parser::ParseOpenACCBindClauseArgument() {
+  // OpenACC 3.3 section 2.15:
+  // The bind clause specifies the name to use when calling the procedure on a
+  // device other than the host. If the name is specified as an identifier, it
+  // is called as if that name were specified in the language being compiled. If
+  // the name is specified as a string, the string is used for the procedure
+  // name unmodified.
+  if (getCurToken().is(tok::r_paren)) {
+    Diag(getCurToken(), diag::err_acc_incorrect_bind_arg);
+    return ExprError();
+  }
+
+  if (tok::isStringLiteral(getCurToken().getKind()))
+    return getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
+        /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
+
+  return ParseOpenACCIDExpression();
 }
 
 /// OpenACC 3.3, section 1.6:

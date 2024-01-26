@@ -4390,8 +4390,8 @@ bool Sema::MergeCompatibleFunctionDecls(FunctionDecl *New, FunctionDecl *Old,
   mergeDeclAttributes(New, Old);
 
   // Merge "pure" flag.
-  if (Old->isPure())
-    New->setPure();
+  if (Old->isPureVirtual())
+    New->setIsPureVirtual();
 
   // Merge "used" flag.
   if (Old->getMostRecentDecl()->isUsed(false))
@@ -7068,8 +7068,7 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   if (WeakRefAttr *Attr = ND.getAttr<WeakRefAttr>()) {
     if (ND.isExternallyVisible()) {
       S.Diag(Attr->getLocation(), diag::err_attribute_weakref_not_static);
-      ND.dropAttr<WeakRefAttr>();
-      ND.dropAttr<AliasAttr>();
+      ND.dropAttrs<WeakRefAttr, AliasAttr>();
     }
   }
 
@@ -9879,7 +9878,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (const CXXRecordDecl *Parent =
           dyn_cast<CXXRecordDecl>(NewFD->getDeclContext())) {
       if (Parent->isInterface() && cast<CXXMethodDecl>(NewFD)->isUserProvided())
-        NewFD->setPure(true);
+        NewFD->setIsPureVirtual(true);
 
       // C++ [class.union]p2
       //   A union can have member functions, but not virtual functions.
@@ -11802,6 +11801,32 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
                                          OldDecl, Previous);
 }
 
+static void CheckConstPureAttributesUsage(Sema &S, FunctionDecl *NewFD) {
+  bool IsPure = NewFD->hasAttr<PureAttr>();
+  bool IsConst = NewFD->hasAttr<ConstAttr>();
+
+  // If there are no pure or const attributes, there's nothing to check.
+  if (!IsPure && !IsConst)
+    return;
+
+  // If the function is marked both pure and const, we retain the const
+  // attribute because it makes stronger guarantees than the pure attribute, and
+  // we drop the pure attribute explicitly to prevent later confusion about
+  // semantics.
+  if (IsPure && IsConst) {
+    S.Diag(NewFD->getLocation(), diag::warn_const_attr_with_pure_attr);
+    NewFD->dropAttrs<PureAttr>();
+  }
+
+  // Constructors and destructors are functions which return void, so are
+  // handled here as well.
+  if (NewFD->getReturnType()->isVoidType()) {
+    S.Diag(NewFD->getLocation(), diag::warn_pure_function_returns_void)
+        << IsConst;
+    NewFD->dropAttrs<PureAttr, ConstAttr>();
+  }
+}
+
 /// Perform semantic checking of a new function declaration.
 ///
 /// Performs semantic analysis of the new function declaration
@@ -11898,6 +11923,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       CheckPPCMMAType(NewFD->getReturnType(), NewFD->getLocation())) {
     NewFD->setInvalidDecl();
   }
+
+  CheckConstPureAttributesUsage(*this, NewFD);
 
   // C++11 [dcl.constexpr]p8:
   //   A constexpr specifier for a non-static member function that is not
@@ -12207,12 +12234,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
+    bool UsesZT0 = Attr && Attr->isNewZT0();
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
           EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
       UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
                 FunctionType::ARM_None;
+      UsesZT0 |= FunctionType::getArmZT0State(EPI.AArch64SMEAttributes) !=
+                 FunctionType::ARM_None;
     }
 
     if (UsesSM || UsesZA) {
@@ -12225,6 +12255,14 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         else
           Diag(NewFD->getLocation(),
                diag::err_sme_definition_using_za_in_non_sme_target);
+      }
+    }
+    if (UsesZT0) {
+      llvm::StringMap<bool> FeatureMap;
+      Context.getFunctionFeatureMap(FeatureMap, NewFD);
+      if (!FeatureMap.contains("sme2")) {
+        Diag(NewFD->getLocation(),
+             diag::err_sme_definition_using_zt0_in_non_sme2_target);
       }
     }
   }
@@ -15205,6 +15243,37 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
   }
 }
 
+QualType Sema::AdjustParameterTypeForObjCAutoRefCount(QualType T,
+                                                      SourceLocation NameLoc,
+                                                      TypeSourceInfo *TSInfo) {
+  // In ARC, infer a lifetime qualifier for appropriate parameter types.
+  if (!getLangOpts().ObjCAutoRefCount ||
+      T.getObjCLifetime() != Qualifiers::OCL_None || !T->isObjCLifetimeType())
+    return T;
+
+  Qualifiers::ObjCLifetime Lifetime;
+
+  // Special cases for arrays:
+  //   - if it's const, use __unsafe_unretained
+  //   - otherwise, it's an error
+  if (T->isArrayType()) {
+    if (!T.isConstQualified()) {
+      if (DelayedDiagnostics.shouldDelayDiagnostics())
+        DelayedDiagnostics.add(sema::DelayedDiagnostic::makeForbiddenType(
+            NameLoc, diag::err_arc_array_param_no_ownership, T, false));
+      else
+        Diag(NameLoc, diag::err_arc_array_param_no_ownership)
+            << TSInfo->getTypeLoc().getSourceRange();
+    }
+    Lifetime = Qualifiers::OCL_ExplicitNone;
+  } else {
+    Lifetime = T->getObjCARCImplicitLifetime();
+  }
+  T = Context.getLifetimeQualifiedType(T, Lifetime);
+
+  return T;
+}
+
 ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                                   SourceLocation NameLoc, IdentifierInfo *Name,
                                   QualType T, TypeSourceInfo *TSInfo,
@@ -15882,13 +15951,26 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
+  return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
+         FD->getDeclName().isIdentifier() && FD->getName().equals(Name);
+}
+
+bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {
+  return methodHasName(FD, "get_return_object");
+}
+
+bool Sema::CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD) {
+  return FD->isStatic() &&
+         methodHasName(FD, "get_return_object_on_allocation_failure");
+}
+
 void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
   RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
   if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
     return;
-  // Allow `get_return_object()`.
-  if (FD->getDeclName().isIdentifier() &&
-      FD->getName().equals("get_return_object") && FD->param_empty())
+  // Allow some_promise_type::get_return_object().
+  if (CanBeGetReturnObject(FD) || CanBeGetReturnTypeOnAllocFailure(FD))
     return;
   if (!FD->hasAttr<CoroWrapperAttr>())
     Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
@@ -15969,7 +16051,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // MSVC permits the use of pure specifier (=0) on function definition,
       // defined at class scope, warn about this non-standard construct.
-      if (getLangOpts().MicrosoftExt && FD->isPure() && !FD->isOutOfLine())
+      if (getLangOpts().MicrosoftExt && FD->isPureVirtual() &&
+          !FD->isOutOfLine())
         Diag(FD->getLocation(), diag::ext_pure_function_definition);
 
       if (!FD->isInvalidDecl()) {

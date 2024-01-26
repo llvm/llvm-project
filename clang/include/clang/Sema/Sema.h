@@ -955,6 +955,10 @@ public:
     OpaqueParser = P;
   }
 
+  /// Callback to the parser to parse a type expressed as a string.
+  std::function<TypeResult(StringRef, StringRef, SourceLocation)>
+      ParseTypeFromStringCallback;
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
@@ -2108,6 +2112,10 @@ public:
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
 
+  /// Check an argument list for placeholders that we won't try to
+  /// handle later.
+  bool CheckArgsForPlaceholders(MultiExprArg args);
+
   /// Build a function type.
   ///
   /// This routine checks the function type according to C++ rules and
@@ -3017,6 +3025,9 @@ public:
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
+  QualType AdjustParameterTypeForObjCAutoRefCount(QualType T,
+                                                  SourceLocation NameLoc,
+                                                  TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                               SourceLocation NameLoc, IdentifierInfo *Name,
                               QualType T, TypeSourceInfo *TSInfo,
@@ -4815,6 +4826,29 @@ public:
   /// Get the outermost AttributedType node that sets a calling convention.
   /// Valid types should not have multiple attributes with different CCs.
   const AttributedType *getCallingConvAttributedType(QualType T) const;
+
+  /// Check whether a nullability type specifier can be added to the given
+  /// type through some means not written in source (e.g. API notes).
+  ///
+  /// \param Type The type to which the nullability specifier will be
+  /// added. On success, this type will be updated appropriately.
+  ///
+  /// \param Nullability The nullability specifier to add.
+  ///
+  /// \param DiagLoc The location to use for diagnostics.
+  ///
+  /// \param AllowArrayTypes Whether to accept nullability specifiers on an
+  /// array type (e.g., because it will decay to a pointer).
+  ///
+  /// \param OverrideExisting Whether to override an existing, locally-specified
+  /// nullability specifier rather than complaining about the conflict.
+  ///
+  /// \returns true if nullability cannot be applied, false otherwise.
+  bool CheckImplicitNullabilityTypeSpecifier(QualType &Type,
+                                             NullabilityKind Nullability,
+                                             SourceLocation DiagLoc,
+                                             bool AllowArrayTypes,
+                                             bool OverrideExisting);
 
   /// Process the attributes before creating an attributed statement. Returns
   /// the semantic attributes that have been processed.
@@ -8561,8 +8595,8 @@ public:
                                           QualType ParamType,
                                           SourceLocation Loc);
   ExprResult
-  BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
-                                              SourceLocation Loc);
+  BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
+                                             SourceLocation Loc);
 
   /// Enumeration describing how template parameter lists are compared
   /// for equality.
@@ -11214,6 +11248,11 @@ public:
   bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
+
+  // Heuristically tells if the function is `get_return_object` member of a
+  // coroutine promise_type by matching the function name.
+  static bool CanBeGetReturnObject(const FunctionDecl *FD);
+  static bool CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD);
 
   // As a clang extension, enforces that a non-coroutine function must be marked
   // with [[clang::coro_wrapper]] if it returns a type marked with
@@ -13893,8 +13932,9 @@ private:
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
-  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
-  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
+  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
+  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
+                                   unsigned BuiltinID);
   bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
@@ -13997,6 +14037,8 @@ private:
                             VariadicCallType CallType, SourceLocation Loc,
                             SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
+
+  void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
 
   void CheckAbsoluteValueFunction(const CallExpr *Call,
                                   const FunctionDecl *FDecl);

@@ -13,8 +13,8 @@
 #include "llvm/AsmParser/LLParser.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/AsmParser/LLToken.h"
 #include "llvm/AsmParser/SlotMapping.h"
@@ -32,7 +32,9 @@
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -53,6 +55,12 @@
 #include <vector>
 
 using namespace llvm;
+
+static cl::opt<bool> AllowIncompleteIR(
+    "allow-incomplete-ir", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Allow incomplete IR on a best effort basis (references to unknown "
+        "metadata will be dropped)"));
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -121,6 +129,55 @@ void LLParser::restoreParsingState(const SlotMapping *Slots) {
   for (const auto &I : Slots->Types)
     NumberedTypes.insert(
         std::make_pair(I.first, std::make_pair(I.second, LocTy())));
+}
+
+static void dropIntrinsicWithUnknownMetadataArgument(IntrinsicInst *II) {
+  // White-list intrinsics that are safe to drop.
+  if (!isa<DbgInfoIntrinsic>(II) &&
+      II->getIntrinsicID() != Intrinsic::experimental_noalias_scope_decl)
+    return;
+
+  SmallVector<MetadataAsValue *> MVs;
+  for (Value *V : II->args())
+    if (auto *MV = dyn_cast<MetadataAsValue>(V))
+      if (auto *MD = dyn_cast<MDNode>(MV->getMetadata()))
+        if (MD->isTemporary())
+          MVs.push_back(MV);
+
+  if (!MVs.empty()) {
+    assert(II->use_empty() && "Cannot have uses");
+    II->eraseFromParent();
+
+    // Also remove no longer used MetadataAsValue wrappers.
+    for (MetadataAsValue *MV : MVs)
+      if (MV->use_empty())
+        delete MV;
+  }
+}
+
+void LLParser::dropUnknownMetadataReferences() {
+  auto Pred = [](unsigned MDKind, MDNode *Node) { return Node->isTemporary(); };
+  for (Function &F : *M) {
+    F.eraseMetadataIf(Pred);
+    for (Instruction &I : make_early_inc_range(instructions(F))) {
+      I.eraseMetadataIf(Pred);
+
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        dropIntrinsicWithUnknownMetadataArgument(II);
+    }
+  }
+
+  for (GlobalVariable &GV : M->globals())
+    GV.eraseMetadataIf(Pred);
+
+  for (const auto &[ID, Info] : make_early_inc_range(ForwardRefMDNodes)) {
+    // Check whether there is only a single use left, which would be in our
+    // own NumberedMetadata.
+    if (Info.first->getNumTemporaryUses() == 1) {
+      NumberedMetadata.erase(ID);
+      ForwardRefMDNodes.erase(ID);
+    }
+  }
 }
 
 /// validateEndOfModule - Do final validity and basic correctness checks at the
@@ -284,6 +341,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
 
+  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
+    dropUnknownMetadataReferences();
+
   if (!ForwardRefMDNodes.empty())
     return error(ForwardRefMDNodes.begin()->second.second,
                  "use of undefined metadata '!" +
@@ -297,10 +357,14 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   for (auto *Inst : InstsWithTBAATag) {
     MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
-    assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
-    auto *UpgradedMD = UpgradeTBAANode(*MD);
-    if (MD != UpgradedMD)
-      Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
+    // With incomplete IR, the tbaa metadata may have been dropped.
+    if (!AllowIncompleteIR)
+      assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
+    if (MD) {
+      auto *UpgradedMD = UpgradeTBAANode(*MD);
+      if (MD != UpgradedMD)
+        Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
+    }
   }
 
   // Look for intrinsic functions and CallInst that need to be upgraded.  We use
@@ -600,7 +664,8 @@ bool LLParser::parseDeclare() {
   }
 
   Function *F;
-  if (parseFunctionHeader(F, false))
+  SmallVector<unsigned> UnnamedArgNums;
+  if (parseFunctionHeader(F, false, UnnamedArgNums))
     return true;
   for (auto &MD : MDs)
     F->addMetadata(MD.first, *MD.second);
@@ -614,8 +679,10 @@ bool LLParser::parseDefine() {
   Lex.Lex();
 
   Function *F;
-  return parseFunctionHeader(F, true) || parseOptionalFunctionMetadata(*F) ||
-         parseFunctionBody(*F);
+  SmallVector<unsigned> UnnamedArgNums;
+  return parseFunctionHeader(F, true, UnnamedArgNums) ||
+         parseOptionalFunctionMetadata(*F) ||
+         parseFunctionBody(*F, UnnamedArgNums);
 }
 
 /// parseGlobalType
@@ -2953,6 +3020,15 @@ bool LLParser::parseOptionalOperandBundles(
   return false;
 }
 
+bool LLParser::checkValueID(LocTy Loc, StringRef Kind, StringRef Prefix,
+                            unsigned NextID, unsigned ID) const {
+  if (ID < NextID)
+    return error(Loc, Kind + " expected to be numbered '" + Prefix +
+                          Twine(NextID) + "' or greater");
+
+  return false;
+}
+
 /// parseArgumentList - parse the argument list for a function type or function
 /// prototype.
 ///   ::= '(' ArgTypeListI ')'
@@ -2963,48 +3039,15 @@ bool LLParser::parseOptionalOperandBundles(
 ///   ::= ArgType (',' ArgType)*
 ///
 bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
+                                 SmallVectorImpl<unsigned> &UnnamedArgNums,
                                  bool &IsVarArg) {
   unsigned CurValID = 0;
   IsVarArg = false;
   assert(Lex.getKind() == lltok::lparen);
   Lex.Lex(); // eat the (.
 
-  if (Lex.getKind() == lltok::rparen) {
-    // empty
-  } else if (Lex.getKind() == lltok::dotdotdot) {
-    IsVarArg = true;
-    Lex.Lex();
-  } else {
-    LocTy TypeLoc = Lex.getLoc();
-    Type *ArgTy = nullptr;
-    AttrBuilder Attrs(M->getContext());
-    std::string Name;
-
-    if (parseType(ArgTy) || parseOptionalParamAttrs(Attrs))
-      return true;
-
-    if (ArgTy->isVoidTy())
-      return error(TypeLoc, "argument can not have void type");
-
-    if (Lex.getKind() == lltok::LocalVar) {
-      Name = Lex.getStrVal();
-      Lex.Lex();
-    } else if (Lex.getKind() == lltok::LocalVarID) {
-      if (Lex.getUIntVal() != CurValID)
-        return error(TypeLoc, "argument expected to be numbered '%" +
-                                  Twine(CurValID) + "'");
-      ++CurValID;
-      Lex.Lex();
-    }
-
-    if (!FunctionType::isValidArgumentType(ArgTy))
-      return error(TypeLoc, "invalid type for function argument");
-
-    ArgList.emplace_back(TypeLoc, ArgTy,
-                         AttributeSet::get(ArgTy->getContext(), Attrs),
-                         std::move(Name));
-
-    while (EatIfPresent(lltok::comma)) {
+  if (Lex.getKind() != lltok::rparen) {
+    do {
       // Handle ... at end of arg list.
       if (EatIfPresent(lltok::dotdotdot)) {
         IsVarArg = true;
@@ -3012,25 +3055,31 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       }
 
       // Otherwise must be an argument type.
-      TypeLoc = Lex.getLoc();
+      LocTy TypeLoc = Lex.getLoc();
+      Type *ArgTy = nullptr;
+      AttrBuilder Attrs(M->getContext());
       if (parseType(ArgTy) || parseOptionalParamAttrs(Attrs))
         return true;
 
       if (ArgTy->isVoidTy())
         return error(TypeLoc, "argument can not have void type");
 
+      std::string Name;
       if (Lex.getKind() == lltok::LocalVar) {
         Name = Lex.getStrVal();
         Lex.Lex();
       } else {
+        unsigned ArgID;
         if (Lex.getKind() == lltok::LocalVarID) {
-          if (Lex.getUIntVal() != CurValID)
-            return error(TypeLoc, "argument expected to be numbered '%" +
-                                      Twine(CurValID) + "'");
+          ArgID = Lex.getUIntVal();
+          if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
+            return true;
           Lex.Lex();
+        } else {
+          ArgID = CurValID;
         }
-        ++CurValID;
-        Name = "";
+        UnnamedArgNums.push_back(ArgID);
+        CurValID = ArgID + 1;
       }
 
       if (!ArgTy->isFirstClassType())
@@ -3039,7 +3088,7 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       ArgList.emplace_back(TypeLoc, ArgTy,
                            AttributeSet::get(ArgTy->getContext(), Attrs),
                            std::move(Name));
-    }
+    } while (EatIfPresent(lltok::comma));
   }
 
   return parseToken(lltok::rparen, "expected ')' at end of argument list");
@@ -3055,7 +3104,8 @@ bool LLParser::parseFunctionType(Type *&Result) {
 
   SmallVector<ArgInfo, 8> ArgList;
   bool IsVarArg;
-  if (parseArgumentList(ArgList, IsVarArg))
+  SmallVector<unsigned> UnnamedArgNums;
+  if (parseArgumentList(ArgList, UnnamedArgNums, IsVarArg))
     return true;
 
   // Reject names on the arguments lists.
@@ -3291,13 +3341,18 @@ bool LLParser::parseTargetExtType(Type *&Result) {
 //===----------------------------------------------------------------------===//
 
 LLParser::PerFunctionState::PerFunctionState(LLParser &p, Function &f,
-                                             int functionNumber)
+                                             int functionNumber,
+                                             ArrayRef<unsigned> UnnamedArgNums)
   : P(p), F(f), FunctionNumber(functionNumber) {
 
   // Insert unnamed arguments into the NumberedVals list.
-  for (Argument &A : F.args())
-    if (!A.hasName())
-      NumberedVals.push_back(&A);
+  auto It = UnnamedArgNums.begin();
+  for (Argument &A : F.args()) {
+    if (!A.hasName()) {
+      unsigned ArgNum = *It++;
+      NumberedVals.add(ArgNum, &A);
+    }
+  }
 }
 
 LLParser::PerFunctionState::~PerFunctionState() {
@@ -3378,7 +3433,7 @@ Value *LLParser::PerFunctionState::getVal(const std::string &Name, Type *Ty,
 
 Value *LLParser::PerFunctionState::getVal(unsigned ID, Type *Ty, LocTy Loc) {
   // Look this name up in the normal function symbol table.
-  Value *Val = ID < NumberedVals.size() ? NumberedVals[ID] : nullptr;
+  Value *Val = NumberedVals.get(ID);
 
   // If this is a forward reference for the value, see if we already created a
   // forward ref record.
@@ -3426,11 +3481,11 @@ bool LLParser::PerFunctionState::setInstName(int NameID,
   if (NameStr.empty()) {
     // If neither a name nor an ID was specified, just use the next ID.
     if (NameID == -1)
-      NameID = NumberedVals.size();
+      NameID = NumberedVals.getNext();
 
-    if (unsigned(NameID) != NumberedVals.size())
-      return P.error(NameLoc, "instruction expected to be numbered '%" +
-                                  Twine(NumberedVals.size()) + "'");
+    if (P.checkValueID(NameLoc, "instruction", "%", NumberedVals.getNext(),
+                       NameID))
+      return true;
 
     auto FI = ForwardRefValIDs.find(NameID);
     if (FI != ForwardRefValIDs.end()) {
@@ -3445,7 +3500,7 @@ bool LLParser::PerFunctionState::setInstName(int NameID,
       ForwardRefValIDs.erase(FI);
     }
 
-    NumberedVals.push_back(Inst);
+    NumberedVals.add(NameID, Inst);
     return false;
   }
 
@@ -3492,15 +3547,15 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
                                                  int NameID, LocTy Loc) {
   BasicBlock *BB;
   if (Name.empty()) {
-    if (NameID != -1 && unsigned(NameID) != NumberedVals.size()) {
-      P.error(Loc, "label expected to be numbered '" +
-                       Twine(NumberedVals.size()) + "'");
-      return nullptr;
+    if (NameID != -1) {
+      if (P.checkValueID(Loc, "label", "", NumberedVals.getNext(), NameID))
+        return nullptr;
+    } else {
+      NameID = NumberedVals.getNext();
     }
-    BB = getBB(NumberedVals.size(), Loc);
+    BB = getBB(NameID, Loc);
     if (!BB) {
-      P.error(Loc, "unable to create block numbered '" +
-                       Twine(NumberedVals.size()) + "'");
+      P.error(Loc, "unable to create block numbered '" + Twine(NameID) + "'");
       return nullptr;
     }
   } else {
@@ -3517,8 +3572,8 @@ BasicBlock *LLParser::PerFunctionState::defineBB(const std::string &Name,
 
   // Remove the block from forward ref sets.
   if (Name.empty()) {
-    ForwardRefValIDs.erase(NumberedVals.size());
-    NumberedVals.push_back(BB);
+    ForwardRefValIDs.erase(NameID);
+    NumberedVals.add(NameID, BB);
   } else {
     // BB forward references are already in the function symbol table.
     ForwardRefVals.erase(Name);
@@ -5962,7 +6017,8 @@ bool LLParser::parseTypeAndBasicBlock(BasicBlock *&BB, LocTy &Loc,
 ///       OptionalCallingConv OptRetAttrs OptUnnamedAddr Type GlobalName
 ///       '(' ArgList ')' OptAddrSpace OptFuncAttrs OptSection OptionalAlign
 ///       OptGC OptionalPrefix OptionalPrologue OptPersonalityFn
-bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
+bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
+                                   SmallVectorImpl<unsigned> &UnnamedArgNums) {
   // parse the linkage.
   LocTy LinkageLoc = Lex.getLoc();
   unsigned Linkage;
@@ -6050,7 +6106,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
   Constant *PersonalityFn = nullptr;
   Comdat *C;
 
-  if (parseArgumentList(ArgList, IsVarArg) ||
+  if (parseArgumentList(ArgList, UnnamedArgNums, IsVarArg) ||
       parseOptionalUnnamedAddr(UnnamedAddr) ||
       parseOptionalProgramAddrSpace(AddrSpace) ||
       parseFnAttributeValuePairs(FuncAttrs, FwdRefAttrGrps, false,
@@ -6245,7 +6301,8 @@ bool LLParser::PerFunctionState::resolveForwardRefBlockAddresses() {
 
 /// parseFunctionBody
 ///   ::= '{' BasicBlock+ UseListOrderDirective* '}'
-bool LLParser::parseFunctionBody(Function &Fn) {
+bool LLParser::parseFunctionBody(Function &Fn,
+                                 ArrayRef<unsigned> UnnamedArgNums) {
   if (Lex.getKind() != lltok::lbrace)
     return tokError("expected '{' in function body");
   Lex.Lex();  // eat the {.
@@ -6253,7 +6310,7 @@ bool LLParser::parseFunctionBody(Function &Fn) {
   int FunctionNumber = -1;
   if (!Fn.hasName()) FunctionNumber = NumberedVals.size()-1;
 
-  PerFunctionState PFS(*this, Fn, FunctionNumber);
+  PerFunctionState PFS(*this, Fn, FunctionNumber, UnnamedArgNums);
 
   // Resolve block addresses and allow basic blocks to be forward-declared
   // within this function.

@@ -4,16 +4,17 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX
 
-; FIXME: Failure to recognise undef elements in constant foldable splats
+; Check for failure to recognise undef elements in constant foldable splats
 define <4 x i32> @PR78109() {
 ; SSE-LABEL: PR78109:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,1,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR78109:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [0,1,0,1]
+; AVX-NEXT:    # xmm0 = mem[0,0]
 ; AVX-NEXT:    retq
   %shuffle.1 = shufflevector <4 x i32> <i32 7, i32 7, i32 0, i32 7>, <4 x i32> zeroinitializer, <4 x i32> <i32 2, i32 2, i32 1, i32 1> ; <0, 0, 7, 7>
   %shift = lshr <4 x i32> %shuffle.1, <i32 0, i32 0, i32 1, i32 0> ; <0, 0, 3, 7>

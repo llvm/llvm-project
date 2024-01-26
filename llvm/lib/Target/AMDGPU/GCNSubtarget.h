@@ -155,6 +155,7 @@ protected:
   bool HasDot10Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
+  bool HasFP8ConversionInsts = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicDsPkAdd16Insts = false;
   bool HasAtomicFlatPkAdd16Insts = false;
@@ -780,6 +781,8 @@ public:
     return HasFP8Insts;
   }
 
+  bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
   }
@@ -853,8 +856,6 @@ public:
   }
 
   bool hasInstPrefetch() const {
-    // GFX12 can still encode the s_set_inst_prefetch_distance instruction but
-    // it has no effect.
     return getGeneration() == GFX10 || getGeneration() == GFX11;
   }
 
@@ -1001,6 +1002,8 @@ public:
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
+
+  bool hasNonNSAEncoding() const { return getGeneration() < GFX12; }
 
   bool hasPartialNSAEncoding() const { return HasPartialNSAEncoding; }
 
@@ -1195,6 +1198,10 @@ public:
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
 
+  /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
+  /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
+  bool hasExtendedWaitCounts() const { return getGeneration() >= GFX12; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
@@ -1268,6 +1275,14 @@ public:
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if VADDR and SADDR fields in VSCRATCH can use negative
+  /// values.
+  bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
+
+  // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
+  // of sign-extending.
+  bool hasGetPCZeroExtension() const { return GFX12Insts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

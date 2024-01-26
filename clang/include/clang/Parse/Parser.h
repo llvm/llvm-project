@@ -3581,6 +3581,17 @@ private:
   /// Parses the clause-list for an OpenACC directive.
   void ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
   bool ParseOpenACCWaitArgument();
+  /// Parses the clause of the 'bind' argument, which can be a string literal or
+  /// an ID expression.
+  ExprResult ParseOpenACCBindClauseArgument();
+  /// Parses the clause kind of 'int-expr', which can be any integral
+  /// expression.
+  ExprResult ParseOpenACCIntExpr();
+  /// Parses the 'device-type-list', which is a list of identifiers.
+  bool ParseOpenACCDeviceTypeList();
+  /// Parses the 'async-argument', which is an integral value with two
+  /// 'special' values that are likely negative (but come from Macros).
+  ExprResult ParseOpenACCAsyncArgument();
 
 private:
   //===--------------------------------------------------------------------===//
@@ -3655,6 +3666,18 @@ private:
   Decl *
   ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                          SourceLocation &DeclEnd);
+
+  /// Parse the given string as a type.
+  ///
+  /// This is a dangerous utility function currently employed only by API notes.
+  /// It is not a general entry-point for safely parsing types from strings.
+  ///
+  /// \param TypeStr The string to be parsed as a type.
+  /// \param Context The name of the context in which this string is being
+  /// parsed, which will be used in diagnostics.
+  /// \param IncludeLoc The location at which this parse was triggered.
+  TypeResult ParseTypeFromString(StringRef TypeStr, StringRef Context,
+                                 SourceLocation IncludeLoc);
 
   //===--------------------------------------------------------------------===//
   // Modules
