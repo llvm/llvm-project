@@ -2991,205 +2991,293 @@ void ModuleVisitor::EraseRenamedUse(const Symbol *useSymbol) {
 }
 
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
-    Symbol &localSymbol, const Symbol &useSymbol) {
+    Symbol &originalLocal, const Symbol &useSymbol) {
   if (localName != useSymbol.name()) {
     EraseRenamedUse(&useSymbol);
   }
-  if (auto *details{localSymbol.detailsIf<UseErrorDetails>()}) {
+  Symbol *localSymbol{&originalLocal};
+  if (auto *details{localSymbol->detailsIf<UseErrorDetails>()}) {
     details->add_occurrence(location, *useModuleScope_);
     return;
   }
   const Symbol &useUltimate{useSymbol.GetUltimate()};
-  if (localSymbol.has<UnknownDetails>()) {
-    localSymbol.set_details(UseDetails{localName, useSymbol});
-    localSymbol.attrs() =
+  if (localSymbol->has<UnknownDetails>()) {
+    localSymbol->set_details(UseDetails{localName, useSymbol});
+    localSymbol->attrs() =
         useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
-    localSymbol.implicitAttrs() =
-        localSymbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
-    localSymbol.flags() = useSymbol.flags();
+    localSymbol->implicitAttrs() =
+        localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+    localSymbol->flags() = useSymbol.flags();
     return;
   }
 
-  Symbol &localUltimate{localSymbol.GetUltimate()};
+  Symbol &localUltimate{localSymbol->GetUltimate()};
   if (&localUltimate == &useUltimate) {
     // use-associating the same symbol again -- ok
     return;
   }
 
-  auto checkAmbiguousDerivedType{[this, location, localName](
-                                     const Symbol *t1, const Symbol *t2) {
-    if (t1 && t2) {
-      t1 = &t1->GetUltimate();
-      t2 = &t2->GetUltimate();
-      if (&t1 != &t2) {
-        Say(location,
-            "Generic interface '%s' has ambiguous derived types from modules '%s' and '%s'"_err_en_US,
-            localName, t1->owner().GetName().value(),
-            t2->owner().GetName().value());
-        return false;
-      }
-    }
-    return true;
-  }};
+  // There are many possible combinations of symbol types that could arrive
+  // with the same (local) name vie USE association from distinct modules.
+  // Fortran allows a generic interface to share its name with a derived type,
+  // or with the name of a non-generic procedure (which should be one of the
+  // generic's specific procedures).  Implementing all these possibilities is
+  // complicated.
+  // Error cases are converted into UseErrorDetails symbols to trigger error
+  // messages when/if bad combinations are actually used later in the program.
+  // The error cases are:
+  //   - two distinct derived types
+  //   - two distinct non-generic procedures
+  //   - a generic and a non-generic that is not already one of its specifics
+  //   - anything other than a derived type, non-generic procedure, or
+  //     generic procedure being combined with something other than an
+  //     prior USE association of itself
 
   auto *localGeneric{localUltimate.detailsIf<GenericDetails>()};
   const auto *useGeneric{useUltimate.detailsIf<GenericDetails>()};
-  auto combine{false};
+
+  Symbol *localDerivedType{nullptr};
+  if (localUltimate.has<DerivedTypeDetails>()) {
+    localDerivedType = &localUltimate;
+  } else if (localGeneric) {
+    if (auto *dt{localGeneric->derivedType()};
+        dt && !dt->attrs().test(Attr::PRIVATE)) {
+      localDerivedType = dt;
+    }
+  }
+  const Symbol *useDerivedType{nullptr};
+  if (useUltimate.has<DerivedTypeDetails>()) {
+    useDerivedType = &useUltimate;
+  } else if (useGeneric) {
+    if (const auto *dt{useGeneric->derivedType()};
+        dt && !dt->attrs().test(Attr::PRIVATE)) {
+      useDerivedType = dt;
+    }
+  }
+
+  Symbol *localProcedure{nullptr};
   if (localGeneric) {
-    if (useGeneric) {
-      combine = checkAmbiguousDerivedType(
-          localGeneric->derivedType(), useGeneric->derivedType());
-    } else if (useUltimate.has<DerivedTypeDetails>()) {
-      combine =
-          checkAmbiguousDerivedType(&useUltimate, localGeneric->derivedType());
+    if (localGeneric->specific() &&
+        !localGeneric->specific()->attrs().test(Attr::PRIVATE)) {
+      localProcedure = localGeneric->specific();
+    }
+  } else if (IsProcedure(localUltimate)) {
+    localProcedure = &localUltimate;
+  }
+  const Symbol *useProcedure{nullptr};
+  if (useGeneric) {
+    if (useGeneric->specific() &&
+        !useGeneric->specific()->attrs().test(Attr::PRIVATE)) {
+      useProcedure = useGeneric->specific();
+    }
+  } else if (IsProcedure(useUltimate)) {
+    useProcedure = &useUltimate;
+  }
+
+  // Creates a UseErrorDetails symbol in the current scope for a
+  // current UseDetails symbol, but leaves the UseDetails in the
+  // scope's name map.
+  auto CreateLocalUseError{[&]() {
+    EraseSymbol(*localSymbol);
+    UseErrorDetails details{localSymbol->get<UseDetails>()};
+    details.add_occurrence(location, *useModuleScope_);
+    Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
+    // Restore *localSymbol in currScope
+    auto iter{currScope().find(localName)};
+    CHECK(iter != currScope().end() && &*iter->second == newSymbol);
+    iter->second = MutableSymbolRef{*localSymbol};
+    return newSymbol;
+  }};
+
+  // When two derived types arrived, try to combine them.
+  const Symbol *combinedDerivedType{nullptr};
+  if (!useDerivedType) {
+    combinedDerivedType = localDerivedType;
+  } else if (!localDerivedType) {
+    combinedDerivedType = useDerivedType;
+  } else {
+    const Scope *localScope{localDerivedType->scope()};
+    const Scope *useScope{useDerivedType->scope()};
+    if (localScope && useScope && localScope->derivedTypeSpec() &&
+        useScope->derivedTypeSpec() &&
+        evaluate::AreSameDerivedType(
+            *localScope->derivedTypeSpec(), *useScope->derivedTypeSpec())) {
+      combinedDerivedType = localDerivedType;
+    } else {
+      // Create a local UseErrorDetails for the ambiguous derived type
+      if (localGeneric) {
+        combinedDerivedType = CreateLocalUseError();
+      } else {
+        ConvertToUseError(*localSymbol, location, *useModuleScope_);
+        combinedDerivedType = localSymbol;
+      }
+    }
+    if (!localGeneric && !useGeneric) {
+      return; // both symbols are derived types; done
+    }
+  }
+
+  auto AreSameProcedure{[&](const Symbol &p1, const Symbol &p2) {
+    if (&p1 == &p2) {
+      return true;
+    } else if (p1.name() != p2.name()) {
+      return false;
+    } else if (p1.attrs().test(Attr::INTRINSIC) ||
+        p2.attrs().test(Attr::INTRINSIC)) {
+      return p1.attrs().test(Attr::INTRINSIC) &&
+          p2.attrs().test(Attr::INTRINSIC);
+    } else if (!IsProcedure(p1) || !IsProcedure(p2)) {
+      return false;
+    } else if (IsPointer(p1) || IsPointer(p2)) {
+      return false;
+    } else if (const auto *subp{p1.detailsIf<SubprogramDetails>()};
+               subp && !subp->isInterface()) {
+      return false; // defined in module, not an external
+    } else if (const auto *subp{p2.detailsIf<SubprogramDetails>()};
+               subp && !subp->isInterface()) {
+      return false; // defined in module, not an external
+    } else {
+      // Both are external interfaces, perhaps to the same procedure
+      auto class1{ClassifyProcedure(p1)};
+      auto class2{ClassifyProcedure(p2)};
+      if (class1 == ProcedureDefinitionClass::External &&
+          class2 == ProcedureDefinitionClass::External) {
+        auto chars1{evaluate::characteristics::Procedure::Characterize(
+            p1, GetFoldingContext())};
+        auto chars2{evaluate::characteristics::Procedure::Characterize(
+            p2, GetFoldingContext())};
+        // same procedure interface defined identically in two modules?
+        return chars1 && chars2 && *chars1 == *chars2;
+      } else {
+        return false;
+      }
+    }
+  }};
+
+  // When two non-generic procedures arrived, try to combine them.
+  const Symbol *combinedProcedure{nullptr};
+  if (!localProcedure) {
+    combinedProcedure = useProcedure;
+  } else if (!useProcedure) {
+    combinedProcedure = localProcedure;
+  } else {
+    if (AreSameProcedure(
+            localProcedure->GetUltimate(), useProcedure->GetUltimate())) {
+      if (!localGeneric && !useGeneric) {
+        return; // both symbols are non-generic procedures
+      }
+      combinedProcedure = localProcedure;
+    }
+  }
+
+  // Prepare to merge generics
+  bool cantCombine{false};
+  if (localGeneric) {
+    if (useGeneric || useDerivedType) {
     } else if (&useUltimate == &BypassGeneric(localUltimate).GetUltimate()) {
       return; // nothing to do; used subprogram is local's specific
     } else if (useUltimate.attrs().test(Attr::INTRINSIC) &&
-        useUltimate.name() == localSymbol.name()) {
+        useUltimate.name() == localSymbol->name()) {
       return; // local generic can extend intrinsic
+    } else {
+      for (const auto &ref : localGeneric->specificProcs()) {
+        if (&ref->GetUltimate() == &useUltimate) {
+          return; // used non-generic is already a specific of local generic
+        }
+      }
+      cantCombine = true;
     }
   } else if (useGeneric) {
-    if (localUltimate.has<DerivedTypeDetails>()) {
-      combine =
-          checkAmbiguousDerivedType(&localUltimate, useGeneric->derivedType());
+    if (localDerivedType) {
     } else if (&localUltimate == &BypassGeneric(useUltimate).GetUltimate() ||
-        (localSymbol.attrs().test(Attr::INTRINSIC) &&
+        (localSymbol->attrs().test(Attr::INTRINSIC) &&
             localUltimate.name() == useUltimate.name())) {
       // Local is the specific of the used generic or an intrinsic with the
       // same name; replace it.
-      EraseSymbol(localSymbol);
+      EraseSymbol(*localSymbol);
       Symbol &newSymbol{MakeSymbol(localName,
           useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
           UseDetails{localName, useUltimate})};
       newSymbol.flags() = useSymbol.flags();
       return;
-    }
-  } else if (localUltimate.name() != useUltimate.name()) {
-    // not the same procedure
-  } else if (localUltimate.attrs().test(Attr::INTRINSIC) &&
-      useUltimate.attrs().test(Attr::INTRINSIC)) {
-    return;
-  } else {
-    auto localClass{ClassifyProcedure(localUltimate)};
-    auto useClass{ClassifyProcedure(useUltimate)};
-    if (localClass == ProcedureDefinitionClass::External &&
-        useClass == ProcedureDefinitionClass::External) {
-      auto localChars{evaluate::characteristics::Procedure::Characterize(
-          localUltimate, GetFoldingContext())};
-      auto useChars{evaluate::characteristics::Procedure::Characterize(
-          useUltimate, GetFoldingContext())};
-      if (localChars && useChars && *localChars == *useChars) {
-        return; // same procedure defined identically in two modules
+    } else {
+      for (const auto &ref : useGeneric->specificProcs()) {
+        if (&ref->GetUltimate() == &localUltimate) {
+          return; // local non-generic is already a specific of used generic
+        }
       }
+      cantCombine = true;
     }
+  } else {
+    cantCombine = true;
   }
-  if (!combine) {
-    if (!ConvertToUseError(localSymbol, location, *useModuleScope_)) {
+
+  // If symbols are not combinable, create a use error.
+  if (cantCombine) {
+    if (!ConvertToUseError(*localSymbol, location, *useModuleScope_)) {
       Say(location,
           "Cannot use-associate '%s'; it is already declared in this scope"_err_en_US,
           localName)
-          .Attach(localSymbol.name(), "Previous declaration of '%s'"_en_US,
+          .Attach(localSymbol->name(), "Previous declaration of '%s'"_en_US,
               localName);
     }
     return;
   }
 
-  // Two items are being use-associated from different modules
-  // to the same local name.  At least one of them must be a generic,
-  // and the other one can be a generic or a derived type.
-  // (It could also have been the specific of the generic, but those
-  // cases are handled above without needing to make a local copy of the
-  // generic.)
+  // At this point, there must be at least one generic interface.
+  CHECK(localGeneric || (useGeneric && (localDerivedType || localProcedure)));
 
-  std::optional<parser::MessageFixedText> msg;
   if (localGeneric) {
-    if (localSymbol.has<UseDetails>()) {
-      // Create a local copy of a previously use-associated generic so that
-      // it can be locally extended without corrupting the original.
+    // Create a local copy of a previously use-associated generic so that
+    // it can be locally extended without corrupting the original.
+    if (localSymbol->has<UseDetails>()) {
       GenericDetails generic;
-      generic.CopyFrom(*localGeneric);
-      if (Symbol * spec{localGeneric->specific()};
-          spec && !spec->attrs().test(Attr::PRIVATE)) {
-        generic.set_specific(*spec);
-      } else if (Symbol * dt{generic.derivedType()};
-                 dt && dt->attrs().test(Attr::PRIVATE)) {
-        generic.clear_derivedType();
-      }
-      EraseSymbol(localSymbol);
+      generic.CopyFrom(DEREF(localGeneric));
+      EraseSymbol(*localSymbol);
       Symbol &newSymbol{MakeSymbol(
-          localSymbol.name(), localSymbol.attrs(), std::move(generic))};
-      newSymbol.flags() = localSymbol.flags();
+          localSymbol->name(), localSymbol->attrs(), std::move(generic))};
+      newSymbol.flags() = localSymbol->flags();
       localGeneric = &newSymbol.get<GenericDetails>();
-      localGeneric->AddUse(localSymbol);
+      localGeneric->AddUse(*localSymbol);
+      localSymbol = &newSymbol;
     }
     if (useGeneric) {
       // Combine two use-associated generics
-      localSymbol.attrs() =
+      localSymbol->attrs() =
           useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
-      localSymbol.flags() = useSymbol.flags();
+      localSymbol->flags() = useSymbol.flags();
       AddGenericUse(*localGeneric, localName, useUltimate);
+      localGeneric->clear_derivedType();
       localGeneric->CopyFrom(*useGeneric);
-      if (const Symbol * useSpec{useGeneric->specific()};
-          useSpec && !useSpec->attrs().test(Attr::PRIVATE)) {
-        if (localGeneric->derivedType()) {
-          msg =
-              "Cannot use-associate generic interface '%s' with specific procedure of the same name when another such interface and derived type are in scope"_err_en_US;
-        } else if (!localGeneric->specific()) {
-          localGeneric->set_specific(*const_cast<Symbol *>(useSpec));
-        } else if (&localGeneric->specific()->GetUltimate() !=
-            &useSpec->GetUltimate()) {
-          msg =
-              "Cannot use-associate generic interface '%s' with specific procedure of the same name when another such interface and procedure are in scope"_err_en_US;
-        }
-      } else if (const Symbol * useDT{useGeneric->derivedType()};
-                 useDT && !useDT->attrs().test(Attr::PRIVATE)) {
-        if (localGeneric->specific()) {
-          msg =
-              "Cannot use-associate generic interface '%s' with derived type of the same name when another such interface and procedure are in scope"_err_en_US;
-        } else if (!localGeneric->derivedType()) {
-          localGeneric->set_derivedType(*const_cast<Symbol *>(useDT));
-        } else if (&localGeneric->derivedType()->GetUltimate() !=
-            &useDT->GetUltimate()) {
-          msg =
-              "Cannot use-associate generic interface '%s' with derived type of the same name when another such interface and derived type are in scope"_err_en_US;
-        }
-      }
-    } else {
-      CHECK(useUltimate.has<DerivedTypeDetails>());
-      if (!localGeneric->derivedType()) {
-        localGeneric->set_derivedType(
-            AddGenericUse(*localGeneric, localName, useUltimate));
-      } else if (&localGeneric->derivedType()->GetUltimate() != &useUltimate) {
-        msg =
-            "Cannot use-associate derived type '%s' when a generic interface and derived type of the same name are in scope"_err_en_US;
-      }
+    }
+    localGeneric->clear_derivedType();
+    if (combinedDerivedType) {
+      localGeneric->set_derivedType(*const_cast<Symbol *>(combinedDerivedType));
+    }
+    localGeneric->clear_specific();
+    if (combinedProcedure) {
+      localGeneric->set_specific(*const_cast<Symbol *>(combinedProcedure));
     }
   } else {
-    CHECK(useGeneric && localUltimate.has<DerivedTypeDetails>());
-    CHECK(localSymbol.has<UseDetails>());
+    CHECK(localSymbol->has<UseDetails>());
     // Create a local copy of the use-associated generic, then extend it
-    // with the local derived type.
-    if (!useGeneric->derivedType() ||
-        &useGeneric->derivedType()->GetUltimate() == &localUltimate) {
-      GenericDetails generic;
-      generic.CopyFrom(*useGeneric);
-      EraseSymbol(localSymbol);
-      Symbol &newSymbol{MakeSymbol(localName,
-          useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
-          std::move(generic))};
-      newSymbol.flags() = useUltimate.flags();
-      auto &newUseGeneric{newSymbol.get<GenericDetails>()};
-      AddGenericUse(newUseGeneric, localName, useUltimate);
-      newUseGeneric.AddUse(localSymbol);
-      newUseGeneric.set_derivedType(localSymbol);
-    } else if (useGeneric->derivedType()) {
-      msg =
-          "Cannot use-associate generic interface '%s' with derived type of the same name when another such derived type is in scope"_err_en_US;
+    // with the combined derived type &/or non-generic procedure.
+    GenericDetails generic;
+    generic.CopyFrom(*useGeneric);
+    EraseSymbol(*localSymbol);
+    Symbol &newSymbol{MakeSymbol(localName,
+        useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
+        std::move(generic))};
+    newSymbol.flags() = useUltimate.flags();
+    auto &newUseGeneric{newSymbol.get<GenericDetails>()};
+    AddGenericUse(newUseGeneric, localName, useUltimate);
+    newUseGeneric.AddUse(*localSymbol);
+    if (combinedDerivedType) {
+      newUseGeneric.set_derivedType(*const_cast<Symbol *>(combinedDerivedType));
     }
-  }
-  if (msg) {
-    Say(location, std::move(*msg), localName)
-        .Attach(localSymbol.name(), "Previous USE of '%s'"_en_US, localName);
+    if (combinedProcedure) {
+      newUseGeneric.set_specific(*const_cast<Symbol *>(combinedProcedure));
+    }
   }
 }
 
@@ -4425,18 +4513,7 @@ void DeclarationVisitor::EndDecl() {
 }
 
 bool DeclarationVisitor::CheckUseError(const parser::Name &name) {
-  const auto *details{
-      name.symbol ? name.symbol->detailsIf<UseErrorDetails>() : nullptr};
-  if (!details) {
-    return false;
-  }
-  Message &msg{Say(name, "Reference to '%s' is ambiguous"_err_en_US)};
-  for (const auto &[location, module] : details->occurrences()) {
-    msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
-        name.source, module->GetName().value());
-  }
-  context().SetError(*name.symbol);
-  return true;
+  return HadUseError(context(), name.source, name.symbol);
 }
 
 // Report error if accessibility of symbol doesn't match isPrivate.
@@ -4817,8 +4894,8 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     symbol = &MakeSymbol(name, EntityDetails{});
   }
   if (CheckDuplicatedAttr(name.source, *symbol, attr)) {
+    HandleSaveName(name.source, Attrs{attr});
     SetExplicitAttr(*symbol, attr);
-    symbol->attrs() = HandleSaveName(name.source, symbol->attrs());
   }
   return *symbol;
 }

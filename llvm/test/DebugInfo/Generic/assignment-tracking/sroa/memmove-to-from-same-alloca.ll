@@ -1,5 +1,7 @@
 ; RUN: opt %s -passes=sroa -o - -S \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=sroa -o - -S \
+; RUN: | FileCheck %s
 
 ;; Generated from this C++ source:
 ;; __attribute__((nodebug)) struct Blob {int P[6];} Glob;

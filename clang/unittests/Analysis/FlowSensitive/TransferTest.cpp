@@ -12,14 +12,13 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -2642,14 +2641,17 @@ TEST(TransferTest, ResultObjectLocation) {
     };
 
     void target() {
-      A();
+      0, A();
       (void)0; // [[p]]
     }
   )";
+  using ast_matchers::binaryOperator;
   using ast_matchers::cxxBindTemporaryExpr;
   using ast_matchers::cxxTemporaryObjectExpr;
   using ast_matchers::exprWithCleanups;
   using ast_matchers::has;
+  using ast_matchers::hasOperatorName;
+  using ast_matchers::hasRHS;
   using ast_matchers::match;
   using ast_matchers::selectFirst;
   using ast_matchers::traverse;
@@ -2659,26 +2661,33 @@ TEST(TransferTest, ResultObjectLocation) {
          ASTContext &ASTCtx) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        // The expresssion `A()` in the code above produces the following
-        // structure, consisting of three prvalues of record type.
+        // The expression `0, A()` in the code above produces the following
+        // structure, consisting of four prvalues of record type.
         // `Env.getResultObjectLocation()` should return the same location for
         // all of these.
         auto MatchResult = match(
             traverse(TK_AsIs,
                      exprWithCleanups(
-                         has(cxxBindTemporaryExpr(
-                                 has(cxxTemporaryObjectExpr().bind("toe")))
-                                 .bind("bte")))
+                         has(binaryOperator(
+                                 hasOperatorName(","),
+                                 hasRHS(cxxBindTemporaryExpr(
+                                            has(cxxTemporaryObjectExpr().bind(
+                                                "toe")))
+                                            .bind("bte")))
+                                 .bind("comma")))
                          .bind("ewc")),
             ASTCtx);
         auto *TOE = selectFirst<CXXTemporaryObjectExpr>("toe", MatchResult);
         ASSERT_NE(TOE, nullptr);
+        auto *Comma = selectFirst<BinaryOperator>("comma", MatchResult);
+        ASSERT_NE(Comma, nullptr);
         auto *EWC = selectFirst<ExprWithCleanups>("ewc", MatchResult);
         ASSERT_NE(EWC, nullptr);
         auto *BTE = selectFirst<CXXBindTemporaryExpr>("bte", MatchResult);
         ASSERT_NE(BTE, nullptr);
 
         RecordStorageLocation &Loc = Env.getResultObjectLocation(*TOE);
+        EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*Comma));
         EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*EWC));
         EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*BTE));
       });
@@ -6447,6 +6456,37 @@ TEST(TransferTest, DifferentReferenceLocInJoin) {
         // environment.
         const ValueDecl *VD = findValueDecl(ASTCtx, "range");
         ASSERT_EQ(Env.getStorageLocation(*VD), nullptr);
+      });
+}
+
+// This test verifies correct modeling of a relational dependency that goes
+// through unmodeled functions (the simple `cond()` in this case).
+TEST(TransferTest, ConditionalRelation) {
+  std::string Code = R"(
+    bool cond();
+    void target() {
+       bool a = true;
+       bool b = true;
+       if (cond()) {
+         a = false;
+         if (cond()) {
+           b = false;
+         }
+       }
+       (void)0;
+       // [[p]]
+    }
+ )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &A = Env.arena();
+        auto &VarA = getValueForDecl<BoolValue>(ASTCtx, Env, "a").formula();
+        auto &VarB = getValueForDecl<BoolValue>(ASTCtx, Env, "b").formula();
+
+        EXPECT_FALSE(Env.allows(A.makeAnd(VarA, A.makeNot(VarB))));
       });
 }
 

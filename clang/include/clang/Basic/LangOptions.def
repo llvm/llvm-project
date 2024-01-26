@@ -220,7 +220,7 @@ BENIGN_LANGOPT(NoSignedZero      , 1, 0, "Permit Floating Point optimization wit
 BENIGN_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
 BENIGN_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
-ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_Full, "Enable use of range reduction for complex arithmetics.")
+ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_None, "Enable use of range reduction for complex arithmetics.")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 
@@ -260,6 +260,7 @@ LANGOPT(OpenMPTeamSubscription  , 1, 0, "Assume distributed loops do not have mo
 LANGOPT(OpenMPNoThreadState  , 1, 0, "Assume that no thread in a parallel region will modify an ICV.")
 LANGOPT(OpenMPNoNestedParallelism  , 1, 0, "Assume that no thread in a parallel region will encounter a parallel region")
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, "Assert that offloading is mandatory and do not create a host fallback.")
+LANGOPT(OpenMPForceUSM     , 1, 0, "Enable OpenMP unified shared memory mode via compiler.")
 LANGOPT(NoGPULib  , 1, 0, "Indicate a build without the standard GPU libraries.")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
@@ -308,7 +309,8 @@ BENIGN_LANGOPT(IgnoreXCOFFVisibility, 1, 0, "All the visibility attributes that 
 BENIGN_LANGOPT(VisibilityInlinesHiddenStaticLocalVar, 1, 0,
                "hidden visibility for static local variables in inline C++ "
                "methods when -fvisibility-inlines hidden is enabled")
-LANGOPT(GlobalAllocationFunctionVisibilityHidden , 1, 0, "hidden visibility for global operator new and delete declaration")
+ENUM_LANGOPT(GlobalAllocationFunctionVisibility, VisibilityForcedKinds, 3, VisibilityForcedKinds::ForceDefault,
+             "How to apply visibility to global operator new and delete declarations")
 LANGOPT(NewInfallible , 1, 0, "Treats throwing global C++ operator new as always returning valid memory (annotates with __attribute__((returns_nonnull)) and throw()). This is detectable in source.")
 BENIGN_LANGOPT(ParseUnknownAnytype, 1, 0, "__unknown_anytype")
 BENIGN_LANGOPT(DebuggerSupport , 1, 0, "debugger support")
@@ -483,7 +485,7 @@ VALUE_LANGOPT(FuchsiaAPILevel, 32, 0, "Fuchsia API level")
 // on large _BitInts.
 BENIGN_VALUE_LANGOPT(MaxBitIntWidth, 32, 128, "Maximum width of a _BitInt")
 
-LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
+COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process statements"
         "on the global scope, ignore EOF token and continue later on (thus "
         "avoid tearing the Lexer and etc. down). Controlled by "
         "-fincremental-extensions.")

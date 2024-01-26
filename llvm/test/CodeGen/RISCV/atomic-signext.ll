@@ -2,11 +2,15 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefix=RV32IA %s
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS %s
+; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefix=RV64IA %s
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS %s
 
 define signext i8 @atomic_load_i8_unordered(ptr %a) nounwind {
 ; RV32I-LABEL: atomic_load_i8_unordered:
@@ -4095,17 +4099,23 @@ define signext i32 @cmpxchg_i32_monotonic_monotonic_val0(ptr %ptr, i32 signext %
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:  .LBB51_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a0)
-; RV32IA-NEXT:    bne a3, a1, .LBB51_3
-; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB51_1 Depth=1
-; RV32IA-NEXT:    sc.w a4, a2, (a0)
-; RV32IA-NEXT:    bnez a4, .LBB51_1
-; RV32IA-NEXT:  .LBB51_3:
-; RV32IA-NEXT:    mv a0, a3
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:  .LBB51_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NOZACAS-NEXT:    lr.w a3, (a0)
+; RV32IA-NOZACAS-NEXT:    bne a3, a1, .LBB51_3
+; RV32IA-NOZACAS-NEXT:  # %bb.2: # in Loop: Header=BB51_1 Depth=1
+; RV32IA-NOZACAS-NEXT:    sc.w a4, a2, (a0)
+; RV32IA-NOZACAS-NEXT:    bnez a4, .LBB51_1
+; RV32IA-NOZACAS-NEXT:  .LBB51_3:
+; RV32IA-NOZACAS-NEXT:    mv a0, a3
+; RV32IA-NOZACAS-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    amocas.w a1, a2, (a0)
+; RV32IA-ZACAS-NEXT:    mv a0, a1
+; RV32IA-ZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
 ; RV64I:       # %bb.0:
@@ -4121,17 +4131,23 @@ define signext i32 @cmpxchg_i32_monotonic_monotonic_val0(ptr %ptr, i32 signext %
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB51_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a0)
-; RV64IA-NEXT:    bne a3, a1, .LBB51_3
-; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB51_1 Depth=1
-; RV64IA-NEXT:    sc.w a4, a2, (a0)
-; RV64IA-NEXT:    bnez a4, .LBB51_1
-; RV64IA-NEXT:  .LBB51_3:
-; RV64IA-NEXT:    mv a0, a3
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB51_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.w a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bne a3, a1, .LBB51_3
+; RV64IA-NOZACAS-NEXT:  # %bb.2: # in Loop: Header=BB51_1 Depth=1
+; RV64IA-NOZACAS-NEXT:    sc.w a4, a2, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a4, .LBB51_1
+; RV64IA-NOZACAS-NEXT:  .LBB51_3:
+; RV64IA-NOZACAS-NEXT:    mv a0, a3
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val0:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    amocas.w a1, a2, (a0)
+; RV64IA-ZACAS-NEXT:    mv a0, a1
+; RV64IA-ZACAS-NEXT:    ret
   %1 = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
   %2 = extractvalue { i32, i1 } %1, 0
   ret i32 %2
@@ -4151,18 +4167,26 @@ define i1 @cmpxchg_i32_monotonic_monotonic_val1(ptr %ptr, i32 signext %cmp, i32 
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
-; RV32IA-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
-; RV32IA:       # %bb.0:
-; RV32IA-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a0)
-; RV32IA-NEXT:    bne a3, a1, .LBB52_3
-; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB52_1 Depth=1
-; RV32IA-NEXT:    sc.w a4, a2, (a0)
-; RV32IA-NEXT:    bnez a4, .LBB52_1
-; RV32IA-NEXT:  .LBB52_3:
-; RV32IA-NEXT:    xor a1, a3, a1
-; RV32IA-NEXT:    seqz a0, a1
-; RV32IA-NEXT:    ret
+; RV32IA-NOZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
+; RV32IA-NOZACAS-NEXT:    lr.w a3, (a0)
+; RV32IA-NOZACAS-NEXT:    bne a3, a1, .LBB52_3
+; RV32IA-NOZACAS-NEXT:  # %bb.2: # in Loop: Header=BB52_1 Depth=1
+; RV32IA-NOZACAS-NEXT:    sc.w a4, a2, (a0)
+; RV32IA-NOZACAS-NEXT:    bnez a4, .LBB52_1
+; RV32IA-NOZACAS-NEXT:  .LBB52_3:
+; RV32IA-NOZACAS-NEXT:    xor a1, a3, a1
+; RV32IA-NOZACAS-NEXT:    seqz a0, a1
+; RV32IA-NOZACAS-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    mv a3, a1
+; RV32IA-ZACAS-NEXT:    amocas.w a3, a2, (a0)
+; RV32IA-ZACAS-NEXT:    xor a1, a3, a1
+; RV32IA-ZACAS-NEXT:    seqz a0, a1
+; RV32IA-ZACAS-NEXT:    ret
 ;
 ; RV64I-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
 ; RV64I:       # %bb.0:
@@ -4177,18 +4201,26 @@ define i1 @cmpxchg_i32_monotonic_monotonic_val1(ptr %ptr, i32 signext %cmp, i32 
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a0)
-; RV64IA-NEXT:    bne a3, a1, .LBB52_3
-; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB52_1 Depth=1
-; RV64IA-NEXT:    sc.w a4, a2, (a0)
-; RV64IA-NEXT:    bnez a4, .LBB52_1
-; RV64IA-NEXT:  .LBB52_3:
-; RV64IA-NEXT:    xor a1, a3, a1
-; RV64IA-NEXT:    seqz a0, a1
-; RV64IA-NEXT:    ret
+; RV64IA-NOZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:  .LBB52_1: # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.w a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bne a3, a1, .LBB52_3
+; RV64IA-NOZACAS-NEXT:  # %bb.2: # in Loop: Header=BB52_1 Depth=1
+; RV64IA-NOZACAS-NEXT:    sc.w a4, a2, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a4, .LBB52_1
+; RV64IA-NOZACAS-NEXT:  .LBB52_3:
+; RV64IA-NOZACAS-NEXT:    xor a1, a3, a1
+; RV64IA-NOZACAS-NEXT:    seqz a0, a1
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: cmpxchg_i32_monotonic_monotonic_val1:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    mv a3, a1
+; RV64IA-ZACAS-NEXT:    amocas.w a3, a2, (a0)
+; RV64IA-ZACAS-NEXT:    xor a1, a3, a1
+; RV64IA-ZACAS-NEXT:    seqz a0, a1
+; RV64IA-ZACAS-NEXT:    ret
   %1 = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
   %2 = extractvalue { i32, i1 } %1, 1
   ret i1 %2
@@ -5398,3 +5430,118 @@ merge:
   ret i32 %4
 }
 declare i32 @llvm.umin.i32(i32, i32)
+
+define signext i32 @cmpxchg_i32_monotonic_crossbb(ptr %ptr, i32 signext %cmp, i32 signext %val, i1 zeroext %c) nounwind {
+; RV32I-LABEL: cmpxchg_i32_monotonic_crossbb:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a3, .LBB64_2
+; RV32I-NEXT:  # %bb.1: # %then
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a1, 8(sp)
+; RV32I-NEXT:    addi a1, sp, 8
+; RV32I-NEXT:    li a3, 5
+; RV32I-NEXT:    li a4, 5
+; RV32I-NEXT:    call __atomic_compare_exchange_4
+; RV32I-NEXT:    lw a0, 8(sp)
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB64_2: # %else
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV32IA-NOZACAS-LABEL: cmpxchg_i32_monotonic_crossbb:
+; RV32IA-NOZACAS:       # %bb.0:
+; RV32IA-NOZACAS-NEXT:    mv a4, a0
+; RV32IA-NOZACAS-NEXT:    beqz a3, .LBB64_2
+; RV32IA-NOZACAS-NEXT:  # %bb.1: # %then
+; RV32IA-NOZACAS-NEXT:  .LBB64_3: # %then
+; RV32IA-NOZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32IA-NOZACAS-NEXT:    lr.w.aqrl a0, (a4)
+; RV32IA-NOZACAS-NEXT:    bne a0, a1, .LBB64_5
+; RV32IA-NOZACAS-NEXT:  # %bb.4: # %then
+; RV32IA-NOZACAS-NEXT:    # in Loop: Header=BB64_3 Depth=1
+; RV32IA-NOZACAS-NEXT:    sc.w.rl a3, a2, (a4)
+; RV32IA-NOZACAS-NEXT:    bnez a3, .LBB64_3
+; RV32IA-NOZACAS-NEXT:  .LBB64_5: # %then
+; RV32IA-NOZACAS-NEXT:    ret
+; RV32IA-NOZACAS-NEXT:  .LBB64_2: # %else
+; RV32IA-NOZACAS-NEXT:    lw a0, 0(a4)
+; RV32IA-NOZACAS-NEXT:    ret
+;
+; RV32IA-ZACAS-LABEL: cmpxchg_i32_monotonic_crossbb:
+; RV32IA-ZACAS:       # %bb.0:
+; RV32IA-ZACAS-NEXT:    beqz a3, .LBB64_2
+; RV32IA-ZACAS-NEXT:  # %bb.1: # %then
+; RV32IA-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
+; RV32IA-ZACAS-NEXT:    mv a0, a1
+; RV32IA-ZACAS-NEXT:    ret
+; RV32IA-ZACAS-NEXT:  .LBB64_2: # %else
+; RV32IA-ZACAS-NEXT:    lw a0, 0(a0)
+; RV32IA-ZACAS-NEXT:    ret
+;
+; RV64I-LABEL: cmpxchg_i32_monotonic_crossbb:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a3, .LBB64_2
+; RV64I-NEXT:  # %bb.1: # %then
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    addi a1, sp, 4
+; RV64I-NEXT:    li a3, 5
+; RV64I-NEXT:    li a4, 5
+; RV64I-NEXT:    call __atomic_compare_exchange_4
+; RV64I-NEXT:    lw a0, 4(sp)
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB64_2: # %else
+; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    ret
+;
+; RV64IA-NOZACAS-LABEL: cmpxchg_i32_monotonic_crossbb:
+; RV64IA-NOZACAS:       # %bb.0:
+; RV64IA-NOZACAS-NEXT:    beqz a3, .LBB64_2
+; RV64IA-NOZACAS-NEXT:  # %bb.1: # %then
+; RV64IA-NOZACAS-NEXT:  .LBB64_3: # %then
+; RV64IA-NOZACAS-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64IA-NOZACAS-NEXT:    lr.w.aqrl a3, (a0)
+; RV64IA-NOZACAS-NEXT:    bne a3, a1, .LBB64_5
+; RV64IA-NOZACAS-NEXT:  # %bb.4: # %then
+; RV64IA-NOZACAS-NEXT:    # in Loop: Header=BB64_3 Depth=1
+; RV64IA-NOZACAS-NEXT:    sc.w.rl a4, a2, (a0)
+; RV64IA-NOZACAS-NEXT:    bnez a4, .LBB64_3
+; RV64IA-NOZACAS-NEXT:  .LBB64_5: # %then
+; RV64IA-NOZACAS-NEXT:    sext.w a0, a3
+; RV64IA-NOZACAS-NEXT:    ret
+; RV64IA-NOZACAS-NEXT:  .LBB64_2: # %else
+; RV64IA-NOZACAS-NEXT:    lw a3, 0(a0)
+; RV64IA-NOZACAS-NEXT:    sext.w a0, a3
+; RV64IA-NOZACAS-NEXT:    ret
+;
+; RV64IA-ZACAS-LABEL: cmpxchg_i32_monotonic_crossbb:
+; RV64IA-ZACAS:       # %bb.0:
+; RV64IA-ZACAS-NEXT:    beqz a3, .LBB64_2
+; RV64IA-ZACAS-NEXT:  # %bb.1: # %then
+; RV64IA-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
+; RV64IA-ZACAS-NEXT:    mv a0, a1
+; RV64IA-ZACAS-NEXT:    ret
+; RV64IA-ZACAS-NEXT:  .LBB64_2: # %else
+; RV64IA-ZACAS-NEXT:    lw a0, 0(a0)
+; RV64IA-ZACAS-NEXT:    ret
+  br i1 %c, label %then, label %else
+
+then:
+  %1 = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst seq_cst
+  %2 = extractvalue { i32, i1 } %1, 0
+  br label %merge
+
+else:
+  %3 = load i32, ptr %ptr, align 4
+  br label %merge
+
+merge:
+  %4 = phi i32 [ %2, %then ], [ %3, %else ]
+  ret i32 %4
+}
