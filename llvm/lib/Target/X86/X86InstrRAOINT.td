@@ -26,13 +26,10 @@ def X86rao_and  : SDNode<"X86ISD::AAND", SDTRAOBinaryArith,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 multiclass RaoInt<string m, string suffix = ""> {
-  let SchedRW = [WriteALURMW, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault] in {
-    def 32mr#suffix : BinOpMR<0xfc, "a" # m, binop_args, Xi32, (outs),
-                        [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR32:$src2)]>;
-
-    def 64mr#suffix : BinOpMR<0xfc, "a" # m, binop_args, Xi64, (outs),
-                        [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR64:$src2)]>, REX_W;
-  }
+  let Pattern = [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR32:$src2)] in
+    def 32mr#suffix : BinOpMR_M<0xfc, "a" # m, Xi32>;
+  let Pattern = [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR64:$src2)] in
+    def 64mr#suffix : BinOpMR_M<0xfc, "a" # m, Xi64>;
 }
 
 let Predicates = [HasRAOINT, NoEGPR] in {
