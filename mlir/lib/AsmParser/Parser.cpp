@@ -1292,6 +1292,19 @@ OperationParser::storeSSANames(Operation *&op,
           StringAttr::get(getContext(), std::get<0>(resIt).drop_front(1)));
     }
   }
+
+  // Find the name of the block that contains this operation.
+  Block *blockPtr = op->getBlock();
+  for (const auto &map : blocksByName) {
+    for (const auto &entry : map) {
+      if (entry.second.block == blockPtr) {
+        op->setDiscardableAttr("mlir.blockName",
+                               StringAttr::get(getContext(), entry.first));
+        llvm::outs() << "Block name: " << entry.first << "\n";
+      }
+    }
+  }
+
   return success();
 }
 

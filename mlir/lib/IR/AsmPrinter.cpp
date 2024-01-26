@@ -1298,6 +1298,10 @@ private:
   /// conflicts, it is automatically renamed.
   StringRef uniqueValueName(StringRef name);
 
+  /// Set the original identifier names if available. Used in debugging with
+  /// `--retain-identifier-names`/`shouldRetainIdentifierNames` in ParserConfig
+  void setRetainedIdentifierNames(Operation &op);
+
   /// This is the value ID for each SSA value. If this returns NameSentinel,
   /// then the valueID has an entry in valueNames.
   DenseMap<Value, unsigned> valueIDs;
@@ -1578,11 +1582,9 @@ void SSANameState::numberValuesInOp(Operation &op) {
   }
   Value resultBegin = op.getResult(0);
 
-  // Get the original SSA for the result if available
-  if (StringAttr ssaNameAttr = op.getAttrOfType<StringAttr>("mlir.ssaName")) {
-    setValueName(resultBegin, ssaNameAttr.strref());
-    op.removeDiscardableAttr("mlir.ssaName");
-  }
+  // Set the original identifier names if available. Used in debugging with
+  // `--retain-identifier-names`/`shouldRetainIdentifierNames` in ParserConfig
+  setRetainedIdentifierNames(op);
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)
@@ -1593,6 +1595,27 @@ void SSANameState::numberValuesInOp(Operation &op) {
     llvm::array_pod_sort(resultGroups.begin(), resultGroups.end());
     opResultGroups.try_emplace(&op, std::move(resultGroups));
   }
+}
+
+void SSANameState::setRetainedIdentifierNames(Operation &op) {
+  // Get the original SSA for the result(s) if available
+  Value resultBegin = op.getResult(0);
+  if (StringAttr ssaNameAttr = op.getAttrOfType<StringAttr>("mlir.ssaName")) {
+    setValueName(resultBegin, ssaNameAttr.strref());
+    op.removeDiscardableAttr("mlir.ssaName");
+  }
+  unsigned numResults = op.getNumResults();
+  if (numResults > 1)
+    llvm::outs()
+        << "have not yet implemented support for multiple return values\n";
+
+  // Get the original SSA name for the block if available
+  if (StringAttr blockNameAttr =
+          op.getAttrOfType<StringAttr>("mlir.blockName")) {
+    blockNames[op.getBlock()] = {-1, blockNameAttr.strref()};
+    op.removeDiscardableAttr("mlir.blockName");
+  }
+  return;
 }
 
 void SSANameState::getResultIDAndNumber(
