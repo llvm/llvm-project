@@ -333,17 +333,6 @@ add_gen_header(
 )
 
 add_gen_header(
-  sys_epoll
-  DEF_FILE sys/epoll.h.def
-  GEN_HDR sys/epoll.h
-  DEPENDS
-    .llvm_libc_common_h
-    .llvm-libc-types.struct_epoll_event
-    .llvm-libc-types.struct_epoll_data
-    .llvm-libc-types.sigset_t
-)
-
-add_gen_header(
   sys_ioctl
   DEF_FILE sys/ioctl.h.def
   GEN_HDR sys/ioctl.h
