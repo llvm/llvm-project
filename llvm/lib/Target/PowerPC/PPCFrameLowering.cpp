@@ -1441,7 +1441,8 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
       ProbeLoopBodyMBB->addSuccessor(ProbeLoopBodyMBB);
     }
     // Update liveins.
-    recomputeLiveIns(MF);
+    recomputeLiveIns(*ProbeLoopBodyMBB);
+    recomputeLiveIns(*ProbeExitMBB);
     return ProbeExitMBB;
   };
   // For case HasBP && MaxAlign > 1, we have to realign the SP by performing
@@ -1533,7 +1534,8 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
         buildDefCFAReg(*ExitMBB, ExitMBB->begin(), SPReg);
       }
       // Update liveins.
-      recomputeLiveIns(MF);
+      recomputeLiveIns(*LoopMBB);
+      recomputeLiveIns(*ExitMBB);
     }
   }
   ++NumPrologProbed;
