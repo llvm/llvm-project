@@ -570,8 +570,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
         ++NumErrors;
         ErrorCategory.Report("Invalid address range", [&]() {
           error() << "Invalid address range " << Range << "\n";
+          DumpDieAfterError = true;
         });
-        DumpDieAfterError = true;
         continue;
       }
 
@@ -586,8 +586,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
         ErrorCategory.Report("DIE has overlapping DW_AT_ranges", [&]() {
           error() << "DIE has overlapping ranges in DW_AT_ranges attribute: "
                   << *PrevRange << " and " << Range << '\n';
+          DumpDieAfterError = true;
         });
-        DumpDieAfterError = DumpOpts.Verbose;
       }
     }
     if (DumpDieAfterError)
@@ -1058,7 +1058,7 @@ DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
                              DIDumpOptions DumpOpts)
     : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
       IsMachOObject(false) {
-  if (DumpOpts.Verbose) {
+  if (DumpOpts.Verbose || !DumpOpts.ShowAggregateErrors) {
     ErrorCategory.EnableDetail();
   }
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
