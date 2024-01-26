@@ -4,9 +4,8 @@
 define i64 @foo(i64 %a, i1 %b) {
 ; CHECK-LABEL: define i64 @foo(
 ; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]]) {
-; CHECK-NEXT:    [[C:%.*]] = sext i1 [[B]] to i64
-; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
-; CHECK-NEXT:    [[R:%.*]] = sub i64 [[D]], [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i64 [[TMP1]], i64 [[A]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %c = sext i1 %b to i64
@@ -18,9 +17,8 @@ define i64 @foo(i64 %a, i1 %b) {
 define i64 @bar(i64 %a, i1 %b) {
 ; CHECK-LABEL: define i64 @bar(
 ; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]]) {
-; CHECK-NEXT:    [[C:%.*]] = sext i1 [[B]] to i64
-; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
-; CHECK-NEXT:    [[R:%.*]] = sub i64 [[C]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i64 [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %c = sext i1 %b to i64
