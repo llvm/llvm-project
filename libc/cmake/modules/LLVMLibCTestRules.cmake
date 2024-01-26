@@ -774,7 +774,7 @@ function(add_libc_hermetic_test test_name)
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     # Hermetic tests for GPUs still need to link against __internal__ targets.
     set(internal_targets TRUE)
-  else
+  else()
     set(internal_targets FALSE)
   endif()
 

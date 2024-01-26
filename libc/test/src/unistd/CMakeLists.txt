@@ -430,9 +430,11 @@ add_libc_unittest(
     libc.src.unistd.sysconf
 )
 
+# getopt_test requires access to set_getopt_state which is only available for
+# __internal__ targets, hence the use of UNIT_TEST_ONLY.
 add_libc_test(
   getopt_test
-  UNIT_TEST_ONLY # set_getopt_state only exposed for __internal__ target.
+  UNIT_TEST_ONLY
   SUITE
     libc_unistd_unittests
   SRCS

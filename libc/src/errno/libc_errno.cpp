@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/architectures.h"
+
 #include "libc_errno.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_GPU
