@@ -350,28 +350,10 @@ entry:
 declare <3 x i16> @llvm.abs.v3i16(<3 x i16>, i1)
 
 define <7 x i16> @abs_v7i16(<7 x i16> %a){
-; CHECK-SD-LABEL: abs_v7i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    abs v0.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abs_v7i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #15 // =0xf
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    mov v2.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[2], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[3], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[4], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[5], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[6], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-GI-NEXT:    neg v1.8h, v2.8h
-; CHECK-GI-NEXT:    sshl v1.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abs_v7i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    abs v0.8h, v0.8h
+; CHECK-NEXT:    ret
 entry:
   %res = call <7 x i16> @llvm.abs.v7i16(<7 x i16> %a, i1 0)
   ret <7 x i16> %res
@@ -379,23 +361,10 @@ entry:
 declare <7 x i16> @llvm.abs.v7i16(<7 x i16>, i1)
 
 define <3 x i32> @abs_v3i32(<3 x i32> %a){
-; CHECK-SD-LABEL: abs_v3i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    abs v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: abs_v3i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w8
-; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    mov v1.s[3], w8
-; CHECK-GI-NEXT:    neg v1.4s, v1.4s
-; CHECK-GI-NEXT:    sshl v1.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: abs_v3i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    abs v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %res = call <3 x i32> @llvm.abs.v3i32(<3 x i32> %a, i1 0)
   ret <3 x i32> %res
