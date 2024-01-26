@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -23,9 +24,9 @@ extern "C" {
 #endif
 ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
                                           const char *runtime_version);
-int start_trace();
-int flush_trace();
-int stop_trace();
+int start_trace(ompt_device_t *Device);
+int flush_trace(ompt_device_t *Device);
+int stop_trace(ompt_device_t *Device);
 void libomptest_global_eventreporter_set_active(bool State);
 #ifdef __cplusplus
 }

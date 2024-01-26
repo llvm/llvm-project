@@ -37,8 +37,10 @@ static ompt_get_record_ompt_t ompt_get_record_ompt = 0;
 static ompt_advance_buffer_cursor_t ompt_advance_buffer_cursor = 0;
 static ompt_get_record_type_t ompt_get_record_type_fn = 0;
 
-// ToDo: Currently using only 1 device
-static ompt_device_t *Device = nullptr;
+// OMPT device side tracing: Currently traced devices
+typedef std::unordered_set<ompt_device_t *> OmptDeviceSetTy;
+typedef std::unique_ptr<OmptDeviceSetTy> OmptDeviceSetPtrTy;
+static OmptDeviceSetPtrTy TracedDevices;
 
 // Tracing buffer helper function
 static void delete_buffer_ompt(ompt_buffer_t *buffer) {
@@ -211,7 +213,11 @@ static void on_ompt_callback_device_initialize(int device_num, const char *type,
            "callbacks\n");
   }
 
-  Device = device;
+  static bool IsDeviceMapInitialized = false;
+  if (!IsDeviceMapInitialized) {
+    TracedDevices = std::make_unique<OmptDeviceSetTy>();
+    IsDeviceMapInitialized = true;
+  }
 
   set_trace_ompt();
 
@@ -221,7 +227,7 @@ static void on_ompt_callback_device_initialize(int device_num, const char *type,
   // is because this device_init callback is invoked during the first
   // target construct implementation.
 
-  start_trace();
+  start_trace(device);
 }
 
 static void on_ompt_callback_device_finalize(int device_num) {
@@ -390,20 +396,26 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
   return &ompt_start_tool_result;
 }
 
-int start_trace() {
+int start_trace(ompt_device_t *Device) {
   if (!ompt_start_trace)
     return 0;
+
+  // This device will be traced.
+  assert(TracedDevices->find(Device) == TracedDevices->end() &&
+         "Device already present in the map");
+  TracedDevices->insert(Device);
+
   return ompt_start_trace(Device, &on_ompt_callback_buffer_request,
                           &on_ompt_callback_buffer_complete);
 }
 
-int flush_trace() {
+int flush_trace(ompt_device_t *Device) {
   if (!ompt_flush_trace)
     return 0;
   return ompt_flush_trace(Device);
 }
 
-int stop_trace() {
+int stop_trace(ompt_device_t *Device) {
   if (!ompt_stop_trace)
     return 0;
   return ompt_stop_trace(Device);
