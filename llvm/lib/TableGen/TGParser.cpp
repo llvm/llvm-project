@@ -3683,8 +3683,8 @@ bool TGParser::ParseDeftype() {
     return TokError("expected identifier");
 
   std::string TypeName = Lex.getCurStrVal();
-  if (TypeAliases.count(TypeName))
-    return TokError("type of this name already exists");
+  if (TypeAliases.count(TypeName) || Records.getClass(TypeName))
+    return TokError("type of this name '" + TypeName + "' already exists");
 
   Lex.Lex();
   if (!consume(tgtok::equal))

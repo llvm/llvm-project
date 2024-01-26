@@ -1,4 +1,6 @@
 // RUN: llvm-tblgen %s | FileCheck %s
+// RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
+// RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 
 deftype Byte = bits<8>;
 deftype IntList = list<int>;
@@ -20,3 +22,13 @@ def test {
   ByteList bytes = [1, 2, 3];
   ClassList defs = [Class<1>, Class<2>, Class<3>];
 }
+
+#ifdef ERROR1
+// ERROR1: [[@LINE+1]]:9: error: type of this name 'Byte' already exists
+deftype Byte = bits<8>;
+#endif
+
+#ifdef ERROR2
+// ERROR2: [[@LINE+1]]:9: error: type of this name 'Class' already exists
+deftype Class = int;
+#endif
