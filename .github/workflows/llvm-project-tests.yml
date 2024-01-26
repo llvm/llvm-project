@@ -93,7 +93,8 @@ jobs:
           # run creates a new cache entry so we want to ensure that we have
           # enough cache space for all the tests to run at once and still
           # fit under the 10 GB limit.
-          max-size: 500M
+          # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
+          max-size: 2G
           key: ${{ matrix.os }}
           variant: sccache
       - name: Build and Test
