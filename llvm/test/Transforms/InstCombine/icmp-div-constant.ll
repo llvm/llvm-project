@@ -112,11 +112,10 @@ define i1 @is_rem16_something_i8(i8 %x) {
 
 define  i1 @icmp_urem_constant(i8 noundef %0, i8 noundef %1) {
 ; CHECK-LABEL: @icmp_urem_constant(
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i8 [[TMP0:%.*]], 9
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i8 [[TMP1:%.*]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = urem i8 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
-; CHECK-NEXT:    ret i1 [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i8 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = urem i8 [[TMP3]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
+; CHECK-NEXT:    ret i1 [[TMP5]]
 ;
   %3 = mul nuw i8 9, %0
   %4 = mul nuw i8 3, %1

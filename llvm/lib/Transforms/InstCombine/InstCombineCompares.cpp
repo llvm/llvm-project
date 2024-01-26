@@ -2595,20 +2595,33 @@ Instruction *InstCombinerImpl::foldICmpRemConstant(ICmpInst &Cmp,
   APInt K;
   Type *Ty;
 
+  if (!match(X, m_Mul(m_Value(A), m_APInt(C1))))
+    return nullptr;
+  if (!match(Y, m_Mul(m_Value(B), m_APInt(C2))))
+    return nullptr;
+  if (C2->isZero())
+    return nullptr;
+
+  Instruction* I1 = dyn_cast<Instruction>(X);
+  Instruction* I2 = dyn_cast<Instruction>(Y);
+
   if (Rem->getOpcode() == Instruction::SRem) {
     // Check if both NSW and NUW flags are on
-    if (!match(X, m_NSWMul(m_Value(A), m_APInt(C1))))
+    if (!I1->hasNoUnsignedWrap()){
       return nullptr;
-    if (!match(Y, m_NSWMul(m_Value(B), m_APInt(C2))))
+    }   
+    if (!I1->hasNoSignedWrap()){
       return nullptr;
-    if (!match(X, m_NUWMul(m_Value(A), m_APInt(C1))))
+    }
+    if (!I2->hasNoUnsignedWrap()){
       return nullptr;
-    if (!match(Y, m_NUWMul(m_Value(B), m_APInt(C2))))
+    }
+    if (!I2->hasNoSignedWrap()){
       return nullptr;
-    if (C2->isZero())
+    }
+    if (!C1->srem(*C2).isZero()){
       return nullptr;
-    if (!C1->srem(*C2).isZero())
-      return nullptr;
+    }
     // Compute the new constant k = c1 / c2.
     K = C1->sdiv(*C2);
     Ty = Rem->getType();
@@ -2620,24 +2633,27 @@ Instruction *InstCombinerImpl::foldICmpRemConstant(ICmpInst &Cmp,
                             true),
           B);
   } else {
-    if (!match(X, m_NUWMul(m_Value(A), m_APInt(C1))))
+    if (!I1->hasNoUnsignedWrap()){
       return nullptr;
-    if (!match(Y, m_NUWMul(m_Value(B), m_APInt(C2))))
+    }
+    if (!I2->hasNoUnsignedWrap()){
       return nullptr;
-    if (C2->isZero())
+    }
+    if (!C1->urem(*C2).isZero()){
       return nullptr;
-    if (!C1->urem(*C2).isZero())
-      return nullptr;
+    }
     // Compute the new constant k = c1 / c2.
     K = C1->udiv(*C2);
     Ty = Rem->getType();
-    if (K == 1)
-      NewRem = Builder.CreateSRem(A, B);
-    else
-      NewRem = Builder.CreateSRem(
+    if (K == 1) {
+      NewRem = Builder.CreateURem(A, B);
+    }
+    else {
+      NewRem = Builder.CreateURem(
           Builder.CreateMul(A, ConstantInt::get(A->getType(), K), "", true,
-                            false),
+                            I1->hasNoSignedWrap()),
           B);
+    }
   }
   return new ICmpInst(Pred, NewRem, ConstantInt::get(Ty, C));
 }
