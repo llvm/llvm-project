@@ -395,10 +395,10 @@ void Matrix<T>::print(raw_ostream &os) const {
 /// we append it to one matrix, and if it is zero, we append it to the other.
 template <typename T>
 std::pair<Matrix<T>, Matrix<T>>
-Matrix<T>::splitByBitset(std::bitset<16> indicator) {
+Matrix<T>::splitByBitset(std::vector<int> indicator) {
   Matrix<T> rowsForOne(0, nColumns), rowsForZero(0, nColumns);
   for (unsigned i = 0; i < nRows; i++) {
-    if (indicator.test(i))
+    if (indicator[i] == 1)
       rowsForOne.appendExtraRow(getRow(i));
     else
       rowsForZero.appendExtraRow(getRow(i));

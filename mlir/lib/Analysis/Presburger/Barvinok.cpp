@@ -325,22 +325,15 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
       regionsAndGeneratingFunctions;
 
   // We iterate over all subsets of inequalities with cardinality numVars,
-  // using bitsets of numIneqs bits to enumerate.
-  // For a given set of numIneqs bits, we consider a subset which contains
-  // the i'th inequality if the i'th bit in the bitset is set.
-  // The largest possible bitset that corresponds to such a subset can be
-  // written as numVar 1's followed by (numIneqs - numVars) 0's.
-  // We start with this and count downwards (in binary), considering only
-  // those numbers whose binary representation has numVars 1's and the
-  // rest 0's.
-  unsigned upperBound = ((1ul << numVars) - 1ul) << (numIneqs - numVars);
-  for (std::bitset<16> indicator(upperBound);
-       indicator.to_ulong() <= upperBound;
-       indicator = std::bitset<16>(indicator.to_ulong() - 1)) {
+  // using permutations of numVars 1's and (numIneqs - numVars) 0's.
+  // For a given permutation, we consider a subset which contains
+  // the i'th inequality if the i'th bit in the bitset is 1.
+  // We start with the permutation that takes the last numVars inequalities.
+  std::vector<int> indicator(numIneqs);
+  for (unsigned i = numIneqs - numVars; i < numIneqs; ++i)
+    indicator[i] = 1;
 
-    if (indicator.count() != numVars)
-      continue;
-
+  do {
     // Collect the inequalities corresponding to the bits which are set
     // and the remaining ones.
     auto [subset, remainder] = poly.getInequalities().splitByBitset(indicator);
@@ -440,7 +433,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // tangent cones.
     regionsAndGeneratingFunctions.emplace_back(PresburgerSet(activeRegionRel),
                                                vertexGf);
-  }
+  } while (std::next_permutation(indicator.begin(), indicator.end()));
 
   // Now, we use Clauss-Loechner decomposition to identify regions in parameter
   // space where each vertex is active. These regions (chambers) have the
