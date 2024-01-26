@@ -38,7 +38,7 @@ static void extractBits(BitsInit &InstBits, InstrInfo &II) {
     if (auto *VarBit = dyn_cast<VarBitInit>(Bit)) {
       // Check if the VarBit is for 'imm' or 'Rd'
       std::string VarName = VarBit->getBitVar()->getAsUnquotedString();
-      if (VarName == "imm" || VarName == "func") {
+      if (VarName == "imm" || VarName == "func" || VarName == "target") {
         II.ImmMask |= 1 << i;
       } else if (VarName == "Rd") {
         II.RegMask |= 1 << i;
