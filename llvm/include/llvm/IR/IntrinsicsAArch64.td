@@ -855,6 +855,9 @@ def int_aarch64_crc32x  : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llv
     [IntrNoMem]>;
 def int_aarch64_crc32cx : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i64_ty],
     [IntrNoMem]>;
+def int_aarch64_ubfx : DefaultAttrsIntrinsic<
+    [llvm_anyint_ty], [llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty],
+    [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -2558,6 +2558,12 @@ def : Pat<(rotr GPR32:$Rn, (i64 imm0_31:$imm)),
 def : Pat<(rotr GPR64:$Rn, (i64 imm0_63:$imm)),
           (EXTRXrri GPR64:$Rn, GPR64:$Rn, imm0_63:$imm)>;
 
+def SDT_AArch64UBFX_32bit : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_AArch64UBFX_64bit : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i64>]>;
+
+def aarch64_ubfxw  : SDNode<"AArch64::UBFMWri",  SDT_AArch64UBFX_32bit>;
+def aarch64_ubfxx  : SDNode<"AArch64::UBFMXri",  SDT_AArch64UBFX_64bit>;
+
 //===----------------------------------------------------------------------===//
 // Other bitfield immediate instructions.
 //===----------------------------------------------------------------------===//

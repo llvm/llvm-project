@@ -5230,6 +5230,19 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     switch (IntNo) {
     default:
       break;
+    case Intrinsic::aarch64_ubfx: {
+      SDLoc DL(Node);
+      auto lsb = cast<ConstantSDNode>(Node->getOperand(2))->getZExtValue();
+      auto width = cast<ConstantSDNode>(Node->getOperand(3))->getZExtValue();
+      auto ImmR = (VT.getSizeInBits() - lsb) % VT.getSizeInBits();
+      auto ImmS = width - 1;
+      SDValue Ops[] = {Node->getOperand(1),
+                       CurDAG->getTargetConstant(ImmR, DL, VT),
+                       CurDAG->getTargetConstant(ImmS, DL, VT)};
+      unsigned Opc = (VT == MVT::i32) ? AArch64::UBFMWri : AArch64::UBFMXri;
+      CurDAG->SelectNodeTo(Node, Opc, VT, Ops);
+      return;
+    }
     case Intrinsic::aarch64_tagp:
       SelectTagP(Node);
       return;
