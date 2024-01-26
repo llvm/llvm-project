@@ -4281,25 +4281,31 @@ void Process::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 //    return Host::GetArchSpecForExistingProcess (process_name);
 //}
 
+EventSP Process::CreateEventFromProcessState(uint32_t event_type) {
+  auto event_data_sp =
+      std::make_shared<ProcessEventData>(shared_from_this(), GetState());
+  return std::make_shared<Event>(event_type, event_data_sp);
+}
+
 void Process::AppendSTDOUT(const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);
   m_stdout_data.append(s, len);
-  BroadcastEventIfUnique(eBroadcastBitSTDOUT,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitSTDOUT);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::AppendSTDERR(const char *s, size_t len) {
   std::lock_guard<std::recursive_mutex> guard(m_stdio_communication_mutex);
   m_stderr_data.append(s, len);
-  BroadcastEventIfUnique(eBroadcastBitSTDERR,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitSTDERR);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::BroadcastAsyncProfileData(const std::string &one_profile_data) {
   std::lock_guard<std::recursive_mutex> guard(m_profile_data_comm_mutex);
   m_profile_data.push_back(one_profile_data);
-  BroadcastEventIfUnique(eBroadcastBitProfileData,
-                         new ProcessEventData(shared_from_this(), GetState()));
+  auto event_sp = CreateEventFromProcessState(eBroadcastBitProfileData);
+  BroadcastEventIfUnique(event_sp);
 }
 
 void Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
