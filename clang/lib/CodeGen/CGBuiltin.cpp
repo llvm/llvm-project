@@ -18619,37 +18619,37 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8;
       break;
-    // GX1210 WMMA builtins
+    // GFX1210 WMMA builtins
     case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f64_16x16x4_f64;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x8_f64:
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f64_16x16x8_f64;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x4_f32;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_xf32:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_xf32;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x32_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x32_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x32_f16:
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x32_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x32_bf16:
-      ArgsForMatchingMatrixTypes = {1, 5};
+      ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x32_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16f32_16x16x32_bf16:
@@ -18658,63 +18658,63 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16f32_16x16x32_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x64_fp8_fp8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x64_fp8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x64_fp8_bf8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x64_fp8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x64_bf8_fp8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x64_bf8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x64_bf8_bf8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x64_bf8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x64_fp8_fp8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x64_fp8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x64_fp8_bf8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x64_fp8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x64_bf8_fp8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x64_bf8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x64_bf8_bf8:
-      ArgsForMatchingMatrixTypes = {0, 3};
+      ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x64_bf8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x64_iu8:
-      ArgsForMatchingMatrixTypes = {1, 4};
+      ArgsForMatchingMatrixTypes = {4, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_i32_16x16x64_iu8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x128_iu4:
-      ArgsForMatchingMatrixTypes = {1, 4};
+      ArgsForMatchingMatrixTypes = {4, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_i32_16x16x128_iu4;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_f16:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x64_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x64_bf16:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f16_16x16x64_f16:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f16_16x16x64_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_bf16_16x16x64_bf16:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_bf16f32_16x16x64_bf16:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x128_fp8_fp8:
@@ -18750,11 +18750,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x128_iu8:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x256_iu4:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5};
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_i32_16x16x256_iu4;
       break;
     }
