@@ -1025,8 +1025,8 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
   if ((ResultFD = sys::RetryAfterSignal(-1, Open)) < 0)
     return std::error_code(errno, std::generic_category());
   if (Access == FA_Read) {
-     struct stat Status;    
-     if (fstat(ResultFD, &Status) == -1)
+    struct stat Status;
+    if (fstat(ResultFD, &Status) == -1)
       return std::error_code(errno, std::generic_category());
     if (S_ISDIR(Status.st_mode))
       return make_error_code(errc::is_a_directory);
