@@ -1999,7 +1999,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
     if (FileMMapInfo.second.PID == -1)
       continue;
-    if (FileMMapInfo.first.equals("(deleted)"))
+    if (FileMMapInfo.first == "(deleted)")
       continue;
 
     // Consider only the first mapping of the file for any given PID
