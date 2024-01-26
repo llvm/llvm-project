@@ -420,6 +420,11 @@ public:
   virtual unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
     return 0;
   }
+
+  /// True if target has some form of pointer arithmetic checking.
+  /// Helps identify whether pointer arithmetic semantics should be preserved
+  /// for passes such as instruction selection.
+  virtual bool isPtrArithmeticChecked(const Function &F) const { return false; }
 };
 
 /// This class describes a target machine that is implemented with the LLVM

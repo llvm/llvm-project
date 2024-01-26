@@ -71,6 +71,10 @@ public:
     return true;
   }
 
+  /// In AArch64, true if FEAT_CPA is present. Helps preserve pointer arithmetic
+  /// semantics for instruction selection.
+  bool isPtrArithmeticChecked(const Function &F) const override;
+
 private:
   bool isLittle;
 };

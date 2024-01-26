@@ -109,7 +109,7 @@ def SDTOther  : SDTypeProfile<1, 0, [SDTCisVT<0, OtherVT>]>; // for 'vt'.
 def SDTUNDEF  : SDTypeProfile<1, 0, []>;                     // for 'undef'.
 def SDTUnaryOp  : SDTypeProfile<1, 1, []>;                   // for bitconvert.
 
-def SDTPtrAddOp : SDTypeProfile<1, 2, [     // ptradd
+def SDTPtrAddSubOp : SDTypeProfile<1, 2, [  // ptradd, ptrsub
   SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisPtrTy<1>
 ]>;
 def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
@@ -384,8 +384,9 @@ def tblockaddress: SDNode<"ISD::TargetBlockAddress",  SDTPtrLeaf, [],
 
 def add        : SDNode<"ISD::ADD"       , SDTIntBinOp   ,
                         [SDNPCommutative, SDNPAssociative]>;
-def ptradd     : SDNode<"ISD::ADD"       , SDTPtrAddOp, []>;
+def ptradd     : SDNode<"ISD::ADD"       , SDTPtrAddSubOp, []>;
 def sub        : SDNode<"ISD::SUB"       , SDTIntBinOp>;
+def ptrsub     : SDNode<"ISD::SUB"       , SDTPtrAddSubOp, []>;
 def mul        : SDNode<"ISD::MUL"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def mulhs      : SDNode<"ISD::MULHS"     , SDTIntBinOp, [SDNPCommutative]>;
