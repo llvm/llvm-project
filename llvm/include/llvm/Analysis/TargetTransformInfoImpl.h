@@ -260,6 +260,10 @@ public:
     return false;
   }
 
+  bool isLegalMaskedPrefetch(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
   bool isLegalNTStore(Type *DataType, Align Alignment) const {
     // By default, assume nontemporal memory stores are available for stores
     // that are aligned and have a size that is a power of 2.
@@ -283,6 +287,10 @@ public:
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
+  bool isLegalMaskedGatherPrefetch(Type *DataType, Align Alignment) const {
     return false;
   }
 

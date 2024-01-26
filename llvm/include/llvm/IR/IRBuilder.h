@@ -820,6 +820,11 @@ public:
   CallInst *CreateMaskedStore(Value *Val, Value *Ptr, Align Alignment,
                               Value *Mask);
 
+  /// Create a call to Masked Prefetch intrinsic
+  CallInst *CreateMaskedPrefetch(Value *Ptr, Value *ElemSize, Value *Mask,
+                                 Value *RW = nullptr, Value *Locality = nullptr,
+                                 const Twine &Name = "");
+
   /// Create a call to Masked Gather intrinsic
   CallInst *CreateMaskedGather(Type *Ty, Value *Ptrs, Align Alignment,
                                Value *Mask = nullptr, Value *PassThru = nullptr,
@@ -828,6 +833,13 @@ public:
   /// Create a call to Masked Scatter intrinsic
   CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, Align Alignment,
                                 Value *Mask = nullptr);
+
+  /// Create a call to Masked Gather Prefetch intrinsic
+  CallInst *CreateMaskedGatherPrefetch(Value *Ptrs, Value *ElemSize,
+                                       Value *Mask = nullptr,
+                                       Value *RW = nullptr,
+                                       Value *Locality = nullptr,
+                                       const Twine &Name = "");
 
   /// Create a call to Masked Expand Load intrinsic
   CallInst *CreateMaskedExpandLoad(Type *Ty, Value *Ptr, Value *Mask = nullptr,

@@ -1365,6 +1365,118 @@ public:
   }
 };
 
+/// This class prefetch intrinsic
+/// i.e. llvm.prefetch
+class PrefetchInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::prefetch;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Value *getPointerOperand() { return getOperand(0); }
+  const Value *getPointerOperand() const { return getOperand(0); }
+  static unsigned getPointerOperandIndex() { return 0U; }
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
+};
+
+/// A helper function that returns the pointer operand of a prefetch
+/// instruction. Returns nullptr if not prefetch.
+inline const Value *getPrefetchPointerOperand(const Value *V) {
+  if (auto *Prefetch = dyn_cast<PrefetchInst>(V))
+    return Prefetch->getPointerOperand();
+  return nullptr;
+}
+inline Value *getPrefetchPointerOperand(Value *V) {
+  return const_cast<Value *>(
+      getPrefetchPointerOperand(static_cast<const Value *>(V)));
+}
+
+/// A helper function that returns the address space of the pointer operand of
+/// prefetch instruction.
+inline unsigned getPrefetchAddressSpace(Value *I) {
+  assert(isa<PrefetchInst>(I) && "Expected prefetch instruction");
+  auto *PtrTy = dyn_cast<PrefetchInst>(I)->getPointerOperandType();
+  return dyn_cast<PointerType>(PtrTy)->getAddressSpace();
+}
+
+/// A helper function that psuedo returns type of a prefetch instruction.
+inline Type *getPrefetchPseudoType(Value *I) {
+  assert(isa<PrefetchInst>(I) && "Expected Prefetch instruction");
+  auto *Prefetch = dyn_cast<PrefetchInst>(I);
+
+  // Get type for the following pattern
+  // ex) %1 = add nuw nsw i64 %indvars.iv, 8
+  //     %arrayidx = getelementptr inbounds double, ptr %b, i64 %1
+  //     tail call void @llvm.prefetch.p0(ptr nonnull %arrayidx, i32 0, i32 3,
+  //     i32 1)
+  auto *GEP = dyn_cast<GetElementPtrInst>(Prefetch->getPointerOperand());
+  if (GEP) {
+    auto *ElemTy = GEP->getSourceElementType();
+    if (isa<ArrayType>(ElemTy) || isa<StructType>(ElemTy))
+      return Type::getInt64Ty(I->getContext());
+    return ElemTy;
+  }
+
+  // Get type for the following pattern
+  // ex) %a = alloca [100 x double], align 8
+  //     tail call void @llvm.prefetch.p0(ptr nonnull %a, i32 0, i32 3, i32 1)
+  auto *Alloca = dyn_cast<AllocaInst>(Prefetch->getPointerOperand());
+  if (Alloca) {
+    auto *ElemTy = Alloca->getAllocatedType()->getArrayElementType();
+    if (isa<ArrayType>(ElemTy) || isa<StructType>(ElemTy))
+      return Type::getInt64Ty(I->getContext());
+    return ElemTy;
+  }
+
+  return Type::getInt64Ty(I->getContext());
+}
+
+/// A helper function that returns the pseudo-alignment of prefetch instruction.
+inline Align getPrefetchPseudoAlignment(Value *I) {
+  assert(isa<PrefetchInst>(I) && "Expected Prefetch instruction");
+  auto *Ty = getPrefetchPseudoType(I);
+  return Ty ? Align(Ty->getScalarSizeInBits() >> 3) : Align(1ULL);
+}
+
+/// A helper function that returns the alignment of load/store/prefetch
+/// instruction.
+inline Align getLdStPfAlignment(Value *I) {
+  if (isa<PrefetchInst>(I))
+    return getPrefetchPseudoAlignment(I);
+  return getLoadStoreAlignment(I);
+}
+
+/// A helper function that returns the pointer operand of a load/store/prefetch
+/// instruction. Returns nullptr if not prefetch.
+inline const Value *getLdStPfPointerOperand(const Value *I) {
+  if (isa<PrefetchInst>(I))
+    return getPrefetchPointerOperand(I);
+  return getLoadStorePointerOperand(I);
+}
+inline Value *getLdStPfPointerOperand(Value *V) {
+  return const_cast<Value *>(
+      getLdStPfPointerOperand(static_cast<const Value *>(V)));
+}
+
+/// A helper function that returns the address space of the pointer operand of
+/// load/store/prefetch instruction.
+inline unsigned getLdStPfAddressSpace(Value *I) {
+  if (isa<PrefetchInst>(I))
+    return getPrefetchAddressSpace(I);
+  return getLoadStoreAddressSpace(I);
+}
+
+/// A helper function that returns the type of a load/store/prefetch
+/// instruction.
+inline Type *getLdStPfType(Value *I) {
+  if (isa<PrefetchInst>(I))
+    return getPrefetchPseudoType(I);
+  return getLoadStoreType(I);
+}
+
 /// This class represents any memmove intrinsic
 /// i.e. llvm.element.unordered.atomic.memmove
 ///  and llvm.memmove

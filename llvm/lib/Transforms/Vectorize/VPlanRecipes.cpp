@@ -153,13 +153,17 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   case VPInterleaveSC:
     return mayWriteToMemory();
-  case VPWidenMemoryInstructionSC:
+  case VPWidenMemoryInstructionSC: {
+    auto *R = cast<VPWidenMemoryInstructionRecipe>(this);
+    if (isa<PrefetchInst>(R->getIngredient()))
+      return true;
     assert(cast<VPWidenMemoryInstructionRecipe>(this)
                    ->getIngredient()
                    .mayHaveSideEffects() == mayWriteToMemory() &&
            "mayHaveSideffects result for ingredient differs from this "
            "implementation");
     return mayWriteToMemory();
+  }
   case VPReplicateSC: {
     auto *R = cast<VPReplicateRecipe>(this);
     return R->getUnderlyingInstr()->mayHaveSideEffects();
@@ -1554,7 +1558,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
 
-  if (!isStore()) {
+  if (!isStore() && !isPrefetch()) {
     getVPSingleValue()->printAsOperand(O, SlotTracker);
     O << " = ";
   }

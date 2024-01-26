@@ -606,6 +606,27 @@ CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
   return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
 }
 
+/// Create a call to a Masked Prefetch intrinsic.
+/// \p Ptr      - base pointer for the prefetch
+/// \p ElemSize - element size for memory address generation
+/// \p Mask     - vector of booleans which indicates what vector lanes should
+///               be accessed in memory
+/// \p RW       - Read or Write
+/// \p Locality - Cache Level
+/// \p Name     - name of the result variable
+CallInst *IRBuilderBase::CreateMaskedPrefetch(Value *Ptr, Value *ElemSize,
+                                              Value *Mask, Value *RW,
+                                              Value *Locality,
+                                              const Twine &Name) {
+  auto *PtrTy = cast<PointerType>(Ptr->getType());
+
+  assert(Mask && "Mask should not be null");
+  Type *OverloadedTypes[] = {PtrTy, Mask->getType()};
+  Value *Ops[] = {Ptr, ElemSize, RW, Locality, Mask};
+  return CreateMaskedIntrinsic(Intrinsic::masked_prefetch, Ops, OverloadedTypes,
+                               Name);
+}
+
 /// Create a call to a Masked intrinsic, with given intrinsic Id,
 /// an array of operands - Ops, and an array of overloaded types -
 /// OverloadedTypes.
@@ -710,6 +731,35 @@ CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
   Value *Ops[] = {Val, Ptr, Mask};
   return CreateMaskedIntrinsic(Intrinsic::masked_compressstore, Ops,
                                OverloadedTypes);
+}
+
+/// Create a call to a Masked Gather Prefetch intrinsic.
+/// \p Ptrs     - vector of pointers for prefetch
+/// \p ElemSize - element size for memory address generation
+/// \p Mask     - vector of booleans which indicates what vector lanes should
+///               be accessed in memory
+/// \p RW       - Read or Write
+/// \p Locality - Cache Level
+/// \p Name     - name of the result variable
+CallInst *IRBuilderBase::CreateMaskedGatherPrefetch(Value *Ptrs,
+                                                    Value *ElemSize,
+                                                    Value *Mask, Value *RW,
+                                                    Value *Locality,
+                                                    const Twine &Name) {
+  auto *PtrsTy = cast<VectorType>(Ptrs->getType());
+  ElementCount NumElts = PtrsTy->getElementCount();
+
+  if (!Mask)
+    Mask = Constant::getAllOnesValue(
+        VectorType::get(Type::getInt1Ty(Context), NumElts));
+
+  Type *OverloadedTypes[] = {PtrsTy};
+  Value *Ops[] = {Ptrs, ElemSize, RW, Locality, Mask};
+
+  // We specify only one type when we create this intrinsic. Types of other
+  // arguments are derived from this type.
+  return CreateMaskedIntrinsic(Intrinsic::masked_gather_prefetch, Ops,
+                               OverloadedTypes, Name);
 }
 
 template <typename T0>
