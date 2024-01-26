@@ -2223,13 +2223,13 @@ mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
 // ATAN, ATAN2PI
 mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
-  // assert for: atand(X), atand(Y,X), atan2d(Y,X)
+  // assert for: atanpi(X), atanpi(Y,X), atan2pi(Y,X)
   assert(args.size() >= 1 && args.size() <= 2);
 
   mlir::Value atan;
   mlir::MLIRContext *context = builder.getContext();
 
-  // atand(Y,X) atan2d(Y,X) == atan2(Y,X) * 180/pi
+  // atanpi(Y,X) atan2pi(Y,X) == atan2(Y,X) / pi
   if (args.size() == 2) {
     mlir::Value y = fir::getBase(args[0]);
     mlir::Value x = fir::getBase(args[1]);

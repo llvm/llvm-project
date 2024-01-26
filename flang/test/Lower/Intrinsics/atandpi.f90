@@ -49,4 +49,3 @@ end function
 ! CHECK: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f64
 ! CHECK: %[[pi:.*]] = arith.constant 3.1415926535897931 : f64
 ! CHECK: %{{.*}} = arith.divf %[[atan2]], %[[pi]] fastmath<contract> : f64
-
