@@ -570,8 +570,8 @@ files.
 .. productionlist::
    TableGenFile: (`Statement` | `IncludeDirective`
             :| `PreprocessorDirective`)*
-   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
-            :| `Dump`  | `Foreach` | `If` | `Let` | `MultiClass`
+   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Deftype`
+            :| `Defvar` | `Dump`  | `Foreach` | `If` | `Let` | `MultiClass`
 
 The following sections describe each of these top-level statements.
 
@@ -931,7 +931,8 @@ template that expands into multiple records.
              : `ParentClassList`
              : "{" `MultiClassStatement`+ "}"
    MultiClassID: `TokIdentifier`
-   MultiClassStatement: `Assert` | `Def` | `Defm` | `Defvar` | `Foreach` | `If` | `Let`
+   MultiClassStatement: `Assert` | `Def` | `Defm` | `Deftype` | `Defvar`
+                      :| `Foreach` | `If` | `Let`
 
 As with regular classes, the multiclass has a name and can accept template
 arguments. A multiclass can inherit from other multiclasses, which causes
@@ -1215,6 +1216,17 @@ set.
 Anonymous records created inside initialization expressions using the
 ``ClassID<...>`` syntax are not collected in the set.
 
+``deftype`` --- define a type
+--------------------------------
+
+A ``deftype`` statement defines a type. Its value can be used
+throughout the statements that follow the definition.
+
+.. productionlist::
+   Deftype: "deftype" `TokIdentifier` "=" `Value` ";"
+
+The identifier on the left of the ``=`` is defined to be a type name
+whose actual type is given by the type expression on the right of the ``=``.
 
 ``defvar`` --- define a variable
 --------------------------------

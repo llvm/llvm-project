@@ -1103,11 +1103,17 @@ RecTy *TGParser::ParseType() {
   case tgtok::Dag:
     Lex.Lex();
     return DagRecTy::get(Records);
-  case tgtok::Id:
+  case tgtok::Id: {
+    std::string TypeName = Lex.getCurStrVal();
+    if (TypeAliases.count(TypeName)) {
+      Lex.Lex();
+      return TypeAliases[TypeName];
+    }
     if (Record *R = ParseClassID())
       return RecordRecTy::get(R);
     TokError("unknown class name");
     return nullptr;
+  }
   case tgtok::Bits: {
     if (Lex.Lex() != tgtok::less) { // Eat 'bits'
       TokError("expected '<' after bits type");
@@ -3665,6 +3671,36 @@ bool TGParser::ParseDefset() {
   return false;
 }
 
+/// ParseDeftype - Parse a defvar statement.
+///
+///   Deftype ::= DEFTYPE Id '=' Value ';'
+///
+bool TGParser::ParseDeftype() {
+  assert(Lex.getCode() == tgtok::Deftype);
+  Lex.Lex(); // Eat the 'deftype' token
+
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("expected identifier");
+
+  std::string TypeName = Lex.getCurStrVal();
+  if (TypeAliases.count(TypeName))
+    return TokError("type of this name already exists");
+
+  Lex.Lex();
+  if (!consume(tgtok::equal))
+    return TokError("expected '='");
+
+  RecTy *Type = ParseType();
+  if (!Type)
+    return true;
+  TypeAliases[TypeName] = Type;
+
+  if (!consume(tgtok::semi))
+    return TokError("expected ';'");
+
+  return false;
+}
+
 /// ParseDefvar - Parse a defvar statement.
 ///
 ///   Defvar ::= DEFVAR Id '=' Value ';'
@@ -4265,6 +4301,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= LETCommand '{' ObjectList '}'
 ///   Object ::= LETCommand Object
 ///   Object ::= Defset
+///   Object ::= Deftype
 ///   Object ::= Defvar
 ///   Object ::= Assert
 ///   Object ::= Dump
@@ -4276,6 +4313,8 @@ bool TGParser::ParseObject(MultiClass *MC) {
   case tgtok::Assert:  return ParseAssert(MC);
   case tgtok::Def:     return ParseDef(MC);
   case tgtok::Defm:    return ParseDefm(MC);
+  case tgtok::Deftype:
+    return ParseDeftype();
   case tgtok::Defvar:  return ParseDefvar();
   case tgtok::Dump:
     return ParseDump(MC);
