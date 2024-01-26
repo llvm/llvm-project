@@ -125,11 +125,11 @@ for.end:
   ret void
 }
 
-; This has the same trip count as loop_with_profile_tc_64 but since the resulting interleaved group 
-; in this case may access memory out-of-bounds, it requires a scalar epilogue iteration for 
-; correctness, making at most 63 iterations available for interleaving.
-; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar remainder
-; than IC 2
+; This has the same profile-guided estimated trip count as loop_with_profile_tc_64 but since the 
+; resulting interleaved group in this case may access memory out-of-bounds, it requires a scalar 
+; epilogue iteration for correctness, making at most 63 iterations available for interleaving.
+; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar 
+; remainder than IC 2
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
 define void @loop_with_profile_tc_64_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
@@ -197,11 +197,12 @@ for.end:
   ret void
 }
 
-; This has the same trip count as loop_with_profile_tc_128 but since the resulting interleaved group 
-; in this case may access memory out-of-bounds, it requires a scalar epilogue iteration for 
-; correctness, making at most 127 iterations available for interleaving.
-; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 2 to leave a smaller scalar remainder
-; than IC 4
+; This has the same profile-guided estimated trip count as loop_with_profile_tc_128 but since 
+; the resulting interleaved group in this case may access memory out-of-bounds, it requires 
+; a scalar epilogue iteration for correctness, making at most 127 iterations available for 
+; interleaving.
+; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 2 to leave a smaller scalar 
+; remainder than IC 4
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
 define void @loop_with_profile_tc_128_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
