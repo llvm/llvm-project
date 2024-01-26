@@ -466,7 +466,8 @@ bool RISCVIntrinsicManagerImpl::CreateIntrinsicIfFound(LookupResult &LR,
                                                        IdentifierInfo *II,
                                                        Preprocessor &PP) {
   StringRef Name = II->getName();
-  Name.consume_front("__riscv_");
+  if (!Name.consume_front("__riscv_"))
+    return false;
 
   // Lookup the function name from the overload intrinsics first.
   auto OvIItr = OverloadIntrinsics.find(Name);
