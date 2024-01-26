@@ -38,7 +38,8 @@ namespace {
 /// pointer arithmetic (and not the beginning of a "full" memory region), this
 /// always returns nullopt because that's the right (or the least bad) thing to
 /// do for the diagnostic output that's relying on this.
-static std::optional<QualType> determineElementType(const Expr *E, const CheckerContext &C) {
+static std::optional<QualType> determineElementType(const Expr *E,
+                                                    const CheckerContext &C) {
   const auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
   if (!ASE)
     return std::nullopt;
@@ -55,8 +56,8 @@ static std::optional<QualType> determineElementType(const Expr *E, const Checker
   return ASE->getType();
 }
 
-
-static std::optional<int64_t> determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
+static std::optional<int64_t>
+determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
   if (!T)
     return std::nullopt;
   return C.getASTContext().getTypeSizeInChars(*T).getQuantity();
@@ -73,7 +74,9 @@ class StateUpdateReporter {
 public:
   StateUpdateReporter(const SubRegion *R, NonLoc ByteOffsVal, const Expr *E,
                       CheckerContext &C)
-      : Reg(R), ByteOffsetVal(ByteOffsVal), ElementType(determineElementType(E, C)), ElementSize(determineElementSize(ElementType, C)) {}
+      : Reg(R), ByteOffsetVal(ByteOffsVal),
+        ElementType(determineElementType(E, C)),
+        ElementSize(determineElementSize(ElementType, C)) {}
 
   void recordNonNegativeAssumption() { AssumedNonNegative = true; }
   void recordUpperBoundAssumption(NonLoc UpperBoundVal) {
