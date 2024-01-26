@@ -74,6 +74,8 @@ std::string NVPTXAssignValidGlobalNames::cleanUpName(StringRef Name) {
   std::string ValidName;
   raw_string_ostream ValidNameStream(ValidName);
   for (char C : Name) {
+    // While PTX also allows '%' at the start of identifiers, LLVM will throw a
+    // fatal error for '%' in symbol names in MCSymbol::print. Exclude for now.
     if (isAlnum(C) || C == '_' || C == '$') {
       ValidNameStream << C;
     } else {
