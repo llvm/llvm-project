@@ -228,8 +228,9 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         // make it non-negative.
         if (normalize(DV, Levels, SE, Src, Dst))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
-        LLVM_DEBUG(StringRef DepType =
-                       D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
+        LLVM_DEBUG(StringRef DepType = D->isFlow()   ? "flow"
+                                       : D->isAnti() ? "anti"
+                                                     : "output";
                    dbgs() << "Found " << DepType
                           << " dependency between Src and Dst\n"
                           << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
