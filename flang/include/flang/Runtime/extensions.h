@@ -12,6 +12,8 @@
 #ifndef FORTRAN_RUNTIME_EXTENSIONS_H_
 #define FORTRAN_RUNTIME_EXTENSIONS_H_
 
+#include "flang/Runtime/entry-names.h"
+
 #define FORTRAN_PROCEDURE_NAME(name) name##_
 
 #include <cstddef>
@@ -34,6 +36,9 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 
 // GNU extension subroutine GETLOG(C).
 void FORTRAN_PROCEDURE_NAME(getlog)(char *name, std::int64_t length);
+
+// GNU extension subroutine SLEEP(SECONDS)
+void RTNAME(Sleep)(std::int64_t seconds);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
