@@ -3592,6 +3592,10 @@ private:
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
   ExprResult ParseOpenACCAsyncArgument();
+  /// Parses the 'size-expr', which is an integral value, or an asterisk.
+  bool ParseOpenACCSizeExpr();
+  /// Parses a comma delimited list of 'size-expr's.
+  bool ParseOpenACCSizeExprList();
 
 private:
   //===--------------------------------------------------------------------===//
