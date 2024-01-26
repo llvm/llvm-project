@@ -24,6 +24,20 @@ int assumingBoth(int arg) {
   return a + b + c;
 }
 
+int assumingBothPointerToMiddle(int arg) {
+  // If we're accessing an array through a pointer pointing to its middle, the checker
+  // will speak about the "byte offset" measured from the beginning of the array.
+  int *p = array + 2;
+  int a = p[arg];
+  // expected-note@-1 {{Assuming byte offset is non-negative and less than 40, the extent of 'array'}}
+  int b = array[arg]; // This is normal access, and only the lower bound is new.
+  // expected-note@-1 {{Assuming index is non-negative}}
+  int c = array[arg + 10];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'array'}}
+  // expected-note@-2 {{Access of 'array' at an overflowing index, while it holds only 10 'int' elements}}
+  return a + b + c;
+}
+
 int assumingLower(int arg) {
   // expected-note@+2 {{Assuming 'arg' is < 10}}
   // expected-note@+1 {{Taking false branch}}
