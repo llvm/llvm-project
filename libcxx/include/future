@@ -362,11 +362,16 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 
 */
 
+#include <__config>
+
+#ifdef _LIBCPP_HAS_NO_THREADS
+#  error "<future> is not supported since libc++ has been configured without support for threads."
+#endif
+
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__chrono/time_point.h>
-#include <__config>
 #include <__exception/exception_ptr.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator.h>
@@ -396,9 +401,8 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #  pragma GCC system_header
 #endif
 
-#ifdef _LIBCPP_HAS_NO_THREADS
-#  error "<future> is not supported since libc++ has been configured without support for threads."
-#endif
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -2042,6 +2046,8 @@ inline shared_future<_Rp&> future<_Rp&>::share() _NOEXCEPT {
 inline shared_future<void> future<void>::share() _NOEXCEPT { return shared_future<void>(std::move(*this)); }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
 #  include <chrono>

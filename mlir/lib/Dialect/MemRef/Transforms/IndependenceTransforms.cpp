@@ -154,7 +154,7 @@ static void replaceAndPropagateMemRefType(RewriterBase &rewriter,
       for (OpOperand &operand : user->getOpOperands()) {
         if ([[maybe_unused]] auto castOp =
                 operand.get().getDefiningOp<UnrealizedConversionCastOp>()) {
-          rewriter.updateRootInPlace(
+          rewriter.modifyOpInPlace(
               user, [&]() { operand.set(conversion->getOperand(0)); });
         }
       }

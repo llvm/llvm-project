@@ -694,15 +694,24 @@ class AM_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj),
             "$rd, $rk, $rj">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class LLBase<bits<32> op>
     : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14),
                "$rd, $rj, $imm14">;
+class LLBase_ACQ<bits<32> op>
+    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), "$rd, $rj">;
+}
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Constraints = "$rd = $dst" in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Constraints = "$rd = $dst" in {
 class SCBase<bits<32> op>
     : Fmt2RI14<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
                "$rd, $rj, $imm14">;
+class SCBase_128<bits<32> op>
+    : Fmt3R<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rk, GPR:$rj),
+               "$rd, $rk, $rj">;
+class SCBase_REL<bits<32> op>
+    : Fmt2R<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj), "$rd, $rj">;
+}
 
 let hasSideEffects = 1 in
 class IOCSRRD<bits<32> op>
@@ -814,6 +823,8 @@ def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12),
 // Atomic Memory Access Instructions
 def LL_W : LLBase<0x20000000>;
 def SC_W : SCBase<0x21000000>;
+def LLACQ_W : LLBase_ACQ<0x38578000>;
+def SCREL_W : SCBase_REL<0x38578400>;
 
 // Barrier Instructions
 def DBAR : MISC_I15<0x38720000>;
@@ -935,8 +946,12 @@ def STLE_W : STORE_3R<0x387f0000>;
 def STLE_D : STORE_3R<0x387f8000>;
 
 // Atomic Memory Access Instructions for 64-bits
+def AMSWAP_B     : AM_3R<0x385c0000>;
+def AMSWAP_H     : AM_3R<0x385c8000>;
 def AMSWAP_W     : AM_3R<0x38600000>;
 def AMSWAP_D     : AM_3R<0x38608000>;
+def AMADD_B      : AM_3R<0x385d0000>;
+def AMADD_H      : AM_3R<0x385d8000>;
 def AMADD_W      : AM_3R<0x38610000>;
 def AMADD_D      : AM_3R<0x38618000>;
 def AMAND_W      : AM_3R<0x38620000>;
@@ -953,8 +968,12 @@ def AMMAX_WU     : AM_3R<0x38670000>;
 def AMMAX_DU     : AM_3R<0x38678000>;
 def AMMIN_WU     : AM_3R<0x38680000>;
 def AMMIN_DU     : AM_3R<0x38688000>;
+def AMSWAP__DB_B : AM_3R<0x385e0000>;
+def AMSWAP__DB_H : AM_3R<0x385e8000>;
 def AMSWAP__DB_W : AM_3R<0x38690000>;
 def AMSWAP__DB_D : AM_3R<0x38698000>;
+def AMADD__DB_B  : AM_3R<0x385f0000>;
+def AMADD__DB_H  : AM_3R<0x385f8000>;
 def AMADD__DB_W  : AM_3R<0x386a0000>;
 def AMADD__DB_D  : AM_3R<0x386a8000>;
 def AMAND__DB_W  : AM_3R<0x386b0000>;
@@ -971,8 +990,19 @@ def AMMAX__DB_WU : AM_3R<0x38700000>;
 def AMMAX__DB_DU : AM_3R<0x38708000>;
 def AMMIN__DB_WU : AM_3R<0x38710000>;
 def AMMIN__DB_DU : AM_3R<0x38718000>;
+def AMCAS_B     : AM_3R<0x38580000>;
+def AMCAS_H     : AM_3R<0x38588000>;
+def AMCAS_W     : AM_3R<0x38590000>;
+def AMCAS_D     : AM_3R<0x38598000>;
+def AMCAS__DB_B     : AM_3R<0x385a0000>;
+def AMCAS__DB_H     : AM_3R<0x385a8000>;
+def AMCAS__DB_W     : AM_3R<0x385b0000>;
+def AMCAS__DB_D     : AM_3R<0x385b8000>;
 def LL_D : LLBase<0x22000000>;
 def SC_D : SCBase<0x23000000>;
+def SC_Q : SCBase_128<0x38570000>;
+def LLACQ_D : LLBase_ACQ<0x38578800>;
+def SCREL_D : SCBase_REL<0x38578C00>;
 
 // CRC Check Instructions
 def CRC_W_B_W  : ALU_3R<0x00240000>;

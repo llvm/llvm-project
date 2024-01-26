@@ -3,7 +3,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s -check-prefixes=VI
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -denormal-fp-math-f32=ieee < %s | FileCheck %s -check-prefixes=GCN
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1030 -denormal-fp-math-f32=ieee < %s | FileCheck %s -check-prefixes=GFX1030
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck %s -check-prefixes=EG
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood < %s | FileCheck %s -check-prefixes=EG
 
 define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: udiv_i32:

@@ -643,9 +643,8 @@ define <vscale x 2 x float> @fp_reduction_vfmv_s_f(float %0, <vscale x 8 x float
 define dso_local <vscale x 2 x i32> @int_reduction_vmv_s_x(i32 signext %0, <vscale x 8 x i32> %1, i64 %2) {
 ; CHECK-LABEL: int_reduction_vmv_s_x:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v12, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.s.x v12, a0
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    ret
   %4 = tail call <vscale x 8 x i32> @llvm.riscv.vmv.s.x.nxv8i32.i64(<vscale x 8 x i32> poison, i32 %0, i64 %2)

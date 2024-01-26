@@ -318,18 +318,8 @@ class FileEntry {
   /// The file content, if it is owned by the \p FileEntry.
   std::unique_ptr<llvm::MemoryBuffer> Content;
 
-  // First access name for this FileEntry.
-  //
-  // This is Optional only to allow delayed construction (FileEntryRef has no
-  // default constructor). It should always have a value in practice.
-  //
-  // TODO: remove this once everyone that needs a name uses FileEntryRef.
-  OptionalFileEntryRef LastRef;
-
 public:
   ~FileEntry();
-  LLVM_DEPRECATED("Use FileEntryRef::getName() instead.", "")
-  StringRef getName() const { return LastRef->getName(); }
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }

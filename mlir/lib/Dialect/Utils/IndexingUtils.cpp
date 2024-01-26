@@ -213,6 +213,13 @@ mlir::invertPermutationVector(ArrayRef<int64_t> permutation) {
   return inversion;
 }
 
+bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
+  for (auto i : llvm::seq<int64_t>(0, permutation.size()))
+    if (permutation[i] != i)
+      return false;
+  return true;
+}
+
 bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {
   assert(llvm::all_of(interchange, [](int64_t s) { return s >= 0; }) &&
          "permutation must be non-negative");

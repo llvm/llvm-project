@@ -8,12 +8,12 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
         FunctionSpec<
             "strlcat",
             RetValSpec<SizeTType>,
-            [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+            [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<SizeTType>]
         >,
         FunctionSpec<
             "strlcpy",
             RetValSpec<SizeTType>,
-            [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+            [ArgSpec<ConstCharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>, ArgSpec<SizeTType>]
         >,
         FunctionSpec<
             "strsep",

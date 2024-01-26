@@ -22,7 +22,7 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   BinaryFormat
   CodeGen
   DebugInfoDWARF
-  DWARFLinkerBase
+  DWARFLinker
   MC
   Object
   Support

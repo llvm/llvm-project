@@ -24,7 +24,6 @@ add_lldb_library(lldbBreakpoint NO_PLUGIN_DEPENDENCIES
   WatchpointList.cpp
   WatchpointOptions.cpp
   WatchpointResource.cpp
-  WatchpointResourceList.cpp
 
   LINK_LIBS
     lldbCore

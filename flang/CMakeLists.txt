@@ -474,6 +474,9 @@ if (FLANG_LIBS)
 endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  add_llvm_install_targets(install-flang-headers
+    COMPONENT flang-headers)
+
   install(DIRECTORY include/flang
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT flang-headers

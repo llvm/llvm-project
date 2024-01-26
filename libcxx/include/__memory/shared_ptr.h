@@ -61,6 +61,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
@@ -1166,12 +1169,12 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(nullptr_t, const shared_ptr<_Tp>& _
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(const shared_ptr<_Tp>& __x, nullptr_t) _NOEXCEPT {
-  return less<_Tp*>()(__x.get(), nullptr);
+  return less<typename shared_ptr<_Tp>::element_type*>()(__x.get(), nullptr);
 }
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(nullptr_t, const shared_ptr<_Tp>& __x) _NOEXCEPT {
-  return less<_Tp*>()(nullptr, __x.get());
+  return less<typename shared_ptr<_Tp>::element_type*>()(nullptr, __x.get());
 }
 
 template <class _Tp>
@@ -1661,5 +1664,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool atomic_compare_exchange_weak_explicit(
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MEMORY_SHARED_PTR_H

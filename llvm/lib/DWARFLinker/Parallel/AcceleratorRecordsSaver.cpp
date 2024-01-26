@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AcceleratorRecordsSaver.h"
-#include "Utils.h"
+#include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/Support/DJB.h"
 

@@ -69,8 +69,29 @@ LogicalResult verifyOperationHasValidTileId(Operation *op) {
     return success(); // Not having a tile ID (yet) is okay.
   if (!tileId.getType().isSignlessInteger(32))
     return tileOp.emitOpError("tile ID should be a 32-bit signless integer");
-  // TODO: Verify value of tile ID is in range.
   return success();
+}
+
+scf::ForOp createLoopOverTileSlices(
+    PatternRewriter &rewriter, Location loc, Value initTile,
+    std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody) {
+  OpBuilder::InsertionGuard g(rewriter);
+  auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
+      loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
+  auto vscale =
+      rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
+  auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto numTileSlices =
+      rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
+  auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step,
+                                           ValueRange{initTile});
+  rewriter.setInsertionPointToStart(forOp.getBody());
+  Value nextTile =
+      makeLoopBody(rewriter, loc, /*tileSliceIndex=*/forOp.getInductionVar(),
+                   /*currentTile=*/forOp.getRegionIterArg(0));
+  rewriter.create<scf::YieldOp>(loc, nextTile);
+  return forOp;
 }
 
 } // namespace mlir::arm_sme

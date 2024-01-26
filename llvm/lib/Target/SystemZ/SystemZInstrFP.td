@@ -51,36 +51,27 @@ let isCodeGenOnly = 1 in
   def LDR32 : UnaryRR<"ldr", 0x28, null_frag, FP32, FP32>;
 
 // Moves between two floating-point registers that also set the condition
-// codes.
+// codes. Note that these instructions will turn SNaNs into QNaNs and should
+// not be used for comparison if the result will be used afterwards.
 let Uses = [FPC], mayRaiseFPException = 1,
     Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
-  defm LTEBR : LoadAndTestRRE<"ltebr", 0xB302, FP32>;
-  defm LTDBR : LoadAndTestRRE<"ltdbr", 0xB312, FP64>;
-  defm LTXBR : LoadAndTestRRE<"ltxbr", 0xB342, FP128>;
-}
-// Note that LTxBRCompare is not available if we have vector support,
-// since load-and-test instructions will partially clobber the target
-// (vector) register.
-let Predicates = [FeatureNoVector] in {
-  defm : CompareZeroFP<LTEBRCompare, FP32>;
-  defm : CompareZeroFP<LTDBRCompare, FP64>;
-  defm : CompareZeroFP<LTXBRCompare, FP128>;
+  def LTEBR : UnaryRRE<"ltebr", 0xB302, null_frag, FP32, FP32>;
+  def LTDBR : UnaryRRE<"ltdbr", 0xB312, null_frag, FP64, FP64>;
+  def LTXBR : UnaryRRE<"ltxbr", 0xB342, null_frag, FP128, FP128>;
 }
 
-// Use a normal load-and-test for compare against zero in case of
-// vector support (via a pseudo to simplify instruction selection).
+// Use a load-and-test for compare against zero (via a pseudo to simplify
+// instruction selection).
 let Uses = [FPC], mayRaiseFPException = 1,
     Defs = [CC], usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-  def LTEBRCompare_VecPseudo : Pseudo<(outs), (ins FP32:$R1, FP32:$R2), []>;
-  def LTDBRCompare_VecPseudo : Pseudo<(outs), (ins FP64:$R1, FP64:$R2), []>;
-  def LTXBRCompare_VecPseudo : Pseudo<(outs), (ins FP128:$R1, FP128:$R2), []>;
+  def LTEBRCompare_Pseudo : Pseudo<(outs), (ins FP32:$R1), []>;
+  def LTDBRCompare_Pseudo : Pseudo<(outs), (ins FP64:$R1), []>;
+  def LTXBRCompare_Pseudo : Pseudo<(outs), (ins FP128:$R1), []>;
 }
-let Predicates = [FeatureVector] in {
-  defm : CompareZeroFP<LTEBRCompare_VecPseudo, FP32>;
-  defm : CompareZeroFP<LTDBRCompare_VecPseudo, FP64>;
-}
-let Predicates = [FeatureVector, FeatureNoVectorEnhancements1] in
-  defm : CompareZeroFP<LTXBRCompare_VecPseudo, FP128>;
+defm : CompareZeroFP<LTEBRCompare_Pseudo, FP32>;
+defm : CompareZeroFP<LTDBRCompare_Pseudo, FP64>;
+let Predicates = [FeatureNoVectorEnhancements1] in
+  defm : CompareZeroFP<LTXBRCompare_Pseudo, FP128>;
 
 // Moves between 64-bit integer and floating-point registers.
 def LGDR : UnaryRRE<"lgdr", 0xB3CD, bitconvert, GR64, FP64>;
