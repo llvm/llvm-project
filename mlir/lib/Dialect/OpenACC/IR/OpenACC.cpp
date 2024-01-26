@@ -963,6 +963,121 @@ static void printDeviceTypeOperandsWithSegment(
   });
 }
 
+static ParseResult parseWaitClause(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
+    llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &deviceTypes,
+    mlir::DenseI32ArrayAttr &segments, mlir::ArrayAttr &keywordOnly) {
+  llvm::SmallVector<mlir::Attribute> deviceTypeAttrs, keywordAttrs;
+  llvm::SmallVector<int32_t> seg;
+
+  bool needCommaBeforeOperands = false;
+
+  // Keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    keywordAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    keywordOnly = ArrayAttr::get(parser.getContext(), keywordAttrs);
+    return success();
+  }
+
+  // Parse keyword only attributes
+  if (succeeded(parser.parseOptionalLSquare())) {
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (parser.parseAttribute(keywordAttrs.emplace_back()))
+            return failure();
+          return success();
+        })))
+      return failure();
+    if (parser.parseRSquare())
+      return failure();
+    needCommaBeforeOperands = true;
+  }
+
+  if (needCommaBeforeOperands && failed(parser.parseComma()))
+    return failure();
+
+  do {
+    if (failed(parser.parseLBrace()))
+      return failure();
+
+    int32_t crtOperandsSize = operands.size();
+
+    if (failed(parser.parseCommaSeparatedList(
+            mlir::AsmParser::Delimiter::None, [&]() {
+              if (parser.parseOperand(operands.emplace_back()) ||
+                  parser.parseColonType(types.emplace_back()))
+                return failure();
+              return success();
+            })))
+      return failure();
+
+    seg.push_back(operands.size() - crtOperandsSize);
+
+    if (failed(parser.parseRBrace()))
+      return failure();
+
+    if (succeeded(parser.parseOptionalLSquare())) {
+      if (parser.parseAttribute(deviceTypeAttrs.emplace_back()) ||
+          parser.parseRSquare())
+        return failure();
+    } else {
+      deviceTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
+          parser.getContext(), mlir::acc::DeviceType::None));
+    }
+  } while (succeeded(parser.parseOptionalComma()));
+
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  deviceTypes = ArrayAttr::get(parser.getContext(), deviceTypeAttrs);
+  keywordOnly = ArrayAttr::get(parser.getContext(), keywordAttrs);
+  segments = DenseI32ArrayAttr::get(parser.getContext(), seg);
+
+  return success();
+}
+
+static bool hasOnlyDeviceTypeNone(std::optional<mlir::ArrayAttr> attrs) {
+  if (!hasDeviceTypeValues(attrs))
+    return false;
+  if (attrs->size() != 1)
+    return false;
+  if (auto deviceTypeAttr =
+          mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*attrs)[0]))
+    return deviceTypeAttr.getValue() == mlir::acc::DeviceType::None;
+  return false;
+}
+
+static void printWaitClause(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                            mlir::OperandRange operands, mlir::TypeRange types,
+                            std::optional<mlir::ArrayAttr> deviceTypes,
+                            std::optional<mlir::DenseI32ArrayAttr> segments,
+                            std::optional<mlir::ArrayAttr> keywordOnly) {
+
+  if (operands.begin() == operands.end() && hasOnlyDeviceTypeNone(keywordOnly))
+    return;
+
+  p << "(";
+
+  printDeviceTypes(p, keywordOnly);
+  if (hasDeviceTypeValues(keywordOnly) && hasDeviceTypeValues(deviceTypes))
+    p << ", ";
+
+  unsigned opIdx = 0;
+  llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
+    p << "{";
+    llvm::interleaveComma(
+        llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
+          p << operands[opIdx] << " : " << operands[opIdx].getType();
+          ++opIdx;
+        });
+    p << "}";
+    printSingleDeviceType(p, it.value());
+  });
+
+  p << ")";
+}
+
 static ParseResult parseDeviceTypeOperands(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
@@ -993,6 +1108,8 @@ static void
 printDeviceTypeOperands(mlir::OpAsmPrinter &p, mlir::Operation *op,
                         mlir::OperandRange operands, mlir::TypeRange types,
                         std::optional<mlir::ArrayAttr> deviceTypes) {
+  if (!hasDeviceTypeValues(deviceTypes))
+    return;
   llvm::interleaveComma(llvm::zip(*deviceTypes, operands), p, [&](auto it) {
     p << std::get<1>(it) << " : " << std::get<1>(it).getType();
     printSingleDeviceType(p, std::get<0>(it));
@@ -1008,17 +1125,12 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
   llvm::SmallVector<mlir::Attribute> keywordOnlyDeviceTypeAttributes;
   bool needCommaBeforeOperands = false;
 
-  // Keyword only
-  if (failed(parser.parseOptionalLParen())) {
-    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    keywordOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
-    return success();
-  }
+  if (failed(parser.parseOptionalLParen()))
+    return failure();
 
   // Parse keyword only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
+    // Parse keyword only attributes
     if (failed(parser.parseCommaSeparatedList([&]() {
           if (parser.parseAttribute(
                   keywordOnlyDeviceTypeAttributes.emplace_back()))
@@ -1029,6 +1141,13 @@ static ParseResult parseDeviceTypeOperandsWithKeywordOnly(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
+  } else if (succeeded(parser.parseOptionalRParen())) {
+    // Keyword only
+    keywordOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    keywordOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), keywordOnlyDeviceTypeAttributes);
+    return success();
   }
 
   if (needCommaBeforeOperands && failed(parser.parseComma()))
@@ -1065,15 +1184,13 @@ static void printDeviceTypeOperandsWithKeywordOnly(
     mlir::TypeRange types, std::optional<mlir::ArrayAttr> deviceTypes,
     std::optional<mlir::ArrayAttr> keywordOnlyDeviceTypes) {
 
-  if (operands.begin() == operands.end() && keywordOnlyDeviceTypes &&
-      keywordOnlyDeviceTypes->size() == 1) {
-    auto deviceTypeAttr =
-        mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*keywordOnlyDeviceTypes)[0]);
-    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
-      return;
+  p << "(";
+  if (operands.begin() == operands.end() &&
+      hasOnlyDeviceTypeNone(keywordOnlyDeviceTypes)) {
+    p << ")";
+    return;
   }
 
-  p << "(";
   printDeviceTypes(p, keywordOnlyDeviceTypes);
   if (hasDeviceTypeValues(keywordOnlyDeviceTypes) &&
       hasDeviceTypeValues(deviceTypes))
@@ -1323,17 +1440,12 @@ static ParseResult parseGangClause(
   bool needCommaBetweenValues = false;
   bool needCommaBeforeOperands = false;
 
-  // Gang only keyword
-  if (failed(parser.parseOptionalLParen())) {
-    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
-        parser.getContext(), mlir::acc::DeviceType::None));
-    gangOnlyDeviceType =
-        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
-    return success();
-  }
+  if (failed(parser.parseOptionalLParen()))
+    return failure();
 
   // Parse gang only attributes
   if (succeeded(parser.parseOptionalLSquare())) {
+    // Parse gang only attributes
     if (failed(parser.parseCommaSeparatedList([&]() {
           if (parser.parseAttribute(
                   gangOnlyDeviceTypeAttributes.emplace_back()))
@@ -1344,6 +1456,13 @@ static ParseResult parseGangClause(
     if (parser.parseRSquare())
       return failure();
     needCommaBeforeOperands = true;
+  } else if (succeeded(parser.parseOptionalRParen())) {
+    // Gang only keyword
+    gangOnlyDeviceTypeAttributes.push_back(mlir::acc::DeviceTypeAttr::get(
+        parser.getContext(), mlir::acc::DeviceType::None));
+    gangOnlyDeviceType =
+        ArrayAttr::get(parser.getContext(), gangOnlyDeviceTypeAttributes);
+    return success();
   }
 
   auto argNum = mlir::acc::GangArgTypeAttr::get(parser.getContext(),
@@ -1443,16 +1562,13 @@ void printGangClause(OpAsmPrinter &p, Operation *op,
                      std::optional<mlir::DenseI32ArrayAttr> segments,
                      std::optional<mlir::ArrayAttr> gangOnlyDeviceTypes) {
 
+  p << "(";
   if (operands.begin() == operands.end() &&
-      hasDeviceTypeValues(gangOnlyDeviceTypes) &&
-      gangOnlyDeviceTypes->size() == 1) {
-    auto deviceTypeAttr =
-        mlir::dyn_cast<mlir::acc::DeviceTypeAttr>((*gangOnlyDeviceTypes)[0]);
-    if (deviceTypeAttr.getValue() == mlir::acc::DeviceType::None)
-      return;
+      hasOnlyDeviceTypeNone(gangOnlyDeviceTypes)) {
+    p << ")";
+    return;
   }
 
-  p << "(";
   printDeviceTypes(p, gangOnlyDeviceTypes);
 
   if (hasDeviceTypeValues(gangOnlyDeviceTypes) &&
@@ -1516,6 +1632,11 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
 }
 
 LogicalResult acc::LoopOp::verify() {
+  if (!getUpperbound().empty() && getInclusiveUpperbound() &&
+      (getUpperbound().size() != getInclusiveUpperbound()->size()))
+    return emitError() << "inclusiveUpperbound size is expected to be the same"
+                       << " as upperbound size";
+
   // Check collapse
   if (getCollapseAttr() && !getCollapseDeviceTypeAttr())
     return emitOpError() << "collapse device_type attr must be define when"
@@ -1629,7 +1750,9 @@ unsigned LoopOp::getNumDataOperands() {
 }
 
 Value LoopOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getGangOperands().size();
+  unsigned numOptional =
+      getLowerbound().size() + getUpperbound().size() + getStep().size();
+  numOptional += getGangOperands().size();
   numOptional += getVectorOperands().size();
   numOptional += getWorkerNumOperands().size();
   numOptional += getTileOperands().size();
@@ -1746,6 +1869,58 @@ bool LoopOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }
 
 bool LoopOp::hasGang(mlir::acc::DeviceType deviceType) {
   return hasDeviceType(getGang(), deviceType);
+}
+
+llvm::SmallVector<mlir::Region *> acc::LoopOp::getLoopRegions() {
+  return {&getRegion()};
+}
+
+/// loop-control ::= `(` ssa-id-and-type-list `)` `=` `(` ssa-id-and-type-list
+/// `)` `to` `(` ssa-id-and-type-list `)` `step` `(` ssa-id-and-type-list `)`
+ParseResult
+parseLoopControl(OpAsmParser &parser, Region &region,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerbound,
+                 SmallVectorImpl<Type> &lowerboundType,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperbound,
+                 SmallVectorImpl<Type> &upperboundType,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &step,
+                 SmallVectorImpl<Type> &stepType) {
+
+  SmallVector<OpAsmParser::Argument> inductionVars;
+  if (succeeded(parser.parseOptionalLParen())) {
+    if (parser.parseArgumentList(inductionVars, OpAsmParser::Delimiter::None,
+                                 /*allowType=*/true) ||
+        parser.parseRParen() || parser.parseEqual() || parser.parseLParen() ||
+        parser.parseOperandList(lowerbound, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(lowerboundType) || parser.parseRParen() ||
+        parser.parseKeyword("to") || parser.parseLParen() ||
+        parser.parseOperandList(upperbound, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(upperboundType) || parser.parseRParen() ||
+        parser.parseKeyword("step") || parser.parseLParen() ||
+        parser.parseOperandList(step, inductionVars.size(),
+                                OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(stepType) || parser.parseRParen())
+      return failure();
+  }
+  return parser.parseRegion(region, inductionVars);
+}
+
+void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
+                      ValueRange lowerbound, TypeRange lowerboundType,
+                      ValueRange upperbound, TypeRange upperboundType,
+                      ValueRange steps, TypeRange stepType) {
+  ValueRange regionArgs = region.front().getArguments();
+  if (!regionArgs.empty()) {
+    p << "(";
+    llvm::interleaveComma(regionArgs, p,
+                          [&p](Value v) { p << v << " : " << v.getType(); });
+    p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
+      << upperbound << " : " << upperboundType << ") "
+      << " step (" << steps << " : " << stepType << ") ";
+  }
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2364,15 +2539,30 @@ LogicalResult acc::UpdateOp::verify() {
   if (getDataClauseOperands().empty())
     return emitError("at least one value must be present in dataOperands");
 
-  // The async attribute represent the async clause without value. Therefore the
-  // attribute and operand cannot appear at the same time.
-  if (getAsyncOperand() && getAsync())
-    return emitError("async attribute cannot appear with asyncOperand");
+  if (failed(verifyDeviceTypeCountMatch(*this, getAsyncOperands(),
+                                        getAsyncOperandsDeviceTypeAttr(),
+                                        "async")))
+    return failure();
 
-  // The wait attribute represent the wait clause without values. Therefore the
-  // attribute and operands cannot appear at the same time.
-  if (!getWaitOperands().empty() && getWait())
-    return emitError("wait attribute cannot appear with waitOperands");
+  if (failed(verifyDeviceTypeAndSegmentCountMatch(
+          *this, getWaitOperands(), getWaitOperandsSegmentsAttr(),
+          getWaitOperandsDeviceTypeAttr(), "wait")))
+    return failure();
+
+  for (uint32_t dtypeInt = 0; dtypeInt != acc::getMaxEnumValForDeviceType();
+       ++dtypeInt) {
+    auto dtype = static_cast<acc::DeviceType>(dtypeInt);
+
+    // The async attribute represent the async clause without value. Therefore
+    // the attribute and operand cannot appear at the same time.
+    if (getAsyncValue(dtype) && hasAsyncOnly(dtype))
+      return emitError("async attribute cannot appear with asyncOperand");
+
+    // The wait attribute represent the wait clause without values. Therefore
+    // the attribute and operands cannot appear at the same time.
+    if (!getWaitValues(dtype).empty() && hasWaitOnly(dtype))
+      return emitError("wait attribute cannot appear with waitOperands");
+  }
 
   if (getWaitDevnum() && getWaitOperands().empty())
     return emitError("wait_devnum cannot appear without waitOperands");
@@ -2391,7 +2581,7 @@ unsigned UpdateOp::getNumDataOperands() {
 }
 
 Value UpdateOp::getDataOperand(unsigned i) {
-  unsigned numOptional = getAsyncOperand() ? 1 : 0;
+  unsigned numOptional = getAsyncOperands().size();
   numOptional += getWaitDevnum() ? 1 : 0;
   numOptional += getIfCond() ? 1 : 0;
   return getOperand(getWaitOperands().size() + numOptional + i);
@@ -2400,6 +2590,46 @@ Value UpdateOp::getDataOperand(unsigned i) {
 void UpdateOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<RemoveConstantIfCondition<UpdateOp>>(context);
+}
+
+bool UpdateOp::hasAsyncOnly() {
+  return hasAsyncOnly(mlir::acc::DeviceType::None);
+}
+
+bool UpdateOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
+  return hasDeviceType(getAsync(), deviceType);
+}
+
+mlir::Value UpdateOp::getAsyncValue() {
+  return getAsyncValue(mlir::acc::DeviceType::None);
+}
+
+mlir::Value UpdateOp::getAsyncValue(mlir::acc::DeviceType deviceType) {
+  if (!hasDeviceTypeValues(getAsyncOperandsDeviceType()))
+    return {};
+
+  if (auto pos = findSegment(*getAsyncOperandsDeviceType(), deviceType))
+    return getAsyncOperands()[*pos];
+
+  return {};
+}
+
+bool UpdateOp::hasWaitOnly() {
+  return hasWaitOnly(mlir::acc::DeviceType::None);
+}
+
+bool UpdateOp::hasWaitOnly(mlir::acc::DeviceType deviceType) {
+  return hasDeviceType(getWait(), deviceType);
+}
+
+mlir::Operation::operand_range UpdateOp::getWaitValues() {
+  return getWaitValues(mlir::acc::DeviceType::None);
+}
+
+mlir::Operation::operand_range
+UpdateOp::getWaitValues(mlir::acc::DeviceType deviceType) {
+  return getValuesFromSegments(getWaitOperandsDeviceType(), getWaitOperands(),
+                               getWaitOperandsSegments(), deviceType);
 }
 
 //===----------------------------------------------------------------------===//

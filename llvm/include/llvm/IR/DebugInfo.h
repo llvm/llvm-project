@@ -193,6 +193,12 @@ inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
   return getAssignmentInsts(DAI->getAssignID());
 }
 
+inline AssignmentInstRange getAssignmentInsts(const DPValue *DPV) {
+  assert(DPV->isDbgAssign() &&
+         "Can't get assignment instructions for non-assign DPV!");
+  return getAssignmentInsts(DPV->getAssignID());
+}
+
 //
 // Utilities for enumerating llvm.dbg.assign intrinsic from an assignment ID.
 //
@@ -224,6 +230,7 @@ inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
   else
     return make_range(Value::user_iterator(), Value::user_iterator());
 }
+
 inline SmallVector<DPValue *> getDPVAssignmentMarkers(const Instruction *Inst) {
   if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
     return cast<DIAssignID>(ID)->getAllDPValueUsers();

@@ -231,8 +231,8 @@ struct ConstraintTy {
 
   ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq,
                bool IsNe)
-      : Coefficients(Coefficients), IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {
-  }
+      : Coefficients(std::move(Coefficients)), IsSigned(IsSigned), IsEq(IsEq),
+        IsNe(IsNe) {}
 
   unsigned size() const { return Coefficients.size(); }
 
@@ -1061,11 +1061,16 @@ void State::addInfoFor(BasicBlock &BB) {
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       break;
     // Enqueue the intrinsics to add extra info.
-    case Intrinsic::abs:
     case Intrinsic::umin:
     case Intrinsic::umax:
     case Intrinsic::smin:
     case Intrinsic::smax:
+      // TODO: Check if it is possible to instead only added the min/max facts
+      // when simplifying uses of the min/max intrinsics.
+      if (!isGuaranteedNotToBePoison(&I))
+        break;
+      [[fallthrough]];
+    case Intrinsic::abs:
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       break;
     }

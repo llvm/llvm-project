@@ -1067,7 +1067,8 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (!isInt<20>(AM.BaseOffs))
     return false;
 
-  bool RequireD12 = Subtarget.hasVector() && Ty->isVectorTy();
+  bool RequireD12 =
+      Subtarget.hasVector() && (Ty->isVectorTy() || Ty->isIntegerTy(128));
   AddressingMode SupportedAM(!RequireD12, true);
   if (I != nullptr)
     SupportedAM = supportedAddressingMode(I, Subtarget.hasVector());

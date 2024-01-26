@@ -138,21 +138,32 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     return;
   }
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    auto AddIfInteresting = [&](Value *V) {
+    for (Value *V : DVI->location_ops()) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
-          return;
+          continue;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
         if (DVIVec.empty() || DVIVec.back() != DVI)
           DVIVec.push_back(DVI);
       }
-    };
-    for (Value *V : DVI->location_ops())
-      AddIfInteresting(V);
-    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-      AddIfInteresting(DAI->getAddress());
+    }
   }
+
+  // Check for non-intrinsic debug-info records.
+  for (auto &DPV : Inst.getDbgValueRange()) {
+    for (Value *V : DPV.location_ops()) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!isInterestingAlloca(*AI))
+          continue;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DPVVec = AInfo.DbgVariableRecords;
+        if (DPVVec.empty() || DPVVec.back() != &DPV)
+          DPVVec.push_back(&DPV);
+      }
+    }
+  }
+
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
   if (ExitUntag)
     Info.RetVec.push_back(ExitUntag);

@@ -455,6 +455,13 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
   if (symbol.attrs().test(Attr::BIND_C)) {
     CheckBindC(symbol);
   }
+  for (MutableSymbolRef ref : symbol.get<CommonBlockDetails>().objects()) {
+    if (ref->test(Symbol::Flag::CrayPointee)) {
+      messages_.Say(ref->name(),
+          "Cray pointee '%s' may not be a member of a COMMON block"_err_en_US,
+          ref->name());
+    }
+  }
 }
 
 // C859, C860
@@ -745,11 +752,6 @@ void CheckHelper::CheckObjectEntity(
       if (!inExplicitInterface && !inModuleProc) {
         messages_.Say(
             "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
-      }
-      if (ignoreTKR.test(common::IgnoreTKR::Contiguous) &&
-          !IsAssumedShape(symbol)) {
-        messages_.Say(
-            "!DIR$ IGNORE_TKR(C) may apply only to an assumed-shape array"_err_en_US);
       }
       if (ownerSymbol && ownerSymbol->attrs().test(Attr::ELEMENTAL) &&
           details.ignoreTKR().test(common::IgnoreTKR::Rank)) {
@@ -2514,6 +2516,13 @@ void CheckHelper::CheckEquivalenceSet(const EquivalenceSet &set) {
     }
   }
   // TODO: Move C8106 (&al.) checks here from resolve-names-utils.cpp
+  for (const EquivalenceObject &object : set) {
+    if (object.symbol.test(Symbol::Flag::CrayPointee)) {
+      messages_.Say(object.symbol.name(),
+          "Cray pointee '%s' may not be a member of an EQUIVALENCE group"_err_en_US,
+          object.symbol.name());
+    }
+  }
 }
 
 void CheckHelper::CheckBlockData(const Scope &scope) {

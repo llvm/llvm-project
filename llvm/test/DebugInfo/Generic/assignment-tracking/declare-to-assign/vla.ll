@@ -1,4 +1,5 @@
 ; RUN: opt -S %s -passes=declare-to-assign -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -passes=declare-to-assign -o - | FileCheck %s
 
 ;; Check declare-to-assign ignores VLA-backed variables (for now).
 ;; From C++ source:
