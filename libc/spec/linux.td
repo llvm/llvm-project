@@ -1,8 +1,3 @@
-def StructEpollEvent : NamedType<"struct epoll_event">;
-def StructEpollEventPtr : PtrType<StructEpollEvent>;
-
-def StructEpollData : NamedType<"struct epoll_data">;
-
 def Linux : StandardSpec<"Linux"> {
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
@@ -142,77 +137,6 @@ def Linux : StandardSpec<"Linux"> {
       []  // Functions
   >;
 
-
-  HeaderSpec SysEpoll = HeaderSpec<
-      "sys/epoll.h",
-      [], // Macros
-      [
-        StructEpollEvent,
-        StructEpollData,
-        SigSetType,
-        StructTimeSpec,
-      ], // Types
-      [], // Enumerations
-      [
-        FunctionSpec<
-          "epoll_create",
-          RetValSpec<IntType>,
-          [
-            ArgSpec<IntType>
-          ]
-        >,
-        FunctionSpec<
-          "epoll_create1",
-          RetValSpec<IntType>,
-          [
-            ArgSpec<IntType>
-          ]
-        >,
-        FunctionSpec<
-          "epoll_ctl",
-          RetValSpec<IntType>,
-          [
-            ArgSpec<IntType>,
-            ArgSpec<IntType>,
-            ArgSpec<IntType>,
-            ArgSpec<StructEpollEventPtr>
-          ]
-        >,
-        FunctionSpec<
-          "epoll_wait",
-          RetValSpec<IntType>,
-          [
-            ArgSpec<IntType>,
-            ArgSpec<StructEpollEventPtr>,
-            ArgSpec<IntType>,
-            ArgSpec<IntType>
-          ]
-        >,
-        FunctionSpec<
-          "epoll_pwait",
-          RetValSpec<IntType>,
-          [
-            ArgSpec<IntType>,
-            ArgSpec<StructEpollEventPtr>,
-            ArgSpec<IntType>,
-            ArgSpec<IntType>,
-            ArgSpec<SigSetPtrType>
-          ]
-        >,
-        FunctionSpec<
-          "epoll_pwait2",
-          RetValSpec<IntType>,
-          [
-            ArgSpec<IntType>,
-            ArgSpec<StructEpollEventPtr>,
-            ArgSpec<IntType>,
-            ArgSpec<ConstStructTimeSpecPtr>,
-            ArgSpec<SigSetPtrType>
-          ]
-        >,
-      ]  // Functions
-  >;
-
   HeaderSpec Signal = HeaderSpec<
       "signal.h",
       [
@@ -257,7 +181,6 @@ def Linux : StandardSpec<"Linux"> {
 
   let Headers = [
     Errno,
-    SysEpoll,
     SysMMan,
     SysPrctl,
     SysRandom,
