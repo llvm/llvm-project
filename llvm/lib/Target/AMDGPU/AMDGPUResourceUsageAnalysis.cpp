@@ -46,12 +46,12 @@ char &llvm::AMDGPUResourceUsageAnalysisID = AMDGPUResourceUsageAnalysis::ID;
 // In code object v4 and older, we need to tell the runtime some amount ahead of
 // time if we don't know the true stack size. Assume a smaller number if this is
 // only due to dynamic / non-entry block allocas.
-static cl::opt<uint32_t> AssumedStackSizeForExternalCall(
+static cl::opt<uint32_t> clAssumedStackSizeForExternalCall(
     "amdgpu-assume-external-call-stack-size",
     cl::desc("Assumed stack use of any external call (in bytes)"), cl::Hidden,
     cl::init(16384));
 
-static cl::opt<uint32_t> AssumedStackSizeForDynamicSizeObjects(
+static cl::opt<uint32_t> clAssumedStackSizeForDynamicSizeObjects(
     "amdgpu-assume-dynamic-stack-object-size",
     cl::desc("Assumed extra stack use if there are any "
              "variable sized objects (in bytes)"),
@@ -112,11 +112,14 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
+  uint32_t AssumedStackSizeForDynamicSizeObjects =
+      clAssumedStackSizeForDynamicSizeObjects;
+  uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
   if (AMDGPU::getAMDHSACodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5 ||
       STI.getTargetTriple().getOS() == Triple::AMDPAL) {
-    if (!AssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+    if (clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences() == 0)
       AssumedStackSizeForDynamicSizeObjects = 0;
-    if (!AssumedStackSizeForExternalCall.getNumOccurrences())
+    if (clAssumedStackSizeForExternalCall.getNumOccurrences() == 0)
       AssumedStackSizeForExternalCall = 0;
   }
 
@@ -132,7 +135,8 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
         CallGraphResourceInfo.insert(std::pair(F, SIFunctionResourceInfo()));
     SIFunctionResourceInfo &Info = CI.first->second;
     assert(CI.second && "should only be called once per function");
-    Info = analyzeResourceUsage(*MF, TM);
+    Info = analyzeResourceUsage(*MF, TM, AssumedStackSizeForDynamicSizeObjects,
+                                AssumedStackSizeForExternalCall);
     HasIndirectCall |= Info.HasIndirectCall;
   }
 
@@ -152,7 +156,8 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
     SIFunctionResourceInfo &Info = CI.first->second;
     MachineFunction *MF = MMI.getMachineFunction(*F);
     assert(MF && "function must have been generated already");
-    Info = analyzeResourceUsage(*MF, TM);
+    Info = analyzeResourceUsage(*MF, TM, AssumedStackSizeForDynamicSizeObjects,
+                                AssumedStackSizeForExternalCall);
     HasIndirectCall |= Info.HasIndirectCall;
   }
 
@@ -164,7 +169,9 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
 
 AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo
 AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
-    const MachineFunction &MF, const TargetMachine &TM) const {
+    const MachineFunction &MF, const TargetMachine &TM,
+    uint32_t AssumedStackSizeForDynamicSizeObjects,
+    uint32_t AssumedStackSizeForExternalCall) const {
   SIFunctionResourceInfo Info;
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
@@ -541,9 +548,9 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
             // directly call the tail called function. If a kernel directly
             // calls a tail recursive function, we'll assume maximum stack size
             // based on the regular call instruction.
-            CalleeFrameSize =
-              std::max(CalleeFrameSize,
-                       static_cast<uint64_t>(AssumedStackSizeForExternalCall));
+            CalleeFrameSize = std::max(
+                CalleeFrameSize,
+                static_cast<uint64_t>(AssumedStackSizeForExternalCall));
           }
         }
 
