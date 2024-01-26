@@ -44,7 +44,7 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
   }
 
   // Verify that we don't break out of the above loop in error.
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_TRUE(file1 != nullptr);
   ASSERT_TRUE(file2 != nullptr);
@@ -58,7 +58,7 @@ TEST(LlvmLibcDirentTest, OpenNonExistentDir) {
   libc_errno = 0;
   ::DIR *dir = LIBC_NAMESPACE::opendir("___xyz123__.non_existent__");
   ASSERT_TRUE(dir == nullptr);
-  ASSERT_EQ(libc_errno, ENOENT);
+  ASSERT_ERRNO_EQ(ENOENT);
   libc_errno = 0;
 }
 
@@ -66,6 +66,6 @@ TEST(LlvmLibcDirentTest, OpenFile) {
   libc_errno = 0;
   ::DIR *dir = LIBC_NAMESPACE::opendir("testdata/file1.txt");
   ASSERT_TRUE(dir == nullptr);
-  ASSERT_EQ(libc_errno, ENOTDIR);
+  ASSERT_ERRNO_EQ(ENOTDIR);
   libc_errno = 0;
 }

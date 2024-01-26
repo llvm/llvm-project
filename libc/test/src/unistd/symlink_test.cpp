@@ -29,7 +29,7 @@ TEST(LlvmLibcSymlinkTest, CreateAndUnlink) {
   //   4. Cleanup the file and its symlink.
   libc_errno = 0;
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
@@ -38,7 +38,7 @@ TEST(LlvmLibcSymlinkTest, CreateAndUnlink) {
 
   int symlink_fd = LIBC_NAMESPACE::open(TEST_FILE_LINK, O_PATH);
   ASSERT_GT(symlink_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(symlink_fd), Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));

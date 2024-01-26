@@ -21,7 +21,7 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "__unistd_read_write.test";
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   constexpr const char HELLO[] = "hello";
   constexpr int HELLO_SIZE = sizeof(HELLO);
@@ -31,7 +31,7 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
   int read_fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(read_fd, 0);
   char read_buf[10];
   ASSERT_THAT(LIBC_NAMESPACE::read(read_fd, read_buf, HELLO_SIZE),
