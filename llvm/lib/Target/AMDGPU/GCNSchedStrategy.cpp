@@ -934,7 +934,7 @@ void GCNSchedStage::checkScheduling() {
     DAG.RegionsWithMinOcc[RegionIdx] =
         PressureAfter.getOccupancy(ST) == DAG.MinOccupancy;
 
-    // Early out if we have achieve the occupancy target.
+    // Early out if we have achieved the occupancy target.
     LLVM_DEBUG(dbgs() << "Pressure in desired limits, done.\n");
     return;
   }

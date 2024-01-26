@@ -556,6 +556,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/false},
+    {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
     {"spread",
      &I::genSpread,
@@ -5922,6 +5923,12 @@ void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
   fir::runtime::genSystemClock(builder, loc, fir::getBase(args[0]),
                                fir::getBase(args[1]), fir::getBase(args[2]));
+}
+
+// SLEEP
+void IntrinsicLibrary::genSleep(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "SLEEP has one compulsory argument");
+  fir::runtime::genSleep(builder, loc, fir::getBase(args[0]));
 }
 
 // TRANSFER
