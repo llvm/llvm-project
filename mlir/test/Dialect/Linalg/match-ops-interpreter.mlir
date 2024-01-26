@@ -202,12 +202,26 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
-  func.func @payload(%in1: tensor<2xf32>, %in2: tensor<2xf32>, %in3: tensor<2x3xf32>, %out: tensor<2xf32>, %out2: tensor<2x3xf32>) -> (tensor<2xf32>, tensor<2x3xf32>) attributes { transform.target_tag = "start_here" } {
+  func.func @payload(%in1: tensor<2xf32>, %in2: tensor<2xf32>, %in3: tensor<2x3xf32>, %out: tensor<2xf32>, %out2: tensor<2x3xf32>) -> (tensor<2xf32>, tensor<2x3xf32>, tensor<2x3xf32>) attributes { transform.target_tag = "start_here" } {
     %cst0 = arith.constant 0.0 : f32
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
     // expected-remark @below {{elementwise}}
     %fill = linalg.fill ins(%cst0: f32) outs(%out: tensor<2xf32>) -> tensor<2xf32>
     // expected-remark @below {{elementwise}}
     %add = linalg.map {arith.addf} ins(%in1, %in2: tensor<2xf32>, tensor<2xf32>) outs(%fill: tensor<2xf32>)
+    %non_elementwise = linalg.generic
+      {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+       iterator_types = ["parallel", "parallel"]}
+      ins(%in1, %in3: tensor<2xf32>, tensor<2x3xf32>) outs(%out2: tensor<2x3xf32>) {
+        ^bb0(%arg0: f32, %arg1: f32, %arg3: f32):
+          %0 = arith.addf %arg0, %arg1 : f32
+          %1 = tensor.dim %add, %c0 : tensor<2xf32>
+          %2 = arith.subi %1, %c1 : index
+          %3 = tensor.extract %add[%2] : tensor<2xf32>
+          %4 = arith.mulf %0, %3 : f32
+          linalg.yield %4 : f32
+      } -> tensor<2x3xf32>
     // expected-remark @below {{elementwise}}
     %add_bcast = linalg.generic
       {indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
@@ -217,7 +231,7 @@ module attributes { transform.with_named_sequence } {
           %0 = arith.addf %arg0, %arg1 : f32
           linalg.yield %0 : f32
       } -> tensor<2x3xf32>
-    return %add, %add_bcast : tensor<2xf32>, tensor<2x3xf32>
+    return %add, %add_bcast, %non_elementwise : tensor<2xf32>, tensor<2x3xf32>, tensor<2x3xf32>
   }
 }
 
