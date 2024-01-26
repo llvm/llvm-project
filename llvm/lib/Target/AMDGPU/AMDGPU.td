@@ -997,6 +997,12 @@ def FeatureVmemWriteVgprInOrder : SubtargetFeature<"vmem-write-vgpr-in-order",
   "VMEM instructions of the same type write VGPR results in order"
 >;
 
+def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
+  "HasBitOp3Insts",
+  "true",
+  "Has v_bitop3_b32/v_bitop3_b16 instructions"
+>;
+
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
   "true",
@@ -1524,7 +1530,8 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureCvtFP8VOP1Bug,
    FeatureGFX950Insts,
    FeaturePrngInst,
-   FeatureBF16ConversionInsts
+   FeatureBF16ConversionInsts,
+   FeatureBitOp3Insts
    ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -2391,6 +2398,9 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
+
+def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
+  AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
 
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;

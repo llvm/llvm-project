@@ -220,6 +220,7 @@ protected:
   bool HasSALUFloatInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
+  bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
@@ -1320,6 +1321,8 @@ public:
 
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
+
+  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
