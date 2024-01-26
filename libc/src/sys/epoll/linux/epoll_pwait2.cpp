@@ -14,9 +14,11 @@
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-#include "include/llvm-libc-types/sigset_t.h"
-#include "include/llvm-libc-types/struct_epoll_event.h"
-#include "include/llvm-libc-types/struct_timespec.h"
+// #include "include/llvm-libc-types/sigset_t.h"
+// #include "include/llvm-libc-types/struct_epoll_event.h"
+// #include "include/llvm-libc-types/struct_timespec.h"
+
+#include <sys/epoll.h>
 
 namespace LIBC_NAMESPACE {
 

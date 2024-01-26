@@ -9,8 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT_H
 #define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT_H
 
-#include "include/llvm-libc-types/sigset_t.h"
-#include "include/llvm-libc-types/struct_epoll_event.h"
+// #include "include/llvm-libc-types/sigset_t.h"
+// #include "include/llvm-libc-types/struct_epoll_event.h"
+
+#include <sys/epoll.h>
 
 namespace LIBC_NAMESPACE {
 

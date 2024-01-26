@@ -9,7 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H
 #define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_WAIT_H
 
-#include "include/llvm-libc-types/struct_epoll_event.h"
+// TODO: Use this include once the include headers are also using quotes.
+// #include "include/llvm-libc-types/struct_epoll_event.h"
+
+#include <sys/epoll.h>
 
 namespace LIBC_NAMESPACE {
 
