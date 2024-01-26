@@ -522,7 +522,7 @@ static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
     assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
     Step = new VPScalarCastRecipe(Instruction::Trunc, Step, ResultTy);
     auto *VecPreheader =
-        cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSinglePredecessor());
+        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
     VecPreheader->appendRecipe(Step->getDefiningRecipe());
   }
 
