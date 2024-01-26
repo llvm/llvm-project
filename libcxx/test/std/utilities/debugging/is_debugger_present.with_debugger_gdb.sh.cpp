@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// REQUIRES: host-has-lldb-with-python
+// REQUIRES: host-has-gdb-with-python
 // UNSUPPORTED: android
 // XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: %{lldb} %t.exe -ex "command source %S/is_debugger_present.with_debugger_lldb.py" -o run -o detach -o quit
+// RUN: %{gdb} %t.exe -ex "source %S/is_debugger_present.with_debugger_gdb.py" -ex run -ex detach -ex quit --silent
 
 // <debugging>
 
@@ -40,7 +40,7 @@ void StopForDebugger(void*, void*) OPT_NONE;
 void StopForDebugger(void*, void*) {}
 
 // Test with debugger attached:
-//   LLDB command: `lldb "is_debugger_present.pass" -o run -o detach -o quit`
+//   GDB command: `gdb is_debugger_present.pass -ex run -ex detach -ex quit --silent`
 
 void test() {
   static_assert(noexcept(std::is_debugger_present()));
