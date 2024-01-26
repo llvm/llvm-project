@@ -2132,7 +2132,6 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-instr-info", "lib/Target/RISCV/RISCVGenInstrInfo.inc"),
             ("-gen-macro-fusion-pred", "lib/Target/RISCV/RISCVGenMacroFusion.inc"),
             ("-gen-emitter", "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc"),
-            ("-gen-macro-fusion-pred", "lib/Target/RISCV/RISCVGenMacroFusion.inc"),
             ("-gen-pseudo-lowering", "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc"),
             ("-gen-register-bank", "lib/Target/RISCV/RISCVGenRegisterBank.inc"),
             ("-gen-register-info", "lib/Target/RISCV/RISCVGenRegisterInfo.inc"),
