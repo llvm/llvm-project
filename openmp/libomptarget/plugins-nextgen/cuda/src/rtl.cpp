@@ -28,6 +28,9 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Program.h"
 
 namespace llvm {
 namespace omp {
@@ -63,11 +66,20 @@ cuMemGetAllocationGranularity(size_t *granularity,
                               CUmemAllocationGranularity_flags option) {}
 #endif
 
+#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11020))
+// Forward declarations of asynchronous memory management functions. This is
+// necessary for older versions of CUDA.
+CUresult cuMemAllocAsync(CUdeviceptr *ptr, size_t, CUstream) { *ptr = nullptr; }
+
+CUresult cuMemFreeAsync(CUdeviceptr dptr, CUstream hStream) {}
+#endif
+
 /// Class implementing the CUDA device images properties.
 struct CUDADeviceImageTy : public DeviceImageTy {
   /// Create the CUDA image with the id and the target image pointer.
-  CUDADeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), Module(nullptr) {}
+  CUDADeviceImageTy(int32_t ImageId, GenericDeviceTy &Device,
+                    const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, Device, TgtImage), Module(nullptr) {}
 
   /// Load the image as a CUDA module.
   Error loadModule() {
@@ -381,23 +393,89 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
                                        DeviceImageTy &Image) override {
+    // Check for the presense of global destructors at initialization time. This
+    // is required when the image may be deallocated before destructors are run.
+    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+    if (Handler.isSymbolInImage(*this, Image, "nvptx$device$fini"))
+      Image.setPendingGlobalDtors();
+
     return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/true);
   }
 
   virtual Error callGlobalDestructors(GenericPluginTy &Plugin,
                                       DeviceImageTy &Image) override {
-    return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
+    if (Image.hasPendingGlobalDtors())
+      return callGlobalCtorDtorCommon(Plugin, Image, /*IsCtor=*/false);
+    return Plugin::success();
+  }
+
+  Expected<std::unique_ptr<MemoryBuffer>>
+  doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {
+    // TODO: We should be able to use the 'nvidia-ptxjitcompiler' interface to
+    //       avoid the call to 'ptxas'.
+    SmallString<128> PTXInputFilePath;
+    std::error_code EC = sys::fs::createTemporaryFile("nvptx-pre-link-jit", "s",
+                                                      PTXInputFilePath);
+    if (EC)
+      return Plugin::error("Failed to create temporary file for ptxas");
+
+    // Write the file's contents to the output file.
+    Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
+        FileOutputBuffer::create(PTXInputFilePath, MB->getBuffer().size());
+    if (!OutputOrErr)
+      return OutputOrErr.takeError();
+    std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
+    llvm::copy(MB->getBuffer(), Output->getBufferStart());
+    if (Error E = Output->commit())
+      return std::move(E);
+
+    SmallString<128> PTXOutputFilePath;
+    EC = sys::fs::createTemporaryFile("nvptx-post-link-jit", "cubin",
+                                      PTXOutputFilePath);
+    if (EC)
+      return Plugin::error("Failed to create temporary file for ptxas");
+
+    // Try to find `ptxas` in the path to compile the PTX to a binary.
+    const auto ErrorOrPath = sys::findProgramByName("ptxas");
+    if (!ErrorOrPath)
+      return Plugin::error("Failed to find 'ptxas' on the PATH.");
+
+    std::string Arch = getComputeUnitKind();
+    StringRef Args[] = {*ErrorOrPath,
+                        "-m64",
+                        "-O2",
+                        "--gpu-name",
+                        Arch,
+                        "--output-file",
+                        PTXOutputFilePath,
+                        PTXInputFilePath};
+
+    std::string ErrMsg;
+    if (sys::ExecuteAndWait(*ErrorOrPath, Args, std::nullopt, {}, 0, 0,
+                            &ErrMsg))
+      return Plugin::error("Running 'ptxas' failed: %s\n", ErrMsg.c_str());
+
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(PTXOutputFilePath.data());
+    if (!BufferOrErr)
+      return Plugin::error("Failed to open temporary file for ptxas");
+
+    // Clean up the temporary files afterwards.
+    if (sys::fs::remove(PTXOutputFilePath))
+      return Plugin::error("Failed to remove temporary file for ptxas");
+    if (sys::fs::remove(PTXInputFilePath))
+      return Plugin::error("Failed to remove temporary file for ptxas");
+
+    return std::move(*BufferOrErr);
   }
 
   /// Allocate and construct a CUDA kernel.
-  Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry) override {
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    new (CUDAKernel) CUDAKernelTy(KernelEntry.name);
+    new (CUDAKernel) CUDAKernelTy(Name);
 
     return *CUDAKernel;
   }
@@ -452,7 +530,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     // Allocate and initialize the image object.
     CUDADeviceImageTy *CUDAImage = Plugin::get().allocate<CUDADeviceImageTy>();
-    new (CUDAImage) CUDADeviceImageTy(ImageId, TgtImage);
+    new (CUDAImage) CUDADeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the CUDA module.
     if (auto Err = CUDAImage->loadModule())
@@ -488,6 +566,16 @@ struct CUDADeviceTy : public GenericDeviceTy {
       Res = cuMemAllocManaged(&DevicePtr, Size, CU_MEM_ATTACH_GLOBAL);
       MemAlloc = (void *)DevicePtr;
       break;
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+      CUstream Stream;
+      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+        break;
+      if ((Res = cuMemAllocAsync(&DevicePtr, Size, Stream)))
+        break;
+      cuStreamSynchronize(Stream);
+      Res = cuStreamDestroy(Stream);
+      MemAlloc = (void *)DevicePtr;
+    }
     }
 
     if (auto Err =
@@ -518,6 +606,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
     case TARGET_ALLOC_HOST:
       Res = cuMemFreeHost(TgtPtr);
       break;
+    case TARGET_ALLOC_DEVICE_NON_BLOCKING: {
+      CUstream Stream;
+      if ((Res = cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING)))
+        break;
+      cuMemFreeAsync(reinterpret_cast<CUdeviceptr>(TgtPtr), Stream);
+      cuStreamSynchronize(Stream);
+      if ((Res = cuStreamDestroy(Stream)))
+        break;
+    }
     }
 
     if (auto Err = Plugin::check(Res, "Error in cuMemFree[Host]: %s")) {
@@ -1056,7 +1153,7 @@ private:
     // Perform a quick check for the named kernel in the image. The kernel
     // should be created by the 'nvptx-lower-ctor-dtor' pass.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (!Handler.isSymbolInImage(*this, Image, KernelName))
+    if (IsCtor && !Handler.isSymbolInImage(*this, Image, KernelName))
       return Plugin::success();
 
     // The Nvidia backend cannot handle creating the ctor / dtor array
@@ -1189,10 +1286,10 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
       std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
 
   CUresult Res =
-      cuLaunchKernel(Func, NumBlocks, /* gridDimY */ 1,
-                     /* gridDimZ */ 1, NumThreads,
-                     /* blockDimY */ 1, /* blockDimZ */ 1, MaxDynCGroupMem,
-                     Stream, (void **)Args, nullptr);
+      cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
+                     /*gridDimZ=*/1, NumThreads,
+                     /*blockDimY=*/1, /*blockDimZ=*/1, MaxDynCGroupMem, Stream,
+                     (void **)Args, nullptr);
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 

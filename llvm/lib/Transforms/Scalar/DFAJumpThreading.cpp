@@ -307,7 +307,7 @@ void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
 
 struct ClonedBlock {
   BasicBlock *BB;
-  uint64_t State; ///< \p State corresponds to the next value of a switch stmnt.
+  APInt State; ///< \p State corresponds to the next value of a switch stmnt.
 };
 
 typedef std::deque<BasicBlock *> PathType;
@@ -344,9 +344,9 @@ inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
 /// exit state, and the block that determines the next state.
 struct ThreadingPath {
   /// Exit value is DFA's exit state for the given path.
-  uint64_t getExitValue() const { return ExitVal; }
+  APInt getExitValue() const { return ExitVal; }
   void setExitValue(const ConstantInt *V) {
-    ExitVal = V->getZExtValue();
+    ExitVal = V->getValue();
     IsExitValSet = true;
   }
   bool isExitValueSet() const { return IsExitValSet; }
@@ -365,7 +365,7 @@ struct ThreadingPath {
 
 private:
   PathType Path;
-  uint64_t ExitVal;
+  APInt ExitVal;
   const BasicBlock *DBB = nullptr;
   bool IsExitValSet = false;
 };
@@ -744,7 +744,7 @@ private:
 
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       PathType PathBBs = TPath.getPath();
-      uint64_t NextState = TPath.getExitValue();
+      APInt NextState = TPath.getExitValue();
       const BasicBlock *Determinator = TPath.getDeterminatorBB();
 
       // Update Metrics for the Switch block, this is always cloned
@@ -901,7 +901,7 @@ private:
                       DuplicateBlockMap &DuplicateMap,
                       SmallSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
-    uint64_t NextState = Path.getExitValue();
+    APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();
     PathType PathBBs = Path.getPath();
 
@@ -910,8 +910,9 @@ private:
       PathBBs.pop_front();
 
     auto DetIt = llvm::find(PathBBs, Determinator);
-    auto Prev = std::prev(DetIt);
-    BasicBlock *PrevBB = *Prev;
+    // When there is only one BB in PathBBs, the determinator takes itself as a
+    // direct predecessor.
+    BasicBlock *PrevBB = PathBBs.size() == 1 ? *DetIt : *std::prev(DetIt);
     for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
       BasicBlock *BB = *BBIt;
       BlocksToClean.insert(BB);
@@ -993,13 +994,14 @@ private:
   /// This function also includes updating phi nodes in the successors of the
   /// BB, and remapping uses that were defined locally in the cloned BB.
   BasicBlock *cloneBlockAndUpdatePredecessor(BasicBlock *BB, BasicBlock *PrevBB,
-                                             uint64_t NextState,
+                                             const APInt &NextState,
                                              DuplicateBlockMap &DuplicateMap,
                                              DefMap &NewDefs,
                                              DomTreeUpdater *DTU) {
     ValueToValueMapTy VMap;
     BasicBlock *NewBB = CloneBasicBlock(
-        BB, VMap, ".jt" + std::to_string(NextState), BB->getParent());
+        BB, VMap, ".jt" + std::to_string(NextState.getLimitedValue()),
+        BB->getParent());
     NewBB->moveAfter(BB);
     NumCloned++;
 
@@ -1034,7 +1036,7 @@ private:
   /// This means creating a new incoming value from NewBB with the new
   /// instruction wherever there is an incoming value from BB.
   void updateSuccessorPhis(BasicBlock *BB, BasicBlock *ClonedBB,
-                           uint64_t NextState, ValueToValueMapTy &VMap,
+                           const APInt &NextState, ValueToValueMapTy &VMap,
                            DuplicateBlockMap &DuplicateMap) {
     std::vector<BasicBlock *> BlocksToUpdate;
 
@@ -1144,7 +1146,7 @@ private:
   void updateLastSuccessor(ThreadingPath &TPath,
                            DuplicateBlockMap &DuplicateMap,
                            DomTreeUpdater *DTU) {
-    uint64_t NextState = TPath.getExitValue();
+    APInt NextState = TPath.getExitValue();
     BasicBlock *BB = TPath.getPath().back();
     BasicBlock *LastBlock = getClonedBB(BB, NextState, DuplicateMap);
 
@@ -1198,7 +1200,7 @@ private:
 
   /// Checks if BB was already cloned for a particular next state value. If it
   /// was then it returns this cloned block, and otherwise null.
-  BasicBlock *getClonedBB(BasicBlock *BB, uint64_t NextState,
+  BasicBlock *getClonedBB(BasicBlock *BB, const APInt &NextState,
                           DuplicateBlockMap &DuplicateMap) {
     CloneList ClonedBBs = DuplicateMap[BB];
 
@@ -1212,10 +1214,10 @@ private:
 
   /// Helper to get the successor corresponding to a particular case value for
   /// a switch statement.
-  BasicBlock *getNextCaseSuccessor(SwitchInst *Switch, uint64_t NextState) {
+  BasicBlock *getNextCaseSuccessor(SwitchInst *Switch, const APInt &NextState) {
     BasicBlock *NextCase = nullptr;
     for (auto Case : Switch->cases()) {
-      if (Case.getCaseValue()->getZExtValue() == NextState) {
+      if (Case.getCaseValue()->getValue() == NextState) {
         NextCase = Case.getCaseSuccessor();
         break;
       }

@@ -46,13 +46,15 @@ SavedPosition::SavedPosition(IoStatementState &io) : io_{io} {
 }
 
 SavedPosition::~SavedPosition() {
-  ConnectionState &conn{io_.GetConnectionState()};
-  while (conn.currentRecordNumber > saved_.currentRecordNumber) {
-    io_.BackspaceRecord();
+  if (!cancelled_) {
+    ConnectionState &conn{io_.GetConnectionState()};
+    while (conn.currentRecordNumber > saved_.currentRecordNumber) {
+      io_.BackspaceRecord();
+    }
+    conn.leftTabLimit = saved_.leftTabLimit;
+    conn.furthestPositionInRecord = saved_.furthestPositionInRecord;
+    conn.positionInRecord = saved_.positionInRecord;
+    conn.pinnedFrame = saved_.pinnedFrame;
   }
-  conn.leftTabLimit = saved_.leftTabLimit;
-  conn.furthestPositionInRecord = saved_.furthestPositionInRecord;
-  conn.positionInRecord = saved_.positionInRecord;
-  conn.pinnedFrame = saved_.pinnedFrame;
 }
 } // namespace Fortran::runtime::io

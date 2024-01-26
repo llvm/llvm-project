@@ -1055,3 +1055,42 @@ define i8 @or_nand_xor_common_op_commute3_use3(i8 %x, i8 %y, i8 %z) {
   %r = or i8 %xor, %nand
   ret i8 %r
 }
+
+; (a ^ 4) & (a ^ ~4) -> -1
+define i32 @PR75692_1(i32 %x) {
+; CHECK-LABEL: @PR75692_1(
+; CHECK-NEXT:  ret i32 -1
+;
+  %t2 = xor i32 %x, 4
+  %t3 = xor i32 %x, -5
+  %t4 = or i32 %t2, %t3
+  ret i32 %t4
+}
+
+; (a ^ 4) & (a ^ 3) is not -1
+define i32 @PR75692_2(i32 %x) {
+; CHECK-LABEL: @PR75692_2
+; CHECK-NEXT:  %t2 = xor i32 %x, 4
+; CHECK-NEXT:  %t3 = xor i32 %x, -4
+; CHECK-NEXT:  %t4 = or i32 %t2, %t3
+; CHECK-NEXT:  ret i32 %t4
+;
+  %t2 = xor i32 %x, 4
+  %t3 = xor i32 %x, -4
+  %t4 = or i32 %t2, %t3
+  ret i32 %t4
+}
+
+; (a ^ 4) & (b ^ ~4) is not -1, since a != b is possible
+define i32 @PR75692_3(i32 %x, i32 %y) {
+; CHECK-LABEL: @PR75692_3
+; CHECK-NEXT:  %t2 = xor i32 %x, 4
+; CHECK-NEXT:  %t3 = xor i32 %y, -5
+; CHECK-NEXT:  %t4 = or i32 %t2, %t3
+; CHECK-NEXT:  ret i32 %t4
+;
+  %t2 = xor i32 %x, 4
+  %t3 = xor i32 %y, -5
+  %t4 = or i32 %t2, %t3
+  ret i32 %t4
+}

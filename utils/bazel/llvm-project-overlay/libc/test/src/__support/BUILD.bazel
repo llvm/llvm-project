@@ -49,7 +49,7 @@ libc_test(
         "str_to_long_double_test.cpp",
     ],
     deps = [
-        "//libc:__support_fputil_float_properties",
+        "//libc:__support_fputil_fp_bits",
         "//libc:__support_str_to_float",
         "//libc:__support_uint128",
     ],

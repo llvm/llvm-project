@@ -82,5 +82,5 @@ end program
 ! ALL-NEXT: ExternalNameConversion
 ! DEBUG-NEXT: AddDebugFoundation
 ! NO-DEBUG-NOT: AddDebugFoundation
-! ALL-NEXT: FIRToLLVMLowering
+! ALL: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

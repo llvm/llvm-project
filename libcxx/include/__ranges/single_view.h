@@ -26,6 +26,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -37,8 +40,8 @@ template <move_constructible _Tp>
 template <copy_constructible _Tp>
 #  endif
   requires is_object_v<_Tp>
-class single_view : public view_interface<single_view<_Tp>> {
-  __movable_box<_Tp> __value_;
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS single_view : public view_interface<single_view<_Tp>> {
+  _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Tp> __value_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI single_view()
@@ -100,5 +103,7 @@ inline constexpr auto single = __single_view::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_SINGLE_VIEW_H

@@ -137,7 +137,7 @@ define <8 x i32> @xor_undef_elts_alt(<4 x i32> %x) {
 ; SSE-LABEL: xor_undef_elts_alt:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movaps {{.*#+}} xmm2 = <u,u,44,12>
+; SSE-NEXT:    movaps {{.*#+}} xmm2 = [u,u,44,12]
 ; SSE-NEXT:    xorps %xmm0, %xmm2
 ; SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0

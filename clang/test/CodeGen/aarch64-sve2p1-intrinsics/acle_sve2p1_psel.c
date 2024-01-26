@@ -10,8 +10,18 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
 // RUN:   -target-feature +sve2p1 -S -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu \
+// RUN:   -target-feature +sme -S -DTEST_SME -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -S -DTEST_SME -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
+
+#ifndef TEST_SME
+#define ATTR
+#else
+#define ATTR __arm_streaming
+#endif
 
 // CHECK-LABEL: @test_svpsel_lane_b8(
 // CHECK-NEXT:  entry:
@@ -25,7 +35,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 16 x i1> [[P2:%.*]], i32 [[ADD]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svpsel_lane_b8(svbool_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
+svbool_t test_svpsel_lane_b8(svbool_t p1, svbool_t p2, uint32_t idx) ATTR {
   return svpsel_lane_b8(p1, p2, idx + 15);
 }
 
@@ -43,7 +53,7 @@ svbool_t test_svpsel_lane_b8(svbool_t p1, svbool_t p2, uint32_t idx) __arm_strea
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 8 x i1> [[TMP0]], i32 [[ADD]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpsel_lane_b16(svbool_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
+svbool_t test_svpsel_lane_b16(svbool_t p1, svbool_t p2, uint32_t idx) ATTR {
   return svpsel_lane_b16(p1, p2, idx + 7);
 }
 
@@ -61,7 +71,7 @@ svbool_t test_svpsel_lane_b16(svbool_t p1, svbool_t p2, uint32_t idx) __arm_stre
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 4 x i1> [[TMP0]], i32 [[ADD]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpsel_lane_b32(svbool_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
+svbool_t test_svpsel_lane_b32(svbool_t p1, svbool_t p2, uint32_t idx) ATTR {
   return svpsel_lane_b32(p1, p2, idx + 3);
 }
 
@@ -79,92 +89,6 @@ svbool_t test_svpsel_lane_b32(svbool_t p1, svbool_t p2, uint32_t idx) __arm_stre
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1> [[P1:%.*]], <vscale x 2 x i1> [[TMP0]], i32 [[ADD]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpsel_lane_b64(svbool_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
+svbool_t test_svpsel_lane_b64(svbool_t p1, svbool_t p2, uint32_t idx) ATTR {
   return svpsel_lane_b64(p1, p2, idx + 1);
-}
-
-// CHECK-LABEL: @test_svpsel_lane_c8(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 15
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i1> [[P2:%.*]], i32 [[ADD]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP1]])
-// CHECK-NEXT:    ret target("aarch64.svcount") [[TMP2]]
-//
-// CPP-CHECK-LABEL: @_Z19test_svpsel_lane_c8u11__SVCount_tu10__SVBool_tj(
-// CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 15
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv16i1(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i1> [[P2:%.*]], i32 [[ADD]])
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP1]])
-// CPP-CHECK-NEXT:    ret target("aarch64.svcount") [[TMP2]]
-//
-svcount_t test_svpsel_lane_c8(svcount_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
-  return svpsel_lane_c8(p1, p2, idx + 15);
-}
-
-// CHECK-LABEL: @test_svpsel_lane_c16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 7
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[P2:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], i32 [[ADD]])
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP2]])
-// CHECK-NEXT:    ret target("aarch64.svcount") [[TMP3]]
-//
-// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_c16u11__SVCount_tu10__SVBool_tj(
-// CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 7
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[P2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv8i1(<vscale x 16 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], i32 [[ADD]])
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP2]])
-// CPP-CHECK-NEXT:    ret target("aarch64.svcount") [[TMP3]]
-//
-svcount_t test_svpsel_lane_c16(svcount_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
-  return svpsel_lane_c16(p1, p2, idx + 7);
-}
-
-// CHECK-LABEL: @test_svpsel_lane_c32(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 3
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[P2:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], i32 [[ADD]])
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP2]])
-// CHECK-NEXT:    ret target("aarch64.svcount") [[TMP3]]
-//
-// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_c32u11__SVCount_tu10__SVBool_tj(
-// CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 3
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[P2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv4i1(<vscale x 16 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], i32 [[ADD]])
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP2]])
-// CPP-CHECK-NEXT:    ret target("aarch64.svcount") [[TMP3]]
-//
-svcount_t test_svpsel_lane_c32(svcount_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
-  return svpsel_lane_c32(p1, p2, idx + 3);
-}
-
-// CHECK-LABEL: @test_svpsel_lane_c64(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 1
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[P2:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1> [[TMP0]], <vscale x 2 x i1> [[TMP1]], i32 [[ADD]])
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP2]])
-// CHECK-NEXT:    ret target("aarch64.svcount") [[TMP3]]
-//
-// CPP-CHECK-LABEL: @_Z20test_svpsel_lane_c64u11__SVCount_tu10__SVBool_tj(
-// CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IDX:%.*]], 1
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.taarch64.svcountt(target("aarch64.svcount") [[P1:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[P2:%.*]])
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.psel.nxv2i1(<vscale x 16 x i1> [[TMP0]], <vscale x 2 x i1> [[TMP1]], i32 [[ADD]])
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> [[TMP2]])
-// CPP-CHECK-NEXT:    ret target("aarch64.svcount") [[TMP3]]
-//
-svcount_t test_svpsel_lane_c64(svcount_t p1, svbool_t p2, uint32_t idx) __arm_streaming_compatible {
-  return svpsel_lane_c64(p1, p2, idx + 1);
 }

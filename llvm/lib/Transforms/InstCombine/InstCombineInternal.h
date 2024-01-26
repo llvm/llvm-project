@@ -276,17 +276,15 @@ private:
   bool transformConstExprCastCall(CallBase &Call);
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
-  Instruction *foldCommutativeIntrinsicOverSelects(IntrinsicInst &II);
 
-  // Match a pair of Phi Nodes like
-  // phi [a, BB0], [b, BB1] & phi [b, BB0], [a, BB1]
-  // Return the matched two operands.
-  std::optional<std::pair<Value *, Value *>>
-  matchSymmetricPhiNodesPair(PHINode *LHS, PHINode *RHS);
-
-  // Tries to fold (op phi(a, b) phi(b, a)) -> (op a, b)
-  // while op is a commutative intrinsic call.
-  Instruction *foldCommutativeIntrinsicOverPhis(IntrinsicInst &II);
+  // Return (a, b) if (LHS, RHS) is known to be (a, b) or (b, a).
+  // Otherwise, return std::nullopt
+  // Currently it matches:
+  // - LHS = (select c, a, b), RHS = (select c, b, a)
+  // - LHS = (phi [a, BB0], [b, BB1]), RHS = (phi [b, BB0], [a, BB1])
+  // - LHS = min(a, b), RHS = max(a, b)
+  std::optional<std::pair<Value *, Value *>> matchSymmetricPair(Value *LHS,
+                                                                Value *RHS);
 
   Value *simplifyMaskedLoad(IntrinsicInst &II);
   Instruction *simplifyMaskedStore(IntrinsicInst &II);
@@ -502,15 +500,14 @@ public:
   /// X % (C0 * C1)
   Value *SimplifyAddWithRemainder(BinaryOperator &I);
 
-  // Tries to fold (Binop phi(a, b) phi(b, a)) -> (Binop a, b)
-  // while Binop is commutative.
-  Value *SimplifyPhiCommutativeBinaryOp(BinaryOperator &I, Value *LHS,
-                                        Value *RHS);
-
   // Binary Op helper for select operations where the expression can be
   // efficiently reorganized.
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
                                         Value *RHS);
+
+  // If `I` has operand `(ctpop (not x))`, fold `I` with `(sub nuw nsw
+  // BitWidth(x), (ctpop x))`.
+  Instruction *tryFoldInstWithCtpopWithNot(Instruction *I);
 
   // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
   //    -> (logic_shift (Binop1 (Binop2 X, inv_logic_shift(C1, C)), Y), C)
@@ -648,9 +645,8 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
-  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
-                                      Value *Z, ICmpInst::Predicate Pred);
-  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
+  Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
+                                  Value *Z, ICmpInst::Predicate Pred);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);
@@ -708,6 +704,8 @@ public:
                                                const APInt &C);
   Instruction *foldICmpBitCast(ICmpInst &Cmp);
   Instruction *foldICmpWithTrunc(ICmpInst &Cmp);
+  Instruction *foldICmpCommutative(ICmpInst::Predicate Pred, Value *Op0,
+                                   Value *Op1, ICmpInst &CxtI);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
@@ -738,6 +736,13 @@ public:
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
+  void tryToSinkInstructionDbgValues(
+      Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+      BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
+  void tryToSinkInstructionDPValues(Instruction *I,
+                                    BasicBlock::iterator InsertPos,
+                                    BasicBlock *SrcBlock, BasicBlock *DestBlock,
+                                    SmallVectorImpl<DPValue *> &DPUsers);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
   void addDeadEdge(BasicBlock *From, BasicBlock *To,

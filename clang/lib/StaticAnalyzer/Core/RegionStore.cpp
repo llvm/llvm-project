@@ -2016,7 +2016,7 @@ std::optional<SVal> RegionStoreManager::getBindingForDerivedDefaultValue(
     const TypedValueRegion *R, QualType Ty) {
 
   if (const std::optional<SVal> &D = B.getDefaultBinding(superR)) {
-    const SVal &val = *D;
+    SVal val = *D;
     if (SymbolRef parentSym = val.getAsSymbol())
       return svalBuilder.getDerivedRegionValueSymbolVal(parentSym, R);
 
@@ -2331,7 +2331,7 @@ bool RegionStoreManager::includedInBindings(Store store,
     const ClusterBindings &Cluster = RI.getData();
     for (ClusterBindings::iterator CI = Cluster.begin(), CE = Cluster.end();
          CI != CE; ++CI) {
-      const SVal &D = CI.getData();
+      SVal D = CI.getData();
       if (const MemRegion *R = D.getAsRegion())
         if (R->getBaseRegion() == region)
           return true;
@@ -2500,7 +2500,7 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
     if (VI == VE)
       break;
 
-    const NonLoc &Idx = svalBuilder.makeArrayIndex(i);
+    NonLoc Idx = svalBuilder.makeArrayIndex(i);
     const ElementRegion *ER = MRMgr.getElementRegion(ElementTy, Idx, R, Ctx);
 
     if (ElementTy->isStructureOrClassType())

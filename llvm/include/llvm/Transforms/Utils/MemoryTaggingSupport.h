@@ -52,6 +52,8 @@ struct AllocaInfo {
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
   SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
+  // Non-intrinsic records of variable locations.
+  SmallVector<DPValue *, 2> DbgVariableRecords;
 };
 
 struct StackInfo {

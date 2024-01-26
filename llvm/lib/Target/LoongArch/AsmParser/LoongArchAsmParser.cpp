@@ -85,7 +85,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   // "emitLoadAddress*" functions.
   void emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
                      const MCExpr *Symbol, SmallVectorImpl<Inst> &Insts,
-                     SMLoc IDLoc, MCStreamer &Out);
+                     SMLoc IDLoc, MCStreamer &Out, bool RelaxHint = false);
 
   // Helper to emit pseudo instruction "la.abs $rd, sym".
   void emitLoadAddressAbs(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
@@ -120,6 +120,10 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 
   // Helper to emit pseudo instruction "li.w/d $rd, $imm".
   void emitLoadImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+
+  // Helper to emit pseudo instruction "call36 sym" or "tail36 $rj, sym".
+  void emitFuncCall36(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                      bool IsTailCall);
 
 public:
   enum LoongArchMatchResultTy {
@@ -393,6 +397,22 @@ public:
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_LO20 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_LO20 ||
                        VK == LoongArchMCExpr::VK_LoongArch_TLS_LE64_LO20;
+
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm20pcaddu18i() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_CALL36;
 
     return IsConstantImm
                ? isInt<20>(Imm) && IsValidKind
@@ -748,12 +768,14 @@ bool LoongArchAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 void LoongArchAsmParser::emitLAInstSeq(MCRegister DestReg, MCRegister TmpReg,
                                        const MCExpr *Symbol,
                                        SmallVectorImpl<Inst> &Insts,
-                                       SMLoc IDLoc, MCStreamer &Out) {
+                                       SMLoc IDLoc, MCStreamer &Out,
+                                       bool RelaxHint) {
   MCContext &Ctx = getContext();
   for (LoongArchAsmParser::Inst &Inst : Insts) {
     unsigned Opc = Inst.Opc;
     LoongArchMCExpr::VariantKind VK = Inst.VK;
-    const LoongArchMCExpr *LE = LoongArchMCExpr::create(Symbol, VK, Ctx);
+    const LoongArchMCExpr *LE =
+        LoongArchMCExpr::create(Symbol, VK, Ctx, RelaxHint);
     switch (Opc) {
     default:
       llvm_unreachable("unexpected opcode");
@@ -854,7 +876,7 @@ void LoongArchAsmParser::emitLoadAddressPcrel(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(ADDI, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
 }
 
 void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
@@ -900,7 +922,7 @@ void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
 }
 
 void LoongArchAsmParser::emitLoadAddressGotLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1108,6 +1130,35 @@ void LoongArchAsmParser::emitLoadImm(MCInst &Inst, SMLoc IDLoc,
   }
 }
 
+void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
+                                        MCStreamer &Out, bool IsTailCall) {
+  // call36 sym
+  // expands to:
+  //   pcaddu18i $ra, %call36(sym)
+  //   jirl      $ra, $ra, 0
+  //
+  // tail36 $rj, sym
+  // expands to:
+  //   pcaddu18i $rj, %call36(sym)
+  //   jirl      $r0, $rj, 0
+  unsigned ScratchReg =
+      IsTailCall ? Inst.getOperand(0).getReg() : (unsigned)LoongArch::R1;
+  const MCExpr *Sym =
+      IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
+  const LoongArchMCExpr *LE = LoongArchMCExpr::create(
+      Sym, llvm::LoongArchMCExpr::VK_LoongArch_CALL36, getContext());
+
+  Out.emitInstruction(
+      MCInstBuilder(LoongArch::PCADDU18I).addReg(ScratchReg).addExpr(LE),
+      getSTI());
+  Out.emitInstruction(
+      MCInstBuilder(LoongArch::JIRL)
+          .addReg(IsTailCall ? (unsigned)LoongArch::R0 : ScratchReg)
+          .addReg(ScratchReg)
+          .addImm(0),
+      getSTI());
+}
+
 bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
                                             OperandVector &Operands,
                                             MCStreamer &Out) {
@@ -1155,6 +1206,12 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case LoongArch::PseudoLI_W:
   case LoongArch::PseudoLI_D:
     emitLoadImm(Inst, IDLoc, Out);
+    return false;
+  case LoongArch::PseudoCALL36:
+    emitFuncCall36(Inst, IDLoc, Out, /*IsTailCall=*/false);
+    return false;
+  case LoongArch::PseudoTAIL36:
+    emitFuncCall36(Inst, IDLoc, Out, /*IsTailCall=*/true);
     return false;
   }
   Out.emitInstruction(Inst, getSTI());
@@ -1436,6 +1493,12 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, /*Lower=*/-(1 << 19),
         /*Upper=*/(1 << 19) - 1,
         "operand must be a symbol with modifier (e.g. %pc_hi20) or an integer "
+        "in the range");
+  case Match_InvalidSImm20pcaddu18i:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %call36) or an integer "
         "in the range");
   case Match_InvalidSImm21lsl2:
     return generateImmOutOfRangeError(

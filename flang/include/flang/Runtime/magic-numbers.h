@@ -27,6 +27,10 @@ start at 100 so as to never conflict with those codes.
 #ifndef FORTRAN_RUNTIME_MAGIC_NUMBERS_H_
 #define FORTRAN_RUNTIME_MAGIC_NUMBERS_H_
 
+#define FORTRAN_DEFAULT_OUTPUT_UNIT 6
+#define FORTRAN_DEFAULT_INPUT_UNIT 5
+#define FORTRAN_ERROR_UNIT 0
+
 #define FORTRAN_RUNTIME_IOSTAT_END (-1)
 #define FORTRAN_RUNTIME_IOSTAT_EOR (-2)
 #define FORTRAN_RUNTIME_IOSTAT_FLUSH (-3)
@@ -58,6 +62,11 @@ Processor-defined status code for MOVE_ALLOC where arguments are the
 same allocatable.
 #endif
 #define FORTRAN_RUNTIME_STAT_MOVE_ALLOC_SAME_ALLOCATABLE 109
+
+#if 0
+Additional status code for a bad pointer DEALLOCATE.
+#endif
+#define FORTRAN_RUNTIME_STAT_BAD_POINTER_DEALLOCATION 110
 
 #if 0
 ieee_class_type values

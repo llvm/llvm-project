@@ -17,8 +17,7 @@ template <typename T> class FrexpTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr StorageType HIDDEN_BIT =
-      StorageType(1)
-      << LIBC_NAMESPACE::fputil::FloatProperties<T>::FRACTION_LEN;
+      StorageType(1) << LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN;
 
 public:
   typedef T (*FrexpFunc)(T, int *);

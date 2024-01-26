@@ -97,7 +97,7 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   if (!AlgDecl)
     return;
 
-  if (Unordered && AlgDecl->getName().find("bound") != llvm::StringRef::npos)
+  if (Unordered && AlgDecl->getName().contains("bound"))
     return;
 
   const auto *AlgParam = Result.Nodes.getNodeAs<Expr>("AlgParam");

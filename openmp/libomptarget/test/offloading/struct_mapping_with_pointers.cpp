@@ -29,6 +29,7 @@ int main() {
 
   dat.datum[7] = 7;
   dat.more_datum[17] = 17;
+  dat.datum[dat.arr[0][0]] = 0;
 
   /// The struct is mapped with type 0x0 when the pointer fields are mapped.
   /// The struct is also map explicitely by the user. The second mapping by

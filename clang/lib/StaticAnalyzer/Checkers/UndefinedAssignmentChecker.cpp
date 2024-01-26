@@ -23,7 +23,7 @@ using namespace ento;
 namespace {
 class UndefinedAssignmentChecker
   : public Checker<check::Bind> {
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Assigned value is garbage or undefined"};
 
 public:
   void checkBind(SVal location, SVal val, const Stmt *S,
@@ -48,11 +48,6 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
 
   if (!N)
     return;
-
-  static const char *const DefaultMsg =
-      "Assigned value is garbage or undefined";
-  if (!BT)
-    BT.reset(new BugType(this, DefaultMsg));
 
   // Generate a report for this bug.
   llvm::SmallString<128> Str;
@@ -105,9 +100,9 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   }
 
   if (OS.str().empty())
-    OS << DefaultMsg;
+    OS << BT.getDescription();
 
-  auto R = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
   if (ex) {
     R->addRange(ex->getSourceRange());
     bugreporter::trackExpressionValue(N, ex, *R);

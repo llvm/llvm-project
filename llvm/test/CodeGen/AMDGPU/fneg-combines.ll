@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -start-before=amdgpu-unify-divergent-exit-nodes -mattr=+flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,SI %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=hawaii -start-before=amdgpu-unify-divergent-exit-nodes -mattr=+flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,SI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -mtriple=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,SI %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,VI %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,VI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -mtriple=amdgcn -mcpu=fiji -start-before=amdgpu-unify-divergent-exit-nodes < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,VI %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests

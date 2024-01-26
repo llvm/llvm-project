@@ -889,4 +889,3 @@ define <vscale x 8 x i64> @vmin_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
   %vc = select <vscale x 8 x i1> %cmp, <vscale x 8 x i64> %va, <vscale x 8 x i64> %splat
   ret <vscale x 8 x i64> %vc
 }
-

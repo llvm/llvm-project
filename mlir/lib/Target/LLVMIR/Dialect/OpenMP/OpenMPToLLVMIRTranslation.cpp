@@ -1884,7 +1884,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::EnterDataOp enterDataOp) {
             if (enterDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(enterDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = enterDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -1900,7 +1901,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::ExitDataOp exitDataOp) {
             if (exitDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(exitDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = exitDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -1917,7 +1919,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::UpdateDataOp updateDataOp) {
             if (updateDataOp.getNowait())
-              return failure();
+              return (LogicalResult)(updateDataOp.emitError(
+                  "`nowait` is not supported yet"));
 
             if (auto ifExprVar = updateDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifExprVar);
@@ -2035,6 +2038,12 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
+  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                              attribute.getOpenmpDeviceVersion());
+
+  if (attribute.getNoGpuLib())
+    return success();
+
   ompBuilder->createGlobalFlag(
       attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
       "__omp_rtl_debug_kind");
@@ -2056,8 +2065,6 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
           .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
       ,
       "__omp_rtl_assume_no_nested_parallelism");
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
   return success();
 }
 
@@ -2357,13 +2364,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   StringRef parentName = opInst.getParentOfType<LLVM::LLVMFuncOp>().getName();
-
-  // Override parent name if early outlining function
-  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
-          opInst.getParentOfType<LLVM::LLVMFuncOp>().getOperation())) {
-    llvm::StringRef outlineParentName = earlyOutlineOp.getParentName();
-    parentName = outlineParentName.empty() ? parentName : outlineParentName;
-  }
 
   llvm::TargetRegionEntryInfo entryInfo;
 

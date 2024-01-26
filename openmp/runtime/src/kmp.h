@@ -1192,6 +1192,9 @@ extern void __kmp_init_target_task();
 // Minimum stack size for pthread for VE is 4MB.
 //   https://www.hpc.nec/documents/veos/en/glibc/Difference_Points_glibc.htm
 #define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
+#elif KMP_OS_AIX
+// The default stack size for worker threads on AIX is 4MB.
+#define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
 #else
 #define KMP_DEFAULT_STKSIZE ((size_t)(1024 * 1024))
 #endif
@@ -1352,6 +1355,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_WASI
 /* TODO: tune for KMP_OS_WASI */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_AIX
+/* TODO: tune for KMP_OS_AIX */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #endif

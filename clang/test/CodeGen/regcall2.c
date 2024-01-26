@@ -19,7 +19,7 @@ double __regcall bar(__sVector a) {
 }
 
 // FIXME: Do we need to change for Windows?
-// Win: define dso_local x86_regcallcc void @__regcall3__foo(ptr noalias sret(%struct.__sVector) align 64 %agg.result, i32 noundef %a) #0
+// Win: define dso_local x86_regcallcc void @__regcall3__foo(ptr dead_on_unwind noalias writable sret(%struct.__sVector) align 64 %agg.result, i32 noundef %a) #0
 // Win: define dso_local x86_regcallcc double @__regcall3__bar(ptr noundef %a) #0
 // Win: attributes #0 = { noinline nounwind optnone "min-legal-vector-width"="0" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+avx,+avx2,+avx512f,+avx512vl,+crc32,+cx8,+evex512,+f16c,+fma,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" }
 

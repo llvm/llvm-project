@@ -100,6 +100,19 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   };
   uint32_t HW_FP;
 
+  enum {
+    /// __arm_cdp __arm_ldc, __arm_ldcl, __arm_stc,
+    /// __arm_stcl, __arm_mcr and __arm_mrc
+    FEATURE_COPROC_B1 = (1 << 0),
+    /// __arm_cdp2, __arm_ldc2, __arm_stc2, __arm_ldc2l,
+    /// __arm_stc2l, __arm_mcr2 and __arm_mrc2
+    FEATURE_COPROC_B2 = (1 << 1),
+    /// __arm_mcrr, __arm_mrrc
+    FEATURE_COPROC_B3 = (1 << 2),
+    /// __arm_mcrr2,  __arm_mrrc2
+    FEATURE_COPROC_B4 = (1 << 3),
+  };
+
   void setABIAAPCS();
   void setABIAPCS(bool IsAAPCS16);
 

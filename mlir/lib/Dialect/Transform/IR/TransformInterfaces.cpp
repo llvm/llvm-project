@@ -629,9 +629,6 @@ void transform::TransformState::recordOpHandleInvalidation(
   // the IR nested in each payload op associated with the given handle and look
   // for handles associated with each operation and value.
   for (const auto &[region, mapping] : llvm::reverse(mappings)) {
-    // Stop lookup when reaching a region that is isolated from above.
-    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
-      break;
     // Go over all op handle mappings and mark as invalidated any handle
     // pointing to any of the payload ops associated with the given handle or
     // any op nested in them.
@@ -652,6 +649,10 @@ void transform::TransformState::recordOpHandleInvalidation(
                                                    payloadValue, valueHandle,
                                                    newlyInvalidated);
     }
+
+    // Stop lookup when reaching a region that is isolated from above.
+    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
   }
 }
 

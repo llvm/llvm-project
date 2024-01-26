@@ -43,9 +43,12 @@ macro(add_polly_library name)
   endif( LLVM_LINK_COMPONENTS )
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LLVMPolly")
     install(TARGETS ${name}
+      COMPONENT ${name}
       EXPORT LLVMExports
       LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
       ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+    add_llvm_install_targets(install-${name}
+      COMPONENT ${name})
   endif()
   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
 endmacro(add_polly_library)

@@ -97,6 +97,30 @@ struct SCFTileAndFuseOptions {
     tilingOptions = options;
     return *this;
   }
+
+  /// Control function to check if a slice needs to be fused or not,
+  /// The control function receives
+  /// 1) the slice along which fusion is to be done,
+  /// 2) the producer value that is to be fused
+  /// 3) a boolean value set to `true` if the fusion is from
+  ///    a destination operand.
+  /// It retuns two booleans
+  /// - returns `true` if the fusion should be done through the candidate slice
+  /// - returns `true` if a replacement for the fused producer needs to be
+  ///   yielded from within the tiled loop. Note that it is valid to return
+  ///   `true` only if the slice fused is disjoint across all iterations of the
+  ///   tiled loop. It is up to the caller to ensure that this is true for the
+  ///   fused producers.
+  using ControlFnTy = std::function<std::tuple<bool, bool>(
+      tensor::ExtractSliceOp candidateSliceOp, OpResult originalProducer,
+      bool isDestinationOperand)>;
+  ControlFnTy fusionControlFn = [](tensor::ExtractSliceOp, OpResult, bool) {
+    return std::make_tuple(true, false);
+  };
+  SCFTileAndFuseOptions &setFusionControlFn(ControlFnTy controlFn) {
+    fusionControlFn = controlFn;
+    return *this;
+  }
 };
 
 /// Fuse the producer of the source of `candidateSliceOp` by computing the

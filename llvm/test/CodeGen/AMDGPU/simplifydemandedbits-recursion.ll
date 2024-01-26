@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck %s
 
 ; Check we can compile this bugpoint-reduced test without an
 ; infinite loop in TLI.SimplifyDemandedBits() due to failure

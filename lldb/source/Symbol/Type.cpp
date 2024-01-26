@@ -145,6 +145,10 @@ void TypeQuery::AddLanguage(LanguageType language) {
   m_languages->Insert(language);
 }
 
+void TypeQuery::SetLanguages(LanguageSet languages) {
+  m_languages = std::move(languages);
+}
+
 bool TypeQuery::ContextMatches(
     llvm::ArrayRef<CompilerContext> context_chain) const {
   if (GetExactMatch() || context_chain.size() == m_context.size())

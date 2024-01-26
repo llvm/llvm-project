@@ -334,6 +334,11 @@ bool RealOutputEditing<KIND>::EditEorDOutput(const DataEdit &edit) {
     }
     ++significantDigits;
     scale = std::min(scale, significantDigits + 1);
+  } else if (edit.digits.value_or(1) == 0 && !edit.variation) {
+    // F'2023 13.7.2.3.3 p5; does not apply to Gw.0(Ee) or E0(no d)
+    io_.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+        "Output edit descriptor %cw.d must have d>0", edit.descriptor);
+    return false;
   }
   // In EN editing, multiple attempts may be necessary, so this is a loop.
   while (true) {
@@ -341,11 +346,12 @@ bool RealOutputEditing<KIND>::EditEorDOutput(const DataEdit &edit) {
         ConvertToDecimal(significantDigits, edit.modes.round, flags)};
     if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
       return editWidth > 0 &&
-              converted.length > static_cast<std::size_t>(editWidth)
+              converted.length + trailingBlanks_ >
+                  static_cast<std::size_t>(editWidth)
           ? EmitRepeated(io_, '*', editWidth)
           : EmitPrefix(edit, converted.length, editWidth) &&
               EmitAscii(io_, converted.str, converted.length) &&
-              EmitSuffix(edit);
+              EmitRepeated(io_, ' ', trailingBlanks_) && EmitSuffix(edit);
     }
     if (!IsZero()) {
       converted.decimalExponent -= scale;
@@ -522,8 +528,9 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       zeroesBeforePoint = 1; // "." -> "0."
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
-        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes};
-    int width{editWidth > 0 ? editWidth : totalLength};
+        1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes +
+        trailingBlanks_ /* G editing converted to F */};
+    int width{editWidth > 0 || trailingBlanks_ ? editWidth : totalLength};
     if (totalLength > width) {
       return EmitRepeated(io_, '*', width);
     }
@@ -547,6 +554,7 @@ bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
 template <int KIND>
 DataEdit RealOutputEditing<KIND>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'E';
+  edit.variation = 'G'; // to suppress error for Ew.0
   int editWidth{edit.width.value_or(0)};
   int significantDigits{
       edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
@@ -574,8 +582,11 @@ DataEdit RealOutputEditing<KIND>::EditForGOutput(DataEdit edit) {
   trailingBlanks_ = 0;
   if (editWidth > 0) {
     int expoDigits{edit.expoDigits.value_or(0)};
+    // F'2023 13.7.5.2.3 p5: "If 0 <= s <= d, the scale factor has no effect
+    // and F(w − n).(d − s),n(’b’) editing is used where b is a blank and
+    // n is 4 for Gw.d editing, e + 2 for Gw.dEe editing if e > 0, and
+    // 4 for Gw.dE0 editing."
     trailingBlanks_ = expoDigits > 0 ? expoDigits + 2 : 4; // 'n'
-    *edit.width = std::max(0, editWidth - trailingBlanks_);
   }
   if (edit.digits.has_value()) {
     *edit.digits = std::max(0, *edit.digits - expo);
@@ -589,7 +600,9 @@ bool RealOutputEditing<KIND>::EditListDirectedOutput(const DataEdit &edit) {
   decimal::ConversionToDecimalResult converted{
       ConvertToDecimal(1, edit.modes.round)};
   if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
-    return EditEorDOutput(edit);
+    DataEdit copy{edit};
+    copy.variation = DataEdit::ListDirected;
+    return EditEorDOutput(copy);
   }
   int expo{converted.decimalExponent};
   // The decimal precision of 16-bit floating-point types is very low,
@@ -599,10 +612,12 @@ bool RealOutputEditing<KIND>::EditListDirectedOutput(const DataEdit &edit) {
       std::max(6, BinaryFloatingPoint::decimalPrecision)};
   if (expo < 0 || expo > maxExpo) {
     DataEdit copy{edit};
+    copy.variation = DataEdit::ListDirected;
     copy.modes.scale = 1; // 1P
     return EditEorDOutput(copy);
+  } else {
+    return EditFOutput(edit);
   }
-  return EditFOutput(edit);
 }
 
 // 13.7.2.3.6 in F'2023
@@ -649,7 +664,7 @@ auto RealOutputEditing<KIND>::ConvertToHexadecimal(
     // x_.binaryPrecision is constant, so / can be used for readability.
     int shift{x_.binaryPrecision - 4};
     typename BinaryFloatingPoint::RawType one{1};
-    auto remaining{(one << shift) - one};
+    auto remaining{(one << x_.binaryPrecision) - one};
     for (int digits{0}; digits < significantDigits; ++digits) {
       if ((flags & decimal::Minimize) && !(fraction & remaining)) {
         break;
@@ -682,7 +697,8 @@ bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
     flags |= decimal::AlwaysSign;
   }
   int editWidth{edit.width.value_or(0)}; // 'w' field
-  if (editWidth == 0 && !edit.digits) { // EX0 (no .d)
+  if ((editWidth == 0 && !edit.digits) || editDigits == 0) {
+    // EX0 or EXw.0
     flags |= decimal::Minimize;
     significantDigits = 28; // enough for 128-bit F.P.
   }

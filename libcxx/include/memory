@@ -139,7 +139,7 @@ public:
     template <class U> struct rebind {typedef allocator<U> other;}; // deprecated in C++17, removed in C++20
 
     typedef true_type propagate_on_container_move_assignment;
-    typedef true_type is_always_equal;
+    typedef true_type is_always_equal;                   // Deprecated in C++23, removed in C++26
 
     constexpr allocator() noexcept;                      // constexpr in C++20
     constexpr allocator(const allocator&) noexcept;      // constexpr in C++20
@@ -629,7 +629,7 @@ public:
     T& operator*() const noexcept;
     T* operator->() const noexcept;
     long use_count() const noexcept;
-    bool unique() const noexcept;
+    bool unique() const noexcept;  // deprected in C++17, removed in C++20
     explicit operator bool() const noexcept;
     template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
     template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;

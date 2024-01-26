@@ -39,8 +39,8 @@
 #include "InfoByHwMode.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LowLevelType.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -1972,6 +1972,10 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       DstMIBuilder.addRenderer<CopyRenderer>(Dst->getName());
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
 
+      // Erase the root.
+      unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+      M.addAction<EraseInstAction>(RootInsnID);
+
       // We're done with this pattern!  It's eligible for GISel emission; return
       // it.
       ++NumPatternImported;
@@ -2099,14 +2103,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 
     M.addAction<ConstrainOperandToRegClassAction>(
         0, 0, Target.getRegisterClass(DstIOpRec));
-
-    // We're done with this pattern!  It's eligible for GISel emission; return
-    // it.
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "EXTRACT_SUBREG") {
+  } else if (DstIName == "EXTRACT_SUBREG") {
     auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
     if (!SuperClass)
       return failedImport(
@@ -2136,14 +2133,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     M.addAction<ConstrainOperandToRegClassAction>(0, 0,
                                                   *SrcRCDstRCPair->second);
     M.addAction<ConstrainOperandToRegClassAction>(0, 1, *SrcRCDstRCPair->first);
-
-    // We're done with this pattern!  It's eligible for GISel emission; return
-    // it.
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "INSERT_SUBREG") {
+  } else if (DstIName == "INSERT_SUBREG") {
     assert(Src->getExtTypes().size() == 1 &&
            "Expected Src of INSERT_SUBREG to have one result type");
     // We need to constrain the destination, a super regsister source, and a
@@ -2160,11 +2150,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
     M.addAction<ConstrainOperandToRegClassAction>(0, 1, **SuperClass);
     M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "SUBREG_TO_REG") {
+  } else if (DstIName == "SUBREG_TO_REG") {
     // We need to constrain the destination and subregister source.
     assert(Src->getExtTypes().size() == 1 &&
            "Expected Src of SUBREG_TO_REG to have one result type");
@@ -2184,11 +2170,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
           "Cannot infer register class for SUBREG_TO_REG operand #0");
     M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
     M.addAction<ConstrainOperandToRegClassAction>(0, 2, **SubClass);
-    ++NumPatternImported;
-    return std::move(M);
-  }
-
-  if (DstIName == "REG_SEQUENCE") {
+  } else if (DstIName == "REG_SEQUENCE") {
     auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
 
     M.addAction<ConstrainOperandToRegClassAction>(0, 0, **SuperClass);
@@ -2207,12 +2189,13 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       M.addAction<ConstrainOperandToRegClassAction>(0, I,
                                                     *SrcRCDstRCPair->second);
     }
-
-    ++NumPatternImported;
-    return std::move(M);
+  } else {
+    M.addAction<ConstrainOperandsToDefinitionAction>(0);
   }
 
-  M.addAction<ConstrainOperandsToDefinitionAction>(0);
+  // Erase the root.
+  unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+  M.addAction<EraseInstAction>(RootInsnID);
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
   ++NumPatternImported;

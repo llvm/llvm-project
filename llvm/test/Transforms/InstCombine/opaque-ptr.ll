@@ -160,7 +160,7 @@ define void @varargs_cast_opaque_to_typed(ptr %a) {
 
 define ptr @geps_combinable(ptr %a) {
 ; CHECK-LABEL: @geps_combinable(
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, { i32, i32 } }, ptr [[A:%.*]], i64 0, i32 1, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, { i32, i32 } }, ptr %a, i32 0, i32 1
@@ -170,7 +170,7 @@ define ptr @geps_combinable(ptr %a) {
 
 define ptr @geps_combinable_different_elem_type1(ptr %a) {
 ; CHECK-LABEL: @geps_combinable_different_elem_type1(
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
@@ -180,7 +180,7 @@ define ptr @geps_combinable_different_elem_type1(ptr %a) {
 
 define ptr @geps_combinable_different_elem_type2(ptr %a) {
 ; CHECK-LABEL: @geps_combinable_different_elem_type2(
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
@@ -190,7 +190,7 @@ define ptr @geps_combinable_different_elem_type2(ptr %a) {
 
 define ptr @geps_combinable_different_elem_type3(ptr %a) {
 ; CHECK-LABEL: @geps_combinable_different_elem_type3(
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 1, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 12
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
@@ -263,9 +263,9 @@ declare void @use(ptr)
 
 define ptr @geps_combinable_different_elem_type_extra_use1(ptr %a) {
 ; CHECK-LABEL: @geps_combinable_different_elem_type_extra_use1(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    call void @use(ptr [[A2]])
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
@@ -440,7 +440,7 @@ bb2:
 define ptr addrspace(1) @gep_of_addrspace_cast(ptr %ptr) {
 ; CHECK-LABEL: @gep_of_addrspace_cast(
 ; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[PTR:%.*]] to ptr addrspace(1)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[CAST1]], i64 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[CAST1]], i64 4
 ; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
 ;
   %cast1 = addrspacecast ptr %ptr to ptr addrspace(1)
@@ -519,7 +519,7 @@ define ptr @phi_of_gep(i1 %c, ptr %p) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[PHI]]
 ;
   br i1 %c, label %if, label %else
@@ -541,10 +541,10 @@ define ptr @phi_of_gep_different_type(i1 %c, ptr %p) {
 ; CHECK-LABEL: @phi_of_gep_different_type(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP1]], [[IF]] ], [ [[GEP2]], [[ELSE]] ]
@@ -573,9 +573,9 @@ define ptr @gep_of_phi_of_gep(i1 %c, ptr %p) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 1, [[IF]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4, [[IF]] ], [ 8, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   br i1 %c, label %if, label %else
@@ -598,14 +598,13 @@ define ptr @gep_of_phi_of_gep_different_type(i1 %c, ptr %p) {
 ; CHECK-LABEL: @gep_of_phi_of_gep_different_type(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[P]], i64 2
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP1]], [[IF]] ], [ [[GEP2]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4, [[IF]] ], [ 16, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   br i1 %c, label %if, label %else
@@ -626,8 +625,8 @@ join:
 
 define ptr @select_of_gep(i1 %c, ptr %p) {
 ; CHECK-LABEL: @select_of_gep(
-; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 1, i64 2
-; CHECK-NEXT:    [[S:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[S_V]]
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 4, i64 8
+; CHECK-NEXT:    [[S:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[S_V]]
 ; CHECK-NEXT:    ret ptr [[S]]
 ;
   %gep1 = getelementptr i32, ptr %p, i64 1
@@ -638,9 +637,8 @@ define ptr @select_of_gep(i1 %c, ptr %p) {
 
 define ptr @select_of_gep_different_type(i1 %c, ptr %p) {
 ; CHECK-LABEL: @select_of_gep_different_type(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, ptr [[P]], i64 2
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], ptr [[GEP1]], ptr [[GEP2]]
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 4, i64 16
+; CHECK-NEXT:    [[S:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[S_V]]
 ; CHECK-NEXT:    ret ptr [[S]]
 ;
   %gep1 = getelementptr i32, ptr %p, i64 1

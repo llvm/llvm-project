@@ -1,5 +1,5 @@
 # RUN: not llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR,NORELAX --implicit-check-not=error:
-## TODO: not llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR,RELAX --implicit-check-not=error:
+# RUN: not llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=ERR,RELAX --implicit-check-not=error:
 
 a:
   nop

@@ -57,7 +57,7 @@ struct JITEngine {
 
   /// Return true if \p Image is a bitcode image that can be JITed for the given
   /// architecture.
-  bool checkBitcodeImage(const __tgt_device_image &Image);
+  Expected<bool> checkBitcodeImage(StringRef Buffer) const;
 
 private:
   /// Compile the bitcode image \p Image and generate the binary image that can

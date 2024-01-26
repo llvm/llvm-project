@@ -896,7 +896,7 @@ static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
   // Immediate is encoded as the top 16-bits of an unsigned 18-bit negative
   // PC-relative offset.
   uint64_t ImmVal = Imm;
-  if (ImmVal < 0 || ImmVal > (1 << 16))
+  if (ImmVal > (1 << 16))
     return Fail;
   ImmVal = -ImmVal;
   if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal << 2), Addr,

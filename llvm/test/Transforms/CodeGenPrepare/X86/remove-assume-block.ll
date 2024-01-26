@@ -1,4 +1,4 @@
-; RUN: opt -S -codegenprepare -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=x86_64-linux < %s | FileCheck %s
 ;
 ; Ensure that blocks that only contain @llvm.assume are removed completely
 ; during CodeGenPrepare.

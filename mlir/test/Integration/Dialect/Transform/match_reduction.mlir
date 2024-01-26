@@ -104,13 +104,13 @@ module attributes { transform.with_named_sequence } {
       %rank: !transform.param<i64> {transform.readonly},
       %dims: !transform.param<i64> {transform.readonly},
       %bitwidth: !transform.param<i64> {transform.readonly}) {
-    transform.test_print_remark_at_operand %leading, "leading" : !transform.any_op
-    transform.test_print_remark_at_operand %fill, "fill" : !transform.any_op
-    transform.test_print_remark_at_operand %reduction, "reduction" : !transform.any_op
-    transform.test_print_remark_at_operand %trailing, "trailing" : !transform.any_op
-    transform.test_print_param %rank, "rank" at %reduction : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %dims, "dimensions" at %reduction : !transform.param<i64>, !transform.any_op
-    transform.test_print_param %bitwidth, "bitwidth" at %reduction : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_remark_at %leading, "leading" : !transform.any_op
+    transform.debug.emit_remark_at %fill, "fill" : !transform.any_op
+    transform.debug.emit_remark_at %reduction, "reduction" : !transform.any_op
+    transform.debug.emit_remark_at %trailing, "trailing" : !transform.any_op
+    transform.debug.emit_param_as_remark %rank, "rank" at %reduction : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %dims, "dimensions" at %reduction : !transform.param<i64>, !transform.any_op
+    transform.debug.emit_param_as_remark %bitwidth, "bitwidth" at %reduction : !transform.param<i64>, !transform.any_op
     transform.yield
   }
 
