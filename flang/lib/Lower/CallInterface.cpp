@@ -1131,12 +1131,11 @@ private:
             getBounds(*typeAndShape))
       mlirType = fir::SequenceType::get(*bounds, mlirType);
     if (result.attrs.test(Attr::Allocatable))
-      mlirType = fir::wrapInClassOrBoxType(
-          fir::HeapType::get(mlirType), resIsPolymorphic, resIsAssumedType);
+      mlirType = fir::wrapInClassOrBoxType(fir::HeapType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
     if (result.attrs.test(Attr::Pointer))
-      mlirType =
-          fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
-                                    resIsPolymorphic, resIsAssumedType);
+      mlirType = fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
 
     if (fir::isa_char(mlirType)) {
       // Character scalar results must be passed as arguments in lowering so
