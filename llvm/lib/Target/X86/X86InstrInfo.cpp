@@ -9517,25 +9517,25 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   if (Invert)
     return false;
   switch (Inst.getOpcode()) {
-  case X86::ADD8rr:
-  case X86::ADD16rr:
-  case X86::ADD32rr:
-  case X86::ADD64rr:
-  case X86::AND8rr:
-  case X86::AND16rr:
-  case X86::AND32rr:
-  case X86::AND64rr:
-  case X86::OR8rr:
-  case X86::OR16rr:
-  case X86::OR32rr:
-  case X86::OR64rr:
-  case X86::XOR8rr:
-  case X86::XOR16rr:
-  case X86::XOR32rr:
-  case X86::XOR64rr:
-  case X86::IMUL16rr:
-  case X86::IMUL32rr:
-  case X86::IMUL64rr:
+  CASE_ND(ADD8rr)
+  CASE_ND(ADD16rr)
+  CASE_ND(ADD32rr)
+  CASE_ND(ADD64rr)
+  CASE_ND(AND8rr)
+  CASE_ND(AND16rr)
+  CASE_ND(AND32rr)
+  CASE_ND(AND64rr)
+  CASE_ND(OR8rr)
+  CASE_ND(OR16rr)
+  CASE_ND(OR32rr)
+  CASE_ND(OR64rr)
+  CASE_ND(XOR8rr)
+  CASE_ND(XOR16rr)
+  CASE_ND(XOR32rr)
+  CASE_ND(XOR64rr)
+  CASE_ND(IMUL16rr)
+  CASE_ND(IMUL32rr)
+  CASE_ND(IMUL64rr)
   case X86::PANDrr:
   case X86::PORrr:
   case X86::PXORrr:
