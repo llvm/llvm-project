@@ -25,7 +25,7 @@ body:             |
   ; CHECK-LABEL: name: none
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.5(0x5c0b8170), %bb.1(0x23f47e90)
-  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r4, $r5, $r6
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r4, $r5, $r6, $lr
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
@@ -42,7 +42,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r6, $r12
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r3 = t2LDRHi12 $sp, 16, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r1, dead $cpsr = nsw tLSLri killed renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -156,7 +156,7 @@ body:             |
   ; CHECK-LABEL: name: copyin
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.5(0x5c0b8170), %bb.1(0x23f47e90)
-  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r4, $r5, $r6
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r4, $r5, $r6, $lr
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
@@ -173,7 +173,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r6, $r12
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r3 = t2LDRHi12 $sp, 16, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r1, dead $cpsr = nsw tLSLri killed renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -289,7 +289,7 @@ body:             |
   ; CHECK-LABEL: name: copyout
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.5(0x5c0b8170), %bb.1(0x23f47e90)
-  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r4, $r5, $r6
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r4, $r5, $r6, $lr
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
@@ -306,7 +306,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r6, $r12
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r3 = t2LDRHi12 $sp, 16, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r1, dead $cpsr = nsw tLSLri killed renamable $r1, 1, 14 /* CC::al */, $noreg
@@ -336,7 +336,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x04000000), %bb.2(0x7c000000)
-  ; CHECK-NEXT:   liveins: $d0, $d1, $r0, $r1, $r2, $r3, $r6, $r12
+  ; CHECK-NEXT:   liveins: $q0, $r0, $r1, $r2, $r3, $r6, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r3, dead $cpsr = nuw nsw tADDi8 killed renamable $r3, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r0 = tADDhirr killed renamable $r0, renamable $r1, 14 /* CC::al */, $noreg
