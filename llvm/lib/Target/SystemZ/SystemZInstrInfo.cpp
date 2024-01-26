@@ -610,7 +610,7 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     .addImm(CCValid).addImm(CCMask);
 }
 
-bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
   unsigned DefOpc = DefMI.getOpcode();
