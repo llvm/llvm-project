@@ -1146,17 +1146,13 @@ static LogicalResult printSupportCall(KokkosCppEmitter &emitter, func::CallOp ca
   // Declare the result (if any) in current scope
   bool hasResult = callOp.getResults().size() == 1;
   bool resultIsMemref = hasResult && isa<MemRefType>(callOp.getResult(0).getType());
-  // Register the space of the result as being HostSpace now
-  emitter.memrefSpaces[callOp.getResult(0)] = MemSpace::Host;
-  if(hasResult)
-  {
-    if(resultIsMemref)
-    {
+  if (hasResult) {
+    // Register the space of the result as being HostSpace now
+    emitter.memrefSpaces[callOp.getResult(0)] = MemSpace::Host;
+    if (resultIsMemref) {
       if(failed(emitter.emitMemrefType(callOp.getLoc(), dyn_cast<MemRefType>(callOp.getResult(0).getType()), MemSpace::Host)))
         return failure();
-    }
-    else
-    {
+    } else {
       if(failed(emitter.emitType(callOp.getLoc(), callOp.getResult(0).getType(), false)))
         return failure();
     }
@@ -1989,8 +1985,8 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
         return failure();
       }
       //If there will be any arg types, add an extra comma
-      if (functionOp.getArgumentTypes().size())
-      {
+      if (!(functionOp.getFunctionType().getResults().empty() ||
+            functionOp.getArgumentTypes().empty())) {
         os << ", ";
       }
     }
@@ -2464,30 +2460,19 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
       sparseSupportFunctions.insert({name, {pointerResult, name}});
     };
   registerCIface(false, "newSparseTensor");
-  for(std::string funcName : {
-      "sparseCoordinates0",
-      "sparseCoordinates8",
-      "sparseCoordinates16",
-      "sparseCoordinates32",
-      "sparseCoordinates64",
-      "sparsePositions0",
-      "sparsePositions8",
-      "sparsePositions16",
-      "sparsePositions32",
-      "sparsePositions64",
-      "sparseValuesBF16",
-      "sparseValuesC32",
-      "sparseValuesC64",
-      "sparseValuesF16",
-      "sparseValuesF32",
-      "sparseValuesF64",
-      "sparseValuesI8",
-      "sparseValuesI16",
-      "sparseValuesI32",
-      "sparseValuesI64"
-  })
-  {
+  for (std::string funcName :
+       {"getPartitions",       "updateSlice",         "sparseCoordinates0",
+        "sparseCoordinates8",  "sparseCoordinates16", "sparseCoordinates32",
+        "sparseCoordinates64", "sparsePositions0",    "sparsePositions8",
+        "sparsePositions16",   "sparsePositions32",   "sparsePositions64",
+        "sparseValuesBF16",    "sparseValuesC32",     "sparseValuesC64",
+        "sparseValuesF16",     "sparseValuesF32",     "sparseValuesF64",
+        "sparseValuesI8",      "sparseValuesI16",     "sparseValuesI32",
+        "sparseValuesI64"}) {
     registerCIface(true, funcName);
+  }
+  for (std::string funcName : {"getSlice"}) {
+    registerCIface(false, funcName);
   }
   registerCIface(false, "lexInsertF32");
   registerCIface(false, "lexInsertF64");
@@ -2495,6 +2480,7 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
   registerCIface(false, "expInsertF64");
   // Now the functions _not_ prefixed with _mlir_ciface_
   registerNonPrefixed(false, "endInsert");
+  registerNonPrefixed(false, "sparseDimSize");
 }
 
 /// Return the existing or a new name for a Value.
