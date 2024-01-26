@@ -223,7 +223,7 @@ double set_exceptional(double x) {
         return x;
 
       if (fputil::quick_get_round() == FE_UPWARD)
-        return FPBits::min_denormal();
+        return FPBits::min_subnormal().get_val();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0;
@@ -237,13 +237,13 @@ double set_exceptional(double x) {
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return FPBits::max_normal();
+      return FPBits::max_normal().get_val();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
   }
   // x is +inf or nan
-  return x + static_cast<double>(FPBits::inf());
+  return x + FPBits::inf().get_val();
 }
 
 } // namespace

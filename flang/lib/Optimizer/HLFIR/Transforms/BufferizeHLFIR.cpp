@@ -730,13 +730,15 @@ struct HLFIRListener : public mlir::OpBuilder::Listener {
   HLFIRListener(fir::FirOpBuilder &builder,
                 mlir::ConversionPatternRewriter &rewriter)
       : builder{builder}, rewriter{rewriter} {}
-  void notifyOperationInserted(mlir::Operation *op) override {
-    builder.notifyOperationInserted(op);
-    rewriter.notifyOperationInserted(op);
+  void notifyOperationInserted(mlir::Operation *op,
+                               mlir::OpBuilder::InsertPoint previous) override {
+    builder.notifyOperationInserted(op, previous);
+    rewriter.notifyOperationInserted(op, previous);
   }
-  virtual void notifyBlockCreated(mlir::Block *block) override {
-    builder.notifyBlockCreated(block);
-    rewriter.notifyBlockCreated(block);
+  virtual void notifyBlockInserted(mlir::Block *block, mlir::Region *previous,
+                                   mlir::Region::iterator previousIt) override {
+    builder.notifyBlockInserted(block, previous, previousIt);
+    rewriter.notifyBlockInserted(block, previous, previousIt);
   }
   fir::FirOpBuilder &builder;
   mlir::ConversionPatternRewriter &rewriter;

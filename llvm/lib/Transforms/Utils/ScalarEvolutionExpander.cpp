@@ -1010,14 +1010,11 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   // Create the PHI.
   BasicBlock *Header = L->getHeader();
   Builder.SetInsertPoint(Header, Header->begin());
-  pred_iterator HPB = pred_begin(Header), HPE = pred_end(Header);
-  PHINode *PN = Builder.CreatePHI(ExpandTy, std::distance(HPB, HPE),
-                                  Twine(IVName) + ".iv");
+  PHINode *PN =
+      Builder.CreatePHI(ExpandTy, pred_size(Header), Twine(IVName) + ".iv");
 
   // Create the step instructions and populate the PHI.
-  for (pred_iterator HPI = HPB; HPI != HPE; ++HPI) {
-    BasicBlock *Pred = *HPI;
-
+  for (BasicBlock *Pred : predecessors(Header)) {
     // Add a start value.
     if (!L->contains(Pred)) {
       PN->addIncoming(StartV, Pred);
@@ -1569,6 +1566,69 @@ void SCEVExpander::rememberInstruction(Value *I) {
   DoInsert(I);
 }
 
+void SCEVExpander::replaceCongruentIVInc(
+    PHINode *&Phi, PHINode *&OrigPhi, Loop *L, const DominatorTree *DT,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  BasicBlock *LatchBlock = L->getLoopLatch();
+  if (!LatchBlock)
+    return;
+
+  Instruction *OrigInc =
+      dyn_cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
+  Instruction *IsomorphicInc =
+      dyn_cast<Instruction>(Phi->getIncomingValueForBlock(LatchBlock));
+  if (!OrigInc || !IsomorphicInc)
+    return;
+
+  // If this phi has the same width but is more canonical, replace the
+  // original with it. As part of the "more canonical" determination,
+  // respect a prior decision to use an IV chain.
+  if (OrigPhi->getType() == Phi->getType() &&
+      !(ChainedPhis.count(Phi) ||
+        isExpandedAddRecExprPHI(OrigPhi, OrigInc, L)) &&
+      (ChainedPhis.count(Phi) ||
+       isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
+    std::swap(OrigPhi, Phi);
+    std::swap(OrigInc, IsomorphicInc);
+  }
+
+  // Replacing the congruent phi is sufficient because acyclic
+  // redundancy elimination, CSE/GVN, should handle the
+  // rest. However, once SCEV proves that a phi is congruent,
+  // it's often the head of an IV user cycle that is isomorphic
+  // with the original phi. It's worth eagerly cleaning up the
+  // common case of a single IV increment so that DeleteDeadPHIs
+  // can remove cycles that had postinc uses.
+  // Because we may potentially introduce a new use of OrigIV that didn't
+  // exist before at this point, its poison flags need readjustment.
+  const SCEV *TruncExpr =
+      SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
+  if (OrigInc == IsomorphicInc || TruncExpr != SE.getSCEV(IsomorphicInc) ||
+      !SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) ||
+      !hoistIVInc(OrigInc, IsomorphicInc,
+                  /*RecomputePoisonFlags*/ true))
+    return;
+
+  SCEV_DEBUG_WITH_TYPE(DebugType,
+                       dbgs() << "INDVARS: Eliminated congruent iv.inc: "
+                              << *IsomorphicInc << '\n');
+  Value *NewInc = OrigInc;
+  if (OrigInc->getType() != IsomorphicInc->getType()) {
+    BasicBlock::iterator IP;
+    if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
+      IP = PN->getParent()->getFirstInsertionPt();
+    else
+      IP = OrigInc->getNextNonDebugInstruction()->getIterator();
+
+    IRBuilder<> Builder(IP->getParent(), IP);
+    Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
+    NewInc =
+        Builder.CreateTruncOrBitCast(OrigInc, IsomorphicInc->getType(), IVName);
+  }
+  IsomorphicInc->replaceAllUsesWith(NewInc);
+  DeadInsts.emplace_back(IsomorphicInc);
+}
+
 /// replaceCongruentIVs - Check for congruent phis in this loop header and
 /// replace them with their most canonical representative. Return the number of
 /// phis eliminated.
@@ -1654,60 +1714,7 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     if (OrigPhiRef->getType()->isPointerTy() != Phi->getType()->isPointerTy())
       continue;
 
-    if (BasicBlock *LatchBlock = L->getLoopLatch()) {
-      Instruction *OrigInc = dyn_cast<Instruction>(
-          OrigPhiRef->getIncomingValueForBlock(LatchBlock));
-      Instruction *IsomorphicInc =
-          dyn_cast<Instruction>(Phi->getIncomingValueForBlock(LatchBlock));
-
-      if (OrigInc && IsomorphicInc) {
-        // If this phi has the same width but is more canonical, replace the
-        // original with it. As part of the "more canonical" determination,
-        // respect a prior decision to use an IV chain.
-        if (OrigPhiRef->getType() == Phi->getType() &&
-            !(ChainedPhis.count(Phi) ||
-              isExpandedAddRecExprPHI(OrigPhiRef, OrigInc, L)) &&
-            (ChainedPhis.count(Phi) ||
-             isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
-          std::swap(OrigPhiRef, Phi);
-          std::swap(OrigInc, IsomorphicInc);
-        }
-        // Replacing the congruent phi is sufficient because acyclic
-        // redundancy elimination, CSE/GVN, should handle the
-        // rest. However, once SCEV proves that a phi is congruent,
-        // it's often the head of an IV user cycle that is isomorphic
-        // with the original phi. It's worth eagerly cleaning up the
-        // common case of a single IV increment so that DeleteDeadPHIs
-        // can remove cycles that had postinc uses.
-        // Because we may potentially introduce a new use of OrigIV that didn't
-        // exist before at this point, its poison flags need readjustment.
-        const SCEV *TruncExpr =
-            SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
-        if (OrigInc != IsomorphicInc &&
-            TruncExpr == SE.getSCEV(IsomorphicInc) &&
-            SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
-            hoistIVInc(OrigInc, IsomorphicInc, /*RecomputePoisonFlags*/ true)) {
-          SCEV_DEBUG_WITH_TYPE(
-              DebugType, dbgs() << "INDVARS: Eliminated congruent iv.inc: "
-                                << *IsomorphicInc << '\n');
-          Value *NewInc = OrigInc;
-          if (OrigInc->getType() != IsomorphicInc->getType()) {
-            BasicBlock::iterator IP;
-            if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
-              IP = PN->getParent()->getFirstInsertionPt();
-            else
-              IP = OrigInc->getNextNonDebugInstruction()->getIterator();
-
-            IRBuilder<> Builder(IP->getParent(), IP);
-            Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
-            NewInc = Builder.CreateTruncOrBitCast(
-                OrigInc, IsomorphicInc->getType(), IVName);
-          }
-          IsomorphicInc->replaceAllUsesWith(NewInc);
-          DeadInsts.emplace_back(IsomorphicInc);
-        }
-      }
-    }
+    replaceCongruentIVInc(Phi, OrigPhiRef, L, DT, DeadInsts);
     SCEV_DEBUG_WITH_TYPE(DebugType,
                          dbgs() << "INDVARS: Eliminated congruent iv: " << *Phi
                                 << '\n');

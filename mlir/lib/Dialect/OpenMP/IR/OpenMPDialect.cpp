@@ -1154,6 +1154,22 @@ LogicalResult SimdLoopOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// Verifier for Distribute construct [2.9.4.1]
+//===----------------------------------------------------------------------===//
+
+LogicalResult DistributeOp::verify() {
+  if (this->getChunkSize() && !this->getDistScheduleStatic())
+    return emitOpError() << "chunk size set without "
+                            "dist_schedule_static being present";
+
+  if (getAllocateVars().size() != getAllocatorsVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//
 

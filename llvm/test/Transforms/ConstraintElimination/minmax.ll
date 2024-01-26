@@ -306,7 +306,9 @@ define i1 @smin_branchless(i32 %x, i32 %y) {
 ; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 true, false
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[MIN]], [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[MIN]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:

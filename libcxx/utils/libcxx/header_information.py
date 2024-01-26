@@ -215,3 +215,28 @@ module_headers = [
     # These headers have been removed in C++20 so are never part of a module.
     and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
 ]
+
+# The C headers used in the std and std.compat modules.
+module_c_headers = [
+    "cassert",
+    "cctype",
+    "cerrno",
+    "cfenv",
+    "cfloat",
+    "cinttypes",
+    "climits",
+    "clocale",
+    "cmath",
+    "csetjmp",
+    "csignal",
+    "cstdarg",
+    "cstddef",
+    "cstdint",
+    "cstdio",
+    "cstdlib",
+    "cstring",
+    "ctime",
+    "cuchar",
+    "cwchar",
+    "cwctype",
+]
