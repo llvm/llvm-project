@@ -861,14 +861,10 @@ public:
 
   // Return the size of the saved packs if all of them has the same size.
   std::optional<unsigned> getSavedPackSizeIfAllEqual() const {
-    if (Packs.size() == 0 ||
-        Packs[0].Saved.getKind() != clang::TemplateArgument::Pack)
-      return {};
     unsigned PackSize = Packs[0].Saved.pack_size();
 
     if (std::all_of(Packs.begin() + 1, Packs.end(), [&PackSize](const auto &P) {
-          return P.Saved.getKind() == TemplateArgument::Pack &&
-                 P.Saved.pack_size() == PackSize;
+          return P.Saved.pack_size() == PackSize;
         }))
       return PackSize;
     return {};
