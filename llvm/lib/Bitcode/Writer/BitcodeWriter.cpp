@@ -210,7 +210,7 @@ public:
 
           // For each referenced variables in the function summary, see if the
           // variable is represented by a GUID (as opposed to a symbol to
-          // declarations or definitions in the module). If so, sythesize a
+          // declarations or definitions in the module). If so, synthesize a
           // value id.
           for (auto &RefEdge : FS->refs())
             if ((!RefEdge.haveGVs() || !RefEdge.getValue()))

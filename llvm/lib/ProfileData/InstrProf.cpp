@@ -1339,6 +1339,7 @@ static bool getValueProfDataFromInst(const MDNode *const MD,
   return true;
 }
 
+
 std::unique_ptr<InstrProfValueData[]>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
@@ -1353,6 +1354,8 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
   return ValueDataArray;
 }
 
+// FIXME: Migrate existing callers to the function above that returns an
+// array.
 bool getValueProfDataFromInst(const Instruction &Inst,
                               InstrProfValueKind ValueKind,
                               uint32_t MaxNumValueData,
