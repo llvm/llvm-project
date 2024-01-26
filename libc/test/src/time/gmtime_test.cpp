@@ -26,7 +26,7 @@ TEST(LlvmLibcGmTime, OutOfRange) {
                         TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
   struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  EXPECT_EQ(libc_errno, EOVERFLOW);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
 
   libc_errno = 0;
   seconds = INT_MIN * static_cast<int64_t>(
@@ -34,7 +34,7 @@ TEST(LlvmLibcGmTime, OutOfRange) {
             1;
   tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  EXPECT_EQ(libc_errno, EOVERFLOW);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
 }
 
 TEST(LlvmLibcGmTime, InvalidSeconds) {

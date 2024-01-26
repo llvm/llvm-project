@@ -28,13 +28,13 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_PATH);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::chdir(TEST_DIR), Succeeds(0));
   fd = LIBC_NAMESPACE::open(TEST_FILE_BASE, O_PATH);
   ASSERT_GT(fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 

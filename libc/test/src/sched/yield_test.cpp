@@ -15,5 +15,5 @@ TEST(LlvmLibcSchedYieldTest, SmokeTest) {
   // sched_yield() always succeeds, just do a basic test that errno/ret are
   // properly 0.
   ASSERT_EQ(LIBC_NAMESPACE::sched_yield(), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 }

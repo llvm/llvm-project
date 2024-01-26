@@ -36,7 +36,7 @@ TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   ASSERT_EQ(size_t(0),
             LIBC_NAMESPACE::fread_unlocked(data, 1, sizeof(READ_SIZE), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror_unlocked(f), 0);
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_ERRNO_FAILURE();
   libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr_unlocked(f);
@@ -57,7 +57,7 @@ TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   ASSERT_EQ(size_t(0),
             LIBC_NAMESPACE::fwrite_unlocked(CONTENT, 1, sizeof(CONTENT), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror_unlocked(f), 0);
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_ERRNO_FAILURE();
   libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr_unlocked(f);

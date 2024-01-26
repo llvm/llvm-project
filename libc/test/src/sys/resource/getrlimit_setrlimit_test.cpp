@@ -33,10 +33,10 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
 
   int fd1 = LIBC_NAMESPACE::open(TEST_FILE1, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd1, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   int fd2 = LIBC_NAMESPACE::open(TEST_FILE2, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd2, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_THAT(LIBC_NAMESPACE::close(fd1), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd2), Succeeds(0));
@@ -49,20 +49,20 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   // One can now only open one of the files successfully.
   fd1 = LIBC_NAMESPACE::open(TEST_FILE1, O_RDONLY);
   ASSERT_GT(fd1, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   fd2 = LIBC_NAMESPACE::open(TEST_FILE2, O_RDONLY);
   ASSERT_LT(fd2, 0);
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_ERRNO_FAILURE();
 
   libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::close(fd1), Succeeds(0));
 
   fd2 = LIBC_NAMESPACE::open(TEST_FILE2, O_RDONLY);
   ASSERT_GT(fd2, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   fd1 = LIBC_NAMESPACE::open(TEST_FILE1, O_RDONLY);
   ASSERT_LT(fd1, 0);
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_ERRNO_FAILURE();
 
   libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::close(fd2), Succeeds(0));
