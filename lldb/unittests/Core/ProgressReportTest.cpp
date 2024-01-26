@@ -21,18 +21,19 @@ using namespace lldb;
 using namespace lldb_private;
 
 class ProgressReportTest : public ::testing::Test {
-  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
+    SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
 
-  // The debugger's initialization function can't be called with no arguments
-  // so calling it using SubsystemRAII will cause the test build to fail as
-  // SubsystemRAII will call Initialize with no arguments. As such we set it up
-  // here the usual way.
-  void SetUp() override { Debugger::Initialize(nullptr); }
-  void TearDown() override { Debugger::Terminate(); }
+    // The debugger's initialization function can't be called with no arguments
+    // so calling it using SubsystemRAII will cause the test build to fail as
+    // SubsystemRAII will call Initialize with no arguments. As such we set it up
+    // here the usual way.
+    void SetUp() override { Debugger::Initialize(nullptr); }
+    void TearDown() override { Debugger::Terminate(); }
 };
 
 TEST_F(ProgressReportTest, TestReportCreation) {
   std::chrono::milliseconds timeout(100);
+  const unsigned long long NO_TOTAL = 1;
 
   // Set up the debugger, make sure that was done properly
   ArchSpec arch("x86_64-apple-macosx-");
@@ -51,7 +52,7 @@ TEST_F(ProgressReportTest, TestReportCreation) {
   listener_sp->StartListeningForEvents(&broadcaster,
                                        Debugger::eBroadcastBitProgress);
   EXPECT_TRUE(
-      broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitProgress));
+    broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitProgress));
 
   EventSP event_sp;
   const ProgressEventData *data;
@@ -61,24 +62,39 @@ TEST_F(ProgressReportTest, TestReportCreation) {
   // started are broadcasted
   {
     Progress progress1("Progress report 1", "Starting report 1");
-    EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
-
-    data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-    ASSERT_EQ(data->GetDetails(), "Starting report 1");
-
     Progress progress2("Progress report 2", "Starting report 2");
-    EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
-
-    data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-    ASSERT_EQ(data->GetDetails(), "Starting report 2");
-
     Progress progress3("Progress report 3", "Starting report 3");
-    EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
-    ASSERT_TRUE(event_sp);
-
-    data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
-    ASSERT_EQ(data->GetDetails(), "Starting report 3");
   }
+
+  // Start popping events from the queue, they should have been recevied
+  // in this order:
+  // Starting progress: 1, 2, 3
+  // Ending progress: 3, 2, 1
+  EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+
+  ASSERT_EQ(data->GetDetails(), "Starting report 1");
+  ASSERT_FALSE(data->IsFinite());
+  ASSERT_FALSE(data->GetCompleted());
+  ASSERT_EQ(data->GetTotal(), NO_TOTAL);
+  ASSERT_EQ(data->GetMessage(), "Progress report 1: Starting report 1");
+
+  EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+
+  ASSERT_EQ(data->GetDetails(), "Starting report 2");
+  ASSERT_FALSE(data->IsFinite());
+  ASSERT_FALSE(data->GetCompleted());
+  ASSERT_EQ(data->GetTotal(), NO_TOTAL);
+  ASSERT_EQ(data->GetMessage(), "Progress report 2: Starting report 2");
+
+  EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
+  data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
+  ASSERT_EQ(data->GetDetails(), "Starting report 3");
+  ASSERT_FALSE(data->IsFinite());
+  ASSERT_FALSE(data->GetCompleted());
+  ASSERT_EQ(data->GetTotal(), NO_TOTAL);
+  ASSERT_EQ(data->GetMessage(), "Progress report 3: Starting report 3");
 
   // Progress report objects should be destroyed at this point so
   // get each report from the queue and check that they've been
@@ -88,16 +104,22 @@ TEST_F(ProgressReportTest, TestReportCreation) {
 
   ASSERT_EQ(data->GetTitle(), "Progress report 3");
   ASSERT_TRUE(data->GetCompleted());
+  ASSERT_FALSE(data->IsFinite());
+  ASSERT_EQ(data->GetMessage(), "Progress report 3: Starting report 3");
 
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
 
   ASSERT_EQ(data->GetTitle(), "Progress report 2");
   ASSERT_TRUE(data->GetCompleted());
+  ASSERT_FALSE(data->IsFinite());
+  ASSERT_EQ(data->GetMessage(), "Progress report 2: Starting report 2");
 
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
 
   ASSERT_EQ(data->GetTitle(), "Progress report 1");
   ASSERT_TRUE(data->GetCompleted());
+  ASSERT_FALSE(data->IsFinite());
+  ASSERT_EQ(data->GetMessage(), "Progress report 1: Starting report 1");
 }
