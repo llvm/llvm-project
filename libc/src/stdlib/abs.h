@@ -11,7 +11,7 @@
 
 namespace LIBC_NAMESPACE {
 
-int abs(int n);
+[[gnu::const]] int abs(int n);
 
 } // namespace LIBC_NAMESPACE
 
