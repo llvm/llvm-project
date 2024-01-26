@@ -907,6 +907,12 @@ def FeatureHasRestrictedSOffset : SubtargetFeature<"restricted-soffset",
   "Has restricted SOffset (immediate not supported)."
 >;
 
+def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
+  "HasBitOp3Insts",
+  "true",
+  "Has v_bitop3_b32/v_bitop3_b16 instructions"
+>;
+
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
   "true",
@@ -1402,7 +1408,12 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureKernargPreload]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features, [FeatureGFX950Insts, FeatureLocalMemorySize163840, FeaturePrngInst, FeatureBF16ConversionInsts])>;
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+  [FeatureGFX950Insts,
+   FeatureLocalMemorySize163840,
+   FeaturePrngInst,
+   FeatureBF16ConversionInsts,
+   FeatureBitOp3Insts])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -2190,6 +2201,9 @@ def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts(
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
+
+def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
+  AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
 
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;

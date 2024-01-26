@@ -211,6 +211,7 @@ protected:
   bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
+  bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
@@ -1247,6 +1248,8 @@ public:
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   bool hasPrngInst() const { return HasPrngInst; }
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }

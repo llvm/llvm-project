@@ -1157,6 +1157,9 @@ def WaitEXP : NamedIntOperand<i8, "wait_exp">;
 def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst">;
 def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc">;
 
+def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+def bitop3_0 : DefaultOperand<BitOp3, 0>;
+
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
