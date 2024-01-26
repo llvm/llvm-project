@@ -470,6 +470,9 @@ class LowerTypeTestsModule {
 
   Function *WeakInitializerFn = nullptr;
 
+  GlobalVariable *GlobalAnnotation;
+  std::set<void *> FunctionAnnotations;
+
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
@@ -530,6 +533,10 @@ class LowerTypeTestsModule {
   /// replaceDirectCalls - Go through the uses list for this definition and
   /// replace each use, which is a direct function call.
   void replaceDirectCalls(Value *Old, Value *New);
+
+  bool isFunctionAnnotation(void *GV) {
+    return FunctionAnnotations.count(GV) != 0;
+  }
 
 public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
@@ -1377,8 +1384,11 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // (all?) targets. Switch to a runtime initializer.
   SmallSetVector<GlobalVariable *, 8> GlobalVarUsers;
   findGlobalVariableUsersOf(F, GlobalVarUsers);
-  for (auto *GV : GlobalVarUsers)
+  for (auto *GV : GlobalVarUsers) {
+    if (GV == GlobalAnnotation)
+      continue;
     moveInitializerToModuleConstructor(GV);
+  }
 
   // Can not RAUW F with an expression that uses F. Replace with a temporary
   // placeholder first.
@@ -1392,6 +1402,10 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // Don't use range based loop, because use list will be modified.
   while (!PlaceholderFn->use_empty()) {
     Use &U = *PlaceholderFn->use_begin();
+    if (isFunctionAnnotation(U.getUser())) {
+      U.set(F);
+      continue;
+    }
     auto *InsertPt = dyn_cast<Instruction>(U.getUser());
     assert(InsertPt && "Non-instruction users should have been eliminated");
     auto *PN = dyn_cast<PHINode>(InsertPt);
@@ -1837,6 +1851,16 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   }
   OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
+
+  // Function annotation describes or applies to function itself, and
+  // shouldn't be associated with jump table thunk generated for CFI.
+  GlobalAnnotation = M.getGlobalVariable("llvm.global.annotations");
+  auto *C = dyn_cast_or_null<Constant>(GlobalAnnotation);
+  if (C && C->getNumOperands() == 1) {
+    C = cast<Constant>(C->getOperand(0));
+    for (auto &Op : C->operands())
+      FunctionAnnotations.insert(Op.get());
+  }
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
@@ -1898,6 +1922,10 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
 
     // Skip direct calls to externally defined or non-dso_local functions
     if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
+      continue;
+
+    // Skip function annotation
+    if (isFunctionAnnotation(U.getUser()))
       continue;
 
     // Must handle Constants specially, we cannot call replaceUsesOfWith on a
