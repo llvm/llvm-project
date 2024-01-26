@@ -410,8 +410,4 @@ def ConvertToSvboolIntrOp :
     /*overloadedResults=*/[]>,
     Arguments<(ins SVEPredicate:$mask)>;
 
-def Zip1IntrOp :
-  ArmSVE_IntrBinaryOverloadedOp<"zip1">,
-  Arguments<(ins AnyScalableVector, AnyScalableVector)>;
-
 #endif // ARMSVE_OPS

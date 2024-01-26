@@ -969,6 +969,20 @@ def LLVM_vector_extract
   }];
 }
 
+class HalfElementsVectorTypeConstraint<string lhs, string rhs>
+    : TypesMatchWith<
+        "'" # rhs # "'" # " has half elements of '" # lhs # "'",
+      lhs, rhs,
+      "VectorType(VectorType::Builder(::llvm::cast<VectorType>($_self))"
+        ".setDim(0, ::llvm::cast<VectorType>($_self).getShape()[0] / 2))">;
+
+def LLVM_experimental_vector_interleave2
+    : LLVM_OneResultIntrOp<"experimental.vector.interleave2",
+                           /*overloadedResults=*/[0], /*overloadedOperands=*/[],
+                           /*traits=*/[Pure, AllTypesMatch<["vec1", "vec2"]>,
+                                       HalfElementsVectorTypeConstraint<"res", "vec1">]>,
+      Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
+
 //
 // LLVM Vector Predication operations.
 //
