@@ -150,7 +150,7 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
                                 unsigned Imm, unsigned EncImm,
                                 bool MandatoryLiteral, unsigned ImmWidth,
                                 const MCDisassembler *Decoder) {
-  assert(Imm < (1 << EncSize) && "Operand doesn't fit encoding!");
+  assert(Imm < (1U << EncSize) && "Operand doesn't fit encoding!");
   auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(
       Inst, DAsm->decodeSrcOp(OpWidth, EncImm, MandatoryLiteral, ImmWidth));

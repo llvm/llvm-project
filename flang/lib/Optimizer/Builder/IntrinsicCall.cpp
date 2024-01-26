@@ -550,12 +550,17 @@ static constexpr IntrinsicHandler handlers[]{
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
     {"sign", &I::genSign},
+    {"signal",
+     &I::genSignalSubroutine,
+     {{{"number", asValue}, {"handler", asAddr}, {"status", asAddr}}},
+     /*isElemental=*/false},
     {"size",
      &I::genSize,
      {{{"array", asBox},
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/false},
+    {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
     {"spread",
      &I::genSpread,
@@ -5578,6 +5583,18 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
                                                shifted);
 }
 
+// SIGNAL
+void IntrinsicLibrary::genSignalSubroutine(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2 || args.size() == 3);
+  mlir::Value number = fir::getBase(args[0]);
+  mlir::Value handler = fir::getBase(args[1]);
+  mlir::Value status;
+  if (args.size() == 3)
+    status = fir::getBase(args[2]);
+  fir::runtime::genSignal(builder, loc, number, handler, status);
+}
+
 // SIGN
 mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
@@ -5922,6 +5939,12 @@ void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
   fir::runtime::genSystemClock(builder, loc, fir::getBase(args[0]),
                                fir::getBase(args[1]), fir::getBase(args[2]));
+}
+
+// SLEEP
+void IntrinsicLibrary::genSleep(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && "SLEEP has one compulsory argument");
+  fir::runtime::genSleep(builder, loc, fir::getBase(args[0]));
 }
 
 // TRANSFER

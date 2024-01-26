@@ -297,7 +297,15 @@ public:
     virtual void notifyOperationInserted(Operation *op, InsertPoint previous) {}
 
     /// Notify the listener that the specified block was inserted.
-    virtual void notifyBlockCreated(Block *block) {}
+    ///
+    /// * If the block was moved, then `previous` and `previousIt` are the
+    ///   previous location of the block.
+    /// * If the block was unlinked before it was inserted, then `previous`
+    ///   is "nullptr".
+    ///
+    /// Note: Creating an (unlinked) block does not trigger this notification.
+    virtual void notifyBlockInserted(Block *block, Region *previous,
+                                     Region::iterator previousIt) {}
 
   protected:
     Listener(Kind kind) : ListenerBase(kind) {}

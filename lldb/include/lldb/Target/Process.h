@@ -3216,6 +3216,8 @@ private:
   Status LaunchPrivate(ProcessLaunchInfo &launch_info, lldb::StateType &state,
                        lldb::EventSP &event_sp);
 
+  lldb::EventSP CreateEventFromProcessState(uint32_t event_type);
+
   Process(const Process &) = delete;
   const Process &operator=(const Process &) = delete;
 };
