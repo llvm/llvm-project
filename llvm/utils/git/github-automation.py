@@ -309,6 +309,10 @@ class ReleaseWorkflow:
         return self._issue_number
 
     @property
+    def branch_repo_owner(self) -> str:
+        return self.branch_repo_name.split("/")[0]
+
+    @property
     def branch_repo_name(self) -> str:
         return self._branch_repo_name
 
@@ -394,7 +398,7 @@ class ReleaseWorkflow:
         action_url = self.action_url
         if action_url:
             message += action_url + "\n\n"
-        message += "Please manually backport the fix and push it to your github fork.  Once this is done, please add a comment like this:\n\n`/branch <user>/<repo>/<branch>`"
+        message += "Please manually backport the fix and push it to your github fork.  Once this is done, please create a [pull request](https://github.com/llvm/llvm-project/compare)"
         issue = self.issue
         comment = issue.create_comment(message)
         issue.add_to_labels(self.CHERRY_PICK_FAILED_LABEL)
@@ -472,9 +476,10 @@ class ReleaseWorkflow:
         print("Pushing to {} {}".format(push_url, branch_name))
         local_repo.git.push(push_url, "HEAD:{}".format(branch_name), force=True)
 
-        self.issue_notify_branch()
         self.issue_remove_cherry_pick_failed_label()
-        return True
+        return self.create_pull_request(
+            self.branch_repo_owner, self.repo_name, branch_name
+        )
 
     def check_if_pull_request_exists(
         self, repo: github.Repository.Repository, head: str
@@ -551,14 +556,6 @@ class ReleaseWorkflow:
                 arg_list = args.split()
                 commits = list(map(lambda a: extract_commit_hash(a), arg_list))
                 return self.create_branch(commits)
-
-            if command == "branch":
-                m = re.match("([^/]+)/([^/]+)/(.+)", args)
-                if m:
-                    owner = m.group(1)
-                    repo = m.group(2)
-                    branch = m.group(3)
-                    return self.create_pull_request(owner, repo, branch)
 
         print("Do not understand input:")
         print(sys.stdin.readlines())

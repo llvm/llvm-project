@@ -2362,7 +2362,7 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator &DeclaratorInfo,
   if (!NeedLateParse) {
     // Look ahead to see if there are any default args
     for (unsigned ParamIdx = 0; ParamIdx < FTI.NumParams; ++ParamIdx) {
-      auto Param = cast<ParmVarDecl>(FTI.Params[ParamIdx].Param);
+      const auto *Param = cast<ParmVarDecl>(FTI.Params[ParamIdx].Param);
       if (Param->hasUnparsedDefaultArg()) {
         NeedLateParse = true;
         break;

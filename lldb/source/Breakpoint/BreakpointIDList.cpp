@@ -62,15 +62,6 @@ bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id,
   return false;
 }
 
-bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
-                                        size_t *position) const {
-  auto bp_id = BreakpointID::ParseCanonicalReference(bp_id_str);
-  if (!bp_id)
-    return false;
-
-  return FindBreakpointID(*bp_id, position);
-}
-
 //  This function takes OLD_ARGS, which is usually the result of breaking the
 //  command string arguments into
 //  an array of space-separated strings, and searches through the arguments for

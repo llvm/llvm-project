@@ -67,7 +67,7 @@ FunctionPass *llvm::createX86FixupVectorConstants() {
 static std::optional<APInt> extractConstantBits(const Constant *C) {
   unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
 
-  if (auto *CUndef = dyn_cast<UndefValue>(C))
+  if (isa<UndefValue>(C))
     return APInt::getZero(NumBits);
 
   if (auto *CInt = dyn_cast<ConstantInt>(C))

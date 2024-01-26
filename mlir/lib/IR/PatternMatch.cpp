@@ -343,7 +343,18 @@ Block *RewriterBase::splitBlock(Block *block, Block::iterator before) {
 /// region and pass it the correct block arguments.
 void RewriterBase::inlineRegionBefore(Region &region, Region &parent,
                                       Region::iterator before) {
-  parent.getBlocks().splice(before, region.getBlocks());
+  // Fast path: If no listener is attached, move all blocks at once.
+  if (!listener) {
+    parent.getBlocks().splice(before, region.getBlocks());
+    return;
+  }
+
+  // Move blocks from the beginning of the region one-by-one.
+  while (!region.empty()) {
+    Block *block = &region.front();
+    parent.getBlocks().splice(before, region.getBlocks(), block->getIterator());
+    listener->notifyBlockInserted(block, &region, region.begin());
+  }
 }
 void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
   inlineRegionBefore(region, *before->getParent(), before->getIterator());
@@ -365,4 +376,32 @@ void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
 }
 void RewriterBase::cloneRegionBefore(Region &region, Block *before) {
   cloneRegionBefore(region, *before->getParent(), before->getIterator());
+}
+
+void RewriterBase::moveOpBefore(Operation *op, Operation *existingOp) {
+  moveOpBefore(op, existingOp->getBlock(), existingOp->getIterator());
+}
+
+void RewriterBase::moveOpBefore(Operation *op, Block *block,
+                                Block::iterator iterator) {
+  Block *currentBlock = op->getBlock();
+  Block::iterator currentIterator = op->getIterator();
+  op->moveBefore(block, iterator);
+  if (listener)
+    listener->notifyOperationInserted(
+        op, /*previous=*/InsertPoint(currentBlock, currentIterator));
+}
+
+void RewriterBase::moveOpAfter(Operation *op, Operation *existingOp) {
+  moveOpAfter(op, existingOp->getBlock(), existingOp->getIterator());
+}
+
+void RewriterBase::moveOpAfter(Operation *op, Block *block,
+                               Block::iterator iterator) {
+  Block *currentBlock = op->getBlock();
+  Block::iterator currentIterator = op->getIterator();
+  op->moveAfter(block, iterator);
+  if (listener)
+    listener->notifyOperationInserted(
+        op, /*previous=*/InsertPoint(currentBlock, currentIterator));
 }

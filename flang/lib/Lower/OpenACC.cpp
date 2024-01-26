@@ -3001,27 +3001,42 @@ void genACCSetOp(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static inline mlir::ArrayAttr
+getArrayAttr(fir::FirOpBuilder &b,
+             llvm::SmallVector<mlir::Attribute> &attributes) {
+  return attributes.empty() ? nullptr : b.getArrayAttr(attributes);
+}
+
+static inline mlir::DenseI32ArrayAttr
+getDenseI32ArrayAttr(fir::FirOpBuilder &builder,
+                     llvm::SmallVector<int32_t> &values) {
+  return values.empty() ? nullptr : builder.getDenseI32ArrayAttr(values);
+}
+
 static void
 genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
                mlir::Location currentLocation,
                Fortran::semantics::SemanticsContext &semanticsContext,
                Fortran::lower::StatementContext &stmtCtx,
                const Fortran::parser::AccClauseList &accClauseList) {
-  mlir::Value ifCond, async, waitDevnum;
+  mlir::Value ifCond, waitDevnum;
   llvm::SmallVector<mlir::Value> dataClauseOperands, updateHostOperands,
-      waitOperands, deviceTypeOperands;
-  llvm::SmallVector<mlir::Attribute> deviceTypes;
-
-  // Async and wait clause have optional values but can be present with
-  // no value as well. When there is no value, the op has an attribute to
-  // represent the clause.
-  bool addAsyncAttr = false;
-  bool addWaitAttr = false;
-  bool addIfPresentAttr = false;
+      waitOperands, deviceTypeOperands, asyncOperands;
+  llvm::SmallVector<mlir::Attribute> asyncOperandsDeviceTypes,
+      asyncOnlyDeviceTypes, waitOperandsDeviceTypes, waitOnlyDeviceTypes;
+  llvm::SmallVector<int32_t> waitOperandsSegments;
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  // Lower clauses values mapped to operands.
+  // device_type attribute is set to `none` until a device_type clause is
+  // encountered.
+  llvm::SmallVector<mlir::Attribute> crtDeviceTypes;
+  crtDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+      builder.getContext(), mlir::acc::DeviceType::None));
+
+  bool ifPresent = false;
+
+  // Lower clauses values mapped to operands and array attributes.
   // Keep track of each group of operands separately as clauses can appear
   // more than once.
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
@@ -3031,15 +3046,19 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
       genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
     } else if (const auto *asyncClause =
                    std::get_if<Fortran::parser::AccClause::Async>(&clause.u)) {
-      genAsyncClause(converter, asyncClause, async, addAsyncAttr, stmtCtx);
+      genAsyncClause(converter, asyncClause, asyncOperands,
+                     asyncOperandsDeviceTypes, asyncOnlyDeviceTypes,
+                     crtDeviceTypes, stmtCtx);
     } else if (const auto *waitClause =
                    std::get_if<Fortran::parser::AccClause::Wait>(&clause.u)) {
-      genWaitClause(converter, waitClause, waitOperands, waitDevnum,
-                    addWaitAttr, stmtCtx);
+      genWaitClause(converter, waitClause, waitOperands,
+                    waitOperandsDeviceTypes, waitOnlyDeviceTypes,
+                    waitOperandsSegments, waitDevnum, crtDeviceTypes, stmtCtx);
     } else if (const auto *deviceTypeClause =
                    std::get_if<Fortran::parser::AccClause::DeviceType>(
                        &clause.u)) {
-      gatherDeviceTypeAttrs(builder, deviceTypeClause, deviceTypes);
+      crtDeviceTypes.clear();
+      gatherDeviceTypeAttrs(builder, deviceTypeClause, crtDeviceTypes);
     } else if (const auto *hostClause =
                    std::get_if<Fortran::parser::AccClause::Host>(&clause.u)) {
       genDataOperandOperations<mlir::acc::GetDevicePtrOp>(
@@ -3053,7 +3072,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
           dataClauseOperands, mlir::acc::DataClause::acc_update_device, false,
           /*implicit=*/false);
     } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
-      addIfPresentAttr = true;
+      ifPresent = true;
     } else if (const auto *selfClause =
                    std::get_if<Fortran::parser::AccClause::Self>(&clause.u)) {
       const std::optional<Fortran::parser::AccSelfClause> &accSelfClause =
@@ -3070,30 +3089,17 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
 
   dataClauseOperands.append(updateHostOperands);
 
-  // Prepare the operand segment size attribute and the operands value range.
-  llvm::SmallVector<mlir::Value> operands;
-  llvm::SmallVector<int32_t> operandSegments;
-  addOperand(operands, operandSegments, ifCond);
-  addOperand(operands, operandSegments, async);
-  addOperand(operands, operandSegments, waitDevnum);
-  addOperands(operands, operandSegments, waitOperands);
-  addOperands(operands, operandSegments, dataClauseOperands);
-
-  mlir::acc::UpdateOp updateOp = createSimpleOp<mlir::acc::UpdateOp>(
-      builder, currentLocation, operands, operandSegments);
-  if (!deviceTypes.empty())
-    updateOp.setDeviceTypesAttr(
-        mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
+  builder.create<mlir::acc::UpdateOp>(
+      currentLocation, ifCond, asyncOperands,
+      getArrayAttr(builder, asyncOperandsDeviceTypes),
+      getArrayAttr(builder, asyncOnlyDeviceTypes), waitDevnum, waitOperands,
+      getDenseI32ArrayAttr(builder, waitOperandsSegments),
+      getArrayAttr(builder, waitOperandsDeviceTypes),
+      getArrayAttr(builder, waitOnlyDeviceTypes), dataClauseOperands,
+      ifPresent);
 
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
       builder, updateHostOperands, /*structured=*/false);
-
-  if (addAsyncAttr)
-    updateOp.setAsyncAttr(builder.getUnitAttr());
-  if (addWaitAttr)
-    updateOp.setWaitAttr(builder.getUnitAttr());
-  if (addIfPresentAttr)
-    updateOp.setIfPresentAttr(builder.getUnitAttr());
 }
 
 static void
