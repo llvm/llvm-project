@@ -1395,6 +1395,10 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"count_max", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"sleep",
+        {{"seconds", AnyInt, Rank::scalar, Optionality::required,
+            common::Intent::In}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
 // TODO: Intrinsic subroutine EVENT_QUERY

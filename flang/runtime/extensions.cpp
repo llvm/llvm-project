@@ -14,8 +14,11 @@
 #include "tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
+#include <chrono>
 #include <ctime>
+#include <thread>
 
 #ifdef _WIN32
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
@@ -111,6 +114,16 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #else
   GetUsernameEnvVar("LOGNAME", arg, length);
 #endif
+}
+
+// CALL SLEEP(SECONDS)
+void RTNAME(Sleep)(std::int64_t seconds) {
+  // ensure that conversion to unsigned makes sense,
+  // sleep(0) is an immidiate return anyway
+  if (seconds < 1) {
+    return;
+  }
+  std::this_thread::sleep_for(std::chrono::seconds(seconds));
 }
 
 } // namespace Fortran::runtime
