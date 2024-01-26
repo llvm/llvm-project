@@ -159,7 +159,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4096(ptr addrspace(1) inr
 ;
 ; GFX12-LABEL: global_load_saddr_i8_offset_neg4096:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], -0x1000
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 0x1000
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -200,7 +201,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4097(ptr addrspace(1) inr
 ;
 ; GFX12-LABEL: global_load_saddr_i8_offset_neg4097:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], -0x1001
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 0x1001
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -241,7 +243,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4098(ptr addrspace(1) inr
 ;
 ; GFX12-LABEL: global_load_saddr_i8_offset_neg4098:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], -0x1002
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 0x1002
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -378,7 +381,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg2048(ptr addrspace(1) inr
 ;
 ; GFX12-LABEL: global_load_saddr_i8_offset_neg2048:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], -0x800
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 0x800
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -415,7 +419,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg2049(ptr addrspace(1) inr
 ;
 ; GFX12-LABEL: global_load_saddr_i8_offset_neg2049:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], -0x801
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 0x801
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -452,7 +457,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg2050(ptr addrspace(1) inr
 ;
 ; GFX12-LABEL: global_load_saddr_i8_offset_neg2050:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], -0x802
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 0x802
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
@@ -527,7 +533,8 @@ define amdgpu_ps float @global_load_saddr_i8_offset_0xFFFFFF(ptr addrspace(1) in
 ;
 ; GFX12-LABEL: global_load_saddr_i8_offset_0xFFFFFF:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_u8 s0, s[2:3], -0x800000
+; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[2:3], 0x800000
+; GFX12-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog

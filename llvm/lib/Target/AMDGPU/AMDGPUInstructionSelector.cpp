@@ -4221,7 +4221,8 @@ AMDGPUInstructionSelector::selectVINTERPModsHi(MachineOperand &Root) const {
 bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
                                                  Register &Base,
                                                  Register *SOffset,
-                                                 int64_t *Offset) const {
+                                                 int64_t *Offset,
+                                                 bool IsPrefetch) const {
   MachineInstr *MI = Root.getParent();
   MachineBasicBlock *MBB = MI->getParent();
 
@@ -4257,6 +4258,27 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
   if (Offset && GEPI.SgprParts.size() == 1 && EncodedImm) {
     Base = GEPI.SgprParts[0];
     *Offset = *EncodedImm;
+    // For unbuffered smem loads, it is illegal and undefined for the Immediate
+    // Offset to be negative if the resulting (Offset + (M0 or SOffset or zero)
+    // is negative. Handle the case where the Immediate Offset is negative and
+    // there is no SOffset.
+    //
+    // FIXME: Also handle M0 or SOffset case?
+    if (!IsPrefetch && *Offset < 0 &&
+        STI.getGeneration() >= AMDGPUSubtarget::GFX11) {
+      // Subtract the absolute value of the offset from the base register and
+      // set the immediate offset to 0.
+      Register SubtractReg =
+          MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_SUB_U64),
+              SubtractReg)
+          .addReg(Base)
+          .addImm(std::abs(*Offset));
+      Base = SubtractReg;
+      *Offset = 0;
+    }
+
     return true;
   }
 
@@ -4336,6 +4358,17 @@ AMDGPUInstructionSelector::selectSmrdSgprImm(MachineOperand &Root) const {
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
            [=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectSmrdPrefetchImm(MachineOperand &Root) const {
+  Register Base;
+  int64_t Offset;
+  if (!selectSmrdOffset(Root, Base, /* SOffset= */ nullptr, &Offset, true))
+    return std::nullopt;
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }}};
 }
 

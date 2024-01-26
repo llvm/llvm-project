@@ -220,8 +220,10 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-  bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
-                        int64_t *Offset) const;
+  bool selectSmrdOffset(MachineOperand & Root, Register & Base,
+                        Register * SOffset, int64_t * Offset,
+                        bool IsPrefetch = false) const;
+
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
@@ -230,6 +232,8 @@ private:
   selectSmrdSgpr(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectSmrdSgprImm(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectSmrdPrefetchImm(MachineOperand &Root) const;
 
   std::pair<Register, int> selectFlatOffsetImpl(MachineOperand &Root,
                                                 uint64_t FlatVariant) const;

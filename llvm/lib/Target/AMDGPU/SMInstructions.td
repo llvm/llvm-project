@@ -859,6 +859,7 @@ def SMRDSgprImm     : ComplexPattern<iPTR, 3, "SelectSMRDSgprImm">;
 def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
+def SMRDPrefetchImm : ComplexPattern<iPTR, 2, "SelectSMRDPrefetchImm">;
 
 multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
 
@@ -1078,7 +1079,7 @@ def i32imm_one : TImmLeaf <i32, [{
 
 multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
   def : GCNPat <
-    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), timm, timm, cache_type),
+    (smrd_prefetch (SMRDPrefetchImm i64:$sbase, i32:$offset), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0))
   >;
 

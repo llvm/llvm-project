@@ -2071,13 +2071,16 @@ SDValue AMDGPUDAGToDAGISel::Expand32BitAddress(SDValue Addr) const {
 // true, match only 32-bit immediate offsets available on CI.
 bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
                                               SDValue *SOffset, SDValue *Offset,
-                                              bool Imm32Only,
-                                              bool IsBuffer) const {
+                                              bool Imm32Only, bool IsBuffer,
+                                              bool IsPrefetch,
+                                              bool HasSOffset) const {
   if (SOffset && Offset) {
     assert(!Imm32Only && !IsBuffer);
     SDValue B;
-    return SelectSMRDBaseOffset(Addr, B, nullptr, Offset) &&
-           SelectSMRDBaseOffset(B, SBase, SOffset, nullptr);
+    return SelectSMRDBaseOffset(Addr, B, nullptr, Offset, false, false,
+                                IsPrefetch, true) &&
+           SelectSMRDBaseOffset(B, SBase, SOffset, nullptr, false, false,
+                                IsPrefetch, true);
   }
 
   // A 32-bit (address + offset) should not cause unsigned 32-bit integer
@@ -2096,12 +2099,39 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
   }
   if (!N0 || !N1)
     return false;
+
+  bool Selected = false;
   if (SelectSMRDOffset(N1, SOffset, Offset, Imm32Only, IsBuffer)) {
     SBase = N0;
-    return true;
+    Selected = true;
   }
+
   if (SelectSMRDOffset(N0, SOffset, Offset, Imm32Only, IsBuffer)) {
     SBase = N1;
+    Selected = true;
+  }
+
+  if (Selected) {
+    // For unbuffered smem loads, it is illegal and undefined for the Immediate
+    // Offset to be negative if the resulting (Offset + (M0 or SOffset or zero)
+    // is negative. Handle the case where the Immediate Offset is negative and
+    // there is no SOffset.
+    //
+    // FIXME: Also handle M0 or SOffset case?
+    if (Offset && !HasSOffset && !IsBuffer && !IsPrefetch &&
+        Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11) {
+      if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(*Offset)) {
+        if (C->getSExtValue() < 0) {
+          SDLoc SL(SBase);
+          *Offset = CurDAG->getTargetConstant(std::abs(C->getSExtValue()), SL,
+                                              MVT::i32);
+          const SDValue Ops[] = {SBase, *Offset};
+          SBase = SDValue(
+              CurDAG->getMachineNode(AMDGPU::S_SUB_U64, SL, MVT::i64, Ops), 0);
+          *Offset = CurDAG->getTargetConstant(0, SL, MVT::i32);
+        }
+      }
+    }
     return true;
   }
   return false;
@@ -2109,8 +2139,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
 
 bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
                                     SDValue *SOffset, SDValue *Offset,
-                                    bool Imm32Only) const {
-  if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only)) {
+                                    bool Imm32Only, bool IsPrefetch) const {
+  if (SelectSMRDBaseOffset(Addr, SBase, SOffset, Offset, Imm32Only, IsPrefetch)) {
     SBase = Expand32BitAddress(SBase);
     return true;
   }
@@ -2167,6 +2197,11 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
          SelectSMRDBaseOffset(N, /* SBase */ SOffset, /* SOffset*/ nullptr,
                               &Offset, /* Imm32Only */ false,
                               /* IsBuffer */ true);
+}
+
+bool AMDGPUDAGToDAGISel::SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
+                                       SDValue &Offset) const {
+  return SelectSMRD(Addr, SBase, /* SOffset */ nullptr, &Offset, false, true);
 }
 
 bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,

@@ -21,7 +21,8 @@ define amdgpu_ps void @test_s_load_i8(ptr addrspace(4) inreg %in, ptr addrspace(
 define amdgpu_ps void @test_s_load_i8_imm(ptr addrspace(4) inreg %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_i8_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_i8 s0, s[0:1], -0x64
+; GCN-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], 0x64
+; GCN-NEXT:    s_load_i8 s0, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
@@ -197,7 +198,8 @@ define amdgpu_ps void @test_s_load_i16(ptr addrspace(4) inreg %in, ptr addrspace
 define amdgpu_ps void @test_s_load_i16_imm(ptr addrspace(4) inreg %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_i16_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_i16 s0, s[0:1], -0xc8
+; GCN-NEXT:    s_sub_nc_u64 s[0:1], s[0:1], 0xc8
+; GCN-NEXT:    s_load_i16 s0, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
