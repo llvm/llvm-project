@@ -597,13 +597,15 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     for (const auto &I : enumerate(operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
-      // Some vectorized function variants may also take a scalar argument,
-      // e.g. linear parameters for pointers.
       Value *Arg;
-      if ((VFTy && !VFTy->getParamType(I.index())->isVectorTy()) ||
-          (UseIntrinsic &&
-           isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index())))
+      if (UseIntrinsic &&
+          isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
         Arg = State.get(I.value(), VPIteration(0, 0));
+      // Some vectorized function variants may also take a scalar argument,
+      // e.g. linear parameters for pointers. This needs to be the scalar value
+      // from the start of the respective part when interleaving.
+      else if (VFTy && !VFTy->getParamType(I.index())->isVectorTy())
+        Arg = State.get(I.value(), VPIteration(Part, 0));
       else
         Arg = State.get(I.value(), Part);
       if (UseIntrinsic &&
