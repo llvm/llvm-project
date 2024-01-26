@@ -2857,6 +2857,26 @@ LogicalResult InsertStridedSliceOp::verify() {
           /*halfOpen=*/false, /*min=*/1)))
     return failure();
 
+  unsigned rankDiff = destShape.size() - sourceShape.size();
+  for (unsigned idx = 0; idx < sourceShape.size(); ++idx) {
+    if (sourceVectorType.getScalableDims()[idx] !=
+        destVectorType.getScalableDims()[idx + rankDiff]) {
+      return emitOpError("mismatching scalable flags (at source vector idx=")
+             << idx << ")";
+    }
+    if (sourceVectorType.getScalableDims()[idx]) {
+      auto sourceSize = sourceShape[idx];
+      auto destSize = destShape[idx + rankDiff];
+      if (sourceSize != destSize) {
+        return emitOpError("expected size at idx=")
+               << idx
+               << (" to match the corresponding base size from the input "
+                   "vector (")
+               << sourceSize << (" vs ") << destSize << (")");
+      }
+    }
+  }
+
   return success();
 }
 
@@ -3194,6 +3214,7 @@ void ReshapeOp::getFixedVectorSizes(SmallVectorImpl<int64_t> &results) {
 // Inference works as follows:
 //   1. Add 'sizes' from prefix of dims in 'offsets'.
 //   2. Add sizes from 'vectorType' for remaining dims.
+// Scalable flags are inherited from 'vectorType'.
 static Type inferStridedSliceOpResultType(VectorType vectorType,
                                           ArrayAttr offsets, ArrayAttr sizes,
                                           ArrayAttr strides) {
@@ -3206,7 +3227,8 @@ static Type inferStridedSliceOpResultType(VectorType vectorType,
   for (unsigned e = vectorType.getShape().size(); idx < e; ++idx)
     shape.push_back(vectorType.getShape()[idx]);
 
-  return VectorType::get(shape, vectorType.getElementType());
+  return VectorType::get(shape, vectorType.getElementType(),
+                         vectorType.getScalableDims());
 }
 
 void ExtractStridedSliceOp::build(OpBuilder &builder, OperationState &result,
@@ -3264,6 +3286,19 @@ LogicalResult ExtractStridedSliceOp::verify() {
                                                   offsets, sizes, strides);
   if (getResult().getType() != resultType)
     return emitOpError("expected result type to be ") << resultType;
+
+  for (unsigned idx = 0; idx < sizes.size(); ++idx) {
+    if (type.getScalableDims()[idx]) {
+      auto inputDim = type.getShape()[idx];
+      auto inputSize = llvm::cast<IntegerAttr>(sizes[idx]).getInt();
+      if (inputDim != inputSize)
+        return emitOpError("expected size at idx=")
+               << idx
+               << (" to match the corresponding base size from the input "
+                   "vector (")
+               << inputSize << (" vs ") << inputDim << (")");
+    }
+  }
 
   return success();
 }

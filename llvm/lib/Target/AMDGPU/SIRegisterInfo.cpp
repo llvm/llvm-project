@@ -1621,7 +1621,6 @@ void SIRegisterInfo::buildSpillLoadStore(
       }
       SubReg = TmpIntermediateVGPR;
     } else if (UseVGPROffset) {
-      // FIXME: change to scavengeRegisterBackwards()
       if (!TmpOffsetVGPR) {
         TmpOffsetVGPR = RS->scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass,
                                                       MI, false, 0);

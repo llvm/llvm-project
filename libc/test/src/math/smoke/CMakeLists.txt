@@ -990,7 +990,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
     HDRS
       FMinTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.fminf
       libc.src.__support.FPUtil.fp_bits
   )
@@ -1004,7 +1003,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
     HDRS
       FMinTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.fmin
       libc.src.__support.FPUtil.fp_bits
   )
@@ -1018,8 +1016,20 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
     HDRS
       FMinTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.fminl
+      libc.src.__support.FPUtil.fp_bits
+  )
+
+  add_fp_unittest(
+    fminf128_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      fminf128_test.cpp
+    HDRS
+      FMinTest.h
+    DEPENDS
+      libc.src.math.fminf128
       libc.src.__support.FPUtil.fp_bits
   )
 
@@ -1032,7 +1042,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
     HDRS
       FMaxTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.fmaxf
       libc.src.__support.FPUtil.fp_bits
   )
@@ -1046,7 +1055,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
     HDRS
       FMaxTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.fmax
       libc.src.__support.FPUtil.fp_bits
   )
@@ -1060,8 +1068,20 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
     HDRS
       FMaxTest.h
     DEPENDS
-      libc.include.math
       libc.src.math.fmaxl
+      libc.src.__support.FPUtil.fp_bits
+  )
+  
+  add_fp_unittest(
+    fmaxf128_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      fmaxf128_test.cpp
+    HDRS
+      FMaxTest.h
+    DEPENDS
+      libc.src.math.fmaxf128
       libc.src.__support.FPUtil.fp_bits
   )
 endif()
