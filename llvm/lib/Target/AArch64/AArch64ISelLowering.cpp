@@ -18231,8 +18231,8 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     EVT N10VT = N10.getValueType();
 
     // For extracted subvectors from the same original vectors, combine these
-    // into a single avg that operates on the two original vectors. 
-    // avgceil is the target independant name for rhadd, avgfloor is a hadd. 
+    // into a single avg that operates on the two original vectors.
+    // avgceil is the target independant name for rhadd, avgfloor is a hadd.
     // Example:
     //  (concat_vectors (v8i8 (avgceils (extract_subvector (v16i8 OpA, <0>),
     //                                   extract_subvector (v16i8 OpB, <0>))),
@@ -18267,7 +18267,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     // For a concat of two [u]avgfloors with a 128-bit destination size, combine
     // into an avg of two contacts of the source vectors.
     // eg: concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c), concat(b, d))
-    if (N0Opc == ISD::AVGFLOORU && N0Opc == N1Opc && VT.is128BitVector() &&
+    if (N0Opc == ISD::AVGFLOORU && VT.is128BitVector() &&
         N0->hasOneUse() && N1->hasOneUse()) {
       EVT PairVT = N00VT.getDoubleNumVectorElementsVT(*DAG.getContext());
       SDValue Concat0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, PairVT, N00, N10);
