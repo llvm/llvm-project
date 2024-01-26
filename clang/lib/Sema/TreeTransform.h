@@ -6131,7 +6131,9 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
       //   "pointer to cv-qualifier-seq X" between the optional cv-qualifer-seq
       //   and the end of the function-definition, member-declarator, or
       //   declarator.
-      Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext, ThisTypeQuals);
+      auto *RD = dyn_cast<CXXRecordDecl>(SemaRef.getCurLexicalContext());
+      Sema::CXXThisScopeRAII ThisScope(
+          SemaRef, !ThisContext && RD ? RD : ThisContext, ThisTypeQuals);
 
       ResultType = getDerived().TransformType(TLB, TL.getReturnLoc());
       if (ResultType.isNull())
@@ -7088,10 +7090,10 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   // FIXME: dependent operand expressions?
   if (getDerived().AlwaysRebuild() ||
       modifiedType != oldType->getModifiedType()) {
-    // TODO: this is really lame; we should really be rebuilding the
-    // equivalent type from first principles.
-    QualType equivalentType
-      = getDerived().TransformType(oldType->getEquivalentType());
+    TypeLocBuilder AuxiliaryTLB;
+    AuxiliaryTLB.reserve(TL.getFullDataSize());
+    QualType equivalentType =
+        getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
     if (equivalentType.isNull())
       return QualType();
 
