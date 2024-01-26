@@ -608,13 +608,14 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       do {
         EmitCharAndAdvance(tokens, *at_);
       } while (IsHexadecimalDigit(*at_));
-    } else if (IsLetter(*at_)) {
-      // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
-      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
-      EmitCharAndAdvance(tokens, *at_);
     } else if (at_[0] == '_' && (at_[1] == '\'' || at_[1] == '"')) { // 4_"..."
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
+    } else if (IsLetter(*at_) && !preventHollerith_ &&
+        parenthesisNesting_ > 0) {
+      // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
+      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
+      EmitCharAndAdvance(tokens, *at_);
     }
     preventHollerith_ = false;
   } else if (*at_ == '.') {
