@@ -9,6 +9,7 @@
 // This Tablegen backend emits instruction encodings of AArch32 for JITLink.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -37,7 +38,7 @@ static void extractBits(BitsInit &InstBits, InstrInfo &II) {
     if (auto *VarBit = dyn_cast<VarBitInit>(Bit)) {
       // Check if the VarBit is for 'imm' or 'Rd'
       std::string VarName = VarBit->getBitVar()->getAsUnquotedString();
-      if (VarName == "imm") {
+      if (VarName == "imm" || VarName == "func") {
         II.ImmMask |= 1 << i;
       } else if (VarName == "Rd") {
         II.RegMask |= 1 << i;
@@ -81,10 +82,24 @@ void JITLinkEmitter::run(raw_ostream &OS) {
   for (auto *InstRecord : RecordsList) {
     if (InstRecord->getValueAsBit("isPseudo"))
       continue;
-    auto *InstBits = InstRecord->getValueAsBitsInit("Inst");
-    InstrInfo II;
-    extractBits(*InstBits, II);
-    writeInstrInfo(OS, II, InstRecord->getNameInitAsString());
+    LLVM_DEBUG(dbgs() << "Processing " << InstRecord->getNameInitAsString()
+                      << "\n");
+    if (InstRecord->getValueAsBit("isMoveImm") ||
+        InstRecord->getValueAsBit("isCall") ||
+        // FIXME movt for ARM and Thumb2 do not have their isMovImm flags set
+        //       so we add these conditionals
+        InstRecord->getNameInitAsString() == "MOVTi16" ||
+        InstRecord->getNameInitAsString() == "t2MOVTi16") {
+      LLVM_DEBUG(for (const auto &Val
+                      : InstRecord->getValues()) {
+        dbgs() << "Field: " << Val.getNameInitAsString() << " = "
+               << Val.getValue()->getAsUnquotedString() << "\n";
+      });
+      auto *InstBits = InstRecord->getValueAsBitsInit("Inst");
+      InstrInfo II;
+      extractBits(*InstBits, II);
+      writeInstrInfo(OS, II, InstRecord->getNameInitAsString());
+    }
   }
 
   OS << "#endif\n";

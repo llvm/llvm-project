@@ -1,0 +1,33 @@
+/*===- TableGen'erated file -------------------------------------*- C++ -*-===*\
+|*                                                                            *|
+|* Instruction Encoding Information                                           *|
+|*                                                                            *|
+|* Automatically generated file, do not edit!                                 *|
+|*                                                                            *|
+\*===----------------------------------------------------------------------===*/
+
+#ifdef GET_INSTR // (Opc, Opc_Mask, Imm_Mask, Reg_Mask)
+GET_INSTR(BL, 0xeb000000, 0xff000000, 0xffffff, 0x0)
+GET_INSTR(BLX, 0xe12fff30, 0xfffffff0, 0xf, 0x0)
+GET_INSTR(BLX_pred, 0x12fff30, 0xffffff0, 0xf, 0x0)
+GET_INSTR(BLXi, 0xfa000000, 0xfe000000, 0x0, 0x0)
+GET_INSTR(BL_pred, 0xb000000, 0xf000000, 0xffffff, 0x0)
+GET_INSTR(HVC, 0xe1400070, 0xfff000f0, 0xfff0f, 0x0)
+GET_INSTR(MOVTi16, 0x3400000, 0xff00000, 0xf0fff, 0xf000)
+GET_INSTR(MOVi, 0x3a00000, 0xfef0000, 0xfff, 0xf000)
+GET_INSTR(MOVi16, 0x3000000, 0xff00000, 0xf0fff, 0xf000)
+GET_INSTR(MVNi, 0x3e00000, 0xfef0000, 0xfff, 0xf000)
+GET_INSTR(SVC, 0xf000000, 0xf000000, 0x0, 0x0)
+GET_INSTR(t2HVC, 0xf7e08000, 0xfff0f000, 0x0, 0x0)
+GET_INSTR(t2MOVTi16, 0xf2c00000, 0xfbf08000, 0x40f70ff, 0xf00)
+GET_INSTR(t2MOVi, 0xf04f0000, 0xfbef8000, 0x40070ff, 0xf00)
+GET_INSTR(t2MOVi16, 0xf2400000, 0xfbf08000, 0x40f70ff, 0xf00)
+GET_INSTR(t2MVNi, 0xf06f0000, 0xfbef8000, 0x40070ff, 0xf00)
+GET_INSTR(t2SMC, 0xf7f08000, 0xfff0f000, 0x0, 0x0)
+GET_INSTR(tBL, 0xf000d000, 0xf800d000, 0x7ff2fff, 0x0)
+GET_INSTR(tBLXNSr, 0x4784, 0xffffff87, 0x78, 0x0)
+GET_INSTR(tBLXi, 0xf000c000, 0xf800d001, 0x7ff2ffe, 0x0)
+GET_INSTR(tBLXr, 0x4780, 0xffffff87, 0x78, 0x0)
+GET_INSTR(tMOVi8, 0x2000, 0xfffff800, 0x0, 0x700)
+GET_INSTR(tSVC, 0xdf00, 0xffffff00, 0xff, 0x0)
+#endif
