@@ -4046,11 +4046,11 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 
   // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
   if (Pred == FCmpInst::FCMP_ORD)
-    return {Src, ~fcNan, fcNan};
+    return exactClass(Src, ~fcNan);
 
   // fcmp uno x, zero|normal|subnormal|inf -> fcNan
   if (Pred == FCmpInst::FCMP_UNO)
-    return {Src, fcNan, ~fcNan};
+    return exactClass(Src, fcNan);
 
   if (Pred == FCmpInst::FCMP_TRUE)
     return {Src, fcAllFlags, fcAllFlags};
