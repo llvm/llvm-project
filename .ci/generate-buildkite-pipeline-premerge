@@ -29,7 +29,7 @@ set -o pipefail
 # Fetch origin to have an up to date merge base for the diff.
 git fetch origin
 # List of files affected by this commit
-: ${MODIFIED_FILES:=$(git diff --name-only ${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD)}
+: ${MODIFIED_FILES:=$(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD)}
 # Filter rules for generic windows tests
 : ${WINDOWS_AGENTS:='{"queue": "windows"}'}
 # Filter rules for generic linux tests
