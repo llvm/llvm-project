@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-linux-gnu -o - \
-# RUN: | not llvm-dwarfdump -v -verify - 2>&1 \
+# RUN: | not llvm-dwarfdump --no-aggregate-errors -v -verify - 2>&1 \
 # RUN: | FileCheck %s --implicit-check-not=error --implicit-check-not=warning
 
 # CHECK: Verifying dwo Units...
