@@ -4053,10 +4053,10 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     return {Src, fcNan, ~fcNan};
 
   if (Pred == FCmpInst::FCMP_TRUE)
-    return {LHS, fcAllFlags, fcAllFlags};
+    return {Src, fcAllFlags, fcAllFlags};
 
   if (Pred == FCmpInst::FCMP_FALSE)
-    return {LHS, fcNone, fcNone};
+    return {Src, fcNone, fcNone};
 
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   if (IsFabs)
