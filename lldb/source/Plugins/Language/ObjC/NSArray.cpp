@@ -548,8 +548,9 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetIndexOfChildWithName
 }
 
 template <typename D32, typename D64>
-lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<
-    D32, D64>::~GenericNSArrayMSyntheticFrontEnd() {
+lldb_private::formatters::
+  GenericNSArrayMSyntheticFrontEnd<D32, D64>::
+    ~GenericNSArrayMSyntheticFrontEnd<D32, D64>() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;
@@ -614,8 +615,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 }
 
 template <typename D32, typename D64, bool Inline>
-lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
-    D32, D64, Inline>::~GenericNSArrayISyntheticFrontEnd() {
+lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
+  ~GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>() {
   delete m_data_32;
   m_data_32 = nullptr;
   delete m_data_64;
