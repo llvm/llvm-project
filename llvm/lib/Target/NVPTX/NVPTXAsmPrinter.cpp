@@ -1610,6 +1610,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
             }
             Align ParamAlign = I->getParamAlign().valueOrOne();
             O << ".align " << ParamAlign.value() << " ";
+          } else if (I->getParamAlign().valueOrOne() != 1) {
+            O << ".ptr .global ";
+            Align ParamAlign = I->getParamAlign().value();
+            O << ".align " << ParamAlign.value() << " ";
           }
           O << TLI->getParamName(F, paramIndex);
           continue;
