@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -74,6 +75,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
 
   // Set unsupported atomic operations as Custom so
   // we can emit better error messages than fatal error
@@ -317,6 +320,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSDIVSREM(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   }
 }
 
@@ -640,6 +645,22 @@ SDValue BPFTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return DAG.getMergeValues(Ops, SDLoc());
 }
 
+SDValue BPFTargetLowering::LowerADDRSPACECAST(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  auto *ACast = dyn_cast<AddrSpaceCastSDNode>(Op);
+  const SDValue &Ptr = ACast->getOperand(0);
+  unsigned SrcAS = ACast->getSrcAddressSpace();
+  unsigned DstAS = ACast->getDestAddressSpace();
+  SDLoc DL(Op);
+
+  if (SrcAS == 0 && DstAS == 0)
+    return Op.getOperand(0);
+
+  return DAG.getNode(BPFISD::ADDR_SPACE_CAST, DL, Op.getValueType(), Ptr,
+                     DAG.getTargetConstant(DstAS, DL, MVT::i64),
+                     DAG.getTargetConstant(SrcAS, DL, MVT::i64));
+}
+
 SDValue BPFTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
@@ -689,6 +710,8 @@ const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "BPFISD::Wrapper";
   case BPFISD::MEMCPY:
     return "BPFISD::MEMCPY";
+  case BPFISD::ADDR_SPACE_CAST:
+    return "BPFISD::ADDR_SPACE_CAST";
   }
   return nullptr;
 }

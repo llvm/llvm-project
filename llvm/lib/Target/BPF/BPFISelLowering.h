@@ -28,7 +28,8 @@ enum NodeType : unsigned {
   SELECT_CC,
   BR_CC,
   Wrapper,
-  MEMCPY
+  MEMCPY,
+  ADDR_SPACE_CAST,
 };
 }
 
@@ -75,6 +76,7 @@ private:
 
   SDValue LowerSDIVSREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 
