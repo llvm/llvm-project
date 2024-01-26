@@ -114,7 +114,7 @@ TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
   // Should be an error to write.
   ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_ERRNO_FAILURE();
   libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(f);
@@ -148,7 +148,7 @@ TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
   ASSERT_EQ(size_t(0),
             LIBC_NAMESPACE::fread(read_data, 1, sizeof(WRITE_DATA), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
-  ASSERT_EQ(libc_errno, EBADF);
+  ASSERT_ERRNO_EQ(EBADF);
   libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(f);
@@ -177,7 +177,7 @@ TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
   // This is not a readable file.
   ASSERT_EQ(LIBC_NAMESPACE::fread(read_data, 1, READ_SIZE, f), size_t(0));
   ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
-  EXPECT_NE(libc_errno, 0);
+  ASSERT_ERRNO_FAILURE();
   libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(f);

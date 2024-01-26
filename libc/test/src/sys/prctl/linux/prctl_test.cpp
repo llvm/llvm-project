@@ -36,7 +36,7 @@ TEST(LlvmLibcSysPrctlTest, GetTHPDisable) {
   // covered in ErrnoSetterMatcher.
   libc_errno = 0;
   int ret = LIBC_NAMESPACE::prctl(PR_GET_THP_DISABLE, 0, 0, 0, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   // PR_GET_THP_DISABLE return (as the function result) the current
   // setting of the "THP disable" flag for the calling thread, which
   // is either 1, if the flag is set; or 0, if it is not.

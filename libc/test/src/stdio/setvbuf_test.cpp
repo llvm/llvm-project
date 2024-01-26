@@ -100,7 +100,7 @@ TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
   char buf[BUFSIZ];
   ASSERT_NE(LIBC_NAMESPACE::setvbuf(f, buf, _IOFBF + _IOLBF + _IONBF, BUFSIZ),
             0);
-  ASSERT_EQ(libc_errno, EINVAL);
+  ASSERT_ERRNO_EQ(EINVAL);
 
   libc_errno = 0;
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));

@@ -30,7 +30,7 @@ TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
 
   char buf[sizeof(LINK_VAL)];
   ssize_t len = LIBC_NAMESPACE::readlink(LINK, buf, sizeof(buf));
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(cpp::string_view(buf, len), cpp::string_view(LINK_VAL));
 
   ASSERT_THAT(LIBC_NAMESPACE::unlink(LINK), Succeeds(0));
