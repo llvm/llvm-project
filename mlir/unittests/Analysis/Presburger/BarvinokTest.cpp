@@ -1,5 +1,6 @@
 #include "mlir/Analysis/Presburger/Barvinok.h"
 #include "./Utils.h"
+#include "Parser.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -243,16 +244,10 @@ TEST(BarvinokTest, computeNumTermsCone) {
 /// hand.
 TEST(BarvinokTest, computeNumTermsPolytope) {
   // A cube of side 1.
-  IntMatrix ineqs = makeIntMatrix(6, 4,
-                                  {{1, 0, 0, 0},
-                                   {0, 1, 0, 0},
-                                   {0, 0, 1, 0},
-                                   {-1, 0, 0, 1},
-                                   {0, -1, 0, 1},
-                                   {0, 0, -1, 1}});
-  PolyhedronH poly = defineHRep(3);
-  for (unsigned i = 0; i < 6; i++)
-    poly.addInequality(ineqs.getRow(i));
+  PolyhedronH poly =
+      parseRelationFromSet("(x, y, z) : (x >= 0, y >= 0, z >= 0, -x + 1 >= 0, "
+                           "-y + 1 >= 0, -z + 1 >= 0)",
+                           0);
 
   std::vector<std::pair<PresburgerSet, GeneratingFunction>> count =
       computePolytopeGeneratingFunction(poly);
@@ -279,10 +274,8 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
            {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}));
 
   // A right-angled triangle with side p.
-  ineqs = makeIntMatrix(3, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {-1, -1, 1, 0}});
-  poly = defineHRep(2, 1);
-  for (unsigned i = 0; i < 3; i++)
-    poly.addInequality(ineqs.getRow(i));
+  poly =
+      parseRelationFromSet("(x, y)[N] : (x >= 0, y >= 0, -x - y + N >= 0)", 0);
 
   count = computePolytopeGeneratingFunction(poly);
   // There is only one chamber: p ≥ 0
@@ -298,19 +291,10 @@ TEST(BarvinokTest, computeNumTermsPolytope) {
               {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}}));
 
   // Cartesian product of a cube with side M and a right triangle with side N.
-  ineqs = makeIntMatrix(9, 8,
-                        {{1, 0, 0, 0, 0, 1, 0, 0},
-                         {0, 1, 0, 0, 0, 1, 0, 0},
-                         {0, 0, 1, 0, 0, 1, 0, 0},
-                         {-1, 0, 0, 0, 0, 1, 0, 0},
-                         {0, -1, 0, 0, 0, 1, 0, 0},
-                         {0, 0, -1, 0, 0, 1, 0, 0},
-                         {0, 0, 0, 1, 0, 0, 0, 0},
-                         {0, 0, 0, 0, 1, 0, 0, 0},
-                         {0, 0, 0, -1, -1, 0, 1, 0}});
-  poly = defineHRep(5, 2);
-  for (unsigned i = 0; i < 9; i++)
-    poly.addInequality(ineqs.getRow(i));
+  poly = parseRelationFromSet(
+      "(x, y, z, w, a)[M, N] : (x >= 0, y >= 0, z >= 0, -x + M >= 0, -y + M >= "
+      "0, -z + M >= 0, w >= 0, a >= 0, -w - a + N >= 0)",
+      0);
 
   count = computePolytopeGeneratingFunction(poly);
 
