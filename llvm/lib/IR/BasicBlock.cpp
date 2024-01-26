@@ -914,7 +914,7 @@ void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
   if (!MoreDanglingDPValues)
     return;
 
-  // FIXME: we could avoid an allocation here sometimes. (absorbDbgValues
+  // FIXME: we could avoid an allocation here sometimes. (adoptDbgValues
   // requires an iterator).
   DPMarker *LastMarker = Src->createMarker(Last);
   LastMarker->absorbDebugValues(*MoreDanglingDPValues, true);
