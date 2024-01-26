@@ -266,11 +266,9 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
 
 define i32 @ctpop_and_or_combine(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ctpop_and_or_combine(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[AND]]), !range [[RNG1]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[OR]]), !range [[RNG1]]
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[CTPOP1]], [[CTPOP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[A:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[B:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %and = and i32 %a, %b
@@ -383,7 +381,7 @@ define <2 x i32> @sub_ctpop_vec_extra_use(<2 x i32> %a, ptr %p) {
 
 define i32 @zext_ctpop(i16 %x) {
 ; CHECK-LABEL: @zext_ctpop(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X:%.*]]), !range [[RNG6:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X:%.*]]), !range [[RNG4:![0-9]+]]
 ; CHECK-NEXT:    [[P:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
@@ -433,7 +431,7 @@ define i32 @parity_xor(i32 %arg, i32 %arg1) {
 define i32 @parity_xor_trunc(i64 %arg, i64 %arg1) {
 ; CHECK-LABEL: @parity_xor_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[ARG1:%.*]], [[ARG:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]]), !range [[RNG7:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]]), !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    [[I4:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I4]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]

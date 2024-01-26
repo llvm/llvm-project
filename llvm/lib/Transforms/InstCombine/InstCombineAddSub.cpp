@@ -1718,6 +1718,20 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         Builder.CreateIntrinsic(Intrinsic::umax, {I.getType()}, {A, B}));
   }
 
+  // ctpop(A | B) + ctpop(A & B) => ctpop(A) + ctpop(B)
+  if ((match(LHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(
+                      m_c_Or(m_Value(A), m_Value(B))))) &&
+       (match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(
+                       m_c_And(m_Specific(A), m_Specific(B))))))) ||
+      (match(LHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(
+                      m_c_And(m_Value(A), m_Value(B))))) &&
+       (match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(
+                       m_c_Or(m_Specific(A), m_Specific(B)))))))) {
+    return BinaryOperator::CreateAdd(
+        Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A),
+        Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, B));
+  }
+
   // ctpop(A) + ctpop(B) => ctpop(A | B) if A and B have no bits set in common.
   if (match(LHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(A)))) &&
       match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(B)))) &&
