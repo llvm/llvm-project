@@ -28,16 +28,16 @@ TEST(LlvmLibcChdirTest, ChangeAndOpen) {
 
   int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
   ASSERT_GT(dir_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   int file_fd = LIBC_NAMESPACE::open(TEST_FILE, O_PATH);
   ASSERT_GT(file_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(file_fd), Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::fchdir(dir_fd), Succeeds(0));
   file_fd = LIBC_NAMESPACE::open(TEST_FILE_BASE, O_PATH);
   ASSERT_GT(file_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(file_fd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(dir_fd), Succeeds(0));
 }
@@ -46,6 +46,6 @@ TEST(LlvmLibcChdirTest, ChangeToNonExistentDir) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   libc_errno = 0;
   ASSERT_EQ(LIBC_NAMESPACE::fchdir(0), -1);
-  ASSERT_NE(libc_errno, 0);
+  ASSERT_ERRNO_FAILURE();
   libc_errno = 0;
 }

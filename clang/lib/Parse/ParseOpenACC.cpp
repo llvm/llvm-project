@@ -124,6 +124,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("reduction", OpenACCClauseKind::Reduction)
       .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
+      .Case("tile", OpenACCClauseKind::Tile)
       .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
       .Case("vector_length", OpenACCClauseKind::VectorLength)
@@ -494,6 +495,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:
   case OpenACCClauseKind::DType:
+  case OpenACCClauseKind::Tile:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -614,6 +616,47 @@ bool Parser::ParseOpenACCDeviceTypeList() {
       return false;
     }
     ConsumeToken();
+  }
+  return false;
+}
+
+/// OpenACC 3.3 Section 2.9:
+/// size-expr is one of:
+//    *
+//    int-expr
+// Note that this is specified under 'gang-arg-list', but also applies to 'tile'
+// via reference.
+bool Parser::ParseOpenACCSizeExpr() {
+  // FIXME: Ensure these are constant expressions.
+
+  // The size-expr ends up being ambiguous when only looking at the current
+  // token, as it could be a deref of a variable/expression.
+  if (getCurToken().is(tok::star) &&
+      NextToken().isOneOf(tok::comma, tok::r_paren)) {
+    ConsumeToken();
+    return false;
+  }
+
+  return getActions()
+      .CorrectDelayedTyposInExpr(ParseAssignmentExpression())
+      .isInvalid();
+}
+
+bool Parser::ParseOpenACCSizeExprList() {
+  if (ParseOpenACCSizeExpr()) {
+    SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return false;
+  }
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    if (ParseOpenACCSizeExpr()) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
+      return false;
+    }
   }
   return false;
 }
@@ -756,6 +799,10 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
       } else if (ParseOpenACCDeviceTypeList()) {
         return true;
       }
+      break;
+    case OpenACCClauseKind::Tile:
+      if (ParseOpenACCSizeExprList())
+        return true;
       break;
     default:
       llvm_unreachable("Not a required parens type?");

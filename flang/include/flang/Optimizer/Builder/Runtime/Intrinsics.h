@@ -20,6 +20,7 @@
 
 namespace mlir {
 class Location;
+class Type;
 class Value;
 } // namespace mlir
 
@@ -65,9 +66,16 @@ void genTransferSize(fir::FirOpBuilder &builder, mlir::Location loc,
 void genSystemClock(fir::FirOpBuilder &, mlir::Location, mlir::Value count,
                     mlir::Value rate, mlir::Value max);
 
+// generate signal runtime call
+// CALL SIGNAL(NUMBER, HANDLER [, STATUS])
+// status can be {} or a value. It may also be dynamically absent
+void genSignal(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value number, mlir::Value handler, mlir::Value status);
+
 /// generate sleep runtime call
 void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value seconds);
+
 } // namespace runtime
 } // namespace fir
 

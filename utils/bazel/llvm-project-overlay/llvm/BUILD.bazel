@@ -1807,9 +1807,6 @@ cc_library(
             "lib/CodeGen/SelectionDAG/*.cpp",
             "lib/CodeGen/SelectionDAG/*.h",
         ],
-        exclude = [
-            "lib/CodeGen/LowLevelType.cpp",
-        ],
     ),
     hdrs = [
         "include/llvm/LinkAllPasses.h",
