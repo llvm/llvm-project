@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Runtime/extensions.h"
 #include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
 #include "flang/Runtime/random.h"
@@ -234,4 +235,13 @@ void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
     makeCall(getRuntimeFunc<mkRTKey(SystemClockCountRate)>(loc, builder), rate);
   if (max)
     makeCall(getRuntimeFunc<mkRTKey(SystemClockCountMax)>(loc, builder), max);
+}
+
+void fir::runtime::genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value seconds) {
+  mlir::Type int64 = builder.getIntegerType(64);
+  seconds = builder.create<fir::ConvertOp>(loc, int64, seconds);
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(Sleep)>(loc, builder)};
+  builder.create<fir::CallOp>(loc, func, seconds);
 }
