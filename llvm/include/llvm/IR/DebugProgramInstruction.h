@@ -89,6 +89,7 @@ class DPValue : public ilist_node<DPValue>, private DebugValueUser {
 public:
   void deleteInstr();
 
+  const Instruction *getInstruction() const;
   const BasicBlock *getParent() const;
   BasicBlock *getParent();
   void dump() const;
