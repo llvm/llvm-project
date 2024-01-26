@@ -614,6 +614,7 @@ public:
   /// Store the SSA names for the current operation as attrs for debug purposes.
   ParseResult storeSSANames(Operation *&op,
                             SmallVector<ResultRecord, 1> resultIDs);
+  DenseMap<BlockArgument, StringRef> blockArgNames;
 
   //===--------------------------------------------------------------------===//
   // Region Parsing
@@ -1203,6 +1204,11 @@ ParseResult OperationParser::parseOperation() {
              << op->getNumResults() << " results but was provided "
              << numExpectedResults << " to bind";
 
+    // If enabled, store the SSA name(s) for the operation
+    llvm::outs() << "parsing operation: " << op->getName() << "\n";
+    if (state.config.shouldRetainIdentifierNames())
+      storeSSANames(op, resultIDs);
+
     // Add this operation to the assembly state if it was provided to populate.
     if (state.asmState) {
       unsigned resultIt = 0;
@@ -1226,10 +1232,6 @@ ParseResult OperationParser::parseOperation() {
           return failure();
       }
     }
-
-    // If enabled, store the SSA name(s) for the operation
-    if (state.config.shouldRetainIdentifierNames())
-      storeSSANames(op, resultIDs);
 
     // Add this operation to the assembly state if it was provided to populate.
   } else if (state.asmState) {
@@ -1300,7 +1302,16 @@ OperationParser::storeSSANames(Operation *&op,
       if (entry.second.block == blockPtr) {
         op->setDiscardableAttr("mlir.blockName",
                                StringAttr::get(getContext(), entry.first));
-        llvm::outs() << "Block name: " << entry.first << "\n";
+
+        // Store block arguments, if present
+        llvm::SmallVector<llvm::StringRef, 1> argNames;
+
+        for (BlockArgument arg : blockPtr->getArguments()) {
+          auto it = blockArgNames.find(arg);
+          if (it != blockArgNames.end())
+            argNames.push_back(it->second.drop_front(1));
+        }
+        op->setAttr("mlir.blockArgNames", builder.getStrArrayAttr(argNames));
       }
     }
   }
@@ -2395,6 +2406,10 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
           } else {
             auto loc = getEncodedSourceLocation(useInfo.location);
             arg = owner->addArgument(type, loc);
+
+            // Optionally store argument name for debug purposes
+            if (state.config.shouldRetainIdentifierNames())
+              blockArgNames.insert({arg, useInfo.name});
           }
 
           // If the argument has an explicit loc(...) specifier, parse and apply

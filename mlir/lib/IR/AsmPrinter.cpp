@@ -1609,11 +1609,23 @@ void SSANameState::setRetainedIdentifierNames(Operation &op) {
     llvm::outs()
         << "have not yet implemented support for multiple return values\n";
 
-  // Get the original SSA name for the block if available
+  // Get the original name for the block if available
   if (StringAttr blockNameAttr =
           op.getAttrOfType<StringAttr>("mlir.blockName")) {
     blockNames[op.getBlock()] = {-1, blockNameAttr.strref()};
     op.removeDiscardableAttr("mlir.blockName");
+  }
+
+  // Get the original name for the block args if available
+  if (ArrayAttr blockArgNamesAttr =
+          op.getAttrOfType<ArrayAttr>("mlir.blockArgNames")) {
+    auto blockArgNames = blockArgNamesAttr.getValue();
+    auto blockArgs = op.getBlock()->getArguments();
+    for (int i = 0; i < blockArgs.size() && i < blockArgNames.size(); ++i) {
+      auto blockArgName = blockArgNames[i].cast<StringAttr>();
+      setValueName(blockArgs[i], cast<StringAttr>(blockArgNames[i]).strref());
+    }
+    op.removeDiscardableAttr("mlir.blockArgNames");
   }
   return;
 }
