@@ -72,13 +72,12 @@ OpAsmParser::~OpAsmParser() = default;
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
 /// Parse a type list.
-/// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
+/// This is out-of-line to work-around
+/// https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
-    return parseCommaSeparatedList(
-        [&]() { return parseType(result.emplace_back()); });
-  }
-
-
+  return parseCommaSeparatedList(
+      [&]() { return parseType(result.emplace_back()); });
+}
 
 //===----------------------------------------------------------------------===//
 // DialectAsmPrinter
@@ -1578,6 +1577,12 @@ void SSANameState::numberValuesInOp(Operation &op) {
     return;
   }
   Value resultBegin = op.getResult(0);
+
+  // Get the original SSA for the result if available
+  if (StringAttr ssaNameAttr = op.getAttrOfType<StringAttr>("mlir.ssaName")) {
+    setValueName(resultBegin, ssaNameAttr.strref());
+    op.removeDiscardableAttr("mlir.ssaName");
+  }
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)

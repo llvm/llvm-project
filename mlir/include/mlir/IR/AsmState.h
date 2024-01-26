@@ -144,8 +144,7 @@ public:
   /// Return the underlying data as an array of the given type. This is an
   /// inherrently unsafe operation, and should only be used when the data is
   /// known to be of the correct type.
-  template <typename T>
-  ArrayRef<T> getDataAs() const {
+  template <typename T> ArrayRef<T> getDataAs() const {
     return llvm::ArrayRef<T>((const T *)data.data(), data.size() / sizeof(T));
   }
 
@@ -464,8 +463,10 @@ public:
   /// `fallbackResourceMap` is an optional fallback handler that can be used to
   /// parse external resources not explicitly handled by another parser.
   ParserConfig(MLIRContext *context, bool verifyAfterParse = true,
-               FallbackAsmResourceMap *fallbackResourceMap = nullptr)
+               FallbackAsmResourceMap *fallbackResourceMap = nullptr,
+               bool retainIdentifierNames = false)
       : context(context), verifyAfterParse(verifyAfterParse),
+        retainIdentifierNames(retainIdentifierNames),
         fallbackResourceMap(fallbackResourceMap) {
     assert(context && "expected valid MLIR context");
   }
@@ -475,6 +476,10 @@ public:
 
   /// Returns if the parser should verify the IR after parsing.
   bool shouldVerifyAfterParse() const { return verifyAfterParse; }
+
+  /// Returns if the parser should retain identifier names collected using
+  /// parsing.
+  bool shouldRetainIdentifierNames() const { return retainIdentifierNames; }
 
   /// Returns the parsing configurations associated to the bytecode read.
   BytecodeReaderConfig &getBytecodeReaderConfig() const {
@@ -513,6 +518,7 @@ public:
 private:
   MLIRContext *context;
   bool verifyAfterParse;
+  bool retainIdentifierNames;
   DenseMap<StringRef, std::unique_ptr<AsmResourceParser>> resourceParsers;
   FallbackAsmResourceMap *fallbackResourceMap;
   BytecodeReaderConfig bytecodeReaderConfig;

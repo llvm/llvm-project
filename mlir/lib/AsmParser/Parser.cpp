@@ -1223,6 +1223,23 @@ ParseResult OperationParser::parseOperation() {
       }
     }
 
+    // If enabled, store the SSA name(s) for the operation
+    if (state.config.shouldRetainIdentifierNames()) {
+      if (opResI == 1) {
+        for (ResultRecord &resIt : resultIDs) {
+          for (unsigned subRes : llvm::seq<unsigned>(0, std::get<1>(resIt))) {
+            op->setDiscardableAttr(
+                "mlir.ssaName",
+                StringAttr::get(getContext(),
+                                std::get<0>(resIt).drop_front(1)));
+          }
+        }
+      } else if (opResI > 1) {
+        emitError(
+            "have not yet implemented support for multiple return values");
+      }
+    }
+
     // Add this operation to the assembly state if it was provided to populate.
   } else if (state.asmState) {
     state.asmState->finalizeOperationDefinition(
