@@ -827,6 +827,9 @@ int main(int argc, char **argv) {
                           "is not supported";
     return 1;
   }
+  if (!Verify && (NoAggregateErrors || OnlyAggregateErrors))
+    WithColor::warning() << "-no-aggregate-errors and -only-aggregate-errors "
+                            "have no effect without -verify";
 
   std::error_code EC;
   ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);

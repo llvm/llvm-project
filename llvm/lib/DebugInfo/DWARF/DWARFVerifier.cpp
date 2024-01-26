@@ -1630,10 +1630,11 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       ++NumErrors;
     }
   }
-  handleAllErrors(EntryOr.takeError(),
-                  [&](const DWARFDebugNames::SentinelError &) {
-                    if (NumEntries > 0)
-                      return;
+  handleAllErrors(
+      EntryOr.takeError(),
+      [&](const DWARFDebugNames::SentinelError &) {
+        if (NumEntries > 0)
+          return;
         ErrorCategory.Report(
             "NameIndex Name is not associated with any entries", [&]() {
               error() << formatv("Name Index @ {0:x}: Name {1} ({2}) is "
