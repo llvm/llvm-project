@@ -12,10 +12,14 @@
 #include "libc_errno.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_GPU
-// If we are targeting the GPU we currently don't support 'errno'. We simply
-// consume it.
-void LIBC_NAMESPACE::Errno::operator=(int) {}
-LIBC_NAMESPACE::Errno::operator int() { return 0; }
+// LIBC_THREAD_LOCAL on GPU currently does nothing.  So essentially this is just
+// a global errno for gpu to use for now.
+extern "C" {
+LIBC_THREAD_LOCAL int __llvmlibc_gpu_errno;
+}
+
+void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_gpu_errno = a; }
+LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_gpu_errno; }
 
 #elif !defined(LIBC_COPT_PUBLIC_PACKAGING)
 // This mode is for unit testing.  We just use our internal errno.

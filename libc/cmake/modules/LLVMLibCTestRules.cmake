@@ -564,11 +564,16 @@ function(add_integration_test test_name)
 
   list(REMOVE_DUPLICATES fq_deps_list)
 
-  # TODO: Instead of gathering internal object files from entrypoints,
-  # collect the object files with public names of entrypoints.
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  # Hermetic tests for GPUs still need to link against __internal__ targets.
+    set(internal_targets TRUE)
+  else()
+    set(internal_targets FALSE)
+  endif()
+
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list
-      INTERNAL FALSE
+      INTERNAL ${internal_targets}
       ${fq_deps_list}
   )
 
