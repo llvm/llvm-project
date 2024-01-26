@@ -9,12 +9,43 @@
 #include "UseStdMinMaxCheck.h"
 #include "../utils/ASTUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
+#include <iostream>
+using namespace std;
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
+
+class ExprVisitor : public clang::RecursiveASTVisitor<ExprVisitor> {
+public:
+  explicit ExprVisitor(clang::ASTContext *Context) : Context(Context) {}
+  bool visitStmt(const clang::Stmt *S, bool &found,
+                 clang::QualType &GlobalImplicitCastType) {
+
+    if (isa<clang::ImplicitCastExpr>(S) && !found) {
+      found = true;
+      const clang::ImplicitCastExpr *ImplicitCast =
+          cast<clang::ImplicitCastExpr>(S);
+      GlobalImplicitCastType = ImplicitCast->getType();
+      // Stop visiting children.
+      return false;
+    }
+    // Continue visiting children.
+    for (const clang::Stmt *Child : S->children()) {
+      if (Child) {
+        this->visitStmt(Child, found, GlobalImplicitCastType);
+      }
+    }
+
+    return true; // Continue visiting other nodes.
+  }
+
+private:
+  clang::ASTContext *Context;
+};
 
 static const llvm::StringRef AlgorithmHeader("<algorithm>");
 
@@ -54,16 +85,19 @@ static std::string
 createReplacement(const BinaryOperator::Opcode Op, const Expr *CondLhs,
                   const Expr *CondRhs, const Expr *AssignLhs,
                   const ASTContext &Context, const SourceManager &Source,
-                  const LangOptions &LO, StringRef FunctionName) {
+                  const LangOptions &LO, StringRef FunctionName,
+                  QualType GlobalImplicitCastType) {
   const llvm::StringRef CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
   const llvm::StringRef CondRhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondRhs->getSourceRange()), Source, LO);
   const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
+
   return (AssignLhsStr + " = " + FunctionName +
           ((CondLhs->getType() != CondRhs->getType())
-               ? "<" + AssignLhs->getType().getAsString() + ">("
+               ? "<" + GlobalImplicitCastType.getCanonicalType().getAsString() +
+                     ">("
                : "(") +
           CondLhsStr + ", " + CondRhsStr + ");")
       .str();
@@ -120,6 +154,11 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &Source = Context.getSourceManager();
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
+  bool found = false;
+  clang::QualType GlobalImplicitCastType;
+
+  ExprVisitor Visitor(Result.Context);
+  Visitor.visitStmt(If, found, GlobalImplicitCastType);
 
   // Ignore Macros
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
@@ -132,7 +171,8 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
                createReplacement(BinaryOpcode, CondLhs, CondRhs, AssignLhs,
-                                 Context, Source, LO, FunctionName))
+                                 Context, Source, LO, FunctionName,
+                                 GlobalImplicitCastType))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };

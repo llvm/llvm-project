@@ -1,5 +1,4 @@
 // RUN: %check_clang_tidy %s readability-use-std-min-max %t
-
 #define MY_MACRO_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 constexpr int myConstexprMin(int a, int b) {
@@ -24,7 +23,10 @@ public:
 void foo() {
   int value1,value2,value3;
   short value4;
+  unsigned int value5;
+  unsigned char value6;
   MyClass obj;
+
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value1, value2);
@@ -145,7 +147,7 @@ void foo() {
     value3 = MY_MACRO_MIN(value1, value2); 
   
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
-  // CHECK-FIXES: value4 = std::max<short>(value4, value2);
+  // CHECK-FIXES: value4 = std::max<int>(value4, value2);
   if (value4 < value2){
     value4 = value2; 
   }
@@ -200,5 +202,11 @@ void foo() {
     else if(value3>value2){
       value2 = value3;
     }
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  // CHECK-FIXES: value6 = std::min<unsigned int>(value5, value6);
+  if(value5<value6){
+    value6 = value5;
   }
 }
