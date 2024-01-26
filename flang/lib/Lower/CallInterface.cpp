@@ -1118,25 +1118,25 @@ private:
                    Property::Value);
       return;
     }
-
     const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
         result.GetTypeAndShape();
     assert(typeAndShape && "expect type for non proc pointer result");
     mlirType = translateDynamicType(typeAndShape->type());
-    fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
     const auto *resTypeAndShape{result.GetTypeAndShape()};
     bool resIsPolymorphic =
         resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
     bool resIsAssumedType =
         resTypeAndShape && resTypeAndShape->type().IsAssumedType();
-    if (!bounds.empty())
-      mlirType = fir::SequenceType::get(bounds, mlirType);
+    if (std::optional<fir::SequenceType::Shape> bounds =
+            getBounds(*typeAndShape))
+      mlirType = fir::SequenceType::get(*bounds, mlirType);
     if (result.attrs.test(Attr::Allocatable))
-      mlirType = fir::wrapInClassOrBoxType(fir::HeapType::get(mlirType),
-                                           resIsPolymorphic, resIsAssumedType);
+      mlirType = fir::wrapInClassOrBoxType(
+          fir::HeapType::get(mlirType), resIsPolymorphic, resIsAssumedType);
     if (result.attrs.test(Attr::Pointer))
-      mlirType = fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
-                                           resIsPolymorphic, resIsAssumedType);
+      mlirType =
+          fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
+                                    resIsPolymorphic, resIsAssumedType);
 
     if (fir::isa_char(mlirType)) {
       // Character scalar results must be passed as arguments in lowering so
