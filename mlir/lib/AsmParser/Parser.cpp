@@ -611,6 +611,10 @@ public:
   /// an object of type 'OperationName'. Otherwise, failure is returned.
   FailureOr<OperationName> parseCustomOperationName();
 
+  /// Store the SSA names for the current operation as attrs for debug purposes.
+  ParseResult storeSSANames(Operation *&op,
+                            SmallVector<ResultRecord, 1> resultIDs);
+
   //===--------------------------------------------------------------------===//
   // Region Parsing
   //===--------------------------------------------------------------------===//
@@ -1224,21 +1228,8 @@ ParseResult OperationParser::parseOperation() {
     }
 
     // If enabled, store the SSA name(s) for the operation
-    if (state.config.shouldRetainIdentifierNames()) {
-      if (opResI == 1) {
-        for (ResultRecord &resIt : resultIDs) {
-          for (unsigned subRes : llvm::seq<unsigned>(0, std::get<1>(resIt))) {
-            op->setDiscardableAttr(
-                "mlir.ssaName",
-                StringAttr::get(getContext(),
-                                std::get<0>(resIt).drop_front(1)));
-          }
-        }
-      } else if (opResI > 1) {
-        emitError(
-            "have not yet implemented support for multiple return values");
-      }
-    }
+    if (state.config.shouldRetainIdentifierNames())
+      storeSSANames(op, resultIDs);
 
     // Add this operation to the assembly state if it was provided to populate.
   } else if (state.asmState) {
@@ -1283,6 +1274,25 @@ OperationParser::parseSuccessors(SmallVectorImpl<Block *> &destinations) {
   };
   return parseCommaSeparatedListUntil(Token::r_square, parseElt,
                                       /*allowEmptyList=*/false);
+}
+
+/// Store the SSA names for the current operation as attrs for debug purposes.
+ParseResult
+OperationParser::storeSSANames(Operation *&op,
+                               SmallVector<ResultRecord, 1> resultIDs) {
+  if (op->getNumResults() == 0)
+    emitError("Operation has no results\n");
+  else if (op->getNumResults() > 1)
+    emitError("have not yet implemented support for multiple return values\n");
+
+  for (ResultRecord &resIt : resultIDs) {
+    for (unsigned subRes : llvm::seq<unsigned>(0, std::get<1>(resIt))) {
+      op->setDiscardableAttr(
+          "mlir.ssaName",
+          StringAttr::get(getContext(), std::get<0>(resIt).drop_front(1)));
+    }
+  }
+  return success();
 }
 
 namespace {
