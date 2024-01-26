@@ -1383,6 +1383,14 @@ struct UnaryOp<
   }
 };
 
+static bool hasDeferredCharacterLength(const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
+  return type &&
+         type->category() ==
+             Fortran::semantics::DeclTypeSpec::Category::Character &&
+         type->characterTypeSpec().length().isDeferred();
+}
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -1719,8 +1727,12 @@ private:
           mlir::Type idxType = builder.getIndexType();
           typeParams.push_back(
               builder.createIntegerConstant(loc, idxType, charType.getLen()));
-        } else {
-          TODO(loc, "dynamic character length in structure constructor");
+        } else if (!hasDeferredCharacterLength(sym)) {
+          // If the length is not deferred, this is a parametrized derived type
+          // where the character length depends on the derived type length
+          // parameters. Otherwise, this is a pointer/allocatable component and
+          // the length will be set during the assignment.
+          TODO(loc, "automatic character component in structure constructor");
         }
       }
 

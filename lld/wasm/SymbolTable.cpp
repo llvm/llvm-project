@@ -774,7 +774,7 @@ void SymbolTable::addLazy(StringRef name, InputFile *file) {
 
   LLVM_DEBUG(dbgs() << "replacing existing undefined\n");
   const InputFile *oldFile = s->getFile();
-  replaceSymbol<LazySymbol>(s, name, 0, file)->extract();
+  LazySymbol(name, 0, file).extract();
   if (!config->whyExtract.empty())
     ctx.whyExtractRecords.emplace_back(toString(oldFile), s->getFile(), *s);
 }

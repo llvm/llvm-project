@@ -88,7 +88,7 @@ TEST_F(LlvmLibcAtanhfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   const uint32_t STEP = FPBits(1.0f).uintval() / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     ASSERT_MPFR_MATCH(mpfr::Operation::Atanh, x, LIBC_NAMESPACE::atanhf(x),
                       0.5);
     ASSERT_MPFR_MATCH(mpfr::Operation::Atanh, -x, LIBC_NAMESPACE::atanhf(-x),
@@ -98,12 +98,12 @@ TEST_F(LlvmLibcAtanhfTest, InFloatRange) {
 
 // For small values, atanh(x) is x.
 TEST_F(LlvmLibcAtanhfTest, SmallValues) {
-  float x = float(FPBits(uint32_t(0x17800000)));
+  float x = FPBits(uint32_t(0x17800000)).get_val();
   float result = LIBC_NAMESPACE::atanhf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Atanh, x, result, 0.5);
   EXPECT_FP_EQ(x, result);
 
-  x = float(FPBits(uint32_t(0x00400000)));
+  x = FPBits(uint32_t(0x00400000)).get_val();
   result = LIBC_NAMESPACE::atanhf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Atanh, x, result, 0.5);
   EXPECT_FP_EQ(x, result);

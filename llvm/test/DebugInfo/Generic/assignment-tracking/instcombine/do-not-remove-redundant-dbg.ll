@@ -1,5 +1,7 @@
 ; RUN: opt -passes=instcombine -S %s -o -  \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=instcombine -S %s -o -  \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Based on the test remove-redundant-dbg.ll.
 ;;

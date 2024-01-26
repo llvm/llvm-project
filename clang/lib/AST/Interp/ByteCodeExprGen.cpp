@@ -291,9 +291,6 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FloatingComplexToReal:
     return this->emitComplexReal(SubExpr);
 
-  case CK_ToVoid:
-    return discard(SubExpr);
-
   case CK_IntegralRealToComplex:
   case CK_FloatingRealToComplex: {
     // We're creating a complex value here, so we need to
@@ -316,6 +313,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     return this->emitInitElem(T, 1, SubExpr);
   }
+
+  case CK_ToVoid:
+    return discard(SubExpr);
 
   default:
     assert(false && "Cast not implemented");
@@ -601,8 +601,8 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  PrimType LHSElemT = *this->classifyComplexElementType(LHS->getType());
-  PrimType RHSElemT = *this->classifyComplexElementType(RHS->getType());
+  PrimType LHSElemT = this->classifyComplexElementType(LHS->getType());
+  PrimType RHSElemT = this->classifyComplexElementType(RHS->getType());
 
   unsigned LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
   unsigned RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
@@ -2992,7 +2992,7 @@ bool ByteCodeExprGen<Emitter>::emitComplexReal(const Expr *SubExpr) {
   // Since our _Complex implementation does not map to a primitive type,
   // we sometimes have to do the lvalue-to-rvalue conversion here manually.
   if (!SubExpr->isLValue())
-    return this->emitLoadPop(*classifyComplexElementType(SubExpr->getType()),
+    return this->emitLoadPop(classifyComplexElementType(SubExpr->getType()),
                              SubExpr);
   return true;
 }

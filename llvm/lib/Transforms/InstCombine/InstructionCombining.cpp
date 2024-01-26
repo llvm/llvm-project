@@ -2450,6 +2450,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (MadeChange)
     return &GEP;
 
+  // Canonicalize constant GEPs to i8 type.
+  if (!GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
+    APInt Offset(DL.getIndexTypeSizeInBits(GEPType), 0);
+    if (GEP.accumulateConstantOffset(DL, Offset))
+      return replaceInstUsesWith(
+          GEP, Builder.CreatePtrAdd(PtrOp, Builder.getInt(Offset), "",
+                                    GEP.isInBounds()));
+  }
+
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
     auto *Op1 = dyn_cast<GetElementPtrInst>(PN->getOperand(0));
@@ -4304,12 +4313,31 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
-  findDbgUsers(DbgUsers, I);
+  SmallVector<DPValue *, 2> DPValues;
+  findDbgUsers(DbgUsers, I, &DPValues);
+  if (!DbgUsers.empty())
+    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
+  if (!DPValues.empty())
+    tryToSinkInstructionDPValues(I, InsertPos, SrcBlock, DestBlock, DPValues);
 
+  // PS: there are numerous flaws with this behaviour, not least that right now
+  // assignments can be re-ordered past other assignments to the same variable
+  // if they use different Values. Creating more undef assignements can never be
+  // undone. And salvaging all users outside of this block can un-necessarily
+  // alter the lifetime of the live-value that the variable refers to.
+  // Some of these things can be resolved by tolerating debug use-before-defs in
+  // LLVM-IR, however it depends on the instruction-referencing CodeGen backend
+  // being used for more architectures.
+
+  return true;
+}
+
+void InstCombinerImpl::tryToSinkInstructionDbgValues(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
   // For all debug values in the destination block, the sunk instruction
   // will still be available, so they do not need to be dropped.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSalvage;
-  SmallVector<DPValue *, 2> DPValuesToSalvage;
   for (auto &DbgUser : DbgUsers)
     if (DbgUser->getParent() != DestBlock)
       DbgUsersToSalvage.push_back(DbgUser);
@@ -4353,10 +4381,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // Perform salvaging without the clones, then sink the clones.
   if (!DIIClones.empty()) {
-    // RemoveDIs: pass in empty vector of DPValues until we get to instrumenting
-    // this pass.
-    SmallVector<DPValue *, 1> DummyDPValues;
-    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, DummyDPValues);
+    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, {});
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
@@ -4364,8 +4389,132 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
       LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }
+}
 
-  return true;
+void InstCombinerImpl::tryToSinkInstructionDPValues(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock, SmallVectorImpl<DPValue *> &DPValues) {
+  // Implementation of tryToSinkInstructionDbgValues, but for the DPValue of
+  // variable assignments rather than dbg.values.
+
+  // Fetch all DPValues not already in the destination.
+  SmallVector<DPValue *, 2> DPValuesToSalvage;
+  for (auto &DPV : DPValues)
+    if (DPV->getParent() != DestBlock)
+      DPValuesToSalvage.push_back(DPV);
+
+  // Fetch a second collection, of DPValues in the source block that we're going
+  // to sink.
+  SmallVector<DPValue *> DPValuesToSink;
+  for (DPValue *DPV : DPValuesToSalvage)
+    if (DPV->getParent() == SrcBlock)
+      DPValuesToSink.push_back(DPV);
+
+  // Sort DPValues according to their position in the block. This is a partial
+  // order: DPValues attached to different instructions will be ordered by the
+  // instruction order, but DPValues attached to the same instruction won't
+  // have an order.
+  auto Order = [](DPValue *A, DPValue *B) -> bool {
+    return B->getInstruction()->comesBefore(A->getInstruction());
+  };
+  llvm::stable_sort(DPValuesToSink, Order);
+
+  // If there are two assignments to the same variable attached to the same
+  // instruction, the ordering between the two assignments is important. Scan
+  // for this (rare) case and establish which is the last assignment.
+  using InstVarPair = std::pair<const Instruction *, DebugVariable>;
+  SmallDenseMap<InstVarPair, DPValue *> FilterOutMap;
+  if (DPValuesToSink.size() > 1) {
+    SmallDenseMap<InstVarPair, unsigned> CountMap;
+    // Count how many assignments to each variable there is per instruction.
+    for (DPValue *DPV : DPValuesToSink) {
+      DebugVariable DbgUserVariable =
+          DebugVariable(DPV->getVariable(), DPV->getExpression(),
+                        DPV->getDebugLoc()->getInlinedAt());
+      CountMap[std::make_pair(DPV->getInstruction(), DbgUserVariable)] += 1;
+    }
+
+    // If there are any instructions with two assignments, add them to the
+    // FilterOutMap to record that they need extra filtering.
+    SmallPtrSet<const Instruction *, 4> DupSet;
+    for (auto It : CountMap) {
+      if (It.second > 1) {
+        FilterOutMap[It.first] = nullptr;
+        DupSet.insert(It.first.first);
+      }
+    }
+
+    // For all instruction/variable pairs needing extra filtering, find the
+    // latest assignment.
+    for (const Instruction *Inst : DupSet) {
+      for (DPValue &DPV : llvm::reverse(Inst->getDbgValueRange())) {
+        DebugVariable DbgUserVariable =
+            DebugVariable(DPV.getVariable(), DPV.getExpression(),
+                          DPV.getDebugLoc()->getInlinedAt());
+        auto FilterIt =
+            FilterOutMap.find(std::make_pair(Inst, DbgUserVariable));
+        if (FilterIt == FilterOutMap.end())
+          continue;
+        if (FilterIt->second != nullptr)
+          continue;
+        FilterIt->second = &DPV;
+      }
+    }
+  }
+
+  // Perform cloning of the DPValues that we plan on sinking, filter out any
+  // duplicate assignments identified above.
+  SmallVector<DPValue *, 2> DPVClones;
+  SmallSet<DebugVariable, 4> SunkVariables;
+  for (DPValue *DPV : DPValuesToSink) {
+    if (DPV->Type == DPValue::LocationType::Declare)
+      continue;
+
+    DebugVariable DbgUserVariable =
+        DebugVariable(DPV->getVariable(), DPV->getExpression(),
+                      DPV->getDebugLoc()->getInlinedAt());
+
+    // For any variable where there were multiple assignments in the same place,
+    // ignore all but the last assignment.
+    if (!FilterOutMap.empty()) {
+      InstVarPair IVP = std::make_pair(DPV->getInstruction(), DbgUserVariable);
+      auto It = FilterOutMap.find(IVP);
+
+      // Filter out.
+      if (It != FilterOutMap.end() && It->second != DPV)
+        continue;
+    }
+
+    if (!SunkVariables.insert(DbgUserVariable).second)
+      continue;
+
+    if (DPV->isDbgAssign())
+      continue;
+
+    DPVClones.emplace_back(DPV->clone());
+    LLVM_DEBUG(dbgs() << "CLONE: " << *DPVClones.back() << '\n');
+  }
+
+  // Perform salvaging without the clones, then sink the clones.
+  if (DPVClones.empty())
+    return;
+
+  salvageDebugInfoForDbgValues(*I, {}, DPValuesToSalvage);
+
+  // The clones are in reverse order of original appearance. Assert that the
+  // head bit is set on the iterator as we _should_ have received it via
+  // getFirstInsertionPt. Inserting like this will reverse the clone order as
+  // we'll repeatedly insert at the head, such as:
+  //   DPV-3 (third insertion goes here)
+  //   DPV-2 (second insertion goes here)
+  //   DPV-1 (first insertion goes here)
+  //   Any-Prior-DPVs
+  //   InsertPtInst
+  assert(InsertPos.getHeadBit());
+  for (DPValue *DPVClone : DPVClones) {
+    InsertPos->getParent()->insertDPValueBefore(DPVClone, InsertPos);
+    LLVM_DEBUG(dbgs() << "SINK: " << *DPVClone << '\n');
+  }
 }
 
 bool InstCombinerImpl::run() {
@@ -4522,7 +4671,7 @@ bool InstCombinerImpl::run() {
           if (isa<PHINode>(I)) // PHI -> Non-PHI
             InsertPos = InstParent->getFirstInsertionPt();
           else // Non-PHI -> PHI
-            InsertPos = InstParent->getFirstNonPHI()->getIterator();
+            InsertPos = InstParent->getFirstNonPHIIt();
         }
 
         Result->insertInto(InstParent, InsertPos);

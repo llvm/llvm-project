@@ -17,6 +17,7 @@ add_header_library(
     AtoiTest.h
   DEPENDS
     libc.src.errno.errno
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
 )
 

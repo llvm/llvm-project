@@ -238,7 +238,7 @@ void SerializeGPUModuleBase::addControlVariables(
   addControlVariable("__oclc_wavefrontsize64", wave64);
 
   llvm::Type *i32Ty = llvm::Type::getInt32Ty(module.getContext());
-  int abi = 400;
+  int abi = 500;
   abiVer.getAsInteger(0, abi);
   llvm::GlobalVariable *abiVersion = new llvm::GlobalVariable(
       module, i32Ty, true, llvm::GlobalValue::LinkageTypes::LinkOnceODRLinkage,

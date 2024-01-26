@@ -153,6 +153,7 @@ private:
   const DataLayout *DL;
   BasicBlock *Entry;
   ProfileSummaryInfo *PSI;
+  bool OptForSize;
 
   /// Keeps track of constant candidates found in the function.
   using ConstCandVecType = std::vector<consthoist::ConstantCandidate>;
