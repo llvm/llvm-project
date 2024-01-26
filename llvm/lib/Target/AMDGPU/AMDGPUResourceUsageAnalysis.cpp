@@ -113,14 +113,13 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
   // By default, for code object v5 and later, track only the minimum scratch
   // size
   uint32_t AssumedStackSizeForDynamicSizeObjects =
-      clAssumedStackSizeForDynamicSizeObjects.getValue();
-  uint32_t AssumedStackSizeForExternalCall =
-      clAssumedStackSizeForExternalCall.getValue();
+      clAssumedStackSizeForDynamicSizeObjects;
+  uint32_t AssumedStackSizeForExternalCall = clAssumedStackSizeForExternalCall;
   if (AMDGPU::getAMDHSACodeObjectVersion(M) >= AMDGPU::AMDHSA_COV5 ||
       STI.getTargetTriple().getOS() == Triple::AMDPAL) {
-    if (!clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+    if (clAssumedStackSizeForDynamicSizeObjects.getNumOccurrences() == 0)
       AssumedStackSizeForDynamicSizeObjects = 0;
-    if (!clAssumedStackSizeForExternalCall.getNumOccurrences())
+    if (clAssumedStackSizeForExternalCall.getNumOccurrences() == 0)
       AssumedStackSizeForExternalCall = 0;
   }
 
