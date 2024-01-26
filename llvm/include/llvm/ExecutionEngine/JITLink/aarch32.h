@@ -274,8 +274,10 @@ struct FixupInfoArmBranch : public FixupInfoArm<Kind> {
 
 template <>
 struct FixupInfo<Arm_Jump24> : public FixupInfoArmBranch<Arm_Jump24> {
-  static constexpr uint32_t OpcodeMask = FixupInfoArm<Arm_Jump24>::OpcodeMask & ~(CondMask | BitBlx);
-  static constexpr uint32_t ImmMask = FixupInfoArm<Arm_Jump24>::ImmMask & ~(BitH);
+  static constexpr uint32_t OpcodeMask =
+      FixupInfoArm<Arm_Jump24>::OpcodeMask & ~(CondMask | BitBlx);
+  static constexpr uint32_t ImmMask =
+      FixupInfoArm<Arm_Jump24>::ImmMask & ~(BitH);
 };
 
 template <> struct FixupInfo<Arm_Call> : public FixupInfoArmBranch<Arm_Call> {
