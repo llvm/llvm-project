@@ -9,9 +9,9 @@
 #ifndef __LLVM_LIBC_TYPES_EPOLL_EVENT_H__
 #define __LLVM_LIBC_TYPES_EPOLL_EVENT_H__
 
-#include <llvm-libc-types/epoll_data.h>
+#include <llvm-libc-types/struct_epoll_data.h>
 
-typedef struct epoll_event {
+struct epoll_event {
   __UINT32_TYPE__ events;
   epoll_data_t data;
 };

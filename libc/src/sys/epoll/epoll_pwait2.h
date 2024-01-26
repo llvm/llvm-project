@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT2_H
 #define LLVM_LIBC_SRC_SYS_EPOLL_EPOLL_PWAIT2_H
 
-#include <signal.h>    // For sigset_t
-#include <sys/epoll.h> // For epoll_event
-#include <time.h>      // For timespec
+#include "include/llvm-libc-types/sigset_t.h"
+#include "include/llvm-libc-types/struct_epoll_event.h"
+#include "include/llvm-libc-types/struct_timespec.h"
 
 namespace LIBC_NAMESPACE {
 
