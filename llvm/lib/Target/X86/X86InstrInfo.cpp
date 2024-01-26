@@ -5483,153 +5483,78 @@ MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
   return nullptr;
 }
 
-/// Convert an ALUrr opcode to corresponding ALUri opcode. Such as
-///     ADD32rr  ==>  ADD32ri
-/// ShiftRotate will be set to true if the Opcode is shift or rotate.
-/// If the ALUri can be further changed to COPY when the immediate is 0, set
-/// CanConvert2Copy to true.
-static unsigned ConvertALUrr2ALUri(unsigned Opcode, bool &CanConvert2Copy,
-                                   bool &ShiftRotate) {
-  CanConvert2Copy = false;
-  ShiftRotate = false;
-  unsigned NewOpcode = 0;
-  switch (Opcode) {
-  case X86::ADD64rr:
-    NewOpcode = X86::ADD64ri32;
-    CanConvert2Copy = true;
-    break;
-  case X86::ADC64rr:
-    NewOpcode = X86::ADC64ri32;
-    break;
-  case X86::SUB64rr:
-    NewOpcode = X86::SUB64ri32;
-    CanConvert2Copy = true;
-    break;
-  case X86::SBB64rr:
-    NewOpcode = X86::SBB64ri32;
-    break;
-  case X86::AND64rr:
-    NewOpcode = X86::AND64ri32;
-    break;
-  case X86::OR64rr:
-    NewOpcode = X86::OR64ri32;
-    CanConvert2Copy = true;
-    break;
-  case X86::XOR64rr:
-    NewOpcode = X86::XOR64ri32;
-    CanConvert2Copy = true;
-    break;
-  case X86::TEST64rr:
-    NewOpcode = X86::TEST64ri32;
-    break;
-  case X86::CMP64rr:
-    NewOpcode = X86::CMP64ri32;
-    break;
-  case X86::SHR64rCL:
-    NewOpcode = X86::SHR64ri;
-    ShiftRotate = true;
-    break;
-  case X86::SHL64rCL:
-    NewOpcode = X86::SHL64ri;
-    ShiftRotate = true;
-    break;
-  case X86::SAR64rCL:
-    NewOpcode = X86::SAR64ri;
-    ShiftRotate = true;
-    break;
-  case X86::ROL64rCL:
-    NewOpcode = X86::ROL64ri;
-    ShiftRotate = true;
-    break;
-  case X86::ROR64rCL:
-    NewOpcode = X86::ROR64ri;
-    ShiftRotate = true;
-    break;
-  case X86::RCL64rCL:
-    NewOpcode = X86::RCL64ri;
-    ShiftRotate = true;
-    break;
-  case X86::RCR64rCL:
-    NewOpcode = X86::RCR64ri;
-    ShiftRotate = true;
-    break;
-  case X86::ADD32rr:
-    NewOpcode = X86::ADD32ri;
-    CanConvert2Copy = true;
-    break;
-  case X86::ADC32rr:
-    NewOpcode = X86::ADC32ri;
-    break;
-  case X86::SUB32rr:
-    NewOpcode = X86::SUB32ri;
-    CanConvert2Copy = true;
-    break;
-  case X86::SBB32rr:
-    NewOpcode = X86::SBB32ri;
-    break;
-  case X86::AND32rr:
-    NewOpcode = X86::AND32ri;
-    break;
-  case X86::OR32rr:
-    NewOpcode = X86::OR32ri;
-    CanConvert2Copy = true;
-    break;
-  case X86::XOR32rr:
-    NewOpcode = X86::XOR32ri;
-    CanConvert2Copy = true;
-    break;
-  case X86::TEST32rr:
-    NewOpcode = X86::TEST32ri;
-    break;
-  case X86::CMP32rr:
-    NewOpcode = X86::CMP32ri;
-    break;
-  case X86::SHR32rCL:
-    NewOpcode = X86::SHR32ri;
-    ShiftRotate = true;
-    break;
-  case X86::SHL32rCL:
-    NewOpcode = X86::SHL32ri;
-    ShiftRotate = true;
-    break;
-  case X86::SAR32rCL:
-    NewOpcode = X86::SAR32ri;
-    ShiftRotate = true;
-    break;
-  case X86::ROL32rCL:
-    NewOpcode = X86::ROL32ri;
-    ShiftRotate = true;
-    break;
-  case X86::ROR32rCL:
-    NewOpcode = X86::ROR32ri;
-    ShiftRotate = true;
-    break;
-  case X86::RCL32rCL:
-    NewOpcode = X86::RCL32ri;
-    ShiftRotate = true;
-    break;
-  case X86::RCR32rCL:
-    NewOpcode = X86::RCR32ri;
-    ShiftRotate = true;
-    break;
+/// \returns true if the instruction can be changed to COPY when imm is 0.
+static bool canConvert2Copy(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
+  case X86::ADD64ri32:
+  case X86::SUB64ri32:
+  case X86::OR64ri32:
+  case X86::XOR64ri32:
+  case X86::ADD32ri:
+  case X86::SUB32ri:
+  case X86::OR32ri:
+  case X86::XOR32ri:
+    return true;
   }
-  return NewOpcode;
 }
 
-/// Real implementation of FoldImmediate.
+/// Convert an ALUrr opcode to corresponding ALUri opcode. Such as
+///     ADD32rr  ==>  ADD32ri
+static unsigned convertALUrr2ALUri(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 0;
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    return X86::TO;
+    FROM_TO(ADD64rr, ADD64ri32)
+    FROM_TO(ADC64rr, ADC64ri32)
+    FROM_TO(SUB64rr, SUB64ri32)
+    FROM_TO(SBB64rr, SBB64ri32)
+    FROM_TO(AND64rr, AND64ri32)
+    FROM_TO(OR64rr, OR64ri32)
+    FROM_TO(XOR64rr, XOR64ri32)
+    FROM_TO(TEST64rr, TEST64ri32)
+    FROM_TO(CMP64rr, CMP64ri32)
+    FROM_TO(SHR64rCL, SHR64ri)
+    FROM_TO(SHL64rCL, SHL64ri)
+    FROM_TO(SAR64rCL, SAR64ri)
+    FROM_TO(ROL64rCL, ROL64ri)
+    FROM_TO(ROR64rCL, ROR64ri)
+    FROM_TO(RCL64rCL, RCL64ri)
+    FROM_TO(RCR64rCL, RCR64ri)
+    FROM_TO(ADD32rr, ADD32ri)
+    FROM_TO(ADC32rr, ADC32ri)
+    FROM_TO(SUB32rr, SUB32ri)
+    FROM_TO(SBB32rr, SBB32ri)
+    FROM_TO(AND32rr, AND32ri)
+    FROM_TO(OR32rr, OR32ri)
+    FROM_TO(XOR32rr, XOR32ri)
+    FROM_TO(TEST32rr, TEST32ri)
+    FROM_TO(CMP32rr, CMP32ri)
+    FROM_TO(SHR32rCL, SHR32ri)
+    FROM_TO(SHL32rCL, SHL32ri)
+    FROM_TO(SAR32rCL, SAR32ri)
+    FROM_TO(ROL32rCL, ROL32ri)
+    FROM_TO(ROR32rCL, ROR32ri)
+    FROM_TO(RCL32rCL, RCL32ri)
+    FROM_TO(RCR32rCL, RCR32ri)
+#undef FROM_TO
+  }
+}
+
 /// Reg is assigned ImmVal in DefMI, and is used in UseMI.
 /// If MakeChange is true, this function tries to replace Reg by ImmVal in
 /// UseMI. If MakeChange is false, just check if folding is possible.
-/// Return true if folding is successful or possible.
-bool X86InstrInfo::FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
+//
+/// \returns true if folding is successful or possible.
+bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
                                      Register Reg, int64_t ImmVal,
                                      MachineRegisterInfo *MRI,
                                      bool MakeChange) const {
   bool Modified = false;
-  bool ShiftRotate = false;
-  // When ImmVal is 0, some instructions can be changed to COPY.
-  bool CanChangeToCopy = false;
-  unsigned Opc = UseMI.getOpcode();
 
   // 64 bit operations accept sign extended 32 bit immediates.
   // 32 bit operations accept all 32 bit immediates, so we don't need to check
@@ -5651,6 +5576,7 @@ bool X86InstrInfo::FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       !MRI->hasOneNonDBGUse(Reg))
     return false;
 
+  unsigned Opc = UseMI.getOpcode();
   unsigned NewOpc;
   if (Opc == TargetOpcode::COPY) {
     Register ToReg = UseMI.getOperand(0).getReg();
@@ -5701,7 +5627,7 @@ bool X86InstrInfo::FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
     else
       return false;
   } else
-    NewOpc = ConvertALUrr2ALUri(Opc, CanChangeToCopy, ShiftRotate);
+    NewOpc = convertALUrr2ALUri(Opc);
 
   if (!NewOpc)
     return false;
@@ -5716,7 +5642,9 @@ bool X86InstrInfo::FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       UseMI.findRegisterUseOperandIdx(Reg) != 1)
     return false;
 
-  if (ShiftRotate) {
+  using namespace X86;
+  if (isSHL(Opc) || isSHR(Opc) || isSAR(Opc) || isROL(Opc) || isROR(Opc) ||
+      isRCL(Opc) || isRCR(Opc)) {
     unsigned RegIdx = UseMI.findRegisterUseOperandIdx(Reg);
     if (RegIdx < 2)
       return false;
@@ -5740,7 +5668,7 @@ bool X86InstrInfo::FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
 
   if (!Modified) {
     // Modify the instruction.
-    if (ImmVal == 0 && CanChangeToCopy &&
+    if (ImmVal == 0 && canConvert2Copy(NewOpc) &&
         UseMI.registerDefIsDead(X86::EFLAGS)) {
       //          %100 = add %101, 0
       //    ==>
@@ -5776,15 +5704,15 @@ bool X86InstrInfo::FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
   return true;
 }
 
-/// FoldImmediate - 'Reg' is known to be defined by a move immediate
+/// foldImmediate - 'Reg' is known to be defined by a move immediate
 /// instruction, try to fold the immediate into the use instruction.
-bool X86InstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool X86InstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                  Register Reg, MachineRegisterInfo *MRI) const {
   int64_t ImmVal;
   if (!getConstValDefinedInReg(DefMI, Reg, ImmVal))
     return false;
 
-  return FoldImmediateImpl(UseMI, &DefMI, Reg, ImmVal, MRI, true);
+  return foldImmediateImpl(UseMI, &DefMI, Reg, ImmVal, MRI, true);
 }
 
 /// Expand a single-def pseudo instruction to a two-addr
