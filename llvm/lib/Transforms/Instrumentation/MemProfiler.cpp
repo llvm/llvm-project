@@ -59,7 +59,7 @@ extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
 constexpr int LLVM_MEM_PROFILER_VERSION = 1;
 
 // Size of memory mapped to a single shadow location.
-constexpr uint64_t DefaultShadowGranularity = 64;
+constexpr uint64_t DefaultMemGranularity = 64;
 
 // Scale from granularity down to shadow size.
 constexpr uint64_t DefaultShadowScale = 3;
@@ -120,7 +120,7 @@ static cl::opt<int> ClMappingScale("memprof-mapping-scale",
 static cl::opt<int>
     ClMappingGranularity("memprof-mapping-granularity",
                          cl::desc("granularity of memprof shadow mapping"),
-                         cl::Hidden, cl::init(DefaultShadowGranularity));
+                         cl::Hidden, cl::init(DefaultMemGranularity));
 
 static cl::opt<bool> ClStack("memprof-instrument-stack",
                              cl::desc("Instrument scalar stack variables"),

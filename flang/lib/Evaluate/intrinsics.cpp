@@ -1113,6 +1113,12 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"kiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 8}}},
          TypePattern{IntType, KindCode::exactKind, 8}},
         "abs"},
+    {{"kidnnt", {{"a", DoublePrecision}},
+         TypePattern{IntType, KindCode::exactKind, 8}},
+        "nint"},
+    {{"knint", {{"a", DefaultReal}},
+         TypePattern{IntType, KindCode::exactKind, 8}},
+        "nint"},
     {{"len", {{"string", DefaultChar, Rank::anyOrAssumedRank}}, DefaultInt,
         Rank::scalar, IntrinsicClass::inquiryFunction}},
     {{"lge", {{"string_a", DefaultChar}, {"string_b", DefaultChar}},
@@ -3105,23 +3111,31 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
             if (auto specificCall{
                     matchOrBufferMessages(*genIter->second, specificBuffer)}) {
               // Force the call result type to the specific intrinsic result
-              // type
+              // type, if possible.
+              DynamicType genericType{
+                  DEREF(specificCall->specificIntrinsic.characteristics.value()
+                            .functionResult.value()
+                            .GetTypeAndShape())
+                      .type()};
               DynamicType newType{GetReturnType(*specIter->second, defaults_)};
-              if (context.languageFeatures().ShouldWarn(
-                      common::LanguageFeature::
-                          UseGenericIntrinsicWhenSpecificDoesntMatch)) {
-                context.messages().Say(
-                    "Argument types do not match specific intrinsic '%s' "
-                    "requirements; using '%s' generic instead and converting "
-                    "the "
-                    "result to %s if needed"_port_en_US,
-                    call.name, genericName, newType.AsFortran());
+              if (genericType.category() == newType.category() ||
+                  ((genericType.category() == TypeCategory::Integer ||
+                       genericType.category() == TypeCategory::Real) &&
+                      (newType.category() == TypeCategory::Integer ||
+                          newType.category() == TypeCategory::Real))) {
+                if (context.languageFeatures().ShouldWarn(
+                        common::LanguageFeature::
+                            UseGenericIntrinsicWhenSpecificDoesntMatch)) {
+                  context.messages().Say(
+                      "Argument types do not match specific intrinsic '%s' requirements; using '%s' generic instead and converting the result to %s if needed"_port_en_US,
+                      call.name, genericName, newType.AsFortran());
+                }
+                specificCall->specificIntrinsic.name = call.name;
+                specificCall->specificIntrinsic.characteristics.value()
+                    .functionResult.value()
+                    .SetType(newType);
+                return specificCall;
               }
-              specificCall->specificIntrinsic.name = call.name;
-              specificCall->specificIntrinsic.characteristics.value()
-                  .functionResult.value()
-                  .SetType(newType);
-              return specificCall;
             }
           }
         }

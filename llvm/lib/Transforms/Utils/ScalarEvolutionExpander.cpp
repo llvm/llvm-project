@@ -1010,14 +1010,11 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   // Create the PHI.
   BasicBlock *Header = L->getHeader();
   Builder.SetInsertPoint(Header, Header->begin());
-  pred_iterator HPB = pred_begin(Header), HPE = pred_end(Header);
-  PHINode *PN = Builder.CreatePHI(ExpandTy, std::distance(HPB, HPE),
-                                  Twine(IVName) + ".iv");
+  PHINode *PN =
+      Builder.CreatePHI(ExpandTy, pred_size(Header), Twine(IVName) + ".iv");
 
   // Create the step instructions and populate the PHI.
-  for (pred_iterator HPI = HPB; HPI != HPE; ++HPI) {
-    BasicBlock *Pred = *HPI;
-
+  for (BasicBlock *Pred : predecessors(Header)) {
     // Add a start value.
     if (!L->contains(Pred)) {
       PN->addIncoming(StartV, Pred);
