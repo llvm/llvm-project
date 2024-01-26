@@ -13300,6 +13300,9 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
         // We should investigate why buildbots were failing with ASan short
         // string annotations turned on. Related PR:
         // https://github.com/llvm/llvm-project/pull/79049
+        // If making those variables static didn't fix the problem,
+        // please confirm that https://github.com/llvm/llvm-project/pull/79489
+        // fixed the real issue.
         LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
         RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
         Info.FFDiag(E, DiagID)
