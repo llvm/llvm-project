@@ -5,12 +5,24 @@
 @aa = global [256 x [256 x float]] zeroinitializer, align 64
 @bb = global [256 x [256 x float]] zeroinitializer, align 64
 
-;;  for (int nl = 0; nl < 10000000/256; nl++)
-;;    for (int i = 0; i < 256; ++i)
-;;      for (int j = 1; j < 256; j++)
+;; This test check that the direction of level 1 loop dependence between
+;; aa[j][i] and aa[j - 1][i] will be set to '=' instead of default '*'.
+;; Because level 1 loop IV(nl) won't affect the value of aa[j][i] and
+;; aa[j - 1][i].
+;; By setting to '=' will enable normalize and legalize the interchange.
+;;
+;;  for (int nl = 0; nl < 10000000/256; nl++) // Level 1
+;;    for (int i = 0; i < 256; ++i)           // Level 2
+;;      for (int j = 1; j < 256; j++)         // Level 3
 ;;        aa[j][i] = aa[j - 1][i] + bb[j][i];
 
-; CHECK: Not interchanging loops. Cannot prove legality.
+; CHECK: Set level 1 loop direction to =
+; CHECK: Before normalizing negative direction vectors:
+; CHECK:  [= = >]
+; CHECK: After normalizing negative direction vectors:
+; CGECK:  [= = <]
+; CHECK: Negative dependence vector normalized.
+; CHECK: Loops interchanged.
 
 define float @s231() {
 entry:
