@@ -5488,14 +5488,14 @@ static bool canConvert2Copy(unsigned Opc) {
   switch (Opc) {
   default:
     return false;
-  case X86::ADD64ri32:
-  case X86::SUB64ri32:
-  case X86::OR64ri32:
-  case X86::XOR64ri32:
-  case X86::ADD32ri:
-  case X86::SUB32ri:
-  case X86::OR32ri:
-  case X86::XOR32ri:
+  CASE_ND(ADD64ri32)
+  CASE_ND(SUB64ri32)
+  CASE_ND(OR64ri32)
+  CASE_ND(XOR64ri32)
+  CASE_ND(ADD32ri)
+  CASE_ND(SUB32ri)
+  CASE_ND(OR32ri)
+  CASE_ND(XOR32ri)
     return true;
   }
 }
@@ -5508,7 +5508,9 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     return 0;
 #define FROM_TO(FROM, TO)                                                      \
   case X86::FROM:                                                              \
-    return X86::TO;
+    return X86::TO;                                                            \
+  case X86::FROM##_ND:                                                         \
+    return X86::TO##_ND;
     FROM_TO(ADD64rr, ADD64ri32)
     FROM_TO(ADC64rr, ADC64ri32)
     FROM_TO(SUB64rr, SUB64ri32)
@@ -5516,8 +5518,6 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     FROM_TO(AND64rr, AND64ri32)
     FROM_TO(OR64rr, OR64ri32)
     FROM_TO(XOR64rr, XOR64ri32)
-    FROM_TO(TEST64rr, TEST64ri32)
-    FROM_TO(CMP64rr, CMP64ri32)
     FROM_TO(SHR64rCL, SHR64ri)
     FROM_TO(SHL64rCL, SHL64ri)
     FROM_TO(SAR64rCL, SAR64ri)
@@ -5532,8 +5532,6 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     FROM_TO(AND32rr, AND32ri)
     FROM_TO(OR32rr, OR32ri)
     FROM_TO(XOR32rr, XOR32ri)
-    FROM_TO(TEST32rr, TEST32ri)
-    FROM_TO(CMP32rr, CMP32ri)
     FROM_TO(SHR32rCL, SHR32ri)
     FROM_TO(SHL32rCL, SHL32ri)
     FROM_TO(SAR32rCL, SAR32ri)
@@ -5541,6 +5539,14 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     FROM_TO(ROR32rCL, ROR32ri)
     FROM_TO(RCL32rCL, RCL32ri)
     FROM_TO(RCR32rCL, RCR32ri)
+#undef FROM_TO
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM:                                                              \
+    return X86::TO;
+    FROM_TO(TEST64rr, TEST64ri32)
+    FROM_TO(CMP64rr, CMP64ri32)
+    FROM_TO(TEST32rr, TEST32ri)
+    FROM_TO(CMP32rr, CMP32ri)
 #undef FROM_TO
   }
 }
@@ -5634,7 +5640,9 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
 
   // For SUB instructions the immediate can only be the second source operand.
   if ((NewOpc == X86::SUB64ri32 || NewOpc == X86::SUB32ri ||
-       NewOpc == X86::SBB64ri32 || NewOpc == X86::SBB32ri) &&
+       NewOpc == X86::SBB64ri32 || NewOpc == X86::SBB32ri ||
+       NewOpc == X86::SUB64ri32_ND || NewOpc == X86::SUB32ri_ND ||
+       NewOpc == X86::SBB64ri32_ND || NewOpc == X86::SBB32ri_ND) &&
       UseMI.findRegisterUseOperandIdx(Reg) != 2)
     return false;
   // For CMP instructions the immediate can only be at index 1.
