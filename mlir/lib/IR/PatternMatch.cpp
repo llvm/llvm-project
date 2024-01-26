@@ -350,11 +350,8 @@ void RewriterBase::inlineRegionBefore(Region &region, Region &parent,
   }
 
   // Move blocks from the beginning of the region one-by-one.
-  while (!region.empty()) {
-    Block *block = &region.front();
-    parent.getBlocks().splice(before, region.getBlocks(), block->getIterator());
-    listener->notifyBlockInserted(block, &region, region.begin());
-  }
+  while (!region.empty())
+    moveBlockBefore(&region.front(), &parent, before);
 }
 void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
   inlineRegionBefore(region, *before->getParent(), before->getIterator());
@@ -378,6 +375,21 @@ void RewriterBase::cloneRegionBefore(Region &region, Block *before) {
   cloneRegionBefore(region, *before->getParent(), before->getIterator());
 }
 
+void RewriterBase::moveBlockBefore(Block *block, Block *anotherBlock) {
+  moveBlockBefore(block, anotherBlock->getParent(),
+                  anotherBlock->getIterator());
+}
+
+void RewriterBase::moveBlockBefore(Block *block, Region *region,
+                                   Region::iterator iterator) {
+  Region *currentRegion = block->getParent();
+  Region::iterator nextIterator = std::next(block->getIterator());
+  block->moveBefore(region, iterator);
+  if (listener)
+    listener->notifyBlockInserted(block, /*previous=*/currentRegion,
+                                  /*previousIt=*/nextIterator);
+}
+
 void RewriterBase::moveOpBefore(Operation *op, Operation *existingOp) {
   moveOpBefore(op, existingOp->getBlock(), existingOp->getIterator());
 }
@@ -385,11 +397,11 @@ void RewriterBase::moveOpBefore(Operation *op, Operation *existingOp) {
 void RewriterBase::moveOpBefore(Operation *op, Block *block,
                                 Block::iterator iterator) {
   Block *currentBlock = op->getBlock();
-  Block::iterator currentIterator = op->getIterator();
+  Block::iterator nextIterator = std::next(op->getIterator());
   op->moveBefore(block, iterator);
   if (listener)
     listener->notifyOperationInserted(
-        op, /*previous=*/InsertPoint(currentBlock, currentIterator));
+        op, /*previous=*/InsertPoint(currentBlock, nextIterator));
 }
 
 void RewriterBase::moveOpAfter(Operation *op, Operation *existingOp) {
@@ -398,10 +410,6 @@ void RewriterBase::moveOpAfter(Operation *op, Operation *existingOp) {
 
 void RewriterBase::moveOpAfter(Operation *op, Block *block,
                                Block::iterator iterator) {
-  Block *currentBlock = op->getBlock();
-  Block::iterator currentIterator = op->getIterator();
-  op->moveAfter(block, iterator);
-  if (listener)
-    listener->notifyOperationInserted(
-        op, /*previous=*/InsertPoint(currentBlock, currentIterator));
+  assert(iterator != block->end() && "cannot move after end of block");
+  moveOpBefore(op, block, std::next(iterator));
 }
