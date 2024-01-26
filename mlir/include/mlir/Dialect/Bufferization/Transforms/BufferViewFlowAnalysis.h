@@ -53,6 +53,7 @@ public:
   ///
   /// Results in resolve(B) returning {B, C}
   ValueSetT resolve(Value value) const;
+  ValueSetT resolveReverse(Value value) const;
 
   /// Removes the given values from all alias sets.
   void remove(const SetVector<Value> &aliasValues);
@@ -73,6 +74,7 @@ private:
 
   /// Maps values to all immediate dependencies this value can have.
   ValueMapT dependencies;
+  ValueMapT reverseDependencies;
 
   /// A set of all terminal values. I.e., values where the analysis stopped.
   DenseSet<Value> terminals;

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -29,6 +29,161 @@ namespace bufferization {
 
 using namespace mlir;
 using namespace mlir::bufferization;
+
+//===----------------------------------------------------------------------===//
+// BufferOriginAnalysis
+//===----------------------------------------------------------------------===//
+
+/// Return "true" if the given value is the result of a memory allocation.
+static bool hasAllocateSideEffect(Value v) {
+  Operation *op = v.getDefiningOp();
+  if (!op)
+    return false;
+  return hasEffect<MemoryEffects::Allocate>(op, v);
+}
+
+/// Return "true" if the given value is a function block argument.
+static bool isFunctionArgument(Value v) {
+  auto bbArg = dyn_cast<BlockArgument>(v);
+  if (!bbArg)
+    return false;
+  Block *b = bbArg.getOwner();
+  auto funcOp = dyn_cast<FunctionOpInterface>(b->getParentOp());
+  if (!funcOp)
+    return false;
+  return bbArg.getOwner() == &funcOp.getFunctionBody().front();
+}
+
+/// Given a memref value, return the "base" value by skipping over all
+/// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
+static Value getViewBase(Value value) {
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+    value = viewLikeOp.getViewSource();
+  return value;
+}
+
+/// An is-same-buffer analysis that checks if two SSA values belong to the same
+/// buffer allocation or not.
+class BufferOriginAnalysis {
+public:
+  BufferOriginAnalysis(Operation *op) : analysis(op) {}
+
+  /// Return "true" if `v1` and `v2` originate from the same buffer allocation.
+  /// Return "false" if `v1` and `v2` originate from different allocations.
+  /// Return "nullopt" if we do not know for sure.
+  ///
+  /// Example 1: isSameAllocation(%0, %1) == true
+  /// ```
+  /// %0 = memref.alloc()
+  /// %1 = memref.subview %0
+  /// ```
+  ///
+  /// Example 2: isSameAllocation(%0, %1) == false
+  /// ```
+  /// %0 = memref.alloc()
+  /// %1 = memref.alloc()
+  /// ```
+  ///
+  /// Example 3: isSameAllocation(%0, %2) == nullopt
+  /// ```
+  /// %0 = memref.alloc()
+  /// %1 = memref.alloc()
+  /// %2 = arith.select %c, %0, %1
+  /// ```
+  std::optional<bool> isSameAllocation(Value v1, Value v2) {
+    assert(isa<BaseMemRefType>(v1.getType()) && "expected buffer");
+    assert(isa<BaseMemRefType>(v2.getType()) && "expected buffer");
+
+    // Skip over all view-like ops.
+    v1 = getViewBase(v1);
+    v2 = getViewBase(v2);
+
+    // Fast path: If both buffers are the same SSA value, we can be sure that
+    // they originate from the same allocation.
+    if (v1 == v2)
+      return true;
+
+    // Compute the SSA values from which the buffers `v1` and `v2` originate.
+    SmallPtrSet<Value, 16> origin1 = analysis.resolveReverse(v1);
+    SmallPtrSet<Value, 16> origin2 = analysis.resolveReverse(v2);
+
+    // Originating buffers are "terminal" if they could not be traced back any
+    // further by the `BufferViewFlowAnalysis`. Examples of terminal buffers:
+    // - function block arguments
+    // - values defined by allocation ops such as "memref.alloc"
+    // - values defined by ops that are unknown to the buffer view flow analysis
+    // - values that are marked as "terminal" in the `BufferViewFlowOpInterface`
+    SmallPtrSet<Value, 16> terminal1, terminal2;
+
+    // While gathering terminal buffers, keep track of whether all terminal
+    // buffers are newly allocated buffer or function entry arguments.
+    bool allAllocs1 = true, allAllocs2 = true;
+    bool allAllocsOrFuncEntryArgs1 = true, allAllocsOrFuncEntryArgs2 = true;
+
+    // Gather terminal buffers for `v1`.
+    for (Value v : origin1) {
+      if (isa<BaseMemRefType>(v.getType()) && analysis.isTerminalBuffer(v)) {
+        terminal1.insert(v);
+        allAllocs1 &= hasAllocateSideEffect(v);
+        allAllocsOrFuncEntryArgs1 &=
+            isFunctionArgument(v) || hasAllocateSideEffect(v);
+      }
+    }
+    assert(!terminal1.empty() && "expected non-empty terminal set");
+
+    // Gather terminal buffers for `v2`.
+    bool distinctTerminalSets = true;
+    for (Value v : origin2) {
+      if (isa<BaseMemRefType>(v.getType()) && analysis.isTerminalBuffer(v)) {
+        terminal2.insert(v);
+        allAllocs2 &= hasAllocateSideEffect(v);
+        allAllocsOrFuncEntryArgs2 &=
+            isFunctionArgument(v) || hasAllocateSideEffect(v);
+        distinctTerminalSets &= !terminal1.contains(v);
+      }
+    }
+    assert(!terminal2.empty() && "expected non-empty terminal set");
+
+    // If both `v1` and `v2` have a single matching terminal buffer, they are
+    // guaranteed to originate from the same buffer allocation.
+    if (llvm::hasSingleElement(terminal1) &&
+        llvm::hasSingleElement(terminal2) &&
+        *terminal1.begin() == *terminal2.begin())
+      return true;
+
+    // At least one of the two values has multiple terminals.
+
+    // If there is overlap between the terminal buffers of `v1` and `v2`, we
+    // cannot make an accurate decision without further analysis.
+    if (!distinctTerminalSets)
+      return std::nullopt;
+
+    // If `v1` originates from only allocs, and `v2` is guaranteed to originate
+    // from different allocations (that is guaranteed if `v2` originates from
+    // only distinct allocs or function entry arguments), we can be sure that
+    // `v1` and `v2` originate from different allocations. The same argument can
+    // be made when swapping `v1` and `v2`.
+    bool isolatedAlloc1 =
+        allAllocs1 && (allAllocs2 || allAllocsOrFuncEntryArgs2);
+    bool isolatedAlloc2 =
+        (allAllocs1 || allAllocsOrFuncEntryArgs1) && allAllocs2;
+    if (isolatedAlloc1 || isolatedAlloc2)
+      return false;
+
+    // Otherwise: We do not know whether `v1` and `v2` originate from the same
+    // allocation or not.
+    // TODO: Function arguments are currently handled conservatively. We assume
+    // that they could be the same allocation.
+    // TODO: Terminals other than allocations and function arguments are
+    // currently handled conservatively. We assume that they could be the same
+    // allocation. E.g., we currently return "nullopt" for values that originate
+    // from different "memref.get_global" ops (with different symbols).
+    return std::nullopt;
+  }
+
+private:
+  BufferViewFlowAnalysis analysis;
+};
 
 //===----------------------------------------------------------------------===//
 // Helpers
@@ -47,14 +202,6 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
     deallocOp.getConditionsMutable().assign(conditions);
   });
   return success();
-}
-
-/// Given a memref value, return the "base" value by skipping over all
-/// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
-static Value getViewBase(Value value) {
-  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
-    value = viewLikeOp.getViewSource();
-  return value;
 }
 
 /// Return "true" if the given values are guaranteed to be different (and
@@ -80,12 +227,14 @@ static bool distinctAllocAndBlockArgument(Value v1, Value v2) {
 /// Checks if `memref` may potentially alias a MemRef in `otherList`. It is
 /// often a requirement of optimization patterns that there cannot be any
 /// aliasing memref in order to perform the desired simplification.
-static bool potentiallyAliasesMemref(AliasAnalysis &analysis,
+static bool potentiallyAliasesMemref(BufferOriginAnalysis &analysis,
                                      ValueRange otherList, Value memref) {
   for (auto other : otherList) {
     if (distinctAllocAndBlockArgument(other, memref))
       continue;
-    if (!analysis.alias(other, memref).isNo())
+    std::optional<bool> analysisResult =
+        analysis.isSameAllocation(other, memref);
+    if (!analysisResult.has_value() || analysisResult == true)
       return true;
   }
   return false;
@@ -129,8 +278,8 @@ namespace {
 struct RemoveDeallocMemrefsContainedInRetained
     : public OpRewritePattern<DeallocOp> {
   RemoveDeallocMemrefsContainedInRetained(MLIRContext *context,
-                                          AliasAnalysis &aliasAnalysis)
-      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+                                          BufferOriginAnalysis &analysis)
+      : OpRewritePattern<DeallocOp>(context), analysis(analysis) {}
 
   /// The passed 'memref' must not have a may-alias relation to any retained
   /// memref, and at least one must-alias relation. If there is no must-aliasing
@@ -147,10 +296,11 @@ struct RemoveDeallocMemrefsContainedInRetained
     // deallocated in some situations and can thus not be dropped).
     bool atLeastOneMustAlias = false;
     for (Value retained : deallocOp.getRetained()) {
-      AliasResult analysisResult = aliasAnalysis.alias(retained, memref);
-      if (analysisResult.isMay())
+      std::optional<bool> analysisResult =
+          analysis.isSameAllocation(retained, memref);
+      if (!analysisResult.has_value())
         return failure();
-      if (analysisResult.isMust() || analysisResult.isPartial())
+      if (analysisResult == true)
         atLeastOneMustAlias = true;
     }
     if (!atLeastOneMustAlias)
@@ -161,8 +311,9 @@ struct RemoveDeallocMemrefsContainedInRetained
     // we can remove that operand later on.
     for (auto [i, retained] : llvm::enumerate(deallocOp.getRetained())) {
       Value updatedCondition = deallocOp.getUpdatedConditions()[i];
-      AliasResult analysisResult = aliasAnalysis.alias(retained, memref);
-      if (analysisResult.isMust() || analysisResult.isPartial()) {
+      std::optional<bool> analysisResult =
+          analysis.isSameAllocation(retained, memref);
+      if (analysisResult == true) {
         auto disjunction = rewriter.create<arith::OrIOp>(
             deallocOp.getLoc(), updatedCondition, cond);
         rewriter.replaceAllUsesExcept(updatedCondition, disjunction.getResult(),
@@ -206,7 +357,7 @@ struct RemoveDeallocMemrefsContainedInRetained
   }
 
 private:
-  AliasAnalysis &aliasAnalysis;
+  BufferOriginAnalysis &analysis;
 };
 
 /// Remove memrefs from the `retained` list which are guaranteed to not alias
@@ -228,15 +379,15 @@ private:
 struct RemoveRetainedMemrefsGuaranteedToNotAlias
     : public OpRewritePattern<DeallocOp> {
   RemoveRetainedMemrefsGuaranteedToNotAlias(MLIRContext *context,
-                                            AliasAnalysis &aliasAnalysis)
-      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+                                            BufferOriginAnalysis &analysis)
+      : OpRewritePattern<DeallocOp>(context), analysis(analysis) {}
 
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> newRetainedMemrefs, replacements;
 
     for (auto retainedMemref : deallocOp.getRetained()) {
-      if (potentiallyAliasesMemref(aliasAnalysis, deallocOp.getMemrefs(),
+      if (potentiallyAliasesMemref(analysis, deallocOp.getMemrefs(),
                                    retainedMemref)) {
         newRetainedMemrefs.push_back(retainedMemref);
         replacements.push_back({});
@@ -264,7 +415,7 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
   }
 
 private:
-  AliasAnalysis &aliasAnalysis;
+  BufferOriginAnalysis &analysis;
 };
 
 /// Split off memrefs to separate dealloc operations to reduce the number of
@@ -297,8 +448,8 @@ private:
 struct SplitDeallocWhenNotAliasingAnyOther
     : public OpRewritePattern<DeallocOp> {
   SplitDeallocWhenNotAliasingAnyOther(MLIRContext *context,
-                                      AliasAnalysis &aliasAnalysis)
-      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+                                      BufferOriginAnalysis &analysis)
+      : OpRewritePattern<DeallocOp>(context), analysis(analysis) {}
 
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
@@ -314,7 +465,7 @@ struct SplitDeallocWhenNotAliasingAnyOther
       SmallVector<Value> otherMemrefs(deallocOp.getMemrefs());
       otherMemrefs.erase(otherMemrefs.begin() + i);
       // Check if `memref` can split off into a separate bufferization.dealloc.
-      if (potentiallyAliasesMemref(aliasAnalysis, otherMemrefs, memref)) {
+      if (potentiallyAliasesMemref(analysis, otherMemrefs, memref)) {
         // `memref` alias with other memrefs, do not split off.
         remainingMemrefs.push_back(memref);
         remainingConditions.push_back(cond);
@@ -352,7 +503,7 @@ struct SplitDeallocWhenNotAliasingAnyOther
   }
 
 private:
-  AliasAnalysis &aliasAnalysis;
+  BufferOriginAnalysis &analysis;
 };
 
 /// Check for every retained memref if a must-aliasing memref exists in the
@@ -381,8 +532,8 @@ private:
 struct RetainedMemrefAliasingAlwaysDeallocatedMemref
     : public OpRewritePattern<DeallocOp> {
   RetainedMemrefAliasingAlwaysDeallocatedMemref(MLIRContext *context,
-                                                AliasAnalysis &aliasAnalysis)
-      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+                                                BufferOriginAnalysis &analysis)
+      : OpRewritePattern<DeallocOp>(context), analysis(analysis) {}
 
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
@@ -396,8 +547,9 @@ struct RetainedMemrefAliasingAlwaysDeallocatedMemref
         if (!matchPattern(cond, m_One()))
           continue;
 
-        AliasResult analysisResult = aliasAnalysis.alias(retained, memref);
-        if (analysisResult.isMust() || analysisResult.isPartial()) {
+        std::optional<bool> analysisResult =
+            analysis.isSameAllocation(retained, memref);
+        if (analysisResult == true) {
           rewriter.replaceAllUsesWith(res, cond);
           aliasesWithConstTrueMemref[i] = true;
           canDropMemref = true;
@@ -411,10 +563,9 @@ struct RetainedMemrefAliasingAlwaysDeallocatedMemref
         if (!extractOp)
           continue;
 
-        AliasResult extractAnalysisResult =
-            aliasAnalysis.alias(retained, extractOp.getOperand());
-        if (extractAnalysisResult.isMust() ||
-            extractAnalysisResult.isPartial()) {
+        std::optional<bool> extractAnalysisResult =
+            analysis.isSameAllocation(retained, extractOp.getOperand());
+        if (extractAnalysisResult == true) {
           rewriter.replaceAllUsesWith(res, cond);
           aliasesWithConstTrueMemref[i] = true;
           canDropMemref = true;
@@ -434,7 +585,7 @@ struct RetainedMemrefAliasingAlwaysDeallocatedMemref
   }
 
 private:
-  AliasAnalysis &aliasAnalysis;
+  BufferOriginAnalysis &analysis;
 };
 
 } // namespace
@@ -452,13 +603,13 @@ struct BufferDeallocationSimplificationPass
     : public bufferization::impl::BufferDeallocationSimplificationBase<
           BufferDeallocationSimplificationPass> {
   void runOnOperation() override {
-    AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
+    BufferOriginAnalysis analysis(getOperation());
     RewritePatternSet patterns(&getContext());
     patterns.add<RemoveDeallocMemrefsContainedInRetained,
                  RemoveRetainedMemrefsGuaranteedToNotAlias,
                  SplitDeallocWhenNotAliasingAnyOther,
                  RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
-                                                                aliasAnalysis);
+                                                                analysis);
     populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
 
     if (failed(

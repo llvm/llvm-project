@@ -22,25 +22,35 @@ using namespace mlir::bufferization;
 /// Constructs a new alias analysis using the op provided.
 BufferViewFlowAnalysis::BufferViewFlowAnalysis(Operation *op) { build(op); }
 
-/// Find all immediate and indirect dependent buffers this value could
-/// potentially have. Note that the resulting set will also contain the value
-/// provided as it is a dependent alias of itself.
-BufferViewFlowAnalysis::ValueSetT
-BufferViewFlowAnalysis::resolve(Value rootValue) const {
-  ValueSetT result;
+static BufferViewFlowAnalysis::ValueSetT
+resolveValues(const BufferViewFlowAnalysis::ValueMapT &map, Value value) {
+  BufferViewFlowAnalysis::ValueSetT result;
   SmallVector<Value, 8> queue;
-  queue.push_back(rootValue);
+  queue.push_back(value);
   while (!queue.empty()) {
     Value currentValue = queue.pop_back_val();
     if (result.insert(currentValue).second) {
-      auto it = dependencies.find(currentValue);
-      if (it != dependencies.end()) {
+      auto it = map.find(currentValue);
+      if (it != map.end()) {
         for (Value aliasValue : it->second)
           queue.push_back(aliasValue);
       }
     }
   }
   return result;
+}
+
+/// Find all immediate and indirect dependent buffers this value could
+/// potentially have. Note that the resulting set will also contain the value
+/// provided as it is a dependent alias of itself.
+BufferViewFlowAnalysis::ValueSetT
+BufferViewFlowAnalysis::resolve(Value rootValue) const {
+  return resolveValues(dependencies, rootValue);
+}
+
+BufferViewFlowAnalysis::ValueSetT
+BufferViewFlowAnalysis::resolveReverse(Value rootValue) const {
+  return resolveValues(reverseDependencies, rootValue);
 }
 
 /// Removes the given values from all alias sets.
@@ -69,8 +79,10 @@ void BufferViewFlowAnalysis::rename(Value from, Value to) {
 void BufferViewFlowAnalysis::build(Operation *op) {
   // Registers all dependencies of the given values.
   auto registerDependencies = [&](ValueRange values, ValueRange dependencies) {
-    for (auto [value, dep] : llvm::zip_equal(values, dependencies))
+    for (auto [value, dep] : llvm::zip_equal(values, dependencies)) {
       this->dependencies[value].insert(dep);
+      this->reverseDependencies[dep].insert(value);
+    }
   };
 
   // Mark all buffer results and buffer region entry block arguments of the
