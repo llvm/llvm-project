@@ -25,8 +25,7 @@
 namespace llvm {
 namespace orc {
 
-ManglingOptions
-irManglingOptionsFromTargetOptions(const TargetOptions &Opts) {
+ManglingOptions irManglingOptionsFromTargetOptions(const TargetOptions &Opts) {
   ManglingOptions MO;
 
   MO.EmulatedTLS = Opts.EmulatedTLS;

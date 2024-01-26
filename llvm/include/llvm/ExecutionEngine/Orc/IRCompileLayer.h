@@ -34,9 +34,7 @@ public:
   public:
     IRCompiler(ManglingOptions MO) : MO(std::move(MO)) {}
     virtual ~IRCompiler();
-    const ManglingOptions &getManglingOptions() const {
-      return MO;
-    }
+    const ManglingOptions &getManglingOptions() const { return MO; }
     virtual Expected<std::unique_ptr<MemoryBuffer>> operator()(Module &M) = 0;
 
   protected:
