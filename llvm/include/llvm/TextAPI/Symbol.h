@@ -51,7 +51,8 @@ enum class SymbolFlags : uint8_t {
 
 // clang-format on
 
-enum class SymbolKind : uint8_t {
+/// Mapping of entry types in TextStubs.
+enum class EncodeKind : uint8_t {
   GlobalSymbol,
   ObjectiveCClass,
   ObjectiveCClassEHType,
@@ -81,11 +82,11 @@ typename C::iterator addEntry(C &Container, const Target &Targ) {
 
 class Symbol {
 public:
-  Symbol(SymbolKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
+  Symbol(EncodeKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
       : Name(Name), Targets(std::move(Targets)), Kind(Kind), Flags(Flags) {}
 
   void addTarget(Target InputTarget) { addEntry(Targets, InputTarget); }
-  SymbolKind getKind() const { return Kind; }
+  EncodeKind getKind() const { return Kind; }
   StringRef getName() const { return Name; }
   ArchitectureSet getArchitectures() const {
     return mapToArchitectureSet(Targets);
@@ -156,21 +157,21 @@ public:
 private:
   StringRef Name;
   TargetList Targets;
-  SymbolKind Kind;
+  EncodeKind Kind;
   SymbolFlags Flags;
 };
 
 /// Lightweight struct for passing around symbol information.
 struct SimpleSymbol {
   StringRef Name;
-  SymbolKind Kind;
+  EncodeKind Kind;
 
   bool operator<(const SimpleSymbol &O) const {
     return std::tie(Name, Kind) < std::tie(O.Name, O.Kind);
   }
 };
 
-/// Determine SymbolKind from Flags and parsing Name.
+/// Determine EncodeKind from Flags and parsing Name.
 ///
 /// \param Name The name of symbol.
 /// \param Flags The flags pre-determined for the symbol.
