@@ -12,6 +12,12 @@
 // RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib,%mlir_arm_runner_utils | \
 // RUN: FileCheck %s
 
+/// This is very similar to the SME matmul.mlir test, except that it uses a tile
+/// size of [8]x[8]xf32, which is larger than a 32-bit SME virtual tile, which
+/// would be [4]x[4]xf32. The [8]x[8] tile will be decomposed into four
+/// by the `-arm-sme-vector-legalization` pass, which should then use all 32-bit
+/// SME accumulators.
+
 func.func @matmul(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : tensor<?x?xf32>) {
   %res = linalg.matmul ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
                        outs(%C: tensor<?x?xf32>) -> tensor<?x?xf32>

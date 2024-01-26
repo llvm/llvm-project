@@ -29,7 +29,7 @@ func.func @fill2DMemrefRows(%memref: memref<?x?xf32>) {
   return
 }
 
-func.func @testTransposedReadWithMask() {
+func.func @testTransposedReadWithMask(%maskRows: index, %maskCols: index) {
   %in = memref.alloca() : memref<4x16xf32>
   %out = memref.alloca() : memref<16x4xf32>
 
@@ -38,9 +38,7 @@ func.func @testTransposedReadWithMask() {
 
   func.call @fill2DMemrefRows(%inDyn) : (memref<?x?xf32>) -> ()
 
-  /// A mask so we only read the first 2x15 portion of %in.
-  %maskRows = arith.constant 2 : index
-  %maskCols = arith.constant 15 : index
+  /// A mask so we only read the first maskRows x maskCols portion of %in.
   %mask = vector.create_mask %maskRows, %maskCols : vector<[4]x[16]xi1>
   %pad = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
@@ -59,35 +57,31 @@ func.func @testTransposedReadWithMask() {
   call @printMemrefF32(%inUnranked) : (memref<*xf32>) -> ()
 
   /// Print the result memref.
-  vector.print str "(Masked 15x2) transposed result:"
+  vector.print str "Masked transposed result:"
   %outUnranked = memref.cast %outDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%outUnranked) : (memref<*xf32>) -> ()
 
   return
 }
 
-func.func @testTransposedWriteWithMask() {
+func.func @testTransposedWriteWithMask(%maskRows: index, %maskCols: index) {
   %in = memref.alloca() : memref<16x4xf32>
   %out = memref.alloca() : memref<4x16xf32>
 
-  %fill = arith.constant -1.0 : f32
-  linalg.fill ins(%fill : f32) outs(%out : memref<4x16xf32>)
+  %c0_f32 = arith.constant 0.0 : f32
+  linalg.fill ins(%c0_f32 : f32) outs(%out : memref<4x16xf32>)
 
   %inDyn = memref.cast %in : memref<16x4xf32> to memref<?x?xf32>
   %outDyn = memref.cast %out : memref<4x16xf32> to memref<?x?xf32>
 
   func.call @fill2DMemrefRows(%inDyn) : (memref<?x?xf32>) -> ()
 
-  %pad = arith.constant 0.0 : f32
-  %c0 = arith.constant 0 : index
-
   /// A regular read.
-  %read = vector.transfer_read %inDyn[%c0, %c0], %pad {in_bounds = [true, true]}
+  %c0 = arith.constant 0 : index
+  %read = vector.transfer_read %inDyn[%c0, %c0], %c0_f32 {in_bounds = [true, true]}
     : memref<?x?xf32>, vector<[16]x[4]xf32>
 
-  /// A mask so we only write the first 3x8 portion of transpose(%in).
-  %maskRows = arith.constant 3 : index
-  %maskCols = arith.constant 8 : index
+  /// A mask so we only write the first maskRows x maskCols portion of transpose(%in).
   %mask = vector.create_mask %maskRows, %maskCols : vector<[4]x[16]xi1>
 
   /// Write out the data with a transpose. Here (like the read test) the mask
@@ -101,7 +95,7 @@ func.func @testTransposedWriteWithMask() {
   call @printMemrefF32(%inUnranked) : (memref<*xf32>) -> ()
 
   /// Print the result memref.
-  vector.print str "(Masked 3x8) transposed result:"
+  vector.print str "Masked transposed result:"
   %outUnranked = memref.cast %outDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%outUnranked) : (memref<*xf32>) -> ()
 
@@ -120,7 +114,7 @@ func.func @main() {
   // CHECK-NEXT:  [3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3]
   // CHECK-NEXT:  [4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4,   4]
   //
-  //      CHECK: (Masked 15x2) transposed result:
+  //      CHECK:  Masked transposed result:
   //      CHECK:  [1,   2,   0,   0]
   // CHECK-NEXT:  [1,   2,   0,   0]
   // CHECK-NEXT:  [1,   2,   0,   0]
@@ -137,7 +131,9 @@ func.func @main() {
   // CHECK-NEXT:  [1,   2,   0,   0]
   // CHECK-NEXT:  [1,   2,   0,   0]
   // CHECK-NEXT:  [0,   0,   0,   0]
-  func.call @testTransposedReadWithMask() : () -> ()
+  %readMaskRows = arith.constant 2 : index
+  %readMaskCols = arith.constant 15 : index
+  func.call @testTransposedReadWithMask(%readMaskRows, %readMaskCols) : (index, index) -> ()
 
   //      CHECK: Input memref:
   //      CHECK:  [1,   1,   1,   1]
@@ -157,12 +153,14 @@ func.func @main() {
   // CHECK-NEXT:  [15,   15,   15,   15]
   // CHECK-NEXT:  [16,   16,   16,   16]
   //
-  //      CHECK: (Masked 3x8) transposed result:
-  //      CHECK:  [1,   2,   3,   4,   5,   6,   7,   8,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1]
-  // CHECK-NEXT:  [1,   2,   3,   4,   5,   6,   7,   8,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1]
-  // CHECK-NEXT:  [1,   2,   3,   4,   5,   6,   7,   8,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1]
-  // CHECK-NEXT:  [-1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1,   -1]
-  func.call @testTransposedWriteWithMask() : () -> ()
+  //      CHECK:  Masked transposed result:
+  //      CHECK:  [1,   2,   3,   4,   5,   6,   7,   8,   0,   0,   0,   0,   0,   0,   0,   0]
+  // CHECK-NEXT:  [1,   2,   3,   4,   5,   6,   7,   8,   0,   0,   0,   0,   0,   0,   0,   0]
+  // CHECK-NEXT:  [1,   2,   3,   4,   5,   6,   7,   8,   0,   0,   0,   0,   0,   0,   0,   0]
+  // CHECK-NEXT:  [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0]
+  %writeMaskRows = arith.constant 3 : index
+  %writeMaskCols = arith.constant 8 : index
+  func.call @testTransposedWriteWithMask(%writeMaskRows, %writeMaskCols) : (index, index) -> ()
 
   return
 }
