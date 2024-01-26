@@ -1,4 +1,5 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes="CHECK,CHECK-FAST"
+! RUN: bbc --math-runtime=precise -emit-fir -hlfir=false %s -o - | FileCheck %s --check-prefixes="CHECK,CHECK-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s --check-prefixes="CHECK,CHECK-FAST"
 
 function test_real4(x)
@@ -7,6 +8,7 @@ function test_real4(x)
 end function
 
 ! CHECK-LABEL: @_QPtest_real4
+! CHECK-PRECISE: %[[atan:.*]] = fir.call @atanf({{%[A-Za-z0-9._]+}}) fastmath<contract> : (f32) -> f32
 ! CHECK-FAST: %[[atan:.*]] = math.atan %{{.*}} : f32
 ! CHECK: %[[dfactor:.*]] = arith.constant 57.295779513082323 : f64
 ! CHECK: %[[factor:.*]] = fir.convert %[[dfactor]] : (f64) -> f32
@@ -18,6 +20,7 @@ function test_real8(x)
 end function
 
 ! CHECK-LABEL: @_QPtest_real8
+! CHECK-PRECISE: %[[atan:.*]] = fir.call @atanf({{%[A-Za-z0-9._]+}}) fastmath<contract> : (f32) -> f32
 ! CHECK-FAST: %[[atan:.*]] = math.atan %{{.*}} : f64
 ! CHECK: %[[factor:.*]] = arith.constant 57.295779513082323 : f64
 ! CHECK: %{{.*}} = arith.mulf %[[atan]], %[[factor]] fastmath<contract> : f64
@@ -28,6 +31,8 @@ function test_real4_all_args(y,x)
 end function
 
 ! CHECK-LABEL: @_QPtest_real4_all_args
+! CHECK: %[[terminationCheck:.*]] = arith.andi %[[YEq0:.*]], %[[XEq0:.*]] : i1
+! CHECK: fir.if %[[terminationCheck]]
 ! CHECK-FAST: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f32
 ! CHECK: %[[dfactor:.*]] = arith.constant 57.295779513082323 : f64
 ! CHECK: %[[factor:.*]] = fir.convert %[[dfactor]] : (f64) -> f32
@@ -39,6 +44,8 @@ function test_real8_all_args(y,x)
 end function
 
 ! CHECK-LABEL: @_QPtest_real8_all_args
+! CHECK: %[[terminationCheck:.*]] = arith.andi %[[YEq0:.*]], %[[XEq0:.*]] : i1
+! CHECK: fir.if %[[terminationCheck]]
 ! CHECK-FAST: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f64
 ! CHECK: %[[factor:.*]] = arith.constant 57.295779513082323 : f64
 ! CHECK: %{{.*}} = arith.mulf %[[atan2]], %[[factor]] fastmath<contract> : f64

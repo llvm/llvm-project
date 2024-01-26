@@ -174,7 +174,8 @@ struct IntrinsicLibrary {
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtan2d(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtan(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAsind(mlir::Type, llvm::ArrayRef<mlir::Value>);
