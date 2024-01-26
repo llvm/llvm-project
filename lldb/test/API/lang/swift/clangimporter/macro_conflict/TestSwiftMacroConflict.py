@@ -55,7 +55,6 @@ class TestSwiftMacroConflict(TestBase):
                         bar_value.GetError().Success())
 
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
-        lldb.SBDebugger.MemoryPressureDetected()
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
@@ -85,4 +84,3 @@ class TestSwiftMacroConflict(TestBase):
         process.Continue()
         self.expect("v foo", substrs=["42"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
-        lldb.SBDebugger.MemoryPressureDetected()
