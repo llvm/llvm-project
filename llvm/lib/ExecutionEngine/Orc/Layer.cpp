@@ -21,17 +21,59 @@ namespace orc {
 
 IRLayer::~IRLayer() = default;
 
-Error IRLayer::add(ResourceTrackerSP RT, ThreadSafeModule TSM) {
+Expected<IRMaterializationUnit::SymbolInfo>
+IRLayer::getSymbolInfo(const Module &M, ExecutionSession &ES,
+                       const ManglingOptions &MO, IRSymbolMapper &SymMapper) {
+  std::vector<GlobalValue *> GVs;
+
+  for (auto &GV : M.global_values())
+    GVs.push_back(const_cast<GlobalValue *>(&GV));
+
+  SymbolFlagsMap SymbolFlags;
+  SymbolNameToDefinitionMap SymbolToDef;
+  SymMapper(GVs, ES, MO, SymbolFlags, &SymbolToDef);
+
+  SymbolStringPtr InitSymbol;
+  // If we need an init symbol for this module then create one.
+  if (!getStaticInitGVs(const_cast<Module &>(M)).empty()) {
+    size_t Counter = 0;
+
+    do {
+      std::string InitSymbolName;
+      raw_string_ostream(InitSymbolName)
+          << "$." << M.getModuleIdentifier() << ".__inits." << Counter++;
+      InitSymbol = ES.intern(InitSymbolName);
+    } while (SymbolFlags.count(InitSymbol));
+
+    SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
+  }
+
+  return IRMaterializationUnit::SymbolInfo(
+      MaterializationUnit::Interface(SymbolFlags, InitSymbol), SymbolToDef);
+}
+
+Error IRLayer::add(ResourceTrackerSP RT, ThreadSafeModule TSM,
+                   IRSymbolMapper SymMapper) {
   assert(RT && "RT can not be null");
+  if (!SymMapper)
+    SymMapper = defaultSymbolMapper;
+
   auto &JD = RT->getJITDylib();
+  auto SymbolInfoOrErr = TSM.withModuleDo([&](const Module &M) {
+    return getSymbolInfo(M, JD.getExecutionSession(), *getManglingOptions(),
+                         SymMapper);
+  });
+  if (auto Err = SymbolInfoOrErr.takeError())
+    return Err;
+
   return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
-                       *this, *getManglingOptions(), std::move(TSM)),
+                       *this, std::move(TSM), *SymbolInfoOrErr),
                    std::move(RT));
 }
 
-IRMaterializationUnit::IRMaterializationUnit(
-    ExecutionSession &ES, const IRSymbolMapper::ManglingOptions &MO,
-    ThreadSafeModule TSM)
+IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
+                                             const ManglingOptions &MO,
+                                             ThreadSafeModule TSM)
     : MaterializationUnit(Interface()), TSM(std::move(TSM)) {
 
   assert(this->TSM && "Module must not be null");
@@ -133,9 +175,10 @@ void IRMaterializationUnit::discard(const JITDylib &JD,
 }
 
 BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
-    IRLayer &L, const IRSymbolMapper::ManglingOptions &MO, ThreadSafeModule TSM)
-    : IRMaterializationUnit(L.getExecutionSession(), MO, std::move(TSM)), L(L) {
-}
+    IRLayer &L, ThreadSafeModule TSM, SymbolInfo SymInfo)
+    : IRMaterializationUnit(std::move(TSM), SymInfo.Interface,
+                            SymInfo.SymbolToDefinition),
+      L(L) {}
 
 void BasicIRLayerMaterializationUnit::materialize(
     std::unique_ptr<MaterializationResponsibility> R) {

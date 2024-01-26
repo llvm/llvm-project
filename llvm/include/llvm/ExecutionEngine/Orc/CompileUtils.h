@@ -27,8 +27,7 @@ class TargetMachine;
 
 namespace orc {
 
-IRSymbolMapper::ManglingOptions
-irManglingOptionsFromTargetOptions(const TargetOptions &Opts);
+ManglingOptions irManglingOptionsFromTargetOptions(const TargetOptions &Opts);
 
 /// Simple compile functor: Takes a single IR module and returns an ObjectFile.
 /// This compiler supports a single compilation thread and LLVMContext only.
@@ -49,8 +48,7 @@ public:
   Expected<CompileResult> operator()(Module &M) override;
 
 private:
-  IRSymbolMapper::ManglingOptions
-  manglingOptionsForTargetMachine(const TargetMachine &TM);
+  ManglingOptions manglingOptionsForTargetMachine(const TargetMachine &TM);
 
   CompileResult tryToLoadFromObjectCache(const Module &M);
   void notifyObjectCompiled(const Module &M, const MemoryBuffer &ObjBuffer);
