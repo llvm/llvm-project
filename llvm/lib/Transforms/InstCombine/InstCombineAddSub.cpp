@@ -2449,13 +2449,18 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   }
 
   {
-    // (sub (xor X, (sext C)), (sext C)) => (select C (neg X), X)
-    Value *C0, *C1, *X;
-    if (match(Op0, m_Xor(m_Value(X), m_SExt(m_Value(C0)))) &&
-        (C0->getType()->getScalarSizeInBits() == 1) &&
-        match(Op1, m_SExt(m_Specific(C0)))) {
+    // (sub (xor X, (sext C)), (sext C)) => (select C, (neg X), X)
+    // (sub (sext C), (xor X, (sext C))) => (select C, X, (neg X))
+    Value *C0, *X;
+    auto m_SubXorSext = [&C0, &X](Value *LHS, Value *RHS) {
+      return match(LHS, m_Xor(m_Value(X), m_SExt(m_OneUse(m_Value(C0))))) &&
+             (C0->getType()->getScalarSizeInBits() == 1) &&
+             match(RHS, m_SExt(m_Specific(C0)));
+    };
+    if (m_SubXorSext(Op0, Op1))
       return SelectInst::Create(C0, Builder.CreateNeg(X), X);
-    }
+    if (m_SubXorSext(Op1, Op0))
+      return SelectInst::Create(C0, X, Builder.CreateNeg(X));
   }
 
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
