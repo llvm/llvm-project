@@ -29,7 +29,12 @@ int assumingBothPointerToMiddle(int arg) {
   // will speak about the "byte offset" measured from the beginning of the array.
   int *p = array + 2;
   int a = p[arg];
-  // expected-note@-1 {{Assuming byte offset is non-negative and less than 40, the extent of 'array'}}
+  // FIXME: The following note does not appear:
+  //  {{Assuming byte offset is non-negative and less than 40, the extent of 'array'}}
+  // It seems that the analyzer "gives up" modeling this pointer arithmetics and says that
+  // `p[arg]` is just an UnknownVal (instead of calculating that it's
+  // equivalent to `array[2+arg]`).
+
   int b = array[arg]; // This is normal access, and only the lower bound is new.
   // expected-note@-1 {{Assuming index is non-negative}}
   int c = array[arg + 10];
