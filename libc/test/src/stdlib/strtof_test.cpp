@@ -48,7 +48,7 @@ public:
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
     EXPECT_FP_EQ(result, expected_fp.get_val());
-    EXPECT_EQ(libc_errno, expectedErrno);
+    ASSERT_ERRNO_EQ(expectedErrno);
   }
 };
 
