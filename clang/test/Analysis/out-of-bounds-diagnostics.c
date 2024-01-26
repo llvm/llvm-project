@@ -244,8 +244,8 @@ int *symbolicExtent(int arg) {
 
 int *symbolicExtentDiscardedRangeInfo(int arg) {
   // This is a copy of the case 'symbolicExtent' without the '(void)arg' hack.
-  // TODO: if the analyzer can detect the out-of-bounds access within this TC,
-  // then remove this TC and the `(void)arg` hack from `symbolicExtent`.
+  // TODO: if the analyzer can detect the out-of-bounds access within this
+  // testcase, then remove this and the `(void)arg` hack from `symbolicExtent`.
   if (arg >= 5)
     return 0;
   int *mem = (int*)malloc(arg);
@@ -267,14 +267,16 @@ int *nothingIsCertain(int x, int y) {
     return 0;
   int *mem = (int*)malloc(x);
 
-  // TODO: The next line is a temporary hack; see 'symbolicExtent()' for details.
-  (void)x;
-
   if (y >= 8)
     mem[y] = -2;
   // FIXME: this should produce
   //   {{Out of bound access to memory after the end of the heap area}}
   //   {{Access of 'int' element in the heap area at an overflowing index}}
   // but apparently the analyzer isn't smart enough to deduce this.
+
+  // Keep constraints alive. (Without this, the overeager garbage collection of
+  // constraints would _also_ prevent the intended behavior in this testcase.)
+  (void)x;
+
   return mem;
 }
