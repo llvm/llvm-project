@@ -1,0 +1,4 @@
+# REQUIRES: system-linux, has-pytype
+
+# RUN: pytype %S/../mlgo
+# RUN: pytype %S/../tests
