@@ -8543,10 +8543,12 @@ def _SLASH_ZW : CLJoined<"ZW">;
 // AOCC Optimization Options
 //===----------------------------------------------------------------------===//
 
-let Visibility = [ClangOption, CLOption] in {
+let Visibility = [ClangOption, CLOption, FlangOption] in {
 def famd_opt : Flag<["-"], "famd-opt">, Group<f_Group>,
   HelpText<"Enable \"All\" [AMD] proprietary Optimizations">;
 def fno_amd_opt : Flag<["-"], "fno-amd-opt">, Group<f_Group>;
+}
+let Visibility = [ClangOption, CLOption] in {
 def floop_unswitch_aggressive : Flag<["-"], "floop-unswitch-aggressive">, Group<f_Group>,
   HelpText<"Aggressively unswitch loops.">;
 def fno_loop_unswitch_aggressive: Flag<["-"], "fno-loop-unswitch-aggressive">, Group<f_Group>;
