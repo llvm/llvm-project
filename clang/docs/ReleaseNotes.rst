@@ -184,7 +184,7 @@ AST Matchers
 
 clang-format
 ------------
-- Add ``ShortReturnTypeColumn`` option.
+- Add ``AllowShortType`` option for ``AlwaysBreakAfterReturnType``.
 
 libclang
 --------

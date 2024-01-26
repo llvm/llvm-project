@@ -9872,9 +9872,30 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("class A {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
+               "  long fooooooooooooooooooooooooooooooooooooooooooooooo::\n"
+               "      baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int f() { return 1; }\n"
-               "int g();",
+               "int g();\n"
+               "int foooooooooooooooooooooooooooooooooooooooooooooooo::\n"
+               "    baaaaaaaaaaaaaaaaaaaaar();",
+               Style);
+
+  // It is now allowed to break after a short return type if necessary.
+  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllowShortType;
+  verifyFormat("class A {\n"
+               "  int f() { return 1; }\n"
+               "  int g();\n"
+               "  long\n"
+               "  "
+               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaar();\n"
+               "};\n"
+               "int f() { return 1; }\n"
+               "int g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // All declarations and definitions should have the return type moved to its
@@ -9891,13 +9912,20 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  }\n"
                "  int\n"
                "  g();\n"
+               "  long\n"
+               "  "
+               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
                "  return 1;\n"
                "}\n"
                "int\n"
-               "g();",
+               "g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // Top-level definitions, and no kinds of declarations should have the
@@ -9906,12 +9934,19 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("class B {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
+               "  long\n"
+               "  "
+               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
                "  return 1;\n"
                "}\n"
-               "int g();",
+               "int g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // Top-level definitions and declarations should have the return type moved
@@ -9920,13 +9955,20 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("class C {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
+               "  long\n"
+               "  "
+               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
                "  return 1;\n"
                "}\n"
                "int\n"
-               "g();",
+               "g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // All definitions should have the return type moved to its own line, but no
@@ -9938,12 +9980,19 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "    return 1;\n"
                "  }\n"
                "  int g();\n"
+               "  long\n"
+               "  "
+               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
                "  return 1;\n"
                "}\n"
-               "int g();",
+               "int g();\n"
+               "int\n"
+               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
+               "baaaaaaaaaaaaaaaaaaaaar();",
                Style);
   verifyFormat("const char *\n"
                "f(void) {\n" // Break here.
@@ -12406,49 +12455,6 @@ TEST_F(FormatTest, BreaksLongDeclarations) {
   verifyFormat("template <typename T> // Templates on own line.\n"
                "static int            // Some comment.\n"
                "MyFunction(int a);");
-
-  FormatStyle ShortReturnType = getLLVMStyle();
-  verifyFormat("Type "
-               "Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-               "ooooooooong::\n"
-               "    FunctionDeclaration();",
-               ShortReturnType);
-  verifyFormat("struct S {\n"
-               "  Type "
-               "Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-               "oooooooooooong::\n"
-               "      FunctionDeclaration();\n"
-               "}",
-               ShortReturnType);
-
-  ShortReturnType.ShortReturnTypeColumn = 0;
-  verifyFormat("Type\n"
-               "Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-               "ooooooooong::\n"
-               "    FunctionDeclaration();",
-               ShortReturnType);
-  verifyFormat("struct S {\n"
-               "  Type\n"
-               "  "
-               "Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-               "oooooooooooong::\n"
-               "      FunctionDeclaration();\n"
-               "}",
-               ShortReturnType);
-
-  ShortReturnType.ShortReturnTypeColumn = 7;
-  verifyFormat("Type "
-               "Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-               "ooooooooong::\n"
-               "    FunctionDeclaration();",
-               ShortReturnType);
-  verifyFormat("struct S {\n"
-               "  Type "
-               "Loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-               "oooooooooooong::\n"
-               "      FunctionDeclaration();\n"
-               "}",
-               ShortReturnType);
 }
 
 TEST_F(FormatTest, FormatsAccessModifiers) {

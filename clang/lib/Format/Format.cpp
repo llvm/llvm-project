@@ -574,6 +574,7 @@ template <>
 struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::ReturnTypeBreakingStyle &Value) {
     IO.enumCase(Value, "None", FormatStyle::RTBS_None);
+    IO.enumCase(Value, "AllowShortType", FormatStyle::RTBS_AllowShortType);
     IO.enumCase(Value, "All", FormatStyle::RTBS_All);
     IO.enumCase(Value, "TopLevel", FormatStyle::RTBS_TopLevel);
     IO.enumCase(Value, "TopLevelDefinitions",
@@ -1085,7 +1086,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.RequiresExpressionIndentation);
     IO.mapOptional("SeparateDefinitionBlocks", Style.SeparateDefinitionBlocks);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
-    IO.mapOptional("ShortReturnTypeColumn", Style.ShortReturnTypeColumn);
     IO.mapOptional("SkipMacroDefinitionBody", Style.SkipMacroDefinitionBody);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
     IO.mapOptional("SortJavaStaticImport", Style.SortJavaStaticImport);
@@ -1558,7 +1558,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.RequiresExpressionIndentation = FormatStyle::REI_OuterScope;
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
-  LLVMStyle.ShortReturnTypeColumn = 5;
   LLVMStyle.SkipMacroDefinitionBody = false;
   LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;

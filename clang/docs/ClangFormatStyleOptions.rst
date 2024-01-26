@@ -146,7 +146,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BasedOnStyle:
 
-**BasedOnStyle** (``String``) :ref:`¶ <BasedOnStyle>`
+**BasedOnStyle** (``String``) :ref:`Ã‚Â¶ <BasedOnStyle>`
   The style used for all options not specifically set in the configuration.
 
   This option is supported only in the :program:`clang-format` configuration
@@ -1547,6 +1547,23 @@ the configuration (without a prefix: ``Auto``).
       };
       int f();
       int f() { return 1; }
+      int foooooooooooooooooooooooooooooooooooooooooooooooo::
+          baaaaaaaaaaaaaaaaaaaaar();
+
+  * ``RTBS_AllowShortType`` (in configuration: ``AllowShortType``)
+    Break after return type automatically, while allowing a break after
+    short return types.
+    ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+
+    .. code-block:: c++
+
+      class A {
+        int f() { return 0; };
+      };
+      int f();
+      int f() { return 1; }
+      int
+      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
 
   * ``RTBS_All`` (in configuration: ``All``)
     Always break after the return type.
@@ -1580,6 +1597,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
 
   * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
     Always break after the return type of function definitions.
@@ -1597,6 +1616,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
 
   * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
     Always break after the return type of top-level definitions.
@@ -1611,6 +1632,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
 
 
 
@@ -4998,19 +5021,6 @@ the configuration (without a prefix: ``Auto``).
        int foo;                           int foo;
        int bar;                           int bar;
      } // namespace b                   } // namespace b
-
-.. _ShortReturnTypeColumn:
-
-**ShortReturnTypeColumn** (``Unsigned``) :versionbadge:`clang-format 19` :ref:`¶ <ShortReturnTypeColumn>`
-  When ``AlwaysBreakAfterReturnType`` is ``None``, line breaks are prevented
-  after short return types. This configures the column limit for a type
-  to be regarded as short.
-
-
-  .. note::
-
-   This isn't the length of the type itself, but the column where it
-   finishes. I.e. it includes indentation, etc.
 
 .. _SkipMacroDefinitionBody:
 

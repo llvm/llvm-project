@@ -326,12 +326,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return false;
   }
 
-  // Don't break after very short return types (e.g. "void") as that is often
-  // unexpected.
-  if (Current.is(TT_FunctionDeclarationName) &&
-      State.Column - State.FirstIndent <= Style.ShortReturnTypeColumn) {
-    if (Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None)
+  if (Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None) {
+    // Don't break after very short return types (e.g. "void") as that is often
+    // unexpected.
+    if (Current.is(TT_FunctionDeclarationName) &&
+        State.Column - State.FirstIndent < 6) {
       return false;
+    }
   }
 
   // If binary operators are moved to the next line (including commas for some
@@ -588,7 +589,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       !State.Line->ReturnTypeWrapped &&
       // Don't break before a C# function when no break after return type.
       (!Style.isCSharp() ||
-       Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
+       (Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None &&
+        Style.AlwaysBreakAfterReturnType !=
+            FormatStyle::RTBS_AllowShortType)) &&
       // Don't always break between a JavaScript `function` and the function
       // name.
       !Style.isJavaScript() && Previous.isNot(tok::kw_template) &&
