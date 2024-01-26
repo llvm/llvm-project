@@ -2451,16 +2451,16 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   {
     // (sub (xor X, (sext C)), (sext C)) => (select C, (neg X), X)
     // (sub (sext C), (xor X, (sext C))) => (select C, X, (neg X))
-    Value *C0, *X;
-    auto m_SubXorCmp = [&C0, &X](Value *LHS, Value *RHS) {
-      return match(LHS, m_c_Xor(m_Value(X), m_SExt(m_OneUse(m_Value(C0))))) &&
-             (C0->getType()->getScalarSizeInBits() == 1) &&
-             match(RHS, m_SExt(m_Specific(C0)));
+    Value *C, *X;
+    auto m_SubXorCmp = [&C, &X](Value *LHS, Value *RHS) {
+      return match(LHS, m_c_Xor(m_Value(X), m_SExt(m_OneUse(m_Value(C))))) &&
+             (C->getType()->getScalarSizeInBits() == 1) &&
+             match(RHS, m_SExt(m_Specific(C)));
     };
     if (m_SubXorCmp(Op0, Op1))
-      return SelectInst::Create(C0, Builder.CreateNeg(X), X);
+      return SelectInst::Create(C, Builder.CreateNeg(X), X);
     if (m_SubXorCmp(Op1, Op0))
-      return SelectInst::Create(C0, X, Builder.CreateNeg(X));
+      return SelectInst::Create(C, X, Builder.CreateNeg(X));
   }
 
   if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
