@@ -25,21 +25,23 @@ def X86rao_xor  : SDNode<"X86ISD::AXOR", SDTRAOBinaryArith,
 def X86rao_and  : SDNode<"X86ISD::AAND", SDTRAOBinaryArith,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
-multiclass RAOINT_BASE<string OpcodeStr> {
-  let Predicates = [HasRAOINT] in
-    def 32mr : I<0xfc, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
-                 !strconcat("a", OpcodeStr, "{l}\t{$src, $dst|$dst, $src}"),
-                 [(!cast<SDNode>("X86rao_" # OpcodeStr) addr:$dst, GR32:$src)]>,
-               Sched<[WriteALURMW]>;
-
-  let Predicates = [HasRAOINT, In64BitMode] in
-    def 64mr : I<0xfc, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
-                 !strconcat("a", OpcodeStr, "{q}\t{$src, $dst|$dst, $src}"),
-                 [(!cast<SDNode>("X86rao_" # OpcodeStr) addr:$dst, GR64:$src)]>,
-               Sched<[WriteALURMW]>, REX_W;
+multiclass RaoInt<string m, string suffix = ""> {
+  let Pattern = [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR32:$src2)] in
+    def 32mr#suffix : BinOpMR_M<0xfc, "a" # m, Xi32>;
+  let Pattern = [(!cast<SDNode>("X86rao_" # m) addr:$src1, GR64:$src2)] in
+    def 64mr#suffix : BinOpMR_M<0xfc, "a" # m, Xi64>;
 }
 
-defm AADD : RAOINT_BASE<"add">, T8;
-defm AAND : RAOINT_BASE<"and">, T8, PD;
-defm AOR  : RAOINT_BASE<"or" >, T8, XD;
-defm AXOR : RAOINT_BASE<"xor">, T8, XS;
+let Predicates = [HasRAOINT, NoEGPR] in {
+  defm AADD : RaoInt<"add">, T8;
+  defm AAND : RaoInt<"and">, T8, PD;
+  defm AOR  : RaoInt<"or" >, T8, XD;
+  defm AXOR : RaoInt<"xor">, T8, XS;
+}
+
+let Predicates = [HasRAOINT, HasEGPR, In64BitMode] in {
+  defm AADD : RaoInt<"add", "_EVEX">, EVEX, T_MAP4;
+  defm AAND : RaoInt<"and", "_EVEX">, EVEX, T_MAP4, PD;
+  defm AOR  : RaoInt<"or",  "_EVEX">, EVEX, T_MAP4, XD;
+  defm AXOR : RaoInt<"xor", "_EVEX">, EVEX, T_MAP4, XS;
+}
