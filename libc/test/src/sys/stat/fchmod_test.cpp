@@ -32,14 +32,14 @@ TEST(LlvmLibcChmodTest, ChangeAndOpen) {
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_WRONLY);
   ASSERT_GT(fd, 0);
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::write(fd, WRITE_DATA, sizeof(WRITE_DATA)),
             WRITE_SIZE);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_WRONLY);
   ASSERT_GT(fd, 0);
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_THAT(LIBC_NAMESPACE::fchmod(fd, S_IRUSR), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
@@ -50,7 +50,7 @@ TEST(LlvmLibcChmodTest, ChangeAndOpen) {
   // But opening for reading should succeed.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_RDONLY);
   EXPECT_GT(fd, 0);
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_THAT(LIBC_NAMESPACE::fchmod(fd, S_IRWXU), Succeeds(0));
   EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));

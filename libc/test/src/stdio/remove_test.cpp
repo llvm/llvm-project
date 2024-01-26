@@ -25,7 +25,7 @@ TEST(LlvmLibcRemoveTest, CreateAndRemoveFile) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/remove.test.file";
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 

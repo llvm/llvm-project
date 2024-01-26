@@ -41,14 +41,14 @@ public:
 
     int init_policy = LIBC_NAMESPACE::sched_getscheduler(0);
     ASSERT_GE(init_policy, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
 
     int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
     int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
 
     struct sched_param param = {min_priority};
 
@@ -90,7 +90,7 @@ public:
 
     ASSERT_EQ(LIBC_NAMESPACE::sched_getscheduler(0),
               can_set ? policy : init_policy);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
 
     // Out of bounds priority
     param.sched_priority = -1;
@@ -105,7 +105,7 @@ public:
 
     for (int priority = min_priority; priority <= max_priority; ++priority) {
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, &param), 0);
-      ASSERT_ERRNO_EQ(0);
+      ASSERT_ERRNO_SUCCESS();
       int init_priority = param.sched_priority;
 
       param.sched_priority = priority;
@@ -126,7 +126,7 @@ public:
       libc_errno = 0;
 
       ASSERT_EQ(LIBC_NAMESPACE::sched_getparam(0, &param), 0);
-      ASSERT_ERRNO_EQ(0);
+      ASSERT_ERRNO_SUCCESS();
 
       ASSERT_EQ(param.sched_priority, can_set ? priority : init_priority);
     }

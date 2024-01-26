@@ -68,10 +68,10 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
     int policy = SCHED_OTHER;
     int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
     int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);
@@ -82,10 +82,10 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
     int policy = SCHED_FIFO;
     int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
     int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);
@@ -96,10 +96,10 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
     int policy = SCHED_RR;
     int max_priority = LIBC_NAMESPACE::sched_get_priority_max(policy);
     ASSERT_GE(max_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
     int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
-    ASSERT_ERRNO_EQ(0);
+    ASSERT_ERRNO_SUCCESS();
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);

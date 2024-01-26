@@ -34,14 +34,14 @@ TEST(LlvmLibcFchmodatTest, ChangeAndOpen) {
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd, 0);
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::write(fd, WRITE_DATA, sizeof(WRITE_DATA)),
             WRITE_SIZE);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   int dirfd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
   ASSERT_GT(dirfd, 0);
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_THAT(LIBC_NAMESPACE::fchmodat(dirfd, TEST_FILE_BASENAME, S_IRUSR, 0),
               Succeeds(0));
@@ -53,7 +53,7 @@ TEST(LlvmLibcFchmodatTest, ChangeAndOpen) {
   // But opening for reading should succeed.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_RDONLY);
   EXPECT_GT(fd, 0);
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
 
   EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   EXPECT_THAT(LIBC_NAMESPACE::fchmodat(dirfd, TEST_FILE_BASENAME, S_IRWXU, 0),

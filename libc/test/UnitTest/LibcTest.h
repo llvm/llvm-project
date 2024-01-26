@@ -447,6 +447,7 @@ CString libc_make_test_file_path_func(const char *file_name);
 // Errno checks.
 
 #define ASSERT_ERRNO_EQ(VAL) ASSERT_EQ(VAL, static_cast<int>(libc_errno))
+#define ASSERT_ERRNO_SUCCESS() ASSERT_EQ(0, static_cast<int>(libc_errno))
 #define ASSERT_ERRNO_FAILURE() ASSERT_NE(0, static_cast<int>(libc_errno))
 
 ////////////////////////////////////////////////////////////////////////////////

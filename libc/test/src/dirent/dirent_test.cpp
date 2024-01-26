@@ -44,7 +44,7 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
   }
 
   // Verify that we don't break out of the above loop in error.
-  ASSERT_ERRNO_EQ(0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_TRUE(file1 != nullptr);
   ASSERT_TRUE(file2 != nullptr);
