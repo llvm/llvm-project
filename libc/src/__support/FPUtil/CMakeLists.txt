@@ -84,6 +84,7 @@ add_header_library(
     .nearest_integer_operations
     .normal_float
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
     libc.src.__support.macros.optimization

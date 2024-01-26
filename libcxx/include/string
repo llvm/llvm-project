@@ -1937,12 +1937,7 @@ private:
     return (__s + (__a - 1)) & ~(__a - 1);
   }
   enum {
-    __alignment =
-#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
-        8
-#else
-        16
-#endif
+    __alignment = 8
   };
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __recommend(size_type __s) _NOEXCEPT {
     if (__s < __min_cap) {
@@ -2385,7 +2380,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
   __set_long_size(__old_sz);
   traits_type::assign(__p[__old_sz], value_type());
-  __annotate_new(__old_cap + __delta_cap);
+  __annotate_new(__old_sz);
 }
 
 // __grow_by is deprecated because it does not set the size. It may not update the size when the size is changed, and it
