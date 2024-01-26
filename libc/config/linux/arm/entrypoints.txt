@@ -95,6 +95,12 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
+
+    # sys/epoll.h entrypoints
+    libc.src.sys.epoll.epoll_wait
+    libc.src.sys.epoll.epoll_pwait
+    libc.src.sys.epoll.epoll_pwait2
+
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
