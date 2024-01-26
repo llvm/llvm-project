@@ -46,6 +46,6 @@ TEST(LlvmLibcChdirTest, ChangeToNonExistentDir) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   libc_errno = 0;
   ASSERT_EQ(LIBC_NAMESPACE::fchdir(0), -1);
-  ASSERT_ERRNO();
+  ASSERT_ERRNO_FAILURE();
   libc_errno = 0;
 }

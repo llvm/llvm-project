@@ -68,11 +68,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Errno checks.
 
-#define EXPECT_ERRNO_EQ(VAL) EXPECT_EQ(VAL, static_cast<int>(libc_errno))
 #define ASSERT_ERRNO_EQ(VAL) ASSERT_EQ(VAL, static_cast<int>(libc_errno))
-
-#define EXPECT_ERRNO() EXPECT_NE(static_cast<int>(libc_errno), 0)
-#define ASSERT_ERRNO() ASSERT_NE(static_cast<int>(libc_errno), 0)
+#define ASSERT_ERRNO_FAILURE() ASSERT_NE(0, static_cast<int>(libc_errno))
 
 // Integration tests are compiled with -ffreestanding which stops treating
 // the main function as a non-overloadable special function. Hence, we use a

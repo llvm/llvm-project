@@ -52,7 +52,7 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   ASSERT_ERRNO_EQ(0);
   fd2 = LIBC_NAMESPACE::open(TEST_FILE2, O_RDONLY);
   ASSERT_LT(fd2, 0);
-  ASSERT_ERRNO();
+  ASSERT_ERRNO_FAILURE();
 
   libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::close(fd1), Succeeds(0));
@@ -62,7 +62,7 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   ASSERT_ERRNO_EQ(0);
   fd1 = LIBC_NAMESPACE::open(TEST_FILE1, O_RDONLY);
   ASSERT_LT(fd1, 0);
-  ASSERT_ERRNO();
+  ASSERT_ERRNO_FAILURE();
 
   libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::close(fd2), Succeeds(0));

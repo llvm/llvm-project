@@ -48,12 +48,12 @@ TEST(LlvmLibcFchmodatTest, ChangeAndOpen) {
 
   // Opening for writing should fail.
   EXPECT_EQ(LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_WRONLY), -1);
-  EXPECT_ERRNO();
+  ASSERT_ERRNO_FAILURE();
   libc_errno = 0;
   // But opening for reading should succeed.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_RDONLY);
   EXPECT_GT(fd, 0);
-  EXPECT_ERRNO_EQ(0);
+  ASSERT_ERRNO_EQ(0);
 
   EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   EXPECT_THAT(LIBC_NAMESPACE::fchmodat(dirfd, TEST_FILE_BASENAME, S_IRWXU, 0),
