@@ -149,15 +149,13 @@ define <4 x i64> @m2_splat_into_identity_two_source_v2_hi(<4 x i64> %v1, <4 x i6
   ret <4 x i64> %res
 }
 
-; FIXME: This is a miscompile, we're clobbering the lower reg group of %v2
-; (v10), and the vmv1r.v is moving from the wrong reg group (should be v10)
 define <4 x i64> @m2_splat_into_slide_two_source_v2_lo(<4 x i64> %v1, <4 x i64> %v2) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_into_slide_two_source_v2_lo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vrgather.vi v12, v8, 0
+; CHECK-NEXT:    vmv1r.v v13, v10
+; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> %v2, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x i64> %res
