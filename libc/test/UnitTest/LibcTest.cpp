@@ -13,6 +13,11 @@
 #include "src/__support/UInt128.h"
 #include "test/UnitTest/TestLogger.h"
 
+#ifdef LIBC_TEST_USE_CLOCK
+#include "include/llvm-libc-macros/time-macros.h" // CLOCKS_PER_SEC
+#include "src/time/clock.h"
+#endif // LIBC_TEST_USE_CLOCK
+
 namespace LIBC_NAMESPACE {
 namespace testing {
 
@@ -116,7 +121,7 @@ int Test::runTests(const char *TestFilter) {
     }
     tlog << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
 #ifdef LIBC_TEST_USE_CLOCK
-    const auto start_time = clock();
+    const auto start_time = LIBC_NAMESPACE::clock();
 #endif
     RunContext Ctx;
     T->SetUp();
@@ -124,7 +129,7 @@ int Test::runTests(const char *TestFilter) {
     T->Run();
     T->TearDown();
 #ifdef LIBC_TEST_USE_CLOCK
-    const auto end_time = clock();
+    const auto end_time = LIBC_NAMESPACE::clock();
 #endif // LIBC_TEST_USE_CLOCK
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:

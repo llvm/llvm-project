@@ -1,3 +1,12 @@
+# When the clock target is available, it will be used inside the test lib
+# to indicate the performance of the tests.
+set(clock_target "")
+if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  set(clock_target
+      libc.src.time.${LIBC_TARGET_OS}.clock
+      libc.include.llvm-libc-macros.time_macros)
+endif()
+
 function(add_unittest_framework_library name)
   cmake_parse_arguments(
     "TEST_LIB"
@@ -18,13 +27,6 @@ function(add_unittest_framework_library name)
     set(library_type STATIC)
   endif()
 
-  # When the clock target is available, it will be used inside the test lib
-  # to indicate the performance of the tests.
-  set(clock_target "")
-  if(TARGET libc.src.time.clock)
-    set(clock_target libc.src.time.clock)
-  endif()
-
   foreach(lib IN ITEMS ${name}.unit ${name}.hermetic)
     add_library(
       ${lib}
@@ -35,8 +37,8 @@ function(add_unittest_framework_library name)
     )
     target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
     target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
-    if(${clock_target})
-      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
+    if(clock_target)
+      target_compile_definitions(${lib} PRIVATE LIBC_TEST_USE_CLOCK)
     endif()
   endforeach()
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
@@ -44,16 +46,16 @@ function(add_unittest_framework_library name)
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} -ffreestanding -nostdinc++)
 
   if(TEST_LIB_DEPENDS)
-    foreach(dep IN LISTS ${TEST_LIB_DEPENDS})
+    foreach(dep IN LISTS TEST_LIB_DEPENDS)
       if(TARGET ${dep}.unit)
-        add_dependencies(${name}.unit ${dep}.unit)
+        target_link_libraries(${name}.unit ${dep}.unit)
       else()
-        add_dependencies(${name}.unit ${dep})
+        target_link_libraries(${name}.unit ${dep})
       endif()
       if(TARGET ${dep}.hermetic)
-        add_dependencies(${name}.hermetic ${dep}.hermetic)
+        target_link_libraries(${name}.hermetic ${dep}.hermetic)
       else()
-        add_dependencies(${name}.hermetic ${dep})
+        target_link_libraries(${name}.hermetic ${dep})
       endif()
     endforeach()
   endif()
