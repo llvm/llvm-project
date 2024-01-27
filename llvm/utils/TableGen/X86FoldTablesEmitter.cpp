@@ -81,6 +81,7 @@ class X86FoldTablesEmitter {
     bool FoldStore = false;
     enum BcastType {
       BCAST_NONE,
+      BCAST_W,
       BCAST_D,
       BCAST_Q,
       BCAST_SS,
@@ -114,6 +115,9 @@ class X86FoldTablesEmitter {
         Attrs += "TB_ALIGN_" + std::to_string(Alignment.value()) + "|";
       switch (BroadcastKind) {
       case BCAST_NONE:
+        break;
+      case BCAST_W:
+        Attrs += "TB_BCAST_W|";
         break;
       case BCAST_D:
         Attrs += "TB_BCAST_D|";
@@ -534,9 +538,9 @@ void X86FoldTablesEmitter::addBroadcastEntry(
   for (unsigned I = 0, E = In->getNumArgs(); I != E; ++I) {
     Result.BroadcastKind =
         StringSwitch<X86FoldTableEntry::BcastType>(In->getArg(I)->getAsString())
+            .Case("i16mem", X86FoldTableEntry::BCAST_W)
             .Case("i32mem", X86FoldTableEntry::BCAST_D)
             .Case("i64mem", X86FoldTableEntry::BCAST_Q)
-            .Case("i16mem", X86FoldTableEntry::BCAST_SH)
             .Case("f16mem", X86FoldTableEntry::BCAST_SH)
             .Case("f32mem", X86FoldTableEntry::BCAST_SS)
             .Case("f64mem", X86FoldTableEntry::BCAST_SD)
