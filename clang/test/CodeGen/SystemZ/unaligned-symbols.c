@@ -105,8 +105,8 @@ unsigned char foo6 () {
 
 // A weak symbol could be replaced with an unaligned one at link time.
 // CHECK-LABEL: foo7
-// ALIGNED: %0 = load i8, ptr @Weaksym, align 2
-// UNALIGN: %0 = load i8, ptr @Weaksym, align 1
+// ALIGNED: load i8, ptr @Weaksym, align 2
+// UNALIGN: load i8, ptr @Weaksym, align 1
 unsigned char __attribute__((weak)) Weaksym = 0;
 unsigned char foo7 () {
   return Weaksym;
