@@ -45,10 +45,11 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
 
 /// Verify invariants of the LoopOpInterface.
 LogicalResult detail::verifyLoopOpInterface(Operation *op) {
-  auto loopOp = cast<LoopOpInterface>(op);
-  if (!isa<ConditionOp>(loopOp.getCond().back().getTerminator()))
-    return op->emitOpError(
-        "expected condition region to terminate with 'cir.condition'");
+  // FIXME: fix this so the conditionop isn't requiring MLIRCIR
+  // auto loopOp = cast<LoopOpInterface>(op);
+  // if (!isa<ConditionOp>(loopOp.getCond().back().getTerminator()))
+  //   return op->emitOpError(
+  //       "expected condition region to terminate with 'cir.condition'");
   return success();
 }
 
