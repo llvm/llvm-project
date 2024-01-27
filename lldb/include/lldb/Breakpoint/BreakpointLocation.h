@@ -313,6 +313,8 @@ private:
 
   void UndoBumpHitCount();
 
+  void SetThreadIDInternal(lldb::tid_t thread_id);
+
   // Constructors and Destructors
   //
   // Only the Breakpoint can make breakpoint locations, and it owns them.
@@ -337,7 +339,6 @@ private:
                      bool check_for_resolver = true);
 
   // Data members:
-  bool m_being_created;
   bool m_should_resolve_indirect_functions;
   bool m_is_reexported;
   bool m_is_indirect;

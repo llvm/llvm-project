@@ -227,8 +227,6 @@ private:
   WatchpointOptions
       m_options; // Settable watchpoint options, which is a delegate to handle
                  // the callback machinery.
-  bool m_being_created;
-
   std::unique_ptr<UserExpression> m_condition_up; // The condition to test.
 
   void SetID(lldb::watch_id_t id) { m_id = id; }
