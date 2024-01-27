@@ -26,7 +26,7 @@ function(_get_common_compile_options output_var flags)
     set(ADD_PREFER_GENERIC_FLAG TRUE)
   endif()
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
@@ -41,8 +41,15 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fno-unwind-tables")
     list(APPEND compile_options "-fno-asynchronous-unwind-tables")
     list(APPEND compile_options "-fno-rtti")
+    if (LIBC_CC_SUPPORTS_PATTERN_INIT)
+      list(APPEND compile_options "-ftrivial-auto-var-init=pattern")
+    endif()
     list(APPEND compile_options "-Wall")
     list(APPEND compile_options "-Wextra")
+    # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
+    if(NOT LIBC_WNO_ERROR)
+      list(APPEND compile_options "-Werror")
+    endif()
     list(APPEND compile_options "-Wconversion")
     list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
@@ -357,11 +364,8 @@ function(create_object_library fq_target_name)
     set(internal_target_name ${fq_target_name})
   endif()
 
-  _get_common_compile_options(
-    compile_options
-    "${ADD_OBJECT_FLAGS}"
-    ${ADD_OBJECT_COMPILE_OPTIONS}
-  )
+  _get_common_compile_options(compile_options "${ADD_OBJECT_FLAGS}")
+  list(APPEND compile_options ${ADD_OBJECT_COMPILE_OPTIONS})
 
   # GPU builds require special handling for the objects because we want to
   # export several different targets at once, e.g. for both Nvidia and AMD.
@@ -640,18 +644,15 @@ function(create_entrypoint_object fq_target_name)
     set(ADD_ENTRYPOINT_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
 
-  _get_common_compile_options(
-    common_compile_options
-    "${ADD_ENTRYPOINT_OBJ_FLAGS}"
-    ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
-  )
+  _get_common_compile_options(common_compile_options "${ADD_ENTRYPOINT_OBJ_FLAGS}")
+  list(APPEND common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding entrypoint object ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
-      foreach(dep IN LISTS ADD_OBJECT_DEPENDS)
+      foreach(dep IN LISTS ADD_ENTRYPOINT_OBJ_DEPENDS)
         message(STATUS "  ${fq_target_name} depends on ${dep}")
       endforeach()
     endif()

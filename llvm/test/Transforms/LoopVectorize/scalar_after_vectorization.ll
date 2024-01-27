@@ -11,7 +11,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK:   %[[T2:.+]] = add nuw nsw i64 %offset.idx, %tmp0
 ; CHECK:   %[[T3:.+]] = sub nsw i64 %[[T2]], %x
 ; CHECK:   %[[T4:.+]] = getelementptr inbounds i32, ptr %a, i64 %[[T3]]
-; CHECK:   %[[T6:.+]] = getelementptr inbounds i32, ptr %[[T4]], i64 4
+; CHECK:   %[[T6:.+]] = getelementptr inbounds i8, ptr %[[T4]], i64 16
 ; CHECK:   load <4 x i32>, ptr %[[T4]], align 4
 ; CHECK:   load <4 x i32>, ptr %[[T6]], align 4
 ; CHECK:   br {{.*}}, label %middle.block, label %vector.body

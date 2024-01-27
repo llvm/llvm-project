@@ -35,9 +35,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -645,7 +645,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
         unsigned Idx = cast<ConstantInt>(Op)->getZExtValue();
         TmpOffset += SL->getElementOffset(Idx);
       } else {
-        uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
+        uint64_t S = GTI.getSequentialElementStride(DL);
         while (true) {
           if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
             // Constant-offset addressing.
@@ -3176,6 +3176,9 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (IsVarArg)
     return false;
 
+  if (Subtarget->isWindowsArm64EC())
+    return false;
+
   for (auto Flag : CLI.OutFlags)
     if (Flag.isInReg() || Flag.isSRet() || Flag.isNest() || Flag.isByVal() ||
         Flag.isSwiftSelf() || Flag.isSwiftAsync() || Flag.isSwiftError())
@@ -4978,15 +4981,13 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
       if (Field)
         TotalOffs += DL.getStructLayout(StTy)->getElementOffset(Field);
     } else {
-      Type *Ty = GTI.getIndexedType();
-
       // If this is a constant subscript, handle it quickly.
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
         if (CI->isZero())
           continue;
         // N = N + Offset
-        TotalOffs +=
-            DL.getTypeAllocSize(Ty) * cast<ConstantInt>(CI)->getSExtValue();
+        TotalOffs += GTI.getSequentialElementStride(DL) *
+                     cast<ConstantInt>(CI)->getSExtValue();
         continue;
       }
       if (TotalOffs) {
@@ -4997,7 +4998,7 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
       }
 
       // N = N + Idx * ElementSize;
-      uint64_t ElementSize = DL.getTypeAllocSize(Ty);
+      uint64_t ElementSize = GTI.getSequentialElementStride(DL);
       unsigned IdxN = getRegForGEPIndex(Idx);
       if (!IdxN)
         return false;

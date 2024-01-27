@@ -40,7 +40,7 @@ define i32 @caller_double_in_regs() nounwind {
   ; ILP32-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32-NEXT:   $x11 = COPY [[UV]](s32)
   ; ILP32-NEXT:   $x12 = COPY [[UV1]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_double_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_double_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -55,7 +55,7 @@ define i32 @caller_double_in_regs() nounwind {
   ; ILP32F-NEXT:   $x10 = COPY [[C]](s32)
   ; ILP32F-NEXT:   $x11 = COPY [[UV]](s32)
   ; ILP32F-NEXT:   $x12 = COPY [[UV1]](s32)
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_double_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_double_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   $x10 = COPY [[COPY]](s32)
@@ -79,7 +79,7 @@ define i64 @caller_small_scalar_ret() nounwind {
   ; ILP32-LABEL: name: caller_small_scalar_ret
   ; ILP32: bb.1 (%ir-block.0):
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_small_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -92,7 +92,7 @@ define i64 @caller_small_scalar_ret() nounwind {
   ; ILP32F-LABEL: name: caller_small_scalar_ret
   ; ILP32F: bb.1 (%ir-block.0):
   ; ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_small_scalar_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10, implicit-def $x11
+  ; ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_small_scalar_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10, implicit-def $x11
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11

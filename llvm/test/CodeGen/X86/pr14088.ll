@@ -26,8 +26,7 @@ define i32 @f(i1 %foo, ptr %tm_year2, ptr %bar, i16 %zed, i32 %zed2) {
 ; CHECK-NEXT:    imull $100, %ecx, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    movw %ax, (%rsi)
-; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    cltq
+; CHECK-NEXT:    movswq %ax, %rax
 ; CHECK-NEXT:    imulq $1717986919, %rax, %rax # imm = 0x66666667
 ; CHECK-NEXT:    movq %rax, %rcx
 ; CHECK-NEXT:    shrq $63, %rcx

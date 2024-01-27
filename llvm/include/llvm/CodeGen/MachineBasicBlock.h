@@ -74,10 +74,10 @@ private:
   MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
-// This structure represents the information for a basic block.
+// This structure represents the information for a basic block pertaining to
+// the basic block sections profile.
 struct UniqueBBID {
   unsigned BaseID;
-  // sections profile).
   unsigned CloneID;
 };
 

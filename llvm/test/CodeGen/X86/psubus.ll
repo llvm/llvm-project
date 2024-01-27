@@ -208,7 +208,7 @@ define <4 x i32> @usubsat_custom(<4 x i32> %x) nounwind {
 ;
 ; SSE41-LABEL: usubsat_custom:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <2147483648,2147483648,2147483648,u>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,u]
 ; SSE41-NEXT:    pmaxud %xmm1, %xmm0
 ; SSE41-NEXT:    psubd %xmm1, %xmm0
 ; SSE41-NEXT:    retq

@@ -91,8 +91,8 @@ It may take a while to download!
    $ git clone https://github.com/llvm/llvm-project.git
 
 This will create a directory "llvm-project" with all of the source
-code.(Checking out anonymously is OK - pushing commits uses a different
-mechanism, as we'll see later)
+code. (Checking out anonymously is OK - pushing commits uses a different
+mechanism, as we'll see later.)
 
 Configure your workspace
 ------------------------
@@ -142,21 +142,21 @@ Let's break down that last command a little:
 -  The two **-D** flags set CMake variables, which override
    CMake/project defaults:
 
--  **CMAKE\ BUILD\ TYPE=Release**: build in optimized mode, which is
-   (surprisingly) the fastest option.
+    -  **CMAKE_BUILD_TYPE=Release**: build in optimized mode, which is
+       (surprisingly) the fastest option.
 
-   If you want to run under a debugger, you should use the default Debug
-   (which is totally unoptimized, and will lead to >10x slower test
-   runs) or RelWithDebInfo which is a halfway point.
-   **CMAKE\ BUILD\ TYPE** affects code generation only, assertions are
-   on by default regardless! **LLVM\ ENABLE\ ASSERTIONS=Off** disables
-   them.
+       If you want to run under a debugger, you should use the default Debug
+       (which is totally unoptimized, and will lead to >10x slower test
+       runs) or RelWithDebInfo which is a halfway point.
+       **CMAKE_BUILD_TYPE** affects code generation only, assertions are
+       on by default regardless! **LLVM_ENABLE_ASSERTIONS=Off** disables
+       them.
 
--  **LLVM\ ENABLE\ PROJECTS=clang** : this lists the LLVM subprojects
-   you are interested in building, in addition to LLVM itself. Multiple
-   projects can be listed, separated by semicolons, such as "clang;
-   lldb".In this example, we'll be making a change to Clang, so we
-   should build it.
+    -  **LLVM_ENABLE_PROJECTS=clang**: this lists the LLVM subprojects
+       you are interested in building, in addition to LLVM itself. Multiple
+       projects can be listed, separated by semicolons, such as "clang;
+       lldb".In this example, we'll be making a change to Clang, so we
+       should build it.
 
 Finally, create a symlink (or a copy) of
 llvm-project/build/compile-commands.json into llvm-project/:
@@ -225,7 +225,7 @@ the message in your favorite editor:
    $ vi ../clang/include/clang/Basic/DiagnosticSemaKinds.td
 
 Find the message (it should be under
-warn\ *infinite*\ recursive_function)Change the message to "in order to
+``warn_infinite_recursive_function``). Change the message to "in order to
 understand recursion, you must first understand recursion".
 
 

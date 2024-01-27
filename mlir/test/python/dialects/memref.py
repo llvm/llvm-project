@@ -3,6 +3,7 @@
 from mlir.ir import *
 import mlir.dialects.func as func
 import mlir.dialects.memref as memref
+import mlir.extras.types as T
 
 
 def run(f):
@@ -76,3 +77,14 @@ def testCustomBuidlers():
         # CHECK: memref.load %[[ARG0]][%[[ARG1]], %[[ARG2]]]
         print(module)
         assert module.operation.verify()
+
+
+# CHECK-LABEL: TEST: testMemRefAttr
+@run
+def testMemRefAttr():
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            memref.global_("objFifo_in0", T.memref(16, T.i32()))
+        # CHECK: memref.global @objFifo_in0 : memref<16xi32>
+        print(module)

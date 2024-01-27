@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX1010 -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=si-peephole-sdwa -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX1010 -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}name: vop1_instructions
 
