@@ -1,1 +1,0 @@
-// This empty .h file is used for creating an AAR with empty C++ lib that will be replaced with OpenCV C++ lib
