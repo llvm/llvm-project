@@ -251,6 +251,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
     Module *module, bool lookInModule, ArrayRef<std::string> searchPaths) {
   FileManager &fileMgr = SourceMgr.getFileManager();
   auto moduleName = module->getTopLevelModuleName();
+  auto ExportedModuleName = module->getTopLevelModule()->ExportAsModule;
   llvm::SmallVector<const FileEntry *, 2> APINotes;
 
   // First, look relative to the module itself.
@@ -263,6 +264,10 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
 
         APINotes.push_back(file);
       }
+      // If module FooCore is re-exported through module Foo, try Foo.apinotes.
+      if (!ExportedModuleName.empty())
+        if (auto File = findAPINotesFile(dir, ExportedModuleName, wantPublic))
+          APINotes.push_back(File);
     };
 
     if (module->IsFramework) {
