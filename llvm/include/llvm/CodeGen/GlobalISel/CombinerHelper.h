@@ -20,8 +20,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/InstrTypes.h"
 #include <functional>
 
@@ -909,6 +909,9 @@ private:
   bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
+
+  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
+  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);

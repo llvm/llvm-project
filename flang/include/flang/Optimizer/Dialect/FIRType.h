@@ -46,6 +46,13 @@ public:
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
 
+  /// Is this the box for an assumed rank?
+  bool isAssumedRank() const;
+
+  /// Return the same type, except for the shape, that is taken the shape
+  /// of shapeMold.
+  BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(mlir::Type type);
 };
@@ -330,7 +337,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
 
-/// Return true iff `ty` is the type of an assumed type.
+/// Return true iff `ty` is the type of an assumed type. In FIR,
+/// assumed types are of the form `[fir.ref|ptr|heap]fir.box<[fir.array]none>`,
+/// or `fir.ref|ptr|heap<[fir.array]none>`.
 bool isAssumedType(mlir::Type ty);
 
 /// Return true iff `ty` is the type of an assumed shape array.
@@ -425,6 +434,13 @@ inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
     return mlir::NoneType::get(ty.getContext());
   return ty;
 }
+
+/// Replace the element type of \p type by \p newElementType, preserving
+/// all other layers of the type (fir.ref/ptr/heap/array/box/class).
+/// If \p turnBoxIntoClass and the input is a fir.box, it will be turned into
+/// a fir.class in the result.
+mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
+                             bool turnBoxIntoClass);
 
 /// Is `t` an address to fir.box or class type?
 inline bool isBoxAddress(mlir::Type t) {

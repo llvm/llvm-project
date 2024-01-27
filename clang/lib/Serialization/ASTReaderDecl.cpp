@@ -910,7 +910,7 @@ void ASTDeclReader::VisitEnumConstantDecl(EnumConstantDecl *ECD) {
   VisitValueDecl(ECD);
   if (Record.readInt())
     ECD->setInitExpr(Record.readExpr());
-  ECD->setInitVal(Record.readAPSInt());
+  ECD->setInitVal(Reader.getContext(), Record.readAPSInt());
   mergeMergeable(ECD);
 }
 
@@ -1135,7 +1135,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
   // Defer calling `setPure` until merging above has guaranteed we've set
   // `DefinitionData` (as this will need to access it).
-  FD->setPure(Pure);
+  FD->setIsPureVirtual(Pure);
 
   // Read in the parameters.
   unsigned NumParams = Record.readInt();
@@ -3095,6 +3095,8 @@ public:
 
   Expr *readExpr() { return Reader.readExpr(); }
 
+  Attr *readAttr() { return Reader.readAttr(); }
+
   std::string readString() {
     return Reader.readString();
   }
@@ -3284,10 +3286,10 @@ DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
   if (auto *OID = dyn_cast<ObjCInterfaceDecl>(DC))
     return OID->getDefinition();
 
-  // We can see the TU here only if we have no Sema object. In that case,
-  // there's no TU scope to look in, so using the DC alone is sufficient.
+  // We can see the TU here only if we have no Sema object. It is possible
+  // we're in clang-repl so we still need to get the primary context.
   if (auto *TU = dyn_cast<TranslationUnitDecl>(DC))
-    return TU;
+    return TU->getPrimaryContext();
 
   return nullptr;
 }

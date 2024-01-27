@@ -100,7 +100,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         // If any of the dimensions are missing, fill them in with 1.
         attributes.emplace_back(
             kernelBlockSizeAttributeName.value(),
-            rewriter.getI32ArrayAttr(
+            rewriter.getDenseI32ArrayAttr(
                 {dimX.value_or(1), dimY.value_or(1), dimZ.value_or(1)}));
       }
     }
@@ -529,7 +529,8 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
                                       /*alignment=*/0);
   for (auto [index, arg] : llvm::enumerate(args)) {
     Value ptr = rewriter.create<LLVM::GEPOp>(
-        loc, ptrType, structType, tempAlloc, ArrayRef<LLVM::GEPArg>{0, index});
+        loc, ptrType, structType, tempAlloc,
+        ArrayRef<LLVM::GEPArg>{0, static_cast<int32_t>(index)});
     rewriter.create<LLVM::StoreOp>(loc, arg, ptr);
   }
   std::array<Value, 2> printfArgs = {stringStart, tempAlloc};

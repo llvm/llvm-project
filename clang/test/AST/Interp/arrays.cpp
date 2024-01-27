@@ -566,3 +566,35 @@ namespace GH69115 {
   static_assert(foo2() == 0, "");
 #endif
 }
+
+namespace NonConstReads {
+#if __cplusplus >= 202002L
+  void *p = nullptr; // ref-note {{declared here}} \
+                     // expected-note {{declared here}}
+
+  int arr[!p]; // ref-error {{not allowed at file scope}} \
+               // expected-error {{not allowed at file scope}} \
+               // ref-warning {{variable length arrays}} \
+               // ref-note {{read of non-constexpr variable 'p'}} \
+               // expected-warning {{variable length arrays}} \
+               // expected-note {{read of non-constexpr variable 'p'}}
+  int z; // ref-note {{declared here}} \
+         // expected-note {{declared here}}
+  int a[z]; // ref-error {{not allowed at file scope}} \
+            // expected-error {{not allowed at file scope}} \
+            // ref-warning {{variable length arrays}} \
+            // ref-note {{read of non-const variable 'z'}} \
+            // expected-warning {{variable length arrays}} \
+            // expected-note {{read of non-const variable 'z'}}
+#else
+  void *p = nullptr;
+  int arr[!p]; // ref-error {{not allowed at file scope}} \
+               // expected-error {{not allowed at file scope}}
+  int z;
+  int a[z]; // ref-error {{not allowed at file scope}} \
+            // expected-error {{not allowed at file scope}}
+#endif
+
+  const int y = 0;
+  int yy[y];
+}

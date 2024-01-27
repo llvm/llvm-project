@@ -1373,6 +1373,7 @@ public:
         LangOptions::SignReturnAddressKeyKind::AKey;
     bool BranchTargetEnforcement = false;
     bool BranchProtectionPAuthLR = false;
+    bool GuardedControlStack = false;
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
@@ -1430,6 +1431,12 @@ public:
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
   }
+
+  // Identify whether this target supports __builtin_cpu_supports and
+  // __builtin_cpu_is.
+  virtual bool supportsCpuSupports() const { return false; }
+  virtual bool supportsCpuIs() const { return false; }
+  virtual bool supportsCpuInit() const { return false; }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.

@@ -216,7 +216,7 @@ define <4 x i32> @cmp_ult_load_const(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ult_load_const:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <42,214,0,255,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    movd {{.*#+}} xmm1 = [42,214,0,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE-NEXT:    pmaxub %xmm0, %xmm1
 ; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -243,7 +243,7 @@ define <3 x i32> @cmp_ult_load_const_bad_type(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ult_load_const_bad_type:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <42,214,0,u,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    movd {{.*#+}} xmm1 = [42,214,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE-NEXT:    pmaxub %xmm0, %xmm1
 ; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
@@ -283,10 +283,10 @@ define <4 x i32> @cmp_slt_load_const(ptr %x) nounwind {
 ; SSE-LABEL: cmp_slt_load_const:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = <42,214,0,255,u,u,u,u,u,u,u,u,u,u,u,u>
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [10794,10794,54998,54998,0,0,65535,65535]
 ; SSE-NEXT:    pcmpgtb %xmm1, %xmm0
-; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: cmp_slt_load_const:

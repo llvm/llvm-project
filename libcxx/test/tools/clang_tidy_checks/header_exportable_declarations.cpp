@@ -252,8 +252,12 @@ static bool is_global_name_exported_by_std_module(std::string_view name) {
 
 static bool is_valid_declaration_context(
     const clang::NamedDecl& decl, std::string_view name, header_exportable_declarations::FileType file_type) {
-  if (decl.getDeclContext()->isNamespace())
+  const clang::DeclContext& context = *decl.getDeclContext();
+  if (context.isNamespace())
     return true;
+
+  if (context.isFunctionOrMethod() || context.isRecord())
+    return false;
 
   if (is_global_name_exported_by_std_module(name))
     return true;

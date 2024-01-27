@@ -52,16 +52,16 @@ class VDSDIRe<bits<2> op, bit is_direct> : Enc32 {
 
 class LDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
-    (ins wait_vdst:$waitvdst),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_vdst:$waitvdst)
+    (ins WaitVDST:$waitvdst),
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, WaitVDST:$waitvdst)
   );
 }
 
 class VDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
-    (ins wait_va_vdst:$waitvdst, wait_va_vsrc:$waitvsrc),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst,
-         wait_va_vsrc:$waitvsrc)
+    (ins WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc),
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, WaitVAVDst:$waitvdst,
+         WaitVMVSrc:$waitvsrc)
   );
 }
 
@@ -73,6 +73,7 @@ class DSDIR_Common<string opName, string asm = "", dag ins, bit direct> :
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
+  let maybeAtomic = 0;
 
   string Mnemonic = opName;
   let UseNamedOperandTable = 1;

@@ -32,7 +32,9 @@ enum AsmComments {
   // For instr that was compressed from EVEX to LEGACY.
   AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
-  AC_EVEX_2_VEX = AC_EVEX_2_LEGACY << 1
+  AC_EVEX_2_VEX = AC_EVEX_2_LEGACY << 1,
+  // For instr that was compressed from EVEX to EVEX.
+  AC_EVEX_2_EVEX = AC_EVEX_2_VEX << 1
 };
 
 /// Return a pair of condition code for the given predicate and whether
@@ -77,6 +79,16 @@ unsigned getSwappedVCMPImm(unsigned Imm);
 
 /// Check if the instruction is X87 instruction.
 bool isX87Instruction(MachineInstr &MI);
+
+/// Return the index of the instruction's first address operand, if it has a
+/// memory reference, or -1 if it has none. Unlike X86II::getMemoryOperandNo(),
+/// this also works for both pseudo instructions (e.g., TCRETURNmi) as well as
+/// real instructions (e.g., JMP64m).
+int getFirstAddrOperandIdx(const MachineInstr &MI);
+
+/// Find any constant pool entry associated with a specific instruction operand.
+const Constant *getConstantFromPool(const MachineInstr &MI, unsigned OpNo);
+
 } // namespace X86
 
 /// isGlobalStubReference - Return true if the specified TargetFlag operand is
@@ -148,6 +160,10 @@ class X86InstrInfo final : public X86GenInstrInfo {
                          SmallVectorImpl<MachineOperand> &Cond,
                          SmallVectorImpl<MachineInstr *> &CondBranches,
                          bool AllowModify) const;
+
+  bool foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI, Register Reg,
+                         int64_t ImmVal, MachineRegisterInfo *MRI,
+                         bool MakeChange) const;
 
 public:
   explicit X86InstrInfo(X86Subtarget &STI);
@@ -563,13 +579,9 @@ public:
                                   Register &FoldAsLoadDefReg,
                                   MachineInstr *&DefMI) const override;
 
-  bool FoldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI, Register Reg,
-                         int64_t ImmVal, MachineRegisterInfo *MRI,
-                         bool MakeChange) const;
-
   /// Reg is known to be defined by a move immediate instruction, try to fold
   /// the immediate into the use instruction.
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 
   std::pair<unsigned, unsigned>
