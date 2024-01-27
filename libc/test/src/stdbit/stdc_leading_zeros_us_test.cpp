@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdbit/stdc_leading_zeros_us.h"
 #include "src/__support/CPP/limits.h"
+#include "src/stdbit/stdc_leading_zeros_us.h"
 #include "test/UnitTest/Test.h"
 
 #define LZ(x) LIBC_NAMESPACE::stdc_leading_zeros_us((x))

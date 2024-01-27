@@ -9,11 +9,12 @@
 #ifndef __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 #define __LLVM_LIBC_MACROS_STDBIT_MACROS_H
 
-#define stdc_leading_zeros(x) _Generic((x), \
-  unsigned char: stdc_leading_zeros_uc, \
-  unsigned short: stdc_leading_zeros_us, \
-  unsigned: stdc_leading_zeros_ui, \
-  unsigned long: stdc_leading_zeros_ul, \
-  unsigned long long: stdc_leading_zeros_ull)(x)
+#define stdc_leading_zeros(x)                                                  \
+  _Generic((x),                                                                \
+      unsigned char: stdc_leading_zeros_uc,                                    \
+      unsigned short: stdc_leading_zeros_us,                                   \
+      unsigned: stdc_leading_zeros_ui,                                         \
+      unsigned long: stdc_leading_zeros_ul,                                    \
+      unsigned long long: stdc_leading_zeros_ull)(x)
 
 #endif // __LLVM_LIBC_MACROS_STDBIT_MACROS_H

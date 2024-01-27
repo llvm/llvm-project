@@ -13,7 +13,8 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(unsigned char, stdc_leading_zeros_uc, (unsigned char value)) {
+LLVM_LIBC_FUNCTION(unsigned char, stdc_leading_zeros_uc,
+                   (unsigned char value)) {
   return static_cast<unsigned char>(cpp::countl_zero(value));
 }
 

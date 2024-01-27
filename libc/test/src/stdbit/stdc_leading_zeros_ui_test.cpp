@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdbit/stdc_leading_zeros_ui.h"
 #include "src/__support/CPP/limits.h"
+#include "src/stdbit/stdc_leading_zeros_ui.h"
 #include "test/UnitTest/Test.h"
 #include <stddef.h>
 
