@@ -32,7 +32,7 @@ struct typelist{};
 template <typename... T>
 requires requires(T...[0]) { {T...[0](0)}; }
 struct SS : T...[1] {
-    [[no_unique_address]] T...[1] base = {};
+    [[maybe_unused]] T...[1] base = {};
     using foo = T...[1];
     SS()
     : T...[1]()

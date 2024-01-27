@@ -48,7 +48,7 @@ void invalid_indexes(auto... p) {
                                 // expected-note {{cannot be used in a constant expression}}
 
     const char* no_index = "";
-    p...[no_index]; // expected-error {{value of type 'const char *' is not implicitly convertible to 'unsigned long'}}
+    p...[no_index]; // expected-error {{value of type 'const char *' is not implicitly convertible}}
 }
 
 void invalid_index_types() {
