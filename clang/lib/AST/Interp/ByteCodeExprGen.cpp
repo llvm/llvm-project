@@ -231,10 +231,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralComplexToBoolean:
   case CK_FloatingComplexToBoolean: {
-    std::optional<PrimType> ElemT =
-        classifyComplexElementType(SubExpr->getType());
-    if (!ElemT)
-      return false;
+    PrimType ElemT = classifyComplexElementType(SubExpr->getType());
     // We emit the expression (__real(E) != 0 || __imag(E) != 0)
     // for us, that means (bool)E[0] || (bool)E[1]
     if (!this->visit(SubExpr))
@@ -243,13 +240,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     if (!this->emitArrayElemPtrUint8(CE))
       return false;
-    if (!this->emitLoadPop(*ElemT, CE))
+    if (!this->emitLoadPop(ElemT, CE))
       return false;
-    if (*ElemT == PT_Float) {
+    if (ElemT == PT_Float) {
       if (!this->emitCastFloatingIntegral(PT_Bool, CE))
         return false;
     } else {
-      if (!this->emitCast(*ElemT, PT_Bool, CE))
+      if (!this->emitCast(ElemT, PT_Bool, CE))
         return false;
     }
 
@@ -262,13 +259,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     if (!this->emitArrayElemPtrPopUint8(CE))
       return false;
-    if (!this->emitLoadPop(*ElemT, CE))
+    if (!this->emitLoadPop(ElemT, CE))
       return false;
-    if (*ElemT == PT_Float) {
+    if (ElemT == PT_Float) {
       if (!this->emitCastFloatingIntegral(PT_Bool, CE))
         return false;
     } else {
-      if (!this->emitCast(*ElemT, PT_Bool, CE))
+      if (!this->emitCast(ElemT, PT_Bool, CE))
         return false;
     }
     // Leave the boolean value of E[1] on the stack.
