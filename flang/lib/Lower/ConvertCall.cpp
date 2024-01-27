@@ -158,8 +158,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   bool mustPopSymMap = false;
 
   // Is procedure pointer functin result.
-  bool isProcedurePointer = resultType && resultType->isa<fir::BoxProcType>();
-  if (!isProcedurePointer && caller.mustMapInterfaceSymbols()) {
+  if (caller.mustMapInterfaceSymbols()) {
     symMap.pushScope();
     mustPopSymMap = true;
     Fortran::lower::mapCallInterfaceSymbols(converter, caller, symMap);
@@ -204,8 +203,6 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     llvm::SmallVector<mlir::Value> extents;
     llvm::SmallVector<mlir::Value> lengths;
     if (!caller.callerAllocateResult())
-      return {};
-    if (isProcedurePointer)
       return {};
     mlir::Type type = caller.getResultStorageType();
     if (type.isa<fir::SequenceType>())

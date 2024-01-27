@@ -371,7 +371,7 @@ bool Fortran::lower::CallerInterface::mustMapInterfaceSymbols() const {
   const std::optional<Fortran::evaluate::characteristics::FunctionResult>
       &result = characteristic->functionResult;
   if (!result || result->CanBeReturnedViaImplicitInterface() ||
-      !getInterfaceDetails())
+      !getInterfaceDetails() || result->IsProcedurePointer())
     return false;
   bool allResultSpecExprConstant = true;
   auto visitor = [&](const Fortran::lower::SomeExpr &e) {
