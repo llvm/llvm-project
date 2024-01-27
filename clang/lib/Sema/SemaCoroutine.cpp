@@ -32,6 +32,8 @@
 using namespace clang;
 using namespace sema;
 
+static bool isNoThrow(Sema &S, const Stmt *E);
+
 static LookupResult lookupMember(Sema &S, const char *Name, CXXRecordDecl *RD,
                                  SourceLocation Loc, bool &Res) {
   DeclarationName DN = S.PP.getIdentifierInfo(Name);
@@ -267,7 +269,7 @@ static ExprResult buildOperatorCoawaitCall(Sema &SemaRef, Scope *S,
 }
 
 static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
-                                       SourceLocation Loc) {
+                                       Expr *FramePtr, SourceLocation Loc) {
   QualType CoroHandleType = lookupCoroutineHandleType(S, PromiseType, Loc);
   if (CoroHandleType.isNull())
     return ExprError();
@@ -280,9 +282,6 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
         << "from_address";
     return ExprError();
   }
-
-  Expr *FramePtr =
-      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
 
   CXXScopeSpec SS;
   ExprResult FromAddr =
@@ -297,6 +296,8 @@ struct ReadySuspendResumeResult {
   enum AwaitCallType { ACT_Ready, ACT_Suspend, ACT_Resume };
   Expr *Results[3];
   OpaqueValueExpr *OpaqueValue;
+  OpaqueValueExpr *OpaqueFramePtr;
+  bool IsSuspendNoThrow;
   bool IsInvalid;
 };
 
@@ -381,66 +382,7 @@ static Expr *maybeTailCall(Sema &S, QualType RetType, Expr *E,
   // __builtin_coro_resume so that the cleanup code are not inserted in-between
   // the resume call and return instruction, which would interfere with the
   // musttail call contract.
-  JustAddress = S.MaybeCreateExprWithCleanups(JustAddress);
-  return S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_resume,
-                                JustAddress);
-}
-
-/// The await_suspend call performed by co_await is essentially asynchronous
-/// to the execution of the coroutine. Inlining it normally into an unsplit
-/// coroutine can cause miscompilation because the coroutine CFG misrepresents
-/// the true control flow of the program: things that happen in the
-/// await_suspend are not guaranteed to happen prior to the resumption of the
-/// coroutine, and things that happen after the resumption of the coroutine
-/// (including its exit and the potential deallocation of the coroutine frame)
-/// are not guaranteed to happen only after the end of await_suspend.
-///
-/// See https://github.com/llvm/llvm-project/issues/56301 and
-/// https://reviews.llvm.org/D157070 for the example and the full discussion.
-///
-/// The short-term solution to this problem is to mark the call as uninlinable.
-/// But we don't want to do this if the call is known to be trivial, which is
-/// very common.
-///
-/// The long-term solution may introduce patterns like:
-///
-///  call @llvm.coro.await_suspend(ptr %awaiter, ptr %handle,
-///                                ptr @awaitSuspendFn)
-///
-/// Then it is much easier to perform the safety analysis in the middle end.
-/// If it is safe to inline the call to awaitSuspend, we can replace it in the
-/// CoroEarly pass. Otherwise we could replace it in the CoroSplit pass.
-static void tryMarkAwaitSuspendNoInline(Sema &S, OpaqueValueExpr *Awaiter,
-                                        CallExpr *AwaitSuspend) {
-  // The method here to extract the awaiter decl is not precise.
-  // This is intentional. Since it is hard to perform the analysis in the
-  // frontend due to the complexity of C++'s type systems.
-  // And we prefer to perform such analysis in the middle end since it is
-  // easier to implement and more powerful.
-  CXXRecordDecl *AwaiterDecl =
-      Awaiter->getType().getNonReferenceType()->getAsCXXRecordDecl();
-
-  if (AwaiterDecl && AwaiterDecl->field_empty())
-    return;
-
-  FunctionDecl *FD = AwaitSuspend->getDirectCallee();
-
-  assert(FD);
-
-  // If the `await_suspend()` function is marked as `always_inline` explicitly,
-  // we should give the user the right to control the codegen.
-  if (FD->hasAttr<NoInlineAttr>() || FD->hasAttr<AlwaysInlineAttr>())
-    return;
-
-  // This is problematic if the user calls the await_suspend standalone. But on
-  // the on hand, it is not incorrect semantically since inlining is not part
-  // of the standard. On the other hand, it is relatively rare to call
-  // the await_suspend function standalone.
-  //
-  // And given we've already had the long-term plan, the current workaround
-  // looks relatively tolerant.
-  FD->addAttr(
-      NoInlineAttr::CreateImplicit(S.getASTContext(), FD->getLocation()));
+  return S.MaybeCreateExprWithCleanups(JustAddress);
 }
 
 /// Build calls to await_ready, await_suspend, and await_resume for a co_await
@@ -462,7 +404,11 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
 
   // Assume valid until we see otherwise.
   // Further operations are responsible for setting IsInalid to true.
-  ReadySuspendResumeResult Calls = {{}, Operand, /*IsInvalid=*/false};
+  ReadySuspendResumeResult Calls = {{},
+                                    Operand,
+                                    /*OpaqueFramePtr=*/nullptr,
+                                    /*IsSuspendNoThrow=*/false,
+                                    /*IsInvalid=*/false};
 
   using ACT = ReadySuspendResumeResult::AwaitCallType;
 
@@ -496,8 +442,17 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
       Calls.Results[ACT::ACT_Ready] = S.MaybeCreateExprWithCleanups(Conv.get());
   }
 
+  Expr *GetFramePtr =
+      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
+
+  OpaqueValueExpr *FramePtr = new (S.Context)
+      OpaqueValueExpr(Loc, GetFramePtr->getType(), VK_PRValue,
+                      GetFramePtr->getObjectKind(), GetFramePtr);
+
+  Calls.OpaqueFramePtr = FramePtr;
+
   ExprResult CoroHandleRes =
-      buildCoroutineHandle(S, CoroPromise->getType(), Loc);
+      buildCoroutineHandle(S, CoroPromise->getType(), FramePtr, Loc);
   if (CoroHandleRes.isInvalid()) {
     Calls.IsInvalid = true;
     return Calls;
@@ -513,10 +468,6 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     //     a prvalue of type void, bool, or std::coroutine_handle<Z> for some
     //     type Z.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
-
-    // We need to mark await_suspend as noinline temporarily. See the comment
-    // of tryMarkAwaitSuspendNoInline for details.
-    tryMarkAwaitSuspendNoInline(S, Operand, AwaitSuspend);
 
     // Support for coroutine_handle returning await_suspend.
     if (Expr *TailCallSuspend =
@@ -541,6 +492,10 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
         Calls.Results[ACT::ACT_Suspend] =
             S.MaybeCreateExprWithCleanups(AwaitSuspend);
     }
+  }
+
+  if (Calls.Results[ACT::ACT_Suspend]) {
+    Calls.IsSuspendNoThrow = isNoThrow(S, Calls.Results[ACT::ACT_Suspend]);
   }
 
   BuildSubExpr(ACT::ACT_Resume, "await_resume", std::nullopt);
@@ -693,6 +648,59 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
     return nullptr;
 
   return ScopeInfo;
+}
+
+/// Recursively check \p E and all its children to see if any call target
+/// (including constructor call) is declared noexcept. Also any value returned
+/// from the call has a noexcept destructor.
+static bool isNoThrow(Sema &S, const Stmt *E) {
+  auto isDeclNoexcept = [&](const Decl *D, bool IsDtor = false) -> bool {
+    // In the case of dtor, the call to dtor is implicit and hence we should
+    // pass nullptr to canCalleeThrow.
+    if (Sema::canCalleeThrow(S, IsDtor ? nullptr : cast<Expr>(E), D)) {
+      return false;
+    }
+    return true;
+  };
+
+  if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
+    CXXConstructorDecl *Ctor = CE->getConstructor();
+    if (!isDeclNoexcept(Ctor)) {
+      return false;
+    }
+    // Check the corresponding destructor of the constructor.
+    if (!isDeclNoexcept(Ctor->getParent()->getDestructor(), /*IsDtor=*/true)) {
+      return false;
+    }
+  } else if (auto *CE = dyn_cast<CallExpr>(E)) {
+    if (CE->isTypeDependent())
+      return false;
+
+    if (!isDeclNoexcept(CE->getCalleeDecl())) {
+      return false;
+    }
+
+    QualType ReturnType = CE->getCallReturnType(S.getASTContext());
+    // Check the destructor of the call return type, if any.
+    if (ReturnType.isDestructedType() ==
+        QualType::DestructionKind::DK_cxx_destructor) {
+      const auto *T =
+          cast<RecordType>(ReturnType.getCanonicalType().getTypePtr());
+      if (!isDeclNoexcept(cast<CXXRecordDecl>(T->getDecl())->getDestructor(),
+                          /*IsDtor=*/true)) {
+        return false;
+      }
+    }
+  }
+  for (const auto *Child : E->children()) {
+    if (!Child)
+      continue;
+    if (!isNoThrow(S, Child)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /// Recursively check \p E and all its children to see if any call target
@@ -993,9 +1001,9 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res = new (Context)
-      CoawaitExpr(Loc, Operand, Awaiter, RSS.Results[0], RSS.Results[1],
-                  RSS.Results[2], RSS.OpaqueValue, IsImplicit);
+  Expr *Res = new (Context) CoawaitExpr(
+      Loc, Operand, Awaiter, RSS.Results[0], RSS.Results[1], RSS.Results[2],
+      RSS.IsSuspendNoThrow, RSS.OpaqueValue, RSS.OpaqueFramePtr, IsImplicit);
 
   return Res;
 }
@@ -1051,9 +1059,9 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res =
-      new (Context) CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
-                                RSS.Results[2], RSS.OpaqueValue);
+  Expr *Res = new (Context) CoyieldExpr(
+      Loc, Operand, E, RSS.Results[0], RSS.Results[1], RSS.Results[2],
+      RSS.IsSuspendNoThrow, RSS.OpaqueValue, RSS.OpaqueFramePtr);
 
   return Res;
 }

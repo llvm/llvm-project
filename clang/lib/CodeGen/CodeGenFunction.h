@@ -352,6 +352,10 @@ public:
     return isCoroutine() && CurCoro.InSuspendBlock;
   }
 
+  llvm::Function *generateAwaitSuspendHelper(Twine const &CoroName,
+                                             Twine const &SuspendPointName,
+                                             CoroutineSuspendExpr const &S);
+
   /// CurGD - The GlobalDecl for the current function being compiled.
   GlobalDecl CurGD;
 

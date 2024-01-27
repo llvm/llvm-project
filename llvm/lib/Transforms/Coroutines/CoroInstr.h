@@ -78,6 +78,36 @@ public:
   }
 };
 
+/// This represents the llvm.coro.await.suspend instruction.
+class LLVM_LIBRARY_VISIBILITY CoroAwaitSuspendInst : public CallBase {
+  enum { AwaiterArg, FrameArg, HelperArg };
+
+public:
+  Value *getAwaiter() const { return getArgOperand(AwaiterArg); }
+
+  Value *getFrame() const { return getArgOperand(FrameArg); }
+
+  Function *getHelperFunction() const {
+    return cast<Function>(getArgOperand(HelperArg));
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const CallBase *CB) {
+    if (const Function *CF = CB->getCalledFunction()) {
+      auto IID = CF->getIntrinsicID();
+      return IID == Intrinsic::coro_await_suspend ||
+             IID == Intrinsic::coro_await_suspend_bool ||
+             IID == Intrinsic::coro_await_suspend_handle;
+    }
+
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<CallBase>(V) && classof(cast<CallBase>(V));
+  }
+};
+
 /// This represents a common base class for llvm.coro.id instructions.
 class LLVM_LIBRARY_VISIBILITY AnyCoroIdInst : public IntrinsicInst {
 public:

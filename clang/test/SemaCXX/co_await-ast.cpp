@@ -81,9 +81,10 @@ awaitable foo() {
 // CHECK:   |     |         `-CallExpr {{.*}} 'coroutine_handle<awaitable_frame>':'std::coroutine_handle<awaitable_frame>'
 // CHECK:   |     |           |-ImplicitCastExpr {{.*}} 'coroutine_handle<awaitable_frame> (*)(void *) noexcept' <FunctionToPointerDecay>
 // CHECK:   |     |           | `-DeclRefExpr {{.*}} 'coroutine_handle<awaitable_frame> (void *) noexcept' lvalue CXXMethod {{.*}} 'from_address' 'coroutine_handle<awaitable_frame> (void *) noexcept'
-// CHECK:   |     |           `-CallExpr {{.*}} 'void *'
-// CHECK:   |     |             `-ImplicitCastExpr {{.*}} 'void *(*)() noexcept' <FunctionToPointerDecay>
-// CHECK:   |     |               `-DeclRefExpr {{.*}} 'void *() noexcept' lvalue Function {{.*}} '__builtin_coro_frame' 'void *() noexcept'
+// CHECK:   |     |           `-OpaqueValueExpr {{.*}} 'void *'
+// CHECK:   |     |             `-CallExpr {{.*}} 'void *'
+// CHECK:   |     |               `-ImplicitCastExpr {{.*}} 'void *(*)() noexcept' <FunctionToPointerDecay>
+// CHECK:   |     |                 `-DeclRefExpr {{.*}} 'void *() noexcept' lvalue Function {{.*}} '__builtin_coro_frame' 'void *() noexcept'
 // CHECK:   |     `-CXXMemberCallExpr {{.*}} 'void'
 // CHECK:   |       `-MemberExpr {{.*}} '<bound member function type>' .await_resume {{.*}}
 // CHECK:   |         `-ImplicitCastExpr {{.*}} 'const awaitable_frame::result_t' lvalue <NoOp>

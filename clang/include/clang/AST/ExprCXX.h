@@ -5035,15 +5035,19 @@ class CoroutineSuspendExpr : public Expr {
   enum SubExpr { Operand, Common, Ready, Suspend, Resume, Count };
 
   Stmt *SubExprs[SubExpr::Count];
+  bool IsSuspendNoThrow = false;
   OpaqueValueExpr *OpaqueValue = nullptr;
+  OpaqueValueExpr *OpaqueFramePtr = nullptr;
 
 public:
   CoroutineSuspendExpr(StmtClass SC, SourceLocation KeywordLoc, Expr *Operand,
                        Expr *Common, Expr *Ready, Expr *Suspend, Expr *Resume,
-                       OpaqueValueExpr *OpaqueValue)
+                       bool IsSuspendNoThrow, OpaqueValueExpr *OpaqueValue,
+                       OpaqueValueExpr *OpaqueFramePtr)
       : Expr(SC, Resume->getType(), Resume->getValueKind(),
              Resume->getObjectKind()),
-        KeywordLoc(KeywordLoc), OpaqueValue(OpaqueValue) {
+        KeywordLoc(KeywordLoc), IsSuspendNoThrow(IsSuspendNoThrow),
+        OpaqueValue(OpaqueValue), OpaqueFramePtr(OpaqueFramePtr) {
     SubExprs[SubExpr::Operand] = Operand;
     SubExprs[SubExpr::Common] = Common;
     SubExprs[SubExpr::Ready] = Ready;
@@ -5080,6 +5084,9 @@ public:
   /// getOpaqueValue - Return the opaque value placeholder.
   OpaqueValueExpr *getOpaqueValue() const { return OpaqueValue; }
 
+  /// getOpaqueFramePtr - Return coroutine frame pointer placeholder.
+  OpaqueValueExpr *getOpaqueFramePtr() const { return OpaqueFramePtr; }
+
   Expr *getReadyExpr() const {
     return static_cast<Expr*>(SubExprs[SubExpr::Ready]);
   }
@@ -5096,6 +5103,8 @@ public:
   Expr *getOperand() const {
     return static_cast<Expr *>(SubExprs[SubExpr::Operand]);
   }
+
+  bool isSuspendNoThrow() const { return IsSuspendNoThrow; }
 
   SourceLocation getKeywordLoc() const { return KeywordLoc; }
 
@@ -5125,10 +5134,12 @@ class CoawaitExpr : public CoroutineSuspendExpr {
 
 public:
   CoawaitExpr(SourceLocation CoawaitLoc, Expr *Operand, Expr *Common,
-              Expr *Ready, Expr *Suspend, Expr *Resume,
-              OpaqueValueExpr *OpaqueValue, bool IsImplicit = false)
+              Expr *Ready, Expr *Suspend, Expr *Resume, bool IsSuspendNoThrow,
+              OpaqueValueExpr *OpaqueValue, OpaqueValueExpr *OpaqueFramePtr,
+              bool IsImplicit = false)
       : CoroutineSuspendExpr(CoawaitExprClass, CoawaitLoc, Operand, Common,
-                             Ready, Suspend, Resume, OpaqueValue) {
+                             Ready, Suspend, Resume, IsSuspendNoThrow,
+                             OpaqueValue, OpaqueFramePtr) {
     CoawaitBits.IsImplicit = IsImplicit;
   }
 
@@ -5206,10 +5217,11 @@ class CoyieldExpr : public CoroutineSuspendExpr {
 
 public:
   CoyieldExpr(SourceLocation CoyieldLoc, Expr *Operand, Expr *Common,
-              Expr *Ready, Expr *Suspend, Expr *Resume,
-              OpaqueValueExpr *OpaqueValue)
+              Expr *Ready, Expr *Suspend, Expr *Resume, bool IsSuspendNoThrow,
+              OpaqueValueExpr *OpaqueValue, OpaqueValueExpr *OpaqueFramePtr)
       : CoroutineSuspendExpr(CoyieldExprClass, CoyieldLoc, Operand, Common,
-                             Ready, Suspend, Resume, OpaqueValue) {}
+                             Ready, Suspend, Resume, IsSuspendNoThrow,
+                             OpaqueValue, OpaqueFramePtr) {}
   CoyieldExpr(SourceLocation CoyieldLoc, QualType Ty, Expr *Operand,
               Expr *Common)
       : CoroutineSuspendExpr(CoyieldExprClass, CoyieldLoc, Ty, Operand,

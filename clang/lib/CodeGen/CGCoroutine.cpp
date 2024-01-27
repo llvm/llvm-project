@@ -212,9 +212,10 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
                                     bool ignoreResult, bool forLValue) {
   auto *E = S.getCommonExpr();
 
-  auto Binder =
+  auto CommonBinder =
       CodeGenFunction::OpaqueValueMappingData::bind(CGF, S.getOpaqueValue(), E);
-  auto UnbindOnExit = llvm::make_scope_exit([&] { Binder.unbind(CGF); });
+  auto UnbindCommonOnExit =
+      llvm::make_scope_exit([&] { CommonBinder.unbind(CGF); });
 
   auto Prefix = buildSuspendPrefixStr(Coro, Kind);
   BasicBlock *ReadyBlock = CGF.createBasicBlock(Prefix + Twine(".ready"));
@@ -232,16 +233,57 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   auto *NullPtr = llvm::ConstantPointerNull::get(CGF.CGM.Int8PtrTy);
   auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
 
-  CGF.CurCoro.InSuspendBlock = true;
-  auto *SuspendRet = CGF.EmitScalarExpr(S.getSuspendExpr());
-  CGF.CurCoro.InSuspendBlock = false;
+  auto SuspendHelper = CodeGenFunction(CGF.CGM).generateAwaitSuspendHelper(
+      CGF.CurFn->getName(), Prefix, S);
 
-  if (SuspendRet != nullptr && SuspendRet->getType()->isIntegerTy(1)) {
-    // Veto suspension if requested by bool returning await_suspend.
-    BasicBlock *RealSuspendBlock =
-        CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
-    CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
-    CGF.EmitBlock(RealSuspendBlock);
+  llvm::CallBase *SuspendRet = nullptr;
+
+  {
+    CGF.CurCoro.InSuspendBlock = true;
+
+    auto FramePtrBinder = CodeGenFunction::OpaqueValueMappingData::bind(
+        CGF, S.getOpaqueFramePtr(), S.getOpaqueFramePtr()->getSourceExpr());
+    auto UnbindFramePtrOnExit =
+        llvm::make_scope_exit([&] { FramePtrBinder.unbind(CGF); });
+
+    SmallVector<llvm::Value *, 3> SuspendHelperCallArgs;
+    SuspendHelperCallArgs.push_back(
+        CGF.getOrCreateOpaqueLValueMapping(S.getOpaqueValue()).getPointer(CGF));
+    SuspendHelperCallArgs.push_back(
+        CGF.getOrCreateOpaqueRValueMapping(S.getOpaqueFramePtr())
+            .getScalarVal());
+    SuspendHelperCallArgs.push_back(SuspendHelper);
+
+    auto IID = llvm::Intrinsic::coro_await_suspend;
+    if (S.getSuspendExpr()->getType()->isBooleanType())
+      IID = llvm::Intrinsic::coro_await_suspend_bool;
+    else if (S.getSuspendExpr()->getType()->isVoidPointerType())
+      IID = llvm::Intrinsic::coro_await_suspend_handle;
+
+    llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(IID);
+    // FIXME: add call attributes?
+    if (S.isSuspendNoThrow()) {
+      SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
+                                               SuspendHelperCallArgs);
+    } else {
+      SuspendRet =
+          CGF.EmitCallOrInvoke(AwaitSuspendIntrinsic, SuspendHelperCallArgs);
+    }
+
+    CGF.CurCoro.InSuspendBlock = false;
+  }
+
+  if (SuspendRet != nullptr) {
+    if (SuspendRet->getType()->isIntegerTy(1)) {
+      // Veto suspension if requested by bool returning await_suspend.
+      BasicBlock *RealSuspendBlock =
+          CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
+      CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
+      CGF.EmitBlock(RealSuspendBlock);
+    } else if (SuspendRet->getType()->isPointerTy()) {
+      auto ResumeIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_resume);
+      Builder.CreateCall(ResumeIntrinsic, SuspendRet);
+    }
   }
 
   // Emit the suspend point.
@@ -337,6 +379,86 @@ static QualType getCoroutineSuspendExprReturnType(const ASTContext &Ctx,
   return cast<CallExpr>(RE)->getCallReturnType(Ctx);
 }
 #endif
+
+llvm::Function *
+CodeGenFunction::generateAwaitSuspendHelper(Twine const &CoroName,
+                                            Twine const &SuspendPointName,
+                                            CoroutineSuspendExpr const &S) {
+  std::string FuncName = "__await_suspend_helper_";
+  FuncName += CoroName.str();
+  FuncName += '_';
+  FuncName += SuspendPointName.str();
+
+  ASTContext &C = getContext();
+
+  FunctionArgList args;
+
+  ImplicitParamDecl AwaiterDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  ImplicitParamDecl FrameDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  QualType ReturnTy = S.getSuspendExpr()->getType();
+
+  if (ReturnTy->isBooleanType()) {
+    ReturnTy = C.BoolTy;
+  } else if (ReturnTy->isVoidPointerType()) {
+    ReturnTy = C.VoidPtrTy;
+  } else {
+    ReturnTy = C.VoidTy;
+  }
+
+  args.push_back(&AwaiterDecl);
+  args.push_back(&FrameDecl);
+
+  const CGFunctionInfo &FI =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
+
+  llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
+
+  llvm::Function *Fn = llvm::Function::Create(
+      LTy, llvm::GlobalValue::PrivateLinkage, FuncName, &CGM.getModule());
+
+  Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
+  Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
+
+  Fn->addParamAttr(1, llvm::Attribute::AttrKind::NoUndef);
+
+  Fn->setMustProgress();
+  Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+
+  if (S.isSuspendNoThrow()) {
+    Fn->addFnAttr(llvm::Attribute::AttrKind::NoUnwind);
+  }
+
+  StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
+
+  llvm::Value *AwaiterPtr = Builder.CreateLoad(GetAddrOfLocalVar(&AwaiterDecl));
+  auto AwaiterLValue =
+      MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl.getType());
+
+  // FIXME: mark as aliasing with awaiter?
+  // FIXME: TBAA?
+  // FIXME: emit in a better way (maybe egenerate AST in SemaCoroutine)?
+  auto FramePtrRValue =
+      RValue::get(Builder.CreateLoad(GetAddrOfLocalVar(&FrameDecl)));
+
+  auto AwaiterBinder = CodeGenFunction::OpaqueValueMappingData::bind(
+      *this, S.getOpaqueValue(), AwaiterLValue);
+  auto FramePtrBinder = CodeGenFunction::OpaqueValueMappingData::bind(
+      *this, S.getOpaqueFramePtr(), FramePtrRValue);
+
+  auto *SuspendRet = EmitScalarExpr(S.getSuspendExpr());
+
+  auto UnbindCommonOnExit =
+      llvm::make_scope_exit([&] { AwaiterBinder.unbind(*this); });
+  auto UnbindFramePtrOnExit =
+      llvm::make_scope_exit([&] { FramePtrBinder.unbind(*this); });
+  if (SuspendRet != nullptr) {
+    Fn->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
+    Builder.CreateStore(SuspendRet, ReturnValue);
+  }
+
+  FinishFunction();
+  return Fn;
+}
 
 LValue
 CodeGenFunction::EmitCoawaitLValue(const CoawaitExpr *E) {
