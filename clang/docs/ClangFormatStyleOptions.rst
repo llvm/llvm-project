@@ -146,7 +146,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BasedOnStyle:
 
-**BasedOnStyle** (``String``) :ref:`Ã‚Â¶ <BasedOnStyle>`
+**BasedOnStyle** (``String``) :ref:`¶ <BasedOnStyle>`
   The style used for all options not specifically set in the configuration.
 
   This option is supported only in the :program:`clang-format` configuration

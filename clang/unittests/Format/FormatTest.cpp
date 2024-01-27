@@ -9867,17 +9867,19 @@ TEST_F(FormatTest, AlignsStringLiterals) {
 
 TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 60;
+
   // No declarations or definitions should be moved to own line.
   Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   verifyFormat("class A {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
-               "  long fooooooooooooooooooooooooooooooooooooooooooooooo::\n"
+               "  long foooooooooooooooooooooooooooo::\n"
                "      baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int f() { return 1; }\n"
                "int g();\n"
-               "int foooooooooooooooooooooooooooooooooooooooooooooooo::\n"
+               "int foooooooooooooooooooooooooooo::\n"
                "    baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
@@ -9887,15 +9889,12 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  int f() { return 1; }\n"
                "  int g();\n"
                "  long\n"
-               "  "
-               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaar();\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int f() { return 1; }\n"
                "int g();\n"
                "int\n"
-               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaaar();",
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // All declarations and definitions should have the return type moved to its
@@ -9913,9 +9912,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  int\n"
                "  g();\n"
                "  long\n"
-               "  "
-               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaar();\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
@@ -9924,8 +9921,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "int\n"
                "g();\n"
                "int\n"
-               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaaar();",
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // Top-level definitions, and no kinds of declarations should have the
@@ -9935,9 +9931,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  int f() { return 1; }\n"
                "  int g();\n"
                "  long\n"
-               "  "
-               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaar();\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
@@ -9945,8 +9939,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "}\n"
                "int g();\n"
                "int\n"
-               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaaar();",
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // Top-level definitions and declarations should have the return type moved
@@ -9956,9 +9949,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  int f() { return 1; }\n"
                "  int g();\n"
                "  long\n"
-               "  "
-               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaar();\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
@@ -9967,8 +9958,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "int\n"
                "g();\n"
                "int\n"
-               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaaar();",
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // All definitions should have the return type moved to its own line, but no
@@ -9981,9 +9971,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "  }\n"
                "  int g();\n"
                "  long\n"
-               "  "
-               "fooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaar();\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int\n"
                "f() {\n"
@@ -9991,8 +9979,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "}\n"
                "int g();\n"
                "int\n"
-               "foooooooooooooooooooooooooooooooooooooooooooooooo::"
-               "baaaaaaaaaaaaaaaaaaaaar();",
+               "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
                Style);
   verifyFormat("const char *\n"
                "f(void) {\n" // Break here.
