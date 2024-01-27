@@ -38,7 +38,7 @@ constexpr void test_empty_iota() {
 
     assert(iv.empty());
   }
-  // Left paramter is const
+  // Left parameter is const
   {
     auto iv = std::views::iota(std::ranges::begin(std::as_const(ev)), std::ranges::end(ev));
 
