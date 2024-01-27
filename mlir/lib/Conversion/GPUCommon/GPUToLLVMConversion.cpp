@@ -918,8 +918,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
   for (auto stream : streams)
     streamDestroyCallBuilder.create(loc, rewriter, {stream});
 
-  rewriter.updateRootInPlace(yieldOp,
-                             [&] { yieldOp->setOperands(newOperands); });
+  rewriter.modifyOpInPlace(yieldOp, [&] { yieldOp->setOperands(newOperands); });
   return success();
 }
 
@@ -1042,13 +1041,14 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
   auto arrayPtr = builder.create<LLVM::AllocaOp>(
       loc, llvmPointerType, llvmPointerType, arraySize, /*alignment=*/0);
   for (const auto &en : llvm::enumerate(arguments)) {
+    const auto index = static_cast<int32_t>(en.index());
     Value fieldPtr =
         builder.create<LLVM::GEPOp>(loc, llvmPointerType, structType, structPtr,
-                                    ArrayRef<LLVM::GEPArg>{0, en.index()});
+                                    ArrayRef<LLVM::GEPArg>{0, index});
     builder.create<LLVM::StoreOp>(loc, en.value(), fieldPtr);
-    auto elementPtr = builder.create<LLVM::GEPOp>(
-        loc, llvmPointerType, llvmPointerType, arrayPtr,
-        ArrayRef<LLVM::GEPArg>{en.index()});
+    auto elementPtr =
+        builder.create<LLVM::GEPOp>(loc, llvmPointerType, llvmPointerType,
+                                    arrayPtr, ArrayRef<LLVM::GEPArg>{index});
     builder.create<LLVM::StoreOp>(loc, fieldPtr, elementPtr);
   }
   return arrayPtr;
@@ -1334,24 +1334,25 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::SetDefaultDeviceOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  setDefaultDeviceCallBuilder.create(loc, rewriter, {adaptor.getDevIndex()});
-  rewriter.replaceOp(op, {});
+  auto call = setDefaultDeviceCallBuilder.create(loc, rewriter,
+                                                 {adaptor.getDevIndex()});
+  rewriter.replaceOp(op, call);
   return success();
 }
 
 template <typename T>
-static Value genConstInt32From(OpBuilder &builder, Location loc, T TValue) {
+static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmInt32Type = builder.getIntegerType(32);
   return builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                          static_cast<int32_t>(TValue));
+                                          static_cast<int32_t>(tValue));
 }
 
 template <typename T>
-static Value genConstFloat32From(OpBuilder &builder, Location loc, T TValue) {
+static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmFloat32Type = builder.getF32Type();
   return builder.create<LLVM::ConstantOp>(
       loc, llvmFloat32Type,
-      builder.getF32FloatAttr(static_cast<float>(TValue)));
+      builder.getF32FloatAttr(static_cast<float>(tValue)));
 }
 
 LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
@@ -1629,7 +1630,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto stream = adaptor.getAsyncDependencies().front();
   Value bufferSize;
   if (is2To4Sparsity(op.getSpmatA())) {
-    auto prune_flag =
+    auto pruneFlag =
         genConstInt32From(rewriter, loc, get2To4PruneFlag(op.getSpmatA()));
     auto computeType = genConstInt32From(
         rewriter, loc, getCuSparseLtDataTypeFrom(adaptor.getComputeType()));
@@ -1641,7 +1642,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
         .create(loc, rewriter,
                 {bufferSize, modeA, modeB, adaptor.getSpmatA(),
                  adaptor.getDnmatB(), adaptor.getDnmatC(), computeType,
-                 prune_flag, stream})
+                 pruneFlag, stream})
         .getResult();
 
     auto bufferSizePtr1 = rewriter.create<LLVM::GEPOp>(

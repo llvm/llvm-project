@@ -1,8 +1,5 @@
 ## Check how yaml2obj produces .llvm_bb_addr_map sections.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s
 

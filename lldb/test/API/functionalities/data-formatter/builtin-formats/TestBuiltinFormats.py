@@ -19,6 +19,7 @@ class TestCase(TestBase):
         self.assertTrue(result.Succeeded(), result.GetError())
         return result.GetOutput()
 
+    @skipIf(dwarf_version=["<", "3"])
     @no_debug_info_test
     @skipIfWindows
     def testAllPlatforms(self):

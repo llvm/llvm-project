@@ -319,9 +319,6 @@ public:
   void ReadPendingInstantiations(
      SmallVectorImpl<std::pair<ValueDecl*, SourceLocation> >& Pending) override;
 
-  virtual void ReadPendingInstantiationsOfConstexprEntity(
-      const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) override;
-
   /// Read the set of late parsed template functions for this source.
   ///
   /// The external source should insert its own late parsed template functions

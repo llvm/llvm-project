@@ -82,7 +82,7 @@ public:
     if (File) {
       auto IncludingFileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc));
       if (!IncludingFileEntry) {
-        assert(SM.getBufferName(HashLoc).startswith("<") &&
+        assert(SM.getBufferName(HashLoc).starts_with("<") &&
                "Expected #include location to be a file or <built-in>");
         // Treat as if included from the main file.
         IncludingFileEntry = SM.getFileEntryRefForID(MainFID);
@@ -131,7 +131,7 @@ private:
 };
 
 bool isLiteralInclude(llvm::StringRef Include) {
-  return Include.startswith("<") || Include.startswith("\"");
+  return Include.starts_with("<") || Include.starts_with("\"");
 }
 
 bool HeaderFile::valid() const {
@@ -316,7 +316,7 @@ IncludeInserter::insert(llvm::StringRef VerbatimHeader,
   std::optional<TextEdit> Edit;
   if (auto Insertion =
           Inserter.insert(VerbatimHeader.trim("\"<>"),
-                          VerbatimHeader.startswith("<"), Directive))
+                          VerbatimHeader.starts_with("<"), Directive))
     Edit = replacementToEdit(Code, *Insertion);
   return Edit;
 }

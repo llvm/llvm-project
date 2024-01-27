@@ -32,7 +32,8 @@
 
 namespace LIBC_NAMESPACE {
 
-LIBC_INLINE int inline_bcmp(const void *p1, const void *p2, size_t count) {
+[[gnu::flatten]] LIBC_INLINE int inline_bcmp(const void *p1, const void *p2,
+                                             size_t count) {
   return static_cast<int>(LIBC_SRC_STRING_MEMORY_UTILS_BCMP(
       reinterpret_cast<CPtr>(p1), reinterpret_cast<CPtr>(p2), count));
 }

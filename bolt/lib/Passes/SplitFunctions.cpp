@@ -175,8 +175,12 @@ struct SplitCacheDirected final : public SplitStrategy {
   void fragment(const BlockIt Start, const BlockIt End) override {
     BasicBlockOrder BlockOrder(Start, End);
     BinaryFunction &BF = *BlockOrder.front()->getFunction();
+    // No need to re-split small functions.
+    if (BlockOrder.size() <= 2)
+      return;
 
     size_t BestSplitIndex = findSplitIndex(BF, BlockOrder);
+    assert(BestSplitIndex < BlockOrder.size());
 
     // Assign fragments based on the computed best split index.
     // All basic blocks with index up to the best split index become hot.
@@ -194,22 +198,18 @@ struct SplitCacheDirected final : public SplitStrategy {
   }
 
 private:
-  struct JumpInfo {
-    bool HasUncondBranch = false;
-    BinaryBasicBlock *CondSuccessor = nullptr;
-    BinaryBasicBlock *UncondSuccessor = nullptr;
-  };
-
   struct CallInfo {
     size_t Length;
     size_t Count;
   };
 
   struct SplitScore {
-    size_t SplitIndex;
+    size_t SplitIndex = size_t(-1);
     size_t HotSizeReduction = 0;
     double LocalScore = 0;
     double CoverCallScore = 0;
+
+    double sum() const { return LocalScore + CoverCallScore; }
   };
 
   // Auxiliary variables used by the algorithm.
@@ -218,7 +218,6 @@ private:
   DenseMap<const BinaryBasicBlock *, size_t> GlobalIndices;
   DenseMap<const BinaryBasicBlock *, size_t> BBSizes;
   DenseMap<const BinaryBasicBlock *, size_t> BBOffsets;
-  DenseMap<const BinaryBasicBlock *, JumpInfo> JumpInfos;
 
   // Call graph.
   std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callers;
@@ -231,27 +230,6 @@ private:
   }
 
   void initializeAuxiliaryVariables() {
-    // Gather information about conditional and unconditional successors of
-    // each basic block; this information will be used to estimate block size
-    // increase due to hot-warm splitting.
-    auto analyzeBranches = [&](BinaryBasicBlock &BB) {
-      JumpInfo BBJumpInfo;
-      const MCSymbol *TBB = nullptr;
-      const MCSymbol *FBB = nullptr;
-      MCInst *CondBranch = nullptr;
-      MCInst *UncondBranch = nullptr;
-      if (BB.analyzeBranch(TBB, FBB, CondBranch, UncondBranch)) {
-        BBJumpInfo.HasUncondBranch = UncondBranch != nullptr;
-        if (BB.succ_size() == 1) {
-          BBJumpInfo.UncondSuccessor = BB.getSuccessor();
-        } else if (BB.succ_size() == 2) {
-          BBJumpInfo.CondSuccessor = BB.getConditionalSuccessor(true);
-          BBJumpInfo.UncondSuccessor = BB.getConditionalSuccessor(false);
-        }
-      }
-      return BBJumpInfo;
-    };
-
     for (BinaryFunction *BF : BC.getSortedFunctions()) {
       if (!shouldConsiderForCallGraph(*BF))
         continue;
@@ -273,9 +251,6 @@ private:
         BBOffsets[BB] = OrigHotSectionSize;
         if (!BB->isSplit())
           OrigHotSectionSize += BBSizes[BB];
-
-        // (Un)Conditional branch instruction information.
-        JumpInfos[BB] = analyzeBranches(*BB);
       }
     }
   }
@@ -334,7 +309,7 @@ private:
                              const size_t SplitIndex) {
     assert(SplitIndex < BlockOrder.size() && "Invalid split index");
 
-    // Update function layout assuming hot-warm splitting at SplitIndex
+    // Update function layout assuming hot-warm splitting at SplitIndex.
     for (size_t Index = 0; Index < BlockOrder.size(); Index++) {
       BinaryBasicBlock *BB = BlockOrder[Index];
       if (BB->getFragmentNum() == FragmentNum::cold())
@@ -350,8 +325,8 @@ private:
     // Populate BB.OutputAddressRange with estimated new start and end addresses
     // and compute the old end address of the hot section and the new end
     // address of the hot section.
-    size_t OldHotEndAddr;
-    size_t NewHotEndAddr;
+    size_t OldHotEndAddr{0};
+    size_t NewHotEndAddr{0};
     size_t CurrentAddr = BBOffsets[BlockOrder[0]];
     for (BinaryBasicBlock *BB : BlockOrder) {
       // We only care about new addresses of blocks in hot/warm.
@@ -523,20 +498,15 @@ private:
   }
 
   /// Compute the split score of splitting a function at a given index.
-  /// The split score consists of local score and cover score. Cover call score
-  /// is expensive to compute. As a result, we pass in a \p ReferenceScore and
-  /// compute cover score only when the local score exceeds that in the
-  /// ReferenceScore or that the size reduction of the hot fragment is larger
-  /// than that achieved by the split index of the ReferenceScore. This function
-  /// returns \p Score of SplitScore type. It contains the local score and cover
-  /// score (if computed) of the current splitting index. For easier book
-  /// keeping and comparison, it also stores the split index and the resulting
-  /// reduction in hot fragment size.
+  /// The split score consists of local score and cover score. This function
+  /// returns \p Score of SplitScore type. It contains the local score and
+  /// cover score of the current splitting index. For easier book keeping and
+  /// comparison, it also stores the split index and the resulting reduction
+  /// in hot fragment size.
   SplitScore computeSplitScore(const BinaryFunction &BF,
                                const BasicBlockOrder &BlockOrder,
                                const size_t SplitIndex,
-                               const std::vector<CallInfo> &CoverCalls,
-                               const SplitScore &ReferenceScore) {
+                               const std::vector<CallInfo> &CoverCalls) {
     // Populate BinaryBasicBlock::OutputAddressRange with estimated
     // new start and end addresses after hot-warm splitting at SplitIndex.
     size_t OldHotEnd;
@@ -564,15 +534,27 @@ private:
     // increamented in place.
     computeJumpScore(BlockOrder, SplitIndex, Score);
 
-    // There is no need to compute CoverCallScore if we have already found
-    // another split index with a bigger LocalScore and bigger HotSizeReduction.
-    if (Score.LocalScore <= ReferenceScore.LocalScore &&
-        Score.HotSizeReduction <= ReferenceScore.HotSizeReduction)
-      return Score;
-
     // Compute CoverCallScore and store in Score in place.
     computeCoverCallScore(BlockOrder, SplitIndex, CoverCalls, Score);
     return Score;
+  }
+
+  /// Find the most likely successor of a basic block when it has one or two
+  /// successors. Return nullptr otherwise.
+  const BinaryBasicBlock *getMostLikelySuccessor(const BinaryBasicBlock *BB) {
+    if (BB->succ_size() == 1)
+      return BB->getSuccessor();
+    if (BB->succ_size() == 2) {
+      uint64_t TakenCount = BB->getTakenBranchInfo().Count;
+      assert(TakenCount != BinaryBasicBlock::COUNT_NO_PROFILE);
+      uint64_t NonTakenCount = BB->getFallthroughBranchInfo().Count;
+      assert(NonTakenCount != BinaryBasicBlock::COUNT_NO_PROFILE);
+      if (TakenCount > NonTakenCount)
+        return BB->getConditionalSuccessor(true);
+      else if (TakenCount < NonTakenCount)
+        return BB->getConditionalSuccessor(false);
+    }
+    return nullptr;
   }
 
   /// Find the best index for splitting. The returned value is the index of the
@@ -580,30 +562,45 @@ private:
   /// value which is one less than the size of the function.
   size_t findSplitIndex(const BinaryFunction &BF,
                         const BasicBlockOrder &BlockOrder) {
+    assert(BlockOrder.size() > 2);
     // Find all function calls that can be shortened if we move blocks of the
     // current function to warm/cold
     const std::vector<CallInfo> CoverCalls = extractCoverCalls(BF);
 
-    // Try all possible split indices (blocks with Index <= SplitIndex are in
-    // hot) and find the one maximizing the splitting score.
-    SplitScore BestScore;
-    double BestScoreSum = -1.0;
-    SplitScore ReferenceScore;
-    for (size_t Index = 0; Index < BlockOrder.size(); Index++) {
-      const BinaryBasicBlock *LastHotBB = BlockOrder[Index];
-      // No need to keep cold blocks in the hot section.
-      if (LastHotBB->getFragmentNum() == FragmentNum::cold())
+    // Find the existing hot-cold splitting index.
+    size_t HotColdIndex = 0;
+    while (HotColdIndex + 1 < BlockOrder.size()) {
+      if (BlockOrder[HotColdIndex + 1]->getFragmentNum() == FragmentNum::cold())
         break;
-      const SplitScore Score =
-          computeSplitScore(BF, BlockOrder, Index, CoverCalls, ReferenceScore);
-      double ScoreSum = Score.LocalScore + Score.CoverCallScore;
-      if (ScoreSum > BestScoreSum) {
-        BestScoreSum = ScoreSum;
-        BestScore = Score;
-      }
-      if (Score.LocalScore > ReferenceScore.LocalScore)
-        ReferenceScore = Score;
+      HotColdIndex++;
     }
+    assert(HotColdIndex + 1 == BlockOrder.size() ||
+           (BlockOrder[HotColdIndex]->getFragmentNum() == FragmentNum::main() &&
+            BlockOrder[HotColdIndex + 1]->getFragmentNum() ==
+                FragmentNum::cold()));
+
+    // Try all possible split indices up to HotColdIndex (blocks that have
+    // Index <= SplitIndex are in hot) and find the one maximizing the
+    // splitting score.
+    SplitScore BestScore;
+    for (size_t Index = 0; Index <= HotColdIndex; Index++) {
+      const BinaryBasicBlock *LastHotBB = BlockOrder[Index];
+      assert(LastHotBB->getFragmentNum() != FragmentNum::cold());
+
+      // Do not break jump to the most likely successor.
+      if (Index + 1 < BlockOrder.size() &&
+          BlockOrder[Index + 1] == getMostLikelySuccessor(LastHotBB))
+        continue;
+
+      const SplitScore Score =
+          computeSplitScore(BF, BlockOrder, Index, CoverCalls);
+      if (Score.sum() > BestScore.sum())
+        BestScore = Score;
+    }
+
+    // If we don't find a good splitting point, fallback to the original one.
+    if (BestScore.SplitIndex == size_t(-1))
+      return HotColdIndex;
 
     return BestScore.SplitIndex;
   }

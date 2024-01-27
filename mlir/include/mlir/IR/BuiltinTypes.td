@@ -47,7 +47,7 @@ def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
     element type, which is composed of a real and imaginary value of that
     element type. The element must be a floating point or integer scalar type.
 
-    Examples:
+    #### Example:
 
     ```mlir
     complex<f32>
@@ -251,6 +251,16 @@ def Builtin_Function : Builtin_Type<"Function", "function"> {
 
     The function type can be thought of as a function signature. It consists of
     a list of formal parameter types and a list of formal result types.
+
+    #### Example:
+
+    ```mlir
+    func.func @add_one(%arg0 : i64) -> i64 {
+      %c1 = arith.constant 1 : i64
+      %0 = arith.addi %arg0, %c1 : i64
+      return %0 : i64
+    }
+    ```
   }];
   let parameters = (ins "ArrayRef<Type>":$inputs, "ArrayRef<Type>":$results);
   let builders = [
@@ -392,10 +402,10 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     Syntax:
 
     ```
-    memref-type ::= `memref` `<` dimension-list-ranked type
-                    (`,` layout-specification)? (`,` memory-space)? `>`
     layout-specification ::= attribute-value
     memory-space ::= attribute-value
+    memref-type ::= `memref` `<` dimension-list-ranked type
+                    (`,` layout-specification)? (`,` memory-space)? `>`
     ```
 
     A `memref` type is a reference to a region of memory (similar to a buffer
@@ -667,8 +677,23 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
 def Builtin_None : Builtin_Type<"None", "none"> {
   let summary = "A unit type";
   let description = [{
+    Syntax:
+
+    ```
+    none-type ::= `none`
+    ```
+
     NoneType is a unit type, i.e. a type with exactly one possible value, where
     its value does not have a defined dynamic representation.
+
+    #### Example:
+
+    ```mlir
+    func.func @none_type() {
+      %none_val = "foo.unknown_op"() : () -> none
+      return
+    }
+    ```
   }];
   let extraClassDeclaration = [{
     static NoneType get(MLIRContext *context);
@@ -692,7 +717,7 @@ def Builtin_Opaque : Builtin_Type<"Opaque", "opaque"> {
     represented in their raw string form, and can only usefully be tested for
     type equality.
 
-    Examples:
+    #### Example:
 
     ```mlir
     opaque<"llvm", "struct<(i32, float)>">
@@ -761,7 +786,7 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
     zero sizes are not allowed in some other types, such tensors should be
     optimized away before lowering tensors to vectors.
 
-    Examples:
+    #### Example:
 
     ```mlir
     // Known rank but unknown dimensions.
@@ -846,7 +871,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", "tuple"> {
     provides no standard operations for operating on `tuple` types
     ([rationale](../../Rationale/Rationale/#tuple-types)).
 
-    Examples:
+    #### Example:
 
     ```mlir
     // Empty tuple.
@@ -917,7 +942,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
     See [MemRefType](#memreftype) for more information on
     memref types.
 
-    Examples:
+    #### Examples:
 
     ```mlir
     memref<*f32>
@@ -990,7 +1015,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
     unknown rank. See [RankedTensorType](#rankedtensortype)
     for more information on tensor types.
 
-    Examples:
+    #### Examples:
 
     ```mlir
     tensor<*xf32>
@@ -1051,7 +1076,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
     declarations, `vector<0x42xi32>` is invalid because it is interpreted as a
     2D vector with shape `(0, 42)` and zero shapes are not allowed.
 
-    Examples:
+    #### Examples:
 
     ```mlir
     // A 2D fixed-length vector of 3x42 i32 elements.

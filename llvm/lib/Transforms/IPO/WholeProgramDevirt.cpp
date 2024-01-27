@@ -1264,7 +1264,8 @@ static bool AddCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
   // to better ensure we have the opportunity to inline them.
   bool IsExported = false;
   auto &S = Callee.getSummaryList()[0];
-  CalleeInfo CI(CalleeInfo::HotnessType::Hot, /* RelBF = */ 0);
+  CalleeInfo CI(CalleeInfo::HotnessType::Hot, /* HasTailCall = */ false,
+                /* RelBF = */ 0);
   auto AddCalls = [&](CallSiteInfo &CSInfo) {
     for (auto *FS : CSInfo.SummaryTypeCheckedLoadUsers) {
       FS->addCall({Callee, CI});
@@ -1768,7 +1769,7 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
       continue;
     auto *RetType = cast<IntegerType>(Call.CB.getType());
     IRBuilder<> B(&Call.CB);
-    Value *Addr = B.CreateGEP(Int8Ty, Call.VTable, Byte);
+    Value *Addr = B.CreatePtrAdd(Call.VTable, Byte);
     if (RetType->getBitWidth() == 1) {
       Value *Bits = B.CreateLoad(Int8Ty, Addr);
       Value *BitsAndBit = B.CreateAnd(Bits, Bit);
@@ -2065,14 +2066,14 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
     Value *LoadedValue = nullptr;
     if (TypeCheckedLoadFunc->getIntrinsicID() ==
         Intrinsic::type_checked_load_relative) {
-      Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
+      Value *GEP = LoadB.CreatePtrAdd(Ptr, Offset);
       LoadedValue = LoadB.CreateLoad(Int32Ty, GEP);
       LoadedValue = LoadB.CreateSExt(LoadedValue, IntPtrTy);
       GEP = LoadB.CreatePtrToInt(GEP, IntPtrTy);
       LoadedValue = LoadB.CreateAdd(GEP, LoadedValue);
       LoadedValue = LoadB.CreateIntToPtr(LoadedValue, Int8PtrTy);
     } else {
-      Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
+      Value *GEP = LoadB.CreatePtrAdd(Ptr, Offset);
       LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEP);
     }
 

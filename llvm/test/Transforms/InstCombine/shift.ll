@@ -119,8 +119,8 @@ define i8 @test11a(i8 %A) {
 ;; (A >> 8) << 8 === A & -256
 define i32 @test12(i32 %A) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[C:%.*]] = and i32 [[A:%.*]], -256
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -256
+; CHECK-NEXT:    ret i32 [[B]]
 ;
   %B = ashr i32 %A, 8
   %C = shl i32 %B, 8
@@ -171,7 +171,7 @@ define i8 @test13a(i8 %A) {
 define i32 @test14(i32 %A) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -19760
-; CHECK-NEXT:    [[C:%.*]] = or i32 [[B]], 19744
+; CHECK-NEXT:    [[C:%.*]] = or disjoint i32 [[B]], 19744
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = lshr i32 %A, 4
@@ -400,14 +400,12 @@ define <2 x i1> @test28vec(<2 x i8> %x) {
 define i8 @test28a(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test28a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I1:%.*]] = lshr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[COND1_NOT:%.*]] = icmp sgt i8 [[X]], -1
+; CHECK-NEXT:    [[COND1_NOT:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    br i1 [[COND1_NOT]], label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    ret i8 [[I1]]
+; CHECK-NEXT:    ret i8 1
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[I2:%.*]] = add i8 [[I1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[I2]]
+; CHECK-NEXT:    ret i8 [[Y:%.*]]
 ;
 entry:
 ; This shouldn't be transformed.
@@ -660,7 +658,7 @@ define i8 @test39(i32 %a0) {
 ; CHECK-NEXT:    [[I51:%.*]] = xor i8 [[I50]], [[I5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr exact i8 [[I5]], 3
 ; CHECK-NEXT:    [[I54:%.*]] = and i8 [[TMP0]], 16
-; CHECK-NEXT:    [[I551:%.*]] = or i8 [[I54]], [[I51]]
+; CHECK-NEXT:    [[I551:%.*]] = or disjoint i8 [[I54]], [[I51]]
 ; CHECK-NEXT:    ret i8 [[I551]]
 ;
 entry:
@@ -1041,7 +1039,7 @@ define i32 @test56(i32 %x) {
 ; CHECK-LABEL: @test56(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -16
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 7
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL]], 7
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %shr2 = lshr i32 %x, 1
@@ -1054,7 +1052,7 @@ define i32 @test57(i32 %x) {
 ; CHECK-LABEL: @test57(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -16
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 7
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL]], 7
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %shr = ashr i32 %x, 1
@@ -1091,7 +1089,7 @@ define i32 @test59(i32 %x) {
 ; CHECK-LABEL: @test59(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -4
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 2
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL]], 2
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %shr = ashr i32 %x, 4
@@ -1756,7 +1754,7 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[B:%.*]] = select i1 [[TMP1]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[B]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[TMP3]], i64 -1
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -24
 ; CHECK-NEXT:    [[C17:%.*]] = icmp sgt i177 [[B]], [[L_FROZEN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C17]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP4]]
@@ -1785,7 +1783,7 @@ define void @ashr_out_of_range_1(ptr %A) {
 define void @ossfuzz_38078(i32 %arg, i32 %arg1, ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5, ptr %ptr6, ptr %ptr7) {
 ; CHECK-LABEL: @ossfuzz_38078(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 -4
 ; CHECK-NEXT:    [[I2:%.*]] = sub i32 0, [[ARG1:%.*]]
 ; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[I2]], [[ARG:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I5]])
@@ -1915,7 +1913,7 @@ define <2 x i32> @lshr_mul_negpow2_5(<2 x i32> %x) {
 ; CHECK-LABEL: @lshr_mul_negpow2_5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[TMP1]], <i32 65527, i32 65527>
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A]], <i32 8, i32 8>
+; CHECK-NEXT:    [[B:%.*]] = or disjoint <2 x i32> [[A]], <i32 8, i32 8>
 ; CHECK-NEXT:    ret <2 x i32> [[B]]
 ;
   %a = mul <2 x i32> %x, <i32 -65536, i32 -65536>

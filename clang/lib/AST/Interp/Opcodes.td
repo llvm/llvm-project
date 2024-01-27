@@ -375,10 +375,9 @@ def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
-def CheckGlobalCtor : Opcode {}
-
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
+def GetGlobalUnchecked : AccessOpcode;
 // [Value] -> []
 def InitGlobal : AccessOpcode;
 // [Value] -> []
@@ -416,7 +415,11 @@ def InitThisField : AccessOpcode;
 // [Value] -> []
 def InitThisFieldActive : AccessOpcode;
 // [Value] -> []
-def InitThisBitField : BitFieldOpcode;
+def InitThisBitField : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgRecordField, ArgUint32];
+  let HasGroup = 1;
+}
 // [Pointer, Value] -> []
 def InitField : AccessOpcode;
 // [Pointer, Value] -> []

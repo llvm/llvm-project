@@ -27,8 +27,5 @@ executable("clang-linker-wrapper") {
     "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Utils",
   ]
-  sources = [
-    "ClangLinkerWrapper.cpp",
-    "OffloadWrapper.cpp",
-  ]
+  sources = [ "ClangLinkerWrapper.cpp" ]
 }

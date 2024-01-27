@@ -151,7 +151,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Template parameter initialization</td>
   <td><a href="https://wg21.link/P2308R1">P2308R1</a> (<a href="#dr">DR</a>)</td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 18</td>
  </tr>
  <tr>
   <td>Pack Indexing</td>
@@ -637,13 +637,21 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <!-- Rapperswil papers -->
     <tr>
-      <td rowspan="2">Class types as non-type template parameters</td>
+      <td>Class types as non-type template parameters</td>
       <td><a href="https://wg21.link/p0732r2">P0732R2</a></td>
-      <td rowspan="2" class="partial" align="center">Partial</td>
+      <td class="full" align="center">Clang 12</td>
     </tr>
-      <tr> <!-- from Belfast -->
-        <td><a href="https://wg21.link/p1907r1">P1907R1</a></td>
-      </tr>
+    <tr> <!-- from Belfast -->
+      <td>Generalized non-type template parameters of scalar type</td>
+      <td><a href="https://wg21.link/p1907r1">P1907R1</a></td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 18 (Partial)</summary>
+          Reference type template arguments referring to instantiation-dependent objects and subobjects
+          (i.e. declared inside a template but neither type- nor value-dependent) aren't fully supported.
+        </details>
+      </td>
+    </tr>
     <tr>
       <td>Destroying operator delete</td>
       <td><a href="https://wg21.link/p0722r3">P0722R3</a></td>

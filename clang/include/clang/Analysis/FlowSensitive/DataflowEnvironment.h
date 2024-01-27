@@ -166,6 +166,16 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
+  /// Assigns storage locations and values to all parameters, captures, global
+  /// variables, fields and functions referenced in the function currently being
+  /// analyzed.
+  ///
+  /// Requirements:
+  ///
+  ///  The function must have a body, i.e.
+  ///  `FunctionDecl::doesThisDecalarationHaveABody()` must be true.
+  void initialize();
+
   /// Returns a new environment that is a copy of this one.
   ///
   /// The state of the program is initially the same, but can be mutated without
@@ -280,10 +290,34 @@ public:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   StorageLocation *getStorageLocation(const Expr &E) const;
 
+  /// Returns the result of casting `getStorageLocation(...)` to a subclass of
+  /// `StorageLocation` (using `cast_or_null<T>`).
+  /// This assert-fails if the result of `getStorageLocation(...)` is not of
+  /// type `T *`; if the storage location is not guaranteed to have type `T *`,
+  /// consider using `dyn_cast_or_null<T>(getStorageLocation(...))` instead.
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T *>
+  get(const ValueDecl &D) const {
+    return cast_or_null<T>(getStorageLocation(D));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T *>
+  get(const Expr &E) const {
+    return cast_or_null<T>(getStorageLocation(E));
+  }
+
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
-  RecordStorageLocation *getThisPointeeStorageLocation() const;
+  RecordStorageLocation *getThisPointeeStorageLocation() const {
+    return ThisPointeeLoc;
+  }
+
+  /// Sets the storage location assigned to the `this` pointee in the
+  /// environment.
+  void setThisPointeeStorageLocation(RecordStorageLocation &Loc) {
+    ThisPointeeLoc = &Loc;
+  }
 
   /// Returns the location of the result object for a record-type prvalue.
   ///
@@ -308,7 +342,8 @@ public:
   ///
   /// Requirements:
   ///  `E` must be a prvalue of record type.
-  RecordStorageLocation &getResultObjectLocation(const Expr &RecordPRValue);
+  RecordStorageLocation &
+  getResultObjectLocation(const Expr &RecordPRValue) const;
 
   /// Returns the return value of the current function. This can be null if:
   /// - The function has a void return type
@@ -367,7 +402,8 @@ public:
   /// storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
   ///
-  /// If `Type` is a class, struct, or union type, calls `setValue()` to
+  /// If `Type` is a class, struct, or union type, creates values for all
+  /// modeled fields (including synthetic fields) and calls `setValue()` to
   /// associate the `RecordValue` with its storage location
   /// (`RecordValue::getLoc()`).
   ///
@@ -416,24 +452,14 @@ public:
 
   /// Assigns `Val` as the value of the prvalue `E` in the environment.
   ///
-  /// If `E` is not yet associated with a storage location, associates it with
-  /// a newly created storage location. In any case, associates the storage
-  /// location of `E` with `Val`.
-  ///
-  /// Once the migration to strict handling of value categories is complete
-  /// (see https://discourse.llvm.org/t/70086), this function will be renamed to
-  /// `setValue()`. At this point, prvalue expressions will be associated
-  /// directly with `Value`s, and the legacy behavior of associating prvalue
-  /// expressions with storage locations (as described above) will be
-  /// eliminated.
-  ///
   /// Requirements:
   ///
-  ///  `E` must be a prvalue
-  ///  If `Val` is a `RecordValue`, its `RecordStorageLocation` must be the
-  ///  same as that of any `RecordValue` that has already been associated with
-  ///  `E`. This is to guarantee that the result object initialized by a prvalue
-  ///  `RecordValue` has a durable storage location.
+  ///  - `E` must be a prvalue
+  ///  - If `Val` is a `RecordValue`, its `RecordStorageLocation` must be
+  ///    `getResultObjectLocation(E)`. An exception to this is if `E` is an
+  ///    expression that originally creates a `RecordValue` (such as a
+  ///    `CXXConstructExpr` or `CallExpr`), as these establish the location of
+  ///    the result object in the first place.
   void setValue(const Expr &E, Value &Val);
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
@@ -447,6 +473,26 @@ public:
   /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
   /// storage location in the environment, otherwise returns null.
   Value *getValue(const Expr &E) const;
+
+  /// Returns the result of casting `getValue(...)` to a subclass of `Value`
+  /// (using `cast_or_null<T>`).
+  /// This assert-fails if the result of `getValue(...)` is not of type `T *`;
+  /// if the value is not guaranteed to have type `T *`, consider using
+  /// `dyn_cast_or_null<T>(getValue(...))` instead.
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *>
+  get(const StorageLocation &Loc) const {
+    return cast_or_null<T>(getValue(Loc));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *>
+  get(const ValueDecl &D) const {
+    return cast_or_null<T>(getValue(D));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_base_of_v<Value, T>, T *> get(const Expr &E) const {
+    return cast_or_null<T>(getValue(E));
+  }
 
   // FIXME: should we deprecate the following & call arena().create() directly?
 
@@ -570,6 +616,9 @@ public:
     return dyn_cast<FunctionDecl>(getDeclCtx());
   }
 
+  /// Returns the size of the call stack.
+  size_t callStackSize() const { return CallStack.size(); }
+
   /// Returns whether this `Environment` can be extended to analyze the given
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
   /// given `MaxDepth`.
@@ -586,14 +635,6 @@ public:
 private:
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
-
-  /// Internal version of `setStorageLocation()` that doesn't check if the
-  /// expression is a prvalue.
-  void setStorageLocationInternal(const Expr &E, StorageLocation &Loc);
-
-  /// Internal version of `getStorageLocation()` that doesn't check if the
-  /// expression is a prvalue.
-  StorageLocation *getStorageLocationInternal(const Expr &E) const;
 
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
   /// return null.
@@ -687,20 +728,9 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
 
 /// Associates a new `RecordValue` with `Loc` and returns the new value.
-/// It is not defined whether the field values remain the same or not.
-///
-/// This function is primarily intended for use by checks that set custom
-/// properties on `RecordValue`s to model the state of these values. Such checks
-/// should avoid modifying the properties of an existing `RecordValue` because
-/// these changes would be visible to other `Environment`s that share the same
-/// `RecordValue`. Instead, call `refreshRecordValue()`, then set the properties
-/// on the new `RecordValue` that it returns. Typical usage:
-///
-///   refreshRecordValue(Loc, Env).setProperty("my_prop", MyPropValue);
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 
 /// Associates a new `RecordValue` with `Expr` and returns the new value.
-/// See also documentation for the overload above.
 RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow

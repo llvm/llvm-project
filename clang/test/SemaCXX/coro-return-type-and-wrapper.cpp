@@ -1,13 +1,25 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++20 -fsyntax-only -verify -Wall -Wextra -Wno-c++23-lambda-attributes
 #include "Inputs/std-coroutine.h"
 
 using std::suspend_always;
 using std::suspend_never;
 
 
+namespace std {
+  struct nothrow_t {};
+  constexpr nothrow_t nothrow = {};
+}
+
+using SizeT = decltype(sizeof(int));
+
+void* operator new(SizeT __sz, const std::nothrow_t&) noexcept;
+
 template <typename T> struct [[clang::coro_return_type]] Gen {
   struct promise_type {
     Gen<T> get_return_object() {
+      return {};
+    }
+    static Gen<T> get_return_object_on_allocation_failure() {
       return {};
     }
     suspend_always initial_suspend();
@@ -45,11 +57,6 @@ Co<int> non_marked_wrapper(int b) { return foo_coro(b); }
 } // namespace using_decl
 
 namespace lambdas {
-#define CORO_WRAPPER \
-  _Pragma("clang diagnostic push") \
-  _Pragma("clang diagnostic ignored \"-Wc++23-extensions\"") \
-  [[clang::coro_wrapper]] \
-  _Pragma("clang diagnostic pop")
 
 void foo() {
   auto coro_lambda = []() -> Gen<int> {
@@ -59,7 +66,7 @@ void foo() {
   auto not_allowed_wrapper = []() -> Gen<int> {
     return foo_coro(1);
   };
-  auto allowed_wrapper = [] CORO_WRAPPER() -> Gen<int> {
+  auto allowed_wrapper = [] [[clang::coro_wrapper]] () -> Gen<int> {
     return foo_coro(1);
   };
 }

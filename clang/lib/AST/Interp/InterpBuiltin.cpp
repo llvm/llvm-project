@@ -34,6 +34,19 @@ PrimType getIntPrimType(const InterpState &S) {
   llvm_unreachable("Int isn't 16 or 32 bit?");
 }
 
+PrimType getLongPrimType(const InterpState &S) {
+  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  unsigned LongWidth = TI.getLongWidth();
+
+  if (LongWidth == 64)
+    return PT_Sint64;
+  else if (LongWidth == 32)
+    return PT_Sint32;
+  else if (LongWidth == 16)
+    return PT_Sint16;
+  llvm_unreachable("long isn't 16, 32 or 64 bit?");
+}
+
 /// Peek an integer value from the stack into an APSInt.
 static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   if (Offset == 0)
@@ -110,6 +123,19 @@ static void pushAPSInt(InterpState &S, const APSInt &Val) {
   }
 }
 
+/// Pushes \p Val to the stack, as a target-dependent 'long'.
+static void pushLong(InterpState &S, int64_t Val) {
+  PrimType LongType = getLongPrimType(S);
+  if (LongType == PT_Sint64)
+    S.Stk.push<Integral<64, true>>(Integral<64, true>::from(Val));
+  else if (LongType == PT_Sint32)
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Val));
+  else if (LongType == PT_Sint16)
+    S.Stk.push<Integral<16, true>>(Integral<16, true>::from(Val));
+  else
+    llvm_unreachable("Long isn't 16, 32 or 64 bit?");
+}
+
 static void pushSizeT(InterpState &S, uint64_t Val) {
   const TargetInfo &TI = S.getCtx().getTargetInfo();
   unsigned SizeTWidth = TI.getTypeWidth(TI.getSizeType());
@@ -138,6 +164,8 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
   case X:                                                                      \
     return Ret<X>(S, OpPC, Result);
   switch (*T) {
+    RET_CASE(PT_Ptr);
+    RET_CASE(PT_FnPtr);
     RET_CASE(PT_Float);
     RET_CASE(PT_Bool);
     RET_CASE(PT_Sint8);
@@ -533,15 +561,88 @@ static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// __builtin_expect(long, long)
+// __builtin_expect_with_probability(long, long, double)
+static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  // The return value is simply the value of the first parameter.
+  // We ignore the probability.
+  unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs == 2 || NumArgs == 3);
+
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  unsigned Offset = align(primSize(getLongPrimType(S))) * 2;
+  if (NumArgs == 3)
+    Offset += align(primSize(PT_Float));
+
+  APSInt Val = peekToAPSInt(S.Stk, ArgT, Offset);
+  pushLong(S, Val.getSExtValue());
+  return true;
+}
+
+/// rotateleft(value, amount)
+static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call,
+                                   bool Right) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+
+  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
+  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+
+  APSInt Result;
+  if (Right)
+    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+  else // Left.
+    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+
+  pushAPSInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *Func,
+                                const CallExpr *Call) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  APSInt Value = peekToAPSInt(S.Stk, ArgT);
+
+  uint64_t N = Value.countr_zero();
+  pushInt(S, N == Value.getBitWidth() ? 0 : N + 1);
+  return true;
+}
+
+static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType PtrT =
+      S.getContext().classify(Call->getArg(0)->getType()).value_or(PT_Ptr);
+
+  if (PtrT == PT_FnPtr) {
+    const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
+    S.Stk.push<FunctionPointer>(Arg);
+  } else if (PtrT == PT_Ptr) {
+    const Pointer &Arg = S.Stk.peek<Pointer>();
+    S.Stk.push<Pointer>(Arg);
+  } else {
+    assert(false && "Unsupported pointer type passed to __builtin_addressof()");
+  }
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
-  QualType ReturnType = Call->getCallReturnType(S.getCtx());
-  std::optional<PrimType> ReturnT = S.getContext().classify(ReturnType);
+  std::optional<PrimType> ReturnT = S.getContext().classify(Call->getType());
+
   // If classify failed, we assume void.
-  assert(ReturnT || ReturnType->isVoidType());
+  assert(ReturnT || Call->getType()->isVoidType());
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -699,6 +800,51 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_classify_type:
     if (!interp__builtin_classify_type(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability:
+    if (!interp__builtin_expect(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/false))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/true))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    if (!interp__builtin_ffs(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BI__builtin_addressof:
+    if (!interp__builtin_addressof(S, OpPC, Frame, F, Call))
       return false;
     break;
 

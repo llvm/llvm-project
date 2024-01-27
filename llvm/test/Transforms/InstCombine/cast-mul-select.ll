@@ -149,7 +149,7 @@ define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[T]], 14
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]]
-; CHECK-NEXT:    [[O:%.*]] = or i16 [[M]], -32768
+; CHECK-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768
 ; CHECK-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -160,7 +160,7 @@ define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[A]], metadata [[META77:![0-9]+]], metadata !DIExpression()), !dbg [[DBG82]]
 ; DBGINFO-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]], !dbg [[DBG83:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[M]], metadata [[META78:![0-9]+]], metadata !DIExpression()), !dbg [[DBG83]]
-; DBGINFO-NEXT:    [[O:%.*]] = or i16 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
+; DBGINFO-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[O]], metadata [[META79:![0-9]+]], metadata !DIExpression()), !dbg [[DBG84]]
 ; DBGINFO-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32, !dbg [[DBG85:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[R]], metadata [[META80:![0-9]+]], metadata !DIExpression()), !dbg [[DBG85]]

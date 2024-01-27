@@ -859,6 +859,9 @@ private:
 
   /// Add all of the metadata from an instruction.
   void processInstructionMetadata(const Instruction &I);
+
+  /// Add all of the metadata from an instruction.
+  void processDPValueMetadata(const DPValue &DPV);
 };
 
 } // end namespace llvm
@@ -1126,8 +1129,19 @@ void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
 void SlotTracker::processFunctionMetadata(const Function &F) {
   processGlobalObjectMetadata(F);
   for (auto &BB : F) {
-    for (auto &I : BB)
+    for (auto &I : BB) {
+      for (const DPValue &DPV : I.getDbgValueRange())
+        processDPValueMetadata(DPV);
       processInstructionMetadata(I);
+    }
+  }
+}
+
+void SlotTracker::processDPValueMetadata(const DPValue &DPV) {
+  CreateMetadataSlot(DPV.getVariable());
+  CreateMetadataSlot(DPV.getDebugLoc());
+  if (DPV.isDbgAssign()) {
+    CreateMetadataSlot(DPV.getAssignID());
   }
 }
 
@@ -3243,6 +3257,10 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
         Out << ", hotness: " << getHotnessName(Call.second.getHotness());
       else if (Call.second.RelBlockFreq)
         Out << ", relbf: " << Call.second.RelBlockFreq;
+      // Follow the convention of emitting flags as a boolean value, but only
+      // emit if true to avoid unnecessary verbosity and test churn.
+      if (Call.second.HasTailCall)
+        Out << ", tail: 1";
       Out << ")";
     }
     Out << ")";
@@ -3516,15 +3534,15 @@ static void printMetadataIdentifier(StringRef Name,
   if (Name.empty()) {
     Out << "<empty name> ";
   } else {
-    if (isalpha(static_cast<unsigned char>(Name[0])) || Name[0] == '-' ||
-        Name[0] == '$' || Name[0] == '.' || Name[0] == '_')
-      Out << Name[0];
+    unsigned char FirstC = static_cast<unsigned char>(Name[0]);
+    if (isalpha(FirstC) || FirstC == '-' || FirstC == '$' || FirstC == '.' ||
+        FirstC == '_')
+      Out << FirstC;
     else
-      Out << '\\' << hexdigit(Name[0] >> 4) << hexdigit(Name[0] & 0x0F);
+      Out << '\\' << hexdigit(FirstC >> 4) << hexdigit(FirstC & 0x0F);
     for (unsigned i = 1, e = Name.size(); i != e; ++i) {
       unsigned char C = Name[i];
-      if (isalnum(static_cast<unsigned char>(C)) || C == '-' || C == '$' ||
-          C == '.' || C == '_')
+      if (isalnum(C) || C == '-' || C == '$' || C == '.' || C == '_')
         Out << C;
       else
         Out << '\\' << hexdigit(C >> 4) << hexdigit(C & 0x0F);
@@ -3670,6 +3688,27 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   if (GV->hasPartition()) {
     Out << ", partition \"";
     printEscapedString(GV->getPartition(), Out);
+    Out << '"';
+  }
+  if (auto CM = GV->getCodeModel()) {
+    Out << ", code_model \"";
+    switch (*CM) {
+    case CodeModel::Tiny:
+      Out << "tiny";
+      break;
+    case CodeModel::Small:
+      Out << "small";
+      break;
+    case CodeModel::Kernel:
+      Out << "kernel";
+      break;
+    case CodeModel::Medium:
+      Out << "medium";
+      break;
+    case CodeModel::Large:
+      Out << "large";
+      break;
+    }
     Out << '"';
   }
 
@@ -4535,7 +4574,22 @@ void AssemblyWriter::printDPMarker(const DPMarker &Marker) {
 void AssemblyWriter::printDPValue(const DPValue &Value) {
   // There's no formal representation of a DPValue -- print purely as a
   // debugging aid.
-  Out << "  DPValue { ";
+  Out << "  DPValue ";
+
+  switch (Value.getType()) {
+  case DPValue::LocationType::Value:
+    Out << "value";
+    break;
+  case DPValue::LocationType::Declare:
+    Out << "declare";
+    break;
+  case DPValue::LocationType::Assign:
+    Out << "assign";
+    break;
+  default:
+    llvm_unreachable("Tried to print a DPValue with an invalid LocationType!");
+  }
+  Out << " { ";
   auto WriterCtx = getContext();
   WriteAsOperandInternal(Out, Value.getRawLocation(), WriterCtx, true);
   Out << ", ";
@@ -4543,6 +4597,14 @@ void AssemblyWriter::printDPValue(const DPValue &Value) {
   Out << ", ";
   WriteAsOperandInternal(Out, Value.getExpression(), WriterCtx, true);
   Out << ", ";
+  if (Value.isDbgAssign()) {
+    WriteAsOperandInternal(Out, Value.getAssignID(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, Value.getRawAddress(), WriterCtx, true);
+    Out << ", ";
+    WriteAsOperandInternal(Out, Value.getAddressExpression(), WriterCtx, true);
+    Out << ", ";
+  }
   WriteAsOperandInternal(Out, Value.getDebugLoc().get(), WriterCtx, true);
   Out << " marker @" << Value.getMarker();
   Out << " }";

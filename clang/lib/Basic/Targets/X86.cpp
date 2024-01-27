@@ -295,11 +295,13 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512BF16 = true;
     } else if (Feature == "+avx512er") {
       HasAVX512ER = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512fp16") {
       HasAVX512FP16 = true;
       HasLegalHalfType = true;
     } else if (Feature == "+avx512pf") {
       HasAVX512PF = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+avx512dq") {
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
@@ -358,6 +360,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasPREFETCHI = true;
     } else if (Feature == "+prefetchwt1") {
       HasPREFETCHWT1 = true;
+      Diags.Report(diag::warn_knl_knm_isa_support_removed);
     } else if (Feature == "+clzero") {
       HasCLZERO = true;
     } else if (Feature == "+cldemote") {
@@ -428,6 +431,18 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasX87 = true;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
+    } else if (Feature == "+egpr") {
+      HasEGPR = true;
+    } else if (Feature == "+push2pop2") {
+      HasPush2Pop2 = true;
+    } else if (Feature == "+ppx") {
+      HasPPX = true;
+    } else if (Feature == "+ndd") {
+      HasNDD = true;
+    } else if (Feature == "+ccmp") {
+      HasCCMP = true;
+    } else if (Feature == "+cf") {
+      HasCF = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -927,6 +942,18 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__USERMSR__");
   if (HasCRC32)
     Builder.defineMacro("__CRC32__");
+  if (HasEGPR)
+    Builder.defineMacro("__EGPR__");
+  if (HasPush2Pop2)
+    Builder.defineMacro("__PUSH2POP2__");
+  if (HasPPX)
+    Builder.defineMacro("__PPX__");
+  if (HasNDD)
+    Builder.defineMacro("__NDD__");
+  if (HasCCMP)
+    Builder.defineMacro("__CCMP__");
+  if (HasCF)
+    Builder.defineMacro("__CF__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1122,6 +1149,12 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
+      .Case("egpr", true)
+      .Case("push2pop2", true)
+      .Case("ppx", true)
+      .Case("ndd", true)
+      .Case("ccmp", true)
+      .Case("cf", true)
       .Default(false);
 }
 
@@ -1238,6 +1271,12 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("xsaves", HasXSAVES)
       .Case("xsaveopt", HasXSAVEOPT)
       .Case("fullbf16", HasFullBFloat16)
+      .Case("egpr", HasEGPR)
+      .Case("push2pop2", HasPush2Pop2)
+      .Case("ppx", HasPPX)
+      .Case("ndd", HasNDD)
+      .Case("ccmp", HasCCMP)
+      .Case("cf", HasCF)
       .Default(false);
 }
 
@@ -1379,6 +1418,14 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'O':
     Info.setRequiresImmediate(0, 127);
     return true;
+  case 'W':
+    switch (*++Name) {
+    default:
+      return false;
+    case 's':
+      Info.setAllowsRegister();
+      return true;
+    }
   // Register constraints.
   case 'Y': // 'Y' is the first character for several 2-character constraints.
     // Shift the pointer to the second character of the constraint.
@@ -1577,8 +1624,7 @@ bool X86TargetInfo::validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
                                        StringRef Constraint,
                                        unsigned Size) const {
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   return validateOperandSize(FeatureMap, Constraint, Size);
 }
@@ -1677,6 +1723,9 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
     return std::string("{st}");
   case 'u':                        // second from top of floating point stack.
     return std::string("{st(1)}"); // second from top of floating point stack.
+  case 'W':
+    assert(Constraint[1] == 's');
+    return '^' + std::string(Constraint++, 2);
   case 'Y':
     switch (Constraint[1]) {
     default:

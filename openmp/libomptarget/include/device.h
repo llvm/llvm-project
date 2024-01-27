@@ -19,27 +19,24 @@
 #include <cstring>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 
 #include "ExclusiveAccess.h"
+#include "OffloadEntry.h"
 #include "omptarget.h"
 #include "rtl.h"
 
 #include "OpenMP/Mapping.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+
 // Forward declarations.
 struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
-
-// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
-enum kmp_target_offload_kind {
-  tgt_disabled = 0,
-  tgt_default = 1,
-  tgt_mandatory = 2
-};
-typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
 ///
 struct PendingCtorDtorListsTy {
@@ -54,103 +51,26 @@ struct DeviceTy {
   PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
 
-  bool IsInit;
-  std::once_flag InitFlag;
-  bool HasPendingGlobals;
-
-  /// Host data to device map type with a wrapper key indirection that allows
-  /// concurrent modification of the entries without invalidating the underlying
-  /// entries.
-  using HostDataToTargetListTy =
-      std::set<HostDataToTargetMapKeyTy, std::less<>>;
-
-  /// The HDTTMap is a protected object that can only be accessed by one thread
-  /// at a time.
-  ProtectedObj<HostDataToTargetListTy> HostDataToTargetMap;
-
-  /// The type used to access the HDTT map.
-  using HDTTMapAccessorTy = decltype(HostDataToTargetMap)::AccessorTy;
+  bool HasMappedGlobalData = false;
 
   PendingCtorsDtorsPerLibrary PendingCtorsDtors;
 
   std::mutex PendingGlobalsMtx;
 
-  DeviceTy(PluginAdaptorTy *RTL);
+  DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
 
   ~DeviceTy();
 
-  // Return true if data can be copied to DstDevice directly
-  bool isDataExchangable(const DeviceTy &DstDevice);
+  /// Try to initialize the device and return any failure.
+  llvm::Error init();
 
-  /// Lookup the mapping of \p HstPtrBegin in \p HDTTMap. The accessor ensures
-  /// exclusive access to the HDTT map.
-  LookupResult lookupMapping(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
-                             int64_t Size,
-                             HostDataToTargetTy *OwnedTPR = nullptr);
+  /// Provide access to the mapping handler.
+  MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
-  /// Get the target pointer based on host pointer begin and base. If the
-  /// mapping already exists, the target pointer will be returned directly. In
-  /// addition, if required, the memory region pointed by \p HstPtrBegin of size
-  /// \p Size will also be transferred to the device. If the mapping doesn't
-  /// exist, and if unified shared memory is not enabled, a new mapping will be
-  /// created and the data will also be transferred accordingly. nullptr will be
-  /// returned because of any of following reasons:
-  /// - Data allocation failed;
-  /// - The user tried to do an illegal mapping;
-  /// - Data transfer issue fails.
-  TargetPointerResultTy getTargetPointer(
-      HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
-      int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName,
-      bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
-      bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
-      AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
-      bool ReleaseHDTTMap = true);
-
-  /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
-  /// ensures exclusive access to the HDTT map.
-  void *getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
-                       int64_t Size);
-
-  /// Return the target pointer begin (where the data will be moved).
-  /// Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.
-  /// - \p UpdateRefCount and \p UseHoldRefCount controls which and if the entry
-  /// reference counters will be decremented.
-  /// - \p MustContain enforces that the query must not extend beyond an already
-  /// mapped entry to be valid.
-  /// - \p ForceDelete deletes the entry regardless of its reference counting
-  /// (unless it is infinite).
-  /// - \p FromDataEnd tracks the number of threads referencing the entry at
-  /// targetDataEnd for delayed deletion purpose.
-  [[nodiscard]] TargetPointerResultTy
-  getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool UpdateRefCount,
-                 bool UseHoldRefCount, bool MustContain = false,
-                 bool ForceDelete = false, bool FromDataEnd = false);
-
-  /// Remove the \p Entry from the data map. Expect the entry's total reference
-  /// count to be zero and the caller thread to be the last one using it. \p
-  /// HDTTMap ensure the caller holds exclusive access and can modify the map.
-  /// Return \c OFFLOAD_SUCCESS if the map entry existed, and return \c
-  /// OFFLOAD_FAIL if not. It is the caller's responsibility to skip calling
-  /// this function if the map entry is not expected to exist because \p
-  /// HstPtrBegin uses shared memory.
-  [[nodiscard]] int eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
-                                  HostDataToTargetTy *Entry, int64_t Size);
-
-  /// Deallocate the \p Entry from the device memory and delete it. Return \c
-  /// OFFLOAD_SUCCESS if the deallocation operations executed successfully, and
-  /// return \c OFFLOAD_FAIL otherwise.
-  [[nodiscard]] int deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
-                                          int64_t Size);
-
-  int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
-  int disassociatePtr(void *HstPtrBegin);
-
-  // calls to RTL
-  int32_t initOnce();
-  __tgt_target_table *loadBinary(__tgt_device_image *Img);
+  llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -163,6 +83,7 @@ struct DeviceTy {
   /// be used (host, shared, device).
   void *allocData(int64_t Size, void *HstPtr = nullptr,
                   int32_t Kind = TARGET_ALLOC_DEFAULT);
+
   /// Deallocates memory which \p TgtPtrBegin points at and returns
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. p Kind dictates what
   /// allocator should be used (host, shared, device).
@@ -173,11 +94,18 @@ struct DeviceTy {
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
-                     HostDataToTargetTy *Entry = nullptr);
+                     HostDataToTargetTy *Entry = nullptr,
+                     MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
-                       HostDataToTargetTy *Entry = nullptr);
+                       HostDataToTargetTy *Entry = nullptr,
+                       MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
+  // Return true if data can be copied to DstDevice directly
+  bool isDataExchangable(const DeviceTy &DstDevice);
+
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
@@ -205,9 +133,8 @@ struct DeviceTy {
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
 
-  /// Calls the corresponding print in the \p RTLDEVID
-  /// device RTL to obtain the information of the specific device.
-  bool printDeviceInfo(int32_t RTLDevID);
+  /// Calls the corresponding print device info function in the plugin.
+  bool printDeviceInfo();
 
   /// Event related interfaces.
   /// {
@@ -231,14 +158,26 @@ struct DeviceTy {
   int32_t destroyEvent(void *Event);
   /// }
 
-private:
-  // Call to RTL
-  void init(); // To be called only via DeviceTy::initOnce()
+  /// Register \p Entry as an offload entry that is avalable on this device.
+  void addOffloadEntry(const OffloadEntryTy &Entry);
 
+  /// Print all offload entries to stderr.
+  void dumpOffloadEntries();
+
+  /// Ask the device whether the runtime should use auto zero-copy.
+  bool useAutoZeroCopy();
+
+private:
   /// Deinitialize the device (and plugin).
   void deinit();
-};
 
-extern bool deviceIsReady(int DeviceNum);
+  /// All offload entries available on this device.
+  using DeviceOffloadEntriesMapTy =
+      llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
+  ProtectedObj<DeviceOffloadEntriesMapTy> DeviceOffloadEntries;
+
+  /// Handler to collect and organize host-2-device mapping information.
+  MappingInfoTy MappingInfo;
+};
 
 #endif

@@ -240,6 +240,12 @@ enum NodeType : unsigned {
   TexUnifiedCubeArrayS32FloatLevel,
   TexUnifiedCubeArrayU32Float,
   TexUnifiedCubeArrayU32FloatLevel,
+  TexUnifiedCubeFloatFloatGrad,
+  TexUnifiedCubeS32FloatGrad,
+  TexUnifiedCubeU32FloatGrad,
+  TexUnifiedCubeArrayFloatFloatGrad,
+  TexUnifiedCubeArrayS32FloatGrad,
+  TexUnifiedCubeArrayU32FloatGrad,
   Tld4UnifiedR2DFloatFloat,
   Tld4UnifiedG2DFloatFloat,
   Tld4UnifiedB2DFloatFloat,
@@ -513,6 +519,8 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+
   std::string
   getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
                const SmallVectorImpl<ISD::OutputArg> &, MaybeAlign retAlignment,
@@ -607,6 +615,9 @@ private:
   SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOADi1(SDValue Op, SelectionDAG &DAG) const;
 
@@ -626,8 +637,8 @@ private:
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
-  Align getArgumentAlignment(SDValue Callee, const CallBase *CB, Type *Ty,
-                             unsigned Idx, const DataLayout &DL) const;
+  Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
+                             const DataLayout &DL) const;
 };
 
 } // namespace llvm

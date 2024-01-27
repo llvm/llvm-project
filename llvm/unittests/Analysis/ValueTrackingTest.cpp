@@ -1177,12 +1177,12 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
        "<4 x i32> <i32 0, i32 1, i32 2, i32 3>"},
-      {{false, true},
+      {{true, false},
        "shufflevector <4 x i32> %vx, <4 x i32> %vx2, "
-       "<4 x i32> <i32 0, i32 1, i32 2, i32 undef>"},
-      {{false, true},
+       "<4 x i32> <i32 0, i32 1, i32 2, i32 poison>"},
+      {{true, false},
        "shufflevector <vscale x 4 x i32> %svx, "
-       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> undef"},
+       "<vscale x 4 x i32> %svx, <vscale x 4 x i32> poison"},
       {{true, false}, "call i32 @g(i32 %x)"},
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},
@@ -1945,14 +1945,14 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   auto [OleVal, OleClass] =
       fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
-  EXPECT_EQ(nullptr, OleVal);
-  EXPECT_EQ(fcAllFlags, OleClass);
+  EXPECT_EQ(A->getOperand(0), OleVal);
+  EXPECT_EQ(~fcNan, OleClass);
 
   auto [UgtVal, UgtClass] =
       fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
-  EXPECT_EQ(nullptr, UgtVal);
-  EXPECT_EQ(fcAllFlags, UgtClass);
+  EXPECT_EQ(A4->getOperand(0), UgtVal);
+  EXPECT_EQ(fcNan, UgtClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
@@ -2604,7 +2604,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for an inverted mask: (X & ~M) op (Y & M).
     auto M = parseModule(R"(
-  define i32 @test(i32 %X, i32 %Y, i32 %M) {
+  define i32 @test(i32 %X, i32 %Y, i32 noundef %M) {
     %1 = xor i32 %M, -1
     %LHS = and i32 %1, %X
     %RHS = and i32 %Y, %M
@@ -2623,7 +2623,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B)
     auto M = parseModule(R"(
-  define void @test(i32 %A, i32 %B) {
+  define void @test(i32 noundef %A, i32 noundef %B) {
     %LHS = and i32 %A, %B
     %or = or i32 %A, %B
     %RHS = xor i32 %or, -1
@@ -2651,7 +2651,7 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   {
     // Check for (A & B) and ~(A | B) in vector version
     auto M = parseModule(R"(
-  define void @test(<2 x i32> %A, <2 x i32> %B) {
+  define void @test(<2 x i32> noundef %A, <2 x i32> noundef %B) {
     %LHS = and <2 x i32> %A, %B
     %or = or <2 x i32> %A, %B
     %RHS = xor <2 x i32> %or, <i32 -1, i32 -1>

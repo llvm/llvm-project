@@ -99,11 +99,11 @@ lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
   SmallVector<StringRef> commentLines;
   while (std::optional<StringRef> line = popLastLine()) {
     // Check for a comment at the beginning of the line.
-    if (!line->startswith("//"))
+    if (!line->starts_with("//"))
       break;
 
     // Extract the document string from the comment.
-    commentLines.push_back(line->drop_while([](char c) { return c == '/'; }));
+    commentLines.push_back(line->ltrim('/'));
   }
 
   if (commentLines.empty())

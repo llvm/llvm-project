@@ -26,7 +26,9 @@
 #pragma push_macro("SM_87")
 #pragma push_macro("SM_89")
 #pragma push_macro("SM_90")
-#define SM_90 "sm_90"
+#pragma push_macro("SM_90a")
+#define SM_90a "sm_90a"
+#define SM_90 "sm_90|" SM_90a
 #define SM_89 "sm_89|" SM_90
 #define SM_87 "sm_87|" SM_89
 #define SM_86 "sm_86|" SM_87
@@ -56,7 +58,11 @@
 #pragma push_macro("PTX78")
 #pragma push_macro("PTX80")
 #pragma push_macro("PTX81")
-#define PTX81 "ptx81"
+#pragma push_macro("PTX82")
+#pragma push_macro("PTX83")
+#define PTX83 "ptx83"
+#define PTX82 "ptx82|" PTX83
+#define PTX81 "ptx81|" PTX82
 #define PTX80 "ptx80|" PTX81
 #define PTX78 "ptx78|" PTX80
 #define PTX77 "ptx77|" PTX78
@@ -1055,6 +1061,7 @@ TARGET_BUILTIN(__nvvm_getctarank_shared_cluster, "iv*3", "", AND(SM_90,PTX78))
 #pragma pop_macro("SM_87")
 #pragma pop_macro("SM_89")
 #pragma pop_macro("SM_90")
+#pragma pop_macro("SM_90a")
 #pragma pop_macro("PTX42")
 #pragma pop_macro("PTX60")
 #pragma pop_macro("PTX61")
@@ -1072,3 +1079,5 @@ TARGET_BUILTIN(__nvvm_getctarank_shared_cluster, "iv*3", "", AND(SM_90,PTX78))
 #pragma pop_macro("PTX78")
 #pragma pop_macro("PTX80")
 #pragma pop_macro("PTX81")
+#pragma pop_macro("PTX82")
+#pragma pop_macro("PTX83")

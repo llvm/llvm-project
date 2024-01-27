@@ -78,6 +78,10 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_120;
   if (raw_version < 12020)
     return CudaVersion::CUDA_121;
+  if (raw_version < 12030)
+    return CudaVersion::CUDA_122;
+  if (raw_version < 12040)
+    return CudaVersion::CUDA_123;
   return CudaVersion::NEW;
 }
 
@@ -234,7 +238,7 @@ CudaInstallationDetector::CudaInstallationDetector(
         // Process all bitcode filenames that look like
         // libdevice.compute_XX.YY.bc
         const StringRef LibDeviceName = "libdevice.";
-        if (!(FileName.startswith(LibDeviceName) && FileName.endswith(".bc")))
+        if (!(FileName.starts_with(LibDeviceName) && FileName.ends_with(".bc")))
           continue;
         StringRef GpuArch = FileName.slice(
             LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
@@ -671,6 +675,8 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(123, 83);
+    CASE_CUDA_VERSION(122, 82);
     CASE_CUDA_VERSION(121, 81);
     CASE_CUDA_VERSION(120, 80);
     CASE_CUDA_VERSION(118, 78);
@@ -732,9 +738,22 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  if (!DAL->hasArg(options::OPT_march_EQ))
+  if (!DAL->hasArg(options::OPT_march_EQ)) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
+  } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
+    auto GPUsOrErr = getSystemGPUArchs(Args);
+    if (!GPUsOrErr) {
+      getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+          << getArchName() << llvm::toString(GPUsOrErr.takeError()) << "-march";
+    } else {
+      if (GPUsOrErr->size() > 1)
+        getDriver().Diag(diag::warn_drv_multi_gpu_arch)
+            << getArchName() << llvm::join(*GPUsOrErr, ", ") << "-march";
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
+                        Args.MakeArgString(GPUsOrErr->front()));
+    }
+  }
 
   return DAL;
 }
@@ -775,6 +794,31 @@ void NVPTXToolChain::adjustDebugInfoKind(
     // Use same debug info level as the host.
     break;
   }
+}
+
+Expected<SmallVector<std::string>>
+NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
+  // Detect NVIDIA GPUs availible on the system.
+  std::string Program;
+  if (Arg *A = Args.getLastArg(options::OPT_nvptx_arch_tool_EQ))
+    Program = A->getValue();
+  else
+    Program = GetProgramPath("nvptx-arch");
+
+  auto StdoutOrErr = executeToolChainProgram(Program);
+  if (!StdoutOrErr)
+    return StdoutOrErr.takeError();
+
+  SmallVector<std::string, 1> GPUArchs;
+  for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
+    if (!Arch.empty())
+      GPUArchs.push_back(Arch.str());
+
+  if (GPUArchs.empty())
+    return llvm::createStringError(std::error_code(),
+                                   "No NVIDIA GPU detected in the system");
+
+  return std::move(GPUArchs);
 }
 
 /// CUDA toolchain.  Our assembler is ptxas, and our "linker" is fatbinary,
@@ -888,7 +932,7 @@ std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   // these particular file names.
   SmallString<256> Filename(ToolChain::getInputFilename(Input));
   llvm::sys::path::replace_extension(Filename, "cubin");
-  return std::string(Filename.str());
+  return std::string(Filename);
 }
 
 llvm::opt::DerivedArgList *
@@ -940,31 +984,6 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                       BoundArch);
   }
   return DAL;
-}
-
-Expected<SmallVector<std::string>>
-CudaToolChain::getSystemGPUArchs(const ArgList &Args) const {
-  // Detect NVIDIA GPUs availible on the system.
-  std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_nvptx_arch_tool_EQ))
-    Program = A->getValue();
-  else
-    Program = GetProgramPath("nvptx-arch");
-
-  auto StdoutOrErr = executeToolChainProgram(Program);
-  if (!StdoutOrErr)
-    return StdoutOrErr.takeError();
-
-  SmallVector<std::string, 1> GPUArchs;
-  for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
-    if (!Arch.empty())
-      GPUArchs.push_back(Arch.str());
-
-  if (GPUArchs.empty())
-    return llvm::createStringError(std::error_code(),
-                                   "No NVIDIA GPU detected in the system");
-
-  return std::move(GPUArchs);
 }
 
 Tool *NVPTXToolChain::buildAssembler() const {

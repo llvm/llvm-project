@@ -191,14 +191,16 @@ module {
 
   // CHECK: llvm.func @test_ccs
   llvm.func @test_ccs() {
+    // CHECK-NEXT: %[[PTR:.*]] = llvm.mlir.addressof @cconv4 : !llvm.ptr
+    %ptr = llvm.mlir.addressof @cconv4 : !llvm.ptr
     // CHECK-NEXT: llvm.call        @cconv1() : () -> ()
     // CHECK-NEXT: llvm.call        @cconv2() : () -> ()
     // CHECK-NEXT: llvm.call fastcc @cconv3() : () -> ()
-    // CHECK-NEXT: llvm.call cc_10  @cconv4() : () -> ()
+    // CHECK-NEXT: llvm.call cc_10  %[[PTR]]() : !llvm.ptr, () -> ()
     llvm.call        @cconv1() : () -> ()
     llvm.call ccc    @cconv2() : () -> ()
     llvm.call fastcc @cconv3() : () -> ()
-    llvm.call cc_10  @cconv4() : () -> ()
+    llvm.call cc_10  %ptr() : !llvm.ptr, () -> ()
     llvm.return
   }
 
@@ -247,6 +249,12 @@ module {
   llvm.func @vscale_roundtrip() vscale_range(1, 2) {
     // CHECK: @vscale_roundtrip
     // CHECK-SAME: vscale_range(1, 2)
+    llvm.return
+  }
+
+  // CHECK-LABEL: @frame_pointer_roundtrip()
+  // CHECK-SAME: attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
+  llvm.func @frame_pointer_roundtrip() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">} {
     llvm.return
   }
 }

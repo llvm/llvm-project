@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <array>
-#include <string>
-
 #include "SnippetRepetitor.h"
 #include "Target.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 namespace llvm {
@@ -32,10 +30,10 @@ public:
             CleanupMemory](FunctionFiller &Filler) {
       auto Entry = Filler.getEntry();
       if (!Instructions.empty()) {
-        // Add the whole snippet at least once.
-        Entry.addInstructions(Instructions);
-        for (unsigned I = Instructions.size(); I < MinInstructions; ++I) {
-          Entry.addInstruction(Instructions[I % Instructions.size()]);
+        const unsigned NumRepetitions =
+            divideCeil(MinInstructions, Instructions.size());
+        for (unsigned I = 0; I < NumRepetitions; ++I) {
+          Entry.addInstructions(Instructions);
         }
       }
       Entry.addReturn(State.getExegesisTarget(), CleanupMemory);
@@ -76,6 +74,11 @@ public:
 
       auto Loop = Filler.addBasicBlock();
       auto Exit = Filler.addBasicBlock();
+
+      // Align the loop machine basic block to a target-specific boundary
+      // to promote optimal instruction fetch/predecoding conditions.
+      Loop.MBB->setAlignment(
+          Filler.MF.getSubtarget().getTargetLowering()->getPrefLoopAlignment());
 
       const unsigned LoopUnrollFactor =
           LoopBodySize <= Instructions.size()

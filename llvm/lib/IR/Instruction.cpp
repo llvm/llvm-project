@@ -146,9 +146,9 @@ void Instruction::insertBefore(BasicBlock &BB,
   bool InsertAtHead = InsertPos.getHeadBit();
   if (!InsertAtHead) {
     DPMarker *SrcMarker = BB.getMarker(InsertPos);
-    if (!SrcMarker)
-      SrcMarker = BB.createMarker(InsertPos);
-    DbgMarker->absorbDebugValues(*SrcMarker, false);
+    // If there's no source marker, InsertPos is very likely end().
+    if (SrcMarker)
+      DbgMarker->absorbDebugValues(*SrcMarker, false);
   }
 
   // If we're inserting a terminator, check if we need to flush out
@@ -200,8 +200,9 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
   // If we've been given the "Preserve" flag, then just move the DPValues with
   // the instruction, no more special handling needed.
   if (BB.IsNewDbgInfoFormat && DbgMarker && !Preserve) {
-    if (I != this->getIterator()) {
-      // "this" is definitely moving; detach any existing DPValues.
+    if (I != this->getIterator() || InsertAtHead) {
+      // "this" is definitely moving in the list, or it's moving ahead of its
+      // attached DPValues. Detach any existing DPValues.
       handleMarkerRemoval();
     }
   }
@@ -217,7 +218,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
 
     // If we're inserting at point I, and not in front of the DPValues attached
     // there, then we should absorb the DPValues attached to I.
-    if (!InsertAtHead)
+    if (NextMarker && !InsertAtHead)
       DbgMarker->absorbDebugValues(*NextMarker, false);
   }
 
@@ -240,18 +241,6 @@ Instruction::cloneDebugInfoFrom(const Instruction *From,
     getParent()->createMarker(this);
 
   return DbgMarker->cloneDebugInfoFrom(From->DbgMarker, FromHere, InsertAtHead);
-}
-
-iterator_range<DPValue::self_iterator>
-Instruction::getDbgValueRange() const {
-  BasicBlock *Parent = const_cast<BasicBlock *>(getParent());
-  assert(Parent && "Instruction must be inserted to have DPValues");
-  (void)Parent;
-
-  if (!DbgMarker)
-    return DPMarker::getEmptyDPValueRange();
-
-  return DbgMarker->getDbgValueRange();
 }
 
 std::optional<DPValue::self_iterator> Instruction::getDbgReinsertionPosition() {
@@ -1091,6 +1080,8 @@ const DebugLoc &Instruction::getStableDebugLoc() const {
 }
 
 bool Instruction::isAssociative() const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isAssociative();
   unsigned Opcode = getOpcode();
   if (isAssociative(Opcode))
     return true;
@@ -1176,9 +1167,7 @@ void Instruction::copyMetadata(const Instruction &SrcInst,
   if (!SrcInst.hasMetadata())
     return;
 
-  DenseSet<unsigned> WLS;
-  for (unsigned M : WL)
-    WLS.insert(M);
+  SmallDenseSet<unsigned, 4> WLS(WL.begin(), WL.end());
 
   // Otherwise, enumerate and copy over metadata from the old instruction to the
   // new one.

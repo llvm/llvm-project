@@ -28,16 +28,16 @@ LLVM_DUMP_METHOD void Symbol::dump(raw_ostream &OS) const {
   if (isThreadLocalValue())
     Result += "(tlv) ";
   switch (Kind) {
-  case SymbolKind::GlobalSymbol:
+  case EncodeKind::GlobalSymbol:
     Result += Name.str();
     break;
-  case SymbolKind::ObjectiveCClass:
+  case EncodeKind::ObjectiveCClass:
     Result += "(ObjC Class) " + Name.str();
     break;
-  case SymbolKind::ObjectiveCClassEHType:
+  case EncodeKind::ObjectiveCClassEHType:
     Result += "(ObjC Class EH) " + Name.str();
     break;
-  case SymbolKind::ObjectiveCInstanceVariable:
+  case EncodeKind::ObjectiveCInstanceVariable:
     Result += "(ObjC IVar) " + Name.str();
     break;
   }
@@ -70,6 +70,32 @@ bool Symbol::operator==(const Symbol &O) const {
   RemoveFlag(O, RHSFlags);
   return std::tie(Name, Kind, Targets, LHSFlags) ==
          std::tie(O.Name, O.Kind, O.Targets, RHSFlags);
+}
+
+SimpleSymbol parseSymbol(StringRef SymName, const SymbolFlags Flags) {
+  if (SymName.starts_with(ObjC1ClassNamePrefix))
+    return {SymName.drop_front(ObjC1ClassNamePrefix.size()),
+            EncodeKind::ObjectiveCClass};
+  if (SymName.starts_with(ObjC2ClassNamePrefix))
+    return {SymName.drop_front(ObjC2ClassNamePrefix.size()),
+            EncodeKind::ObjectiveCClass};
+  if (SymName.starts_with(ObjC2MetaClassNamePrefix))
+    return {SymName.drop_front(ObjC2MetaClassNamePrefix.size()),
+            EncodeKind::ObjectiveCClass};
+  if (SymName.starts_with(ObjC2EHTypePrefix)) {
+    // When classes without ehtype are used in try/catch blocks
+    // a weak-defined symbol is exported. In those cases, treat these as a
+    // global instead.
+    if ((Flags & SymbolFlags::WeakDefined) == SymbolFlags::WeakDefined)
+      return {SymName, EncodeKind::GlobalSymbol};
+    return {SymName.drop_front(ObjC2EHTypePrefix.size()),
+            EncodeKind::ObjectiveCClassEHType};
+  }
+
+  if (SymName.starts_with(ObjC2IVarPrefix))
+    return {SymName.drop_front(ObjC2IVarPrefix.size()),
+            EncodeKind::ObjectiveCInstanceVariable};
+  return {SymName, EncodeKind::GlobalSymbol};
 }
 
 } // end namespace MachO.

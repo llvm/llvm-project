@@ -13,6 +13,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
@@ -41,7 +43,7 @@ TEST(LlvmLibcIsATTYTest, DevTTYTest) {
   libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TTY_FILE, O_RDONLY);
   if (fd > 0) {
-    ASSERT_EQ(libc_errno, 0);
+    ASSERT_ERRNO_SUCCESS();
     EXPECT_THAT(LIBC_NAMESPACE::isatty(fd), Succeeds(1));
     ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   }
@@ -51,7 +53,7 @@ TEST(LlvmLibcIsATTYTest, FileTest) {
   constexpr const char *TEST_FILE = "testdata/isatty.test";
   libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   EXPECT_THAT(LIBC_NAMESPACE::isatty(fd), Fails(ENOTTY, 0));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));

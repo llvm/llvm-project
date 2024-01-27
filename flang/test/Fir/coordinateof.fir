@@ -30,8 +30,8 @@ func.func @foo3(%box : !fir.box<!fir.array<?xi32>>, %i : i32) -> i32 {
   // CHECK: %[[boxptr:.*]] = load ptr, ptr %[[gep0]]
   // CHECK: %[[gep1:.*]] = getelementptr { ptr, i64, {{.*}} i32 7
   // CHECK: %[[stride:.*]] = load i64, ptr %[[gep1]]
-  // CHECK: %[[dimoffset:.*]] = mul i64 %[[cvt]], %[[stride]]
-  // CHECK: %[[offset:.*]] = add i64 %[[dimoffset]], 0
+  // CHECK: %[[dimoffset:.*]] = mul nsw i64 %[[cvt]], %[[stride]]
+  // CHECK: %[[offset:.*]] = add nsw i64 %[[dimoffset]], 0
   // CHECK: %[[gep2:.*]] = getelementptr i8, ptr %[[boxptr]], i64 %[[offset]]
   %1 = fir.coordinate_of %box, %ii : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
   // CHECK: load i32, ptr %[[gep2]]
@@ -68,8 +68,8 @@ func.func @foo6(%box : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1>>>>, %i : i64 
   // CHECK: %[[addr:.*]] = load ptr, ptr %[[addr_gep]]
   // CHECK: %[[stride_gep:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[box]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[stride:.*]] = load i64, ptr %[[stride_gep]]
-  // CHECK: %[[mul:.*]] = mul i64 %{{.*}}, %[[stride]]
-  // CHECK: %[[offset:.*]] = add i64 %[[mul]], 0
+  // CHECK: %[[mul:.*]] = mul nsw i64 %{{.*}}, %[[stride]]
+  // CHECK: %[[offset:.*]] = add nsw i64 %[[mul]], 0
   // CHECK: %[[gep:.*]] = getelementptr i8, ptr %[[addr]], i64 %[[offset]]
   %coor = fir.coordinate_of %box, %i : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1>>>>, i64) -> !fir.ref<!fir.char<1>>
 

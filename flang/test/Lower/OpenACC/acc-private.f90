@@ -189,7 +189,7 @@ program acc_private
   END DO
 
 ! CHECK: %[[C_PRIVATE:.*]] = acc.private varPtr(%[[DECLC]]#1 : !fir.ref<i32>) -> !fir.ref<i32> {name = "c"}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[C_PRIVATE]] : !fir.ref<i32>)
+! CHECK: acc.loop private({{.*}}@privatization_ref_i32 -> %[[C_PRIVATE]] : !fir.ref<i32>)
 ! CHECK: acc.yield
 
   !$acc loop private(b)
@@ -203,7 +203,7 @@ program acc_private
 ! CHECK: %[[UB:.*]] = arith.subi %{{.*}}, %[[C1]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
-! CHECK: acc.loop private(@privatization_ref_100xf32 -> %[[B_PRIVATE]] : !fir.ref<!fir.array<100xf32>>) {
+! CHECK: acc.loop private({{.*}}@privatization_ref_100xf32 -> %[[B_PRIVATE]] : !fir.ref<!fir.array<100xf32>>)
 ! CHECK: acc.yield
 
   !$acc loop private(b(1:50))
@@ -215,9 +215,9 @@ program acc_private
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.constant 49 : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<50xf32>> {name = "b(1:50)"}
-! CHECK: acc.loop private(@privatization_ref_50xf32 -> %[[B_PRIVATE]] : !fir.ref<!fir.array<50xf32>>)
+! CHECK: acc.loop private({{.*}}@privatization_ref_50xf32 -> %[[B_PRIVATE]] : !fir.ref<!fir.array<50xf32>>)
 
   !$acc parallel loop firstprivate(c)
   DO i = 1, n
@@ -252,7 +252,7 @@ program acc_private
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 50 : index
 ! CHECK: %[[UB:.*]] = arith.constant 99 : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%{{.*}} : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#1 : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<50xf32>> {name = "b(51:100)"}
 ! CHECK: acc.parallel firstprivate(@firstprivatization_section_lb50.ub99_ref_50xf32 -> %[[FP_B]] : !fir.ref<!fir.array<50xf32>>)
 
@@ -273,7 +273,7 @@ end subroutine
 ! CHECK: acc.parallel {
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[DECL_A]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[ADDR]] : !fir.ref<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
-! CHECK: acc.loop private(@privatization_box_Uxi32 -> %[[PRIVATE]] : !fir.ref<!fir.array<?xi32>>) {
+! CHECK: acc.loop private({{.*}}@privatization_box_Uxi32 -> %[[PRIVATE]] : !fir.ref<!fir.array<?xi32>>)
 
 subroutine acc_private_allocatable_array(a, n)
   integer, allocatable :: a(:)
@@ -296,7 +296,7 @@ end subroutine
 ! CHECK: %[[BOX:.*]] = fir.load %[[DECLA_A]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.heap<!fir.array<?xi32>> {name = "a"}
-! CHECK: acc.loop private(@privatization_box_heap_Uxi32 -> %[[PRIVATE]] : !fir.heap<!fir.array<?xi32>>)
+! CHECK: acc.loop private({{.*}}@privatization_box_heap_Uxi32 -> %[[PRIVATE]] : !fir.heap<!fir.array<?xi32>>)
 ! CHECK: acc.serial private(@privatization_box_heap_Uxi32 -> %{{.*}} : !fir.heap<!fir.array<?xi32>>)
 
 subroutine acc_private_pointer_array(a, n)
@@ -316,7 +316,7 @@ end subroutine
 ! CHECK: %[[BOX:.*]] = fir.load %[[DECLA_A]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[BOX_ADDR]] : !fir.ptr<!fir.array<?xi32>>) bounds(%{{.*}}) -> !fir.ptr<!fir.array<?xi32>> {name = "a"}
-! CHECK: acc.loop private(@privatization_box_ptr_Uxi32 -> %[[PRIVATE]] : !fir.ptr<!fir.array<?xi32>>)
+! CHECK: acc.loop private({{.*}}@privatization_box_ptr_Uxi32 -> %[[PRIVATE]] : !fir.ptr<!fir.array<?xi32>>)
 
 subroutine acc_private_dynamic_extent(a, n)
   integer :: n, i
@@ -334,7 +334,7 @@ end subroutine
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ARG0]](%16) {uniq_name = "_QFacc_private_dynamic_extentEa"} : (!fir.ref<!fir.array<?x?x2xi32>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x2xi32>>, !fir.ref<!fir.array<?x?x2xi32>>)
 ! CHECK: acc.parallel {
 ! CHECK: %[[PRIV:.*]] = acc.private varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?x?x2xi32>>) bounds(%{{.*}}, %{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<?x?x2xi32>> {name = "a"}
-! CHECK: acc.loop private(@privatization_ref_UxUx2xi32 -> %[[PRIV]] : !fir.ref<!fir.array<?x?x2xi32>>)
+! CHECK: acc.loop private({{.*}}@privatization_ref_UxUx2xi32 -> %[[PRIV]] : !fir.ref<!fir.array<?x?x2xi32>>)
 
 subroutine acc_firstprivate_assumed_shape(a, n)
   integer :: a(:), i, n

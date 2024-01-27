@@ -166,6 +166,13 @@ public:
     return builder.genShape(loc, lbounds, extents);
   }
 
+  fir::FortranVariableOpInterface
+  gen(const Fortran::evaluate::DataRef &dataRef) {
+    return std::visit(
+        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
+        dataRef.u);
+  }
+
 private:
   /// Struct that is filled while visiting a part-ref (in the "visit" member
   /// function) before the top level "gen" generates an hlfir.declare for the
@@ -312,13 +319,6 @@ private:
   }
 
   fir::FortranVariableOpInterface
-  gen(const Fortran::evaluate::DataRef &dataRef) {
-    return std::visit(
-        Fortran::common::visitors{[&](const auto &x) { return gen(x); }},
-        dataRef.u);
-  }
-
-  fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::ArrayRef &arrayRef) {
     PartInfo partInfo;
     mlir::Type resultType = visit(arrayRef, partInfo);
@@ -405,8 +405,8 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-              fir::BoxType>([&](auto t) -> mlir::Type {
+        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+              fir::ClassType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
           return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
@@ -1383,6 +1383,14 @@ struct UnaryOp<
   }
 };
 
+static bool hasDeferredCharacterLength(const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
+  return type &&
+         type->category() ==
+             Fortran::semantics::DeclTypeSpec::Category::Character &&
+         type->characterTypeSpec().length().isDeferred();
+}
+
 /// Lower Expr to HLFIR.
 class HlfirBuilder {
 public:
@@ -1719,8 +1727,12 @@ private:
           mlir::Type idxType = builder.getIndexType();
           typeParams.push_back(
               builder.createIntegerConstant(loc, idxType, charType.getLen()));
-        } else {
-          TODO(loc, "dynamic character length in structure constructor");
+        } else if (!hasDeferredCharacterLength(sym)) {
+          // If the length is not deferred, this is a parametrized derived type
+          // where the character length depends on the derived type length
+          // parameters. Otherwise, this is a pointer/allocatable component and
+          // the length will be set during the assignment.
+          TODO(loc, "automatic character component in structure constructor");
         }
       }
 
@@ -1738,6 +1750,8 @@ private:
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
+        if (Fortran::semantics::IsProcedure(sym))
+          TODO(loc, "procedure pointer component in structure constructor");
         // Pointer component construction is just a copy of the box contents.
         fir::ExtendedValue lhsExv =
             hlfir::translateToExtendedValue(loc, builder, lhs);
@@ -1923,6 +1937,15 @@ fir::ExtendedValue Fortran::lower::convertExprToValue(
     Fortran::lower::StatementContext &stmtCtx) {
   hlfir::EntityWithAttributes loweredExpr =
       HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+  return convertToValue(loc, converter, loweredExpr, stmtCtx);
+}
+
+fir::ExtendedValue Fortran::lower::convertDataRefToValue(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::DataRef &dataRef, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  fir::FortranVariableOpInterface loweredExpr =
+      HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx).gen(dataRef);
   return convertToValue(loc, converter, loweredExpr, stmtCtx);
 }
 

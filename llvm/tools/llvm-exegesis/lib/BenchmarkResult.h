@@ -32,6 +32,16 @@ class Error;
 
 namespace exegesis {
 
+enum ValidationEvent {
+  InstructionRetired,
+  L1DCacheLoadMiss,
+  L1DCacheStoreMiss,
+  L1ICacheLoadMiss,
+  DataTLBLoadMiss,
+  DataTLBStoreMiss,
+  InstructionTLBLoadMiss
+};
+
 enum class BenchmarkPhaseSelectorE {
   PrepareSnippet,
   PrepareAndAssembleSnippet,
@@ -70,12 +80,17 @@ struct BenchmarkKey {
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.
   std::string Config;
+  // The address that the snippet should be loaded in at if the execution mode
+  // being used supports it.
+  intptr_t SnippetAddress = 0;
 };
 
 struct BenchmarkMeasure {
   // A helper to create an unscaled BenchmarkMeasure.
-  static BenchmarkMeasure Create(std::string Key, double Value) {
-    return {Key, Value, Value};
+  static BenchmarkMeasure
+  Create(std::string Key, double Value,
+         std::map<ValidationEvent, int64_t> ValCounters) {
+    return {Key, Value, Value, ValCounters};
   }
   std::string Key;
   // This is the per-instruction value, i.e. measured quantity scaled per
@@ -84,6 +99,8 @@ struct BenchmarkMeasure {
   // This is the per-snippet value, i.e. measured quantity for one repetition of
   // the whole snippet.
   double PerSnippetValue;
+  // These are the validation counter values.
+  std::map<ValidationEvent, int64_t> ValidationCounters;
 };
 
 // The result of an instruction benchmark.

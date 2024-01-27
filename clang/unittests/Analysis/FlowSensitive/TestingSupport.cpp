@@ -4,6 +4,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -18,7 +19,6 @@
 #include "gtest/gtest.h"
 #include <cassert>
 #include <functional>
-#include <memory>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -173,7 +173,8 @@ llvm::Error test::checkDataflowWithNoopAnalysis(
         void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
              ASTContext &)>
         VerifyResults,
-    DataflowAnalysisOptions Options, LangStandard::Kind Std) {
+    DataflowAnalysisOptions Options, LangStandard::Kind Std,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback) {
   llvm::SmallVector<std::string, 3> ASTBuildArgs = {
       // -fnodelayed-template-parsing is the default everywhere but on Windows.
       // Set it explicitly so that tests behave the same on Windows as on other
@@ -183,8 +184,10 @@ llvm::Error test::checkDataflowWithNoopAnalysis(
           std::string(LangStandard::getLangStandardForKind(Std).getName())};
   AnalysisInputs<NoopAnalysis> AI(
       Code, TargetFuncMatcher,
-      [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
-                                                          Environment &Env) {
+      [UseBuiltinModel = Options.BuiltinOpts.has_value(),
+       &SyntheticFieldCallback](ASTContext &C, Environment &Env) {
+        Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
+            std::move(SyntheticFieldCallback));
         return NoopAnalysis(
             C,
             DataflowAnalysisOptions{

@@ -233,7 +233,8 @@ LLVMSymbolizer::symbolizeFrame(ArrayRef<uint8_t> BuildID,
 
 template <typename T>
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
+LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol,
+                                 uint64_t Offset) {
   auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
   if (!InfoOrErr)
     return InfoOrErr.takeError();
@@ -246,7 +247,7 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
   if (!Info)
     return Result;
 
-  for (object::SectionedAddress A : Info->findSymbol(Symbol)) {
+  for (object::SectionedAddress A : Info->findSymbol(Symbol, Offset)) {
     DILineInfo LineInfo = Info->symbolizeCode(
         A, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
         Opts.UseSymbolTable);
@@ -261,18 +262,21 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol) {
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol) {
-  return findSymbolCommon(Obj, Symbol);
+LLVMSymbolizer::findSymbol(const ObjectFile &Obj, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(Obj, Symbol, Offset);
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(StringRef ModuleName, StringRef Symbol) {
-  return findSymbolCommon(ModuleName.str(), Symbol);
+LLVMSymbolizer::findSymbol(const std::string &ModuleName, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(ModuleName, Symbol, Offset);
 }
 
 Expected<std::vector<DILineInfo>>
-LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol) {
-  return findSymbolCommon(BuildID, Symbol);
+LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol,
+                           uint64_t Offset) {
+  return findSymbolCommon(BuildID, Symbol, Offset);
 }
 
 void LLVMSymbolizer::flush() {
@@ -299,7 +303,7 @@ std::string getDarwinDWARFResourceForPath(const std::string &Path,
   }
   sys::path::append(ResourceName, "Contents", "Resources", "DWARF");
   sys::path::append(ResourceName, Basename);
-  return std::string(ResourceName.str());
+  return std::string(ResourceName);
 }
 
 bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
@@ -430,14 +434,14 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   // Try relative/path/to/original_binary/debuglink_name
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   // Try relative/path/to/original_binary/.debug/debuglink_name
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   // Make the path absolute so that lookups will go to
@@ -459,7 +463,7 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
                           DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = std::string(DebugPath.str());
+    Result = std::string(DebugPath);
     return true;
   }
   return false;

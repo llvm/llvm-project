@@ -25,7 +25,6 @@ licenses(["notice"])
 
 PRINTF_COPTS = [
     "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
-    "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE",
     "LIBC_COPT_PRINTF_DISABLE_WRITE_INT",
 ]
 
@@ -210,6 +209,7 @@ libc_support_library(
     deps = [
         "__support_cpp_type_traits",
         "__support_macros_attributes",
+        ":llvm_libc_macros_limits_macros",
     ],
 )
 
@@ -416,7 +416,6 @@ libc_support_library(
         "src/__support/ryu_constants.h",
         "src/__support/ryu_long_double_constants.h",
     ],
-    defines = ["LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE"],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
@@ -432,7 +431,6 @@ libc_support_library(
     hdrs = ["src/__support/number_pair.h"],
     deps = [
         ":__support_cpp_type_traits",
-        ":__support_named_pair",
     ],
 )
 
@@ -440,9 +438,9 @@ libc_support_library(
     name = "__support_integer_utils",
     hdrs = ["src/__support/integer_utils.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_math_extras",
         ":__support_number_pair",
     ],
 )
@@ -451,8 +449,8 @@ libc_support_library(
     name = "__support_uint",
     hdrs = ["src/__support/UInt.h"],
     deps = [
-        ":__support_bit",
         ":__support_cpp_array",
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
         ":__support_cpp_type_traits",
@@ -537,10 +535,11 @@ libc_support_library(
         "src/__support/str_to_float.h",
     ],
     deps = [
-        ":__support_bit",
         ":__support_common",
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
+        ":__support_cpp_string_view",
         ":__support_ctype_utils",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
@@ -588,27 +587,13 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_named_pair",
-    hdrs = ["src/__support/named_pair.h"],
-)
-
-libc_support_library(
-    name = "__support_bit",
-    hdrs = ["src/__support/bit.h"],
-    deps = [
-        ":__support_cpp_type_traits",
-        ":__support_macros_attributes",
-    ],
-)
-
-libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
-        ":__support_named_pair",
     ],
 )
 
@@ -616,8 +601,8 @@ libc_support_library(
     name = "__support_fputil_generic_fmod",
     hdrs = ["src/__support/FPUtil/generic/FMod.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
@@ -675,26 +660,15 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_fputil_float_properties",
-    hdrs = ["src/__support/FPUtil/FloatProperties.h"],
-    deps = [
-        ":__support_macros_attributes",
-        ":__support_macros_properties_float",
-        ":__support_uint128",
-    ],
-)
-
-libc_support_library(
     name = "__support_fputil_fp_bits",
     hdrs = ["src/__support/FPUtil/FPBits.h"],
-    textual_hdrs = ["src/__support/FPUtil/x86_64/LongDoubleBits.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
-        ":__support_fputil_float_properties",
         ":__support_macros_attributes",
+        ":__support_macros_properties_float",
+        ":__support_math_extras",
         ":__support_uint128",
     ],
 )
@@ -706,7 +680,6 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_string",
         ":__support_cpp_type_traits",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_integer_to_string",
         ":__support_uint128",
@@ -717,7 +690,6 @@ libc_support_library(
     name = "__support_fputil_hypot",
     hdrs = ["src/__support/FPUtil/Hypot.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
@@ -736,6 +708,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
@@ -788,7 +761,6 @@ libc_support_library(
     name = "__support_fputil_sqrt",
     hdrs = sqrt_hdrs,
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
@@ -816,11 +788,9 @@ libc_support_library(
     # doesn't support FMA, so they can't be compiled on their own.
     textual_hdrs = fma_platform_hdrs,
     deps = [
-        ":__support_bit",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_macros_attributes",
@@ -899,7 +869,6 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/dyadic_float.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
@@ -985,6 +954,11 @@ libc_support_library(
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
     ],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_limits_macros",
+    hdrs = ["include/llvm-libc-macros/limits-macros.h"],
 )
 
 ############################### errno targets ################################
@@ -1906,6 +1880,30 @@ libc_math_function(name = "llroundf")
 
 libc_math_function(name = "llroundl")
 
+libc_math_function(
+    name = "nan",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanf",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "nanl",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
 libc_math_function(name = "nearbyint")
 
 libc_math_function(name = "nearbyintf")
@@ -2285,6 +2283,19 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
+    features = no_sanitize_features,
+    weak = True,
+    deps = [
+        ":__support_common",
+        ":string_memory_utils",
+    ],
+)
+
+libc_function(
+    name = "mempcpy",
+    srcs = ["src/string/mempcpy.cpp"],
+    hdrs = ["src/string/mempcpy.h"],
+    copts = ["-mllvm --tail-merge-threshold=0"],
     features = no_sanitize_features,
     weak = True,
     deps = [
@@ -2788,7 +2799,6 @@ libc_support_library(
         ":__support_cpp_string_view",
         ":__support_float_to_string",
         ":__support_fputil_fenv_impl",
-        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_integer_to_string",

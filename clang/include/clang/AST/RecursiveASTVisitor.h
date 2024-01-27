@@ -850,6 +850,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgument(
   case TemplateArgument::Declaration:
   case TemplateArgument::Integral:
   case TemplateArgument::NullPtr:
+  case TemplateArgument::StructuralValue:
     return true;
 
   case TemplateArgument::Type:
@@ -882,6 +883,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLoc(
   case TemplateArgument::Declaration:
   case TemplateArgument::Integral:
   case TemplateArgument::NullPtr:
+  case TemplateArgument::StructuralValue:
     return true;
 
   case TemplateArgument::Type: {
@@ -2036,12 +2038,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
 #define DEF_TRAVERSE_TMPL_PART_SPEC_DECL(TMPLDECLKIND, DECLKIND)               \
   DEF_TRAVERSE_DECL(TMPLDECLKIND##TemplatePartialSpecializationDecl, {         \
     /* The partial specialization. */                                          \
-    if (TemplateParameterList *TPL = D->getTemplateParameters()) {             \
-      for (TemplateParameterList::iterator I = TPL->begin(), E = TPL->end();   \
-           I != E; ++I) {                                                      \
-        TRY_TO(TraverseDecl(*I));                                              \
-      }                                                                        \
-    }                                                                          \
+    TRY_TO(TraverseTemplateParameterListHelper(D->getTemplateParameters()));   \
     /* The args that remains unspecialized. */                                 \
     TRY_TO(TraverseTemplateArgumentLocsHelper(                                 \
         D->getTemplateArgsAsWritten()->getTemplateArgs(),                      \

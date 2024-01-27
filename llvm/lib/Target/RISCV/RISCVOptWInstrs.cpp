@@ -53,9 +53,7 @@ class RISCVOptWInstrs : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVOptWInstrs() : MachineFunctionPass(ID) {
-    initializeRISCVOptWInstrsPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVOptWInstrs() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool removeSExtWInstrs(MachineFunction &MF, const RISCVInstrInfo &TII,
@@ -128,7 +126,11 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
     if (MI->getNumExplicitDefs() != 1)
       return false;
 
-    for (auto &UserOp : MRI.use_operands(MI->getOperand(0).getReg())) {
+    Register DestReg = MI->getOperand(0).getReg();
+    if (!DestReg.isVirtual())
+      return false;
+
+    for (auto &UserOp : MRI.use_nodbg_operands(DestReg)) {
       const MachineInstr *UserMI = UserOp.getParent();
       unsigned OpIdx = UserOp.getOperandNo();
 
@@ -368,6 +370,12 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
     return MI.getOperand(1).getReg() == RISCV::X0;
   case RISCV::PseudoAtomicLoadNand32:
     return true;
+  case RISCV::PseudoVMV_X_S: {
+    // vmv.x.s has at least 33 sign bits if log2(sew) <= 5.
+    int64_t Log2SEW = MI.getOperand(2).getImm();
+    assert(Log2SEW >= 3 && Log2SEW <= 6 && "Unexpected Log2SEW");
+    return Log2SEW <= 5;
+  }
   }
 
   return false;

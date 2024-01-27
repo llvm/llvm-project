@@ -9,7 +9,8 @@
 // REQUIRES: long_tests
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// This test chokes on the sanitizers during CI runs. It appears we can address most of this by simply enabling optimizations.
+// This test is super slow, in particular with msan or tsan. In order to avoid timeouts and to
+// spend less time waiting for this particular test to complete we compile with optimizations.
 // ADDITIONAL_COMPILE_FLAGS(msan): -O1
 // ADDITIONAL_COMPILE_FLAGS(tsan): -O1
 

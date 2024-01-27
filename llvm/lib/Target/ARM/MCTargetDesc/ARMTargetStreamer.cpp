@@ -177,7 +177,7 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   switchVendor("aeabi");
 
   const StringRef CPUString = STI.getCPU();
-  if (!CPUString.empty() && !CPUString.startswith("generic")) {
+  if (!CPUString.empty() && !CPUString.starts_with("generic")) {
     // FIXME: remove krait check when GNU tools support krait cpu
     if (STI.hasFeature(ARM::ProcKrait)) {
       emitTextAttribute(ARMBuildAttrs::CPU_name, "cortex-a9");

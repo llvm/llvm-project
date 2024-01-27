@@ -93,6 +93,12 @@ static constexpr llvm::StringRef getInternalProcedureAttrName() {
   return "fir.internal_proc";
 }
 
+/// Attribute containing the original name of a function from before the
+/// ExternalNameConverision pass runs
+static constexpr llvm::StringRef getInternalFuncNameAttrName() {
+  return "fir.internal_name";
+}
+
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
 bool hasHostAssociationArgument(mlir::func::FuncOp func);

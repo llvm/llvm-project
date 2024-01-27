@@ -300,9 +300,12 @@ static void insertIfFunction(const Decl &D,
 }
 
 static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
-  if (!C.getMethodDecl())
+  // Use getCalleeDecl instead of getMethodDecl in order to handle
+  // pointer-to-member calls.
+  const auto *MethodDecl = dyn_cast_or_null<CXXMethodDecl>(C.getCalleeDecl());
+  if (!MethodDecl)
     return nullptr;
-  auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
+  auto *Body = dyn_cast_or_null<CompoundStmt>(MethodDecl->getBody());
   if (!Body || Body->size() != 1)
     return nullptr;
   if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
@@ -367,10 +370,63 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   }
 }
 
+Environment::Environment(DataflowAnalysisContext &DACtx)
+    : DACtx(&DACtx),
+      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
+
+Environment::Environment(DataflowAnalysisContext &DACtx,
+                         const DeclContext &DeclCtx)
+    : Environment(DACtx) {
+  CallStack.push_back(&DeclCtx);
+}
+
+void Environment::initialize() {
+  const DeclContext *DeclCtx = getDeclCtx();
+  if (DeclCtx == nullptr)
+    return;
+
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx)) {
+    assert(FuncDecl->doesThisDeclarationHaveABody());
+
+    initFieldsGlobalsAndFuncs(FuncDecl);
+
+    for (const auto *ParamDecl : FuncDecl->parameters()) {
+      assert(ParamDecl != nullptr);
+      setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
+    }
+  }
+
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
+    auto *Parent = MethodDecl->getParent();
+    assert(Parent != nullptr);
+
+    if (Parent->isLambda()) {
+      for (auto Capture : Parent->captures()) {
+        if (Capture.capturesVariable()) {
+          const auto *VarDecl = Capture.getCapturedVar();
+          assert(VarDecl != nullptr);
+          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
+        } else if (Capture.capturesThis()) {
+          const auto *SurroundingMethodDecl =
+              cast<CXXMethodDecl>(DeclCtx->getNonClosureAncestor());
+          QualType ThisPointeeType =
+              SurroundingMethodDecl->getFunctionObjectParameterType();
+          setThisPointeeStorageLocation(
+              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+        }
+      }
+    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
+      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
+      setThisPointeeStorageLocation(
+          cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+    }
+  }
+}
+
 // FIXME: Add support for resetting globals after function calls to enable
 // the implementation of sound analyses.
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
-  assert(FuncDecl->getBody() != nullptr);
+  assert(FuncDecl->doesThisDeclarationHaveABody());
 
   FieldSet Fields;
   llvm::DenseSet<const VarDecl *> Vars;
@@ -416,57 +472,10 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   }
 }
 
-Environment::Environment(DataflowAnalysisContext &DACtx)
-    : DACtx(&DACtx),
-      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
-
 Environment Environment::fork() const {
   Environment Copy(*this);
   Copy.FlowConditionToken = DACtx->forkFlowCondition(FlowConditionToken);
   return Copy;
-}
-
-Environment::Environment(DataflowAnalysisContext &DACtx,
-                         const DeclContext &DeclCtx)
-    : Environment(DACtx) {
-  CallStack.push_back(&DeclCtx);
-
-  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
-    assert(FuncDecl->getBody() != nullptr);
-
-    initFieldsGlobalsAndFuncs(FuncDecl);
-
-    for (const auto *ParamDecl : FuncDecl->parameters()) {
-      assert(ParamDecl != nullptr);
-      setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
-    }
-  }
-
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
-    auto *Parent = MethodDecl->getParent();
-    assert(Parent != nullptr);
-
-    if (Parent->isLambda()) {
-      for (auto Capture : Parent->captures()) {
-        if (Capture.capturesVariable()) {
-          const auto *VarDecl = Capture.getCapturedVar();
-          assert(VarDecl != nullptr);
-          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
-        } else if (Capture.capturesThis()) {
-          const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(DeclCtx.getNonClosureAncestor());
-          QualType ThisPointeeType =
-              SurroundingMethodDecl->getFunctionObjectParameterType();
-          ThisPointeeLoc =
-              &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
-        }
-      }
-    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
-      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
-      ThisPointeeLoc =
-          &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
-    }
-  }
 }
 
 bool Environment::canDescend(unsigned MaxDepth,
@@ -717,31 +726,76 @@ void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
   // so allow these as an exception.
   assert(E.isGLValue() ||
          E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
-  setStorageLocationInternal(E, Loc);
+  const Expr &CanonE = ignoreCFGOmittedNodes(E);
+  assert(!ExprToLoc.contains(&CanonE));
+  ExprToLoc[&CanonE] = &Loc;
 }
 
 StorageLocation *Environment::getStorageLocation(const Expr &E) const {
   // See comment in `setStorageLocation()`.
   assert(E.isGLValue() ||
          E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
-  return getStorageLocationInternal(E);
+  auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
+  return It == ExprToLoc.end() ? nullptr : &*It->second;
 }
 
-RecordStorageLocation *Environment::getThisPointeeStorageLocation() const {
-  return ThisPointeeLoc;
+// Returns whether a prvalue of record type is the one that originally
+// constructs the object (i.e. it doesn't propagate it from one of its
+// children).
+static bool isOriginalRecordConstructor(const Expr &RecordPRValue) {
+  if (auto *Init = dyn_cast<InitListExpr>(&RecordPRValue))
+    return !Init->isSemanticForm() || !Init->isTransparent();
+  return isa<CXXConstructExpr>(RecordPRValue) || isa<CallExpr>(RecordPRValue) ||
+         isa<LambdaExpr>(RecordPRValue) ||
+         isa<CXXDefaultInitExpr>(RecordPRValue) ||
+         // The framework currently does not propagate the objects created in
+         // the two branches of a `ConditionalOperator` because there is no way
+         // to reconcile their storage locations, which are different. We
+         // therefore claim that the `ConditionalOperator` is the expression
+         // that originally constructs the object.
+         // Ultimately, this will be fixed by propagating locations down from
+         // the result object, rather than up from the original constructor as
+         // we do now (see also the FIXME in the documentation for
+         // `getResultObjectLocation()`).
+         isa<ConditionalOperator>(RecordPRValue);
 }
 
 RecordStorageLocation &
-Environment::getResultObjectLocation(const Expr &RecordPRValue) {
+Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
   assert(RecordPRValue.getType()->isRecordType());
   assert(RecordPRValue.isPRValue());
 
-  if (StorageLocation *ExistingLoc = getStorageLocationInternal(RecordPRValue))
-    return *cast<RecordStorageLocation>(ExistingLoc);
-  auto &Loc = cast<RecordStorageLocation>(
-      DACtx->getStableStorageLocation(RecordPRValue));
-  setStorageLocationInternal(RecordPRValue, Loc);
-  return Loc;
+  // Returns a storage location that we can use if assertions fail.
+  auto FallbackForAssertFailure =
+      [this, &RecordPRValue]() -> RecordStorageLocation & {
+    return cast<RecordStorageLocation>(
+        DACtx->getStableStorageLocation(RecordPRValue));
+  };
+
+  if (isOriginalRecordConstructor(RecordPRValue)) {
+    auto *Val = cast_or_null<RecordValue>(getValue(RecordPRValue));
+    // The builtin transfer function should have created a `RecordValue` for all
+    // original record constructors.
+    assert(Val);
+    if (!Val)
+      return FallbackForAssertFailure();
+    return Val->getLoc();
+  }
+
+  if (auto *Op = dyn_cast<BinaryOperator>(&RecordPRValue);
+      Op && Op->isCommaOp()) {
+    return getResultObjectLocation(*Op->getRHS());
+  }
+
+  // All other expression nodes that propagate a record prvalue should have
+  // exactly one child.
+  llvm::SmallVector<const Stmt *> children(RecordPRValue.child_begin(),
+                                           RecordPRValue.child_end());
+  assert(children.size() == 1);
+  if (children.empty())
+    return FallbackForAssertFailure();
+
+  return getResultObjectLocation(*cast<Expr>(children[0]));
 }
 
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
@@ -755,8 +809,15 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
 }
 
 void Environment::setValue(const Expr &E, Value &Val) {
-  assert(E.isPRValue());
-  ExprToVal[&E] = &Val;
+  const Expr &CanonE = ignoreCFGOmittedNodes(E);
+
+  if (auto *RecordVal = dyn_cast<RecordValue>(&Val)) {
+    assert(isOriginalRecordConstructor(CanonE) ||
+           &RecordVal->getLoc() == &getResultObjectLocation(CanonE));
+  }
+
+  assert(CanonE.isPRValue());
+  ExprToVal[&CanonE] = &Val;
 }
 
 Value *Environment::getValue(const StorageLocation &Loc) const {
@@ -792,18 +853,6 @@ Value *Environment::createValue(QualType Type) {
                  << '\n';
   }
   return Val;
-}
-
-void Environment::setStorageLocationInternal(const Expr &E,
-                                             StorageLocation &Loc) {
-  const Expr &CanonE = ignoreCFGOmittedNodes(E);
-  assert(!ExprToLoc.contains(&CanonE));
-  ExprToLoc[&CanonE] = &Loc;
-}
-
-StorageLocation *Environment::getStorageLocationInternal(const Expr &E) const {
-  auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
-  return It == ExprToLoc.end() ? nullptr : &*It->second;
 }
 
 Value *Environment::createValueUnlessSelfReferential(
@@ -852,8 +901,16 @@ Value *Environment::createValueUnlessSelfReferential(
                                           CreatedValuesCount)});
     }
 
-    RecordStorageLocation &Loc =
-        arena().create<RecordStorageLocation>(Type, std::move(FieldLocs));
+    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
+    for (const auto &Entry : DACtx->getSyntheticFields(Type)) {
+      SyntheticFieldLocs.insert(
+          {Entry.getKey(),
+           &createLocAndMaybeValue(Entry.getValue(), Visited, Depth + 1,
+                                   CreatedValuesCount)});
+    }
+
+    RecordStorageLocation &Loc = DACtx->createRecordStorageLocation(
+        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
     RecordValue &RecordVal = create<RecordValue>(Loc);
 
     // As we already have a storage location for the `RecordValue`, we can and
@@ -985,7 +1042,7 @@ RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
   if (ImplicitObject == nullptr)
     return nullptr;
   if (ImplicitObject->getType()->isPointerType()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*ImplicitObject)))
+    if (auto *Val = Env.get<PointerValue>(*ImplicitObject))
       return &cast<RecordStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
@@ -999,11 +1056,11 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   if (Base == nullptr)
     return nullptr;
   if (ME.isArrow()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Base)))
+    if (auto *Val = Env.get<PointerValue>(*Base))
       return &cast<RecordStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Base));
+  return Env.get<RecordStorageLocation>(*Base);
 }
 
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
@@ -1028,9 +1085,10 @@ RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
   assert(Expr.getType()->isRecordType());
 
   if (Expr.isPRValue()) {
-    if (auto *ExistingVal = cast_or_null<RecordValue>(Env.getValue(Expr))) {
+    if (auto *ExistingVal = Env.get<RecordValue>(Expr)) {
       auto &NewVal = Env.create<RecordValue>(ExistingVal->getLoc());
       Env.setValue(Expr, NewVal);
+      Env.setValue(NewVal.getLoc(), NewVal);
       return NewVal;
     }
 
@@ -1039,8 +1097,7 @@ RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
     return NewVal;
   }
 
-  if (auto *Loc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(Expr))) {
+  if (auto *Loc = Env.get<RecordStorageLocation>(Expr)) {
     auto &NewVal = Env.create<RecordValue>(*Loc);
     Env.setValue(*Loc, NewVal);
     return NewVal;

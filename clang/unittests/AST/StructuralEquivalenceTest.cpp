@@ -1024,6 +1024,29 @@ TEST_F(StructuralEquivalenceRecordContextTest, TransparentContextInNamespace) {
   EXPECT_TRUE(testStructuralMatch(Decls));
 }
 
+TEST_F(StructuralEquivalenceRecordContextTest,
+       ClassTemplateSpecializationContext) {
+  std::string Code =
+      R"(
+      template <typename T> struct O {
+        struct M {};
+      };
+      )";
+  auto t = makeDecls<VarDecl>(Code + R"(
+      typedef O<int>::M MT1;
+      MT1 A;
+      )",
+                              Code + R"(
+      namespace {
+        struct I {};
+      } // namespace
+      typedef O<I>::M MT2;
+      MT2 A;
+      )",
+                              Lang_CXX11, varDecl(hasName("A")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceTest, NamespaceOfRecordMember) {
   auto Decls = makeNamedDecls(
       R"(
@@ -2250,6 +2273,176 @@ TEST_F(StructuralEquivalenceStmtTest, UnaryOperator) {
 TEST_F(StructuralEquivalenceStmtTest, UnaryOperatorDifferentOps) {
   auto t = makeWrappedStmts("+1", "-1", Lang_CXX03, unaryOperator());
   EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest,
+       CXXOperatorCallExprVsUnaryBinaryOperator) {
+  auto t = makeNamedDecls(
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x + y>,
+        A<T, x - y>,
+        A<T, -x>,
+        A<T, x * y>,
+        A<T, *x>,
+        A<T, x / y>,
+        A<T, x % y>,
+        A<T, x ^ y>,
+        A<T, x & y>,
+        A<T, &x>,
+        A<T, x | y>,
+        A<T, ~x>,
+        A<T, !x>,
+        A<T, x < y>,
+        A<T, (x > y)>,
+        A<T, x << y>,
+        A<T, (x >> y)>,
+        A<T, x == y>,
+        A<T, x != y>,
+        A<T, x <= y>,
+        A<T, x >= y>,
+        A<T, x <=> y>,
+        A<T, x && y>,
+        A<T, x || y>,
+        A<T, ++x>,
+        A<T, --x>,
+        A<T, (x , y)>,
+        A<T, x ->* y>,
+        A<T, x -> y>
+      );
+      )",
+      R"(
+      struct Bar {
+        Bar& operator=(Bar&);
+        Bar& operator->();
+      };
+
+      Bar& operator+(Bar&, Bar&);
+      Bar& operator+(Bar&);
+      Bar& operator-(Bar&, Bar&);
+      Bar& operator-(Bar&);
+      Bar& operator*(Bar&, Bar&);
+      Bar& operator*(Bar&);
+      Bar& operator/(Bar&, Bar&);
+      Bar& operator%(Bar&, Bar&);
+      Bar& operator^(Bar&, Bar&);
+      Bar& operator&(Bar&, Bar&);
+      Bar& operator&(Bar&);
+      Bar& operator|(Bar&, Bar&);
+      Bar& operator~(Bar&);
+      Bar& operator!(Bar&);
+      Bar& operator<(Bar&, Bar&);
+      Bar& operator>(Bar&, Bar&);
+      Bar& operator+=(Bar&, Bar&);
+      Bar& operator-=(Bar&, Bar&);
+      Bar& operator*=(Bar&, Bar&);
+      Bar& operator/=(Bar&, Bar&);
+      Bar& operator%=(Bar&, Bar&);
+      Bar& operator^=(Bar&, Bar&);
+      Bar& operator&=(Bar&, Bar&);
+      Bar& operator|=(Bar&, Bar&);
+      Bar& operator<<(Bar&, Bar&);
+      Bar& operator>>(Bar&, Bar&);
+      Bar& operator<<=(Bar&, Bar&);
+      Bar& operator>>=(Bar&, Bar&);
+      Bar& operator==(Bar&, Bar&);
+      Bar& operator!=(Bar&, Bar&);
+      Bar& operator<=(Bar&, Bar&);
+      Bar& operator>=(Bar&, Bar&);
+      Bar& operator<=>(Bar&, Bar&);
+      Bar& operator&&(Bar&, Bar&);
+      Bar& operator||(Bar&, Bar&);
+      Bar& operator++(Bar&);
+      Bar& operator--(Bar&);
+      Bar& operator,(Bar&, Bar&);
+      Bar& operator->*(Bar&, Bar&);
+
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x + y>,
+        A<T, x - y>,
+        A<T, -x>,
+        A<T, x * y>,
+        A<T, *x>,
+        A<T, x / y>,
+        A<T, x % y>,
+        A<T, x ^ y>,
+        A<T, x & y>,
+        A<T, &x>,
+        A<T, x | y>,
+        A<T, ~x>,
+        A<T, !x>,
+        A<T, x < y>,
+        A<T, (x > y)>,
+        A<T, x << y>,
+        A<T, (x >> y)>,
+        A<T, x == y>,
+        A<T, x != y>,
+        A<T, x <= y>,
+        A<T, x >= y>,
+        A<T, x <=> y>,
+        A<T, x && y>,
+        A<T, x || y>,
+        A<T, ++x>,
+        A<T, --x>,
+        A<T, (x , y)>,
+        A<T, x ->* y>,
+        A<T, x -> y>
+      );
+      )",
+      Lang_CXX20);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest,
+       CXXOperatorCallExprVsUnaryBinaryOperatorNe) {
+  auto t = makeNamedDecls(
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x + y>
+      );
+      )",
+      R"(
+      struct Bar;
+
+      Bar& operator-(Bar&, Bar&);
+
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(
+        A<T, x - y>
+      );
+      )",
+      Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, NonTypeTemplateParm) {
+  auto t = makeNamedDecls(
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(A<T, x>);
+      )",
+      R"(
+      template <typename T, T x>
+      class A;
+      template <typename T, T x, T y>
+      void foo(A<T, y>);
+      )",
+      Lang_CXX11);
+  // FIXME: These should not match,
+  EXPECT_TRUE(testStructuralMatch(t));
 }
 
 TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookupDifferentName) {

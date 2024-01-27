@@ -137,6 +137,20 @@ class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
   let results = (outs BoolLikeOfAnyRank:$result);
 }
 
+class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = []> :
+    Arith_BinaryOp<mnemonic, traits #
+      [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>,
+       DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]>,
+    Arguments<(ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs,
+      DefaultValuedAttr<
+        Arith_IntegerOverflowAttr,
+        "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags)>,
+    Results<(outs SignlessIntegerLike:$result)> {
+
+  let assemblyFormat = [{ $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
+                          attr-dict `:` type($result) }];
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
@@ -192,13 +206,23 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
 // AddIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_AddIOp : Arith_TotalIntBinaryOp<"addi", [Commutative]> {
+def Arith_AddIOp : Arith_IntBinaryOpWithOverflowFlags<"addi", [Commutative]> {
   let summary = "integer addition operation";
   let description = [{
+    Performs N-bit addition on the operands. The operands are interpreted as 
+    unsigned bitvectors. The result is represented by a bitvector containing the 
+    mathematical value of the addition modulo 2^n, where `n` is the bitwidth. 
+    Because `arith` integers use a two's complement representation, this operation 
+    is applicable on both signed and unsigned integer operands.
+
     The `addi` operation takes two operands and returns one result, each of
     these is required to be the same type. This type may be an integer scalar type, 
-    a vector whose element type is integer, or a tensor of integers. It has no 
-    standard attributes.
+    a vector whose element type is integer, or a tensor of integers.
+
+    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
+    `nsw` flags are present, and an unsigned/signed overflow occurs
+    (respectively), the result is poison.
 
     Example:
 
@@ -206,7 +230,10 @@ def Arith_AddIOp : Arith_TotalIntBinaryOp<"addi", [Commutative]> {
     // Scalar addition.
     %a = arith.addi %b, %c : i64
 
-    // SIMD vector element-wise addition, e.g. for Intel SSE.
+    // Scalar addition with overflow flags.
+    %a = arith.addi %b, %c overflow<nsw, nuw> : i64
+
+    // SIMD vector element-wise addition.
     %f = arith.addi %g, %h : vector<4xi32>
 
     // Tensor element-wise addition.
@@ -230,7 +257,7 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
   let description = [{
     Performs (N+1)-bit addition on zero-extended operands. Returns two results:
     the N-bit sum (same type as both operands), and the overflow bit
-    (boolean-like), where`1` indicates unsigned addition overflow, while `0`
+    (boolean-like), where `1` indicates unsigned addition overflow, while `0`
     indicates no overflow.
 
     Example:
@@ -272,9 +299,41 @@ def Arith_AddUIExtendedOp : Arith_Op<"addui_extended", [Pure, Commutative,
 // SubIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
+def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi"> {
   let summary = [{
     Integer subtraction operation.
+  }];
+  let description = [{
+    Performs N-bit subtraction on the operands. The operands are interpreted as unsigned
+    bitvectors. The result is represented by a bitvector containing the mathematical
+    value of the subtraction modulo 2^n, where `n` is the bitwidth. Because `arith`
+    integers use a two's complement representation, this operation is applicable on
+    both signed and unsigned integer operands.
+
+    The `subi` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be an integer scalar type,
+    a vector whose element type is integer, or a tensor of integers.
+
+    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
+    `nsw` flags are present, and an unsigned/signed overflow occurs
+    (respectively), the result is poison.
+
+    Example:
+
+    ```mlir
+    // Scalar subtraction.
+    %a = arith.subi %b, %c : i64
+
+    // Scalar subtraction with overflow flags.
+    %a = arith.subi %b, %c overflow<nsw, nuw> : i64
+
+    // SIMD vector element-wise subtraction.
+    %f = arith.subi %g, %h : vector<4xi32>
+
+    // Tensor element-wise subtraction.
+    %x = arith.subi %y, %z : tensor<4x?xi8>
+    ```
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -284,9 +343,41 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
 // MulIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
+def Arith_MulIOp : Arith_IntBinaryOpWithOverflowFlags<"muli", [Commutative]> {
   let summary = [{
     Integer multiplication operation.
+  }];
+  let description = [{
+    Performs N-bit multiplication on the operands. The operands are interpreted as
+    unsigned bitvectors. The result is represented by a bitvector containing the
+    mathematical value of the multiplication modulo 2^n, where `n` is the bitwidth.
+    Because `arith` integers use a two's complement representation, this operation is
+    applicable on both signed and unsigned integer operands.
+
+    The `muli` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be an integer scalar type,
+    a vector whose element type is integer, or a tensor of integers.
+
+    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
+    `nsw` flags are present, and an unsigned/signed overflow occurs
+    (respectively), the result is poison.
+
+    Example:
+
+    ```mlir
+    // Scalar multiplication.
+    %a = arith.muli %b, %c : i64
+
+    // Scalar multiplication with overflow flags.
+    %a = arith.muli %b, %c overflow<nsw, nuw> : i64
+
+    // SIMD vector element-wise multiplication.
+    %f = arith.muli %g, %h : vector<4xi32>
+
+    // Tensor element-wise multiplication.
+    %x = arith.muli %y, %z : tensor<4x?xi8>
+    ```
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -1368,7 +1459,8 @@ def Arith_CmpIOp
 // CmpFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
+def Arith_CmpFOp : Arith_CompareOp<"cmpf",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "floating-point comparison operation";
   let description = [{
     The `cmpf` operation compares its two operands according to the float
@@ -1398,14 +1490,27 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
 
   let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
                        FloatLike:$lhs,
-                       FloatLike:$rhs);
+                       FloatLike:$rhs,
+                       DefaultValuedAttr<
+                         Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
 
   let extraClassDeclaration = [{
     static arith::CmpFPredicate getPredicateByName(StringRef name);
   }];
 
+  let builders = [
+    OpBuilder<(ins "::mlir::arith::CmpFPredicateAttr":$predicate,
+                   "Value":$lhs, "Value":$rhs), [{
+      build($_builder, $_state, predicate, lhs, rhs,
+          mlir::arith::FastMathFlagsAttr::get($_builder.getContext(),
+              mlir::arith::FastMathFlags::none));
+    }]>
+  ];
+
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let assemblyFormat = [{ $predicate `,` $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($lhs)}];
 }
 
 //===----------------------------------------------------------------------===//

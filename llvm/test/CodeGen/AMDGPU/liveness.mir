@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass liveintervals -verify-machineinstrs -o /dev/null -debug-only=regalloc %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass liveintervals -verify-machineinstrs -o /dev/null -debug-only=regalloc %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 # We currently maintain a main liveness range which operates like a superset of
 # all subregister liveranges. We may need to create additional SSA values at

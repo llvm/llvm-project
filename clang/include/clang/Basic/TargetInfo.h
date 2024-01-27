@@ -266,7 +266,6 @@ protected:
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
 
-  LLVM_PREFERRED_TYPE(bool)
   unsigned ARMCDECoprocMask : 8;
 
   unsigned MaxOpenCLWorkGroupSize;
@@ -1373,6 +1372,8 @@ public:
     LangOptions::SignReturnAddressKeyKind SignKey =
         LangOptions::SignReturnAddressKeyKind::AKey;
     bool BranchTargetEnforcement = false;
+    bool BranchProtectionPAuthLR = false;
+    bool GuardedControlStack = false;
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
@@ -1424,10 +1425,18 @@ public:
 
   /// Identify whether this target supports IFuncs.
   bool supportsIFunc() const {
+    if (getTriple().isOSBinFormatMachO())
+      return true;
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
   }
+
+  // Identify whether this target supports __builtin_cpu_supports and
+  // __builtin_cpu_is.
+  virtual bool supportsCpuSupports() const { return false; }
+  virtual bool supportsCpuIs() const { return false; }
+  virtual bool supportsCpuInit() const { return false; }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.

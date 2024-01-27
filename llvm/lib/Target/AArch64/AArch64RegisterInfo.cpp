@@ -78,6 +78,9 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
 
+  if (MF->getFunction().getCallingConv() == CallingConv::ARM64EC_Thunk_X64)
+    return CSR_Win_AArch64_Arm64EC_Thunk_SaveList;
+
   // Darwin has its own CSR_AArch64_AAPCS_SaveList, which means most CSR save
   // lists depending on that will need to have their Darwin variant as well.
   if (MF->getSubtarget<AArch64Subtarget>().isTargetDarwin())
@@ -438,6 +441,12 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   if (MF.getSubtarget<AArch64Subtarget>().hasSME()) {
     for (MCPhysReg SubReg : subregs_inclusive(AArch64::ZA))
       Reserved.set(SubReg);
+  }
+
+  if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
+    for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
+         SubReg.isValid(); ++SubReg)
+      Reserved.set(*SubReg);
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);

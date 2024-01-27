@@ -22,6 +22,7 @@
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -244,6 +245,8 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
 // Find a symbol that encloses a given location.
 Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset,
                                               uint8_t type) const {
+  if (file->isInternal())
+    return nullptr;
   for (Symbol *b : file->getSymbols())
     if (Defined *d = dyn_cast<Defined>(b))
       if (d->section == this && d->value <= offset &&
@@ -343,7 +346,7 @@ template <class ELFT> void InputSection::copyShtGroup(uint8_t *buf) {
 }
 
 InputSectionBase *InputSection::getRelocatedSection() const {
-  if (!file || (type != SHT_RELA && type != SHT_REL))
+  if (!file || file->isInternal() || (type != SHT_RELA && type != SHT_REL))
     return nullptr;
   ArrayRef<InputSectionBase *> sections = file->getSections();
   return sections[info];
@@ -670,6 +673,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
   case R_RISCV_ADD:
+  case R_RISCV_LEB128:
     return sym.getVA(a);
   case R_ADDEND:
     return a;
@@ -714,8 +718,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return sym.getGotVA() + a - p;
   case R_LOONGARCH_GOT_PAGE_PC:
     if (sym.hasFlag(NEEDS_TLSGD))
-      return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p);
-    return getLoongArchPageDelta(sym.getGotVA() + a, p);
+      return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p, type);
+    return getLoongArchPageDelta(sym.getGotVA() + a, p, type);
   case R_MIPS_GOTREL:
     return sym.getVA(a) - in.mipsGot->getGp(file);
   case R_MIPS_GOT_GP:
@@ -765,7 +769,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return 0;
   }
   case R_LOONGARCH_PAGE_PC:
-    return getLoongArchPageDelta(sym.getVA(a), p);
+    return getLoongArchPageDelta(sym.getVA(a), p, type);
   case R_PC:
   case R_ARM_PCA: {
     uint64_t dest;
@@ -800,7 +804,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_PPC64_CALL_PLT:
     return sym.getPltVA() + a - p;
   case R_LOONGARCH_PLT_PAGE_PC:
-    return getLoongArchPageDelta(sym.getPltVA() + a, p);
+    return getLoongArchPageDelta(sym.getPltVA() + a, p, type);
   case R_PLT_GOTPLT:
     return sym.getPltVA() + a - in.gotPlt->getVA();
   case R_PPC32_PLTREL:
@@ -862,7 +866,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_TLSGD_PC:
     return in.got->getGlobalDynAddr(sym) + a - p;
   case R_LOONGARCH_TLSGD_PAGE_PC:
-    return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p);
+    return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p, type);
   case R_TLSLD_GOTPLT:
     return in.got->getVA() + in.got->getTlsIndexOff() + a - in.gotPlt->getVA();
   case R_TLSLD_GOT:
@@ -872,16 +876,6 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   default:
     llvm_unreachable("invalid expression");
   }
-}
-
-// Overwrite a ULEB128 value and keep the original length.
-static uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
-  while (*bufLoc & 0x80) {
-    *bufLoc++ = 0x80 | (val & 0x7f);
-    val >>= 7;
-  }
-  *bufLoc = val;
-  return val;
 }
 
 // This function applies relocations to sections without SHF_ALLOC bit.
@@ -897,10 +891,16 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const TargetInfo &target = *elf::target;
   const auto emachine = config->emachine;
   const bool isDebug = isDebugSection(*this);
-  const bool isDebugLocOrRanges =
-      isDebug && (name == ".debug_loc" || name == ".debug_ranges");
   const bool isDebugLine = isDebug && name == ".debug_line";
   std::optional<uint64_t> tombstone;
+  if (isDebug) {
+    if (name == ".debug_loc" || name == ".debug_ranges")
+      tombstone = 1;
+    else if (name == ".debug_names")
+      tombstone = UINT64_MAX; // tombstone value
+    else
+      tombstone = 0;
+  }
   for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
     if (patAndValue.first.match(this->name)) {
       tombstone = patAndValue.second;
@@ -909,16 +909,8 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
 
   for (size_t i = 0, relsSize = rels.size(); i != relsSize; ++i) {
     const RelTy &rel = rels[i];
-    RelType type = rel.getType(config->isMips64EL);
-
-    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
-    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed
-    // in 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we
-    // need to keep this bug-compatible code for a while.
-    if (emachine == EM_386 && type == R_386_GOTPC)
-      continue;
-
-    uint64_t offset = rel.r_offset;
+    const RelType type = rel.getType(config->isMips64EL);
+    const uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
     if (!RelTy::IsRela)
@@ -953,8 +945,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       return;
     }
 
-    if (tombstone ||
-        (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
+    if (tombstone && (expr == R_ABS || expr == R_DTPREL)) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -970,12 +961,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // vector. The computed value is st_value plus a non-negative offset.
       // Negative values are invalid, so -1 can be used as the tombstone value.
       //
-      // If the referenced symbol is discarded (made Undefined), or the
-      // section defining the referenced symbol is garbage collected,
-      // sym.getOutputSection() is nullptr. `ds->folded` catches the ICF folded
-      // case. However, resolving a relocation in .debug_line to -1 would stop
-      // debugger users from setting breakpoints on the folded-in function, so
-      // exclude .debug_line.
+      // If the referenced symbol is relative to a discarded section (due to
+      // --gc-sections, COMDAT, etc), it has been converted to a Undefined.
+      // `ds->folded` catches the ICF folded case. However, resolving a
+      // relocation in .debug_line to -1 would stop debugger users from setting
+      // breakpoints on the folded-in function, so exclude .debug_line.
       //
       // For pre-DWARF-v5 .debug_loc and .debug_ranges, -1 is a reserved value
       // (base address selection entry), use 1 (which is used by GNU ld for
@@ -983,10 +973,15 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       //
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
-      if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
+      if (!ds || (ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
-        const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
-                                         : (isDebugLocOrRanges ? 1 : 0);
+        uint64_t value = SignExtend64<bits>(*tombstone);
+        // For a 32-bit local TU reference in .debug_names, X86_64::relocate
+        // requires that the unsigned value for R_X86_64_32 is truncated to
+        // 32-bit. Other 64-bit targets's don't discern signed/unsigned 32-bit
+        // absolute relocations and do not need this change.
+        if (emachine == EM_X86_64 && type == R_X86_64_32)
+          value = static_cast<uint32_t>(value);
         target.relocateNoSym(bufLoc, type, value);
         continue;
       }
@@ -998,25 +993,25 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
       continue;
 
+    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
+    // sections.
+    if (LLVM_LIKELY(expr == R_ABS) || expr == R_DTPREL || expr == R_GOTPLTREL ||
+        expr == R_RISCV_ADD) {
+      target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
+      continue;
+    }
+
     if (expr == R_SIZE) {
       target.relocateNoSym(bufLoc, type,
                            SignExtend64<bits>(sym.getSize() + addend));
       continue;
     }
 
-    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
-    // sections.
-    if (expr == R_ABS || expr == R_DTPREL || expr == R_GOTPLTREL ||
-        expr == R_RISCV_ADD) {
-      target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
-      continue;
-    }
-
     std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
-    if (expr != R_PC) {
-      error(msg);
+    if (expr != R_PC && !(emachine == EM_386 && type == R_386_GOTPC)) {
+      errorOrWarn(msg);
       return;
     }
 
@@ -1028,11 +1023,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     // address 0. For bug-compatibility, we accept them with warnings. We
     // know Steel Bank Common Lisp as of 2018 have this bug.
     //
-    // RELA -r stopped earlier and does not get the warning. Suppress the
-    // warning for REL -r as well
-    // (https://github.com/ClangBuiltLinux/linux/issues/1937).
-    if (RelTy::IsRela || !config->relocatable)
-      warn(msg);
+    // GCC 8.0 or earlier have a bug that they emit R_386_GOTPC relocations
+    // against _GLOBAL_OFFSET_TABLE_ for .debug_info. The bug has been fixed in
+    // 2017 (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82630), but we need to
+    // keep this bug-compatible code for a while.
+    warn(msg);
     target.relocateNoSym(
         bufLoc, type,
         SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));

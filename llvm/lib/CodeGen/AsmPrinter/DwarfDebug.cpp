@@ -305,7 +305,6 @@ void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
 
 static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
                                             bool GenerateTypeUnits,
-                                            bool HasSplitDwarf,
                                             DebuggerKind Tuning,
                                             const Triple &TT) {
   // Honor an explicit request.
@@ -314,8 +313,7 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
 
   // Generating DWARF5 acceleration table.
   // Currently Split dwarf and non ELF format is not supported.
-  if (GenerateTypeUnits &&
-      (DwarfVersion < 5 || HasSplitDwarf || !TT.isOSBinFormatELF()))
+  if (GenerateTypeUnits && (DwarfVersion < 5 || !TT.isOSBinFormatELF()))
     return AccelTableKind::None;
 
   // Accelerator tables get emitted if targetting DWARF v5 or LLDB.  DWARF v5
@@ -403,9 +401,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
                        A->TM.getTargetTriple().isOSBinFormatWasm()) &&
                       GenerateDwarfTypeUnits;
 
-  TheAccelTableKind =
-      computeAccelTableKind(DwarfVersion, GenerateTypeUnits, HasSplitDwarf,
-                            DebuggerTuning, A->TM.getTargetTriple());
+  TheAccelTableKind = computeAccelTableKind(
+      DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -3451,7 +3448,6 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
 void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
-  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::TU);
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
@@ -3464,6 +3460,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     return;
   }
 
+  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::TU);
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
 
@@ -3481,6 +3478,16 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   Ins.first->second = Signature;
 
   if (useSplitDwarf()) {
+    // Although multiple type units can have the same signature, they are not
+    // guranteed to be bit identical. When LLDB uses .debug_names it needs to
+    // know from which CU a type unit came from. These two attrbutes help it to
+    // figure that out.
+    if (getDwarfVersion() >= 5) {
+      if (!CompilationDir.empty())
+        NewTU.addString(UnitDie, dwarf::DW_AT_comp_dir, CompilationDir);
+      NewTU.addString(UnitDie, dwarf::DW_AT_dwo_name,
+                      Asm->TM.Options.MCOptions.SplitDwarfFile);
+    }
     MCSection *Section =
         getDwarfVersion() <= 4
             ? Asm->getObjFileLowering().getDwarfTypesDWOSection()
@@ -3532,15 +3539,19 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       InfoHolder.computeSizeAndOffsetsForUnit(TU.first.get());
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
       if (getDwarfVersion() >= 5 &&
-          getAccelTableKind() == AccelTableKind::Dwarf)
-        AccelDebugNames.addTypeUnitSymbol(*TU.first);
+          getAccelTableKind() == AccelTableKind::Dwarf) {
+        if (useSplitDwarf())
+          AccelDebugNames.addTypeUnitSignature(*TU.first);
+        else
+          AccelDebugNames.addTypeUnitSymbol(*TU.first);
+      }
     }
     AccelTypeUnitsDebugNames.convertDieToOffset();
     AccelDebugNames.addTypeEntries(AccelTypeUnitsDebugNames);
     AccelTypeUnitsDebugNames.clear();
+    setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
   }
   CU.addDIETypeSignature(RefDie, Signature);
-  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
 }
 
 // Add the Name along with its companion DIE to the appropriate accelerator
@@ -3569,6 +3580,14 @@ void DwarfDebug::addAccelNameImpl(
     break;
   case AccelTableKind::Dwarf: {
     DWARF5AccelTable &Current = getCurrentDWARF5AccelTable();
+    assert(((&Current == &AccelTypeUnitsDebugNames) ||
+            ((&Current == &AccelDebugNames) &&
+             (Unit.getUnitDie().getTag() != dwarf::DW_TAG_type_unit))) &&
+               "Kind is CU but TU is being processed.");
+    assert(((&Current == &AccelDebugNames) ||
+            ((&Current == &AccelTypeUnitsDebugNames) &&
+             (Unit.getUnitDie().getTag() == dwarf::DW_TAG_type_unit))) &&
+               "Kind is TU but CU is being processed.");
     // The type unit can be discarded, so need to add references to final
     // acceleration table once we know it's complete and we emit it.
     Current.addName(Ref, Die, Unit.getUniqueID());

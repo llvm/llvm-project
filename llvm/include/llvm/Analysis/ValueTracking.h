@@ -214,8 +214,10 @@ std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
                                                 const APFloat *ConstRHS,
                                                 bool LookThroughSrc = true);
 
-/// Compute the possible floating-point classes that \p LHS could be based on an
-/// fcmp returning true. Returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
+/// Compute the possible floating-point classes that \p LHS could be based on
+/// fcmp \Pred \p LHS, \p RHS.
+///
+/// \returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
 ///
 /// If the compare returns an exact class test, ClassesIfTrue == ~ClassesIfFalse
 ///
@@ -230,10 +232,13 @@ std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
 ///
 std::tuple<Value *, FPClassTest, FPClassTest>
 fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 const APFloat *ConstRHS, bool LookThroughSrc = true);
+                 Value *RHS, bool LookThroughSrc = true);
 std::tuple<Value *, FPClassTest, FPClassTest>
 fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 Value *RHS, bool LookThroughSrc = true);
+                 FPClassTest RHS, bool LookThroughSrc = true);
+std::tuple<Value *, FPClassTest, FPClassTest>
+fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                 const APFloat &RHS, bool LookThroughSrc = true);
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -835,9 +840,14 @@ bool isAssumeLikeIntrinsic(const Instruction *I);
 
 /// Return true if it is valid to use the assumptions provided by an
 /// assume intrinsic, I, at the point in the control-flow identified by the
-/// context instruction, CxtI.
+/// context instruction, CxtI. By default, ephemeral values of the assumption
+/// are treated as an invalid context, to prevent the assumption from being used
+/// to optimize away its argument. If the caller can ensure that this won't
+/// happen, it can call with AllowEphemerals set to true to get more valid
+/// assumptions.
 bool isValidAssumeForContext(const Instruction *I, const Instruction *CxtI,
-                             const DominatorTree *DT = nullptr);
+                             const DominatorTree *DT = nullptr,
+                             bool AllowEphemerals = false);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.
@@ -887,6 +897,11 @@ ConstantRange computeConstantRange(const Value *V, bool ForSigned,
                                    const Instruction *CtxI = nullptr,
                                    const DominatorTree *DT = nullptr,
                                    unsigned Depth = 0);
+
+/// Combine constant ranges from computeConstantRange() and computeKnownBits().
+ConstantRange
+computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
+                                       bool ForSigned, const SimplifyQuery &SQ);
 
 /// Return true if this function can prove that the instruction I will
 /// always transfer execution to one of its successors (including the next
@@ -1006,10 +1021,18 @@ bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                       const Instruction *CtxI = nullptr,
                                       const DominatorTree *DT = nullptr,
                                       unsigned Depth = 0);
+
+/// Returns true if V cannot be poison, but may be undef.
 bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC = nullptr,
                                const Instruction *CtxI = nullptr,
                                const DominatorTree *DT = nullptr,
                                unsigned Depth = 0);
+
+/// Returns true if V cannot be undef, but may be poison.
+bool isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC = nullptr,
+                              const Instruction *CtxI = nullptr,
+                              const DominatorTree *DT = nullptr,
+                              unsigned Depth = 0);
 
 /// Return true if undefined behavior would provable be executed on the path to
 /// OnPathTo if Root produced a posion result.  Note that this doesn't say

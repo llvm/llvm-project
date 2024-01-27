@@ -58,7 +58,6 @@
 
 #include <cstring>
 #include <deque>
-#include <list>
 #include <string>
 
 #ifdef LLVM_ON_UNIX
@@ -332,8 +331,12 @@ operator<<(raw_ostream &OS, const Session::FileInfo &FI) {
     OS << "  Section \"" << SIKV.first() << "\": " << SIKV.second << "\n";
   for (auto &GOTKV : FI.GOTEntryInfos)
     OS << "  GOT \"" << GOTKV.first() << "\": " << GOTKV.second << "\n";
-  for (auto &StubKV : FI.StubInfos)
-    OS << "  Stub \"" << StubKV.first() << "\": " << StubKV.second << "\n";
+  for (auto &StubKVs : FI.StubInfos) {
+    OS << "  Stubs \"" << StubKVs.first() << "\":";
+    for (auto MemRegion : StubKVs.second)
+      OS << " " << MemRegion;
+    OS << "\n";
+  }
   return OS;
 }
 
@@ -693,11 +696,12 @@ getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
 }
 
 static Error loadProcessSymbols(Session &S) {
+  S.ProcessSymsJD = &S.ES.createBareJITDylib("Process");
   auto FilterMainEntryPoint =
       [EPName = S.ES.intern(EntryPointName)](SymbolStringPtr Name) {
         return Name != EPName;
       };
-  S.MainJD->addGenerator(
+  S.ProcessSymsJD->addGenerator(
       ExitOnErr(orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
           S.ES, std::move(FilterMainEntryPoint))));
 
@@ -708,8 +712,9 @@ static Error loadDylibs(Session &S) {
   LLVM_DEBUG(dbgs() << "Loading dylibs...\n");
   for (const auto &Dylib : Dylibs) {
     LLVM_DEBUG(dbgs() << "  " << Dylib << "\n");
-    if (auto Err = S.loadAndLinkDynamicLibrary(*S.MainJD, Dylib))
-      return Err;
+    auto DL = S.getOrLoadDynamicLibrary(Dylib);
+    if (!DL)
+      return DL.takeError();
   }
 
   return Error::success();
@@ -964,69 +969,79 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   ES.setErrorReporter(reportLLVMJITLinkError);
 
-  if (auto MainJDOrErr = ES.createJITDylib("main"))
-    MainJD = &*MainJDOrErr;
-  else {
-    Err = MainJDOrErr.takeError();
-    return;
-  }
-
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*this));
-  else {
-    // This symbol is used in testcases.
-    auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
-    ExitOnErr(TestResultJD.define(absoluteSymbols(
-        {{ES.intern("llvm_jitlink_setTestResultOverride"),
-          {ExecutorAddr::fromPtr(llvm_jitlink_setTestResultOverride),
-           JITSymbolFlags::Exported}}})));
-    MainJD->addToLinkOrder(TestResultJD);
-  }
 
   ExitOnErr(loadDylibs(*this));
 
   auto &TT = ES.getTargetTriple();
 
-  if (DebuggerSupport && TT.isOSBinFormatMachO())
-    ObjLayer.addPlugin(ExitOnErr(
-        GDBJITDebugInfoRegistrationPlugin::Create(this->ES, *MainJD, TT)));
+  if (DebuggerSupport && TT.isOSBinFormatMachO()) {
+    if (!ProcessSymsJD) {
+      Err = make_error<StringError>("MachO debugging requires process symbols",
+                                    inconvertibleErrorCode());
+      return;
+    }
+    ObjLayer.addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
+        this->ES, *ProcessSymsJD, TT)));
+  }
 
   if (PerfSupport && TT.isOSBinFormatELF()) {
+    if (!ProcessSymsJD) {
+      Err = make_error<StringError>("MachO debugging requires process symbols",
+                                    inconvertibleErrorCode());
+      return;
+    }
     ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
     ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
-        this->ES.getExecutorProcessControl(), *MainJD, true, true)));
+        this->ES.getExecutorProcessControl(), *ProcessSymsJD, true, true)));
   }
 
   // Set up the platform.
-  if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
-    if (auto P =
-            MachOPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
-      ES.setPlatform(std::move(*P));
-    else {
-      Err = P.takeError();
-      return;
-    }
-  } else if (TT.isOSBinFormatELF() && !OrcRuntime.empty()) {
-    if (auto P =
-            ELFNixPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
-      ES.setPlatform(std::move(*P));
-    else {
-      Err = P.takeError();
-      return;
-    }
-  } else if (TT.isOSBinFormatCOFF() && !OrcRuntime.empty()) {
-    auto LoadDynLibrary = [&, this](JITDylib &JD, StringRef DLLName) -> Error {
-      if (!DLLName.ends_with_insensitive(".dll"))
-        return make_error<StringError>("DLLName not ending with .dll",
-                                       inconvertibleErrorCode());
-      return loadAndLinkDynamicLibrary(JD, DLLName);
-    };
+  if (!OrcRuntime.empty()) {
+    assert(ProcessSymsJD && "ProcessSymsJD should have been set");
+    PlatformJD = &ES.createBareJITDylib("Platform");
+    PlatformJD->addToLinkOrder(*ProcessSymsJD);
 
-    if (auto P = COFFPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str(),
-                                      std::move(LoadDynLibrary))) 
-      ES.setPlatform(std::move(*P));
-     else {
-      Err = P.takeError();
+    if (TT.isOSBinFormatMachO()) {
+      if (auto P = MachOPlatform::Create(ES, ObjLayer, *PlatformJD,
+                                         OrcRuntime.c_str()))
+        ES.setPlatform(std::move(*P));
+      else {
+        Err = P.takeError();
+        return;
+      }
+    } else if (TT.isOSBinFormatELF()) {
+      if (auto P = ELFNixPlatform::Create(ES, ObjLayer, *PlatformJD,
+                                          OrcRuntime.c_str()))
+        ES.setPlatform(std::move(*P));
+      else {
+        Err = P.takeError();
+        return;
+      }
+    } else if (TT.isOSBinFormatCOFF()) {
+      auto LoadDynLibrary = [&, this](JITDylib &JD,
+                                      StringRef DLLName) -> Error {
+        if (!DLLName.ends_with_insensitive(".dll"))
+          return make_error<StringError>("DLLName not ending with .dll",
+                                         inconvertibleErrorCode());
+        return loadAndLinkDynamicLibrary(JD, DLLName);
+      };
+
+      if (auto P = COFFPlatform::Create(ES, ObjLayer, *PlatformJD,
+                                        OrcRuntime.c_str(),
+                                        std::move(LoadDynLibrary)))
+        ES.setPlatform(std::move(*P));
+      else {
+        Err = P.takeError();
+        return;
+      }
+    } else {
+      Err = make_error<StringError>(
+          "-" + OrcRuntime.ArgStr + " specified, but format " +
+              Triple::getObjectFormatTypeName(TT.getObjectFormat()) +
+              " not supported",
+          inconvertibleErrorCode());
       return;
     }
   } else if (TT.isOSBinFormatELF()) {
@@ -1036,6 +1051,24 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
           ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
+  }
+
+  if (auto MainJDOrErr = ES.createJITDylib("main"))
+    MainJD = &*MainJDOrErr;
+  else {
+    Err = MainJDOrErr.takeError();
+    return;
+  }
+
+  if (NoProcessSymbols) {
+    // This symbol is used in testcases, but we're not reflecting process
+    // symbols so we'll need to make it available some other way.
+    auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
+    ExitOnErr(TestResultJD.define(absoluteSymbols(
+        {{ES.intern("llvm_jitlink_setTestResultOverride"),
+          {ExecutorAddr::fromPtr(llvm_jitlink_setTestResultOverride),
+           JITSymbolFlags::Exported}}})));
+    MainJD->addToLinkOrder(TestResultJD);
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
@@ -1154,6 +1187,62 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   return Error::success();
 }
 
+Error Session::FileInfo::registerGOTEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+  GOTEntryInfos[TS->getName()] = {Sym.getSymbolContent(),
+                                  Sym.getAddress().getValue(),
+                                  Sym.getTargetFlags()};
+  return Error::success();
+}
+
+Error Session::FileInfo::registerStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+  auto TS = GetSymbolTarget(G, Sym.getBlock());
+  if (!TS)
+    return TS.takeError();
+
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[TS->getName()];
+  Entry.insert(Entry.begin(),
+               {Sym.getSymbolContent(), Sym.getAddress().getValue(),
+                Sym.getTargetFlags()});
+  return Error::success();
+}
+
+Error Session::FileInfo::registerMultiStubEntry(
+    LinkGraph &G, Symbol &Sym, GetSymbolTargetFunction GetSymbolTarget) {
+  if (Sym.isSymbolZeroFill())
+    return make_error<StringError>("Unexpected zero-fill symbol in section " +
+                                       Sym.getBlock().getSection().getName(),
+                                   inconvertibleErrorCode());
+
+  auto Target = GetSymbolTarget(G, Sym.getBlock());
+  if (!Target)
+    return Target.takeError();
+
+  SmallVectorImpl<MemoryRegionInfo> &Entry = StubInfos[Target->getName()];
+  Entry.emplace_back(Sym.getSymbolContent(), Sym.getAddress().getValue(),
+                     Sym.getTargetFlags());
+
+  // Let's keep stubs ordered by ascending address.
+  std::sort(Entry.begin(), Entry.end(),
+            [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
+              return L.getTargetAddress() < R.getTargetAddress();
+            });
+
+  return Error::success();
+}
+
 Expected<Session::FileInfo &> Session::findFileInfo(StringRef FileName) {
   auto FileInfoItr = FileInfos.find(FileName);
   if (FileInfoItr == FileInfos.end())
@@ -1176,8 +1265,58 @@ Session::findSectionInfo(StringRef FileName, StringRef SectionName) {
   return SecInfoItr->second;
 }
 
+class MemoryMatcher {
+public:
+  MemoryMatcher(ArrayRef<char> Content)
+      : Pos(Content.data()), End(Pos + Content.size()) {}
+
+  template <typename MaskType> bool matchMask(MaskType Mask) {
+    if (Mask == (Mask & *reinterpret_cast<const MaskType *>(Pos))) {
+      Pos += sizeof(MaskType);
+      return true;
+    }
+    return false;
+  }
+
+  template <typename ValueType> bool matchEqual(ValueType Value) {
+    if (Value == *reinterpret_cast<const ValueType *>(Pos)) {
+      Pos += sizeof(ValueType);
+      return true;
+    }
+    return false;
+  }
+
+  bool done() const { return Pos == End; }
+
+private:
+  const char *Pos;
+  const char *End;
+};
+
+static StringRef detectStubKind(const Session::MemoryRegionInfo &Stub) {
+  constexpr uint32_t Armv7MovWTle = 0xe300c000;
+  constexpr uint32_t Armv7BxR12le = 0xe12fff1c;
+  constexpr uint32_t Thumbv7MovWTle = 0x0c00f240;
+  constexpr uint16_t Thumbv7BxR12le = 0x4760;
+
+  MemoryMatcher M(Stub.getContent());
+  if (M.matchMask(Thumbv7MovWTle)) {
+    if (M.matchMask(Thumbv7MovWTle))
+      if (M.matchEqual(Thumbv7BxR12le))
+        if (M.done())
+          return "thumbv7_abs_le";
+  } else if (M.matchMask(Armv7MovWTle)) {
+    if (M.matchMask(Armv7MovWTle))
+      if (M.matchEqual(Armv7BxR12le))
+        if (M.done())
+          return "armv7_abs_le";
+  }
+  return "";
+}
+
 Expected<Session::MemoryRegionInfo &>
-Session::findStubInfo(StringRef FileName, StringRef TargetName) {
+Session::findStubInfo(StringRef FileName, StringRef TargetName,
+                      StringRef KindNameFilter) {
   auto FI = findFileInfo(FileName);
   if (!FI)
     return FI.takeError();
@@ -1187,7 +1326,38 @@ Session::findStubInfo(StringRef FileName, StringRef TargetName) {
                                        "\" registered for file \"" + FileName +
                                        "\"",
                                    inconvertibleErrorCode());
-  return StubInfoItr->second;
+  auto &StubsForTarget = StubInfoItr->second;
+  assert(!StubsForTarget.empty() && "At least 1 stub in each entry");
+  if (KindNameFilter.empty() && StubsForTarget.size() == 1)
+    return StubsForTarget[0]; // Regular single-stub match
+
+  std::string KindsStr;
+  SmallVector<MemoryRegionInfo *, 1> Matches;
+  Regex KindNameMatcher(KindNameFilter.empty() ? ".*" : KindNameFilter);
+  for (MemoryRegionInfo &Stub : StubsForTarget) {
+    StringRef Kind = detectStubKind(Stub);
+    if (KindNameMatcher.match(Kind))
+      Matches.push_back(&Stub);
+    KindsStr += "\"" + (Kind.empty() ? "<unknown>" : Kind.str()) + "\", ";
+  }
+  if (Matches.empty())
+    return make_error<StringError>(
+        "\"" + TargetName + "\" has " + Twine(StubsForTarget.size()) +
+            " stubs in file \"" + FileName +
+            "\", but none of them matches the stub-kind filter \"" +
+            KindNameFilter + "\" (all encountered kinds are " +
+            StringRef(KindsStr.data(), KindsStr.size() - 2) + ").",
+        inconvertibleErrorCode());
+  if (Matches.size() > 1)
+    return make_error<StringError>(
+        "\"" + TargetName + "\" has " + Twine(Matches.size()) +
+            " candidate stubs in file \"" + FileName +
+            "\". Please refine stub-kind filter \"" + KindNameFilter +
+            "\" for disambiguation (encountered kinds are " +
+            StringRef(KindsStr.data(), KindsStr.size() - 2) + ").",
+        inconvertibleErrorCode());
+
+  return *Matches[0];
 }
 
 Expected<Session::MemoryRegionInfo &>
@@ -1266,6 +1436,10 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
   // Disable debugger support by default in noexec tests.
   if (DebuggerSupport.getNumOccurrences() == 0 && NoExec)
     DebuggerSupport = false;
+
+  if (!OrcRuntime.empty() && NoProcessSymbols)
+    return make_error<StringError>("-orc-runtime requires process symbols",
+                                   inconvertibleErrorCode());
 
   // If -slab-allocate is passed, check that we're not trying to use it in
   // -oop-executor or -oop-executor-connect mode.
@@ -1366,6 +1540,13 @@ static Error createJITDylibs(Session &S,
     }
   }
 
+  if (S.PlatformJD)
+    S.JDSearchOrder.push_back(
+        {S.PlatformJD, JITDylibLookupFlags::MatchExportedSymbolsOnly});
+  if (S.ProcessSymsJD)
+    S.JDSearchOrder.push_back(
+        {S.ProcessSymsJD, JITDylibLookupFlags::MatchExportedSymbolsOnly});
+
   LLVM_DEBUG({
     dbgs() << "Dylib search order is [ ";
     for (auto &KV : S.JDSearchOrder)
@@ -1417,23 +1598,67 @@ static Error addAliases(Session &S,
                         const std::map<unsigned, JITDylib *> &IdxToJD) {
   // Define absolute symbols.
   LLVM_DEBUG(dbgs() << "Defining aliases...\n");
+
+  DenseMap<std::pair<JITDylib *, JITDylib *>, SymbolAliasMap> Reexports;
   for (auto AliasItr = Aliases.begin(), AliasEnd = Aliases.end();
        AliasItr != AliasEnd; ++AliasItr) {
-    unsigned AliasArgIdx = Aliases.getPosition(AliasItr - Aliases.begin());
-    auto &JD = *std::prev(IdxToJD.lower_bound(AliasArgIdx))->second;
 
-    StringRef AliasStmt = *AliasItr;
-    size_t EqIdx = AliasStmt.find_first_of('=');
-    if (EqIdx == StringRef::npos)
-      return make_error<StringError>("Invalid alias definition \"" + AliasStmt +
-                                         "\". Syntax: <name>=<addr>",
-                                     inconvertibleErrorCode());
-    StringRef Alias = AliasStmt.substr(0, EqIdx).trim();
-    StringRef Aliasee = AliasStmt.substr(EqIdx + 1).trim();
+    auto BadExpr = [&]() {
+      return make_error<StringError>(
+          "Invalid alias definition \"" + *AliasItr +
+              "\". Syntax: [<dst-jd>:]<alias>=[<src-jd>:]<aliasee>",
+          inconvertibleErrorCode());
+    };
 
-    SymbolAliasMap SAM;
-    SAM[S.ES.intern(Alias)] = {S.ES.intern(Aliasee), JITSymbolFlags::Exported};
-    if (auto Err = JD.define(symbolAliases(std::move(SAM))))
+    auto GetJD = [&](StringRef JDName) -> Expected<JITDylib *> {
+      if (JDName.empty()) {
+        unsigned AliasArgIdx = Aliases.getPosition(AliasItr - Aliases.begin());
+        return std::prev(IdxToJD.lower_bound(AliasArgIdx))->second;
+      }
+
+      auto *JD = S.ES.getJITDylibByName(JDName);
+      if (!JD)
+        return make_error<StringError>(StringRef("In alias definition \"") +
+                                           *AliasItr + "\" no dylib named " +
+                                           JDName,
+                                       inconvertibleErrorCode());
+
+      return JD;
+    };
+
+    {
+      // First split on '=' to get alias and aliasee.
+      StringRef AliasStmt = *AliasItr;
+      auto [AliasExpr, AliaseeExpr] = AliasStmt.split('=');
+      if (AliaseeExpr.empty())
+        return BadExpr();
+
+      auto [AliasJDName, Alias] = AliasExpr.split(':');
+      if (Alias.empty())
+        std::swap(AliasJDName, Alias);
+
+      auto AliasJD = GetJD(AliasJDName);
+      if (!AliasJD)
+        return AliasJD.takeError();
+
+      auto [AliaseeJDName, Aliasee] = AliaseeExpr.split(':');
+      if (Aliasee.empty())
+        std::swap(AliaseeJDName, Aliasee);
+
+      if (AliaseeJDName.empty() && !AliasJDName.empty())
+        AliaseeJDName = AliasJDName;
+      auto AliaseeJD = GetJD(AliaseeJDName);
+      if (!AliaseeJD)
+        return AliaseeJD.takeError();
+
+      Reexports[{*AliasJD, *AliaseeJD}][S.ES.intern(Alias)] = {
+          S.ES.intern(Aliasee), JITSymbolFlags::Exported};
+    }
+  }
+
+  for (auto &[JDs, AliasMap] : Reexports) {
+    auto [DstJD, SrcJD] = JDs;
+    if (auto Err = DstJD->define(reexports(*SrcJD, std::move(AliasMap))))
       return Err;
   }
 
@@ -1463,8 +1688,8 @@ static Error addObjects(Session &S,
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
     const std::string &InputFile = *InputFileItr;
-    if (StringRef(InputFile).endswith(".a") ||
-        StringRef(InputFile).endswith(".lib"))
+    if (StringRef(InputFile).ends_with(".a") ||
+        StringRef(InputFile).ends_with(".lib"))
       continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
@@ -1564,7 +1789,7 @@ static Error addLibraries(Session &S,
   for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
        InputFileItr != InputFileEnd; ++InputFileItr) {
     StringRef InputFile = *InputFileItr;
-    if (!InputFile.endswith(".a") && !InputFile.endswith(".lib"))
+    if (!InputFile.ends_with(".a") && !InputFile.ends_with(".lib"))
       continue;
     LibraryLoad LL;
     LL.LibName = InputFile.str();
@@ -1767,6 +1992,14 @@ static Error addLibraries(Session &S,
                                      inconvertibleErrorCode());
   }
 
+  // Add platform and process symbols if available.
+  for (auto &[Idx, JD] : IdxToJD) {
+    if (S.PlatformJD)
+      JD->addToLinkOrder(*S.PlatformJD);
+    if (S.ProcessSymsJD)
+      JD->addToLinkOrder(*S.ProcessSymsJD);
+  }
+
   return Error::success();
 }
 
@@ -1893,8 +2126,9 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
     return S.findSectionInfo(FileName, SectionName);
   };
 
-  auto GetStubInfo = [&S](StringRef FileName, StringRef SectionName) {
-    return S.findStubInfo(FileName, SectionName);
+  auto GetStubInfo = [&S](StringRef FileName, StringRef SectionName,
+                          StringRef KindNameFilter) {
+    return S.findStubInfo(FileName, SectionName, KindNameFilter);
   };
 
   auto GetGOTInfo = [&S](StringRef FileName, StringRef SectionName) {

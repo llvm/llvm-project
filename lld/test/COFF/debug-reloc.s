@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -triple=x86_64-windows-gnu %s -filetype=obj -o %t.obj
 
-# RUN: lld-link -lldmingw -debug:dwarf -out:%t.exe -entry:mainfunc -subsystem:console %t.obj
+# RUN: lld-link -lldmingw -debug:dwarf -build-id -out:%t.exe -entry:mainfunc -subsystem:console %t.obj
 # RUN: llvm-readobj --sections %t.exe | FileCheck %s -check-prefix SECTIONS
 # RUN: llvm-readobj --coff-basereloc %t.exe | FileCheck %s -check-prefix RELOCS
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck %s -check-prefix HEADERS

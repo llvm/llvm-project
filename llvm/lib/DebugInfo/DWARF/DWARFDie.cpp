@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -489,18 +490,23 @@ void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
   CallDiscriminator = toUnsigned(find(DW_AT_GNU_discriminator), 0);
 }
 
-std::optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
-  if (auto SizeAttr = find(DW_AT_byte_size))
+static std::optional<uint64_t>
+getTypeSizeImpl(DWARFDie Die, uint64_t PointerSize,
+                SmallPtrSetImpl<const DWARFDebugInfoEntry *> &Visited) {
+  // Cycle detected?
+  if (!Visited.insert(Die.getDebugInfoEntry()).second)
+    return {};
+  if (auto SizeAttr = Die.find(DW_AT_byte_size))
     if (std::optional<uint64_t> Size = SizeAttr->getAsUnsignedConstant())
       return Size;
 
-  switch (getTag()) {
+  switch (Die.getTag()) {
   case DW_TAG_pointer_type:
   case DW_TAG_reference_type:
   case DW_TAG_rvalue_reference_type:
     return PointerSize;
   case DW_TAG_ptr_to_member_type: {
-    if (DWARFDie BaseType = getAttributeValueAsReferencedDie(DW_AT_type))
+    if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
       if (BaseType.getTag() == DW_TAG_subroutine_type)
         return 2 * PointerSize;
     return PointerSize;
@@ -510,19 +516,20 @@ std::optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
   case DW_TAG_volatile_type:
   case DW_TAG_restrict_type:
   case DW_TAG_typedef: {
-    if (DWARFDie BaseType = getAttributeValueAsReferencedDie(DW_AT_type))
-      return BaseType.getTypeSize(PointerSize);
+    if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
+      return getTypeSizeImpl(BaseType, PointerSize, Visited);
     break;
   }
   case DW_TAG_array_type: {
-    DWARFDie BaseType = getAttributeValueAsReferencedDie(DW_AT_type);
+    DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type);
     if (!BaseType)
       return std::nullopt;
-    std::optional<uint64_t> BaseSize = BaseType.getTypeSize(PointerSize);
+    std::optional<uint64_t> BaseSize =
+        getTypeSizeImpl(BaseType, PointerSize, Visited);
     if (!BaseSize)
       return std::nullopt;
     uint64_t Size = *BaseSize;
-    for (DWARFDie Child : *this) {
+    for (DWARFDie Child : Die) {
       if (Child.getTag() != DW_TAG_subrange_type)
         continue;
 
@@ -542,11 +549,16 @@ std::optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
     return Size;
   }
   default:
-    if (DWARFDie BaseType = getAttributeValueAsReferencedDie(DW_AT_type))
-      return BaseType.getTypeSize(PointerSize);
+    if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
+      return getTypeSizeImpl(BaseType, PointerSize, Visited);
     break;
   }
   return std::nullopt;
+}
+
+std::optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
+  SmallPtrSet<const DWARFDebugInfoEntry *, 4> Visited;
+  return getTypeSizeImpl(*this, PointerSize, Visited);
 }
 
 /// Helper to dump a DIE with all of its parents, but no siblings.

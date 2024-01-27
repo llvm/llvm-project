@@ -192,12 +192,10 @@ void GenericDetails::AddSpecificProc(
 }
 void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!specific_);
-  CHECK(!derivedType_);
   specific_ = &specific;
 }
 void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
-  CHECK(!specific_);
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
@@ -211,7 +209,7 @@ const Symbol *GenericDetails::CheckSpecific() const {
   return const_cast<GenericDetails *>(this)->CheckSpecific();
 }
 Symbol *GenericDetails::CheckSpecific() {
-  if (specific_) {
+  if (specific_ && !specific_->has<UseErrorDetails>()) {
     for (const Symbol &proc : specificProcs_) {
       if (&proc == specific_) {
         return nullptr;
@@ -733,22 +731,10 @@ bool GenericKind::IsOperator() const {
 
 std::string GenericKind::ToString() const {
   return common::visit(
-      common::visitors {
-        [](const OtherKind &x) { return std::string{EnumToString(x)}; },
-            [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
-#if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
-            [](const common::NumericOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::LogicalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-            [](const common::RelationalOperator &x) {
-              return std::string{common::EnumToString(x)};
-            },
-#else
-            [](const auto &x) { return std::string{common::EnumToString(x)}; },
-#endif
+      common::visitors{
+          [](const OtherKind &x) { return std::string{EnumToString(x)}; },
+          [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
+          [](const auto &x) { return std::string{common::EnumToString(x)}; },
       },
       u);
 }

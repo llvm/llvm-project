@@ -484,7 +484,10 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
   if (!MI->getOperand(OpNo).isImm())
     return printOperand(MI, OpNo, STI, O);
 
-  O << SignExtend32<32>((unsigned)MI->getOperand(OpNo).getImm() << 2);
+  uint64_t Imm = static_cast<uint64_t>(MI->getOperand(OpNo).getImm()) << 2;
+  if (!TT.isPPC64())
+    Imm = static_cast<uint32_t>(Imm);
+  O << formatHex(Imm);
 }
 
 void PPCInstPrinter::printcrbitm(const MCInst *MI, unsigned OpNo,

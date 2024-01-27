@@ -446,6 +446,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // ExitBB can be re-used for the exit block of the Plan.
     NewBB = State->CFG.ExitBB;
     State->CFG.PrevBB = NewBB;
+    State->Builder.SetInsertPoint(NewBB->getFirstNonPHI());
 
     // Update the branch instruction in the predecessor to branch to ExitBB.
     VPBlockBase *PredVPB = getSingleHierarchicalPredecessor();
@@ -741,6 +742,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(&VectorTripCount, VectorTripCountV, Part);
 
+  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  // FIXME: Model VF * UF computation completely in VPlan.
+  State.set(&VFxUF,
+            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
+            0);
+
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
@@ -750,9 +757,10 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
                     return isa<VPScalarIVStepsRecipe>(U) ||
+                           isa<VPScalarCastRecipe>(U) ||
                            isa<VPDerivedIVRecipe>(U) ||
                            cast<VPInstruction>(U)->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrement;
+                               Instruction::Add;
                   }) &&
            "the canonical IV should only be used by its increment or "
            "ScalarIVSteps when resetting the start value");
@@ -843,11 +851,14 @@ void VPlan::execute(VPTransformState *State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD
-void VPlan::print(raw_ostream &O) const {
+void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  O << "VPlan '" << getName() << "' {";
+  if (VFxUF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VFxUF.printAsOperand(O, SlotTracker);
+    O << " = VF * UF";
+  }
 
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -867,6 +878,15 @@ void VPlan::print(raw_ostream &O) const {
   TripCount->printAsOperand(O, SlotTracker);
   O << " = original trip-count";
   O << "\n";
+}
+
+LLVM_DUMP_METHOD
+void VPlan::print(raw_ostream &O) const {
+  VPSlotTracker SlotTracker(this);
+
+  O << "VPlan '" << getName() << "' {";
+
+  printLiveIns(O);
 
   if (!getPreheader()->empty()) {
     O << "\n";
@@ -984,11 +1004,18 @@ void VPlanPrinter::dump() {
   OS << "graph [labelloc=t, fontsize=30; label=\"Vectorization Plan";
   if (!Plan.getName().empty())
     OS << "\\n" << DOT::EscapeString(Plan.getName());
-  if (Plan.BackedgeTakenCount) {
-    OS << ", where:\\n";
-    Plan.BackedgeTakenCount->print(OS, SlotTracker);
-    OS << " := BackedgeTakenCount";
+
+  {
+    // Print live-ins.
+  std::string Str;
+  raw_string_ostream SS(Str);
+  Plan.printLiveIns(SS);
+  SmallVector<StringRef, 0> Lines;
+  StringRef(Str).rtrim('\n').split(Lines, "\n");
+  for (auto Line : Lines)
+    OS << DOT::EscapeString(Line.str()) << "\\n";
   }
+
   OS << "\"]\n";
   OS << "node [shape=rect, fontname=Courier, fontsize=30]\n";
   OS << "edge [fontname=Courier, fontsize=30]\n";
@@ -1110,36 +1137,32 @@ void VPlanIngredient::print(raw_ostream &O) const {
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  for (unsigned J = 0; J < getNumUsers();) {
-    VPUser *User = Users[J];
-    unsigned NumUsers = getNumUsers();
-    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I)
-      if (User->getOperand(I) == this)
-        User->setOperand(I, New);
-    // If a user got removed after updating the current user, the next user to
-    // update will be moved to the current position, so we only need to
-    // increment the index if the number of users did not change.
-    if (NumUsers == getNumUsers())
-      J++;
-  }
+  replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
 }
 
 void VPValue::replaceUsesWithIf(
     VPValue *New,
     llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  // Note that this early exit is required for correctness; the implementation
+  // below relies on the number of users for this VPValue to decrease, which
+  // isn't the case if this == New.
+  if (this == New)
+    return;
+
   for (unsigned J = 0; J < getNumUsers();) {
     VPUser *User = Users[J];
-    unsigned NumUsers = getNumUsers();
+    bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
       if (User->getOperand(I) != this || !ShouldReplace(*User, I))
         continue;
 
+      RemovedUser = true;
       User->setOperand(I, New);
     }
     // If a user got removed after updating the current user, the next user to
     // update will be moved to the current position, so we only need to
     // increment the index if the number of users did not change.
-    if (NumUsers == getNumUsers())
+    if (!RemovedUser)
       J++;
   }
 }
@@ -1225,6 +1248,8 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 }
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
+  if (Plan.VFxUF.getNumUsers() > 0)
+    assignSlot(&Plan.VFxUF);
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
@@ -1246,6 +1271,11 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
   return all_of(Def->users(),
                 [Def](VPUser *U) { return U->onlyFirstLaneUsed(Def); });
+}
+
+bool vputils::onlyFirstPartUsed(VPValue *Def) {
+  return all_of(Def->users(),
+                [Def](VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,

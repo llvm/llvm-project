@@ -34,7 +34,7 @@ class MachODebugObjectSynthesizerBase
     : public GDBJITDebugInfoRegistrationPlugin::DebugSectionSynthesizer {
 public:
   static bool isDebugSection(Section &Sec) {
-    return Sec.getName().startswith("__DWARF,");
+    return Sec.getName().starts_with("__DWARF,");
   }
 
   MachODebugObjectSynthesizerBase(LinkGraph &G, ExecutorAddr RegisterActionAddr)
