@@ -144,7 +144,8 @@ public:
   /// Return the underlying data as an array of the given type. This is an
   /// inherrently unsafe operation, and should only be used when the data is
   /// known to be of the correct type.
-  template <typename T> ArrayRef<T> getDataAs() const {
+  template <typename T>
+  ArrayRef<T> getDataAs() const {
     return llvm::ArrayRef<T>((const T *)data.data(), data.size() / sizeof(T));
   }
 
