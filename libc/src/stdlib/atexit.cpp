@@ -89,7 +89,7 @@ LLVM_LIBC_FUNCTION(int, atexit, (StdCAtExitCallback * callback)) {
 // Tests for nVidia GPUs need to be compiled with -fno-use-cxa-atexit, so we
 // need to export the C symbol `atexit` also for __internal__ targets.
 extern "C" {
-int atexit(StdCAtExitCallback *callback) {
+int atexit(LIBC_NAMESPACE::StdCAtExitCallback *callback) {
   return LIBC_NAMESPACE::atexit(callback);
 }
 }
