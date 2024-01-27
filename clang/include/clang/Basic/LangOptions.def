@@ -269,6 +269,8 @@ LANGOPT(OpenMPNoThreadState  , 1, 0, "Assume that no thread in a parallel region
 LANGOPT(OpenMPNoNestedParallelism  , 1, 0, "Assume that no thread in a parallel region will encounter a parallel region")
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, "Assert that offloading is mandatory and do not create a host fallback.")
 LANGOPT(OpenMPForceUSM     , 1, 0, "Enable OpenMP unified shared memory mode via compiler.")
+LANGOPT(OpenMPKernelIO , 1, 1, "Enable OpenMP host-exec Device IO.")
+
 LANGOPT(NoGPULib  , 1, 0, "Indicate a build without the standard GPU libraries.")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
 

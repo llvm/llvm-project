@@ -4298,6 +4298,8 @@ public:
                                        ReturnValueSlot ReturnValue);
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
                                         ReturnValueSlot ReturnValue);
+  RValue EmitOpenMPDevicePrintfCallExpr(const CallExpr *E);
+
   std::vector<std::string> HostexecFns{
       "printf",        "fprintf",         "hostexec",
       "hostexec_uint", "hostexec_uint64", "hostexec_int",

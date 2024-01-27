@@ -28,7 +28,7 @@ llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
   llvm::FunctionType *VprintfFuncType = llvm::FunctionType::get(
       llvm::Type::getInt32Ty(M.getContext()), ArgTypes, false);
 
-  if (auto* F = M.getFunction("vprintf")) {
+  if (auto *F = M.getFunction("vprintf")) {
     // Our CUDA system header declares vprintf with the right signature, so
     // nobody else should have been able to declare vprintf with a bogus
     // signature.
@@ -90,7 +90,6 @@ llvm::Function *GetOpenMPVprintfDeclaration(CodeGenModule &CGM) {
 // Note that by the time this function runs, E's args have already undergone the
 // standard C vararg promotion (short -> int, float -> double, etc.).
 
-
 std::pair<llvm::Value *, llvm::TypeSize>
 packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
   const llvm::DataLayout &DL = CGF->CGM.getDataLayout();
@@ -126,42 +125,63 @@ packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
     return {BufferPtr, DL.getTypeAllocSize(AllocaTy)};
   }
 }
-} // namespace
 
-RValue
-CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
-                                               ReturnValueSlot ReturnValue) {
-  assert(getTarget().getTriple().isNVPTX());
+bool containsNonScalarVarargs(CodeGenFunction *CGF, const CallArgList &Args) {
+  return llvm::any_of(llvm::drop_begin(Args), [&](const CallArg &A) {
+    return !A.getRValue(*CGF).isScalar();
+  });
+}
+
+RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
+                                llvm::Function *Decl, bool WithSizeArg) {
+  CodeGenModule &CGM = CGF->CGM;
+  CGBuilderTy &Builder = CGF->Builder;
   assert(E->getBuiltinCallee() == Builtin::BIprintf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
 
+  // Uses the same format as nvptx for the argument packing, but also passes
+  // an i32 for the total size of the passed pointer
   CallArgList Args;
-  EmitCallArgs(Args,
-               E->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
-               E->arguments(), E->getDirectCallee(),
-               /* ParamsToSkip = */ 0);
+  CGF->EmitCallArgs(Args,
+                    E->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
+                    E->arguments(), E->getDirectCallee(),
+                    /* ParamsToSkip = */ 0);
 
   // We don't know how to emit non-scalar varargs.
-  if (llvm::any_of(llvm::drop_begin(Args), [&](const CallArg &A) {
-        return !A.getRValue(*this).isScalar();
-      })) {
+  if (containsNonScalarVarargs(CGF, Args)) {
     CGM.ErrorUnsupported(E, "non-scalar arg to printf");
-    return RValue::get(llvm::ConstantInt::get(IntTy, 0));
+    return RValue::get(llvm::ConstantInt::get(CGF->IntTy, 0));
   }
 
-  auto r = packArgsIntoNVPTXFormatBuffer(this, Args);
+  auto r = packArgsIntoNVPTXFormatBuffer(CGF, Args);
   llvm::Value *BufferPtr = r.first;
 
-  // Invoke vprintf and return.
-  llvm::Function* VprintfFunc = GetVprintfDeclaration(CGM.getModule());
-  return RValue::get(Builder.CreateCall(
-      VprintfFunc, {Args[0].getRValue(*this).getScalarVal(), BufferPtr}));
+  llvm::SmallVector<llvm::Value *, 3> Vec = {
+      Args[0].getRValue(*CGF).getScalarVal(), BufferPtr};
+  if (WithSizeArg) {
+    // Passing > 32bit of data as a local alloca doesn't work for nvptx or
+    // amdgpu
+    llvm::Constant *Size =
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(CGM.getLLVMContext()),
+                               static_cast<uint32_t>(r.second.getFixedValue()));
+
+    Vec.push_back(Size);
+  }
+  return RValue::get(Builder.CreateCall(Decl, Vec));
+}
+} // namespace
+
+RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
+                                                      ReturnValueSlot ReturnValu) {
+  assert(getTarget().getTriple().isNVPTX());
+  return EmitDevicePrintfCallExpr(
+      E, this, GetVprintfDeclaration(CGM.getModule()), false);
 }
 
 RValue
 CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
                                                 ReturnValueSlot ReturnValue) {
-  assert(getTarget().getTriple().isAMDGCN());
+  assert(getTarget().getTriple().getArch() == llvm::Triple::amdgcn);
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
          E->getBuiltinCallee() == Builtin::BI__builtin_printf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
@@ -550,4 +570,12 @@ CodeGenFunction::EmitHostexecAllocAndExecFns(const CallExpr *E,
   return RValue::get(Builder.CreateCall(
       hostexecVargsReturnsFnDeclaration(CGM, E->getType(), GPUStubFunctionName),
       {DataStructPtr, BufferLen}));
+}
+
+RValue CodeGenFunction::EmitOpenMPDevicePrintfCallExpr(const CallExpr *E) {
+  assert(getTarget().getTriple().isNVPTX() ||
+         getTarget().getTriple().isAMDGCN());
+  // This will result in a NOP on AMDGPU, unimplimented.
+  return EmitDevicePrintfCallExpr(E, this, GetOpenMPVprintfDeclaration(CGM),
+                                  true);
 }

@@ -3393,6 +3393,14 @@ def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 
 // AMD OpenMP
+def fno_openmp_allow_kernel_io : Flag<["-"], "fno-openmp-allow-kernel-io">, Group<f_Group>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable OpenMP host-exec device I/O">,
+  MarshallingInfoFlag<LangOpts<"OpenMPKernelIO">>;
+def fopenmp_allow_kernel_io : Flag<["-"], "fopenmp-allow-kernel-io">, Group<f_Group>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Enable OpenMP host-exec device I/O">,
+  MarshallingInfoFlag<LangOpts<"OpenMPKernelIO">>;
 def fenable_host_devmem : Flag<["-"], "fenable-host-devmem">, Group<f_Group>,
   HelpText<"Enable host-assisted dynamic device memory management (Default)">;
 def fdisable_host_devmem : Flag<["-"], "fdisable-host-devmem">, Group<f_Group>,
