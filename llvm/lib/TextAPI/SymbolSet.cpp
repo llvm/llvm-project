@@ -11,7 +11,7 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
-Symbol *SymbolSet::addGlobalImpl(SymbolKind Kind, StringRef Name,
+Symbol *SymbolSet::addGlobalImpl(EncodeKind Kind, StringRef Name,
                                  SymbolFlags Flags) {
   Name = copyString(Name);
   auto Result = Symbols.try_emplace(SymbolsMapKey{Kind, Name}, nullptr);
@@ -21,13 +21,13 @@ Symbol *SymbolSet::addGlobalImpl(SymbolKind Kind, StringRef Name,
   return Result.first->second;
 }
 
-Symbol *SymbolSet::addGlobal(SymbolKind Kind, StringRef Name, SymbolFlags Flags,
+Symbol *SymbolSet::addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
                              const Target &Targ) {
   auto *Sym = addGlobalImpl(Kind, Name, Flags);
   Sym->addTarget(Targ);
   return Sym;
 }
 
-const Symbol *SymbolSet::findSymbol(SymbolKind Kind, StringRef Name) const {
+const Symbol *SymbolSet::findSymbol(EncodeKind Kind, StringRef Name) const {
   return Symbols.lookup({Kind, Name});
 }
