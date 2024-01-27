@@ -15,8 +15,8 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -93,8 +93,8 @@ public:
   Instruction *visitFNeg(UnaryOperator &I);
   Instruction *visitAdd(BinaryOperator &I);
   Instruction *visitFAdd(BinaryOperator &I);
-  Value *OptimizePointerDifference(
-      Value *LHS, Value *RHS, Type *Ty, bool isNUW);
+  Value *OptimizePointerDifference(Value *LHS, Value *RHS, Type *Ty,
+                                   bool isNUW);
   Instruction *visitSub(BinaryOperator &I);
   Instruction *visitFSub(BinaryOperator &I);
   Instruction *visitMul(BinaryOperator &I);
@@ -267,8 +267,8 @@ private:
   /// OverflowResult, and return true.  If no simplification is possible,
   /// returns false.
   bool OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp, bool IsSigned,
-                             Value *LHS, Value *RHS,
-                             Instruction &CtxI, Value *&OperationResult,
+                             Value *LHS, Value *RHS, Instruction &CtxI,
+                             Value *&OperationResult,
                              Constant *&OverflowResult);
 
   Instruction *visitCallBase(CallBase &Call);
@@ -364,10 +364,14 @@ private:
                        const Value *RHS, const Instruction &CxtI,
                        bool IsSigned) const {
     switch (Opcode) {
-    case Instruction::Add: return willNotOverflowAdd(LHS, RHS, CxtI, IsSigned);
-    case Instruction::Sub: return willNotOverflowSub(LHS, RHS, CxtI, IsSigned);
-    case Instruction::Mul: return willNotOverflowMul(LHS, RHS, CxtI, IsSigned);
-    default: llvm_unreachable("Unexpected opcode for overflow query");
+    case Instruction::Add:
+      return willNotOverflowAdd(LHS, RHS, CxtI, IsSigned);
+    case Instruction::Sub:
+      return willNotOverflowSub(LHS, RHS, CxtI, IsSigned);
+    case Instruction::Mul:
+      return willNotOverflowMul(LHS, RHS, CxtI, IsSigned);
+    default:
+      llvm_unreachable("Unexpected opcode for overflow query");
     }
   }
 
@@ -476,9 +480,9 @@ public:
     return nullptr; // Don't do anything with FI
   }
 
-  OverflowResult computeOverflow(
-      Instruction::BinaryOps BinaryOp, bool IsSigned,
-      Value *LHS, Value *RHS, Instruction *CxtI) const;
+  OverflowResult computeOverflow(Instruction::BinaryOps BinaryOp, bool IsSigned,
+                                 Value *LHS, Value *RHS,
+                                 Instruction *CxtI) const;
 
   /// Performs a few simplifications for operators which are associative
   /// or commutative.
@@ -547,14 +551,15 @@ public:
   /// DemandedMask, but without modifying the Instruction.
   Value *SimplifyMultipleUseDemandedBits(Instruction *I,
                                          const APInt &DemandedMask,
-                                         KnownBits &Known,
-                                         unsigned Depth, Instruction *CxtI);
+                                         KnownBits &Known, unsigned Depth,
+                                         Instruction *CxtI);
 
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
-  Value *simplifyShrShlDemandedBits(
-      Instruction *Shr, const APInt &ShrOp1, Instruction *Shl,
-      const APInt &ShlOp1, const APInt &DemandedMask, KnownBits &Known);
+  Value *simplifyShrShlDemandedBits(Instruction *Shr, const APInt &ShrOp1,
+                                    Instruction *Shl, const APInt &ShlOp1,
+                                    const APInt &DemandedMask,
+                                    KnownBits &Known);
 
   /// Tries to simplify operands to an integer instruction based on its
   /// demanded bits.
