@@ -426,6 +426,7 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/complex.h
   __fwd/fstream.h
   __fwd/get.h
   __fwd/hash.h

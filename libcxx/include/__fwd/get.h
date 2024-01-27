@@ -12,6 +12,7 @@
 #include <__concepts/copyable.h>
 #include <__config>
 #include <__fwd/array.h>
+#include <__fwd/complex.h>
 #include <__fwd/pair.h>
 #include <__fwd/subrange.h>
 #include <__fwd/tuple.h>
@@ -75,6 +76,22 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp&& get(array<_Tp, _Size>&
 template <size_t _Ip, class _Tp, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&& get(const array<_Tp, _Size>&&) _NOEXCEPT;
 #endif
+
+#if _LIBCPP_STD_VER >= 26
+
+template <size_t _Ip, class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp& get(complex<_Tp>&) noexcept;
+
+template <size_t _Ip, class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp&& get(complex<_Tp>&&) noexcept;
+
+template <size_t _Ip, class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr const _Tp& get(const complex<_Tp>&) noexcept;
+
+template <size_t _Ip, class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const complex<_Tp>&&) noexcept;
+
+#endif // _LIBCPP_STD_VER >= 26
 
 #if _LIBCPP_STD_VER >= 20
 
