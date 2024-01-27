@@ -367,7 +367,7 @@ add_entrypoint_object(
 # to export the C symbol `atexit` also for __internal__ targets.
 set(atexit_compile_options "")
 if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  set(atexit_compile_options "-DLIBC_COPT_PUBLIC_PACKAGING")
+  set(atexit_compile_options "-DLIBC_ATEXIT_EXPORT_C_SYMBOL")
 endif()
 
 add_entrypoint_object(

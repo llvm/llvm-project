@@ -78,6 +78,12 @@ extern "C" int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
   return add_atexit_unit({callback, payload});
 }
 
+#if !defined(LIBC_COPT_PUBLIC_PACKAGING) && defined(LIBC_ATEXIT_EXPORT_C_SYMBOL)
+// Tests for nVidia GPUs need to be compiled with -fno-use-cxa-atexit, so we
+// need to export the C symbol `atexit` also for __internal__ targets.
+#define LIBC_COPT_PUBLIC_PACKAGING
+#endif
+
 LLVM_LIBC_FUNCTION(int, atexit, (StdCAtExitCallback * callback)) {
   return add_atexit_unit(
       {&stdc_at_exit_func, reinterpret_cast<void *>(callback)});
