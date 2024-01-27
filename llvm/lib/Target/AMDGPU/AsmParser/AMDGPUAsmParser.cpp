@@ -21,7 +21,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"

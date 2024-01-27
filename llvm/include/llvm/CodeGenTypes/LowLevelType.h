@@ -1,4 +1,4 @@
-//== llvm/CodeGen/LowLevelType.h ------------------------------- -*- C++ -*-==//
+//== llvm/CodeGenTypes/LowLevelType.h -------------------------- -*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,7 @@
 #define LLVM_CODEGEN_LOWLEVELTYPE_H
 
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 

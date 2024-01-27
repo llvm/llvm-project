@@ -2002,6 +2002,14 @@ bool RISCVTargetLowering::shouldSinkOperands(
   if (!I->getType()->isVectorTy() || !Subtarget.hasVInstructions())
     return false;
 
+  // Don't sink splat operands if the target prefers it. Some targets requires
+  // S2V transfer buffers and we can run out of them copying the same value
+  // repeatedly.
+  // FIXME: It could still be worth doing if it would improve vector register
+  // pressure and prevent a vector spill.
+  if (!Subtarget.sinkSplatOperands())
+    return false;
+
   for (auto OpIdx : enumerate(I->operands())) {
     if (!canSplatOperand(I, OpIdx.index()))
       continue;
@@ -4616,6 +4624,26 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
   return Res;
 }
 
+static bool isLegalBitRotate(ShuffleVectorSDNode *SVN,
+                             SelectionDAG &DAG,
+                             const RISCVSubtarget &Subtarget,
+                             MVT &RotateVT, unsigned &RotateAmt) {
+  SDLoc DL(SVN);
+
+  EVT VT = SVN->getValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  unsigned NumSubElts;
+  if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,
+                                          NumElts, NumSubElts, RotateAmt))
+    return false;
+  RotateVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits * NumSubElts),
+                                  NumElts / NumSubElts);
+
+  // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
+  return Subtarget.getTargetLowering()->isTypeLegal(RotateVT);
+}
+
 // Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
 // reinterpret it as a v2i32 and rotate it right by 8 instead. We can lower this
 // as a vror.vi if we have Zvkb, or otherwise as a vsll, vsrl and vor.
@@ -4625,17 +4653,9 @@ static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
   SDLoc DL(SVN);
 
   EVT VT = SVN->getValueType(0);
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned EltSizeInBits = VT.getScalarSizeInBits();
-  unsigned NumSubElts, RotateAmt;
-  if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,
-                                          NumElts, NumSubElts, RotateAmt))
-    return SDValue();
-  MVT RotateVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits * NumSubElts),
-                                  NumElts / NumSubElts);
-
-  // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
-  if (!Subtarget.getTargetLowering()->isTypeLegal(RotateVT))
+  unsigned RotateAmt;
+  MVT RotateVT;
+  if (!isLegalBitRotate(SVN, DAG, Subtarget, RotateVT, RotateAmt))
     return SDValue();
 
   SDValue Op = DAG.getBitcast(RotateVT, SVN->getOperand(0));
@@ -4670,6 +4690,13 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
   const unsigned MinVLen = Subtarget.getRealMinVLen();
   const unsigned MaxVLen = Subtarget.getRealMaxVLen();
   if (MinVLen != MaxVLen || VT.getSizeInBits().getFixedValue() <= MinVLen)
+    return SDValue();
+
+  // Avoid picking up bitrotate patterns which we have a linear-in-lmul
+  // expansion for.
+  unsigned RotateAmt;
+  MVT RotateVT;
+  if (isLegalBitRotate(SVN, DAG, Subtarget, RotateVT, RotateAmt))
     return SDValue();
 
   MVT ElemVT = VT.getVectorElementType();
@@ -4718,7 +4745,7 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
     if (SrcVecIdx == -1)
       continue;
     unsigned ExtractIdx = (SrcVecIdx % VRegsPerSrc) * NumOpElts;
-    SDValue SrcVec = (unsigned)SrcVecIdx > VRegsPerSrc ? V2 : V1;
+    SDValue SrcVec = (unsigned)SrcVecIdx >= VRegsPerSrc ? V2 : V1;
     SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, SrcVec,
                                  DAG.getVectorIdxConstant(ExtractIdx, DL));
     SubVec = convertFromScalableVector(OneRegVT, SubVec, DAG, Subtarget);
@@ -6956,8 +6983,8 @@ SDValue RISCVTargetLowering::getTLSDescAddr(GlobalAddressSDNode *N,
   // This generates the pattern (PseudoLA_TLSDESC sym), which expands to
   //
   // auipc tX, %tlsdesc_hi(symbol)         // R_RISCV_TLSDESC_HI20(symbol)
-  // lw    tY, tX, %tlsdesc_lo_load(label) // R_RISCV_TLSDESC_LOAD_LO12_I(label)
-  // addi  a0, tX, %tlsdesc_lo_add(label)  // R_RISCV_TLSDESC_ADD_LO12_I(label)
+  // lw    tY, tX, %tlsdesc_load_lo(label) // R_RISCV_TLSDESC_LOAD_LO12(label)
+  // addi  a0, tX, %tlsdesc_add_lo(label)  // R_RISCV_TLSDESC_ADD_LO12(label)
   // jalr  t0, tY                          // R_RISCV_TLSDESC_CALL(label)
   SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
   return SDValue(DAG.getMachineNode(RISCV::PseudoLA_TLSDESC, DL, Ty, Addr), 0);
@@ -9009,94 +9036,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
         FixedIntrinsic->getMemoryVT(), FixedIntrinsic->getMemOperand());
   }
-  case Intrinsic::riscv_sf_vc_x_se_e8mf8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF8);
-  case Intrinsic::riscv_sf_vc_x_se_e8mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF4);
-  case Intrinsic::riscv_sf_vc_x_se_e8mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e8m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M1);
-  case Intrinsic::riscv_sf_vc_x_se_e8m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M2);
-  case Intrinsic::riscv_sf_vc_x_se_e8m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M4);
-  case Intrinsic::riscv_sf_vc_x_se_e8m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E8M8);
-  case Intrinsic::riscv_sf_vc_x_se_e16mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF4);
-  case Intrinsic::riscv_sf_vc_x_se_e16mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e16m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M1);
-  case Intrinsic::riscv_sf_vc_x_se_e16m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M2);
-  case Intrinsic::riscv_sf_vc_x_se_e16m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M4);
-  case Intrinsic::riscv_sf_vc_x_se_e16m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E16M8);
-  case Intrinsic::riscv_sf_vc_x_se_e32mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32MF2);
-  case Intrinsic::riscv_sf_vc_x_se_e32m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M1);
-  case Intrinsic::riscv_sf_vc_x_se_e32m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M2);
-  case Intrinsic::riscv_sf_vc_x_se_e32m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M4);
-  case Intrinsic::riscv_sf_vc_x_se_e32m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E32M8);
-  case Intrinsic::riscv_sf_vc_x_se_e64m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M1);
-  case Intrinsic::riscv_sf_vc_x_se_e64m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M2);
-  case Intrinsic::riscv_sf_vc_x_se_e64m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M4);
-  case Intrinsic::riscv_sf_vc_x_se_e64m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_X_SE_E64M8);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF8);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF4);
-  case Intrinsic::riscv_sf_vc_i_se_e8mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e8m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M1);
-  case Intrinsic::riscv_sf_vc_i_se_e8m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M2);
-  case Intrinsic::riscv_sf_vc_i_se_e8m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M4);
-  case Intrinsic::riscv_sf_vc_i_se_e8m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E8M8);
-  case Intrinsic::riscv_sf_vc_i_se_e16mf4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF4);
-  case Intrinsic::riscv_sf_vc_i_se_e16mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e16m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M1);
-  case Intrinsic::riscv_sf_vc_i_se_e16m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M2);
-  case Intrinsic::riscv_sf_vc_i_se_e16m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M4);
-  case Intrinsic::riscv_sf_vc_i_se_e16m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E16M8);
-  case Intrinsic::riscv_sf_vc_i_se_e32mf2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32MF2);
-  case Intrinsic::riscv_sf_vc_i_se_e32m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M1);
-  case Intrinsic::riscv_sf_vc_i_se_e32m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M2);
-  case Intrinsic::riscv_sf_vc_i_se_e32m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M4);
-  case Intrinsic::riscv_sf_vc_i_se_e32m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E32M8);
-  case Intrinsic::riscv_sf_vc_i_se_e64m1:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M1);
-  case Intrinsic::riscv_sf_vc_i_se_e64m2:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M2);
-  case Intrinsic::riscv_sf_vc_i_se_e64m4:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M4);
-  case Intrinsic::riscv_sf_vc_i_se_e64m8:
-    return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_I_SE_E64M8);
   case Intrinsic::riscv_sf_vc_xv_se:
     return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_XV_SE);
   case Intrinsic::riscv_sf_vc_iv_se:
@@ -13770,6 +13709,57 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
   return InputRootReplacement;
 }
 
+// Fold (vwadd.wv y, (vmerge cond, x, 0)) -> vwadd.wv y, x, y, cond
+// y will be the Passthru and cond will be the Mask.
+static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
+  unsigned Opc = N->getOpcode();
+  assert(Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWADDU_W_VL);
+
+  SDValue Y = N->getOperand(0);
+  SDValue MergeOp = N->getOperand(1);
+  if (MergeOp.getOpcode() != RISCVISD::VMERGE_VL)
+    return SDValue();
+  SDValue X = MergeOp->getOperand(1);
+
+  if (!MergeOp.hasOneUse())
+    return SDValue();
+
+  // Passthru should be undef
+  SDValue Passthru = N->getOperand(2);
+  if (!Passthru.isUndef())
+    return SDValue();
+
+  // Mask should be all ones
+  SDValue Mask = N->getOperand(3);
+  if (Mask.getOpcode() != RISCVISD::VMSET_VL)
+    return SDValue();
+
+  // False value of MergeOp should be all zeros
+  SDValue Z = MergeOp->getOperand(2);
+  if (Z.getOpcode() != ISD::INSERT_SUBVECTOR)
+    return SDValue();
+  if (!ISD::isBuildVectorAllZeros(Z.getOperand(1).getNode()))
+    return SDValue();
+  if (!isNullOrNullSplat(Z.getOperand(0)) && !Z.getOperand(0).isUndef())
+    return SDValue();
+
+  return DAG.getNode(Opc, SDLoc(N), N->getValueType(0),
+                     {Y, X, Y, MergeOp->getOperand(0), N->getOperand(4)},
+                     N->getFlags());
+}
+
+static SDValue performVWADDW_VLCombine(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const RISCVSubtarget &Subtarget) {
+  unsigned Opc = N->getOpcode();
+  assert(Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWADDU_W_VL);
+
+  if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+    return V;
+
+  return combineVWADDWSelect(N, DCI.DAG);
+}
+
 // Helper function for performMemPairCombine.
 // Try to combine the memory loads/stores LSNode1 and LSNode2
 // into a single memory pair operation.
@@ -15838,9 +15828,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
-  case RISCVISD::SUB_VL:
   case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWADDU_W_VL:
+    return performVWADDW_VLCombine(N, DCI, Subtarget);
+  case RISCVISD::SUB_VL:
   case RISCVISD::VWSUB_W_VL:
   case RISCVISD::VWSUBU_W_VL:
   case RISCVISD::MUL_VL:
@@ -20456,7 +20447,6 @@ RISCVTargetLowering::getTargetMMOFlags(const MemSDNode &Node) const {
   MachineMemOperand::Flags TargetFlags = MachineMemOperand::MONone;
   TargetFlags |= (NodeFlags & MONontemporalBit0);
   TargetFlags |= (NodeFlags & MONontemporalBit1);
-
   return TargetFlags;
 }
 

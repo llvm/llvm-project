@@ -365,11 +365,20 @@ Expected<ExecutableFunction> ExecutableFunction::create(
 
   auto SymbolSizes = object::computeSymbolSizes(*ObjectFileHolder.getBinary());
   // Get the size of the function that we want to call into (with the name of
-  // FunctionID). This should always be the third symbol returned by
-  // calculateSymbolSizes.
-  assert(SymbolSizes.size() == 3);
-  assert(cantFail(std::get<0>(SymbolSizes[2]).getName()) == FunctionID);
-  uintptr_t CodeSize = std::get<1>(SymbolSizes[2]);
+  // FunctionID).
+  auto SymbolIt = llvm::find_if(SymbolSizes, [&](const auto &Pair) {
+    auto SymbolName = Pair.first.getName();
+    if (SymbolName)
+      return *SymbolName == FunctionID;
+    // We should always succeed in finding the FunctionID, hence we suppress
+    // the error here and assert later on the search result, rather than
+    // propagating the Expected<> error back to the caller.
+    llvm::consumeError(SymbolName.takeError());
+    return false;
+  });
+  assert(SymbolIt != SymbolSizes.end() &&
+         "Cannot find the symbol for FunctionID");
+  uintptr_t CodeSize = SymbolIt->second;
 
   auto EJITOrErr = orc::LLJITBuilder().create();
   if (!EJITOrErr)

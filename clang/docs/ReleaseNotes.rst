@@ -68,8 +68,14 @@ C++23 Feature Support
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
+
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Substitute template parameter pack, when it is not explicitly specified
+  in the template parameters, but is deduced from a previous argument.
+  (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
 
 C Language Changes
 ------------------
@@ -113,6 +119,16 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix crash when using lifetimebound attribute in function with trailing return.
+  Fixes (`#73619 <https://github.com/llvm/llvm-project/issues/73619>`_)
+- Fix a crash when specializing an out-of-line member function with a default
+  parameter where we did an incorrect specialization of the initialization of
+  the default parameter.
+  Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
+- Fixed a bug where variables referenced by requires-clauses inside
+  nested generic lambdas were not properly injected into the constraint scope.
+  (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -148,6 +164,8 @@ LoongArch Support
 
 RISC-V Support
 ^^^^^^^^^^^^^^
+
+- ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

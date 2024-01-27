@@ -976,8 +976,8 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
 
-  if ((Exts.count("zvkg") || Exts.count("zvkned") || Exts.count("zvknha") ||
-       Exts.count("zvksed") || Exts.count("zvksh")) &&
+  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkned") ||
+       Exts.count("zvknha") || Exts.count("zvksed") || Exts.count("zvksh")) &&
       !HasVector)
     return createStringError(
         errc::invalid_argument,

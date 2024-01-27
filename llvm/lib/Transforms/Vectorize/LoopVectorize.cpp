@@ -1950,6 +1950,8 @@ class GeneratedRTChecks {
   bool CostTooHigh = false;
   const bool AddBranchWeights;
 
+  Loop *OuterLoop = nullptr;
+
 public:
   GeneratedRTChecks(ScalarEvolution &SE, DominatorTree *DT, LoopInfo *LI,
                     TargetTransformInfo *TTI, const DataLayout &DL,
@@ -2046,6 +2048,9 @@ public:
       DT->eraseNode(SCEVCheckBlock);
       LI->removeBlock(SCEVCheckBlock);
     }
+
+    // Outer loop is used as part of the later cost calculations.
+    OuterLoop = L->getParentLoop();
   }
 
   InstructionCost getCost() {
@@ -2069,15 +2074,60 @@ public:
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
         RTCheckCost += C;
       }
-    if (MemCheckBlock)
+    if (MemCheckBlock) {
+      InstructionCost MemCheckCost = 0;
       for (Instruction &I : *MemCheckBlock) {
         if (MemCheckBlock->getTerminator() == &I)
           continue;
         InstructionCost C =
             TTI->getInstructionCost(&I, TTI::TCK_RecipThroughput);
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
-        RTCheckCost += C;
+        MemCheckCost += C;
       }
+
+      // If the runtime memory checks are being created inside an outer loop
+      // we should find out if these checks are outer loop invariant. If so,
+      // the checks will likely be hoisted out and so the effective cost will
+      // reduce according to the outer loop trip count.
+      if (OuterLoop) {
+        ScalarEvolution *SE = MemCheckExp.getSE();
+        // TODO: If profitable, we could refine this further by analysing every
+        // individual memory check, since there could be a mixture of loop
+        // variant and invariant checks that mean the final condition is
+        // variant.
+        const SCEV *Cond = SE->getSCEV(MemRuntimeCheckCond);
+        if (SE->isLoopInvariant(Cond, OuterLoop)) {
+          // It seems reasonable to assume that we can reduce the effective
+          // cost of the checks even when we know nothing about the trip
+          // count. Assume that the outer loop executes at least twice.
+          unsigned BestTripCount = 2;
+
+          // If exact trip count is known use that.
+          if (unsigned SmallTC = SE->getSmallConstantTripCount(OuterLoop))
+            BestTripCount = SmallTC;
+          else if (LoopVectorizeWithBlockFrequency) {
+            // Else use profile data if available.
+            if (auto EstimatedTC = getLoopEstimatedTripCount(OuterLoop))
+              BestTripCount = *EstimatedTC;
+          }
+
+          InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
+
+          // Let's ensure the cost is always at least 1.
+          NewMemCheckCost = std::max(*NewMemCheckCost.getValue(),
+                                     (InstructionCost::CostType)1);
+
+          LLVM_DEBUG(dbgs()
+                     << "We expect runtime memory checks to be hoisted "
+                     << "out of the outer loop. Cost reduced from "
+                     << MemCheckCost << " to " << NewMemCheckCost << '\n');
+
+          MemCheckCost = NewMemCheckCost;
+        }
+      }
+
+      RTCheckCost += MemCheckCost;
+    }
 
     if (SCEVCheckBlock || MemCheckBlock)
       LLVM_DEBUG(dbgs() << "Total cost of runtime checks: " << RTCheckCost
@@ -2137,8 +2187,8 @@ public:
 
     BranchInst::Create(LoopVectorPreHeader, SCEVCheckBlock);
     // Create new preheader for vector loop.
-    if (auto *PL = LI->getLoopFor(LoopVectorPreHeader))
-      PL->addBasicBlockToLoop(SCEVCheckBlock, *LI);
+    if (OuterLoop)
+      OuterLoop->addBasicBlockToLoop(SCEVCheckBlock, *LI);
 
     SCEVCheckBlock->getTerminator()->eraseFromParent();
     SCEVCheckBlock->moveBefore(LoopVectorPreHeader);
@@ -2172,8 +2222,8 @@ public:
     DT->changeImmediateDominator(LoopVectorPreHeader, MemCheckBlock);
     MemCheckBlock->moveBefore(LoopVectorPreHeader);
 
-    if (auto *PL = LI->getLoopFor(LoopVectorPreHeader))
-      PL->addBasicBlockToLoop(MemCheckBlock, *LI);
+    if (OuterLoop)
+      OuterLoop->addBasicBlockToLoop(MemCheckBlock, *LI);
 
     BranchInst &BI =
         *BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheckCond);
@@ -9277,12 +9327,6 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
       State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
       Kind, cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName("offset.idx");
-  if (TruncResultTy) {
-    assert(TruncResultTy != DerivedIV->getType() &&
-           Step->getType()->isIntegerTy() &&
-           "Truncation requires an integer step");
-    DerivedIV = State.Builder.CreateTrunc(DerivedIV, TruncResultTy);
-  }
   assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
 
   State.set(this, DerivedIV, VPIteration(0, 0));

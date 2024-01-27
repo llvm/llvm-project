@@ -1065,6 +1065,11 @@ DEF_TRAVERSE_TYPE(TypeOfType, { TRY_TO(TraverseType(T->getUnmodifiedType())); })
 DEF_TRAVERSE_TYPE(DecltypeType,
                   { TRY_TO(TraverseStmt(T->getUnderlyingExpr())); })
 
+DEF_TRAVERSE_TYPE(PackIndexingType, {
+  TRY_TO(TraverseType(T->getPattern()));
+  TRY_TO(TraverseStmt(T->getIndexExpr()));
+})
+
 DEF_TRAVERSE_TYPE(UnaryTransformType, {
   TRY_TO(TraverseType(T->getBaseType()));
   TRY_TO(TraverseType(T->getUnderlyingType()));
@@ -1341,6 +1346,11 @@ DEF_TRAVERSE_TYPELOC(TypeOfType, {
 // FIXME: location of underlying expr
 DEF_TRAVERSE_TYPELOC(DecltypeType, {
   TRY_TO(TraverseStmt(TL.getTypePtr()->getUnderlyingExpr()));
+})
+
+DEF_TRAVERSE_TYPELOC(PackIndexingType, {
+  TRY_TO(TraverseType(TL.getPattern()));
+  TRY_TO(TraverseStmt(TL.getTypePtr()->getIndexExpr()));
 })
 
 DEF_TRAVERSE_TYPELOC(UnaryTransformType, {
@@ -2854,6 +2864,7 @@ DEF_TRAVERSE_STMT(CompoundAssignOperator, {})
 DEF_TRAVERSE_STMT(CXXNoexceptExpr, {})
 DEF_TRAVERSE_STMT(PackExpansionExpr, {})
 DEF_TRAVERSE_STMT(SizeOfPackExpr, {})
+DEF_TRAVERSE_STMT(PackIndexingExpr, {})
 DEF_TRAVERSE_STMT(SubstNonTypeTemplateParmPackExpr, {})
 DEF_TRAVERSE_STMT(SubstNonTypeTemplateParmExpr, {})
 DEF_TRAVERSE_STMT(FunctionParmPackExpr, {})

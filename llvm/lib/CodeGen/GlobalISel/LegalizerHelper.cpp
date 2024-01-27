@@ -7946,13 +7946,11 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
-  // Implement vector G_SELECT in terms of XOR, AND, OR.
+  // Implement G_SELECT in terms of XOR, AND, OR.
   auto [DstReg, DstTy, MaskReg, MaskTy, Op1Reg, Op1Ty, Op2Reg, Op2Ty] =
       MI.getFirst4RegLLTs();
-  if (!DstTy.isVector())
-    return UnableToLegalize;
 
-  bool IsEltPtr = DstTy.getElementType().isPointer();
+  bool IsEltPtr = DstTy.getScalarType().isPointer();
   if (IsEltPtr) {
     LLT ScalarPtrTy = LLT::scalar(DstTy.getScalarSizeInBits());
     LLT NewTy = DstTy.changeElementType(ScalarPtrTy);
@@ -7962,7 +7960,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   }
 
   if (MaskTy.isScalar()) {
-    // Turn the scalar condition into a vector condition mask.
+    // Turn the scalar condition into a vector condition mask if needed.
 
     Register MaskElt = MaskReg;
 
@@ -7972,13 +7970,20 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
       MaskElt = MIRBuilder.buildSExtInReg(MaskTy, MaskElt, 1).getReg(0);
 
     // Continue the sign extension (or truncate) to match the data type.
-    MaskElt = MIRBuilder.buildSExtOrTrunc(DstTy.getElementType(),
-                                          MaskElt).getReg(0);
+    MaskElt =
+        MIRBuilder.buildSExtOrTrunc(DstTy.getScalarType(), MaskElt).getReg(0);
 
-    // Generate a vector splat idiom.
-    auto ShufSplat = MIRBuilder.buildShuffleSplat(DstTy, MaskElt);
-    MaskReg = ShufSplat.getReg(0);
+    if (DstTy.isVector()) {
+      // Generate a vector splat idiom.
+      auto ShufSplat = MIRBuilder.buildShuffleSplat(DstTy, MaskElt);
+      MaskReg = ShufSplat.getReg(0);
+    } else {
+      MaskReg = MaskElt;
+    }
     MaskTy = DstTy;
+  } else if (!DstTy.isVector()) {
+    // Cannot handle the case that mask is a vector and dst is a scalar.
+    return UnableToLegalize;
   }
 
   if (MaskTy.getSizeInBits() != DstTy.getSizeInBits()) {
