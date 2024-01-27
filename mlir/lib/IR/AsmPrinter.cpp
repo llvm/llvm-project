@@ -1571,6 +1571,10 @@ void SSANameState::numberValuesInOp(Operation &op) {
     }
   }
 
+  // Set the original identifier names if available. Used in debugging with
+  // `--retain-identifier-names`/`shouldRetainIdentifierNames` in ParserConfig
+  setRetainedIdentifierNames(op);
+
   unsigned numResults = op.getNumResults();
   if (numResults == 0) {
     // If value users should be printed, operations with no result need an id.
@@ -1581,10 +1585,6 @@ void SSANameState::numberValuesInOp(Operation &op) {
     return;
   }
   Value resultBegin = op.getResult(0);
-
-  // Set the original identifier names if available. Used in debugging with
-  // `--retain-identifier-names`/`shouldRetainIdentifierNames` in ParserConfig
-  setRetainedIdentifierNames(op);
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)
@@ -1599,15 +1599,17 @@ void SSANameState::numberValuesInOp(Operation &op) {
 
 void SSANameState::setRetainedIdentifierNames(Operation &op) {
   // Get the original SSA for the result(s) if available
-  Value resultBegin = op.getResult(0);
-  if (StringAttr ssaNameAttr = op.getAttrOfType<StringAttr>("mlir.ssaName")) {
-    setValueName(resultBegin, ssaNameAttr.strref());
-    op.removeDiscardableAttr("mlir.ssaName");
-  }
   unsigned numResults = op.getNumResults();
   if (numResults > 1)
     llvm::outs()
         << "have not yet implemented support for multiple return values\n";
+  else if (numResults == 1) {
+    Value resultBegin = op.getResult(0);
+    if (StringAttr ssaNameAttr = op.getAttrOfType<StringAttr>("mlir.ssaName")) {
+      setValueName(resultBegin, ssaNameAttr.strref());
+      op.removeDiscardableAttr("mlir.ssaName");
+    }
+  }
 
   // Get the original name for the block if available
   if (StringAttr blockNameAttr =
@@ -1621,9 +1623,10 @@ void SSANameState::setRetainedIdentifierNames(Operation &op) {
           op.getAttrOfType<ArrayAttr>("mlir.blockArgNames")) {
     auto blockArgNames = blockArgNamesAttr.getValue();
     auto blockArgs = op.getBlock()->getArguments();
-    for (int i = 0; i < blockArgs.size() && i < blockArgNames.size(); ++i) {
-      auto blockArgName = blockArgNames[i].cast<StringAttr>();
-      setValueName(blockArgs[i], cast<StringAttr>(blockArgNames[i]).strref());
+    for (size_t i = 0; i < blockArgs.size() && i < blockArgNames.size(); ++i) {
+      auto blockArgName = blockArgNames[i].cast<StringAttr>().strref();
+      if (!usedNames.count(blockArgName))
+        setValueName(blockArgs[i], blockArgName);
     }
     op.removeDiscardableAttr("mlir.blockArgNames");
   }
