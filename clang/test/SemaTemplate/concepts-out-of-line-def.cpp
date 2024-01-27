@@ -536,3 +536,25 @@ void X<T>::bar(decltype(requires { requires something_interesting<T>; })) {}
 template <class T>
 void X<T>::bar(decltype(requires { requires is_not_same_v<T, int>; })) {}
 } // namespace GH74314
+
+namespace GH74447 {
+template <typename T> struct S {
+  template <typename... U, int V>
+  void test(T target, U... value)
+    requires requires {
+      target;
+      sizeof...(value) == 1;
+      V == 2;
+    };
+};
+
+template <typename T>
+template <typename... U, int V>
+void S<T>::test(T target, U... value)
+  requires requires {
+    target;
+    sizeof...(value) == 1;
+    V == 2;
+  }
+{}
+} // namespace GH74447

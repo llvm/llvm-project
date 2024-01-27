@@ -128,6 +128,9 @@ Bug Fixes to C++ Support
 - Fixed a bug where variables referenced by requires-clauses inside
   nested generic lambdas were not properly injected into the constraint scope.
   (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+- Fixed a crash where substituting into a requires-expression that refers to function
+  parameters during the equivalence determination of two constraint expressions.
+  (`#74447 <https://github.com/llvm/llvm-project/issues/74447>`)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
