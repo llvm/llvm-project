@@ -120,8 +120,11 @@ public:
 
   /// Adds a MaterializationUnit representing the given IR to the given
   /// JITDylib. If RT is not specified, use the default tracker for this Dylib.
-  Error add(JITDylib &JD, ThreadSafeModule TSM) {
-    return add(JD.getDefaultResourceTracker(), std::move(TSM));
+  Error add(JITDylib &JD, ThreadSafeModule TSM,
+            IRSymbolMapper::SymbolMapperFunction SymMapper =
+                IRSymbolMapper::defaultSymbolMapper) {
+    return add(JD.getDefaultResourceTracker(), std::move(TSM),
+               std::move(SymMapper));
   }
 
   /// Emit should materialize the given IR.
