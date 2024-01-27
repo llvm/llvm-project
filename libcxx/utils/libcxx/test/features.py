@@ -190,7 +190,7 @@ DEFAULT_FEATURES = [
             #include <atomic>
             struct Large { char storage[64/8]; };
             std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); x.is_lockfree(); return 0; }
+            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
           """,
         ),
     ),
@@ -202,7 +202,7 @@ DEFAULT_FEATURES = [
             #include <atomic>
             struct Large { char storage[128/8]; };
             std::atomic<Large> x;
-            int main(int, char**) { (void)x.load(); x.is_lockfree(); return 0; }
+            int main(int, char**) { (void)x.load(); (void)x.is_lock_free(); return 0; }
           """,
         ),
     ),
