@@ -2488,11 +2488,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::cos:
   case Intrinsic::amdgcn_cos: {
-    Value *X;
+    Value *X, *Sign;
     Value *Src = II->getArgOperand(0);
-    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X)))) {
-      // cos(-x) -> cos(x)
-      // cos(fabs(x)) -> cos(x)
+    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+        match(Src, m_CopySign(m_Value(X), m_Value(Sign)))) {
+      // cos(-x) --> cos(x)
+      // cos(fabs(x)) --> cos(x)
+      // cos(copysign(x, y)) --> cos(x)
       return replaceOperand(*II, 0, X);
     }
     break;
