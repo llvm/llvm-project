@@ -53,6 +53,7 @@ static bool isImplicitCastType(const clang::CastKind castKind) {
   case clang::CK_MemberPointerToBoolean:
   case clang::CK_FloatingComplexToBoolean:
   case clang::CK_IntegralComplexToBoolean:
+  case clang::CK_UserDefinedConversion:
     return true;
   default:
     return false;
@@ -124,12 +125,13 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
   return false;
 }
 
-static std::string
-createReplacement(const BinaryOperator::Opcode Op, const Expr *CondLhs,
-                  const Expr *CondRhs, const Expr *AssignLhs,
-                  const ASTContext &Context, const SourceManager &Source,
-                  const LangOptions &LO, StringRef FunctionName,
-                  QualType GlobalImplicitCastType) {
+static std::string createReplacement(const BinaryOperator::Opcode Op,
+                                     const Expr *CondLhs, const Expr *CondRhs,
+                                     const Expr *AssignLhs,
+                                     const ASTContext *Context,
+                                     const SourceManager &Source,
+                                     const LangOptions &LO,
+                                     StringRef FunctionName, const IfStmt *If) {
   const llvm::StringRef CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
   const llvm::StringRef CondRhsStr = Lexer::getSourceText(
@@ -137,9 +139,20 @@ createReplacement(const BinaryOperator::Opcode Op, const Expr *CondLhs,
   const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
+  bool IsImplicitCastTypeNeeded = false;
+  clang::QualType GlobalImplicitCastType;
+  if ((CondLhs->getType()->getUnqualifiedDesugaredType() !=
+       CondRhs->getType()->getUnqualifiedDesugaredType()) &&
+      (CondLhs->getType().getCanonicalType() !=
+       (CondRhs->getType().getCanonicalType()))) {
+    IsImplicitCastTypeNeeded = true;
+    bool Found = false;
+    ExprVisitor Visitor(const_cast<ASTContext *>(Context));
+    Visitor.visitStmt(If, Found, GlobalImplicitCastType);
+  }
+
   return (AssignLhsStr + " = " + FunctionName +
-          ((CondLhs->getType()->getUnqualifiedDesugaredType() !=
-            CondRhs->getType()->getUnqualifiedDesugaredType())
+          (IsImplicitCastTypeNeeded
                ? "<" + GlobalImplicitCastType.getCanonicalType().getAsString() +
                      ">("
                : "(") +
@@ -220,8 +233,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
                createReplacement(BinaryOpcode, CondLhs, CondRhs, AssignLhs,
-                                 Context, Source, LO, FunctionName,
-                                 GlobalImplicitCastType))
+                                 Result.Context, Source, LO, FunctionName, If))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };
