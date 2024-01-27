@@ -5,12 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// Implements result aggregators that are used to aggregate the results from
-/// multiple full benchmark runs.
-///
-//===----------------------------------------------------------------------===//
 
 #include "ResultAggregator.h"
 
@@ -19,13 +13,11 @@ namespace exegesis {
 
 class DefaultResultAggregator : public ResultAggregator {
   void AggregateResults(Benchmark &Result,
-                        ArrayRef<Benchmark> OtherResults) const override;
+                        ArrayRef<Benchmark> OtherResults) const override{};
+  void AggregateMeasurement(BenchmarkMeasure &Measurement,
+                            const BenchmarkMeasure &NewMeasurement,
+                            const Benchmark &Result) const override{};
 };
-
-// We don't need to do anything in the default result aggregator as the result
-// we want is the first one, which is passed in here as Result.
-void DefaultResultAggregator::AggregateResults(
-    Benchmark &Result, ArrayRef<Benchmark> OtherResults) const {}
 
 class MinimumResultAggregator : public ResultAggregator {
   void AggregateMeasurement(BenchmarkMeasure &Measurement,
@@ -40,6 +32,8 @@ void MinimumResultAggregator::AggregateMeasurement(
       Measurement.PerInstructionValue, NewMeasurement.PerInstructionValue);
   Measurement.PerSnippetValue =
       std::min(Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
+  Measurement.RawValue =
+      std::min(Measurement.RawValue, NewMeasurement.RawValue);
 }
 
 class MiddleHalfResultAggregator : public ResultAggregator {
@@ -59,10 +53,6 @@ void MiddleHalfResultAggregator::AggregateMeasurement(
       std::ceil(Result.NumRepetitions /
                 static_cast<double>(Result.Key.Instructions.size()));
 }
-
-void ResultAggregator::AggregateMeasurement(
-    BenchmarkMeasure &Measurement, const BenchmarkMeasure &NewMeasurement,
-    const Benchmark &Result) const {}
 
 void ResultAggregator::AggregateResults(
     Benchmark &Result, ArrayRef<Benchmark> OtherResults) const {
@@ -87,17 +77,17 @@ void ResultAggregator::AggregateResults(
   }
 }
 
-ResultAggregator
+std::unique_ptr<ResultAggregator>
 ResultAggregator::CreateAggregator(Benchmark::RepetitionModeE RepetitionMode) {
   switch (RepetitionMode) {
   case Benchmark::RepetitionModeE::Duplicate:
   case Benchmark::RepetitionModeE::Loop:
-    return DefaultResultAggregator();
+    return std::make_unique<DefaultResultAggregator>();
   case Benchmark::RepetitionModeE::AggregateMin:
-    return MinimumResultAggregator();
+    return std::make_unique<MinimumResultAggregator>();
   case Benchmark::RepetitionModeE::MiddleHalfDuplicate:
   case Benchmark::RepetitionModeE::MiddleHalfLoop:
-    return MiddleHalfResultAggregator();
+    return std::make_unique<MiddleHalfResultAggregator>();
   }
 }
 

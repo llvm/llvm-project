@@ -467,10 +467,10 @@ static void runBenchmarkConfigurations(
         }))
       Result.Measurements.clear();
 
-    ResultAggregator ResultAgg =
+    std::unique_ptr<ResultAggregator> ResultAgg =
         ResultAggregator::CreateAggregator(RepetitionMode);
-    ResultAgg.AggregateResults(Result,
-                               ArrayRef<Benchmark>(AllResults).drop_front());
+    ResultAgg->AggregateResults(Result,
+                                ArrayRef<Benchmark>(AllResults).drop_front());
 
     // With dummy counters, measurements are rather meaningless,
     // so drop them altogether.

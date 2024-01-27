@@ -19,14 +19,14 @@ namespace exegesis {
 
 class ResultAggregator {
 public:
-  static ResultAggregator
+  static std::unique_ptr<ResultAggregator>
   CreateAggregator(Benchmark::RepetitionModeE RepetitionMode);
 
   virtual void AggregateResults(Benchmark &Result,
                                 ArrayRef<Benchmark> OtherResults) const;
   virtual void AggregateMeasurement(BenchmarkMeasure &Measurement,
                                     const BenchmarkMeasure &NewMeasurement,
-                                    const Benchmark &Result) const;
+                                    const Benchmark &Result) const = 0;
 
   virtual ~ResultAggregator() = default;
 };
