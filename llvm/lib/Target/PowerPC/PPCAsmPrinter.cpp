@@ -1555,6 +1555,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // or a load/store instruction (that directly loads or stores off of the
     // thread pointer) with an immediate operand having the MO_TPREL_FLAG.
     // Such instructions do not otherwise arise.
+    if (!HasAIXSmallLocalExecTLS)
+      break;
     bool IsMIADDI8 = MI->getOpcode() == PPC::ADDI8;
     unsigned OpNum = IsMIADDI8 ? 2 : 1;
     const MachineOperand &MO = MI->getOperand(OpNum);
@@ -1562,10 +1564,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (Flag == PPCII::MO_TPREL_FLAG ||
         Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
         Flag == PPCII::MO_TPREL_PCREL_FLAG) {
-      assert(HasAIXSmallLocalExecTLS &&
-             "addi, or load/stores with thread-pointer only expected with "
-             "local-exec small TLS");
-
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
       const MCExpr *Expr = getAdjustedLocalExecExpr(MO, MO.getOffset());
