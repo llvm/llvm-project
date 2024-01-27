@@ -184,22 +184,22 @@ enum InstrName {
 constexpr InstrName getInstrFromJITLinkEdgeKind(Edge::Kind Kind) {
   switch (Kind) {
   case Arm_Call:
-    return InstrName::BLXi;
-  case Arm_Jump24:
-    return InstrName::BL;
-  case Arm_MovwAbsNC:
+    return InstrName::NONE;
+  case aarch32::Arm_Jump24:
+    return InstrName::NONE;
+  case aarch32::Arm_MovwAbsNC:
     return InstrName::MOVi16;
-  case Arm_MovtAbs:
+  case aarch32::Arm_MovtAbs:
     return InstrName::MOVTi16;
-  case Thumb_Call:
+  case aarch32::Thumb_Call:
     return InstrName::NONE;
-  case Thumb_Jump24:
+  case aarch32::Thumb_Jump24:
     return InstrName::NONE;
-  case Thumb_MovwAbsNC:
-  case Thumb_MovwPrelNC:
+  case aarch32::Thumb_MovwAbsNC:
+  case aarch32::Thumb_MovwPrelNC:
     return InstrName::t2MOVi16;
-  case Thumb_MovtAbs:
-  case Thumb_MovtPrel:
+  case aarch32::Thumb_MovtAbs:
+  case aarch32::Thumb_MovtPrel:
     return InstrName::t2MOVTi16;
   default:
     return InstrName::NONE;
@@ -262,35 +262,35 @@ struct FixupInfoThumb : public FixupInfoBase {
 
 template <EdgeKind_aarch32 Kind> struct FixupInfo {};
 
-template <EdgeKind_aarch32 Kind>
-struct FixupInfoArmBranch : public FixupInfoArm<Kind> {
+struct FixupInfoArmBranch : public FixupInfoArmBase {
+  static constexpr uint32_t Opcode = 0x0a000000;
+  static constexpr uint32_t ImmMask = 0x00ffffff;
+};
+
+template <> struct FixupInfo<Arm_Jump24> : public FixupInfoArmBranch {
+  static constexpr uint32_t OpcodeMask = 0x0f000000;
+};
+
+template <> struct FixupInfo<Arm_Call> : public FixupInfoArmBranch {
+  static constexpr uint32_t OpcodeMask = 0x0e000000;
   static constexpr uint32_t CondMask = 0xe0000000; // excluding BLX bit
   static constexpr uint32_t Unconditional = 0xe0000000;
   static constexpr uint32_t BitH = 0x01000000;
   static constexpr uint32_t BitBlx = 0x10000000;
+};
 
-  static constexpr uint32_t Opcode = 0x0a000000;
+template <EdgeKind_aarch32 Kind>
+struct FixupInfoArmMov : public FixupInfoArm<Kind> {
+  static constexpr uint32_t OpcodeMask = 0x0ff00000;
+  static constexpr uint32_t ImmMask = 0x000f0fff;
+  static constexpr uint32_t RegMask = 0x0000f000;
 };
 
 template <>
-struct FixupInfo<Arm_Jump24> : public FixupInfoArmBranch<Arm_Jump24> {
-  static constexpr uint32_t OpcodeMask =
-      FixupInfoArm<Arm_Jump24>::OpcodeMask & ~(CondMask | BitBlx);
-  static constexpr uint32_t ImmMask =
-      FixupInfoArm<Arm_Jump24>::ImmMask & ~(BitH);
-};
-
-template <> struct FixupInfo<Arm_Call> : public FixupInfoArmBranch<Arm_Call> {
-  static constexpr uint32_t OpcodeMask =
-      FixupInfoArm<Arm_Call>::OpcodeMask & ~(CondMask | BitH | BitBlx);
-  static constexpr uint32_t Opcode =
-      FixupInfoArm<Arm_Call>::Opcode & ~(CondMask | BitH | BitBlx);
-};
-
-template <> struct FixupInfo<Arm_MovtAbs> : public FixupInfoArm<Arm_MovtAbs> {};
+struct FixupInfo<Arm_MovtAbs> : public FixupInfoArmMov<Arm_MovtAbs> {};
 
 template <>
-struct FixupInfo<Arm_MovwAbsNC> : public FixupInfoArm<Arm_MovwAbsNC> {};
+struct FixupInfo<Arm_MovwAbsNC> : public FixupInfoArmMov<Arm_MovwAbsNC> {};
 
 template <> struct FixupInfo<Thumb_Jump24> : public FixupInfoThumb {
   static constexpr HalfWords Opcode{0xf000, 0x9000};
