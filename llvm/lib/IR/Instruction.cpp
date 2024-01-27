@@ -1167,9 +1167,7 @@ void Instruction::copyMetadata(const Instruction &SrcInst,
   if (!SrcInst.hasMetadata())
     return;
 
-  DenseSet<unsigned> WLS;
-  for (unsigned M : WL)
-    WLS.insert(M);
+  SmallDenseSet<unsigned, 4> WLS(WL.begin(), WL.end());
 
   // Otherwise, enumerate and copy over metadata from the old instruction to the
   // new one.

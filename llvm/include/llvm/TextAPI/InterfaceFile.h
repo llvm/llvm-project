@@ -351,7 +351,7 @@ public:
   ///
   /// \param Kind The kind of global symbol to record.
   /// \param Name The name of the symbol.
-  std::optional<const Symbol *> getSymbol(SymbolKind Kind,
+  std::optional<const Symbol *> getSymbol(EncodeKind Kind,
                                           StringRef Name) const {
     if (auto *Sym = SymbolsSet->findSymbol(Kind, Name))
       return Sym;
@@ -361,7 +361,7 @@ public:
   /// Add a symbol to the symbols list or extend an existing one.
   template <typename RangeT, typename ElT = std::remove_reference_t<
                                  decltype(*std::begin(std::declval<RangeT>()))>>
-  void addSymbol(SymbolKind Kind, StringRef Name, RangeT &&Targets,
+  void addSymbol(EncodeKind Kind, StringRef Name, RangeT &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -372,7 +372,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Targets The list of targets the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, TargetList &&Targets,
+  void addSymbol(EncodeKind Kind, StringRef Name, TargetList &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -383,7 +383,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Target The target the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, Target &Target,
+  void addSymbol(EncodeKind Kind, StringRef Name, Target &Target,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Target);
   }
