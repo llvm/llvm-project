@@ -1054,6 +1054,10 @@ Bug Fixes to C++ Support
   Fixes (`#78830 <https://github.com/llvm/llvm-project/issues/78830>`_)
   Fixes (`#60085 <https://github.com/llvm/llvm-project/issues/60085>`_)
 
+- Fixed a bug where variables referenced by requires-clauses inside
+  nested generic lambdas were not properly injected into the constraint scope.
+  (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
