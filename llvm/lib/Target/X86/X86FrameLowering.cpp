@@ -885,7 +885,8 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   }
 
   // Update Live In information
-  recomputeLiveIns(MF);
+  recomputeLiveIns(*testMBB);
+  recomputeLiveIns(*tailMBB);
 }
 
 void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
@@ -1377,7 +1378,10 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
         footMBB->addSuccessor(&MBB);
       }
 
-      recomputeLiveIns(MF);
+      recomputeLiveIns(*headMBB);
+      recomputeLiveIns(*bodyMBB);
+      recomputeLiveIns(*footMBB);
+      recomputeLiveIns(MBB);
     }
   } else {
     MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AndOp), Reg)
