@@ -18,7 +18,7 @@ void weird_whitespace_in_declaration(unsigned idx) {
 
 void weird_comments_in_declaration(unsigned idx) {
   int   /* [ ] */   buffer_w  /* [ ] */ [ /* [ ] */ 10 /* [ ] */ ] ;
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:67}:"std::array<int,  /* [ ] */ 10 /* [ ] */ > buffer_w"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:67}:"std::array<int   /* [ ] */,  /* [ ] */ 10 /* [ ] */ > buffer_w"
   buffer_w[idx] = 0;
 }
 
@@ -65,6 +65,21 @@ void local_array_in_template(unsigned idx) {
 // Instantiate the template function to force its analysis.
 template void local_array_in_template<int>(unsigned); // FIXME: expected note {{in instantiation of}}
 
+typedef unsigned int uint;
+void typedef_as_elem_type(unsigned idx) {
+  uint buffer[10];
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:18}:"std::array<uint, 10> buffer"
+  buffer[idx] = 0;
+}
+
+void macro_as_elem_type(unsigned idx) {
+#define MY_INT int
+  MY_INT buffer[10];
+// FIXME: implement support
+  buffer[idx] = 0;
+#undef MY_INT
+}
+
 void macro_as_identifier(unsigned idx) {
 #define MY_BUFFER buffer
   int MY_BUFFER[10];
@@ -76,7 +91,7 @@ void macro_as_identifier(unsigned idx) {
 void macro_as_size(unsigned idx) {
 #define MY_TEN 10
   int buffer[MY_TEN];
-// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:21}:"std::array<int, MY_TEN> buffer"
   buffer[idx] = 0;
 #undef MY_TEN
 }

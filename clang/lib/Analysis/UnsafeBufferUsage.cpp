@@ -12,6 +12,8 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/CharInfo.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APSInt.h"
@@ -2492,8 +2494,25 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
       return {};
     }
 
+    const SourceLocation IdentifierLoc = getVarDeclIdentifierLoc(D);
+
+    // Get the spelling of the element type as written in the source file (including macros, etc.).
+    auto MaybeElemTypeTxt = getRangeText({D->getBeginLoc(), IdentifierLoc}, Ctx.getSourceManager(), Ctx.getLangOpts());
+    if (!MaybeElemTypeTxt)
+      return {};
+    std::string ElemTypeTxt = MaybeElemTypeTxt->str();
+    // Trim whitespace from the type spelling.
+    unsigned TrailingWhitespace = 0;
+    for (auto It = ElemTypeTxt.rbegin(); It < ElemTypeTxt.rend(); ++It) {
+      if (!isWhitespace(*It))
+        break;
+      ++TrailingWhitespace;
+    }
+    if (TrailingWhitespace > 0)
+      ElemTypeTxt.erase(ElemTypeTxt.length() - TrailingWhitespace);
+
     // Find the '[' token.
-    std::optional<Token> NextTok = Lexer::findNextToken(getVarDeclIdentifierLoc(D), Ctx.getSourceManager(), Ctx.getLangOpts());
+    std::optional<Token> NextTok = Lexer::findNextToken(IdentifierLoc, Ctx.getSourceManager(), Ctx.getLangOpts());
     while (NextTok && !NextTok->is(tok::l_square))
       NextTok = Lexer::findNextToken(NextTok->getLocation(), Ctx.getSourceManager(), Ctx.getLangOpts());
     if (!NextTok)
@@ -2517,7 +2536,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
 
     SmallString<32> Replacement;
     raw_svector_ostream OS(Replacement);
-    OS << "std::array<" << ArrayEltT.getAsString() << ", "
+    OS << "std::array<" << ElemTypeTxt << ", "
        << ArraySizeTxt << "> " << IdentText->str();
 
     FixIts.push_back(FixItHint::CreateReplacement(
