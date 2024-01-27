@@ -978,9 +978,10 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
 // non-affine accesses are allowed, we drop the information. In case the
 // information is dropped the memory accesses need to be overapproximated
 // when translated to a polyhedral representation.
-bool ScopDetection::computeAccessFunctions(
-    DetectionContext &Context, const SCEVUnknown *BasePointer,
-    std::shared_ptr<ArrayShape> Shape) const {
+bool
+ScopDetection::computeAccessFunctions(DetectionContext &Context,
+                                      const SCEVUnknown *BasePointer,
+                                      std::shared_ptr<ArrayShape> Shape) const {
   Value *BaseValue = BasePointer->getValue();
   bool BasePtrHasNonAffine = false;
   MapInsnToMemAcc TempMemoryAccesses;
@@ -1691,8 +1692,8 @@ bool ScopDetection::hasSufficientCompute(DetectionContext &Context,
   return InstCount >= ProfitabilityMinPerLoopInstructions;
 }
 
-bool ScopDetection::hasPossiblyDistributableLoop(
-    DetectionContext &Context) const {
+bool
+ScopDetection::hasPossiblyDistributableLoop(DetectionContext &Context) const {
   for (auto *BB : Context.CurRegion.blocks()) {
     auto *L = LI.getLoopFor(BB);
     if (!Context.CurRegion.contains(L))

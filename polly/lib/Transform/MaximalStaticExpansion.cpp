@@ -535,8 +535,8 @@ void MaximalStaticExpanderWrapperPass::printScop(raw_ostream &OS,
   S.print(OS, false);
 }
 
-void MaximalStaticExpanderWrapperPass::getAnalysisUsage(
-    AnalysisUsage &AU) const {
+void
+MaximalStaticExpanderWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<DependenceInfo>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();

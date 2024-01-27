@@ -831,8 +831,9 @@ void IslNodeBuilder::createSubstitutionsVector(
   isl_ast_expr_free(Expr);
 }
 
-void IslNodeBuilder::generateCopyStmt(
-    ScopStmt *Stmt, __isl_keep isl_id_to_ast_expr *NewAccesses) {
+void
+IslNodeBuilder::generateCopyStmt(ScopStmt *Stmt,
+                                 __isl_keep isl_id_to_ast_expr *NewAccesses) {
   assert(Stmt->size() == 2);
   auto ReadAccess = Stmt->begin();
   auto WriteAccess = ReadAccess++;
@@ -1129,8 +1130,8 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   return PreloadVal;
 }
 
-bool IslNodeBuilder::preloadInvariantEquivClass(
-    InvariantEquivClassTy &IAClass) {
+bool
+IslNodeBuilder::preloadInvariantEquivClass(InvariantEquivClassTy &IAClass) {
   // For an equivalence class of invariant loads we pre-load the representing
   // element with the unified execution context. However, we have to map all
   // elements of the class to the one preloaded load as they are referenced
