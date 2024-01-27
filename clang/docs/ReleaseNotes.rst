@@ -108,6 +108,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now applies syntax highlighting to the code snippets it
+  prints.
 
 Improvements to Clang's time-trace
 ----------------------------------

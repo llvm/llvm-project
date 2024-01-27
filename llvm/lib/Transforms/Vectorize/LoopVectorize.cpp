@@ -10125,7 +10125,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
-        VPlan &BestMainPlan = LVP.getBestPlanFor(EPI.MainLoopVF);
+        VPlan &BestMainPlan = *LVP.getBestPlanFor(EPI.MainLoopVF).duplicate();
         const auto &[ExpandedSCEVs, ReductionResumeValues] = LVP.executePlan(
             EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV, DT, true);
         ++LoopsVectorized;
