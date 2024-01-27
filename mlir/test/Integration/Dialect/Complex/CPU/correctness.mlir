@@ -106,6 +106,27 @@ func.func @angle(%arg: complex<f32>) -> f32 {
   func.return %angle : f32
 }
 
+func.func @test_element_f64(%input: tensor<?xcomplex<f64>>,
+                      %func: (complex<f64>) -> f64) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %size = tensor.dim %input, %c0: tensor<?xcomplex<f64>>
+
+  scf.for %i = %c0 to %size step %c1 {
+    %elem = tensor.extract %input[%i]: tensor<?xcomplex<f64>>
+
+    %val = func.call_indirect %func(%elem) : (complex<f64>) -> f64
+    vector.print %val : f64
+    scf.yield
+  }
+  func.return
+}
+
+func.func @abs(%arg: complex<f64>) -> f64 {
+  %abs = complex.abs %arg : complex<f64>
+  func.return %abs : f64
+}
+
 func.func @entry() {
   // complex.sqrt test
   %sqrt_test = arith.constant dense<[
@@ -299,6 +320,29 @@ func.func @entry() {
   %angle_func = func.constant @angle : (complex<f32>) -> f32
   call @test_element(%angle_test_cast, %angle_func)
     : (tensor<?xcomplex<f32>>, (complex<f32>) -> f32) -> ()
+
+  // complex.abs test
+  %abs_test = arith.constant dense<[
+    (1.0, 1.0),
+    // CHECK:  1.414
+    (1.0e300, 1.0e300),
+    // CHECK-NEXT:  1.41421e+300
+    (1.0e-300, 1.0e-300),
+    // CHECK-NEXT:  1.41421e-300
+    (5.0, 0.0),
+    // CHECK-NEXT:  5
+    (0.0, 6.0),
+    // CHECK-NEXT:  6
+    (7.0, 8.0)
+    // CHECK-NEXT:  10.6301
+  ]> : tensor<6xcomplex<f64>>
+  %abs_test_cast = tensor.cast %abs_test
+    :  tensor<6xcomplex<f64>> to tensor<?xcomplex<f64>>
+
+  %abs_func = func.constant @abs : (complex<f64>) -> f64
+
+  call @test_element_f64(%abs_test_cast, %abs_func)
+    : (tensor<?xcomplex<f64>>, (complex<f64>) -> f64) -> ()
 
   func.return
 }
