@@ -2689,7 +2689,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::RSHRNB_I)
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
     MAKE_CASE(AArch64ISD::CALL_ARM64EC_TO_X64)
-    MAKE_CASE(AArch64ISD::SRSHR_I_PRED)
     MAKE_CASE(AArch64ISD::URSHR_I_PRED)
   }
 #undef MAKE_CASE
@@ -13843,7 +13842,7 @@ SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
 
 static SDValue tryLowerToRoundingShiftRightByImm(SDValue Shift,
                                                  SelectionDAG &DAG) {
-  if (Shift->getOpcode() != ISD::SRL && Shift->getOpcode() != ISD::SRA)
+  if (Shift->getOpcode() != ISD::SRL)
     return SDValue();
 
   EVT ResVT = Shift.getValueType();
@@ -13861,6 +13860,10 @@ static SDValue tryLowerToRoundingShiftRightByImm(SDValue Shift,
   SDValue Add = Shift->getOperand(0);
   if (Add->getOpcode() != ISD::ADD || !Add->hasOneUse())
     return SDValue();
+
+  if (!Add->getFlags().hasNoUnsignedWrap())
+    return SDValue();
+
   auto AddOp1 =
       dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(Add->getOperand(1)));
   if (!AddOp1)
@@ -13870,10 +13873,8 @@ static SDValue tryLowerToRoundingShiftRightByImm(SDValue Shift,
     return SDValue();
 
   SDLoc DL(Shift);
-  unsigned Opc = Shift->getOpcode() == ISD::SRA ? AArch64ISD::SRSHR_I_PRED
-                                                : AArch64ISD::URSHR_I_PRED;
-  return DAG.getNode(Opc, DL, ResVT, getPredicateForVector(DAG, DL, ResVT),
-                     Add->getOperand(0),
+  return DAG.getNode(AArch64ISD::URSHR_I_PRED, DL, ResVT,
+                     getPredicateForVector(DAG, DL, ResVT), Add->getOperand(0),
                      DAG.getTargetConstant(ShiftValue, DL, MVT::i32));
 }
 
@@ -17730,9 +17731,6 @@ static SDValue performReinterpretCastCombine(SDNode *N) {
 
 static SDValue performSVEAndCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
@@ -17787,6 +17785,9 @@ static SDValue performSVEAndCombine(SDNode *N,
 
     return DAG.getNode(Opc, DL, N->getValueType(0), And);
   }
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   // If both sides of AND operations are i1 splat_vectors then
   // we can produce just i1 splat_vector as the result.
@@ -20235,9 +20236,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_uqsub_x:
     return DAG.getNode(ISD::USUBSAT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_srshr:
-    return DAG.getNode(AArch64ISD::SRSHR_I_PRED, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_urshr:
     return DAG.getNode(AArch64ISD::URSHR_I_PRED, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
@@ -20857,11 +20855,56 @@ static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Try to combine rounding shifts where the operands come from an extend, and
+// the result is truncated and combined into one vector.
+//   uzp1(urshr(uunpklo(X),C), urshr(uunpkhi(X), C)) -> urshr(X, C)
+static SDValue tryCombineExtendRShTrunc(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == AArch64ISD::UZP1 && "Only UZP1 expected.");
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  EVT VT = Op0->getValueType(0);
+  EVT ResVT = N->getValueType(0);
+
+  // Truncating combine?
+  if (ResVT.widenIntegerVectorElementType(*DAG.getContext()) !=
+      VT.getDoubleNumVectorElementsVT(*DAG.getContext()))
+    return SDValue();
+
+  unsigned RshOpc = Op0.getOpcode();
+  if (RshOpc != AArch64ISD::URSHR_I_PRED)
+    return SDValue();
+  if (!isAllActivePredicate(DAG, Op0.getOperand(0)) ||
+      !isAllActivePredicate(DAG, Op1.getOperand(0)))
+    return SDValue();
+
+  // Same op code and imm value?
+  SDValue ShiftValue = Op0.getOperand(2);
+  if (RshOpc != Op1.getOpcode() || ShiftValue != Op1.getOperand(2))
+    return SDValue();
+  // We cannot reduce the type if shift value is too large for type.
+  if (ShiftValue->getAsZExtVal() > ResVT.getScalarSizeInBits())
+    return SDValue();
+
+  // Same unextended operand value?
+  SDValue Lo = Op0.getOperand(1);
+  SDValue Hi = Op1.getOperand(1);
+  if (Lo.getOpcode() != AArch64ISD::UUNPKLO &&
+      Hi.getOpcode() != AArch64ISD::UUNPKHI)
+    return SDValue();
+  SDValue OrigArg = Lo.getOperand(0);
+  if (OrigArg != Op1.getOperand(1).getOperand(0))
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(RshOpc, DL, ResVT, getPredicateForVector(DAG, DL, ResVT),
+                     OrigArg, Op0.getOperand(2));
+}
+
 // Try to simplify:
-//    t1 = nxv8i16 add(X, 1 << (ShiftValue - 1))
-//    t2 = nxv8i16 srl(t1, ShiftValue)
+//    t1 = nxv8i16 urshr(X, shiftvalue)
 // to
-//    t1 = nxv8i16 rshrnb(X, shiftvalue).
+//    t1 = nxv16i8 rshrnb(X, shiftvalue).
+//    t2 = nxv8i16 = bitcast t1
 // rshrnb will zero the top half bits of each element. Therefore, this combine
 // should only be performed when a following instruction with the rshrnb
 // as an operand does not care about the top half of each element. For example,
@@ -20885,8 +20928,7 @@ static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
   else
     return SDValue();
 
-  unsigned ShiftValue =
-      cast<ConstantSDNode>(Srl->getOperand(2))->getZExtValue();
+  unsigned ShiftValue = Srl->getOperand(2)->getAsZExtVal();
   if (ShiftValue > ResVT.getScalarSizeInBits())
     return SDValue();
 
@@ -20929,6 +20971,9 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
                          DAG.getUNDEF(HalfVT));
     }
   }
+
+  if (SDValue RSh = tryCombineExtendRShTrunc(N, DAG))
+    return RSh;
 
   if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Op0, DAG, Subtarget))
     return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Rshrnb, Op1);

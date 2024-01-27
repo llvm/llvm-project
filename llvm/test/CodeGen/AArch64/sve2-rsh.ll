@@ -9,7 +9,7 @@ define <vscale x 2 x i64> @neg_urshr_1(<vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    add z0.d, z0.d, #16 // =0x10
 ; CHECK-NEXT:    lsr z0.d, z0.d, #6
 ; CHECK-NEXT:    ret
-  %add = add <vscale x 2 x i64> %x, splat (i64 16)
+  %add = add nuw nsw <vscale x 2 x i64> %x, splat (i64 16)
   %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
   ret <vscale x 2 x i64> %sh
 }
@@ -22,7 +22,7 @@ define <vscale x 2 x i64> @neg_urshr_2(<vscale x 2 x i64> %x, <vscale x 2 x i64>
 ; CHECK-NEXT:    add z0.d, z0.d, #32 // =0x20
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %add = add <vscale x 2 x i64> %x, splat (i64 32)
+  %add = add nuw nsw <vscale x 2 x i64> %x, splat (i64 32)
   %sh = lshr <vscale x 2 x i64> %add, %y
   ret <vscale x 2 x i64> %sh
 }
@@ -34,7 +34,7 @@ define <vscale x 2 x i64> @neg_urshr_3(<vscale x 2 x i64> %x, <vscale x 2 x i64>
 ; CHECK-NEXT:    add z0.d, z0.d, z1.d
 ; CHECK-NEXT:    lsr z0.d, z0.d, #6
 ; CHECK-NEXT:    ret
-  %add = add <vscale x 2 x i64> %x, %y
+  %add = add nuw nsw <vscale x 2 x i64> %x, %y
   %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
   ret <vscale x 2 x i64> %sh
 }
@@ -58,9 +58,21 @@ define <vscale x 2 x i64> @neg_urshr_4(<vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %add = add <vscale x 2 x i64> %x, splat (i64 32)
+  %add = add nuw nsw <vscale x 2 x i64> %x, splat (i64 32)
   %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
   call void @use(<vscale x 2 x i64> %add)
+  ret <vscale x 2 x i64> %sh
+}
+
+; Add can overflow.
+define <vscale x 2 x i64> @neg_urshr_5(<vscale x 2 x i64> %x) {
+; CHECK-LABEL: neg_urshr_5:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add z0.d, z0.d, #32 // =0x20
+; CHECK-NEXT:    lsr z0.d, z0.d, #6
+; CHECK-NEXT:    ret
+  %add = add <vscale x 2 x i64> %x, splat (i64 32)
+  %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
   ret <vscale x 2 x i64> %sh
 }
 
@@ -76,9 +88,56 @@ define <vscale x 16 x i8> @urshr_i8(<vscale x 16 x i8> %x) {
 ; SVE2-NEXT:    ptrue p0.b
 ; SVE2-NEXT:    urshr z0.b, p0/m, z0.b, #6
 ; SVE2-NEXT:    ret
-  %add = add <vscale x 16 x i8> %x, splat (i8 32)
+  %add = add nuw nsw <vscale x 16 x i8> %x, splat (i8 32)
   %sh = lshr <vscale x 16 x i8> %add, splat (i8 6)
   ret <vscale x 16 x i8> %sh
+}
+
+define <vscale x 16 x i8> @urshr_8_wide_trunc(<vscale x 16 x i8> %x) {
+; SVE-LABEL: urshr_8_wide_trunc:
+; SVE:       // %bb.0:
+; SVE-NEXT:    uunpkhi z1.h, z0.b
+; SVE-NEXT:    uunpklo z0.h, z0.b
+; SVE-NEXT:    add z0.h, z0.h, #32 // =0x20
+; SVE-NEXT:    add z1.h, z1.h, #32 // =0x20
+; SVE-NEXT:    lsr z1.h, z1.h, #6
+; SVE-NEXT:    lsr z0.h, z0.h, #6
+; SVE-NEXT:    uzp1 z0.b, z0.b, z1.b
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: urshr_8_wide_trunc:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.b
+; SVE2-NEXT:    urshr z0.b, p0/m, z0.b, #6
+; SVE2-NEXT:    ret
+  %ext = zext <vscale x 16 x i8> %x to <vscale x 16 x i16>
+  %add = add nuw nsw <vscale x 16 x i16> %ext, splat (i16 32)
+  %sh = lshr <vscale x 16 x i16> %add, splat (i16 6)
+  %sht = trunc <vscale x 16 x i16> %sh to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %sht
+}
+
+define <vscale x 16 x i8> @urshr_8_wide_trunc_nomerge(<vscale x 16 x i16> %ext) {
+; SVE-LABEL: urshr_8_wide_trunc_nomerge:
+; SVE:       // %bb.0:
+; SVE-NEXT:    add z0.h, z0.h, #256 // =0x100
+; SVE-NEXT:    add z1.h, z1.h, #256 // =0x100
+; SVE-NEXT:    lsr z1.h, z1.h, #9
+; SVE-NEXT:    lsr z0.h, z0.h, #9
+; SVE-NEXT:    uzp1 z0.b, z0.b, z1.b
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: urshr_8_wide_trunc_nomerge:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    urshr z1.h, p0/m, z1.h, #9
+; SVE2-NEXT:    urshr z0.h, p0/m, z0.h, #9
+; SVE2-NEXT:    uzp1 z0.b, z0.b, z1.b
+; SVE2-NEXT:    ret
+  %add = add nuw nsw <vscale x 16 x i16> %ext, splat (i16 256)
+  %sh = lshr <vscale x 16 x i16> %add, splat (i16 9)
+  %sht = trunc <vscale x 16 x i16> %sh to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %sht
 }
 
 define <vscale x 8 x i16> @urshr_i16(<vscale x 8 x i16> %x) {
@@ -93,9 +152,57 @@ define <vscale x 8 x i16> @urshr_i16(<vscale x 8 x i16> %x) {
 ; SVE2-NEXT:    ptrue p0.h
 ; SVE2-NEXT:    urshr z0.h, p0/m, z0.h, #6
 ; SVE2-NEXT:    ret
-  %add = add <vscale x 8 x i16> %x, splat (i16 32)
+  %add = add nuw nsw <vscale x 8 x i16> %x, splat (i16 32)
   %sh = lshr <vscale x 8 x i16> %add, splat (i16 6)
   ret <vscale x 8 x i16> %sh
+}
+
+define <vscale x 8 x i16> @urshr_16_wide_trunc(<vscale x 8 x i16> %x) {
+; SVE-LABEL: urshr_16_wide_trunc:
+; SVE:       // %bb.0:
+; SVE-NEXT:    uunpkhi z1.s, z0.h
+; SVE-NEXT:    uunpklo z0.s, z0.h
+; SVE-NEXT:    add z0.s, z0.s, #32 // =0x20
+; SVE-NEXT:    add z1.s, z1.s, #32 // =0x20
+; SVE-NEXT:    lsr z1.s, z1.s, #6
+; SVE-NEXT:    lsr z0.s, z0.s, #6
+; SVE-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: urshr_16_wide_trunc:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    urshr z0.h, p0/m, z0.h, #6
+; SVE2-NEXT:    ret
+  %ext = zext <vscale x 8 x i16> %x to <vscale x 8 x i32>
+  %add = add nuw nsw <vscale x 8 x i32> %ext, splat (i32 32)
+  %sh = lshr <vscale x 8 x i32> %add, splat (i32 6)
+  %sht = trunc <vscale x 8 x i32> %sh to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %sht
+}
+
+define <vscale x 8 x i16> @urshr_16_wide_trunc_nomerge(<vscale x 8 x i32> %ext) {
+; SVE-LABEL: urshr_16_wide_trunc_nomerge:
+; SVE:       // %bb.0:
+; SVE-NEXT:    mov z2.s, #0x10000
+; SVE-NEXT:    add z0.s, z0.s, z2.s
+; SVE-NEXT:    add z1.s, z1.s, z2.s
+; SVE-NEXT:    lsr z1.s, z1.s, #17
+; SVE-NEXT:    lsr z0.s, z0.s, #17
+; SVE-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: urshr_16_wide_trunc_nomerge:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    urshr z1.s, p0/m, z1.s, #17
+; SVE2-NEXT:    urshr z0.s, p0/m, z0.s, #17
+; SVE2-NEXT:    uzp1 z0.h, z0.h, z1.h
+; SVE2-NEXT:    ret
+  %add = add nuw nsw <vscale x 8 x i32> %ext, splat (i32 65536)
+  %sh = lshr <vscale x 8 x i32> %add, splat (i32 17)
+  %sht = trunc <vscale x 8 x i32> %sh to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %sht
 }
 
 define <vscale x 4 x i32> @urshr_i32(<vscale x 4 x i32> %x) {
@@ -110,9 +217,57 @@ define <vscale x 4 x i32> @urshr_i32(<vscale x 4 x i32> %x) {
 ; SVE2-NEXT:    ptrue p0.s
 ; SVE2-NEXT:    urshr z0.s, p0/m, z0.s, #6
 ; SVE2-NEXT:    ret
-  %add = add <vscale x 4 x i32> %x, splat (i32 32)
+  %add = add nuw nsw <vscale x 4 x i32> %x, splat (i32 32)
   %sh = lshr <vscale x 4 x i32> %add, splat (i32 6)
   ret <vscale x 4 x i32> %sh
+}
+
+define <vscale x 4 x i32> @urshr_32_wide_trunc(<vscale x 4 x i32> %x) {
+; SVE-LABEL: urshr_32_wide_trunc:
+; SVE:       // %bb.0:
+; SVE-NEXT:    uunpkhi z1.d, z0.s
+; SVE-NEXT:    uunpklo z0.d, z0.s
+; SVE-NEXT:    add z0.d, z0.d, #32 // =0x20
+; SVE-NEXT:    add z1.d, z1.d, #32 // =0x20
+; SVE-NEXT:    lsr z1.d, z1.d, #6
+; SVE-NEXT:    lsr z0.d, z0.d, #6
+; SVE-NEXT:    uzp1 z0.s, z0.s, z1.s
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: urshr_32_wide_trunc:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    urshr z0.s, p0/m, z0.s, #6
+; SVE2-NEXT:    ret
+  %ext = zext <vscale x 4 x i32> %x to <vscale x 4 x i64>
+  %add = add nuw nsw <vscale x 4 x i64> %ext, splat (i64 32)
+  %sh = lshr <vscale x 4 x i64> %add, splat (i64 6)
+  %sht = trunc <vscale x 4 x i64> %sh to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %sht
+}
+
+define <vscale x 4 x i32> @urshr_32_wide_trunc_nomerge(<vscale x 4 x i64> %ext) {
+; SVE-LABEL: urshr_32_wide_trunc_nomerge:
+; SVE:       // %bb.0:
+; SVE-NEXT:    mov z2.d, #0x100000000
+; SVE-NEXT:    add z0.d, z0.d, z2.d
+; SVE-NEXT:    add z1.d, z1.d, z2.d
+; SVE-NEXT:    lsr z1.d, z1.d, #33
+; SVE-NEXT:    lsr z0.d, z0.d, #33
+; SVE-NEXT:    uzp1 z0.s, z0.s, z1.s
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: urshr_32_wide_trunc_nomerge:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    urshr z1.d, p0/m, z1.d, #33
+; SVE2-NEXT:    urshr z0.d, p0/m, z0.d, #33
+; SVE2-NEXT:    uzp1 z0.s, z0.s, z1.s
+; SVE2-NEXT:    ret
+  %add = add nuw nsw <vscale x 4 x i64> %ext, splat (i64 4294967296)
+  %sh = lshr <vscale x 4 x i64> %add, splat (i64 33)
+  %sht = trunc <vscale x 4 x i64> %sh to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %sht
 }
 
 define <vscale x 2 x i64> @urshr_i64(<vscale x 2 x i64> %x) {
@@ -127,76 +282,8 @@ define <vscale x 2 x i64> @urshr_i64(<vscale x 2 x i64> %x) {
 ; SVE2-NEXT:    ptrue p0.d
 ; SVE2-NEXT:    urshr z0.d, p0/m, z0.d, #6
 ; SVE2-NEXT:    ret
-  %add = add <vscale x 2 x i64> %x, splat (i64 32)
+  %add = add nuw nsw <vscale x 2 x i64> %x, splat (i64 32)
   %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
-  ret <vscale x 2 x i64> %sh
-}
-
-define <vscale x 16 x i8> @srshr_i8(<vscale x 16 x i8> %x) {
-; SVE-LABEL: srshr_i8:
-; SVE:       // %bb.0:
-; SVE-NEXT:    add z0.b, z0.b, #32 // =0x20
-; SVE-NEXT:    asr z0.b, z0.b, #6
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: srshr_i8:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    ptrue p0.b
-; SVE2-NEXT:    srshr z0.b, p0/m, z0.b, #6
-; SVE2-NEXT:    ret
-  %add = add <vscale x 16 x i8> %x, splat (i8 32)
-  %sh = ashr <vscale x 16 x i8> %add, splat (i8 6)
-  ret <vscale x 16 x i8> %sh
-}
-
-define <vscale x 8 x i16> @srshr_i16(<vscale x 8 x i16> %x) {
-; SVE-LABEL: srshr_i16:
-; SVE:       // %bb.0:
-; SVE-NEXT:    add z0.h, z0.h, #32 // =0x20
-; SVE-NEXT:    asr z0.h, z0.h, #6
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: srshr_i16:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    ptrue p0.h
-; SVE2-NEXT:    srshr z0.h, p0/m, z0.h, #6
-; SVE2-NEXT:    ret
-  %add = add <vscale x 8 x i16> %x, splat (i16 32)
-  %sh = ashr <vscale x 8 x i16> %add, splat (i16 6)
-  ret <vscale x 8 x i16> %sh
-}
-
-define <vscale x 4 x i32> @srshr_i32(<vscale x 4 x i32> %x) {
-; SVE-LABEL: srshr_i32:
-; SVE:       // %bb.0:
-; SVE-NEXT:    add z0.s, z0.s, #32 // =0x20
-; SVE-NEXT:    asr z0.s, z0.s, #6
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: srshr_i32:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    ptrue p0.s
-; SVE2-NEXT:    srshr z0.s, p0/m, z0.s, #6
-; SVE2-NEXT:    ret
-  %add = add <vscale x 4 x i32> %x, splat (i32 32)
-  %sh = ashr <vscale x 4 x i32> %add, splat (i32 6)
-  ret <vscale x 4 x i32> %sh
-}
-
-define <vscale x 2 x i64> @srshr_i64(<vscale x 2 x i64> %x) {
-; SVE-LABEL: srshr_i64:
-; SVE:       // %bb.0:
-; SVE-NEXT:    add z0.d, z0.d, #32 // =0x20
-; SVE-NEXT:    asr z0.d, z0.d, #6
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: srshr_i64:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    ptrue p0.d
-; SVE2-NEXT:    srshr z0.d, p0/m, z0.d, #6
-; SVE2-NEXT:    ret
-  %add = add <vscale x 2 x i64> %x, splat (i64 32)
-  %sh = ashr <vscale x 2 x i64> %add, splat (i64 6)
   ret <vscale x 2 x i64> %sh
 }
 
