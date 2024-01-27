@@ -5,12 +5,12 @@
 // Test SSA results (with single return values)
 //===----------------------------------------------------------------------===//
 
-// CHECK: func.func @add_one(%arg0: f64, %arg1: f64) -> f64 {
-func.func @add_one(%arg0: f64, %arg1: f64) -> f64 {
+// CHECK: func.func @add_one(%my_input: f64, %arg1: f64) -> f64 {
+func.func @add_one(%my_input: f64, %arg1: f64) -> f64 {
   // CHECK: %my_constant = arith.constant 1.000000e+00 : f64
   %my_constant = arith.constant 1.000000e+00 : f64
-  // CHECK: %my_output = arith.addf %arg0, %my_constant : f64
-  %my_output = arith.addf %arg0, %my_constant : f64
+  // CHECK: %my_output = arith.addf %my_input, %my_constant : f64
+  %my_output = arith.addf %my_input, %my_constant : f64
   // CHECK: return %my_output : f64
   return %my_output : f64
 }

@@ -1611,6 +1611,19 @@ void SSANameState::setRetainedIdentifierNames(Operation &op) {
     }
   }
 
+  // Get the original name for the op args if available
+  if (ArrayAttr opArgNamesAttr =
+          op.getAttrOfType<ArrayAttr>("mlir.opArgNames")) {
+    auto opArgNames = opArgNamesAttr.getValue();
+    auto opArgs = op.getOperands();
+    for (size_t i = 0; i < opArgs.size() && i < opArgNames.size(); ++i) {
+      auto opArgName = opArgNames[i].cast<StringAttr>().strref();
+      if (!usedNames.count(opArgName))
+        setValueName(opArgs[i], opArgName);
+    }
+    op.removeDiscardableAttr("mlir.opArgNames");
+  }
+
   // Get the original name for the block if available
   if (StringAttr blockNameAttr =
           op.getAttrOfType<StringAttr>("mlir.blockName")) {

@@ -613,7 +613,7 @@ public:
 
   /// Store the SSA names for the current operation as attrs for debug purposes.
   void storeSSANames(Operation *&op, ArrayRef<ResultRecord> resultIDs);
-  DenseMap<BlockArgument, StringRef> blockArgNames;
+  DenseMap<Value, StringRef> argNames;
 
   //===--------------------------------------------------------------------===//
   // Region Parsing
@@ -1286,7 +1286,19 @@ void OperationParser::storeSSANames(Operation *&op,
     }
   }
 
-  // Find the name of the block that contains this operation.
+  // Store the name information of the arguments of this operation.
+  if (op->getNumOperands() > 0) {
+    llvm::SmallVector<llvm::StringRef, 1> opArgNames;
+    for (auto &operand : op->getOpOperands()) {
+      auto it = argNames.find(operand.get());
+      if (it != argNames.end())
+        opArgNames.push_back(it->second.drop_front(1));
+    }
+    op->setDiscardableAttr("mlir.opArgNames",
+                           builder.getStrArrayAttr(opArgNames));
+  }
+
+  // Store the name information of the block that contains this operation.
   Block *blockPtr = op->getBlock();
   for (const auto &map : blocksByName) {
     for (const auto &entry : map) {
@@ -1295,14 +1307,15 @@ void OperationParser::storeSSANames(Operation *&op,
                                StringAttr::get(getContext(), entry.first));
 
         // Store block arguments, if present
-        llvm::SmallVector<llvm::StringRef, 1> argNames;
+        llvm::SmallVector<llvm::StringRef, 1> blockArgNames;
 
         for (BlockArgument arg : blockPtr->getArguments()) {
-          auto it = blockArgNames.find(arg);
-          if (it != blockArgNames.end())
-            argNames.push_back(it->second.drop_front(1));
+          auto it = argNames.find(arg);
+          if (it != argNames.end())
+            blockArgNames.push_back(it->second.drop_front(1));
         }
-        op->setAttr("mlir.blockArgNames", builder.getStrArrayAttr(argNames));
+        op->setAttr("mlir.blockArgNames",
+                    builder.getStrArrayAttr(blockArgNames));
       }
     }
   }
@@ -1712,6 +1725,11 @@ public:
                              SmallVectorImpl<Value> &result) override {
     if (auto value = parser.resolveSSAUse(operand, type)) {
       result.push_back(value);
+
+      // Optionally store argument name for debug purposes
+      if (parser.getState().config.shouldRetainIdentifierNames())
+        parser.argNames.insert({value, operand.name});
+
       return success();
     }
     return failure();
@@ -2403,7 +2421,7 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
 
             // Optionally store argument name for debug purposes
             if (state.config.shouldRetainIdentifierNames())
-              blockArgNames.insert({arg, useInfo.name});
+              argNames.insert({arg, useInfo.name});
           }
 
           // If the argument has an explicit loc(...) specifier, parse and apply
