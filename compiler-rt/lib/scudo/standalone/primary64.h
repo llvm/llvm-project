@@ -341,9 +341,11 @@ public:
     }
     getRegionInfo(SizeClassMap::BatchClassId)->MMLock.lock();
     getRegionInfo(SizeClassMap::BatchClassId)->FLLock.lock();
+    RegionPageMap::disable();
   }
 
   void enable() NO_THREAD_SAFETY_ANALYSIS {
+    RegionPageMap::enable();
     getRegionInfo(SizeClassMap::BatchClassId)->FLLock.unlock();
     getRegionInfo(SizeClassMap::BatchClassId)->MMLock.unlock();
     for (uptr I = 0; I < NumClasses; I++) {

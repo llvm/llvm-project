@@ -261,6 +261,7 @@ public:
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS {
+    RegionPageMap::disable();
     // The BatchClassId must be locked last since other classes can use it.
     for (sptr I = static_cast<sptr>(NumClasses) - 1; I >= 0; I--) {
       if (static_cast<uptr>(I) == SizeClassMap::BatchClassId)
@@ -281,6 +282,7 @@ public:
         continue;
       getSizeClassInfo(I)->Mutex.unlock();
     }
+    RegionPageMap::enable();
   }
 
   template <typename F> void iterateOverBlocks(F Callback) {
