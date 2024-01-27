@@ -1300,7 +1300,8 @@ private:
 
   /// Set the original identifier names if available. Used in debugging with
   /// `--retain-identifier-names`/`shouldRetainIdentifierNames` in ParserConfig
-  void setRetainedIdentifierNames(Operation &op);
+  void setRetainedIdentifierNames(Operation &op,
+                                  SmallVector<int, 2> &resultGroups);
 
   /// This is the value ID for each SSA value. If this returns NameSentinel,
   /// then the valueID has an entry in valueNames.
@@ -1573,7 +1574,7 @@ void SSANameState::numberValuesInOp(Operation &op) {
 
   // Set the original identifier names if available. Used in debugging with
   // `--retain-identifier-names`/`shouldRetainIdentifierNames` in ParserConfig
-  setRetainedIdentifierNames(op);
+  setRetainedIdentifierNames(op, resultGroups);
 
   unsigned numResults = op.getNumResults();
   if (numResults == 0) {
@@ -1597,18 +1598,25 @@ void SSANameState::numberValuesInOp(Operation &op) {
   }
 }
 
-void SSANameState::setRetainedIdentifierNames(Operation &op) {
-  // Get the original SSA for the result(s) if available
-  unsigned numResults = op.getNumResults();
-  if (numResults > 1)
-    llvm::outs()
-        << "have not yet implemented support for multiple return values\n";
-  else if (numResults == 1) {
-    Value resultBegin = op.getResult(0);
-    if (StringAttr ssaNameAttr = op.getAttrOfType<StringAttr>("mlir.ssaName")) {
-      setValueName(resultBegin, ssaNameAttr.strref());
-      op.removeDiscardableAttr("mlir.ssaName");
+void SSANameState::setRetainedIdentifierNames(
+    Operation &op, SmallVector<int, 2> &resultGroups) {
+  // Get the original names for the results if available
+  if (ArrayAttr resultNamesAttr =
+          op.getAttrOfType<ArrayAttr>("mlir.resultNames")) {
+    auto resultNames = resultNamesAttr.getValue();
+    auto results = op.getResults();
+    // Conservative in the case that the #results has changed
+    for (size_t i = 0; i < results.size() && i < resultNames.size(); ++i) {
+      auto resultName = resultNames[i].cast<StringAttr>().strref();
+      if (!resultName.empty()) {
+        if (!usedNames.count(resultName))
+          setValueName(results[i], resultName);
+        // If a result has a name, it is the start of a result group.
+        if (i > 0)
+          resultGroups.push_back(i);
+      }
     }
+    op.removeDiscardableAttr("mlir.resultNames");
   }
 
   // Get the original name for the op args if available
@@ -1616,6 +1624,7 @@ void SSANameState::setRetainedIdentifierNames(Operation &op) {
           op.getAttrOfType<ArrayAttr>("mlir.opArgNames")) {
     auto opArgNames = opArgNamesAttr.getValue();
     auto opArgs = op.getOperands();
+    // Conservative in the case that the #operands has changed
     for (size_t i = 0; i < opArgs.size() && i < opArgNames.size(); ++i) {
       auto opArgName = opArgNames[i].cast<StringAttr>().strref();
       if (!usedNames.count(opArgName))
@@ -1636,6 +1645,7 @@ void SSANameState::setRetainedIdentifierNames(Operation &op) {
           op.getAttrOfType<ArrayAttr>("mlir.blockArgNames")) {
     auto blockArgNames = blockArgNamesAttr.getValue();
     auto blockArgs = op.getBlock()->getArguments();
+    // Conservative in the case that the #args has changed
     for (size_t i = 0; i < blockArgs.size() && i < blockArgNames.size(); ++i) {
       auto blockArgName = blockArgNames[i].cast<StringAttr>().strref();
       if (!usedNames.count(blockArgName))

@@ -52,3 +52,41 @@ func.func @simple(i64, i1) -> i64 {
 }
 
 // -----
+
+//===----------------------------------------------------------------------===//
+// Test multiple return values
+//===----------------------------------------------------------------------===//
+
+func.func @select_min_max(%a: f64, %b: f64) -> (f64, f64) {
+  %gt = arith.cmpf "ogt", %a, %b : f64
+  // CHECK: %min, %max = scf.if %gt -> (f64, f64) {
+  %min, %max = scf.if %gt -> (f64, f64) {
+    scf.yield %b, %a : f64, f64
+  } else {
+    scf.yield %a, %b : f64, f64
+  }
+  // CHECK: return %min, %max : f64, f64
+  return %min, %max : f64, f64
+}
+
+// -----
+
+////===----------------------------------------------------------------------===//
+// Test multiple return values, with a grouped value tuple
+//===----------------------------------------------------------------------===//
+
+func.func @select_max(%a: f64, %b: f64, %c: f64, %d: f64) -> (f64, f64, f64, f64) {
+  // Find the max between %a and %b,
+  // with %c and %d being other values that are returned.
+  %gt = arith.cmpf "ogt", %a, %b : f64
+  // CHECK: %max, %others:2, %alt = scf.if %gt -> (f64, f64, f64, f64) {
+  %max, %others:2, %alt  = scf.if %gt -> (f64, f64, f64, f64) {
+    scf.yield %b, %a, %c, %d : f64, f64, f64, f64
+  } else {
+    scf.yield %a, %b, %d, %c : f64, f64, f64, f64
+  }
+  // CHECK: return %max, %others#0, %others#1, %alt : f64, f64, f64, f64
+  return %max, %others#0, %others#1, %alt : f64, f64, f64, f64
+}
+
+// -----

@@ -1275,15 +1275,18 @@ OperationParser::parseSuccessors(SmallVectorImpl<Block *> &destinations) {
 /// Store the SSA names for the current operation as attrs for debug purposes.
 void OperationParser::storeSSANames(Operation *&op,
                                     ArrayRef<ResultRecord> resultIDs) {
-  if (op->getNumResults() > 1)
-    emitError("have not yet implemented support for multiple return values\n");
 
-  for (const ResultRecord &resIt : resultIDs) {
-    for (unsigned subRes : llvm::seq<unsigned>(0, std::get<1>(resIt))) {
-      op->setDiscardableAttr(
-          "mlir.ssaName",
-          StringAttr::get(getContext(), std::get<0>(resIt).drop_front(1)));
+  // Store the name(s) of the result(s) of this operation.
+  if (op->getNumResults() > 0) {
+    llvm::SmallVector<llvm::StringRef, 1> resultNames;
+    for (const ResultRecord &resIt : resultIDs) {
+      resultNames.push_back(std::get<0>(resIt).drop_front(1));
+      // Insert empty string for sub-results/result groups
+      for (unsigned int i = 1; i < std::get<1>(resIt); ++i)
+        resultNames.push_back(llvm::StringRef());
     }
+    op->setDiscardableAttr("mlir.resultNames",
+                           builder.getStrArrayAttr(resultNames));
   }
 
   // Store the name information of the arguments of this operation.
