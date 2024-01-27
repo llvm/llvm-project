@@ -330,7 +330,7 @@ static Error checkOpcode(LinkGraph &G, const ThumbRelocation &R,
   assert(Kind >= FirstThumbRelocation && Kind <= LastThumbRelocation &&
          "Edge kind must be Thumb relocation");
   const FixupInfoBase *Entry = DynFixupInfos->getEntry(Kind);
-  const FixupInfoThumb &Info = *static_cast<const FixupInfoThumb *>(Entry);
+  const FixupInfoThumbBase &Info = *static_cast<const FixupInfoThumbBase *>(Entry);
   assert(Info.checkOpcode && "Opcode check is mandatory for Thumb edges");
   if (!Info.checkOpcode(R.Hi, R.Lo))
     return makeUnexpectedOpcodeError(G, R, Kind);
