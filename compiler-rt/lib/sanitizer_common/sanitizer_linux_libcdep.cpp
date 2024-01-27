@@ -934,14 +934,7 @@ u64 MonotonicNanoTime() {
 void ReExec() {
   const char *pathname = "/proc/self/exe";
 
-#  if SANITIZER_FREEBSD
-  for (const auto *aux = __elf_aux_vector; aux->a_type != AT_NULL; aux++) {
-    if (aux->a_type == AT_EXECPATH) {
-      pathname = static_cast<const char *>(aux->a_un.a_ptr);
-      break;
-    }
-  }
-#  elif SANITIZER_NETBSD
+#  if SANITIZER_NETBSD
   static const int name[] = {
       CTL_KERN,
       KERN_PROC_ARGS,
