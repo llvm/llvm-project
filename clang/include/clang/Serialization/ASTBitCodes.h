@@ -1906,6 +1906,7 @@ enum StmtCode {
   EXPR_ARRAY_TYPE_TRAIT,            // ArrayTypeTraitIntExpr
 
   EXPR_PACK_EXPANSION,                    // PackExpansionExpr
+  EXPR_PACK_INDEXING,                     // PackIndexingExpr
   EXPR_SIZEOF_PACK,                       // SizeOfPackExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM,      // SubstNonTypeTemplateParmExpr
   EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK, // SubstNonTypeTemplateParmPackExpr

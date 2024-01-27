@@ -6994,6 +6994,10 @@ void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   TL.setRParenLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+  TL.setEllipsisLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   TL.setKWLoc(readSourceLocation());
   TL.setLParenLoc(readSourceLocation());

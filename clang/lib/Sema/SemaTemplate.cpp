@@ -6441,6 +6441,11 @@ bool UnnamedLocalNoLinkageFinder::VisitDecltypeType(const DecltypeType*) {
   return false;
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitPackIndexingType(
+    const PackIndexingType *) {
+  return false;
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitUnaryTransformType(
                                                     const UnaryTransformType*) {
   return false;

@@ -1388,6 +1388,10 @@ public:
     return nullptr;
   }
 
+  llvm::Constant *VisitPackIndexingExpr(PackIndexingExpr *E, QualType T) {
+    return Visit(E->getSelectedExpr(), T);
+  }
+
   // Utility methods
   llvm::Type *ConvertType(QualType T) {
     return CGM.getTypes().ConvertType(T);
