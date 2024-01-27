@@ -13751,7 +13751,7 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
 static SDValue performVWADDW_VLCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const RISCVSubtarget &Subtarget) {
-  unsigned Opc = N->getOpcode();
+  [[maybe_unused]] unsigned Opc = N->getOpcode();
   assert(Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWADDU_W_VL);
 
   if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
