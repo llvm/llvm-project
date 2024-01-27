@@ -20,6 +20,7 @@
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
 #include "lib/ProgressMeter.h"
+#include "lib/ResultAggregator.h"
 #include "lib/SnippetFile.h"
 #include "lib/SnippetRepetitor.h"
 #include "lib/Target.h"
@@ -456,6 +457,7 @@ static void runBenchmarkConfigurations(
         AllResults.push_back(std::move(BenchmarkResult));
       }
     }
+
     Benchmark &Result = AllResults.front();
 
     // If any of our measurements failed, pretend they all have failed.
@@ -465,50 +467,10 @@ static void runBenchmarkConfigurations(
         }))
       Result.Measurements.clear();
 
-    if (RepetitionMode == Benchmark::RepetitionModeE::AggregateMin) {
-      for (const Benchmark &OtherResult :
-           ArrayRef<Benchmark>(AllResults).drop_front()) {
-        llvm::append_range(Result.AssembledSnippet,
-                           OtherResult.AssembledSnippet);
-        // Aggregate measurements, but only if all measurements succeeded.
-        if (Result.Measurements.empty())
-          continue;
-        assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
-               "Expected to have identical number of measurements.");
-        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
-          BenchmarkMeasure &Measurement = std::get<0>(I);
-          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
-          assert(Measurement.Key == NewMeasurement.Key &&
-                 "Expected measurements to be symmetric");
-
-          Measurement.PerInstructionValue =
-              std::min(Measurement.PerInstructionValue,
-                       NewMeasurement.PerInstructionValue);
-          Measurement.PerSnippetValue = std::min(
-              Measurement.PerSnippetValue, NewMeasurement.PerSnippetValue);
-        }
-      }
-    } else if (RepetitionMode ==
-                   Benchmark::RepetitionModeE::MiddleHalfDuplicate ||
-               RepetitionMode == Benchmark::RepetitionModeE::MiddleHalfLoop) {
-      for (const Benchmark &OtherResult :
-           ArrayRef<Benchmark>(AllResults).drop_front()) {
-        if (OtherResult.Measurements.empty())
-          continue;
-        assert(OtherResult.Measurements.size() == Result.Measurements.size());
-        for (auto I : zip(Result.Measurements, OtherResult.Measurements)) {
-          BenchmarkMeasure &Measurement = std::get<0>(I);
-          const BenchmarkMeasure &NewMeasurement = std::get<1>(I);
-          Measurement.RawValue = NewMeasurement.RawValue - Measurement.RawValue;
-          Measurement.PerInstructionValue = Measurement.RawValue;
-          Measurement.PerInstructionValue /= Result.NumRepetitions;
-          Measurement.PerSnippetValue = Measurement.RawValue;
-          Measurement.PerSnippetValue *=
-              static_cast<double>(Result.Key.Instructions.size()) /
-              Result.NumRepetitions;
-        }
-      }
-    }
+    ResultAggregator ResultAgg =
+        ResultAggregator::CreateAggregator(RepetitionMode);
+    ResultAgg.AggregateResults(Result,
+                               ArrayRef<Benchmark>(AllResults).drop_front());
 
     // With dummy counters, measurements are rather meaningless,
     // so drop them altogether.
