@@ -12,6 +12,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: libcpp-hardening-mode=none
+// UNSUPPORTED: c++03
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <deque>
 
