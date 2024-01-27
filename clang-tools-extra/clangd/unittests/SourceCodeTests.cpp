@@ -820,6 +820,13 @@ TEST(SourceCodeTests, isSpelledInSource) {
 
   EXPECT_TRUE(
       isSpelledInSource(SM.getLocForStartOfFile(SM.getMainFileID()), SM));
+
+  // Check that isSpelledInSource() handles various invalid source locations
+  // gracefully.
+  //
+  // Returning true for SourceLocation() is a behavior that falls out of the
+  // current implementation, which has an early exit for isFileID().
+  // FIXME: Should it return false on SourceLocation()? Does it matter?
   EXPECT_TRUE(isSpelledInSource(SourceLocation(), SM));
   EXPECT_FALSE(isSpelledInSource(
       SourceLocation::getFromRawEncoding(SourceLocation::UIntTy(1 << 31)), SM));
