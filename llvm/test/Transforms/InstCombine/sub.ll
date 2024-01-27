@@ -2626,3 +2626,33 @@ define i8 @sub_of_adds_2xc(i8 %x, i8 %y) {
   %r = sub i8 %xc, %yc
   ret i8 %r
 }
+
+define i32 @sub_and_xor(i32 %A, i32 %B) {
+; CHECK-LABEL: @sub_and_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[XOR]], [[A:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[B]], [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw i32 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %xor = xor i32 %B, -1
+  %and1 = and i32 %xor, %A
+  %and2 = and i32 %B, %A
+  %res = sub nsw i32 %and1, %and2
+  ret i32 %res
+}
+
+define i32 @sub_xor_and(i32 %A, i32 %B) {
+; CHECK-LABEL: @sub_xor_and(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B]], -1
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[XOR]], [[A]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw i32 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and1 = and i32 %B, %A
+  %xor = xor i32 %B, -1
+  %and2 = and i32 %xor, %A
+  %res = sub nsw i32 %and1, %and2
+  ret i32 %res
+}
