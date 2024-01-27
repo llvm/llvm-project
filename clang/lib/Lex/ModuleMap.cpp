@@ -308,7 +308,7 @@ void ModuleMap::resolveHeader(Module *Mod,
         setUmbrellaHeaderAsWritten(Mod, *File, Header.FileName,
                                    RelativePathName.str());
     } else {
-      Module::Header H = {Header.FileName, std::string(RelativePathName.str()),
+      Module::Header H = {Header.FileName, std::string(RelativePathName),
                           *File};
       addHeader(Mod, H, headerKindToRole(Header.Kind));
     }

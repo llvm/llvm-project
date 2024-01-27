@@ -220,6 +220,10 @@ public:
     return RegName.equals("esp") || RegName.equals("rsp");
   }
 
+  bool supportsCpuSupports() const override { return true; }
+  bool supportsCpuIs() const override { return true; }
+  bool supportsCpuInit() const override { return true; }
+
   bool validateCpuSupports(StringRef FeatureStr) const override;
 
   bool validateCpuIs(StringRef FeatureStr) const override;

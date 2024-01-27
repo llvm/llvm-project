@@ -21,11 +21,20 @@ func.func private @no_interface_no_operands(%t : tensor<?x?x?xf16>) -> memref<?x
 // CHECK-LABEL: func private @no_interface(
 //       CHECK:   %[[true:.*]] = arith.constant true
 //       CHECK:   %[[alloc:.*]] = memref.alloc
-//       CHECK:   %[[foo:.*]] = "test.foo"(%[[alloc]])
+//       CHECK:   %[[foo:.*]] = "test.forward_buffer"(%[[alloc]])
 //       CHECK:   %[[r:.*]] = bufferization.dealloc (%[[alloc]] : {{.*}}) if (%[[true]]) retain (%[[foo]] : {{.*}})
 //       CHECK:   return %[[foo]]
 func.func private @no_interface() -> memref<5xf32> {
   %0 = memref.alloc() : memref<5xf32>
-  %1 = "test.foo"(%0) : (memref<5xf32>) -> (memref<5xf32>)
+  %1 = "test.forward_buffer"(%0) : (memref<5xf32>) -> (memref<5xf32>)
   return %1 : memref<5xf32>
+}
+
+// -----
+
+func.func @no_side_effects() {
+  %0 = memref.alloc() : memref<5xf32>
+  // expected-error @below{{ops with unknown memory side effects are not supported}}
+  "test.unregistered_op_foo"(%0) : (memref<5xf32>) -> ()
+  return
 }

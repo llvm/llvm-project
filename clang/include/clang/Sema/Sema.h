@@ -8595,8 +8595,8 @@ public:
                                           QualType ParamType,
                                           SourceLocation Loc);
   ExprResult
-  BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
-                                              SourceLocation Loc);
+  BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
+                                             SourceLocation Loc);
 
   /// Enumeration describing how template parameter lists are compared
   /// for equality.
@@ -13932,8 +13932,9 @@ private:
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
-  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
-  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
+  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
+  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
+                                   unsigned BuiltinID);
   bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
@@ -14036,6 +14037,8 @@ private:
                             VariadicCallType CallType, SourceLocation Loc,
                             SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
+
+  void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
 
   void CheckAbsoluteValueFunction(const CallExpr *Call,
                                   const FunctionDecl *FDecl);

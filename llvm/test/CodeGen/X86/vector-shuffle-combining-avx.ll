@@ -362,7 +362,7 @@ define void @PR39483() {
 ; X86-AVX2:       # %bb.0: # %entry
 ; X86-AVX2-NEXT:    vmovups 32, %ymm0
 ; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3,4],mem[5],ymm0[6,7]
-; X86-AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = <2,5,0,3,6,u,u,u>
+; X86-AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [2,5,0,3,6,u,u,u]
 ; X86-AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X86-AVX2-NEXT:    vpermilps {{.*#+}} ymm1 = mem[0,1,0,3,4,5,4,7]
 ; X86-AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,0,3]
@@ -403,7 +403,7 @@ define void @PR39483() {
 ; X64-AVX2:       # %bb.0: # %entry
 ; X64-AVX2-NEXT:    vmovups 32, %ymm0
 ; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3,4],mem[5],ymm0[6,7]
-; X64-AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = <2,5,0,3,6,u,u,u>
+; X64-AVX2-NEXT:    vmovaps {{.*#+}} ymm1 = [2,5,0,3,6,u,u,u]
 ; X64-AVX2-NEXT:    vpermps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    vpermilps {{.*#+}} ymm1 = mem[0,1,0,3,4,5,4,7]
 ; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,0,3]

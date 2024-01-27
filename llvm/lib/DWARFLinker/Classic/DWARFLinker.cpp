@@ -218,7 +218,7 @@ static void analyzeImportedModule(
     ReportWarning(Twine("Conflicting parseable interfaces for Swift Module ") +
                       *Name + ": " + Entry + " and " + Path,
                   DIE);
-  Entry = std::string(ResolvedPath.str());
+  Entry = std::string(ResolvedPath);
 }
 
 /// The distinct types of work performed by the work loop in
@@ -465,7 +465,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
       if (std::optional<int64_t> RelocAdjustment =
               RelocMgr.getExprOpAddressRelocAdjustment(
                   *U, Op, AttrOffset + CurExprOffset,
-                  AttrOffset + Op.getEndOffset()))
+                  AttrOffset + Op.getEndOffset(), Options.Verbose))
         return std::make_pair(HasLocationAddress, *RelocAdjustment);
     } break;
     case dwarf::DW_OP_constx:
@@ -478,7 +478,8 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
         if (std::optional<int64_t> RelocAdjustment =
                 RelocMgr.getExprOpAddressRelocAdjustment(
                     *U, Op, *AddressOffset,
-                    *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize()))
+                    *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize(),
+                    Options.Verbose))
           return std::make_pair(HasLocationAddress, *RelocAdjustment);
       }
     } break;
@@ -552,7 +553,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
 
   assert(LowPc && "low_pc attribute is not an address.");
   std::optional<int64_t> RelocAdjustment =
-      RelocMgr.getSubprogramRelocAdjustment(DIE);
+      RelocMgr.getSubprogramRelocAdjustment(DIE, Options.Verbose);
   if (!RelocAdjustment)
     return Flags;
 
@@ -2240,14 +2241,20 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
     } break;
     case AccelTableKind::DebugNames: {
       for (const auto &Namespace : Unit.getNamespaces())
-        DebugNames.addName(Namespace.Name, Namespace.Die->getOffset(),
-                           Namespace.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Namespace.Name, Namespace.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Namespace.Die),
+            Namespace.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubname : Unit.getPubnames())
-        DebugNames.addName(Pubname.Name, Pubname.Die->getOffset(),
-                           Pubname.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Pubname.Name, Pubname.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Pubname.Die),
+            Pubname.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubtype : Unit.getPubtypes())
-        DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
-                           Pubtype.Die->getTag(), Unit.getUniqueID());
+        DebugNames.addName(
+            Pubtype.Name, Pubtype.Die->getOffset(),
+            DWARF5AccelTableData::getDefiningParentDieOffset(*Pubtype.Die),
+            Pubtype.Die->getTag(), Unit.getUniqueID());
     } break;
     }
   }

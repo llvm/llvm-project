@@ -43,15 +43,15 @@ TEST_F(LlvmLibcExp2fTest, SpecialNumbers) {
 TEST_F(LlvmLibcExp2fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000000U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(FPBits(0x43000000U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp2f(FPBits(0x43000001U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
@@ -73,7 +73,7 @@ TEST_F(LlvmLibcExp2fTest, TrickyInputs) {
   };
   for (int i = 0; i < N; ++i) {
     libc_errno = 0;
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
                                    LIBC_NAMESPACE::exp2f(x), 0.5);
     EXPECT_MATH_ERRNO(0);
@@ -83,20 +83,20 @@ TEST_F(LlvmLibcExp2fTest, TrickyInputs) {
 TEST_F(LlvmLibcExp2fTest, Underflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      0.0f, LIBC_NAMESPACE::exp2f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
+      0.0f, LIBC_NAMESPACE::exp2f(FPBits(0xff7fffffU).get_val()), FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  float x = float(FPBits(0xc3158000U));
+  float x = FPBits(0xc3158000U).get_val();
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
                                  LIBC_NAMESPACE::exp2f(x), 0.5);
   EXPECT_MATH_ERRNO(0);
 
-  x = float(FPBits(0xc3160000U));
+  x = FPBits(0xc3160000U).get_val();
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
                                  LIBC_NAMESPACE::exp2f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  x = float(FPBits(0xc3165432U));
+  x = FPBits(0xc3165432U).get_val();
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
                                  LIBC_NAMESPACE::exp2f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -106,7 +106,7 @@ TEST_F(LlvmLibcExp2fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
     libc_errno = 0;

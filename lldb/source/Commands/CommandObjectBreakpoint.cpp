@@ -1485,9 +1485,8 @@ protected:
       for (auto breakpoint_sp : breakpoints.Breakpoints()) {
         if (!breakpoint_sp->IsEnabled() && breakpoint_sp->AllowDelete()) {
           BreakpointID bp_id(breakpoint_sp->GetID());
-          size_t pos = 0;
-          if (!excluded_bp_ids.FindBreakpointID(bp_id, &pos))
-            valid_bp_ids.AddBreakpointID(breakpoint_sp->GetID());
+          if (!excluded_bp_ids.Contains(bp_id))
+            valid_bp_ids.AddBreakpointID(bp_id);
         }
       }
       if (valid_bp_ids.GetSize() == 0) {

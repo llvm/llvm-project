@@ -115,7 +115,8 @@ Error DWARFLinkerImpl::link() {
     }
 
     if (GlobalData.getOptions().Verbose) {
-      outs() << "OBJECT: " << Context->InputDWARFFile.FileName << "\n";
+      outs() << "DEBUG MAP OBJECT: " << Context->InputDWARFFile.FileName
+             << "\n";
 
       for (const std::unique_ptr<DWARFUnit> &OrigCU :
            Context->InputDWARFFile.Dwarf->compile_units()) {
@@ -1358,7 +1359,8 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
       case DwarfUnit::AccelType::Namespace:
       case DwarfUnit::AccelType::Type: {
         DebugNames->addName(*DebugStrStrings.getExistingEntry(Info.String),
-                            Info.OutOffset, Info.Tag, CU->getUniqueID());
+                            Info.OutOffset, std::nullopt /*ParentDIEOffset*/,
+                            Info.Tag, CU->getUniqueID());
       } break;
 
       default:

@@ -690,7 +690,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
 
         if (!Buffer.empty() && Buffer.front() == '\01')
           return std::string(Buffer.substr(1));
-        return std::string(Buffer.str());
+        return std::string(Buffer);
       }
       return std::string(ND->getIdentifier()->getName());
     }
@@ -986,7 +986,7 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   SmallString<64> S;
   FixedPointValueToString(
       S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale);
-  return std::string(S.str());
+  return std::string(S);
 }
 
 void CharacterLiteral::print(unsigned Val, CharacterLiteralKind Kind,

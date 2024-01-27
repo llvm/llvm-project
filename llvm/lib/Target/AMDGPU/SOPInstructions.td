@@ -1720,23 +1720,30 @@ let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
-    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_loadcnt timm:$simm16)]>;
   def S_WAIT_LOADCNT_DSCNT :
     SOPP_Pseudo<"s_wait_loadcnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_STORECNT :
-    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_storecnt timm:$simm16)]>;
   def S_WAIT_STORECNT_DSCNT :
     SOPP_Pseudo<"s_wait_storecnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_SAMPLECNT :
-    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_samplecnt timm:$simm16)]>;
   def S_WAIT_BVHCNT :
-    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_bvhcnt timm:$simm16)]>;
   def S_WAIT_EXPCNT :
-    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_expcnt timm:$simm16)]>;
   def S_WAIT_DSCNT :
-    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_dscnt timm:$simm16)]>;
   def S_WAIT_KMCNT :
-    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
 //===----------------------------------------------------------------------===//
@@ -2618,7 +2625,7 @@ multiclass SOPP_Real_With_Relaxation_gfx11_gfx12<bits<7>op> :
 defm S_SETKILL                    : SOPP_Real_32_gfx11_gfx12<0x001>;
 defm S_SETHALT                    : SOPP_Real_32_gfx11_gfx12<0x002>;
 defm S_SLEEP                      : SOPP_Real_32_gfx11_gfx12<0x003>;
-defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11_gfx12<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
+defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;

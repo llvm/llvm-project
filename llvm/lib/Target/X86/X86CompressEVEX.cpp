@@ -121,44 +121,6 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
   return false;
 }
 
-static bool checkVEXInstPredicate(unsigned OldOpc, const X86Subtarget &ST) {
-  switch (OldOpc) {
-  default:
-    return true;
-  case X86::VCVTNEPS2BF16Z128rm:
-  case X86::VCVTNEPS2BF16Z128rr:
-  case X86::VCVTNEPS2BF16Z256rm:
-  case X86::VCVTNEPS2BF16Z256rr:
-    return ST.hasAVXNECONVERT();
-  case X86::VPDPBUSDSZ128m:
-  case X86::VPDPBUSDSZ128r:
-  case X86::VPDPBUSDSZ256m:
-  case X86::VPDPBUSDSZ256r:
-  case X86::VPDPBUSDZ128m:
-  case X86::VPDPBUSDZ128r:
-  case X86::VPDPBUSDZ256m:
-  case X86::VPDPBUSDZ256r:
-  case X86::VPDPWSSDSZ128m:
-  case X86::VPDPWSSDSZ128r:
-  case X86::VPDPWSSDSZ256m:
-  case X86::VPDPWSSDSZ256r:
-  case X86::VPDPWSSDZ128m:
-  case X86::VPDPWSSDZ128r:
-  case X86::VPDPWSSDZ256m:
-  case X86::VPDPWSSDZ256r:
-    return ST.hasAVXVNNI();
-  case X86::VPMADD52HUQZ128m:
-  case X86::VPMADD52HUQZ128r:
-  case X86::VPMADD52HUQZ256m:
-  case X86::VPMADD52HUQZ256r:
-  case X86::VPMADD52LUQZ128m:
-  case X86::VPMADD52LUQZ128r:
-  case X86::VPMADD52LUQZ256m:
-  case X86::VPMADD52LUQZ256r:
-    return ST.hasAVXIFMA();
-  }
-}
-
 // Do any custom cleanup needed to finalize the conversion.
 static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   (void)NewOpc;
@@ -238,7 +200,6 @@ static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
       !MI.getOperand(2).isReg() || MI.getOperand(2).getReg() != Reg0)
     return false;
   // Opcode may change after commute, e.g. SHRD -> SHLD
-  // TODO: Add test for this after ND SHRD/SHLD is supported
   ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
   return true;
 }
@@ -279,7 +240,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   }
 
   if (!IsND) {
-    if (usesExtendedRegister(MI) || !checkVEXInstPredicate(Opc, ST) ||
+    if (usesExtendedRegister(MI) || !checkPredicate(I->NewOpc, &ST) ||
         !performCustomAdjustments(MI, I->NewOpc))
       return false;
   }

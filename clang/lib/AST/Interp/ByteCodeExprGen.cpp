@@ -291,9 +291,6 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FloatingComplexToReal:
     return this->emitComplexReal(SubExpr);
 
-  case CK_ToVoid:
-    return discard(SubExpr);
-
   case CK_IntegralRealToComplex:
   case CK_FloatingRealToComplex: {
     // We're creating a complex value here, so we need to
@@ -316,6 +313,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     return this->emitInitElem(T, 1, SubExpr);
   }
+
+  case CK_ToVoid:
+    return discard(SubExpr);
 
   default:
     assert(false && "Cast not implemented");
@@ -601,8 +601,8 @@ bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  PrimType LHSElemT = *this->classifyComplexElementType(LHS->getType());
-  PrimType RHSElemT = *this->classifyComplexElementType(RHS->getType());
+  PrimType LHSElemT = this->classifyComplexElementType(LHS->getType());
+  PrimType RHSElemT = this->classifyComplexElementType(RHS->getType());
 
   unsigned LHSOffset = this->allocateLocalPrimitive(LHS, PT_Ptr, true, false);
   unsigned RHSOffset = this->allocateLocalPrimitive(RHS, PT_Ptr, true, false);
@@ -1056,20 +1056,16 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
     const ArrayInitLoopExpr *E) {
   assert(Initializing);
   assert(!DiscardResult);
+
+  // We visit the common opaque expression here once so we have its value
+  // cached.
+  if (!this->discard(E->getCommonExpr()))
+    return false;
+
   // TODO: This compiles to quite a lot of bytecode if the array is larger.
   //   Investigate compiling this to a loop.
-
   const Expr *SubExpr = E->getSubExpr();
-  const Expr *CommonExpr = E->getCommonExpr();
   size_t Size = E->getArraySize().getZExtValue();
-
-  // If the common expression is an opaque expression, we visit it
-  // here once so we have its value cached.
-  // FIXME: This might be necessary (or useful) for all expressions.
-  if (isa<OpaqueValueExpr>(CommonExpr)) {
-    if (!this->discard(CommonExpr))
-      return false;
-  }
 
   // So, every iteration, we execute an assignment here
   // where the LHS is on the stack (the target array)
@@ -1107,13 +1103,13 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
     return false;
 
   // Here the local variable is created but the value is removed from the stack,
-  // so we put it back, because the caller might need it.
+  // so we put it back if the caller needs it.
   if (!DiscardResult) {
     if (!this->emitGetLocal(SubExprT, *LocalIndex, E))
       return false;
   }
 
-  // FIXME: Ideally the cached value should be cleaned up later.
+  // This is cleaned up when the local variable is destroyed.
   OpaqueExprs.insert({E, *LocalIndex});
 
   return true;
@@ -2992,7 +2988,7 @@ bool ByteCodeExprGen<Emitter>::emitComplexReal(const Expr *SubExpr) {
   // Since our _Complex implementation does not map to a primitive type,
   // we sometimes have to do the lvalue-to-rvalue conversion here manually.
   if (!SubExpr->isLValue())
-    return this->emitLoadPop(*classifyComplexElementType(SubExpr->getType()),
+    return this->emitLoadPop(classifyComplexElementType(SubExpr->getType()),
                              SubExpr);
   return true;
 }

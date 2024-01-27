@@ -1454,6 +1454,16 @@ def int_nvvm_cp_async_wait_all :
     ClangBuiltin<"__nvvm_cp_async_wait_all">,
     Intrinsic<[],[],[]>;
 
+// cp.async.bulk variants of the commit/wait group
+def int_nvvm_cp_async_bulk_commit_group :
+    Intrinsic<[],[],[]>;
+
+def int_nvvm_cp_async_bulk_wait_group :
+    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
+
+def int_nvvm_cp_async_bulk_wait_group_read :
+    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
+
 // mbarrier
 def int_nvvm_mbarrier_init : ClangBuiltin<"__nvvm_mbarrier_init">,
     Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty],[IntrConvergent, IntrNoCallback]>;
