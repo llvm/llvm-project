@@ -88,6 +88,9 @@ struct allocator_traits
     static pointer allocate(allocator_type& a, size_type n);                          // constexpr and [[nodiscard]] in C++20
     static pointer allocate(allocator_type& a, size_type n, const_void_pointer hint); // constexpr and [[nodiscard]] in C++20
 
+    [[nodiscard]] static constexpr allocation_result<pointer, size_type>
+      allocate_at_least(Alloc& a, size_type n); // Since C++23
+
     static void deallocate(allocator_type& a, pointer p, size_type n) noexcept; // constexpr in C++20
 
     template <class T, class... Args>
@@ -100,15 +103,15 @@ struct allocator_traits
     static allocator_type select_on_container_copy_construction(const allocator_type& a); // constexpr in C++20
 };
 
-template<class Pointer>
+template<class Pointer, class SizeType = size_t>
 struct allocation_result {
     Pointer ptr;
-    size_t count;
-}; // since C++23
+    SizeType count;
+}; // since C++23, modified C++23
 
 template<class Allocator>
 [[nodiscard]] constexpr allocation_result<typename allocator_traits<Allocator>::pointer>
-    allocate_at_least(Allocator& a, size_t n); // since C++23
+    allocate_at_least(Allocator& a, size_t n); // Since C++23, removed C++23
 
 template <>
 class allocator<void> // removed in C++20
@@ -924,6 +927,7 @@ template<size_t N, class T>
 #include <__memory/align.h>
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocation_guard.h>
+#include <__memory/allocation_result.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_traits.h>

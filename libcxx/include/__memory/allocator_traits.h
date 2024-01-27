@@ -11,6 +11,7 @@
 #define _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
 
 #include <__config>
+#include <__memory/allocation_result.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
@@ -283,6 +284,18 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
   allocate(allocator_type& __a, size_type __n, const_void_pointer) {
     return __a.allocate(__n);
   }
+
+#if _LIBCPP_STD_VER >= 23 && !defined(_LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS)
+  template <class _Ap = _Alloc>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr allocation_result<pointer, size_type>
+  allocate_at_least(_Ap& __alloc, size_type __n) {
+    if constexpr (requires { __alloc.allocate_at_least(__n); }) {
+      return __alloc.allocate_at_least(__n);
+    } else {
+      return {__alloc.allocate(__n), __n};
+    }
+  }
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
   deallocate(allocator_type& __a, pointer __p, size_type __n) _NOEXCEPT {

@@ -10,6 +10,7 @@
 #define _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
 
 #include <__config>
+#include <__memory/allocation_result.h>
 #include <__memory/allocator_traits.h>
 #include <cstddef>
 
@@ -20,13 +21,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
-template <class _Pointer>
-struct allocation_result {
-  _Pointer ptr;
-  size_t count;
-};
-_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
 
+#  ifdef _LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS
 template <class _Alloc>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr allocation_result<typename allocator_traits<_Alloc>::pointer>
 allocate_at_least(_Alloc& __alloc, size_t __n) {
@@ -36,12 +32,19 @@ allocate_at_least(_Alloc& __alloc, size_t __n) {
     return {__alloc.allocate(__n), __n};
   }
 }
+#  endif // _LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS
 
 template <class _Alloc>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto __allocate_at_least(_Alloc& __alloc, size_t __n) {
+#  ifndef _LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS
+  return std::allocator_traits<_Alloc>::allocate_at_least(__alloc, __n);
+#  else
   return std::allocate_at_least(__alloc, __n);
+#  endif
 }
+
 #else
+
 template <class _Pointer>
 struct __allocation_result {
   _Pointer ptr;

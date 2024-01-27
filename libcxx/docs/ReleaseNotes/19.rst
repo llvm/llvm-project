@@ -37,12 +37,16 @@ What's New in Libc++ 19.0.0?
 
 Implemented Papers
 ------------------
+
 - P2637R3 - Member ``visit``
+- P2652R2 - Disallow User Specialization of ``allocator_traits``
 
 
 Improvements and New Features
 -----------------------------
-TODO
+
+- The ``_LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS`` macro has been added to re-enable user specialization
+  of `allocator_traits`, which was disabled by `P2652R2 <https://wg21.link/P2652R2>`_.
 
 
 Deprecations and Removals
