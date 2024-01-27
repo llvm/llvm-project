@@ -1454,7 +1454,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
-  LLVMStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
+  LLVMStyle.AlwaysBreakAfterReturnType = FormatStyle::RTBS_AllowShortType;
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
