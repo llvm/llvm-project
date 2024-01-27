@@ -1000,4 +1000,4 @@ While this is the standard behaviour for symbol mapping on the ``IRLayer``, you 
   // Add a ThreadSafeModule to an IRLayer
   MyLayer.add(RT, TSM, mySymbolMapper);
 
-More info on how symbol mapping is usually done can be seen on ``defaultSymbolMapper`` at ``llvm/include/llvm/ExecutionEngine/Orc/Layer.h``.
+More info on how symbol mapping is usually done can be seen on ``defaultSymbolMapper`` at ``llvm/lib/ExecutionEngine/Orc/Mangling.cpp``.

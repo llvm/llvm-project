@@ -32,16 +32,18 @@ class IRCompileLayer : public IRLayer {
 public:
   class IRCompiler {
   public:
-    IRCompiler(ManglingOptions MO) : MO(std::move(MO)) {}
+    IRCompiler(IRSymbolMapper::ManglingOptions MO) : MO(std::move(MO)) {}
     virtual ~IRCompiler();
-    const ManglingOptions &getManglingOptions() const { return MO; }
+    const IRSymbolMapper::ManglingOptions &getManglingOptions() const {
+      return MO;
+    }
     virtual Expected<std::unique_ptr<MemoryBuffer>> operator()(Module &M) = 0;
 
   protected:
-    ManglingOptions &manglingOptions() { return MO; }
+    IRSymbolMapper::ManglingOptions &manglingOptions() { return MO; }
 
   private:
-    ManglingOptions MO;
+    IRSymbolMapper::ManglingOptions MO;
   };
 
   using NotifyCompiledFunction = std::function<void(
@@ -61,7 +63,7 @@ private:
   mutable std::mutex IRLayerMutex;
   ObjectLayer &BaseLayer;
   std::unique_ptr<IRCompiler> Compile;
-  const ManglingOptions *ManglingOpts;
+  const IRSymbolMapper::ManglingOptions *ManglingOpts;
   NotifyCompiledFunction NotifyCompiled = NotifyCompiledFunction();
 };
 

@@ -72,7 +72,7 @@ namespace orc {
 class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
   PartitioningIRMaterializationUnit(ExecutionSession &ES,
-                                    const ManglingOptions &MO,
+                                    const IRSymbolMapper::ManglingOptions &MO,
                                     ThreadSafeModule TSM,
                                     CompileOnDemandLayer &Parent)
       : IRMaterializationUnit(ES, MO, std::move(TSM)), Parent(Parent) {}
@@ -322,8 +322,8 @@ void CompileOnDemandLayer::emitPartition(
 
       MangleAndInterner Mangle(ES, M.getDataLayout());
       SymbolFlagsMap SymbolFlags;
-      IRLayer::defaultSymbolMapper(PromotedGlobals, ES, *getManglingOptions(),
-                                   SymbolFlags);
+      IRSymbolMapper::defaultSymbolMapper(PromotedGlobals, ES,
+                                          *getManglingOptions(), SymbolFlags);
 
       if (auto Err = R->defineMaterializing(SymbolFlags))
         return std::move(Err);

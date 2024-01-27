@@ -27,5 +27,62 @@ SymbolStringPtr MangleAndInterner::operator()(StringRef Name) {
   }
   return ES.intern(MangledName);
 }
+
+void IRSymbolMapper::defaultSymbolMapper(
+    ArrayRef<GlobalValue *> GVs, ExecutionSession &ES,
+    const ManglingOptions &MO, SymbolFlagsMap &SymbolFlags,
+    SymbolNameToDefinitionMap *SymbolToDefinition) {
+  if (GVs.empty())
+    return;
+
+  MangleAndInterner Mangle(ES, GVs[0]->getParent()->getDataLayout());
+  for (auto *G : GVs) {
+    assert(G && "GVs cannot contain null elements");
+    // Follow static linkage behaviour to decide which GVs get a named symbol
+    if (!G->hasName() || G->isDeclaration() || G->hasLocalLinkage() ||
+        G->hasAvailableExternallyLinkage() || G->hasAppendingLinkage() ||
+        G->hasLinkOnceODRLinkage())
+      continue;
+
+    if (G->isThreadLocal() && MO.EmulatedTLS) {
+      auto *GV = cast<GlobalVariable>(G);
+
+      auto Flags = JITSymbolFlags::fromGlobalValue(*GV);
+
+      auto EmuTLSV = Mangle(("__emutls_v." + GV->getName()).str());
+      SymbolFlags[EmuTLSV] = Flags;
+      if (SymbolToDefinition)
+        (*SymbolToDefinition)[EmuTLSV] = GV;
+
+      // If this GV has a non-zero initializer we'll need to emit an
+      // __emutls.t symbol too.
+      if (GV->hasInitializer()) {
+        const auto *InitVal = GV->getInitializer();
+
+        // Skip zero-initializers.
+        if (isa<ConstantAggregateZero>(InitVal))
+          continue;
+        const auto *InitIntValue = dyn_cast<ConstantInt>(InitVal);
+        if (InitIntValue && InitIntValue->isZero())
+          continue;
+
+        auto EmuTLST = Mangle(("__emutls_t." + GV->getName()).str());
+        SymbolFlags[EmuTLST] = Flags;
+        if (SymbolToDefinition)
+          (*SymbolToDefinition)[EmuTLST] = GV;
+      }
+      continue;
+    }
+
+    // Otherwise we just need a normal linker mangling.
+    auto MangledName = Mangle(G->getName());
+    SymbolFlags[MangledName] = JITSymbolFlags::fromGlobalValue(*G);
+    if (G->getComdat() &&
+        G->getComdat()->getSelectionKind() != Comdat::NoDeduplicate)
+      SymbolFlags[MangledName] |= JITSymbolFlags::Weak;
+    if (SymbolToDefinition)
+      (*SymbolToDefinition)[MangledName] = G;
+  }
+}
 } // End namespace orc.
 } // End namespace llvm.

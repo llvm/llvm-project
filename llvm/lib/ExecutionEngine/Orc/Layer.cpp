@@ -21,9 +21,25 @@ namespace orc {
 
 IRLayer::~IRLayer() = default;
 
-Expected<IRMaterializationUnit::SymbolInfo>
-IRLayer::getSymbolInfo(const Module &M, ExecutionSession &ES,
-                       const ManglingOptions &MO, IRSymbolMapper &SymMapper) {
+Error IRLayer::add(ResourceTrackerSP RT, ThreadSafeModule TSM,
+                   IRSymbolMapper::SymbolMapperFunction SymMapper) {
+  assert(RT && "RT can not be null");
+
+  auto &JD = RT->getJITDylib();
+  auto SymbolInfo = TSM.withModuleDo([&](const Module &M) {
+    return IRMaterializationUnit::getSymbolInfo(
+        M, JD.getExecutionSession(), *getManglingOptions(), SymMapper);
+  });
+
+  return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
+                       *this, std::move(TSM), SymbolInfo),
+                   std::move(RT));
+}
+
+IRMaterializationUnit::SymbolInfo IRMaterializationUnit::getSymbolInfo(
+    const Module &M, ExecutionSession &ES,
+    const IRSymbolMapper::ManglingOptions &MO,
+    IRSymbolMapper::SymbolMapperFunction &SymMapper) {
   std::vector<GlobalValue *> GVs;
 
   for (auto &GV : M.global_values())
@@ -52,93 +68,20 @@ IRLayer::getSymbolInfo(const Module &M, ExecutionSession &ES,
       MaterializationUnit::Interface(SymbolFlags, InitSymbol), SymbolToDef);
 }
 
-Error IRLayer::add(ResourceTrackerSP RT, ThreadSafeModule TSM,
-                   IRSymbolMapper SymMapper) {
-  assert(RT && "RT can not be null");
-  if (!SymMapper)
-    SymMapper = defaultSymbolMapper;
-
-  auto &JD = RT->getJITDylib();
-  auto SymbolInfoOrErr = TSM.withModuleDo([&](const Module &M) {
-    return getSymbolInfo(M, JD.getExecutionSession(), *getManglingOptions(),
-                         SymMapper);
-  });
-  if (auto Err = SymbolInfoOrErr.takeError())
-    return Err;
-
-  return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
-                       *this, std::move(TSM), *SymbolInfoOrErr),
-                   std::move(RT));
-}
-
-IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
-                                             const ManglingOptions &MO,
-                                             ThreadSafeModule TSM)
+IRMaterializationUnit::IRMaterializationUnit(
+    ExecutionSession &ES, const IRSymbolMapper::ManglingOptions &MO,
+    ThreadSafeModule TSM, IRSymbolMapper::SymbolMapperFunction SymMapper)
     : MaterializationUnit(Interface()), TSM(std::move(TSM)) {
 
   assert(this->TSM && "Module must not be null");
 
-  MangleAndInterner Mangle(ES, this->TSM.getModuleUnlocked()->getDataLayout());
-  this->TSM.withModuleDo([&](Module &M) {
-    for (auto &G : M.global_values()) {
-      // Skip globals that don't generate symbols.
+  auto SymbolInfo = TSM.withModuleDo(
+      [&](const Module &M) { return getSymbolInfo(M, ES, MO, SymMapper); });
 
-      if (!G.hasName() || G.isDeclaration() || G.hasLocalLinkage() ||
-          G.hasAvailableExternallyLinkage() || G.hasAppendingLinkage())
-        continue;
+  SymbolFlags = SymbolInfo.Interface.SymbolFlags;
+  InitSymbol = SymbolInfo.Interface.InitSymbol;
 
-      // thread locals generate different symbols depending on whether or not
-      // emulated TLS is enabled.
-      if (G.isThreadLocal() && MO.EmulatedTLS) {
-        auto &GV = cast<GlobalVariable>(G);
-
-        auto Flags = JITSymbolFlags::fromGlobalValue(GV);
-
-        auto EmuTLSV = Mangle(("__emutls_v." + GV.getName()).str());
-        SymbolFlags[EmuTLSV] = Flags;
-        SymbolToDefinition[EmuTLSV] = &GV;
-
-        // If this GV has a non-zero initializer we'll need to emit an
-        // __emutls.t symbol too.
-        if (GV.hasInitializer()) {
-          const auto *InitVal = GV.getInitializer();
-
-          // Skip zero-initializers.
-          if (isa<ConstantAggregateZero>(InitVal))
-            continue;
-          const auto *InitIntValue = dyn_cast<ConstantInt>(InitVal);
-          if (InitIntValue && InitIntValue->isZero())
-            continue;
-
-          auto EmuTLST = Mangle(("__emutls_t." + GV.getName()).str());
-          SymbolFlags[EmuTLST] = Flags;
-        }
-        continue;
-      }
-
-      // Otherwise we just need a normal linker mangling.
-      auto MangledName = Mangle(G.getName());
-      SymbolFlags[MangledName] = JITSymbolFlags::fromGlobalValue(G);
-      if (G.getComdat() &&
-          G.getComdat()->getSelectionKind() != Comdat::NoDeduplicate)
-        SymbolFlags[MangledName] |= JITSymbolFlags::Weak;
-      SymbolToDefinition[MangledName] = &G;
-    }
-
-    // If we need an init symbol for this module then create one.
-    if (!getStaticInitGVs(M).empty()) {
-      size_t Counter = 0;
-
-      do {
-        std::string InitSymbolName;
-        raw_string_ostream(InitSymbolName)
-            << "$." << M.getModuleIdentifier() << ".__inits." << Counter++;
-        InitSymbol = ES.intern(InitSymbolName);
-      } while (SymbolFlags.count(InitSymbol));
-
-      SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
-    }
-  });
+  SymbolToDefinition = SymbolInfo.SymbolToDefinition;
 }
 
 IRMaterializationUnit::IRMaterializationUnit(

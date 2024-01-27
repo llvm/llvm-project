@@ -16,7 +16,6 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ExtensibleRTTI.h"
@@ -35,8 +34,11 @@ public:
 
   /// Create an IRMaterializationLayer. Scans the module to build the
   /// SymbolFlags and SymbolToDefinition maps.
-  IRMaterializationUnit(ExecutionSession &ES, const ManglingOptions &MO,
-                        ThreadSafeModule TSM);
+  IRMaterializationUnit(ExecutionSession &ES,
+                        const IRSymbolMapper::ManglingOptions &MO,
+                        ThreadSafeModule TSM,
+                        IRSymbolMapper::SymbolMapperFunction SymMapper =
+                            IRSymbolMapper::defaultSymbolMapper);
 
   /// Create an IRMaterializationLayer from a module, and pre-existing
   /// SymbolFlags and SymbolToDefinition maps. The maps must provide
@@ -52,6 +54,7 @@ public:
   /// Return a reference to the contained ThreadSafeModule.
   const ThreadSafeModule &getModule() const { return TSM; }
 
+  // Stores Interface and SymbolToDefinitionMap
   struct SymbolInfo {
   public:
     SymbolInfo(MaterializationUnit::Interface I, SymbolNameToDefinitionMap SMap)
@@ -60,6 +63,11 @@ public:
     MaterializationUnit::Interface Interface;
     SymbolNameToDefinitionMap SymbolToDefinition;
   };
+
+  static IRMaterializationUnit::SymbolInfo
+  getSymbolInfo(const Module &M, ExecutionSession &ES,
+                const IRSymbolMapper::ManglingOptions &MO,
+                IRSymbolMapper::SymbolMapperFunction &SymMapper);
 
 protected:
   ThreadSafeModule TSM;
@@ -75,76 +83,8 @@ private:
 /// Interface for layers that accept LLVM IR.
 class IRLayer {
 public:
-  using SymbolNameToDefinitionMap = std::map<SymbolStringPtr, GlobalValue *>;
-  using IRSymbolMapper = unique_function<void(
-      ArrayRef<GlobalValue *> Gvs, ExecutionSession &ES,
-      const ManglingOptions &MO, SymbolFlagsMap &SymbolFlags,
-      SymbolNameToDefinitionMap *SymbolToDef)>;
-
-  /// Add mangled symbols for the given GlobalValues to SymbolFlags.
-  /// If a SymbolToDefinitionMap pointer is supplied then it will be populated
-  /// with Name-to-GlobalValue* mappings. Note that this mapping is not
-  /// necessarily one-to-one: thread-local GlobalValues, for example, may
-  /// produce more than one symbol, in which case the map will contain duplicate
-  /// values.
-  static void
-  defaultSymbolMapper(ArrayRef<GlobalValue *> GVs, ExecutionSession &ES,
-                      const ManglingOptions &MO, SymbolFlagsMap &SymbolFlags,
-                      SymbolNameToDefinitionMap *SymbolToDefinition = nullptr) {
-    if (GVs.empty())
-      return;
-
-    MangleAndInterner Mangle(ES, GVs[0]->getParent()->getDataLayout());
-    for (auto *G : GVs) {
-      assert(G && "GVs cannot contain null elements");
-      // Follow static linkage behaviour to decide which GVs get a named symbol
-      if (!G->hasName() || G->isDeclaration() || G->hasLocalLinkage() ||
-          G->hasAvailableExternallyLinkage() || G->hasAppendingLinkage() ||
-          G->hasLinkOnceODRLinkage())
-        continue;
-
-      if (G->isThreadLocal() && MO.EmulatedTLS) {
-        auto *GV = cast<GlobalVariable>(G);
-
-        auto Flags = JITSymbolFlags::fromGlobalValue(*GV);
-
-        auto EmuTLSV = Mangle(("__emutls_v." + GV->getName()).str());
-        SymbolFlags[EmuTLSV] = Flags;
-        if (SymbolToDefinition)
-          (*SymbolToDefinition)[EmuTLSV] = GV;
-
-        // If this GV has a non-zero initializer we'll need to emit an
-        // __emutls.t symbol too.
-        if (GV->hasInitializer()) {
-          const auto *InitVal = GV->getInitializer();
-
-          // Skip zero-initializers.
-          if (isa<ConstantAggregateZero>(InitVal))
-            continue;
-          const auto *InitIntValue = dyn_cast<ConstantInt>(InitVal);
-          if (InitIntValue && InitIntValue->isZero())
-            continue;
-
-          auto EmuTLST = Mangle(("__emutls_t." + GV->getName()).str());
-          SymbolFlags[EmuTLST] = Flags;
-          if (SymbolToDefinition)
-            (*SymbolToDefinition)[EmuTLST] = GV;
-        }
-        continue;
-      }
-
-      // Otherwise we just need a normal linker mangling.
-      auto MangledName = Mangle(G->getName());
-      SymbolFlags[MangledName] = JITSymbolFlags::fromGlobalValue(*G);
-      if (G->getComdat() &&
-          G->getComdat()->getSelectionKind() != Comdat::NoDeduplicate)
-        SymbolFlags[MangledName] |= JITSymbolFlags::Weak;
-      if (SymbolToDefinition)
-        (*SymbolToDefinition)[MangledName] = G;
-    }
-  }
-
-  IRLayer(ExecutionSession &ES, const ManglingOptions *&MO) : ES(ES), MO(MO) {}
+  IRLayer(ExecutionSession &ES, const IRSymbolMapper::ManglingOptions *&MO)
+      : ES(ES), MO(MO) {}
 
   virtual ~IRLayer();
 
@@ -152,7 +92,9 @@ public:
   ExecutionSession &getExecutionSession() { return ES; }
 
   /// Get the mangling options for this layer.
-  const ManglingOptions *&getManglingOptions() const { return MO; }
+  const IRSymbolMapper::ManglingOptions *&getManglingOptions() const {
+    return MO;
+  }
 
   /// Sets the CloneToNewContextOnEmit flag (false by default).
   ///
@@ -170,14 +112,11 @@ public:
   /// Returns the current value of the CloneToNewContextOnEmit flag.
   bool getCloneToNewContextOnEmit() const { return CloneToNewContextOnEmit; }
 
-  Expected<IRMaterializationUnit::SymbolInfo>
-  getSymbolInfo(const Module &M, ExecutionSession &ES,
-                const ManglingOptions &MO, IRSymbolMapper &SymMapper);
-
   /// Adds a MaterializatinoUnit representing the given IR to the JITDylib
   /// targeted by the given tracker.
   virtual Error add(ResourceTrackerSP RT, ThreadSafeModule TSM,
-                    IRSymbolMapper SymMapper = IRSymbolMapper());
+                    IRSymbolMapper::SymbolMapperFunction SymMapper =
+                        IRSymbolMapper::defaultSymbolMapper);
 
   /// Adds a MaterializationUnit representing the given IR to the given
   /// JITDylib. If RT is not specified, use the default tracker for this Dylib.
@@ -192,7 +131,7 @@ public:
 private:
   bool CloneToNewContextOnEmit = false;
   ExecutionSession &ES;
-  const ManglingOptions *&MO;
+  const IRSymbolMapper::ManglingOptions *&MO;
 };
 
 /// MaterializationUnit that materializes modules by calling the 'emit' method
