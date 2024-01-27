@@ -62,7 +62,6 @@ static bool isImplicitCastType(const clang::CastKind castKind) {
 
 class ExprVisitor : public clang::RecursiveASTVisitor<ExprVisitor> {
 public:
-  explicit ExprVisitor(clang::ASTContext *Context) : Context(Context) {}
   bool visitStmt(const clang::Stmt *S, bool &found,
                  clang::QualType &GlobalImplicitCastType) {
 
@@ -86,9 +85,6 @@ public:
 
     return true; // Continue visiting other nodes.
   }
-
-private:
-  clang::ASTContext *Context;
 };
 
 static const llvm::StringRef AlgorithmHeader("<algorithm>");
@@ -128,7 +124,6 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
 static std::string createReplacement(const BinaryOperator::Opcode Op,
                                      const Expr *CondLhs, const Expr *CondRhs,
                                      const Expr *AssignLhs,
-                                     const ASTContext *Context,
                                      const SourceManager &Source,
                                      const LangOptions &LO,
                                      StringRef FunctionName, const IfStmt *If) {
@@ -147,7 +142,7 @@ static std::string createReplacement(const BinaryOperator::Opcode Op,
        (CondRhs->getType().getCanonicalType()))) {
     IsImplicitCastTypeNeeded = true;
     bool Found = false;
-    ExprVisitor Visitor(const_cast<ASTContext *>(Context));
+    ExprVisitor Visitor;
     Visitor.visitStmt(If, Found, GlobalImplicitCastType);
   }
 
@@ -211,11 +206,6 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceManager &Source = Context.getSourceManager();
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
-  bool Found = false;
-  clang::QualType GlobalImplicitCastType;
-
-  ExprVisitor Visitor(Result.Context);
-  Visitor.visitStmt(If, Found, GlobalImplicitCastType);
 
   // Ignore Macros
   if (IfLocation.isMacroID() || ThenLocation.isMacroID())
@@ -233,7 +223,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
                createReplacement(BinaryOpcode, CondLhs, CondRhs, AssignLhs,
-                                 Result.Context, Source, LO, FunctionName, If))
+                                 Source, LO, FunctionName, If))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };
