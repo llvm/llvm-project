@@ -31,7 +31,6 @@ void foo(T value7) {
   volatile int value9 = 6;
   MyClass obj;
 
-
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value1, value2);
   if (value1 < value2)
