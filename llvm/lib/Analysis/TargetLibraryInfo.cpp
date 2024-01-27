@@ -564,6 +564,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     //
     TLI.setAvailableWithName(LibFunc_exp10, "__exp10");
     TLI.setAvailableWithName(LibFunc_exp10f, "__exp10f");
+    TLI.setAvailableWithName(LibFunc_exp10l, "__exp10l");
     break;
   }
 
