@@ -385,6 +385,12 @@ public:
   void VisitDecltypeType(const DecltypeType *T) {
     Visit(T->getUnderlyingExpr());
   }
+
+  void VisitPackIndexingType(const PackIndexingType *T) {
+    Visit(T->getPattern());
+    Visit(T->getIndexExpr());
+  }
+
   void VisitUnaryTransformType(const UnaryTransformType *T) {
     Visit(T->getBaseType());
   }
