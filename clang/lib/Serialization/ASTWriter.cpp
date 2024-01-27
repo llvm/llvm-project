@@ -482,6 +482,10 @@ void ASTRecordWriter::AddConceptReference(const ConceptReference *CR) {
     AddASTTemplateArgumentListInfo(CR->getTemplateArgsAsWritten());
 }
 
+void TypeLocWriter::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+  addSourceLocation(TL.getEllipsisLoc());
+}
+
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
   auto *CR = TL.getConceptReference();
@@ -784,6 +788,7 @@ static void AddStmtsExprs(llvm::BitstreamWriter &Stream,
   RECORD(EXPR_ARRAY_TYPE_TRAIT);
   RECORD(EXPR_PACK_EXPANSION);
   RECORD(EXPR_SIZEOF_PACK);
+  RECORD(EXPR_PACK_INDEXING);
   RECORD(EXPR_SUBST_NON_TYPE_TEMPLATE_PARM);
   RECORD(EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK);
   RECORD(EXPR_FUNCTION_PARM_PACK);

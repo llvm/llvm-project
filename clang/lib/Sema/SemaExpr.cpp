@@ -4715,6 +4715,9 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::Decltype:
       T = cast<DecltypeType>(Ty)->desugar();
       break;
+    case Type::PackIndexing:
+      T = cast<PackIndexingType>(Ty)->desugar();
+      break;
     case Type::Using:
       T = cast<UsingType>(Ty)->desugar();
       break;

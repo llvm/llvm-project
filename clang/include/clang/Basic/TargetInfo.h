@@ -704,8 +704,10 @@ public:
   }
 
   /// getMinGlobalAlign - Return the minimum alignment of a global variable,
-  /// unless its alignment is explicitly reduced via attributes.
-  virtual unsigned getMinGlobalAlign (uint64_t) const {
+  /// unless its alignment is explicitly reduced via attributes. If \param
+  /// HasNonWeakDef is true, this concerns a VarDecl which has a definition
+  /// in current translation unit and that is not weak.
+  virtual unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const {
     return MinGlobalAlign;
   }
 

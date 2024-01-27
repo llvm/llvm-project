@@ -1363,6 +1363,17 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   };
   switch (Tok.getKind()) {
   case tok::identifier: {
+    if (GetLookAheadToken(1).is(tok::ellipsis) &&
+        GetLookAheadToken(2).is(tok::l_square)) {
+
+      if (TryAnnotateTypeOrScopeToken())
+        return TPResult::Error;
+      if (Tok.is(tok::identifier))
+        return TPResult::False;
+      return isCXXDeclarationSpecifier(ImplicitTypenameContext::No,
+                                       BracedCastResult, InvalidAsDeclSpec);
+    }
+
     // Check for need to substitute AltiVec __vector keyword
     // for "vector" identifier.
     if (TryAltiVecVectorToken())
@@ -1755,6 +1766,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 
       return TPResult::True;
     }
+
     [[fallthrough]];
 
   case tok::kw_char:
@@ -1782,6 +1794,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw__Accum:
   case tok::kw__Fract:
   case tok::kw__Sat:
+  case tok::annot_pack_indexing_type:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
     if (NextToken().is(tok::l_paren))
@@ -1860,6 +1873,7 @@ bool Parser::isCXXDeclarationSpecifierAType() {
   switch (Tok.getKind()) {
     // typename-specifier
   case tok::annot_decltype:
+  case tok::annot_pack_indexing_type:
   case tok::annot_template_id:
   case tok::annot_typename:
   case tok::kw_typeof:

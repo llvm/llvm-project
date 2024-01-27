@@ -374,6 +374,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_void:
     case TST_wchar:
     case TST_BFloat16:
+    case TST_typename_pack_indexing:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
       return false;
@@ -585,6 +586,8 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_struct:      return "struct";
   case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
+  case DeclSpec::TST_typename_pack_indexing:
+    return "type-name-pack-indexing";
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_typeof_unqualType:
@@ -775,6 +778,15 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   TSTLoc = TagKwLoc;
   TSTNameLoc = TagNameLoc;
   TypeSpecOwned = false;
+
+  if (T == TST_typename_pack_indexing) {
+    // we got there from a an annotation. Reconstruct the type
+    // Ugly...
+    QualType QT = Rep.get();
+    const PackIndexingType *LIT = cast<PackIndexingType>(QT);
+    TypeRep = ParsedType::make(LIT->getPattern());
+    PackIndexingExpr = LIT->getIndexExpr();
+  }
   return false;
 }
 
@@ -971,6 +983,15 @@ bool DeclSpec::SetBitIntType(SourceLocation KWLoc, Expr *BitsExpr,
   TSTNameLoc = KWLoc;
   TypeSpecOwned = false;
   return false;
+}
+
+void DeclSpec::SetPackIndexingExpr(SourceLocation EllipsisLoc,
+                                   Expr *IndexingExpr) {
+  assert(TypeSpecType == TST_typename &&
+         "pack indexing can only be applied to typename");
+  TypeSpecType = TST_typename_pack_indexing;
+  PackIndexingExpr = IndexingExpr;
+  this->EllipsisLoc = EllipsisLoc;
 }
 
 bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,

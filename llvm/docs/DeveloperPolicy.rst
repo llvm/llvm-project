@@ -104,6 +104,7 @@ When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
 
+
 .. _code review:
 
 Code Reviews
@@ -633,6 +634,24 @@ author and the committer like git does. As such, older commits used a different
 attribution mechanism. The previous method was to include "Patch by John Doe."
 in a separate line of the commit message and there are automated processes that
 rely on this format.
+
+Bans
+----
+
+The goal of a ban is to protect people in the community from having to interact
+with people who are consistently not respecting the
+:ref:`LLVM Community Code of Conduct` in LLVM project spaces. Contributions of
+any variety (pull requests, issue reports, forum posts, etc.) require
+interacting with the community. Therefore, we do not accept any form of direct
+contribution from a banned individual.
+
+Indirect contributions are permissible only by someone taking full ownership of
+such a contribution and they are responsible for all related interactions with
+the community regarding that contribution.
+
+When in doubt how to act in a specific instance, please reach out to
+conduct@llvm.org for advice.
+
 
 .. _IR backwards compatibility:
 

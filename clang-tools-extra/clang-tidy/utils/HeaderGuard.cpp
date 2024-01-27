@@ -19,7 +19,7 @@ namespace clang::tidy::utils {
 static std::string cleanPath(StringRef Path) {
   SmallString<256> Result = Path;
   llvm::sys::path::remove_dots(Result, true);
-  return std::string(Result.str());
+  return std::string(Result);
 }
 
 namespace {

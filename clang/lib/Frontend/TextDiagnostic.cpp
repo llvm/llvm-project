@@ -12,6 +12,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -40,6 +41,14 @@ static const enum raw_ostream::Colors fatalColor = raw_ostream::RED;
 // Used for changing only the bold attribute.
 static const enum raw_ostream::Colors savedColor =
   raw_ostream::SAVEDCOLOR;
+
+// Magenta is taken for 'warning'. Red is already 'error' and 'cyan'
+// is already taken for 'note'. Green is already used to underline
+// source ranges. White and black are bad because of the usual
+// terminal backgrounds. Which leaves us only with TWO options.
+static constexpr raw_ostream::Colors CommentColor = raw_ostream::YELLOW;
+static constexpr raw_ostream::Colors LiteralColor = raw_ostream::GREEN;
+static constexpr raw_ostream::Colors KeywordColor = raw_ostream::BLUE;
 
 /// Add highlights to differences in template strings.
 static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
@@ -644,10 +653,10 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
   return Wrapped;
 }
 
-TextDiagnostic::TextDiagnostic(raw_ostream &OS,
-                               const LangOptions &LangOpts,
-                               DiagnosticOptions *DiagOpts)
-  : DiagnosticRenderer(LangOpts, DiagOpts), OS(OS) {}
+TextDiagnostic::TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
+                               DiagnosticOptions *DiagOpts,
+                               const Preprocessor *PP)
+    : DiagnosticRenderer(LangOpts, DiagOpts), OS(OS), PP(PP) {}
 
 TextDiagnostic::~TextDiagnostic() {}
 
@@ -1112,6 +1121,162 @@ prepareAndFilterRanges(const SmallVectorImpl<CharSourceRange> &Ranges,
   return LineRanges;
 }
 
+/// Creates syntax highlighting information in form of StyleRanges.
+///
+/// The returned unique ptr has always exactly size
+/// (\p EndLineNumber - \p StartLineNumber + 1). Each SmallVector in there
+/// corresponds to syntax highlighting information in one line. In each line,
+/// the StyleRanges are non-overlapping and sorted from start to end of the
+/// line.
+static std::unique_ptr<llvm::SmallVector<TextDiagnostic::StyleRange>[]>
+highlightLines(StringRef FileData, unsigned StartLineNumber,
+               unsigned EndLineNumber, const Preprocessor *PP,
+               const LangOptions &LangOpts, bool ShowColors, FileID FID,
+               const SourceManager &SM) {
+  assert(StartLineNumber <= EndLineNumber);
+  auto SnippetRanges =
+      std::make_unique<SmallVector<TextDiagnostic::StyleRange>[]>(
+          EndLineNumber - StartLineNumber + 1);
+
+  if (!PP || !ShowColors)
+    return SnippetRanges;
+
+  // Might cause emission of another diagnostic.
+  if (PP->getIdentifierTable().getExternalIdentifierLookup())
+    return SnippetRanges;
+
+  auto Buff = llvm::MemoryBuffer::getMemBuffer(FileData);
+  Lexer L{FID, *Buff, SM, LangOpts};
+  L.SetKeepWhitespaceMode(true);
+
+  const char *FirstLineStart =
+      FileData.data() +
+      SM.getDecomposedLoc(SM.translateLineCol(FID, StartLineNumber, 1)).second;
+  if (const char *CheckPoint = PP->getCheckPoint(FID, FirstLineStart)) {
+    assert(CheckPoint >= Buff->getBufferStart() &&
+           CheckPoint <= Buff->getBufferEnd());
+    assert(CheckPoint <= FirstLineStart);
+    size_t Offset = CheckPoint - Buff->getBufferStart();
+    L.seek(Offset, /*IsAtStartOfLine=*/false);
+  }
+
+  // Classify the given token and append it to the given vector.
+  auto appendStyle =
+      [PP, &LangOpts](SmallVector<TextDiagnostic::StyleRange> &Vec,
+                      const Token &T, unsigned Start, unsigned Length) -> void {
+    if (T.is(tok::raw_identifier)) {
+      StringRef RawIdent = T.getRawIdentifier();
+      // Special case true/false/nullptr/... literals, since they will otherwise
+      // be treated as keywords.
+      // FIXME: It would be good to have a programmatic way of getting this
+      // list.
+      if (llvm::StringSwitch<bool>(RawIdent)
+              .Case("true", true)
+              .Case("false", true)
+              .Case("nullptr", true)
+              .Case("__func__", true)
+              .Case("__objc_yes__", true)
+              .Case("__objc_no__", true)
+              .Case("__null", true)
+              .Case("__FUNCDNAME__", true)
+              .Case("__FUNCSIG__", true)
+              .Case("__FUNCTION__", true)
+              .Case("__FUNCSIG__", true)
+              .Default(false)) {
+        Vec.emplace_back(Start, Start + Length, LiteralColor);
+      } else {
+        const IdentifierInfo *II = PP->getIdentifierInfo(RawIdent);
+        assert(II);
+        if (II->isKeyword(LangOpts))
+          Vec.emplace_back(Start, Start + Length, KeywordColor);
+      }
+    } else if (tok::isLiteral(T.getKind())) {
+      Vec.emplace_back(Start, Start + Length, LiteralColor);
+    } else {
+      assert(T.is(tok::comment));
+      Vec.emplace_back(Start, Start + Length, CommentColor);
+    }
+  };
+
+  bool Stop = false;
+  while (!Stop) {
+    Token T;
+    Stop = L.LexFromRawLexer(T);
+    if (T.is(tok::unknown))
+      continue;
+
+    // We are only interested in identifiers, literals and comments.
+    if (!T.is(tok::raw_identifier) && !T.is(tok::comment) &&
+        !tok::isLiteral(T.getKind()))
+      continue;
+
+    bool Invalid = false;
+    unsigned TokenEndLine = SM.getSpellingLineNumber(T.getEndLoc(), &Invalid);
+    if (Invalid || TokenEndLine < StartLineNumber)
+      continue;
+
+    assert(TokenEndLine >= StartLineNumber);
+
+    unsigned TokenStartLine =
+        SM.getSpellingLineNumber(T.getLocation(), &Invalid);
+    if (Invalid)
+      continue;
+    // If this happens, we're done.
+    if (TokenStartLine > EndLineNumber)
+      break;
+
+    unsigned StartCol =
+        SM.getSpellingColumnNumber(T.getLocation(), &Invalid) - 1;
+    if (Invalid)
+      continue;
+
+    // Simple tokens.
+    if (TokenStartLine == TokenEndLine) {
+      SmallVector<TextDiagnostic::StyleRange> &LineRanges =
+          SnippetRanges[TokenStartLine - StartLineNumber];
+      appendStyle(LineRanges, T, StartCol, T.getLength());
+      continue;
+    }
+    assert((TokenEndLine - TokenStartLine) >= 1);
+
+    // For tokens that span multiple lines (think multiline comments), we
+    // divide them into multiple StyleRanges.
+    unsigned EndCol = SM.getSpellingColumnNumber(T.getEndLoc(), &Invalid) - 1;
+    if (Invalid)
+      continue;
+
+    std::string Spelling = Lexer::getSpelling(T, SM, LangOpts);
+
+    unsigned L = TokenStartLine;
+    unsigned LineLength = 0;
+    for (unsigned I = 0; I <= Spelling.size(); ++I) {
+      // This line is done.
+      if (isVerticalWhitespace(Spelling[I]) || I == Spelling.size()) {
+        SmallVector<TextDiagnostic::StyleRange> &LineRanges =
+            SnippetRanges[L - StartLineNumber];
+
+        if (L >= StartLineNumber) {
+          if (L == TokenStartLine) // First line
+            appendStyle(LineRanges, T, StartCol, LineLength);
+          else if (L == TokenEndLine) // Last line
+            appendStyle(LineRanges, T, 0, EndCol);
+          else
+            appendStyle(LineRanges, T, 0, LineLength);
+        }
+
+        ++L;
+        if (L > EndLineNumber)
+          break;
+        LineLength = 0;
+        continue;
+      }
+      ++LineLength;
+    }
+  }
+
+  return SnippetRanges;
+}
+
 /// Emit a code snippet and caret line.
 ///
 /// This routine emits a single line's code snippet and caret line..
@@ -1181,6 +1346,12 @@ void TextDiagnostic::emitSnippetAndCaret(
       OS.indent(MaxLineNoDisplayWidth + 2) << "| ";
   };
 
+  // Prepare source highlighting information for the lines we're about to
+  // emit, starting from the first line.
+  std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
+      highlightLines(BufStart, Lines.first, Lines.second, PP, LangOpts,
+                     DiagOpts->ShowColors, FID, SM);
+
   SmallVector<LineRange> LineRanges =
       prepareAndFilterRanges(Ranges, SM, Lines, FID, LangOpts);
 
@@ -1247,7 +1418,8 @@ void TextDiagnostic::emitSnippetAndCaret(
     }
 
     // Emit what we have computed.
-    emitSnippet(SourceLine, MaxLineNoDisplayWidth, DisplayLineNo);
+    emitSnippet(SourceLine, MaxLineNoDisplayWidth, LineNo, DisplayLineNo,
+                SourceStyles[LineNo - Lines.first]);
 
     if (!CaretLine.empty()) {
       indentForLineNumbers();
@@ -1277,16 +1449,18 @@ void TextDiagnostic::emitSnippetAndCaret(
 
 void TextDiagnostic::emitSnippet(StringRef SourceLine,
                                  unsigned MaxLineNoDisplayWidth,
-                                 unsigned LineNo) {
+                                 unsigned LineNo, unsigned DisplayLineNo,
+                                 ArrayRef<StyleRange> Styles) {
   // Emit line number.
   if (MaxLineNoDisplayWidth > 0) {
-    unsigned LineNoDisplayWidth = getNumDisplayWidth(LineNo);
+    unsigned LineNoDisplayWidth = getNumDisplayWidth(DisplayLineNo);
     OS.indent(MaxLineNoDisplayWidth - LineNoDisplayWidth + 1)
-        << LineNo << " | ";
+        << DisplayLineNo << " | ";
   }
 
   // Print the source line one character at a time.
   bool PrintReversed = false;
+  std::optional<llvm::raw_ostream::Colors> CurrentColor;
   size_t I = 0;
   while (I < SourceLine.size()) {
     auto [Str, WasPrintable] =
@@ -1298,10 +1472,29 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
         PrintReversed = !PrintReversed;
         if (PrintReversed)
           OS.reverseColor();
-        else
+        else {
           OS.resetColor();
+          CurrentColor = std::nullopt;
+        }
+      }
+
+      // Apply syntax highlighting information.
+      const auto *CharStyle = llvm::find_if(Styles, [I](const StyleRange &R) {
+        return (R.Start < I && R.End >= I);
+      });
+
+      if (CharStyle != Styles.end()) {
+        if (!CurrentColor ||
+            (CurrentColor && *CurrentColor != CharStyle->Color)) {
+          OS.changeColor(CharStyle->Color, false);
+          CurrentColor = CharStyle->Color;
+        }
+      } else if (CurrentColor) {
+        OS.resetColor();
+        CurrentColor = std::nullopt;
       }
     }
+
     OS << Str;
   }
 

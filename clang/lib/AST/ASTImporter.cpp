@@ -1369,6 +1369,18 @@ ExpectedType ASTNodeImporter::VisitParenType(const ParenType *T) {
   return Importer.getToContext().getParenType(*ToInnerTypeOrErr);
 }
 
+ExpectedType
+ASTNodeImporter::VisitPackIndexingType(clang::PackIndexingType const *T) {
+
+  ExpectedType Pattern = import(T->getPattern());
+  if (!Pattern)
+    return Pattern.takeError();
+  ExpectedExpr Index = import(T->getIndexExpr());
+  if (!Index)
+    return Index.takeError();
+  return Importer.getToContext().getPackIndexingType(*Pattern, *Index);
+}
+
 ExpectedType ASTNodeImporter::VisitTypedefType(const TypedefType *T) {
   Expected<TypedefNameDecl *> ToDeclOrErr = import(T->getDecl());
   if (!ToDeclOrErr)

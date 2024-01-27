@@ -132,14 +132,19 @@ endfunction(get_fq_dep_list_without_flag)
 # Special flags
 set(FMA_OPT_FLAG "FMA_OPT")
 set(ROUND_OPT_FLAG "ROUND_OPT")
-# This flag will define macros that gated away vectorization code such that
-# one can always test the fallback generic code path.
-set(PREFER_GENERIC_FLAG "PREFER_GENERIC")
+# This flag controls whether we use explicit SIMD instructions or not.
+set(EXPLICIT_SIMD_OPT_FLAG "EXPLICIT_SIMD_OPT")
 
 # Skip FMA_OPT flag for targets that don't support fma.
 if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
        LIBC_TARGET_ARCHITECTURE_IS_RISCV64))
   set(SKIP_FLAG_EXPANSION_FMA_OPT TRUE)
+endif()
+
+# Skip EXPLICIT_SIMD_OPT flag for targets that don't support SSE2.
+# Note: one may want to revisit it if they want to control other explicit SIMD
+if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE2")))
+  set(SKIP_FLAG_EXPANSION_EXPLICIT_SIMD_OPT TRUE)
 endif()
 
 # Skip ROUND_OPT flag for targets that don't support SSE 4.2.

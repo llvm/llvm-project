@@ -1992,7 +1992,8 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
-          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto)) &&
+          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto) ||
+          Tok.is(tok::annot_pack_indexing_type)) &&
          "Cannot be a type or scope token!");
 
   if (Tok.is(tok::kw_typename)) {

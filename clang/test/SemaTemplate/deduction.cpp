@@ -13,6 +13,17 @@ struct X0<int, A> {
   static const unsigned value = 1;
 };
 
+template<class T>
+struct type_identity {
+    using type = T;
+};
+
+template<class T>
+using type_identity_t = typename type_identity<T>::type;
+
+template <typename... T>
+struct args_tag {};
+
 template<int> struct X0i;
 template<long> struct X0l;
 int array_x0a[X0<long, X0l>::value == 0? 1 : -1];
@@ -429,6 +440,29 @@ namespace deduction_after_explicit_pack {
     i<>(0, 1, 2); // expected-error {{no match}}
     i<int, int>(0, 1, 2, 3, 4);
     i<int, int>(0, 1, 2, 3, 4, 5); // expected-error {{no match}}
+  }
+
+  template <typename... T>
+  void bar(args_tag<T...>, type_identity_t<T>..., int mid, type_identity_t<T>...) {}
+  void call_bar() {
+    bar(args_tag<int, int>{}, 4, 8, 1001, 16, 23);
+  }
+
+  template <typename... Y, typename... T>
+  void foo(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., int mid, type_identity_t<T>...) {}
+  void call_foo() {
+    foo(args_tag<const int,const int, const int>{}, args_tag<int, int, int>{}, 4, 8, 9, 15, 16, 23, 1);
+  }
+
+  template <typename... Y, typename... T>
+  void foo2(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., type_identity_t<T>...) {}
+  void call_foo2() {
+    foo2(args_tag<const int,const int, const int>{}, args_tag<int, int, int>{}, 4, 8, 9, 15, 16, 23);
+  }
+
+  template <typename... Y, typename... T> void baz(args_tag<T...>, T..., T...) {}
+  void call_baz() {
+    baz(args_tag<int, int>{}, 1, 2, 3, 4);
   }
 
   // GCC alarmingly accepts this by deducing T={int} by matching the second

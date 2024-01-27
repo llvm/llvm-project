@@ -263,15 +263,6 @@ private:
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
 
-  /// Returns the CXXRecordDecl for the type of the given expression,
-  /// or nullptr if no such decl exists.
-  const CXXRecordDecl *getRecordDecl(const Expr *E) const {
-    QualType T = E->getType();
-    if (const auto *RD = T->getPointeeCXXRecordDecl())
-      return RD;
-    return T->getAsCXXRecordDecl();
-  }
-
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
 
