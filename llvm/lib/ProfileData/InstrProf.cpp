@@ -1308,11 +1308,11 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
   return MD;
 }
 
-static bool getValueProfDataFromInst(const MDNode *const MD,
-                                     const uint32_t MaxNumDataWant,
-                                     InstrProfValueData ValueData[],
-                                     uint32_t &ActualNumValueData,
-                                     uint64_t &TotalC, bool GetNoICPValue) {
+static bool getValueProfDataFromInstImpl(const MDNode *const MD,
+                                         const uint32_t MaxNumDataWant,
+                                         InstrProfValueData ValueData[],
+                                         uint32_t &ActualNumValueData,
+                                         uint64_t &TotalC, bool GetNoICPValue) {
   const unsigned NOps = MD->getNumOperands();
   // Get total count
   ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
@@ -1339,7 +1339,6 @@ static bool getValueProfDataFromInst(const MDNode *const MD,
   return true;
 }
 
-
 std::unique_ptr<InstrProfValueData[]>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
@@ -1348,8 +1347,8 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
   if (!MD)
     return nullptr;
   auto ValueDataArray = std::make_unique<InstrProfValueData[]>(MaxNumValueData);
-  if (!getValueProfDataFromInst(MD, MaxNumValueData, ValueDataArray.get(),
-                                ActualNumValueData, TotalC, GetNoICPValue))
+  if (!getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueDataArray.get(),
+                                    ActualNumValueData, TotalC, GetNoICPValue))
     return nullptr;
   return ValueDataArray;
 }
@@ -1365,8 +1364,9 @@ bool getValueProfDataFromInst(const Instruction &Inst,
   MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
   if (!MD)
     return false;
-  return getValueProfDataFromInst(MD, MaxNumValueData, ValueData,
-                                  ActualNumValueData, TotalC, GetNoICPValue);
+  return getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueData,
+                                      ActualNumValueData, TotalC,
+                                      GetNoICPValue);
 }
 
 MDNode *getPGOFuncNameMetadata(const Function &F) {
