@@ -82,7 +82,7 @@ completely separate as modern LLVM bitcode evolves.
 Testing
 =======
 
-A lot of DXIL testing can be one with typical IR to IR tests using
+A lot of DXIL testing can be done with typical IR to IR tests using
 `opt` and `FileCheck`, since a lot of the support is implemented in
 terms of IR level passes as described in the previous sections. You
 can see examples of this in `llvm/test/CodeGen/DirectX` as well as
