@@ -13204,27 +13204,25 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
       E = Checker.getE();
       D = Checker.getD();
       CE = Checker.getCond();
-      /* The weak clause may only appear if the resulting atomic operation is
-       * an atomic conditional update for which the comparison tests for
-       * equality.
-       * It was not possible to do this check in
-       * OpenMPAtomicCompareChecker::checkStmt() as the check for OMPC_weak
-       * could not be performed (Clauses are not available).
-       */
-      for (OMPClause *C : Clauses) {
-        if (C->getClauseKind() == llvm::omp::Clause::OMPC_weak) {
-          auto *Cond = dyn_cast<BinaryOperator>(CE);
-          if (Cond->getOpcode() != BO_EQ) {
+      // The weak clause may only appear if the resulting atomic operation is
+      // an atomic conditional update for which the comparison tests for
+      // equality. It was not possible to do this check in
+      // OpenMPAtomicCompareChecker::checkStmt() as the check for OMPC_weak
+      // could not be performed (Clauses are not available).
+      auto *It = find_if(Clauses, [](OMPClause *C) {
+        return C->getClauseKind() == llvm::omp::Clause::OMPC_weak;
+      });
+      if (It != Clauses.end()) {
+        auto *Cond = dyn_cast<BinaryOperator>(CE);
+        if (Cond->getOpcode() != BO_EQ) {
+          ErrorInfo.Error = Checker.ErrorTy::NotAnAssignment;
+          ErrorInfo.ErrorLoc = Cond->getExprLoc();
+          ErrorInfo.NoteLoc = Cond->getOperatorLoc();
+          ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
 
-            ErrorInfo.Error = Checker.ErrorTy::NotAnAssignment;
-            ErrorInfo.ErrorLoc = Cond->getExprLoc();
-            ErrorInfo.NoteLoc = Cond->getOperatorLoc();
-            ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
-
-            Diag(ErrorInfo.ErrorLoc, diag::err_omp_atomic_weak_no_equality)
-                << ErrorInfo.ErrorRange;
-            return StmtError();
-          }
+          Diag(ErrorInfo.ErrorLoc, diag::err_omp_atomic_weak_no_equality)
+              << ErrorInfo.ErrorRange;
+          return StmtError();
         }
       }
       // We reuse IsXLHSInRHSPart to tell if it is in the form 'x ordop expr'.
