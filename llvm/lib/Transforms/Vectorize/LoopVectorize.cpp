@@ -1298,11 +1298,9 @@ public:
   bool isProfitableToScalarize(Instruction *I, ElementCount VF) const {
     assert(VF.isVector() &&
            "Profitable to scalarize relevant only for VF > 1.");
-
-    // Cost model is not run in the VPlan-native path - return conservative
-    // result until this changes.
-    if (EnableVPlanNativePath)
-      return false;
+    assert(
+        TheLoop->isInnermost() &&
+        "cost-model should not be used for outer loops (in VPlan-native path)");
 
     auto Scalars = InstsToScalarize.find(VF);
     assert(Scalars != InstsToScalarize.end() &&
@@ -1312,6 +1310,9 @@ public:
 
   /// Returns true if \p I is known to be uniform after vectorization.
   bool isUniformAfterVectorization(Instruction *I, ElementCount VF) const {
+    assert(
+        TheLoop->isInnermost() &&
+        "cost-model should not be used for outer loops (in VPlan-native path)");
     // Pseudo probe needs to be duplicated for each unrolled iteration and
     // vector lane so that profiled loop trip count can be accurately
     // accumulated instead of being under counted.
@@ -1321,11 +1322,6 @@ public:
     if (VF.isScalar())
       return true;
 
-    // Cost model is not run in the VPlan-native path - return conservative
-    // result until this changes.
-    if (EnableVPlanNativePath)
-      return false;
-
     auto UniformsPerVF = Uniforms.find(VF);
     assert(UniformsPerVF != Uniforms.end() &&
            "VF not yet analyzed for uniformity");
@@ -1334,13 +1330,11 @@ public:
 
   /// Returns true if \p I is known to be scalar after vectorization.
   bool isScalarAfterVectorization(Instruction *I, ElementCount VF) const {
+    assert(
+        TheLoop->isInnermost() &&
+        "cost-model should not be used for outer loops (in VPlan-native path)");
     if (VF.isScalar())
       return true;
-
-    // Cost model is not run in the VPlan-native path - return conservative
-    // result until this changes.
-    if (EnableVPlanNativePath)
-      return false;
 
     auto ScalarsPerVF = Scalars.find(VF);
     assert(ScalarsPerVF != Scalars.end() &&
@@ -1399,10 +1393,9 @@ public:
   /// through the cost modeling.
   InstWidening getWideningDecision(Instruction *I, ElementCount VF) const {
     assert(VF.isVector() && "Expected VF to be a vector VF");
-    // Cost model is not run in the VPlan-native path - return conservative
-    // result until this changes.
-    if (EnableVPlanNativePath)
-      return CM_GatherScatter;
+    assert(
+        TheLoop->isInnermost() &&
+        "cost-model should not be used for outer loops (in VPlan-native path)");
 
     std::pair<Instruction *, ElementCount> InstOnVF = std::make_pair(I, VF);
     auto Itr = WideningDecisions.find(InstOnVF);
@@ -1957,6 +1950,8 @@ class GeneratedRTChecks {
   bool CostTooHigh = false;
   const bool AddBranchWeights;
 
+  Loop *OuterLoop = nullptr;
+
 public:
   GeneratedRTChecks(ScalarEvolution &SE, DominatorTree *DT, LoopInfo *LI,
                     TargetTransformInfo *TTI, const DataLayout &DL,
@@ -2053,6 +2048,9 @@ public:
       DT->eraseNode(SCEVCheckBlock);
       LI->removeBlock(SCEVCheckBlock);
     }
+
+    // Outer loop is used as part of the later cost calculations.
+    OuterLoop = L->getParentLoop();
   }
 
   InstructionCost getCost() {
@@ -2076,15 +2074,60 @@ public:
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
         RTCheckCost += C;
       }
-    if (MemCheckBlock)
+    if (MemCheckBlock) {
+      InstructionCost MemCheckCost = 0;
       for (Instruction &I : *MemCheckBlock) {
         if (MemCheckBlock->getTerminator() == &I)
           continue;
         InstructionCost C =
             TTI->getInstructionCost(&I, TTI::TCK_RecipThroughput);
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
-        RTCheckCost += C;
+        MemCheckCost += C;
       }
+
+      // If the runtime memory checks are being created inside an outer loop
+      // we should find out if these checks are outer loop invariant. If so,
+      // the checks will likely be hoisted out and so the effective cost will
+      // reduce according to the outer loop trip count.
+      if (OuterLoop) {
+        ScalarEvolution *SE = MemCheckExp.getSE();
+        // TODO: If profitable, we could refine this further by analysing every
+        // individual memory check, since there could be a mixture of loop
+        // variant and invariant checks that mean the final condition is
+        // variant.
+        const SCEV *Cond = SE->getSCEV(MemRuntimeCheckCond);
+        if (SE->isLoopInvariant(Cond, OuterLoop)) {
+          // It seems reasonable to assume that we can reduce the effective
+          // cost of the checks even when we know nothing about the trip
+          // count. Assume that the outer loop executes at least twice.
+          unsigned BestTripCount = 2;
+
+          // If exact trip count is known use that.
+          if (unsigned SmallTC = SE->getSmallConstantTripCount(OuterLoop))
+            BestTripCount = SmallTC;
+          else if (LoopVectorizeWithBlockFrequency) {
+            // Else use profile data if available.
+            if (auto EstimatedTC = getLoopEstimatedTripCount(OuterLoop))
+              BestTripCount = *EstimatedTC;
+          }
+
+          InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
+
+          // Let's ensure the cost is always at least 1.
+          NewMemCheckCost = std::max(*NewMemCheckCost.getValue(),
+                                     (InstructionCost::CostType)1);
+
+          LLVM_DEBUG(dbgs()
+                     << "We expect runtime memory checks to be hoisted "
+                     << "out of the outer loop. Cost reduced from "
+                     << MemCheckCost << " to " << NewMemCheckCost << '\n');
+
+          MemCheckCost = NewMemCheckCost;
+        }
+      }
+
+      RTCheckCost += MemCheckCost;
+    }
 
     if (SCEVCheckBlock || MemCheckBlock)
       LLVM_DEBUG(dbgs() << "Total cost of runtime checks: " << RTCheckCost
@@ -2144,8 +2187,8 @@ public:
 
     BranchInst::Create(LoopVectorPreHeader, SCEVCheckBlock);
     // Create new preheader for vector loop.
-    if (auto *PL = LI->getLoopFor(LoopVectorPreHeader))
-      PL->addBasicBlockToLoop(SCEVCheckBlock, *LI);
+    if (OuterLoop)
+      OuterLoop->addBasicBlockToLoop(SCEVCheckBlock, *LI);
 
     SCEVCheckBlock->getTerminator()->eraseFromParent();
     SCEVCheckBlock->moveBefore(LoopVectorPreHeader);
@@ -2179,8 +2222,8 @@ public:
     DT->changeImmediateDominator(LoopVectorPreHeader, MemCheckBlock);
     MemCheckBlock->moveBefore(LoopVectorPreHeader);
 
-    if (auto *PL = LI->getLoopFor(LoopVectorPreHeader))
-      PL->addBasicBlockToLoop(MemCheckBlock, *LI);
+    if (OuterLoop)
+      OuterLoop->addBasicBlockToLoop(MemCheckBlock, *LI);
 
     BranchInst &BI =
         *BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheckCond);
@@ -9284,12 +9327,6 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
       State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
       Kind, cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName("offset.idx");
-  if (TruncResultTy) {
-    assert(TruncResultTy != DerivedIV->getType() &&
-           Step->getType()->isIntegerTy() &&
-           "Truncation requires an integer step");
-    DerivedIV = State.Builder.CreateTrunc(DerivedIV, TruncResultTy);
-  }
   assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
 
   State.set(this, DerivedIV, VPIteration(0, 0));
@@ -10104,9 +10141,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
-        VPlan &BestMainPlan = LVP.getBestPlanFor(EPI.MainLoopVF);
+        std::unique_ptr<VPlan> BestMainPlan(
+            LVP.getBestPlanFor(EPI.MainLoopVF).duplicate());
         const auto &[ExpandedSCEVs, ReductionResumeValues] = LVP.executePlan(
-            EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV, DT, true);
+            EPI.MainLoopVF, EPI.MainLoopUF, *BestMainPlan, MainILV, DT, true);
         ++LoopsVectorized;
 
         // Second pass vectorizes the epilogue and adjusts the control flow

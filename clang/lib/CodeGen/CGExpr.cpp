@@ -1675,6 +1675,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitCoawaitLValue(cast<CoawaitExpr>(E));
   case Expr::CoyieldExprClass:
     return EmitCoyieldLValue(cast<CoyieldExpr>(E));
+  case Expr::PackIndexingExprClass:
+    return EmitLValue(cast<PackIndexingExpr>(E)->getSelectedExpr());
   }
 }
 
@@ -3805,7 +3807,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   // If we're optimizing, collapse all calls to trap down to just one per
   // check-type per function to save on code size.
-  if (TrapBBs.size() <= CheckHandlerID)
+  if ((int)TrapBBs.size() <= CheckHandlerID)
     TrapBBs.resize(CheckHandlerID + 1);
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];

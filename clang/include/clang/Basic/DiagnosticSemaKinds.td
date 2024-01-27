@@ -5721,8 +5721,17 @@ def err_function_parameter_pack_without_parameter_packs : Error<
 def err_ellipsis_in_declarator_not_parameter : Error<
   "only function and template parameters can be parameter packs">;
 
-def err_sizeof_pack_no_pack_name : Error<
+def err_expected_name_of_pack : Error<
   "%0 does not refer to the name of a parameter pack">;
+
+def err_pack_index_out_of_bound : Error<
+  "invalid index %0 for pack %1 of size %2">;
+
+def ext_pack_indexing : ExtWarn<
+  "pack indexing is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_pack_indexing : Warning<
+  "pack indexing is incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
 
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
@@ -12111,6 +12120,9 @@ def note_unsafe_buffer_variable_fixit_together : Note<
   "%select{|, and change %2 to safe types to make function %4 bounds-safe}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
+def warn_unsafe_buffer_usage_in_container : Warning<
+  "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
+  InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

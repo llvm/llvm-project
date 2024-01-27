@@ -95,7 +95,8 @@ static void getVGPRSpillLaneOrTempRegister(
                                          TargetStackID::SGPRSpill);
 
     if (TRI->spillSGPRToVGPR() &&
-        MFI->allocateSGPRSpillToVGPRLane(MF, FI, /* IsPrologEpilog */ true)) {
+        MFI->allocateSGPRSpillToVGPRLane(MF, FI, /*SpillToPhysVGPRLane=*/true,
+                                         /*IsPrologEpilog=*/true)) {
       // 2: There's no free lane to spill, and no free register to save the
       // SGPR, so we're forced to take another VGPR to use for the spill.
       MFI->addToPrologEpilogSGPRSpills(
@@ -1559,6 +1560,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // we don't need to save and restore anything.
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
     return;
+
+  MFI->shiftSpillPhysVGPRsToLowestRange(MF);
 
   TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
   if (MFI->isEntryFunction())

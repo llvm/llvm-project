@@ -263,15 +263,6 @@ private:
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
 
-  /// Returns the CXXRecordDecl for the type of the given expression,
-  /// or nullptr if no such decl exists.
-  const CXXRecordDecl *getRecordDecl(const Expr *E) const {
-    QualType T = E->getType();
-    if (const auto *RD = T->getPointeeCXXRecordDecl())
-      return RD;
-    return T->getAsCXXRecordDecl();
-  }
-
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
 
@@ -282,12 +273,12 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
-  std::optional<PrimType> classifyComplexElementType(QualType T) const {
+  PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
 
     QualType ElemType = T->getAs<ComplexType>()->getElementType();
 
-    return this->classify(ElemType);
+    return *this->classify(ElemType);
   }
 
   bool emitComplexReal(const Expr *SubExpr);
@@ -374,6 +365,7 @@ public:
     if (!Idx)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
   }
 
   /// Overriden to support explicit destruction.
@@ -382,6 +374,7 @@ public:
       return;
     this->emitDestructors();
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
+    removeStoredOpaqueValues();
     this->Idx = std::nullopt;
   }
 
@@ -403,8 +396,27 @@ public:
       if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
         this->Ctx->emitGetPtrLocal(Local.Offset, SourceInfo{});
         this->Ctx->emitRecordDestruction(Local.Desc);
+        removeIfStoredOpaqueValue(Local);
       }
     }
+  }
+
+  void removeStoredOpaqueValues() {
+    if (!Idx)
+      return;
+
+    for (const Scope::Local &Local : this->Ctx->Descriptors[*Idx]) {
+      removeIfStoredOpaqueValue(Local);
+    }
+  }
+
+  void removeIfStoredOpaqueValue(const Scope::Local &Local) {
+    if (const auto *OVE =
+            llvm::dyn_cast_if_present<OpaqueValueExpr>(Local.Desc->asExpr())) {
+      if (auto It = this->Ctx->OpaqueExprs.find(OVE);
+          It != this->Ctx->OpaqueExprs.end())
+        this->Ctx->OpaqueExprs.erase(It);
+    };
   }
 
   /// Index of the scope in the chain.

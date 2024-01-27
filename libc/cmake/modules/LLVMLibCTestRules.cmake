@@ -129,6 +129,16 @@ function(create_libc_unittest fq_target_name)
   list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
                            libc.test.UnitTest.ErrnoSetterMatcher)
   list(REMOVE_DUPLICATES fq_deps_list)
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Adding unit test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS LIBC_UNITTEST_DEPENDS)
+        message(STATUS "  ${fq_target_name} depends on ${dep}")
+      endforeach()
+    endif()
+  endif()
+
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
@@ -155,15 +165,6 @@ function(create_libc_unittest fq_target_name)
       message(STATUS ${msg})
     endif()
     return()
-  endif()
-
-  if(SHOW_INTERMEDIATE_OBJECTS)
-    message(STATUS "Adding unit test ${fq_target_name}")
-    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
-      foreach(dep IN LISTS ADD_OBJECT_DEPENDS)
-        message(STATUS "  ${fq_target_name} depends on ${dep}")
-      endforeach()
-    endif()
   endif()
 
   if(LIBC_UNITTEST_NO_RUN_POSTBUILD)
@@ -521,7 +522,7 @@ function(add_integration_test test_name)
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
-      set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+      set(msg "Skipping integration test ${fq_target_name} as it has missing deps: "
               "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
@@ -704,7 +705,7 @@ function(add_libc_hermetic_test test_name)
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
-    set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+    set(msg "Skipping hermetic test ${fq_target_name} as it has missing deps: "
             "${skipped_entrypoints_list}.")
     message(STATUS ${msg})
     return()

@@ -892,6 +892,9 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
         // Strip heapallocsite attachments, they point into the DIType system.
         if (I.hasMetadataOtherThanDebugLoc())
           I.setMetadata("heapallocsite", nullptr);
+
+        // Strip any DPValues attached.
+        I.dropDbgValues();
       }
     }
   }
@@ -2209,6 +2212,10 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
 bool AssignmentTrackingPass::runOnFunction(Function &F) {
   // No value in assignment tracking without optimisations.
   if (F.hasFnAttribute(Attribute::OptimizeNone))
+    return /*Changed*/ false;
+
+  // FIXME: https://github.com/llvm/llvm-project/issues/76545
+  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
     return /*Changed*/ false;
 
   bool Changed = false;

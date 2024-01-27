@@ -14,12 +14,12 @@
 #include "NormalFloat.h"
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <limits.h>
 #include <math.h>
 
 namespace LIBC_NAMESPACE {

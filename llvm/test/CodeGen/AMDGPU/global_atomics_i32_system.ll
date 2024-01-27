@@ -152,23 +152,23 @@ define amdgpu_gfx void @global_atomic_xchg_i32_noret_scalar(ptr addrspace(1) inr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_swap v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -202,23 +202,23 @@ define amdgpu_gfx void @global_atomic_xchg_i32_noret_offset_scalar(ptr addrspace
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_swap v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -830,23 +830,23 @@ define amdgpu_gfx void @global_atomic_xchg_f32_noret_scalar(ptr addrspace(1) inr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_swap v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -958,23 +958,23 @@ define amdgpu_gfx void @global_atomic_xchg_f32_noret_offset_scalar(ptr addrspace
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_swap v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_swap v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1416,23 +1416,23 @@ define amdgpu_gfx void @global_atomic_add_i32_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_add v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_add v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1466,23 +1466,23 @@ define amdgpu_gfx void @global_atomic_add_i32_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1766,23 +1766,23 @@ define amdgpu_gfx void @global_atomic_sub_i32_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_sub v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_sub v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -1816,23 +1816,23 @@ define amdgpu_gfx void @global_atomic_sub_i32_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_sub v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_sub v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2116,23 +2116,23 @@ define amdgpu_gfx void @global_atomic_and_i32_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_and v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_and v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2166,23 +2166,23 @@ define amdgpu_gfx void @global_atomic_and_i32_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_and v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_and v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2649,38 +2649,38 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_scalar(ptr addrspace(1) inr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB44_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v1, s34, v2
-; SI-NEXT:    v_not_b32_e32 v1, v1
+; SI-NEXT:    v_and_b32_e32 v0, s34, v1
+; SI-NEXT:    v_not_b32_e32 v0, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB44_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2740,38 +2740,38 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_offset_scalar(ptr addrspace
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB45_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v1, s34, v2
-; SI-NEXT:    v_not_b32_e32 v1, v1
+; SI-NEXT:    v_and_b32_e32 v0, s34, v1
+; SI-NEXT:    v_not_b32_e32 v0, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB45_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2834,39 +2834,38 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_scalar(ptr addrspace(1) inreg 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB46_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
-; SI-NEXT:    v_and_b32_e32 v0, s34, v4
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_not_b32_e32 v3, v0
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
+; SI-NEXT:    v_and_b32_e32 v0, s34, v2
+; SI-NEXT:    v_not_b32_e32 v1, v0
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB46_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -2928,39 +2927,38 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_offset_scalar(ptr addrspace(1)
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB47_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
-; SI-NEXT:    v_and_b32_e32 v0, s34, v4
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_not_b32_e32 v3, v0
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_and_b32_e32 v0, s34, v2
+; SI-NEXT:    v_not_b32_e32 v1, v0
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB47_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3167,23 +3165,23 @@ define amdgpu_gfx void @global_atomic_or_i32_noret_scalar(ptr addrspace(1) inreg
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_or v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_or v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3217,23 +3215,23 @@ define amdgpu_gfx void @global_atomic_or_i32_noret_offset_scalar(ptr addrspace(1
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_or v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_or v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3517,23 +3515,23 @@ define amdgpu_gfx void @global_atomic_xor_i32_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_xor v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_xor v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -3567,23 +3565,23 @@ define amdgpu_gfx void @global_atomic_xor_i32_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_xor v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_xor v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -4038,37 +4036,37 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB68_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_max_i32_e32 v1, s34, v2
+; SI-NEXT:    v_max_i32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB68_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -4126,37 +4124,37 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB69_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_max_i32_e32 v1, s34, v2
+; SI-NEXT:    v_max_i32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB69_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -4217,38 +4215,37 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_scalar(ptr addrspace(1) inreg %
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB70_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_max_i32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
+; SI-NEXT:    v_max_i32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB70_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -4308,38 +4305,37 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_offset_scalar(ptr addrspace(1) 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB71_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_max_i32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_max_i32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB71_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -5135,37 +5131,37 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_scalar(ptr addrspace(1) inr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB80_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_max_u32_e32 v1, s34, v2
+; SI-NEXT:    v_max_u32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB80_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -5223,37 +5219,37 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_offset_scalar(ptr addrspace
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB81_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_max_u32_e32 v1, s34, v2
+; SI-NEXT:    v_max_u32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB81_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -5314,38 +5310,37 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_scalar(ptr addrspace(1) inreg 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB82_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_max_u32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
+; SI-NEXT:    v_max_u32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB82_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -5405,38 +5400,37 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_offset_scalar(ptr addrspace(1)
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB83_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_max_u32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_max_u32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB83_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -6137,37 +6131,37 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_scalar(ptr addrspace(1) inr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB91_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_min_u32_e32 v1, s34, v2
+; SI-NEXT:    v_min_u32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB91_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -6225,37 +6219,37 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_offset_scalar(ptr addrspace
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB92_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_min_u32_e32 v1, s34, v2
+; SI-NEXT:    v_min_u32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB92_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -6316,38 +6310,37 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_scalar(ptr addrspace(1) inreg 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB93_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_min_u32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
+; SI-NEXT:    v_min_u32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB93_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -6407,38 +6400,37 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_offset_scalar(ptr addrspace(1)
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB94_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_min_u32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_min_u32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB94_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -6814,37 +6806,37 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_scalar(ptr addrspace(1) inre
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB99_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_min_i32_e32 v1, s34, v2
+; SI-NEXT:    v_min_i32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB99_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -6902,37 +6894,37 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_offset_scalar(ptr addrspace(
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v4, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v4, s6, 0
+; SI-NEXT:    v_writelane_b32 v4, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB100_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_min_i32_e32 v1, s34, v2
+; SI-NEXT:    v_min_i32_e32 v0, s34, v1
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
-; SI-NEXT:    buffer_atomic_cmpswap v[3:4], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_mov_b32_e32 v2, v0
+; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v2, v3
+; SI-NEXT:    v_mov_b32_e32 v1, v2
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB100_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v4, 1
+; SI-NEXT:    v_readlane_b32 s6, v4, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v4, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -6993,38 +6985,37 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_scalar(ptr addrspace(1) inreg %
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB101_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_min_i32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc
+; SI-NEXT:    v_min_i32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB101_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -7084,38 +7075,37 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_offset_scalar(ptr addrspace(1) 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v3, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v1, s6, 0
-; SI-NEXT:    v_writelane_b32 v1, s7, 1
+; SI-NEXT:    v_writelane_b32 v3, s6, 0
+; SI-NEXT:    v_writelane_b32 v3, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    buffer_load_dword v2, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_mov_b64 s[36:37], 0
 ; SI-NEXT:  .LBB102_1: ; %atomicrmw.start
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v4, v2
+; SI-NEXT:    v_mov_b32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_min_i32_e32 v3, s34, v4
-; SI-NEXT:    v_mov_b32_e32 v2, v3
-; SI-NEXT:    v_mov_b32_e32 v3, v4
-; SI-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 offset:16 glc
+; SI-NEXT:    v_min_i32_e32 v1, s34, v2
+; SI-NEXT:    v_mov_b32_e32 v0, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v2
+; SI-NEXT:    buffer_atomic_cmpswap v[0:1], off, s[4:7], 0 offset:16 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
 ; SI-NEXT:    s_andn2_b64 exec, exec, s[36:37]
 ; SI-NEXT:    s_cbranch_execnz .LBB102_1
 ; SI-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; SI-NEXT:    s_or_b64 exec, exec, s[36:37]
-; SI-NEXT:    v_mov_b32_e32 v0, v2
-; SI-NEXT:    v_readlane_b32 s7, v1, 1
-; SI-NEXT:    v_readlane_b32 s6, v1, 0
+; SI-NEXT:    v_readlane_b32 s7, v3, 1
+; SI-NEXT:    v_readlane_b32 s6, v3, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v3, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -7727,23 +7717,23 @@ define amdgpu_gfx void @global_atomic_uinc_wrap_i32_noret_scalar(ptr addrspace(1
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_inc v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_inc v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -7777,23 +7767,23 @@ define amdgpu_gfx void @global_atomic_uinc_wrap_i32_noret_offset_scalar(ptr addr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_inc v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_inc v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -8077,23 +8067,23 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i32_noret_scalar(ptr addrspace(1
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_dec v1, off, s[4:7], 0
+; SI-NEXT:    buffer_atomic_dec v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -8127,23 +8117,23 @@ define amdgpu_gfx void @global_atomic_udec_wrap_i32_noret_offset_scalar(ptr addr
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_writelane_b32 v0, s6, 0
-; SI-NEXT:    v_writelane_b32 v0, s7, 1
+; SI-NEXT:    v_writelane_b32 v1, s6, 0
+; SI-NEXT:    v_writelane_b32 v1, s7, 1
 ; SI-NEXT:    s_mov_b32 s34, s6
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v1, s34
+; SI-NEXT:    v_mov_b32_e32 v0, s34
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_atomic_dec v1, off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_atomic_dec v0, off, s[4:7], 0 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_wbinvl1
-; SI-NEXT:    v_readlane_b32 s7, v0, 1
-; SI-NEXT:    v_readlane_b32 s6, v0, 0
+; SI-NEXT:    v_readlane_b32 s7, v1, 1
+; SI-NEXT:    v_readlane_b32 s6, v1, 0
 ; SI-NEXT:    s_xor_saveexec_b64 s[34:35], -1
-; SI-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; SI-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    s_mov_b64 exec, s[34:35]
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]

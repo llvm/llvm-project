@@ -133,9 +133,16 @@ protected:
     }
   }
 
-  void notifyOperationInserted(Operation *op) override {
-    RewriterBase::ForwardingListener::notifyOperationInserted(op);
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+    RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
+    // Invalidate the finger print of the op that owns the block into which the
+    // op was inserted into.
     invalidateFingerPrint(op->getParentOp());
+
+    // Also invalidate the finger print of the op that owns the block from which
+    // the op was moved from. (Only applicable if the op was moved.)
+    if (previous.isSet())
+      invalidateFingerPrint(previous.getBlock()->getParentOp());
   }
 
   void notifyOperationModified(Operation *op) override {
@@ -331,7 +338,7 @@ protected:
   /// Notify the driver that the specified operation was inserted. Update the
   /// worklist as needed: The operation is enqueued depending on scope and
   /// strict mode.
-  void notifyOperationInserted(Operation *op) override;
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
 
   /// Notify the driver that the specified operation was removed. Update the
   /// worklist as needed: The operation and its children are removed from the
@@ -370,8 +377,9 @@ private:
   /// simplifications.
   void addOperandsToWorklist(ValueRange operands);
 
-  /// Notify the driver that the given block was created.
-  void notifyBlockCreated(Block *block) override;
+  /// Notify the driver that the given block was inserted.
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// Notify the driver that the given block is about to be removed.
   void notifyBlockRemoved(Block *block) override;
@@ -631,9 +639,10 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
     worklist.push(op);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockCreated(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockInserted(
+    Block *block, Region *previous, Region::iterator previousIt) {
   if (config.listener)
-    config.listener->notifyBlockCreated(block);
+    config.listener->notifyBlockInserted(block, previous, previousIt);
 }
 
 void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {
@@ -641,13 +650,14 @@ void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {
     config.listener->notifyBlockRemoved(block);
 }
 
-void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op) {
+void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op,
+                                                         InsertPoint previous) {
   LLVM_DEBUG({
     logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
                        << ")\n";
   });
   if (config.listener)
-    config.listener->notifyOperationInserted(op);
+    config.listener->notifyOperationInserted(op, previous);
   if (config.strictMode == GreedyRewriteStrictness::ExistingAndNewOps)
     strictModeFilteredOps.insert(op);
   addToWorklist(op);

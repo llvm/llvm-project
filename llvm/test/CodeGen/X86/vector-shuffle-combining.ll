@@ -1744,26 +1744,18 @@ define <4 x i8> @combine_test1c(ptr %a, ptr %b) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [0,255,255,255,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = [0,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: combine_test1c:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_test1c:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [0,255,255,255,0,255,255,255,0,255,255,255,0,255,255,255]
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_test1c:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovd {{.*#+}} xmm2 = [0,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %A = load <4 x i8>, ptr %a
   %B = load <4 x i8>, ptr %b
   %1 = shufflevector <4 x i8> %A, <4 x i8> %B, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
@@ -1838,26 +1830,18 @@ define <4 x i8> @combine_test4c(ptr %a, ptr %b) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [255,0,255,255,u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = [255,0,255,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: combine_test4c:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,0,255,255,255,0,255,255,255,0,255,255,255,0,255,255]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_test4c:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [255,0,255,255,255,0,255,255,255,0,255,255,255,0,255,255]
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_test4c:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovd {{.*#+}} xmm2 = [255,0,255,255,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %A = load <4 x i8>, ptr %a
   %B = load <4 x i8>, ptr %b
   %1 = shufflevector <4 x i8> %A, <4 x i8> %B, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
@@ -3187,7 +3171,7 @@ declare <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16>, i32)
 define void @PR43024() {
 ; SSE2-LABEL: PR43024:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    movaps %xmm0, (%rax)
 ; SSE2-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
@@ -3198,7 +3182,7 @@ define void @PR43024() {
 ;
 ; SSSE3-LABEL: PR43024:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; SSSE3-NEXT:    movaps %xmm0, (%rax)
 ; SSSE3-NEXT:    addss %xmm0, %xmm0
 ; SSSE3-NEXT:    xorps %xmm1, %xmm1
@@ -3209,7 +3193,7 @@ define void @PR43024() {
 ;
 ; SSE41-LABEL: PR43024:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; SSE41-NEXT:    movaps %xmm0, (%rax)
 ; SSE41-NEXT:    addss %xmm0, %xmm0
 ; SSE41-NEXT:    xorps %xmm1, %xmm1
@@ -3220,7 +3204,7 @@ define void @PR43024() {
 ;
 ; AVX-LABEL: PR43024:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1

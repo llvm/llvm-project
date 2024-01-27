@@ -237,12 +237,12 @@ void BasicBlock::insertInto(Function *NewParent, BasicBlock *InsertBefore) {
   assert(NewParent && "Expected a parent");
   assert(!Parent && "Already has a parent");
 
-  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
-
   if (InsertBefore)
     NewParent->insert(InsertBefore->getIterator(), this);
   else
     NewParent->insert(NewParent->end(), this);
+
+  setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
 }
 
 BasicBlock::~BasicBlock() {
@@ -821,9 +821,15 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
 
   // There are instructions in this block; if the First iterator was
   // with begin() / getFirstInsertionPt() then the caller intended debug-info
-  // at the start of the block to be transferred.
-  if (!Src->empty() && First == Src->begin() && ReadFromHead)
-    Dest->DbgMarker->absorbDebugValues(*First->DbgMarker, InsertAtHead);
+  // at the start of the block to be transferred. Return otherwise.
+  if (Src->empty() || First != Src->begin() || !ReadFromHead)
+    return;
+
+  // Is there actually anything to transfer?
+  if (!First->hasDbgValues())
+    return;
+
+  createMarker(Dest)->absorbDebugValues(*First->DbgMarker, InsertAtHead);
 
   return;
 }

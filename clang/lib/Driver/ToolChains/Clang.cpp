@@ -1747,9 +1747,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.ends_with("+"))
-        Val = Val.substr(0, Val.size() - 1);
-      else {
+      if (!Val.consume_back("+")) {
         bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
         assert(!Invalid && "Failed to parse value");
         CmdArgs.push_back(
@@ -4854,9 +4852,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool UnifiedLTO = false;
   if (IsUsingLTO) {
     UnifiedLTO = Args.hasFlag(options::OPT_funified_lto,
-                              options::OPT_fno_unified_lto, Triple.isPS()) ||
-                 Args.hasFlag(options::OPT_ffat_lto_objects,
-                              options::OPT_fno_fat_lto_objects, false);
+                              options::OPT_fno_unified_lto, Triple.isPS());
     if (UnifiedLTO)
       CmdArgs.push_back("-funified-lto");
   }
@@ -5823,6 +5819,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getOption().getName() << Value;
     Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
   }
+
+  if (isTLSDESCEnabled(TC, Args))
+    CmdArgs.push_back("-enable-tlsdesc");
 
   // Add the target cpu
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);

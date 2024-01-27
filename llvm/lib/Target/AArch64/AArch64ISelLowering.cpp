@@ -48,7 +48,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -56,6 +55,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -6569,22 +6569,22 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
       return CC_AArch64_DarwinPCS;
     return Subtarget->isTargetILP32() ? CC_AArch64_DarwinPCS_ILP32_VarArg
                                       : CC_AArch64_DarwinPCS_VarArg;
-   case CallingConv::Win64:
-     if (IsVarArg) {
-       if (Subtarget->isWindowsArm64EC())
-         return CC_AArch64_Arm64EC_VarArg;
-       return CC_AArch64_Win64_VarArg;
-     }
-     return CC_AArch64_Win64PCS;
-   case CallingConv::CFGuard_Check:
-     if (Subtarget->isWindowsArm64EC())
-       return CC_AArch64_Arm64EC_CFGuard_Check;
-     return CC_AArch64_Win64_CFGuard_Check;
-   case CallingConv::AArch64_VectorCall:
-   case CallingConv::AArch64_SVE_VectorCall:
-   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
-   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
-     return CC_AArch64_AAPCS;
+  case CallingConv::Win64:
+    if (IsVarArg) {
+      if (Subtarget->isWindowsArm64EC())
+        return CC_AArch64_Arm64EC_VarArg;
+      return CC_AArch64_Win64_VarArg;
+    }
+    return CC_AArch64_Win64PCS;
+  case CallingConv::CFGuard_Check:
+    if (Subtarget->isWindowsArm64EC())
+      return CC_AArch64_Arm64EC_CFGuard_Check;
+    return CC_AArch64_Win64_CFGuard_Check;
+  case CallingConv::AArch64_VectorCall:
+  case CallingConv::AArch64_SVE_VectorCall:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
+    return CC_AArch64_AAPCS;
   case CallingConv::ARM64EC_Thunk_X64:
     return CC_AArch64_Arm64EC_Thunk;
   case CallingConv::ARM64EC_Thunk_Native:
@@ -21471,6 +21471,53 @@ bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
          (SrcVT == MVT::nxv2i64 && DstVT == MVT::nxv2i32);
 }
 
+// Combine store (trunc X to <3 x i8>) to sequence of ST1.b.
+static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
+                                   const AArch64Subtarget *Subtarget) {
+  SDValue Value = ST->getValue();
+  EVT ValueVT = Value.getValueType();
+
+  if (ST->isVolatile() || !Subtarget->isLittleEndian() ||
+      Value.getOpcode() != ISD::TRUNCATE ||
+      ValueVT != EVT::getVectorVT(*DAG.getContext(), MVT::i8, 3))
+    return SDValue();
+
+  assert(ST->getOffset().isUndef() && "undef offset expected");
+  SDLoc DL(ST);
+  auto WideVT = EVT::getVectorVT(
+      *DAG.getContext(),
+      Value->getOperand(0).getValueType().getVectorElementType(), 4);
+  SDValue UndefVector = DAG.getUNDEF(WideVT);
+  SDValue WideTrunc = DAG.getNode(
+      ISD::INSERT_SUBVECTOR, DL, WideVT,
+      {UndefVector, Value->getOperand(0), DAG.getVectorIdxConstant(0, DL)});
+  SDValue Cast = DAG.getNode(
+      ISD::BITCAST, DL, WideVT.getSizeInBits() == 64 ? MVT::v8i8 : MVT::v16i8,
+      WideTrunc);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Chain = ST->getChain();
+  MachineMemOperand *MMO = ST->getMemOperand();
+  unsigned IdxScale = WideVT.getScalarSizeInBits() / 8;
+  SDValue E2 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
+                           DAG.getConstant(2 * IdxScale, DL, MVT::i64));
+  TypeSize Offset2 = TypeSize::getFixed(2);
+  SDValue Ptr2 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset2, DL);
+  Chain = DAG.getStore(Chain, DL, E2, Ptr2, MF.getMachineMemOperand(MMO, 2, 1));
+
+  SDValue E1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
+                           DAG.getConstant(1 * IdxScale, DL, MVT::i64));
+  TypeSize Offset1 = TypeSize::getFixed(1);
+  SDValue Ptr1 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset1, DL);
+  Chain = DAG.getStore(Chain, DL, E1, Ptr1, MF.getMachineMemOperand(MMO, 1, 1));
+
+  SDValue E0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i8, Cast,
+                           DAG.getConstant(0, DL, MVT::i64));
+  Chain = DAG.getStore(Chain, DL, E0, ST->getBasePtr(),
+                       MF.getMachineMemOperand(MMO, 0, 1));
+  return Chain;
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -21485,6 +21532,9 @@ static SDValue performSTORECombine(SDNode *N,
     EVT EltVT = VT.getVectorElementType();
     return EltVT == MVT::f32 || EltVT == MVT::f64;
   };
+
+  if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
+    return Res;
 
   // If this is an FP_ROUND followed by a store, fold this into a truncating
   // store. We can do this even if this is already a truncstore.

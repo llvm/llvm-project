@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20  -Wno-all -Wunsafe-buffer-usage \
+// RUN: %clang_cc1 -std=c++20  -Wno-all -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-container\
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fblocks -include %s -verify %s
 
@@ -7,13 +7,14 @@
 // RUN: %clang_cc1 -std=c++20 -fblocks -include %s %s 2>&1 | FileCheck --allow-empty %s
 // CHECK-NOT: [-Wunsafe-buffer-usage]
 
-#include <stdint.h>
 #ifndef INCLUDED
 #define INCLUDED
 #pragma clang system_header
 
 // no spanification warnings for system headers
 #else
+
+typedef __INTPTR_TYPE__ intptr_t;
 
 namespace std {
   class type_info;
