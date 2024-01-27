@@ -519,10 +519,11 @@ TEST_F(FormatTestComments, CorrectlyHandlesLengthOfBlockComments) {
 }
 
 TEST_F(FormatTestComments, DontBreakNonTrailingBlockComments) {
+  FormatStyle Style = getLLVMStyleWithColumns(35);
+  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   EXPECT_EQ("void ffffffffff(\n"
             "    int aaaaa /* test */);",
-            format("void ffffffffff(int aaaaa /* test */);",
-                   getLLVMStyleWithColumns(35)));
+            format("void ffffffffff(int aaaaa /* test */);", Style));
 }
 
 TEST_F(FormatTestComments, SplitsLongCxxComments) {
@@ -604,11 +605,11 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
             format("// A comment before a macro definition\n"
                    "#define a b",
                    getLLVMStyleWithColumns(20)));
-  EXPECT_EQ("void ffffff(\n"
-            "    int aaaaaaaaa,  // wwww\n"
-            "    int bbbbbbbbbb, // xxxxxxx\n"
-            "                    // yyyyyyyyyy\n"
-            "    int c, int d, int e) {}",
+  EXPECT_EQ("void\n"
+            "ffffff(int aaaaaaaaa,  // wwww\n"
+            "       int bbbbbbbbbb, // xxxxxxx\n"
+            "                       // yyyyyyyyyy\n"
+            "       int c, int d, int e) {}",
             format("void ffffff(\n"
                    "    int aaaaaaaaa, // wwww\n"
                    "    int bbbbbbbbbb, // xxxxxxx yyyyyyyyyy\n"
@@ -4100,6 +4101,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(Code, Style));
 
   Style = getLLVMStyleWithColumns(20);
+  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   StringRef WrapCode = "//Lorem ipsum dolor sit amet\n"
                        "\n"
                        "//  Lorem   ipsum   dolor   sit   amet\n"
@@ -4583,7 +4585,7 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
 )",
             format(R"(//
 /\
-/ 
+/
   )",
                    getLLVMStyleWithColumns(10)));
 }
