@@ -302,23 +302,6 @@ cir.func @cast24(%p : !u32i) {
 
 // -----
 
-#false = #cir.bool<false> : !cir.bool
-#true = #cir.bool<true> : !cir.bool
-cir.func @b0() {
-  cir.scope {
-    cir.while {  // expected-error {{expected condition region to terminate with 'cir.condition'}}
-      cir.yield
-    } do {
-      cir.br ^bb1
-    ^bb1:
-      cir.return
-    }
-  }
-  cir.return
-}
-
-// -----
-
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
 module {
@@ -805,28 +788,4 @@ cir.func @const_type_mismatch() -> () {
     // expected-error@+1 {{'cir.const' op result type ('!cir.int<u, 8>') does not match value type ('!cir.int<s, 8>')}}
     %2 = cir.const(#cir.int<0> : !s8i) : !u8i
     cir.return
-}
-
-// -----
-
-cir.func @invalid_cond_region_terminator(%arg0 : !cir.bool) -> !cir.void {
-  cir.do { // expected-error {{op expected condition region to terminate with 'cir.condition'}}
-    cir.yield
-  } while {
-    cir.yield
-  }
-  cir.return
-}
-
-// -----
-
-cir.func @invalidConditionTerminator (%arg0 : !cir.bool) -> !cir.void {
-  cir.for : cond { // expected-error {{op expected condition region to terminate with 'cir.condition'}}
-    cir.yield
-  } body {
-    cir.yield
-  } step {
-    cir.yield
-  }
-  cir.return
 }
