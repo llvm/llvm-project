@@ -1785,13 +1785,12 @@ cc_library(
 
 cc_library(
     name = "CodeGenTypes",
-    srcs = [
-        "lib/CodeGen/LowLevelType.cpp",
-    ],
-    hdrs = [
-        "include/llvm/CodeGen/LowLevelType.h",
-        "include/llvm/CodeGen/MachineValueType.h",
-    ],
+    srcs = glob([
+        "lib/CodeGenTypes/**/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/CodeGenTypes/**/*.h",
+    ]),
     copts = llvm_copts,
     deps = [
         ":Support",
@@ -1807,9 +1806,6 @@ cc_library(
             "lib/CodeGen/**/*.h",
             "lib/CodeGen/SelectionDAG/*.cpp",
             "lib/CodeGen/SelectionDAG/*.h",
-        ],
-        exclude = [
-            "lib/CodeGen/LowLevelType.cpp",
         ],
     ),
     hdrs = [
@@ -2131,6 +2127,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-dag-isel", "lib/Target/RISCV/RISCVGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/RISCV/RISCVGenDisassemblerTables.inc"),
             ("-gen-instr-info", "lib/Target/RISCV/RISCVGenInstrInfo.inc"),
+            ("-gen-macro-fusion-pred", "lib/Target/RISCV/RISCVGenMacroFusion.inc"),
             ("-gen-emitter", "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc"),
             ("-gen-pseudo-lowering", "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc"),
             ("-gen-register-bank", "lib/Target/RISCV/RISCVGenRegisterBank.inc"),
@@ -2577,7 +2574,10 @@ cc_library(
         "lib/Passes/*.cpp",
         "lib/Passes/*.h",
     ]),
-    hdrs = glob(["include/llvm/Passes/*.h"]) + ["include/llvm-c/Transforms/PassBuilder.h"],
+    hdrs = glob([
+        "include/llvm/Passes/*.h",
+        "include/llvm/Passes/*.def",
+    ]) + ["include/llvm-c/Transforms/PassBuilder.h"],
     copts = llvm_copts,
     deps = [
         ":AggressiveInstCombine",
@@ -2591,6 +2591,7 @@ cc_library(
         ":IRPrinter",
         ":InstCombine",
         ":Instrumentation",
+        ":MC",
         ":MLPolicies",
         ":ObjCARC",
         ":Scalar",
@@ -3253,7 +3254,9 @@ cc_binary(
         ":IRPrinter",
         ":IRReader",
         ":MC",
+        ":Passes",
         ":Remarks",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -4808,8 +4811,8 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "opt",
+cc_library(
+    name = "opt-driver",
     srcs = glob([
         "tools/opt/*.cpp",
         "tools/opt/*.h",
@@ -4820,7 +4823,6 @@ cc_binary(
         "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -4845,6 +4847,12 @@ cc_binary(
         ":common_transforms",
         ":config",
     ],
+)
+
+cc_binary(
+    name = "opt",
+    stamp = 0,
+    deps = [":opt-driver"]
 )
 
 gentbl(
@@ -4956,6 +4964,36 @@ py_binary(
     name = "lit",
     testonly = True,
     srcs = ["utils/lit/lit.py"] + glob(["utils/lit/lit/**/*.py"]),
+)
+
+py_binary(
+    name = "extract_ir",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
+        "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
+)
+
+py_binary(
+    name = "combine_training_corpus",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
+        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
+)
+
+py_binary(
+    name = "make_corpus",
+    srcs = [
+        "utils/mlgo-utils/mlgo/__init__.py",
+        "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
+        "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py"
+    ],
+    imports = ["utils/mlgo-utils"]
 )
 
 cc_library(

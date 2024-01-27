@@ -84,6 +84,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  limits
+  DEF_FILE limits.h.def
+  GEN_HDR limits.h
+  DEPENDS
+    .llvm-libc-macros.limits_macros
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h

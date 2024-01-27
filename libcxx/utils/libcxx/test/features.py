@@ -317,6 +317,18 @@ DEFAULT_FEATURES = [
             AddSubstitution("%{clang-tidy}", lambda cfg: _getSuitableClangTidy(cfg))
         ],
     ),
+    # Whether module support for the platform is available.
+    Feature(
+        name="has-no-cxx-module-support",
+        # The libc of these platforms have functions with internal linkage.
+        # This is not allowed per C11 7.1.2 Standard headers/6
+        #  Any declaration of a library function shall have external linkage.
+        when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
+        or "_WIN32" in compilerMacros(cfg)
+        or platform.system().lower().startswith("aix")
+        # Avoid building on platforms that don't support modules properly.
+        or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier"),
+    ),
 ]
 
 # Deduce and add the test features that that are implied by the #defines in
@@ -343,7 +355,6 @@ macros = {
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_NO_STD_MODULES":  "libcpp-has-no-std-modules",
     "_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH": "libcpp-pstl-cpu-backend-libdispatch",
 }
 for macro, feature in macros.items():

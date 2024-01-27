@@ -13,6 +13,8 @@
 // The ability to set a custom abort message is required to compare the assertion message (which only happens in the
 // debug mode).
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// HWASAN replaces TRAP with abort or error exit code.
+// XFAIL: hwasan
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE
 
 #include <cassert>

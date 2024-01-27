@@ -32,7 +32,15 @@ class Error;
 
 namespace exegesis {
 
-enum ValidationEvent { InstructionRetired };
+enum ValidationEvent {
+  InstructionRetired,
+  L1DCacheLoadMiss,
+  L1DCacheStoreMiss,
+  L1ICacheLoadMiss,
+  DataTLBLoadMiss,
+  DataTLBStoreMiss,
+  InstructionTLBLoadMiss
+};
 
 enum class BenchmarkPhaseSelectorE {
   PrepareSnippet,

@@ -139,7 +139,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x + FPBits::build_quiet_nan(0);
+    return x + FPBits::build_quiet_nan().get_val();
   }
 
   // Combine the results with the sine of sum formula:

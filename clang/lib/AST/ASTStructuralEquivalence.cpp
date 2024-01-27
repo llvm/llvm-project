@@ -685,6 +685,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, Arg1.getAsExpr(),
                                     Arg2.getAsExpr());
 
+  case TemplateArgument::StructuralValue:
+    return Arg1.structurallyEquals(Arg2);
+
   case TemplateArgument::Pack:
     return IsStructurallyEquivalent(Context, Arg1.pack_elements(),
                                     Arg2.pack_elements());
@@ -1287,6 +1290,16 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   cast<PackExpansionType>(T1)->getPattern(),
                                   cast<PackExpansionType>(T2)->getPattern()))
       return false;
+    break;
+
+  case Type::PackIndexing:
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<PackIndexingType>(T1)->getPattern(),
+                                  cast<PackIndexingType>(T2)->getPattern()))
+      if (!IsStructurallyEquivalent(Context,
+                                    cast<PackIndexingType>(T1)->getIndexExpr(),
+                                    cast<PackIndexingType>(T2)->getIndexExpr()))
+        return false;
     break;
 
   case Type::ObjCInterface: {

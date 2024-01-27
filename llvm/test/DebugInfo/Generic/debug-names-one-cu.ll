@@ -35,7 +35,7 @@
 ; CHECK-NEXT: Abbrev: [[ABBREV]]
 ; CHECK-NEXT: Tag: DW_TAG_variable
 ; CHECK-NEXT: DW_IDX_die_offset: 0x{{[0-9a-f]*}}
-; CHECK-NEXT: DW_IDX_parent: true
+; CHECK-NEXT: DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT: }
 
 ; CHECK: String: 0x{{[0-9a-f]*}} "foobar"
@@ -43,7 +43,7 @@
 ; CHECK-NEXT: Abbrev: [[ABBREV]]
 ; CHECK-NEXT: Tag: DW_TAG_variable
 ; CHECK-NEXT: DW_IDX_die_offset: 0x{{[0-9a-f]*}}
-; CHECK-NEXT: DW_IDX_parent: true
+; CHECK-NEXT: DW_IDX_parent: <parent not indexed>
 ; CHECK-NEXT: }
 
 ; VERIFY: No errors.

@@ -317,7 +317,7 @@ define <16 x i32> @test_mul_v16i32_v16i8(<16 x i8> %A) {
 define <4 x i32> @test_mul_v4i32_v4i16(<4 x i16> %A) {
 ; SLM-LABEL: test_mul_v4i32_v4i16:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
+; SLM-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778,u,u,u,u]
 ; SLM-NEXT:    movdqa %xmm0, %xmm2
 ; SLM-NEXT:    pmulhuw %xmm1, %xmm2
 ; SLM-NEXT:    pmullw %xmm1, %xmm0
@@ -326,7 +326,7 @@ define <4 x i32> @test_mul_v4i32_v4i16(<4 x i16> %A) {
 ;
 ; SLOW-LABEL: test_mul_v4i32_v4i16:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    movdqa {{.*#+}} xmm1 = <18778,18778,18778,18778,u,u,u,u>
+; SLOW-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778,u,u,u,u]
 ; SLOW-NEXT:    movdqa %xmm0, %xmm2
 ; SLOW-NEXT:    pmulhuw %xmm1, %xmm2
 ; SLOW-NEXT:    pmullw %xmm1, %xmm0

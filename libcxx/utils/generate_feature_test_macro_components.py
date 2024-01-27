@@ -1010,10 +1010,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_saturation_arithmetic",
             "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
-            "headers": [
-                "numeric"  # TODO verify this entry since the paper was underspecified.
-            ],
-            "unimplemented": True,
+            "headers": ["numeric"],
         },
         {
             "name": "__cpp_lib_scoped_lock",
@@ -1267,7 +1264,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_variant",
-            "values": {"c++17": 202102},
+            "values": {
+                "c++17": 202102,  # std::visit for classes derived from std::variant
+                # "c++20": 202106,  # Fully constexpr std::variant
+                # "c++26": 202306,  # Member visit (implemented)
+            },
             "headers": ["variant"],
         },
         {
