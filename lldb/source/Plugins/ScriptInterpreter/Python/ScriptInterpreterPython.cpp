@@ -2972,8 +2972,8 @@ ScriptInterpreterPythonImpl::GetOptionsForCommandObject(
   if (PyErr_Occurred())
     PyErr_Clear();
 
-  PythonList py_return = unwrapOrSetPythonException(
-      As<PythonList>(implementor.CallMethod(callee_name)));
+  PythonDictionary py_return = unwrapOrSetPythonException(
+      As<PythonDictionary>(implementor.CallMethod(callee_name)));
 
   // if it fails, print the error but otherwise go on
   if (PyErr_Occurred()) {

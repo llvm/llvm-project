@@ -831,6 +831,8 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
   return true;
 }
 
+#include "lldb/Interpreter/CommandReturnObject.h"
+
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
     PyObject *implementor, lldb::DebuggerSP debugger, lldb_private::StructuredDataImpl &args_impl,
     lldb_private::CommandReturnObject &cmd_retobj,
@@ -841,13 +843,13 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   PythonObject self(PyRefType::Borrowed, implementor);
   auto pfunc = self.ResolveName<PythonCallable>("__call__");
 
-  if (!pfunc.IsAllocated())
+  if (!pfunc.IsAllocated()) {
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
     return false;
+  }
 
-  auto cmd_retobj_arg = SWIGBridge::ToSWIGWrapper(cmd_retobj);
-  
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
-        SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
+        SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
 
   return true;
 }

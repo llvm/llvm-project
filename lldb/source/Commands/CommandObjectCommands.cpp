@@ -1411,7 +1411,7 @@ private:
     }
     
     
-    Status SetOptionsFromArray(StructuredData::Array &options) {
+    Status SetOptionsFromArray(StructuredData::Dictionary &options) {
       Status error;
       m_num_options = options.GetSize();
       m_options_definition_up.reset(new OptionDefinition[m_num_options]);
@@ -1425,10 +1425,10 @@ private:
       size_t short_opt_counter = 0;
       // This is the Array::ForEach function for adding option elements:
       auto add_element = [this, &error, &counter, &short_opt_counter] 
-          (StructuredData::Object *object) -> bool {
+          (llvm::StringRef long_option, StructuredData::Object *object) -> bool {
         StructuredData::Dictionary *opt_dict = object->GetAsDictionary();
         if (!opt_dict) {
-          error.SetErrorString("Object in options array is not a dictionary");
+          error.SetErrorString("Value in options dictionary is not a dictionary");
           return false;
         }
         OptionDefinition &option_def = m_options_definition_up.get()[counter];
@@ -1489,21 +1489,13 @@ private:
         }
         option_def.short_option = short_option;
         
-        // Long Option:
-        std::string long_option;
-        obj_sp = opt_dict->GetValueForKey("long_option");
-        if (!obj_sp) {
-          error.SetErrorStringWithFormatv("required long_option missing from "
-          "option {0}", counter);
-          return false;
-        }
-        llvm::StringRef long_stref = obj_sp->GetStringValue();
-        if (long_stref.empty()) {
+        // Long Option is the key from the outer dict:
+        if (long_option.empty()) {
           error.SetErrorStringWithFormatv("empty long_option for option {0}", 
               counter);
           return false;
         }
-        auto inserted = g_string_storer.insert(long_stref.str());
+        auto inserted = g_string_storer.insert(long_option.str());
         option_def.long_option = ((*(inserted.first)).data());
         
         // Value Type:
@@ -1556,13 +1548,14 @@ private:
               "{0}", counter);
           return false;
         }
-        long_stref = obj_sp->GetStringValue();
-        if (long_stref.empty()) {
+        llvm::StringRef usage_stref;
+        usage_stref = obj_sp->GetStringValue();
+        if (usage_stref.empty()) {
           error.SetErrorStringWithFormatv("empty usage text for option {0}", 
               counter);
           return false;
         }
-        m_usage_container[counter] = long_stref.str().c_str();
+        m_usage_container[counter] = usage_stref.str().c_str();
         option_def.usage_text = m_usage_container[counter].data();
 
         // Enum Values:
@@ -1743,12 +1736,16 @@ public:
     // Now set up the options definitions from the options:
     StructuredData::ObjectSP options_object_sp 
         = scripter->GetOptionsForCommandObject(cmd_obj_sp);
-    // It's okay not to have an options array.
+    // It's okay not to have an options dict.
     if (options_object_sp) {
-      StructuredData::Array *options_array = options_object_sp->GetAsArray();
+      // The options come as a dictionary of dictionaries.  The key of the
+      // outer dict is the long option name (since that's required).  The
+      // value holds all the other option specification bits.
+      StructuredData::Dictionary *options_dict 
+          = options_object_sp->GetAsDictionary();
       // but if it exists, it has to be an array.
-      if (options_array) {
-        m_options_error = m_options.SetOptionsFromArray(*(options_array));
+      if (options_dict) {
+        m_options_error = m_options.SetOptionsFromArray(*(options_dict));
         // If we got an error don't bother with the arguments...
         if (m_options_error.Fail())
           return;

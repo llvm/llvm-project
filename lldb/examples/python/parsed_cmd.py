@@ -49,7 +49,9 @@ from abc import abstractmethod
 
 class LLDBOVParser:
     def __init__(self):
-        self.options_array = []
+        # This is a dictionary of dictionaries.  The key is the long option
+        # name, and the value is the rest of the definition.
+        self.options_dict = {}
         self.args_array = []
 
     # Some methods to translate common value types.  Should return a
@@ -160,17 +162,14 @@ class LLDBOVParser:
     def get_option_element(self, long_name):
         # Fixme: Is it worth making a long_option dict holding the rest of
         # the options dict so this lookup is faster?
-        for item in self.options_array:
-            if item["long_option"] == long_name:
-                return item
-
-        return None
+        return self.options_dict.get(long_name, None)
             
     def option_parsing_started(self):
         # This makes the ivars for all the varnames in the array and gives them
         # their default values.
-        for elem in self.options_array:
-            elem['_value_set'] = False       
+        for key, elem in self.options_dict.items():
+            #breakpoint()
+            elem['_value_set'] = False
             try:
                 object.__setattr__(self, elem["varname"], elem["default"])
             except AttributeError:
@@ -250,7 +249,6 @@ class LLDBOVParser:
             completion_type = self.determine_completion(value_type)
             
         dict = {"short_option" : short_option,
-                "long_option" : long_option,
                 "required" : required,
                 "usage" : usage,
                 "value_type" : value_type,
@@ -263,7 +261,7 @@ class LLDBOVParser:
         if groups:
             dict["groups"] = groups
 
-        self.options_array.append(dict)
+        self.options_dict[long_option] = dict
 
     def make_argument_element(self, arg_type, repeat = "optional", groups = None):
         element = {"arg_type" : arg_type, "repeat" : repeat}
@@ -284,7 +282,7 @@ class ParsedCommandBase:
         return self.ov_parser
 
     def get_options_definition(self):
-        return self.get_parser().options_array
+        return self.get_parser().options_dict
 
     def get_flags(self):
         return 0

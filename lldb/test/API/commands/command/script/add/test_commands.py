@@ -14,8 +14,7 @@ class ReportingCmd(ParsedCommandBase):
         opt_def = self.get_options_definition()
         if len(opt_def):
             result.AppendMessage("Options:\n")
-            for elem in opt_def:
-                long_option = elem["long_option"]
+            for long_option, elem in opt_def.items():
                 varname = elem["varname"]
                 result.AppendMessage(f"{long_option} (set: {elem['_value_set']}): {object.__getattribute__(self.ov_parser, varname)}\n")
         else:
