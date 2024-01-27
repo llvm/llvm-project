@@ -3536,6 +3536,10 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
       T = DT;
       break;
     }
+    case Type::PackIndexing: {
+      T = cast<PackIndexingType>(T)->getSelectedType();
+      break;
+    }
     case Type::Adjusted:
     case Type::Decayed:
       // Decayed and adjusted types use the adjusted type in LLVM and DWARF.
@@ -3719,6 +3723,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::TypeOfExpr:
   case Type::TypeOf:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::UnaryTransform:
     break;
   }

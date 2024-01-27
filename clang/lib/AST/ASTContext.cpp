@@ -3599,6 +3599,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
+  case Type::PackIndexing:
   case Type::BitInt:
   case Type::DependentBitInt:
     llvm_unreachable("type should never be variably-modified");
@@ -5700,6 +5701,39 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
   }
   Types.push_back(dt);
   return QualType(dt, 0);
+}
+
+QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                         bool FullySubstituted,
+                                         ArrayRef<QualType> Expansions,
+                                         int Index) const {
+  QualType Canonical;
+  if (FullySubstituted && Index != -1) {
+    Canonical = getCanonicalType(Expansions[Index]);
+  } else {
+    llvm::FoldingSetNodeID ID;
+    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr);
+    void *InsertPos = nullptr;
+    PackIndexingType *Canon =
+        DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
+    if (!Canon) {
+      void *Mem = Allocate(
+          PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
+          TypeAlignment);
+      Canon = new (Mem)
+          PackIndexingType(*this, QualType(), Pattern, IndexExpr, Expansions);
+      DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
+    }
+    Canonical = QualType(Canon, 0);
+  }
+
+  void *Mem =
+      Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
+               TypeAlignment);
+  auto *T = new (Mem)
+      PackIndexingType(*this, Canonical, Pattern, IndexExpr, Expansions);
+  Types.push_back(T);
+  return QualType(T, 0);
 }
 
 /// getUnaryTransformationType - We don't unique these, since the memory
@@ -12918,6 +12952,14 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     // As Decltype is not uniqued, building a common type would be wasteful.
     return QualType(DX, 0);
   }
+  case Type::PackIndexing: {
+    const auto *DX = cast<PackIndexingType>(X);
+    [[maybe_unused]] const auto *DY = cast<PackIndexingType>(Y);
+    assert(DX->isDependentType());
+    assert(DY->isDependentType());
+    assert(Ctx.hasSameExpr(DX->getIndexExpr(), DY->getIndexExpr()));
+    return QualType(DX, 0);
+  }
   case Type::DependentName: {
     const auto *NX = cast<DependentNameType>(X),
                *NY = cast<DependentNameType>(Y);
@@ -13078,6 +13120,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     return Ctx.getAutoType(Ctx.getQualifiedType(Underlying), AX->getKeyword(),
                            /*IsDependent=*/false, /*IsPack=*/false, CD, As);
   }
+  case Type::PackIndexing:
   case Type::Decltype:
     return QualType();
   case Type::DeducedTemplateSpecialization:
