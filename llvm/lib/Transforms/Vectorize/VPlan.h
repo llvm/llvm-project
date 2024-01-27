@@ -1389,6 +1389,10 @@ public:
 
   ~VPScalarCastRecipe() override = default;
 
+  VPRecipeBase *clone() override {
+    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy);
+  }
+
   VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
 
   void execute(VPTransformState &State) override;
@@ -2495,10 +2499,9 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
 
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
                     const FPMathOperator *FPBinOp, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
-                    Type *TruncResultTy)
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
       : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        TruncResultTy(TruncResultTy), Kind(Kind), FPBinOp(FPBinOp) {}
+        Kind(Kind), FPBinOp(FPBinOp) {}
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
@@ -2512,8 +2515,7 @@ public:
 
   VPRecipeBase *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(),
-                                 getCanonicalIV(), getStepValue(),
-                                 TruncResultTy);
+                                 getCanonicalIV(), getStepValue());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPDerivedIVSC)
