@@ -12,7 +12,7 @@ constexpr int myConstexprMax(int a, int b) {
 #define MY_IF_MACRO(condition, statement) \
   if (condition) {                        \
     statement                             \
-  }
+  }                                       \
 
 class MyClass {
 public:
@@ -46,7 +46,7 @@ void foo(T value7) {
   if (value2 > value1)
     value2 = value1; 
 
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value2, value1);
   if (value2 > value1)
     value1 = value2; 
