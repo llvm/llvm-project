@@ -2475,10 +2475,6 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
   if (auto CAT = dyn_cast<clang::ConstantArrayType>(D->getType())) {
     const QualType &ArrayEltT = CAT->getElementType();
     assert(!ArrayEltT.isNull() && "Trying to fix a non-array type variable!");
-    // Producing fix-it for variable declaration---make `D` to be of std::array
-    // type:
-    SmallString<32> Replacement;
-    raw_svector_ostream OS(Replacement);
 
     // For most types the transformation is simple:
     //   T foo[10]; => std::array<T, 10> foo;
@@ -2496,6 +2492,21 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
       return {};
     }
 
+    // Find the '[' token.
+    std::optional<Token> NextTok = Lexer::findNextToken(getVarDeclIdentifierLoc(D), Ctx.getSourceManager(), Ctx.getLangOpts());
+    while (NextTok && !NextTok->is(tok::l_square))
+      NextTok = Lexer::findNextToken(NextTok->getLocation(), Ctx.getSourceManager(), Ctx.getLangOpts());
+    if (!NextTok)
+      return {};
+    const SourceLocation LSqBracketLoc = NextTok->getLocation();
+
+    // Get the spelling of the array size as written in the source file (including macros, etc.).
+    auto MaybeArraySizeTxt = getRangeText({LSqBracketLoc.getLocWithOffset(1), D->getTypeSpecEndLoc()}, Ctx.getSourceManager(), Ctx.getLangOpts());
+    if (!MaybeArraySizeTxt)
+      return {};
+
+    const std::string ArraySizeTxt = MaybeArraySizeTxt->str();
+
     std::optional<StringRef> IdentText =
         getVarDeclIdentifierText(D, Ctx.getSourceManager(), Ctx.getLangOpts());
 
@@ -2504,8 +2515,10 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
       return {};
     }
 
+    SmallString<32> Replacement;
+    raw_svector_ostream OS(Replacement);
     OS << "std::array<" << ArrayEltT.getAsString() << ", "
-       << getAPIntText(CAT->getSize()) << "> " << IdentText->str();
+       << ArraySizeTxt << "> " << IdentText->str();
 
     FixIts.push_back(FixItHint::CreateReplacement(
         SourceRange{D->getBeginLoc(), D->getTypeSpecEndLoc()}, OS.str()));

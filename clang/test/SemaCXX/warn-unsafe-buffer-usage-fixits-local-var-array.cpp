@@ -10,6 +10,18 @@ void local_array(unsigned idx) {
   buffer[idx] = 0;
 }
 
+void weird_whitespace_in_declaration(unsigned idx) {
+  int      buffer_w   [       10 ] ;
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:35}:"std::array<int,        10 > buffer_w"
+  buffer_w[idx] = 0;
+}
+
+void weird_comments_in_declaration(unsigned idx) {
+  int   /* [ ] */   buffer_w  /* [ ] */ [ /* [ ] */ 10 /* [ ] */ ] ;
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:67}:"std::array<int,  /* [ ] */ 10 /* [ ] */ > buffer_w"
+  buffer_w[idx] = 0;
+}
+
 void unsupported_multi_decl1(unsigned idx) {
   int a, buffer[10];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
@@ -55,23 +67,25 @@ template void local_array_in_template<int>(unsigned); // FIXME: expected note {{
 
 void macro_as_identifier(unsigned idx) {
 #define MY_BUFFER buffer
-  // Although fix-its include macros, the macros do not overlap with
-  // the bounds of the source range of these fix-its. So these fix-its
-  // are valid.
-
   int MY_BUFFER[10];
 // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:20}:"std::array<int, 10> MY_BUFFER"
   MY_BUFFER[idx] = 0;
-
 #undef MY_BUFFER
 }
 
-void unsupported_fixit_overlapping_macro(unsigned idx) {
-#define MY_INT int
-  MY_INT buffer[10];
+void macro_as_size(unsigned idx) {
+#define MY_TEN 10
+  int buffer[MY_TEN];
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
   buffer[idx] = 0;
-#undef MY_INT
+#undef MY_TEN
+}
+
+void constant_as_size(unsigned idx) {
+  const unsigned my_const = 10;
+  int buffer[my_const];
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:23}:"std::array<int, my_const> buffer"
+  buffer[idx] = 0;
 }
 
 void subscript_negative() {
