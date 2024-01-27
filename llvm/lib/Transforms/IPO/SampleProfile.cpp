@@ -457,7 +457,6 @@ class SampleProfileMatcher {
   uint64_t MismatchedCallsiteSamples = 0;
   uint64_t PostMatchNumMismatchedCallsites = 0;
   uint64_t PostMatchMismatchedCallsiteSamples = 0;
-  uint64_t TotalCallsiteSamples = 0;
   uint64_t TotalProfiledFunc = 0;
   uint64_t NumMismatchedFuncHash = 0;
   uint64_t MismatchedFuncHashSamples = 0;
