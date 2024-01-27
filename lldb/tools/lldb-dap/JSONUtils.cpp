@@ -135,6 +135,12 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
   return strs;
 }
 
+static bool IsClassStructOrUnionType(lldb::SBType t) {
+  return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
+                              lldb::eTypeClassUnion | lldb::eTypeClassArray)) !=
+         0;
+}
+
 /// Create a short summary for a container that contains the summary of its
 /// first children, so that the user can get a glimpse of its contents at a
 /// glance.
@@ -173,21 +179,23 @@ TryCreateAutoSummaryForContainer(lldb::SBValue &v) {
     lldb::SBValue child = v.GetChildAtIndex(i);
 
     if (llvm::StringRef name = child.GetName(); !name.empty()) {
-      llvm::StringRef value;
+      llvm::StringRef desc;
       if (llvm::StringRef summary = child.GetSummary(); !summary.empty())
-        value = summary;
+        desc = summary;
+      else if (llvm::StringRef value = child.GetValue(); !value.empty())
+        desc = value;
+      else if (IsClassStructOrUnionType(child.GetType()))
+        desc = "{...}";
       else
-        value = child.GetValue();
+        continue;
 
-      if (!value.empty()) {
-        // If the child is an indexed entry, we don't show its index to save
-        // characters.
-        if (name.starts_with("["))
-          os << separator << value;
-        else
-          os << separator << name << ":" << value;
-        separator = ", ";
-      }
+      // If the child is an indexed entry, we don't show its index to save
+      // characters.
+      if (name.starts_with("["))
+        os << separator << desc;
+      else
+        os << separator << name << ":" << desc;
+      separator = ", ";
     }
   }
   os << "}";
@@ -1089,6 +1097,23 @@ llvm::json::Object VariableDescription::GetVariableExtensionsJSON() {
       extensions.try_emplace("declaration", std::move(decl_obj));
   }
   return extensions;
+}
+
+std::string VariableDescription::GetResult(llvm::StringRef context) {
+  // In repl and hover context, the results can be displayed as multiple lines
+  // so more detailed descriptions can be returned.
+  if (context != "repl" && context != "hover")
+    return display_value;
+
+  if (!v.IsValid())
+    return display_value;
+
+  // Try the SBValue::GetDescription(), which may call into language runtime
+  // specific formatters (see ValueObjectPrinter).
+  lldb::SBStream stream;
+  v.GetDescription(stream);
+  llvm::StringRef description = stream.GetData();
+  return description.trim().str();
 }
 
 // "Variable": {

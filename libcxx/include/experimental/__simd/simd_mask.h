@@ -52,6 +52,12 @@ public:
     }
   }
 
+  // load constructor
+  template <class _Flags, enable_if_t<is_simd_flag_type_v<_Flags>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI simd_mask(const value_type* __mem, _Flags) {
+    _Impl::__load(__s_, _Flags::template __apply<simd_mask>(__mem));
+  }
+
   // scalar access [simd.mask.subscr]
   _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
   _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }

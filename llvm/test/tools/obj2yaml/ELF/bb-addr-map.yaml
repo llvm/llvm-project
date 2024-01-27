@@ -1,8 +1,5 @@
 ## Check how obj2yaml produces YAML .llvm_bb_addr_map descriptions.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 ## Check that obj2yaml uses the "Entries" tag to describe an .llvm_bb_addr_map section.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1

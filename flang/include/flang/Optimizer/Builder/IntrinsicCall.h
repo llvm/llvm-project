@@ -214,6 +214,7 @@ struct IntrinsicLibrary {
   mlir::Value genDshiftr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genExit(llvm::ArrayRef<fir::ExtendedValue>);
+  void genExecuteCommandLine(mlir::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genExtendsTypeOf(mlir::Type,
                                       llvm::ArrayRef<fir::ExtendedValue>);
@@ -338,6 +339,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genStorageSize(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  void genSignalSubroutine(llvm::ArrayRef<fir::ExtendedValue>);
+  void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);

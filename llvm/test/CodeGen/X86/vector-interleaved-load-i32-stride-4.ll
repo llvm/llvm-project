@@ -78,7 +78,7 @@ define void @load_i32_stride4_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FAST-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512-FAST-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512-FAST-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX512-FAST-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,5,1,5]
+; AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm3 = [1,5,0,0]
 ; AVX512-FAST-NEXT:    vpermi2d %xmm1, %xmm0, %xmm3
 ; AVX512-FAST-NEXT:    vpunpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; AVX512-FAST-NEXT:    vmovq %xmm2, (%rsi)
@@ -160,8 +160,7 @@ define void @load_i32_stride4_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm0 = xmm5[0,1],xmm0[2,3]
 ; AVX2-ONLY-NEXT:    vmovaps 48(%rdi), %xmm5
 ; AVX2-ONLY-NEXT:    vunpcklps {{.*#+}} xmm6 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; AVX2-ONLY-NEXT:    vmovddup {{.*#+}} xmm7 = [1,5,1,5]
-; AVX2-ONLY-NEXT:    # xmm7 = mem[0,0]
+; AVX2-ONLY-NEXT:    vmovsd {{.*#+}} xmm7 = [1,5,0,0]
 ; AVX2-ONLY-NEXT:    vmovaps (%rdi), %ymm8
 ; AVX2-ONLY-NEXT:    vpermps %ymm8, %ymm7, %ymm7
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm6 = xmm7[0,1],xmm6[2,3]
@@ -171,8 +170,7 @@ define void @load_i32_stride4_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-ONLY-NEXT:    vunpckhps {{.*#+}} xmm2 = xmm2[2],xmm3[2],xmm2[3],xmm3[3]
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3]
 ; AVX2-ONLY-NEXT:    vunpckhps {{.*#+}} xmm2 = xmm4[2],xmm5[2],xmm4[3],xmm5[3]
-; AVX2-ONLY-NEXT:    vmovddup {{.*#+}} xmm3 = [3,7,3,7]
-; AVX2-ONLY-NEXT:    # xmm3 = mem[0,0]
+; AVX2-ONLY-NEXT:    vmovsd {{.*#+}} xmm3 = [3,7,0,0]
 ; AVX2-ONLY-NEXT:    vpermps %ymm8, %ymm3, %ymm3
 ; AVX2-ONLY-NEXT:    vblendps {{.*#+}} xmm2 = xmm3[0,1],xmm2[2,3]
 ; AVX2-ONLY-NEXT:    vmovaps %xmm0, (%rsi)

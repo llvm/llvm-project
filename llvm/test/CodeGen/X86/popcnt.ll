@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+popcnt | FileCheck %s --check-prefix=X86-POPCNT
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+popcnt | FileCheck %s --check-prefix=X64-POPCNT
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+ndd | FileCheck %s --check-prefix=X64-NDD
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=sse2 | FileCheck %s --check-prefixes=X86,X86-SSE2
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=ssse3 | FileCheck %s --check-prefixes=X86,X86-SSSE3
 
@@ -55,6 +56,20 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
 ; X64-POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt8:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrb $1, %dil, %al
+; X64-NDD-NEXT:    andb $85, %al
+; X64-NDD-NEXT:    subb %al, %dil, %al
+; X64-NDD-NEXT:    andb $51, %al, %cl
+; X64-NDD-NEXT:    shrb $2, %al
+; X64-NDD-NEXT:    andb $51, %al
+; X64-NDD-NEXT:    addb %cl, %al
+; X64-NDD-NEXT:    shrb $4, %al, %cl
+; X64-NDD-NEXT:    addb %cl, %al
+; X64-NDD-NEXT:    andb $15, %al
+; X64-NDD-NEXT:    retq
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %x)
   ret i8 %cnt
 }
@@ -118,6 +133,24 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
 ; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt16:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
+; X64-NDD-NEXT:    andl $21845, %eax # imm = 0x5555
+; X64-NDD-NEXT:    subl %eax, %edi, %eax
+; X64-NDD-NEXT:    andl $13107, %eax, %ecx # imm = 0x3333
+; X64-NDD-NEXT:    shrl $2, %eax
+; X64-NDD-NEXT:    andl $13107, %eax # imm = 0x3333
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    shrl $4, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X64-NDD-NEXT:    shrl $8, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    movzbl %al, %eax
+; X64-NDD-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NDD-NEXT:    retq
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
   ret i16 %cnt
 }
@@ -171,6 +204,22 @@ define i32 @cnt32(i32 %x) nounwind readnone {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt32:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
+; X64-NDD-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; X64-NDD-NEXT:    subl %eax, %edi, %eax
+; X64-NDD-NEXT:    andl $858993459, %eax, %ecx # imm = 0x33333333
+; X64-NDD-NEXT:    shrl $2, %eax
+; X64-NDD-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    shrl $4, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X64-NDD-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
+; X64-NDD-NEXT:    shrl $24, %eax
+; X64-NDD-NEXT:    retq
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %cnt
 }
@@ -249,6 +298,26 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt64:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    subq %rax, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; X64-NDD-NEXT:    andq %rcx, %rax, %rdx
+; X64-NDD-NEXT:    shrq $2, %rax
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    addq %rdx, %rax
+; X64-NDD-NEXT:    shrq $4, %rax, %rcx
+; X64-NDD-NEXT:    addq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; X64-NDD-NEXT:    imulq %rcx, %rax
+; X64-NDD-NEXT:    shrq $56, %rax
+; X64-NDD-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: cnt64:
 ; X86-SSE2:       # %bb.0:
@@ -444,6 +513,40 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X64-POPCNT-NEXT:    xorl %edx, %edx
 ; X64-POPCNT-NEXT:    retq
 ;
+; X64-NDD-LABEL: cnt128:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrq $1, %rsi, %rax
+; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    subq %rax, %rsi, %rax
+; X64-NDD-NEXT:    movabsq $3689348814741910323, %rdx # imm = 0x3333333333333333
+; X64-NDD-NEXT:    andq %rdx, %rax, %rsi
+; X64-NDD-NEXT:    shrq $2, %rax
+; X64-NDD-NEXT:    andq %rdx, %rax
+; X64-NDD-NEXT:    addq %rsi, %rax
+; X64-NDD-NEXT:    shrq $4, %rax, %rsi
+; X64-NDD-NEXT:    addq %rsi, %rax
+; X64-NDD-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
+; X64-NDD-NEXT:    andq %rsi, %rax
+; X64-NDD-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
+; X64-NDD-NEXT:    imulq %r8, %rax
+; X64-NDD-NEXT:    shrq $56, %rax
+; X64-NDD-NEXT:    shrq $1, %rdi, %r9
+; X64-NDD-NEXT:    andq %r9, %rcx
+; X64-NDD-NEXT:    subq %rcx, %rdi, %rcx
+; X64-NDD-NEXT:    andq %rdx, %rcx, %rdi
+; X64-NDD-NEXT:    shrq $2, %rcx
+; X64-NDD-NEXT:    andq %rdx, %rcx
+; X64-NDD-NEXT:    addq %rdi, %rcx
+; X64-NDD-NEXT:    shrq $4, %rcx, %rdx
+; X64-NDD-NEXT:    addq %rdx, %rcx
+; X64-NDD-NEXT:    andq %rsi, %rcx
+; X64-NDD-NEXT:    imulq %r8, %rcx
+; X64-NDD-NEXT:    shrq $56, %rcx
+; X64-NDD-NEXT:    addq %rcx, %rax
+; X64-NDD-NEXT:    xorl %edx, %edx
+; X64-NDD-NEXT:    retq
+;
 ; X86-SSE2-LABEL: cnt128:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -603,6 +706,26 @@ define i64 @cnt64_noimplicitfloat(i64 %x) nounwind readnone noimplicitfloat  {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt64_noimplicitfloat:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    subq %rax, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; X64-NDD-NEXT:    andq %rcx, %rax, %rdx
+; X64-NDD-NEXT:    shrq $2, %rax
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    addq %rdx, %rax
+; X64-NDD-NEXT:    shrq $4, %rax, %rcx
+; X64-NDD-NEXT:    addq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; X64-NDD-NEXT:    imulq %rcx, %rax
+; X64-NDD-NEXT:    shrq $56, %rax
+; X64-NDD-NEXT:    retq
   %cnt = tail call i64 @llvm.ctpop.i64(i64 %x)
   ret i64 %cnt
 }
@@ -658,6 +781,23 @@ define i32 @cnt32_optsize(i32 %x) nounwind readnone optsize {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt32_optsize:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
+; X64-NDD-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; X64-NDD-NEXT:    subl %eax, %edi, %eax
+; X64-NDD-NEXT:    movl $858993459, %ecx # imm = 0x33333333
+; X64-NDD-NEXT:    andl %ecx, %eax, %edx
+; X64-NDD-NEXT:    shrl $2, %eax
+; X64-NDD-NEXT:    andl %ecx, %eax
+; X64-NDD-NEXT:    addl %edx, %eax
+; X64-NDD-NEXT:    shrl $4, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X64-NDD-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
+; X64-NDD-NEXT:    shrl $24, %eax
+; X64-NDD-NEXT:    retq
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %cnt
 }
@@ -745,6 +885,26 @@ define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt64_optsize:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    subq %rax, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; X64-NDD-NEXT:    andq %rcx, %rax, %rdx
+; X64-NDD-NEXT:    shrq $2, %rax
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    addq %rdx, %rax
+; X64-NDD-NEXT:    shrq $4, %rax, %rcx
+; X64-NDD-NEXT:    addq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; X64-NDD-NEXT:    imulq %rcx, %rax
+; X64-NDD-NEXT:    shrq $56, %rax
+; X64-NDD-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: cnt64_optsize:
 ; X86-SSE2:       # %bb.0:
@@ -949,6 +1109,40 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X64-POPCNT-NEXT:    xorl %edx, %edx
 ; X64-POPCNT-NEXT:    retq
 ;
+; X64-NDD-LABEL: cnt128_optsize:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrq $1, %rsi, %rax
+; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    subq %rax, %rsi, %rax
+; X64-NDD-NEXT:    movabsq $3689348814741910323, %rdx # imm = 0x3333333333333333
+; X64-NDD-NEXT:    andq %rdx, %rax, %rsi
+; X64-NDD-NEXT:    shrq $2, %rax
+; X64-NDD-NEXT:    andq %rdx, %rax
+; X64-NDD-NEXT:    addq %rsi, %rax
+; X64-NDD-NEXT:    shrq $4, %rax, %rsi
+; X64-NDD-NEXT:    addq %rsi, %rax
+; X64-NDD-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
+; X64-NDD-NEXT:    andq %rsi, %rax
+; X64-NDD-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
+; X64-NDD-NEXT:    imulq %r8, %rax
+; X64-NDD-NEXT:    shrq $56, %rax
+; X64-NDD-NEXT:    shrq $1, %rdi, %r9
+; X64-NDD-NEXT:    andq %r9, %rcx
+; X64-NDD-NEXT:    subq %rcx, %rdi, %rcx
+; X64-NDD-NEXT:    andq %rdx, %rcx, %rdi
+; X64-NDD-NEXT:    shrq $2, %rcx
+; X64-NDD-NEXT:    andq %rdx, %rcx
+; X64-NDD-NEXT:    addq %rdi, %rcx
+; X64-NDD-NEXT:    shrq $4, %rcx, %rdx
+; X64-NDD-NEXT:    addq %rdx, %rcx
+; X64-NDD-NEXT:    andq %rsi, %rcx
+; X64-NDD-NEXT:    imulq %r8, %rcx
+; X64-NDD-NEXT:    shrq $56, %rcx
+; X64-NDD-NEXT:    addq %rcx, %rax
+; X64-NDD-NEXT:    xorl %edx, %edx
+; X64-NDD-NEXT:    retq
+;
 ; X86-SSE2-LABEL: cnt128_optsize:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1085,6 +1279,22 @@ define i32 @cnt32_pgso(i32 %x) nounwind readnone !prof !14 {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt32_pgso:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
+; X64-NDD-NEXT:    andl $1431655765, %eax # imm = 0x55555555
+; X64-NDD-NEXT:    subl %eax, %edi, %eax
+; X64-NDD-NEXT:    andl $858993459, %eax, %ecx # imm = 0x33333333
+; X64-NDD-NEXT:    shrl $2, %eax
+; X64-NDD-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    shrl $4, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X64-NDD-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
+; X64-NDD-NEXT:    shrl $24, %eax
+; X64-NDD-NEXT:    retq
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %cnt
 }
@@ -1163,6 +1373,26 @@ define i64 @cnt64_pgso(i64 %x) nounwind readnone !prof !14 {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: cnt64_pgso:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    subq %rax, %rdi, %rax
+; X64-NDD-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; X64-NDD-NEXT:    andq %rcx, %rax, %rdx
+; X64-NDD-NEXT:    shrq $2, %rax
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    addq %rdx, %rax
+; X64-NDD-NEXT:    shrq $4, %rax, %rcx
+; X64-NDD-NEXT:    addq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
+; X64-NDD-NEXT:    imulq %rcx, %rax
+; X64-NDD-NEXT:    shrq $56, %rax
+; X64-NDD-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: cnt64_pgso:
 ; X86-SSE2:       # %bb.0:
@@ -1360,6 +1590,40 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X64-POPCNT-NEXT:    xorl %edx, %edx
 ; X64-POPCNT-NEXT:    retq
 ;
+; X64-NDD-LABEL: cnt128_pgso:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrq $1, %rsi, %rax
+; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
+; X64-NDD-NEXT:    andq %rcx, %rax
+; X64-NDD-NEXT:    subq %rax, %rsi, %rax
+; X64-NDD-NEXT:    movabsq $3689348814741910323, %rdx # imm = 0x3333333333333333
+; X64-NDD-NEXT:    andq %rdx, %rax, %rsi
+; X64-NDD-NEXT:    shrq $2, %rax
+; X64-NDD-NEXT:    andq %rdx, %rax
+; X64-NDD-NEXT:    addq %rsi, %rax
+; X64-NDD-NEXT:    shrq $4, %rax, %rsi
+; X64-NDD-NEXT:    addq %rsi, %rax
+; X64-NDD-NEXT:    movabsq $1085102592571150095, %rsi # imm = 0xF0F0F0F0F0F0F0F
+; X64-NDD-NEXT:    andq %rsi, %rax
+; X64-NDD-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
+; X64-NDD-NEXT:    imulq %r8, %rax
+; X64-NDD-NEXT:    shrq $56, %rax
+; X64-NDD-NEXT:    shrq $1, %rdi, %r9
+; X64-NDD-NEXT:    andq %r9, %rcx
+; X64-NDD-NEXT:    subq %rcx, %rdi, %rcx
+; X64-NDD-NEXT:    andq %rdx, %rcx, %rdi
+; X64-NDD-NEXT:    shrq $2, %rcx
+; X64-NDD-NEXT:    andq %rdx, %rcx
+; X64-NDD-NEXT:    addq %rdi, %rcx
+; X64-NDD-NEXT:    shrq $4, %rcx, %rdx
+; X64-NDD-NEXT:    addq %rdx, %rcx
+; X64-NDD-NEXT:    andq %rsi, %rcx
+; X64-NDD-NEXT:    imulq %r8, %rcx
+; X64-NDD-NEXT:    shrq $56, %rcx
+; X64-NDD-NEXT:    addq %rcx, %rax
+; X64-NDD-NEXT:    xorl %edx, %edx
+; X64-NDD-NEXT:    retq
+;
 ; X86-SSE2-LABEL: cnt128_pgso:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1497,6 +1761,22 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: popcount_zext_i32:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
+; X64-NDD-NEXT:    andl $21845, %eax # imm = 0x5555
+; X64-NDD-NEXT:    subl %eax, %edi, %eax
+; X64-NDD-NEXT:    andl $858993459, %eax, %ecx # imm = 0x33333333
+; X64-NDD-NEXT:    shrl $2, %eax
+; X64-NDD-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    shrl $4, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
+; X64-NDD-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
+; X64-NDD-NEXT:    shrl $24, %eax
+; X64-NDD-NEXT:    retq
   %z = zext i16 %x to i32
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %z)
   ret i32 %cnt
@@ -1556,6 +1836,23 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntl %edi, %eax
 ; X64-POPCNT-NEXT:    retq
+;
+; X64-NDD-LABEL: popcount_i16_zext:
+; X64-NDD:       # %bb.0:
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
+; X64-NDD-NEXT:    andl $21845, %eax # imm = 0x5555
+; X64-NDD-NEXT:    subl %eax, %edi, %eax
+; X64-NDD-NEXT:    andl $13107, %eax, %ecx # imm = 0x3333
+; X64-NDD-NEXT:    shrl $2, %eax
+; X64-NDD-NEXT:    andl $13107, %eax # imm = 0x3333
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    shrl $4, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    andl $3855, %eax # imm = 0xF0F
+; X64-NDD-NEXT:    shrl $8, %eax, %ecx
+; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    movzbl %al, %eax
+; X64-NDD-NEXT:    retq
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
   %z = zext i16 %cnt to i32
   ret i32 %z

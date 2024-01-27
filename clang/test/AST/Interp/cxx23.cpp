@@ -25,22 +25,32 @@ constexpr int g(int n) {        // ref20-error {{constexpr function never produc
 }
 
 constexpr int c_thread_local(int n) { // ref20-error {{constexpr function never produces a constant expression}} \
-                                      // ref23-error {{constexpr function never produces a constant expression}}
+                                      // ref23-error {{constexpr function never produces a constant expression}} \
+                                      // expected20-error {{constexpr function never produces a constant expression}} \
+                                      // expected23-error {{constexpr function never produces a constant expression}}
   static _Thread_local int m = 0;     // ref20-note {{control flows through the definition of a thread_local variable}} \
                                       // ref20-warning {{is a C++23 extension}} \
                                       // ref23-note {{control flows through the definition of a thread_local variable}} \
-                                      // expected20-warning {{is a C++23 extension}}
-  return m;
+                                      // expected20-warning {{is a C++23 extension}} \
+                                      // expected20-note {{declared here}} \
+                                      // expected23-note {{declared here}}
+  return m; // expected20-note {{read of non-const variable}} \
+            // expected23-note {{read of non-const variable}}
 }
 
 
 constexpr int gnu_thread_local(int n) { // ref20-error {{constexpr function never produces a constant expression}} \
-                                        // ref23-error {{constexpr function never produces a constant expression}}
+                                        // ref23-error {{constexpr function never produces a constant expression}} \
+                                        // expected20-error {{constexpr function never produces a constant expression}} \
+                                        // expected23-error {{constexpr function never produces a constant expression}}
   static __thread int m = 0;            // ref20-note {{control flows through the definition of a thread_local variable}} \
                                         // ref20-warning {{is a C++23 extension}} \
                                         // ref23-note {{control flows through the definition of a thread_local variable}} \
-                                        // expected20-warning {{is a C++23 extension}}
-  return m;
+                                        // expected20-warning {{is a C++23 extension}} \
+                                        // expected20-note {{declared here}} \
+                                        // expected23-note {{declared here}}
+  return m; // expected20-note {{read of non-const variable}} \
+            // expected23-note {{read of non-const variable}}
 }
 
 constexpr int h(int n) {  // ref20-error {{constexpr function never produces a constant expression}} \

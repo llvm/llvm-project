@@ -832,12 +832,12 @@ private:
   // the documentation for __sanitizer_annotate_contiguous_container.
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_contiguous_container(
-      const void* __beg, const void* __end, const void* __old_mid, const void* __new_mid) const {
-    (void)__beg;
-    (void)__end;
+      const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
 #ifndef _LIBCPP_HAS_NO_ASAN
+    const void* __beg = data();
+    const void* __end = data() + capacity();
     if (!__libcpp_is_constant_evaluated() && __beg != nullptr &&
         __asan_annotate_container_with_allocator<_Allocator>::value)
       __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
@@ -847,27 +847,27 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void)__current_size;
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + capacity(), data() + __current_size);
+    __annotate_contiguous_container(data() + capacity(), data() + __current_size);
 #endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + size(), data() + capacity());
+    __annotate_contiguous_container(data() + size(), data() + capacity());
 #endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_increase(size_type __n) const _NOEXCEPT {
     (void)__n;
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + size(), data() + size() + __n);
+    __annotate_contiguous_container(data() + size(), data() + size() + __n);
 #endif
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
     (void)__old_size;
 #ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_contiguous_container(data(), data() + capacity(), data() + __old_size, data() + size());
+    __annotate_contiguous_container(data() + __old_size, data() + size());
 #endif
   }
 

@@ -79,7 +79,7 @@ body:             |
     ; CHECK-NEXT: SW renamable $x1, $x2, 4 :: (store (s32) into %ir.a)
     ; CHECK-NEXT: renamable $x11 = ADDIW killed renamable $x1, 0
     ; CHECK-NEXT: $x10 = COPY $x0
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-plt) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
     ; CHECK-NEXT: $x1 = LD $x2, 8 :: (load (s64) from %stack.1)
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 16
     ; CHECK-NEXT: PseudoRET
@@ -87,7 +87,7 @@ body:             |
     renamable $x11 = ADDIW killed renamable $x1, 0
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
     $x10 = COPY $x0
-    PseudoCALL target-flags(riscv-plt) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
+    PseudoCALL target-flags(riscv-call) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     PseudoRET
 

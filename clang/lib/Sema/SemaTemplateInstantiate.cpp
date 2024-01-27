@@ -35,7 +35,6 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -224,6 +223,9 @@ Response HandleFunction(const FunctionDecl *Function,
       (!Pattern || !Pattern->getLexicalDeclContext()->isFileContext())) {
     return Response::ChangeDecl(Function->getLexicalDeclContext());
   }
+
+  if (ForConstraintInstantiation && Function->getFriendObjectKind())
+    return Response::ChangeDecl(Function->getLexicalDeclContext());
   return Response::UseNextDecl(Function);
 }
 
@@ -345,14 +347,25 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
 
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
+
+  if (!CurDecl)
+    CurDecl = Decl::castFromDeclContext(DC);
+
   if (Innermost) {
     Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND),
                                      Innermost->asArray(), Final);
-    CurDecl = Response::UseNextDecl(ND).NextDecl;
+    // Populate placeholder template arguments for TemplateTemplateParmDecls.
+    // This is essential for the case e.g.
+    //
+    // template <class> concept Concept = false;
+    // template <template <Concept C> class T> void foo(T<int>)
+    //
+    // where parameter C has a depth of 1 but the substituting argument `int`
+    // has a depth of 0.
+    if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl))
+      HandleDefaultTempArgIntoTempTempParam(TTP, Result);
+    CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
   }
-
-  if (!ND)
-    CurDecl = Decl::castFromDeclContext(DC);
 
   while (!CurDecl->isFileContextDecl()) {
     Response R;
@@ -381,10 +394,8 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       R = Response::ChangeDecl(CTD->getLexicalDeclContext());
     } else if (!isa<DeclContext>(CurDecl)) {
       R = Response::DontClearRelativeToPrimaryNextDecl(CurDecl);
-      if (CurDecl->getDeclContext()->isTranslationUnit()) {
-        if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl)) {
-          R = HandleDefaultTempArgIntoTempTempParam(TTP, Result);
-        }
+      if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl)) {
+        R = HandleDefaultTempArgIntoTempTempParam(TTP, Result);
       }
     } else {
       R = HandleGenericDeclContext(CurDecl);
@@ -1142,8 +1153,7 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DeducedTemplateArgumentSubstitution:
       // We're either substituting explicitly-specified template arguments,
       // deduced template arguments. SFINAE applies unless we are in a lambda
-      // expression, see [temp.deduct]p9.
-      [[fallthrough]];
+      // body, see [temp.deduct]p9.
     case CodeSynthesisContext::ConstraintSubstitution:
     case CodeSynthesisContext::RequirementInstantiation:
     case CodeSynthesisContext::RequirementParameterInstantiation:
@@ -1445,13 +1455,6 @@ namespace {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
 
-      Sema::CodeSynthesisContext C;
-      C.Kind = clang::Sema::CodeSynthesisContext::LambdaExpressionSubstitution;
-      C.PointOfInstantiation = E->getBeginLoc();
-      SemaRef.pushCodeSynthesisContext(C);
-      auto PopCtx =
-          llvm::make_scope_exit([this] { SemaRef.popCodeSynthesisContext(); });
-
       ExprResult Result = inherited::TransformLambdaExpr(E);
       if (Result.isInvalid())
         return Result;
@@ -1648,9 +1651,7 @@ bool TemplateInstantiator::TransformExceptionSpec(
     SourceLocation Loc, FunctionProtoType::ExceptionSpecInfo &ESI,
     SmallVectorImpl<QualType> &Exceptions, bool &Changed) {
   if (ESI.Type == EST_Uninstantiated) {
-    ESI.NoexceptExpr = cast<FunctionProtoType>(ESI.SourceTemplate->getType())
-                           ->getNoexceptExpr();
-    ESI.Type = EST_DependentNoexcept;
+    ESI.instantiate();
     Changed = true;
   }
   return inherited::TransformExceptionSpec(Loc, ESI, Exceptions, Changed);
@@ -1974,9 +1975,8 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     }
   } else if (arg.getKind() == TemplateArgument::Declaration ||
              arg.getKind() == TemplateArgument::NullPtr) {
-    ValueDecl *VD;
     if (arg.getKind() == TemplateArgument::Declaration) {
-      VD = arg.getAsDecl();
+      ValueDecl *VD = arg.getAsDecl();
 
       // Find the instantiation of the template argument.  This is
       // required for nested templates.
@@ -1984,21 +1984,20 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
              getSema().FindInstantiatedDecl(loc, VD, TemplateArgs));
       if (!VD)
         return ExprError();
-    } else {
-      // Propagate NULL template argument.
-      VD = nullptr;
     }
 
-    QualType paramType = VD ? arg.getParamTypeForDecl() : arg.getNullPtrType();
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
     assert(!paramType.isNull() && "type substitution failed for param type");
     assert(!paramType->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, paramType, loc);
     refParam = paramType->isReferenceType();
   } else {
-    result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
+    result = SemaRef.BuildExpressionFromNonTypeTemplateArgument(arg, loc);
+    refParam = paramType->isReferenceType();
     assert(result.isInvalid() ||
            SemaRef.Context.hasSameType(result.get()->getType(),
-                                       arg.getIntegralType()));
+                                       paramType.getNonReferenceType()));
   }
 
   if (result.isInvalid())
@@ -3050,6 +3049,7 @@ bool Sema::SubstDefaultArgument(
     //   default argument expression appears.
     ContextRAII SavedContext(*this, FD);
     std::unique_ptr<LocalInstantiationScope> LIS;
+    MultiLevelTemplateArgumentList NewTemplateArgs = TemplateArgs;
 
     if (ForCallExpr) {
       // When instantiating a default argument due to use in a call expression,
@@ -3062,11 +3062,19 @@ bool Sema::SubstDefaultArgument(
           /*ForDefinition*/ false);
       if (addInstantiatedParametersToScope(FD, PatternFD, *LIS, TemplateArgs))
         return true;
+      if (FD->isOutOfLine()) {
+        TemplateArgumentList *CurrentTemplateArgumentList =
+            TemplateArgumentList::CreateCopy(getASTContext(),
+                                             TemplateArgs.getInnermost());
+        NewTemplateArgs = getTemplateInstantiationArgs(
+            FD, FD->getDeclContext(), /*Final=*/false,
+            CurrentTemplateArgumentList, /*RelativeToPrimary=*/true);
+      }
     }
 
     runWithSufficientStackSpace(Loc, [&] {
-      Result = SubstInitializer(PatternExpr, TemplateArgs,
-                                /*DirectInit*/false);
+      Result = SubstInitializer(PatternExpr, NewTemplateArgs,
+                                /*DirectInit*/ false);
     });
   }
   if (Result.isInvalid())

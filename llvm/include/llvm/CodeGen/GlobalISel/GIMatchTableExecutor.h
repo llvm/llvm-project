@@ -19,8 +19,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
 #include <bitset>
 #include <cstddef>

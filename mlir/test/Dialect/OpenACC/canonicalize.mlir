@@ -110,14 +110,16 @@ func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
 
 func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
   %0 = acc.use_device varPtr(%a : memref<f32>) -> memref<f32>
+  %1 = arith.constant 1 : i32
+  %2 = arith.constant 10 : i32
   %false = arith.constant false
   acc.host_data dataOperands(%0 : memref<f32>) if(%false) {
-    acc.loop {
+    acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    }
-    acc.loop {
+    } attributes { inclusiveUpperbound = array<i1: true> }
+    acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    }
+    } attributes { inclusiveUpperbound = array<i1: true> }
     acc.terminator
   }
   return

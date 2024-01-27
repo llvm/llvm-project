@@ -30,6 +30,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __formatter {
@@ -71,7 +74,7 @@ __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _
 
   char __buffer[8];
   to_chars_result __r = std::to_chars(std::begin(__buffer), std::end(__buffer), __value, 16);
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   std::ranges::copy(std::begin(__buffer), __r.ptr, __out_it);
 
   __str += _CharT('}');
@@ -217,5 +220,7 @@ __format_escaped_string(basic_string_view<_CharT> __values,
 } // namespace __formatter
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_WRITE_ESCAPED_H

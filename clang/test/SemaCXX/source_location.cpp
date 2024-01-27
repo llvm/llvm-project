@@ -805,3 +805,30 @@ static_assert(S(0).j == S{0}.j);
 static_assert(S(0).j == S{0}.i);
 }
 #endif
+
+namespace GH78128 {
+
+template<int N>
+constexpr int f() {
+  return N;
+}
+
+template<typename T>
+void foo() {
+  constexpr auto* F1 = std::source_location::current().function();
+  static_assert(__builtin_strlen(F1) == f<__builtin_strlen(F1)>());
+
+  constexpr auto* F2 = __builtin_FUNCTION();
+  static_assert(__builtin_strlen(F2) == f<__builtin_strlen(F2)>());
+
+#ifdef MS
+  constexpr auto* F3 = __builtin_FUNCSIG();
+  static_assert(__builtin_strlen(F3) == f<__builtin_strlen(F3)>());
+#endif
+}
+
+void test() {
+  foo<int>();
+}
+
+}
