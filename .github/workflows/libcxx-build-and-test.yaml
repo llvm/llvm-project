@@ -199,3 +199,45 @@ jobs:
             **/CMakeError.log
             **/CMakeOutput.log
             **/crash_diagnostics/*
+  windows:
+    runs-on: windows-2022
+    needs: [ stage1 ]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - { config: clang-cl-dll, mingw: false }
+        - { config: clang-cl-static, mingw: false }
+        - { config: clang-cl-no-vcruntime, mingw: false }
+        - { config: clang-cl-debug, mingw: false }
+        - { config: clang-cl-static-crt, mingw: false }
+        - { config: mingw-dll, mingw: true }
+        - { config: mingw-static, mingw: true }
+        - { config: mingw-dll-i686, mingw: true }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          choco install -y ninja wget
+          pip install psutil
+      - name: Install a current LLVM
+        if: ${{ matrix.mingw != true }}
+        run: |
+          choco install -y llvm --version=17.0.6
+      - name: Install llvm-mingw
+        if: ${{ matrix.mingw == true }}
+        run: |
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20231128/llvm-mingw-20231128-ucrt-x86_64.zip
+          powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
+          del llvm-mingw*.zip
+          mv llvm-mingw* c:\llvm-mingw
+          echo "c:\llvm-mingw\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Add Git Bash to the path
+        run: |
+          echo "c:\Program Files\Git\usr\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Set up the MSVC dev environment
+        if: ${{ matrix.mingw != true }}
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build and test
+        run: |
+          bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}

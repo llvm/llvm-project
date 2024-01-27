@@ -840,6 +840,8 @@ ANNOTATION(primary_expr) // annotation for a primary expression, used when
                          // message send
 ANNOTATION(decltype)     // annotation for a decltype expression,
                          // e.g., "decltype(foo.bar())"
+ANNOTATION(pack_indexing_type) // annotation for an indexed pack of type,
+                              // e.g., "T...[expr]"
 
 // Annotation for #pragma unused(...)
 // For each argument inside the parentheses the pragma handler will produce
