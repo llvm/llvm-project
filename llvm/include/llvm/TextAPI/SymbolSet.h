@@ -23,19 +23,19 @@
 namespace llvm {
 
 struct SymbolsMapKey {
-  MachO::SymbolKind Kind;
+  MachO::EncodeKind Kind;
   StringRef Name;
 
-  SymbolsMapKey(MachO::SymbolKind Kind, StringRef Name)
+  SymbolsMapKey(MachO::EncodeKind Kind, StringRef Name)
       : Kind(Kind), Name(Name) {}
 };
 template <> struct DenseMapInfo<SymbolsMapKey> {
   static inline SymbolsMapKey getEmptyKey() {
-    return SymbolsMapKey(MachO::SymbolKind::GlobalSymbol, StringRef{});
+    return SymbolsMapKey(MachO::EncodeKind::GlobalSymbol, StringRef{});
   }
 
   static inline SymbolsMapKey getTombstoneKey() {
-    return SymbolsMapKey(MachO::SymbolKind::ObjectiveCInstanceVariable,
+    return SymbolsMapKey(MachO::EncodeKind::ObjectiveCInstanceVariable,
                          StringRef{});
   }
 
@@ -87,27 +87,27 @@ private:
   using SymbolsMapType = llvm::DenseMap<SymbolsMapKey, Symbol *>;
   SymbolsMapType Symbols;
 
-  Symbol *addGlobalImpl(SymbolKind, StringRef Name, SymbolFlags Flags);
+  Symbol *addGlobalImpl(EncodeKind, StringRef Name, SymbolFlags Flags);
 
 public:
   SymbolSet() = default;
-  Symbol *addGlobal(SymbolKind Kind, StringRef Name, SymbolFlags Flags,
+  Symbol *addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
                     const Target &Targ);
   size_t size() const { return Symbols.size(); }
 
   template <typename RangeT, typename ElT = std::remove_reference_t<
                                  decltype(*std::begin(std::declval<RangeT>()))>>
-  Symbol *addGlobal(SymbolKind Kind, StringRef Name, SymbolFlags Flags,
+  Symbol *addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
                     RangeT &&Targets) {
     auto *Global = addGlobalImpl(Kind, Name, Flags);
     for (const auto &Targ : Targets)
       Global->addTarget(Targ);
-    if (Kind == SymbolKind::ObjectiveCClassEHType)
-      addGlobal(SymbolKind::ObjectiveCClass, Name, Flags, Targets);
+    if (Kind == EncodeKind::ObjectiveCClassEHType)
+      addGlobal(EncodeKind::ObjectiveCClass, Name, Flags, Targets);
     return Global;
   }
 
-  const Symbol *findSymbol(SymbolKind Kind, StringRef Name) const;
+  const Symbol *findSymbol(EncodeKind Kind, StringRef Name) const;
 
   struct const_symbol_iterator
       : public iterator_adaptor_base<
