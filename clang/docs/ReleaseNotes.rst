@@ -68,8 +68,14 @@ C++23 Feature Support
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
+
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Substitute template parameter pack, when it is not explicitly specified
+  in the template parameters, but is deduced from a previous argument.
+  (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
 
 C Language Changes
 ------------------
