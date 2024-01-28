@@ -1292,6 +1292,16 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::PackIndexing:
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<PackIndexingType>(T1)->getPattern(),
+                                  cast<PackIndexingType>(T2)->getPattern()))
+      if (!IsStructurallyEquivalent(Context,
+                                    cast<PackIndexingType>(T1)->getIndexExpr(),
+                                    cast<PackIndexingType>(T2)->getIndexExpr()))
+        return false;
+    break;
+
   case Type::ObjCInterface: {
     const auto *Iface1 = cast<ObjCInterfaceType>(T1);
     const auto *Iface2 = cast<ObjCInterfaceType>(T2);
