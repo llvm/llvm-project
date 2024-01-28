@@ -4837,7 +4837,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return BinaryOperator::CreateNot(Builder.CreateAnd(Op0, B));
 
   // (A | B) ^ (A | C) --> (B ^ C) & ~A -- There are 4 commuted variants.
-  // TODO: Loosen one-use restriction if common operand is a constant.
   Value *D;
   if (match(Op0, m_OneUse(m_Or(m_Value(A), m_Value(B)))) &&
       match(Op1, m_OneUse(m_Or(m_Value(C), m_Value(D))))) {
@@ -4846,6 +4845,16 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     if (A == C)
       std::swap(C, D);
     if (A == D) {
+      Value *NotA = Builder.CreateNot(A);
+      return BinaryOperator::CreateAnd(Builder.CreateXor(B, C), NotA);
+    }
+  }
+
+  // (A | B) ^ (A | C) --> (B ^ C) & ~A -- There are 4 commuted variants.
+  // We do this if common operand is a constant.
+  if (match(Op0, m_c_Or(m_Value(A), m_Value(B))) &&
+      match(Op1, m_c_Or(m_Specific(A), m_Value(C)))) {
+    if (match(A, m_ImmConstant())) {
       Value *NotA = Builder.CreateNot(A);
       return BinaryOperator::CreateAnd(Builder.CreateXor(B, C), NotA);
     }
