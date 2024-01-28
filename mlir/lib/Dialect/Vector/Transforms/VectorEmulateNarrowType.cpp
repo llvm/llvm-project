@@ -341,7 +341,6 @@ struct ConvertVectorMaskedLoad final
   LogicalResult
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
     auto loc = op.getLoc();
     auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
     Type oldElementType = op.getType().getElementType();
@@ -932,7 +931,6 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 void vector::populateVectorNarrowTypeEmulationPatterns(
     arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
-
   // Populate `vector.*` conversion patterns.
   patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad, ConvertVectorStore,
                ConvertVectorMaskedStore, ConvertVectorTransferRead>(
