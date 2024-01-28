@@ -47,11 +47,6 @@ CLANG_FORMAT        The clang-format binary to use when generating the format
 ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
                     is optional.
 
-ENABLE_STD_MODULES  Whether to enable or disable building the C++23 std
-                    modules. This variable is optional.
-                    TODO MODULES remove when all supported compilers support
-                    modules.
-
 EOF
 }
 
@@ -120,10 +115,6 @@ if [ -z "${ENABLE_CLANG_TIDY}" ]; then
     ENABLE_CLANG_TIDY=Off
 fi
 
-if [ -n "${ENABLE_STD_MODULES}" ]; then
-    ENABLE_STD_MODULES="-DLIBCXX_ENABLE_STD_MODULES=${ENABLE_STD_MODULES}"
-fi
-
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
@@ -136,7 +127,6 @@ function generate-cmake-base() {
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
           -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
-          ${ENABLE_STD_MODULES} \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }

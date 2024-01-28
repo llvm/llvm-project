@@ -14,7 +14,11 @@ on:
         required: false
       os_list:
         required: false
-        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
+      python_version:
+        required: false
+        type: string
+        default: '3.11'
   workflow_call:
     inputs:
       build_target:
@@ -34,9 +38,12 @@ on:
         type: string
         # Use windows-2019 due to:
         # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-        # We're using a specific version of macOS due to:
-        # https://github.com/actions/virtual-environments/issues/5900
-        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
+        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
+
+      python_version:
+        required: false
+        type: string
+        default: '3.11'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -67,7 +74,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: ${{ inputs.python_version }}
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
       # actions/checkout deletes any existing files in the new git directory,
@@ -86,7 +93,8 @@ jobs:
           # run creates a new cache entry so we want to ensure that we have
           # enough cache space for all the tests to run at once and still
           # fit under the 10 GB limit.
-          max-size: 500M
+          # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
+          max-size: 2G
           key: ${{ matrix.os }}
           variant: sccache
       - name: Build and Test

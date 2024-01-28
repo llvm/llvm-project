@@ -69,7 +69,7 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
   let mayStore = 0;
   let hasSideEffects = 0;
 
-  let ReadsModeReg = !or(isFloatType<P.DstVT>.ret, isFloatType<P.Src0VT>.ret);
+  let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
   let mayRaiseFPException = ReadsModeReg;
 
@@ -418,23 +418,19 @@ def VOP_MADMK_F16_t16 : VOP_MADMK <f16> {
 }
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
 
-class getRegisterOperandForVT<ValueType VT> {
-  RegisterOperand ret = RegisterOperand<getVregSrcForVT<VT>.ret>;
-}
-
 // FIXME: Remove src2_modifiers. It isn't used, so is wasting memory
 // and processing time but it makes it easier to convert to mad.
 class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, vt0]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT>.ret:$src2);
-  let Ins64 = getIns64<Src0RC64, Src1RC64, getRegisterOperandForVT<Src2VT>.ret, 3,
+  let Ins64 = getIns64<Src0RC64, Src1RC64, getVregSrcForVT<Src2VT>.ret, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
   let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
                     getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins FI:$fi));
+                    dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                    DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
   let InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel>.ret;
@@ -451,7 +447,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
                      getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
-                     dpp8:$dpp8, FI:$fi);
+                     dpp8:$dpp8, DppFI:$fi);
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      getVregSrcForVT<Src2VT>.ret:$src2, // stub argument
@@ -489,22 +485,22 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let DstRC = VOPDstOperand<VGPR_32_Lo128>;
   let DstRC64 = VOPDstOperand<VGPR_32>;
   let Src1RC32 = VGPRSrc_32_Lo128;
-  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT_t16<Src2VT>.ret:$src2);
-  let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
-  let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
-  let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2);
+  let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+  let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+  let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
   let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
   let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
   let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
-                    getVregSrcForVT_t16<Src2VT>.ret:$src2, // stub argument
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+                    getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2, // stub argument
+                    dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                    DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
-                     getVregSrcForVT_t16<Src2VT>.ret:$src2, // stub argument
-                     dpp8:$dpp8, FI:$fi);
+                     getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret:$src2, // stub argument
+                     dpp8:$dpp8, DppFI:$fi);
   let Src2Mod = FP32InputMods; // dummy unused modifiers
   let Src2RC64 = VGPRSrc_32;   // stub argument
 }
@@ -535,7 +531,7 @@ def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
 
   let Src0Mod = Int32InputMods;
   let Src1Mod = Int32InputMods;
-  let Ins64 = getIns64<Src0RC64, Src1RC64, getRegisterOperandForVT<Src2VT>.ret,
+  let Ins64 = getIns64<Src0RC64, Src1RC64, getVregSrcForVT<Src2VT>.ret,
                        3 /*NumSrcArgs*/, HasClamp, 1 /*HasModifiers*/,
                        1 /*HasSrc2Mods*/, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
@@ -554,13 +550,13 @@ def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], /*EnableClamp=*/
   let InsDPP = (ins DstRCDPP:$old,
                     Src0DPP:$src0,
                     Src1DPP:$src1,
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins FI:$fi));
+                    dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                    DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
                     Src0DPP:$src0,
                     Src1DPP:$src1,
-                    dpp8:$dpp8, FI:$fi);
+                    dpp8:$dpp8, DppFI:$fi);
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
   let OutsVOP3DPP = Outs64;
@@ -596,13 +592,13 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1>
   let InsDPP = (ins DstRCDPP:$old,
                     Src0DPP:$src0,
                     Src1DPP:$src1,
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins FI:$fi));
+                    dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                    DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
                      Src0DPP:$src0,
                      Src1DPP:$src1,
-                     dpp8:$dpp8, FI:$fi);
+                     dpp8:$dpp8, DppFI:$fi);
 
   let HasExt = 1;
   let HasExtDPP = 1;
@@ -647,13 +643,13 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let InsDPP = (ins DstRCDPP:$old,
                     FPVRegInputMods:$src0_modifiers, Src0DPP:$src0,
                     FPVRegInputMods:$src1_modifiers, Src1DPP:$src1,
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins FI:$fi));
+                    dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                    DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
+  let InsDPP16 = !con(InsDPP, (ins DppFI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
                      FPVRegInputMods:$src0_modifiers, Src0DPP:$src0,
                      FPVRegInputMods:$src1_modifiers, Src1DPP:$src1,
-                     dpp8:$dpp8, FI:$fi);
+                     dpp8:$dpp8, DppFI:$fi);
 
   let Src0ModVOP3DPP = FPVRegInputMods;
   let Src1ModVOP3DPP = FPVRegInputMods;
@@ -898,8 +894,8 @@ def LDEXP_F16_VOPProfile : VOPProfile <[f16, f16, f16, untyped]> {
 }
 def LDEXP_F16_VOPProfile_True16 : VOPProfile_Fake16<VOP_F16_F16_F16> {
   let Src1RC32 = RegisterOperand<VGPR_32_Lo128>;
-  let Src1DPP = VGPR_32_Lo128;
-  let Src1ModDPP = IntT16VRegInputMods;
+  let Src1DPP = RegisterOperand<VGPR_32_Lo128>;
+  let Src1ModDPP = IntT16VRegInputMods</* IsFake16= */ 1>;
 }
 
 let isReMaterializable = 1 in {
@@ -2512,6 +2508,7 @@ defm V_FMAAK_F32        : VOP2_Real_MADK_gfx940 <0x18>;
 }
 
 multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : Base_VOP2_Real_e32e64_vi<op> {
+  let SubtargetPredicate = isGFX9Only in
   def _dpp_vi : VOP2_DPP<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
@@ -2520,22 +2517,28 @@ multiclass VOP2_Real_DOT_ACC_gfx10<bits<6> op> :
   VOP2_Real_dpp_gfx10<op>,
   VOP2_Real_dpp8_gfx10<op>;
 
-let SubtargetPredicate = HasDot5Insts in {
+multiclass VOP2Only_Real_DOT_ACC_gfx10<bits<6> op> : VOP2_Real_dpp_gfx10<op>,
+                                                     VOP2_Real_dpp8_gfx10<op> {
+  let IsSingle = 1 in
+    defm NAME : VOP2_Real_e32_gfx10<op>;
+}
+
+let OtherPredicates = [HasDot5Insts] in {
   defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx9<0x37>;
   // NB: Opcode conflicts with V_DOT8C_I32_I4
   // This opcode exists in gfx 10.1* only
-  defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx10<0x02>;
+  defm V_DOT2C_F32_F16 : VOP2Only_Real_DOT_ACC_gfx10<0x02>;
 }
 
-let SubtargetPredicate = HasDot6Insts in {
+let OtherPredicates = [HasDot6Insts] in {
   defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx9<0x39>;
-  defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx10<0x0d>;
+  defm V_DOT4C_I32_I8  : VOP2Only_Real_DOT_ACC_gfx10<0x0d>;
 }
 
-let SubtargetPredicate = HasDot4Insts in {
+let OtherPredicates = [HasDot4Insts] in {
   defm V_DOT2C_I32_I16 : VOP2_Real_DOT_ACC_gfx9<0x38>;
 }
-let SubtargetPredicate = HasDot3Insts in {
+let OtherPredicates = [HasDot3Insts] in {
   defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
 }
 

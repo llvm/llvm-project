@@ -933,11 +933,11 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
   fusedMapping.map(source.getInductionVars(), fusedLoop.getInductionVars());
 
   // Map shared outs.
-  fusedMapping.map(target.getOutputBlockArguments(),
-                   fusedLoop.getOutputBlockArguments().slice(0, numTargetOuts));
+  fusedMapping.map(target.getRegionIterArgs(),
+                   fusedLoop.getRegionIterArgs().slice(0, numTargetOuts));
   fusedMapping.map(
-      source.getOutputBlockArguments(),
-      fusedLoop.getOutputBlockArguments().slice(numTargetOuts, numSourceOuts));
+      source.getRegionIterArgs(),
+      fusedLoop.getRegionIterArgs().slice(numTargetOuts, numSourceOuts));
 
   // Append everything except the terminator into the fused operation.
   rewriter.setInsertionPointToStart(fusedLoop.getBody());

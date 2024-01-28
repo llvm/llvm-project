@@ -423,3 +423,6 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
     gpu.return
   }
 }
+
+gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
+}

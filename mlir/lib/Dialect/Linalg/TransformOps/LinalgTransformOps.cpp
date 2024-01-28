@@ -53,7 +53,7 @@ using namespace mlir::transform;
 #define DEBUG_TYPE "linalg-transforms"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 
 /// Attempts to apply the pattern specified as template argument to the given
 /// operation. The pattern is expected to have a `returningMatchAndRewrite`
@@ -214,8 +214,12 @@ public:
   }
 
 private:
-  void notifyOperationInserted(Operation *op) override {
-    ForwardingListener::notifyOperationInserted(op);
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    ForwardingListener::notifyOperationInserted(op, previous);
+    // We only care about newly created ops.
+    if (previous.isSet())
+      return;
     auto inserted = newOps.insert(op);
     (void)inserted;
     assert(inserted.second && "expected newly created op");
@@ -485,8 +489,8 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
       tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
       [&](TilingInterface tilingInterfaceOp)
           -> FailureOr<scf::SCFTileAndFuseResult> {
-        return tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
-            rewriter, tilingInterfaceOp, tileAndFuseOptions);
+        return tileConsumerAndFuseProducersUsingSCF(rewriter, tilingInterfaceOp,
+                                                    tileAndFuseOptions);
       });
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
@@ -584,7 +588,7 @@ static Operation *replaceForAllWithNewSignature(
   Operation *firstYieldOp = yieldingOps.front();
   rewriter.setInsertionPoint(firstYieldOp);
   Value src = tileAndFuseResult.tiledValues[0];
-  Value dst = newforallOp.getOutputBlockArguments().back();
+  Value dst = newforallOp.getRegionIterArgs().back();
   SmallVector<OpFoldResult> strides(offsets.size(), rewriter.getIndexAttr(1));
   rewriter.create<tensor::ParallelInsertSliceOp>(firstYieldOp->getLoc(), src,
                                                  dst, offsets, sizes, strides);
@@ -658,7 +662,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
   }
 
 #ifndef NDEBUG
-  for (auto tiledOp : tileAndFuseResult->tiledOps) {
+  for (auto *tiledOp : tileAndFuseResult->tiledOps) {
     LLVM_DEBUG(DBGS() << "tiledProducer: " << *tiledOp << "\n");
   }
 #endif
@@ -785,7 +789,7 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   rewriter.replaceOp(sliceOpToTile, *maybeRankReduced);
 
   // Replace the use in containingOp.
-  rewriter.updateRootInPlace(containingOp, [&]() {
+  rewriter.modifyOpInPlace(containingOp, [&]() {
     containingOp->setOperand(pUse->getOperandNumber(),
                              destinationTensors.front());
   });
@@ -835,7 +839,7 @@ static Operation *cloneAndFuseFirstUse(RewriterBase &rewriter, Diagnostic &diag,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(use->getOwner());
   fusedOp = rewriter.clone(*producerOp);
-  rewriter.updateRootInPlace(
+  rewriter.modifyOpInPlace(
       use->getOwner(), [&] { use->set(fusedOp->getOpResult(resultNumber)); });
 
   return fusedOp;
@@ -2063,7 +2067,7 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
   });
   SmallVector<int64_t> emptyTileSizes;
   rewriter.setInsertionPoint(target);
-  FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCFForOp(
+  FailureOr<scf::SCFTilingResult> maybeTilingResult = tileUsingSCF(
       rewriter, cast<TilingInterface>(target.getOperation()), tilingOptions);
   if (failed(maybeTilingResult))
     return emitDefaultDefiniteFailure(target);
@@ -2647,7 +2651,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
 
     tilingOptions.setInterchange(getInterchange());
     FailureOr<scf::SCFTilingResult> maybeTilingResult =
-        tileUsingSCFForOp(rewriter, tilingInterface, tilingOptions);
+        tileUsingSCF(rewriter, tilingInterface, tilingOptions);
     if (failed(maybeTilingResult))
       return DiagnosedSilenceableFailure::definiteFailure();
 

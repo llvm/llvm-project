@@ -295,8 +295,9 @@ public:
   /// Build DeclarationFragments for a field declaration FieldDecl.
   static DeclarationFragments getFragmentsForField(const FieldDecl *);
 
-  /// Build DeclarationFragments for a struct record declaration RecordDecl.
-  static DeclarationFragments getFragmentsForStruct(const RecordDecl *);
+  /// Build DeclarationFragments for a struct/union record declaration
+  /// RecordDecl.
+  static DeclarationFragments getFragmentsForRecordDecl(const RecordDecl *);
 
   static DeclarationFragments getFragmentsForCXXClass(const CXXRecordDecl *);
 

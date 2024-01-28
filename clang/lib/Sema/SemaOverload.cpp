@@ -1259,6 +1259,40 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if ((OldTemplate == nullptr) != (NewTemplate == nullptr))
     return true;
 
+  // Is the function New an overload of the function Old?
+  QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
+  QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
+
+  // Compare the signatures (C++ 1.3.10) of the two functions to
+  // determine whether they are overloads. If we find any mismatch
+  // in the signature, they are overloads.
+
+  // If either of these functions is a K&R-style function (no
+  // prototype), then we consider them to have matching signatures.
+  if (isa<FunctionNoProtoType>(OldQType.getTypePtr()) ||
+      isa<FunctionNoProtoType>(NewQType.getTypePtr()))
+    return false;
+
+  const auto *OldType = cast<FunctionProtoType>(OldQType);
+  const auto *NewType = cast<FunctionProtoType>(NewQType);
+
+  // The signature of a function includes the types of its
+  // parameters (C++ 1.3.10), which includes the presence or absence
+  // of the ellipsis; see C++ DR 357).
+  if (OldQType != NewQType && OldType->isVariadic() != NewType->isVariadic())
+    return true;
+
+  // For member-like friends, the enclosing class is part of the signature.
+  if ((New->isMemberLikeConstrainedFriend() ||
+       Old->isMemberLikeConstrainedFriend()) &&
+      !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
+    return true;
+
+  // Compare the parameter lists.
+  // This can only be done once we have establish that friend functions
+  // inhabit the same context, otherwise we might tried to instantiate
+  // references to non-instantiated entities during constraint substitution.
+  // GH78101.
   if (NewTemplate) {
     // C++ [temp.over.link]p4:
     //   The signature of a function template consists of its function
@@ -1296,34 +1330,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       return true;
   }
 
-  // Is the function New an overload of the function Old?
-  QualType OldQType = SemaRef.Context.getCanonicalType(Old->getType());
-  QualType NewQType = SemaRef.Context.getCanonicalType(New->getType());
-
-  // Compare the signatures (C++ 1.3.10) of the two functions to
-  // determine whether they are overloads. If we find any mismatch
-  // in the signature, they are overloads.
-
-  // If either of these functions is a K&R-style function (no
-  // prototype), then we consider them to have matching signatures.
-  if (isa<FunctionNoProtoType>(OldQType.getTypePtr()) ||
-      isa<FunctionNoProtoType>(NewQType.getTypePtr()))
-    return false;
-
-  const FunctionProtoType *OldType = cast<FunctionProtoType>(OldQType);
-  const FunctionProtoType *NewType = cast<FunctionProtoType>(NewQType);
-
-  // The signature of a function includes the types of its
-  // parameters (C++ 1.3.10), which includes the presence or absence
-  // of the ellipsis; see C++ DR 357).
-  if (OldQType != NewQType && OldType->isVariadic() != NewType->isVariadic())
-    return true;
-
-  // For member-like friends, the enclosing class is part of the signature.
-  if ((New->isMemberLikeConstrainedFriend() ||
-       Old->isMemberLikeConstrainedFriend()) &&
-      !New->getLexicalDeclContext()->Equals(Old->getLexicalDeclContext()))
-    return true;
   const auto *OldMethod = dyn_cast<CXXMethodDecl>(Old);
   const auto *NewMethod = dyn_cast<CXXMethodDecl>(New);
 
@@ -6193,7 +6199,15 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
 
     if (Notes.empty()) {
       // It's a constant expression.
-      Expr *E = ConstantExpr::Create(Context, Result.get(), Value);
+      Expr *E = Result.get();
+      if (const auto *CE = dyn_cast<ConstantExpr>(E)) {
+        // We expect a ConstantExpr to have a value associated with it
+        // by this point.
+        assert(CE->getResultStorageKind() != ConstantResultStorageKind::None &&
+               "ConstantExpr has no value associated with it");
+      } else {
+        E = ConstantExpr::Create(Context, Result.get(), Value);
+      }
       if (!PreNarrowingValue.isAbsent())
         Value = std::move(PreNarrowingValue);
       return E;
@@ -14300,12 +14314,17 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     return ExprError();
 
   case OR_Deleted:
+    // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
+    // object whose method was called. Later in NoteCandidates size of ArgsArray
+    // is passed further and it eventually ends up compared to number of
+    // function candidate parameters which never includes the object parameter,
+    // so slice ArgsArray to make sure apples are compared to apples.
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
                                        << Input->getSourceRange()),
-        *this, OCD_AllCandidates, ArgsArray, UnaryOperator::getOpcodeStr(Opc),
-        OpLoc);
+        *this, OCD_AllCandidates, ArgsArray.drop_front(),
+        UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
   }
 
@@ -15466,7 +15485,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   }
 
   if (isa<CXXConstructorDecl, CXXDestructorDecl>(CurContext) &&
-      TheCall->getDirectCallee()->isPure()) {
+      TheCall->getDirectCallee()->isPureVirtual()) {
     const FunctionDecl *MD = TheCall->getDirectCallee();
 
     if (isa<CXXThisExpr>(MemExpr->getBase()->IgnoreParenCasts()) &&

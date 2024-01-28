@@ -6663,14 +6663,14 @@ let Defs = [ECX, EFLAGS], Uses = [EAX, EDX], hasSideEffects = 0 in {
 class Crc32r<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
   : ITy<0xF1, MRMSrcReg, t, (outs rc:$dst), (ins rc:$src1, t.RegClass:$src2),
       "crc32", binop_args, [(set rc:$dst, (node rc:$src1, t.RegClass:$src2))]>,
-    Sched<[WriteCRC32]>, NoCD8 {
+    Sched<[WriteCRC32]> {
   let Constraints = "$src1 = $dst";
 }
 
 class Crc32m<X86TypeInfo t, RegisterClass rc, SDPatternOperator node>
   : ITy<0xF1, MRMSrcMem, t, (outs rc:$dst), (ins rc:$src1, t.MemOperand:$src2),
       "crc32", binop_args, [(set rc:$dst, (node rc:$src1, (load addr:$src2)))]>,
-    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]>, NoCD8 {
+    Sched<[WriteCRC32.Folded, WriteCRC32.ReadAfterFold]> {
   let Constraints = "$src1 = $dst";
 }
 
@@ -8331,6 +8331,10 @@ let Predicates = [HasAVXNECONVERT] in {
        f256mem>, T8;
   defm VCVTNEPS2BF16 : VCVTNEPS2BF16_BASE, VEX, T8, XS, ExplicitVEXPrefix;
 
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128X:$src))),
+            (VCVTNEPS2BF16rr VR128:$src)>;
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (loadv4f32 addr:$src))),
+            (VCVTNEPS2BF16rm addr:$src)>;
   def : Pat<(v8bf16 (X86vfpround (v8f32 VR256:$src))),
             (VCVTNEPS2BF16Yrr VR256:$src)>;
   def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),

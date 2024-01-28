@@ -41,17 +41,17 @@ void SymbolConverter::addIVars(const ArrayRef<ObjCIVarRecord *> IVars,
       continue;
     std::string Name =
         ObjCIVarRecord::createScopedName(ContainerName, IV->getName());
-    Symbols->addGlobal(SymbolKind::ObjectiveCInstanceVariable, Name,
+    Symbols->addGlobal(EncodeKind::ObjectiveCInstanceVariable, Name,
                        IV->getFlags(), Targ);
   }
 }
 
 void SymbolConverter::visitObjCInterface(const ObjCInterfaceRecord &ObjCR) {
   if (!shouldSkipRecord(ObjCR, RecordUndefs)) {
-    Symbols->addGlobal(SymbolKind::ObjectiveCClass, ObjCR.getName(),
+    Symbols->addGlobal(EncodeKind::ObjectiveCClass, ObjCR.getName(),
                        ObjCR.getFlags(), Targ);
     if (ObjCR.hasExceptionAttribute())
-      Symbols->addGlobal(SymbolKind::ObjectiveCClassEHType, ObjCR.getName(),
+      Symbols->addGlobal(EncodeKind::ObjectiveCClassEHType, ObjCR.getName(),
                          ObjCR.getFlags(), Targ);
   }
 

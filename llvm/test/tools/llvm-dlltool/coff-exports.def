@@ -1,8 +1,8 @@
 ; RUN: llvm-dlltool -m i386:x86-64 --input-def %s --output-lib %t.a
-; RUN: llvm-readobj %t.a | FileCheck %s
+; RUN: llvm-readobj %t.a | FileCheck %s --check-prefixes=CHECK,CHECK-X64
 ; RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=SYMTAB %s
 ; RUN: llvm-dlltool -m arm64 --input-def %s --output-lib %t.a
-; RUN: llvm-readobj %t.a | FileCheck %s
+; RUN: llvm-readobj %t.a | FileCheck %s --check-prefixes=CHECK,CHECK-ARM64
 ; RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=SYMTAB %s
 
 LIBRARY test.dll
@@ -13,7 +13,8 @@ TestFunction3 ; This is a comment
 AnotherFunction
 
 ; CHECK: File: test.dll
-; CHECK: Format: COFF-import-file
+; CHECK-X64:   Format: COFF-import-file-x86-64
+; CHECK-ARM64: Format: COFF-import-file-ARM64
 ; CHECK: Type: code
 ; CHECK:      Name type: name
 ; CHECK-NEXT: Symbol: __imp_TestFunction1
