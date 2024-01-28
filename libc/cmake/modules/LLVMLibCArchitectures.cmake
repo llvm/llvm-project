@@ -171,6 +171,11 @@ elseif(LIBC_TARGET_OS STREQUAL "poky")
   # include the right directories during compilation.
   set(LIBC_TARGET_OS_IS_LINUX TRUE)
   set(LIBC_TARGET_OS "linux")
+elseif(LIBC_TARGET_OS STREQUAL "suse")
+  # openSUSE uses different triple format which causes LIBC_TARGET_OS to be
+  # computed as "suse" instead of "linux".
+  set(LIBC_TARGET_OS_IS_LINUX TRUE)
+  set(LIBC_TARGET_OS "linux")
 elseif(LIBC_TARGET_OS STREQUAL "darwin")
   set(LIBC_TARGET_OS_IS_DARWIN TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "windows")
