@@ -1827,7 +1827,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
     const CXXScalarValueInitExpr *E) {
   QualType Ty = E->getType();
 
-  if (Ty->isVoidType())
+  if (DiscardResult || Ty->isVoidType())
     return true;
 
   if (std::optional<PrimType> T = classify(Ty))

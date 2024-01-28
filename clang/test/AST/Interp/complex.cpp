@@ -158,4 +158,6 @@ namespace ZeroInit {
   constexpr icomplex test8 = icomplex();
   static_assert(__real(test8) == 0, "");
   static_assert(__imag(test8) == 0, "");
+
+  constexpr int ignored = (fcomplex(), 0);
 }
