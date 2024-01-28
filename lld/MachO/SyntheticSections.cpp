@@ -825,10 +825,43 @@ StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   return methname;
 }
 
+void ObjCStubsSection::initialize() {
+  // Do not fold selrefs without ICF.
+  if (config->icfLevel == ICFLevel::none)
+    return;
+
+  // Search methnames already referenced in __objc_selrefs
+  // Map the name to the corresponding selref entry
+  // which we will reuse when creating objc stubs.
+  for (ConcatInputSection *isec : inputSections) {
+    if (isec->shouldOmitFromOutput())
+      continue;
+    if (isec->getName() != "__objc_selrefs")
+      continue;
+    // We expect a single relocation per selref entry to __objc_methname that
+    // might be aggregated.
+    assert(isec->relocs.size() == 1);
+    auto Reloc = isec->relocs[0];
+    if (const auto *sym = Reloc.referent.dyn_cast<Symbol *>()) {
+      if (const auto *d = dyn_cast<Defined>(sym)) {
+        auto *cisec = cast<CStringInputSection>(d->isec);
+        auto methname = cisec->getStringRefAtOffset(d->value);
+        methnameToselref[methname] = isec;
+      }
+    }
+  }
+}
+
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
-  offsets.push_back(
-      in.objcMethnameSection->getStringOffset(methname).outSecOff);
+  // We will create a selref entry for each unique methname.
+  if (!methnameToselref.count(methname) &&
+      !methnameToidxOffsetPair.count(methname)) {
+    auto methnameOffset =
+        in.objcMethnameSection->getStringOffset(methname).outSecOff;
+    auto selIndex = methnameToidxOffsetPair.size();
+    methnameToidxOffsetPair[methname] = {selIndex, methnameOffset};
+  }
 
   auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
                       ? target->objcStubsFastSize
@@ -863,10 +896,12 @@ void ObjCStubsSection::setUp() {
       in.stubs->addEntry(objcMsgSend);
   }
 
-  size_t size = offsets.size() * target->wordSize;
+  size_t size = methnameToidxOffsetPair.size() * target->wordSize;
   uint8_t *selrefsData = bAlloc().Allocate<uint8_t>(size);
-  for (size_t i = 0, n = offsets.size(); i < n; ++i)
-    write64le(&selrefsData[i * target->wordSize], offsets[i]);
+  for (const auto &[methname, idxOffsetPair] : methnameToidxOffsetPair) {
+    const auto &[idx, offset] = idxOffsetPair;
+    write64le(&selrefsData[idx * target->wordSize], offset);
+  }
 
   in.objcSelrefs =
       makeSyntheticInputSection(segment_names::data, section_names::objcSelrefs,
@@ -875,12 +910,13 @@ void ObjCStubsSection::setUp() {
                                 /*align=*/target->wordSize);
   in.objcSelrefs->live = true;
 
-  for (size_t i = 0, n = offsets.size(); i < n; ++i) {
+  for (const auto &[methname, idxOffsetPair] : methnameToidxOffsetPair) {
+    const auto &[idx, offset] = idxOffsetPair;
     in.objcSelrefs->relocs.push_back(
         {/*type=*/target->unsignedRelocType,
          /*pcrel=*/false, /*length=*/3,
-         /*offset=*/static_cast<uint32_t>(i * target->wordSize),
-         /*addend=*/offsets[i] * in.objcMethnameSection->align,
+         /*offset=*/static_cast<uint32_t>(idx * target->wordSize),
+         /*addend=*/offset * in.objcMethnameSection->align,
          /*referent=*/in.objcMethnameSection->isec});
   }
 
@@ -904,8 +940,22 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
   uint64_t stubOffset = 0;
   for (size_t i = 0, n = symbols.size(); i < n; ++i) {
     Defined *sym = symbols[i];
+    uint64_t selBaseAddr;
+    uint64_t selIndex;
+
+    auto methname = getMethname(sym);
+    auto j = methnameToselref.find(methname);
+    if (j != methnameToselref.end()) {
+      selBaseAddr = j->second->getVA(0);
+      selIndex = 0;
+    } else {
+      auto k = methnameToidxOffsetPair.find(methname);
+      assert(k != methnameToidxOffsetPair.end());
+      selBaseAddr = in.objcSelrefs->getVA();
+      selIndex = k->second.first;
+    }
     target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                 stubOffset, in.objcSelrefs->getVA(), i,
+                                 stubOffset, selBaseAddr, selIndex,
                                  objcMsgSend);
   }
 }

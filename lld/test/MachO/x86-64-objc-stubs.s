@@ -10,6 +10,9 @@
 
 # WARNING: warning: -objc_stubs_small is not yet implemented, defaulting to -objc_stubs_fast
 
+# RUN: %lld -arch x86_64 -lSystem -o %t-icf.out --icf=all %t.o
+# RUN: llvm-otool -vs __DATA __objc_selrefs %t-icf.out | FileCheck %s --check-prefix=ICF
+
 # CHECK: Sections:
 # CHECK: __got            {{[0-9a-f]*}} [[#%x, GOTSTART:]] DATA
 # CHECK: __objc_selrefs   {{[0-9a-f]*}} [[#%x, SELSTART:]] DATA
@@ -20,6 +23,13 @@
 # CHECK-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:bar
 # CHECK-NEXT: [[#%x, FOOSELREF:]]  __TEXT:__objc_methname:foo
 # CHECK-NEXT: [[#%x, LENGTHSELREF:]]  __TEXT:__objc_methname:length
+
+# ICF: Contents of (__DATA,__objc_selrefs) section
+
+# ICF-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:foo
+# ICF-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:bar
+# ICF-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:length
+# ICF-EMPTY:
 
 # CHECK: Contents of (__TEXT,__objc_stubs) section
 
