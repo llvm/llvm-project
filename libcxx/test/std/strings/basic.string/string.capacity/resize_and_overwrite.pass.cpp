@@ -20,6 +20,7 @@
 #include "make_string.h"
 #include "test_macros.h"
 #include "asan_testing.h"
+#include "test_allocator.h"
 
 template <class S>
 constexpr void test_appending(std::size_t k, size_t N, size_t new_capacity) {
@@ -91,18 +92,35 @@ void test_value_categories() {
 
 int main(int, char**) {
   test<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
+
   test<std::basic_string<char8_t, std::char_traits<char8_t>, std::allocator<char8_t>>>();
+  test<std::basic_string<char8_t, std::char_traits<char8_t>, fancy_pointer_allocator<char8_t>>>();
+
   test<std::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>();
+  test<std::basic_string<char16_t, std::char_traits<char16_t>, fancy_pointer_allocator<char16_t>>>();
+
   test<std::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>();
+  test<std::basic_string<char32_t, std::char_traits<char32_t>, fancy_pointer_allocator<char32_t>>>();
 
   static_assert(test<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>());
+  static_assert(test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>());
+
   static_assert(test<std::basic_string<char8_t, std::char_traits<char8_t>, std::allocator<char8_t>>>());
+  static_assert(test<std::basic_string<char8_t, std::char_traits<char8_t>, fancy_pointer_allocator<char8_t>>>());
+
   static_assert(test<std::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>());
+  static_assert(test<std::basic_string<char16_t, std::char_traits<char16_t>, fancy_pointer_allocator<char16_t>>>());
+
   static_assert(test<std::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>());
+  static_assert(test<std::basic_string<char32_t, std::char_traits<char32_t>, fancy_pointer_allocator<char32_t>>>());
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>();
+  test<std::basic_string<wchar_t, std::char_traits<wchar_t>, fancy_pointer_allocator<wchar_t>>>();
+
   static_assert(test<std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>());
+  static_assert(test<std::basic_string<wchar_t, std::char_traits<wchar_t>, fancy_pointer_allocator<wchar_t>>>());
 #endif
   return 0;
 }

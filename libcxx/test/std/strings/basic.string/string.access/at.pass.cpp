@@ -16,6 +16,7 @@
 #include <cassert>
 
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 #include "make_string.h"
 #include "test_macros.h"
@@ -61,6 +62,7 @@ struct TestCaller {
     test_string<std::basic_string<T> >();
 #if TEST_STD_VER >= 11
     test_string<std::basic_string<T, std::char_traits<T>, min_allocator<T> > >();
+    test_string<std::basic_string<T, std::char_traits<T>, fancy_pointer_allocator<T> > >();
 #endif
   }
 };

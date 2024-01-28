@@ -19,6 +19,7 @@
 #include <cassert>
 
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 #include "test_macros.h"
 
@@ -6044,6 +6045,7 @@ int main(int, char**) {
   test<char, std::allocator>();
 #if TEST_STD_VER >= 11
   test<char, min_allocator>();
+  test<char, fancy_pointer_allocator>();
 #endif
 
   return 0;

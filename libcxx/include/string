@@ -607,6 +607,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>
+#include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
@@ -829,6 +830,7 @@ private:
     size_type __words[__n_words];
   };
 
+#ifdef _LIBCPP_CXX03_LANG
   struct __rep {
     union {
       __short __s;
@@ -836,6 +838,88 @@ private:
       __raw __r;
     };
   };
+#else
+  // Since C++03, unions can contain members with non-trivial special member functions (C++03 doesn't allow unions to
+  // contain members with non-trivial special member functions). In this case, the corresponding special member
+  // function in the union will be deleted and therefore must be explicitly defined. Therefore, to support fancy
+  // pointers with non-trivial special member functions in __long, we must explicitly define a constructor, copy
+  // constructor and copy assignment operator in __rep.
+  struct __rep {
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep() _NOEXCEPT : __s{} {}
+    
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__rep() _NOEXCEPT = default;
+
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep(const __rep& __other) _NOEXCEPT {
+      // For certain fancy pointers such as offset pointers, the value of __l.__data_ will be different for 2 pointers
+      // pointing to the same object (because the offset is calculated with respect to the pointer itself). Therefore,
+      // the copy assignment operator of the underlying pointer needs to be explicitly called.
+      if (__is_rep_long(__other)) {
+        __begin_long_lifetime(*this);
+        __copy_long(*this, __other);
+      } else {
+        __copy_short(*this, __other);
+      }
+    }
+
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 __rep& operator=(const __rep& __other) _NOEXCEPT {
+      if (this != &__other) {
+        if (__is_rep_long(__other)) {
+          if (!__is_rep_long(*this)) {
+            __begin_long_lifetime(*this);
+          }
+          __copy_long(*this, __other);
+        } else {
+          __copy_short(*this, __other);
+        }
+      }
+      return *this;
+    }
+
+    union {
+        __short __s;
+        __long __l;
+        __raw __r;
+    };
+
+  private:
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __begin_long_lifetime(__rep& __str) _NOEXCEPT {
+#if _LIBCPP_STD_VER >= 17
+      if constexpr(!__is_trivially_constructible(__long)) {
+#else
+      if (!__is_trivially_constructible(__long)) {
+#endif // _LIBCPP_STD_VER >= 17
+          std::__construct_at(std::addressof(__str.__l));
+      }
+    }
+
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __copy_long(__rep& __dest, const __rep& __src) _NOEXCEPT {
+      __dest.__l.__is_long_ = __src.__l.__is_long_;
+      __dest.__l.__cap_ = __src.__l.__cap_;
+      __dest.__l.__size_ = __src.__l.__size_;
+      __dest.__l.__data_ = __src.__l.__data_;
+    }
+
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __copy_short(__rep& __dest, const __rep& __src) _NOEXCEPT {
+      __dest.__s.__is_long_ = __src.__s.__is_long_;
+      __dest.__s.__size_ = __src.__s.__size_;
+
+      for (size_type __i = 0; __i <sizeof(value_type) - 1; ++__i) {
+        __dest.__s.__padding_[__i] = __src.__s.__padding_[__i];
+      }
+
+      for (size_type __i = 0;  __i <__min_cap; ++__i) {
+        __dest.__s.__data_[__i] = __src.__s.__data_[__i];
+      }
+    }
+
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 static bool __is_rep_long(const __rep& __str_rep) _NOEXCEPT {
+      if (__libcpp_is_constant_evaluated() && __builtin_constant_p(__str_rep.__l.__is_long_)) {
+        return __str_rep.__l.__is_long_;
+      }
+      return __str_rep.__s.__is_long_;
+    }
+  };
+#endif // _LIBCPP_CXX03_LANG
 
   __compressed_pair<__rep, allocator_type> __r_;
 
@@ -854,6 +938,7 @@ private:
       auto __capacity   = __recommend(__size) + 1;
       auto __allocation = __alloc_traits::allocate(__alloc(), __capacity);
       __begin_lifetime(__allocation, __capacity);
+      __begin_long_lifetime();
       __set_long_cap(__capacity);
       __set_long_pointer(__allocation);
       __set_long_size(__size);
@@ -1785,6 +1870,20 @@ private:
 #endif // _LIBCPP_STD_VER >= 20
   }
 
+  // If __long is not trivially constructible (this occurs if the pointer type inside __long is not trivially constructible)
+  // then the lifetime of __l must be explicitly started with std::__construct_at before it can be assigned to. If __long is 
+  // trivially constructible, then the lifetime of __l can be implicitly started with a simple assignment and therefore does
+  // not need to be explicitly initialised here.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __begin_long_lifetime() {
+#if _LIBCPP_STD_VER >= 17
+    if constexpr(!__is_trivially_constructible(__long)) {
+#else
+    if (!__is_trivially_constructible(__long)) {
+#endif // _LIBCPP_STD_VER >= 17
+      std::__construct_at(std::addressof(__r_.first().__l));
+    }
+  }
+
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI static bool __fits_in_sso(size_type __sz) { return __sz < __min_cap; }
 
   template <class _Iterator, class _Sentinel>
@@ -2038,6 +2137,7 @@ private:
         if (__is_long())
           __alloc_traits::deallocate(__alloc(), __get_long_pointer(), __get_long_cap());
         __alloc() = std::move(__a);
+        __begin_long_lifetime(); 
         __set_long_pointer(__allocation.ptr);
         __set_long_cap(__allocation.count);
         __set_long_size(__str.size());
@@ -2212,6 +2312,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
     auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
+    __begin_long_lifetime(); 
     __set_long_pointer(__p);
     __set_long_cap(__allocation.count);
     __set_long_size(__sz);
@@ -2237,6 +2338,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(const value
     auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
+    __begin_long_lifetime(); 
     __set_long_pointer(__p);
     __set_long_cap(__allocation.count);
     __set_long_size(__sz);
@@ -2260,6 +2362,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__n) + 1);
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
+    __begin_long_lifetime(); 
     __set_long_pointer(__p);
     __set_long_cap(__allocation.count);
     __set_long_size(__n);
@@ -2325,6 +2428,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __fir
     auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
+    __begin_long_lifetime(); 
     __set_long_pointer(__p);
     __set_long_cap(__allocation.count);
     __set_long_size(__sz);
@@ -2375,6 +2479,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
         std::__to_address(__p) + __n_copy + __n_add, std::__to_address(__old_p) + __n_copy + __n_del, __sec_cp_sz);
   if (__old_cap + 1 != __min_cap)
     __alloc_traits::deallocate(__alloc(), __old_p, __old_cap + 1);
+  __begin_long_lifetime(); 
   __set_long_pointer(__p);
   __set_long_cap(__allocation.count);
   __old_sz = __n_copy + __n_add + __sec_cp_sz;
@@ -2416,6 +2521,7 @@ void _LIBCPP_CONSTEXPR_SINCE_CXX20
         std::__to_address(__p) + __n_copy + __n_add, std::__to_address(__old_p) + __n_copy + __n_del, __sec_cp_sz);
   if (__old_cap + 1 != __min_cap)
     __alloc_traits::deallocate(__alloc(), __old_p, __old_cap + 1);
+  __begin_long_lifetime(); 
   __set_long_pointer(__p);
   __set_long_cap(__allocation.count);
 }
@@ -3266,6 +3372,7 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
   if (__was_long)
     __alloc_traits::deallocate(__alloc(), __p, __cap + 1);
   if (__now_long) {
+    __begin_long_lifetime(); 
     __set_long_cap(__target_capacity + 1);
     __set_long_size(__sz);
     __set_long_pointer(__new_data);

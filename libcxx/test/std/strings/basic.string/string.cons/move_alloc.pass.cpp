@@ -74,6 +74,18 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test(S("1"), A());
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
   }
+  {
+    typedef fancy_pointer_allocator<char> A;
+    typedef std::basic_string<char, std::char_traits<char>, A> S;
+#if TEST_STD_VER > 14
+    static_assert((noexcept(S{})), "");
+#elif TEST_STD_VER >= 11
+    static_assert((noexcept(S()) == std::is_nothrow_move_constructible<A>::value), "");
+#endif
+    test(S(), A());
+    test(S("1"), A());
+    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
+  }
 
   return true;
 }

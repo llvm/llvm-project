@@ -17,6 +17,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
+#include "test_allocator.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test() {
@@ -95,6 +96,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 #if TEST_STD_VER >= 11
   test2<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
   test2<std::basic_string<char, std::char_traits<char>, safe_allocator<char> > >();
+  test2<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char> > >();
   test2<std::basic_string<char, std::char_traits<char>, explicit_allocator<char> > >();
 #endif
 

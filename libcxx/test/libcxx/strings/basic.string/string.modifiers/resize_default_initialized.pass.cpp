@@ -14,6 +14,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_allocator.h"
 
 TEST_CONSTEXPR_CXX20 void write_c_str(char* buf, int size) {
   for (int i = 0; i < size; ++i) {
@@ -67,8 +68,13 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 int main(int, char**) {
   test<std::string>();
+#if TEST_STD_VER >= 11
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char> > >();
+#endif
+
 #if TEST_STD_VER > 17
   static_assert(test<std::string>());
+  static_assert(test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char> > >());
 #endif
 
   return 0;

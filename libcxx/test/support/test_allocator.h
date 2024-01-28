@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <climits>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 
@@ -434,6 +435,193 @@ TEST_CONSTEXPR_CXX20 thread_unsafe_shared_ptr<T> make_thread_unsafe_shared(Args.
   return ptr;
 }
 } // namespace detail
+
+template <class T>
+class fancy_pointer {
+public:
+  // For the std::pointer_traits interface.
+  using pointer         = T*;
+  using element_type    = T;
+  using difference_type = std::ptrdiff_t;
+
+  template <class U>
+  using rebind = fancy_pointer<U>;
+
+  // For the std::iterator_traits interface.
+  using value_type        = typename std::remove_cv<T>::type;
+  using reference         = typename std::add_lvalue_reference<T>::type;
+  using iterator_category = std::random_access_iterator_tag;
+
+  TEST_CONSTEXPR_CXX14 fancy_pointer() TEST_NOEXCEPT : ptr_(nullptr) {}
+  TEST_CONSTEXPR_CXX14 fancy_pointer(T* p) TEST_NOEXCEPT : ptr_(p) {}
+
+  template <typename T2>
+  TEST_CONSTEXPR_CXX14 fancy_pointer(const fancy_pointer<T2>& other) TEST_NOEXCEPT : ptr_(other.get()) {}
+
+  TEST_CONSTEXPR_CXX14 operator T*() const TEST_NOEXCEPT { return ptr_; }
+  TEST_CONSTEXPR_CXX14 fancy_pointer(fancy_pointer&&) TEST_NOEXCEPT                 = default;
+  TEST_CONSTEXPR_CXX14 fancy_pointer(const fancy_pointer&) TEST_NOEXCEPT            = default;
+  TEST_CONSTEXPR_CXX14 fancy_pointer& operator=(fancy_pointer&&) TEST_NOEXCEPT      = default;
+  TEST_CONSTEXPR_CXX14 fancy_pointer& operator=(const fancy_pointer&) TEST_NOEXCEPT = default;
+  TEST_CONSTEXPR_CXX20 ~fancy_pointer() TEST_NOEXCEPT                               = default;
+  TEST_CONSTEXPR_CXX14 operator fancy_pointer<const T>() const TEST_NOEXCEPT { return fancy_pointer<const T>(get()); }
+  TEST_CONSTEXPR_CXX14 T& operator*() const TEST_NOEXCEPT { return *ptr_; }
+  TEST_CONSTEXPR_CXX14 T* operator->() const TEST_NOEXCEPT { return ptr_; }
+  TEST_CONSTEXPR_CXX14 explicit operator bool() const TEST_NOEXCEPT { return ptr_; }
+  TEST_CONSTEXPR_CXX14 T* get() const TEST_NOEXCEPT { return ptr_; }
+
+  TEST_CONSTEXPR_CXX14 fancy_pointer& operator++() TEST_NOEXCEPT {
+    ++ptr_;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 fancy_pointer operator++(int) TEST_NOEXCEPT {
+    fancy_pointer tmp(*this);
+    ++ptr_;
+    return tmp;
+  }
+
+  TEST_CONSTEXPR_CXX14 fancy_pointer& operator--() TEST_NOEXCEPT {
+    --ptr_;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 fancy_pointer operator--(int) TEST_NOEXCEPT {
+    fancy_pointer tmp(*this);
+    --ptr_;
+    return tmp;
+  }
+
+  TEST_CONSTEXPR_CXX14 fancy_pointer& operator+=(difference_type n) TEST_NOEXCEPT {
+    ptr_ += n;
+    return *this;
+  }
+
+  TEST_CONSTEXPR_CXX14 fancy_pointer& operator-=(difference_type n) TEST_NOEXCEPT {
+    ptr_ -= n;
+    return *this;
+  }
+
+  TEST_CONSTEXPR_CXX14 fancy_pointer operator+(difference_type n) const TEST_NOEXCEPT {
+    fancy_pointer tmp(*this);
+    tmp += n;
+    return tmp;
+  }
+
+  TEST_CONSTEXPR_CXX14 fancy_pointer operator-(difference_type n) const TEST_NOEXCEPT {
+    fancy_pointer tmp(*this);
+    tmp -= n;
+    return tmp;
+  }
+
+  TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const TEST_NOEXCEPT { return ptr_[n]; }
+
+  friend TEST_CONSTEXPR_CXX14 fancy_pointer operator+(difference_type x, fancy_pointer y) TEST_NOEXCEPT {
+    return y + x;
+  }
+
+  friend TEST_CONSTEXPR_CXX14 bool operator<(fancy_pointer x, fancy_pointer y) TEST_NOEXCEPT { return x.ptr_ < y.ptr_; }
+  friend TEST_CONSTEXPR_CXX14 bool operator>(fancy_pointer x, fancy_pointer y) TEST_NOEXCEPT { return y < x; }
+  friend TEST_CONSTEXPR_CXX14 bool operator<=(fancy_pointer x, fancy_pointer y) TEST_NOEXCEPT { return !(y < x); }
+  friend TEST_CONSTEXPR_CXX14 bool operator>=(fancy_pointer x, fancy_pointer y) TEST_NOEXCEPT { return !(x < y); }
+
+  static TEST_CONSTEXPR_CXX14 fancy_pointer pointer_to(reference ref) TEST_NOEXCEPT { return fancy_pointer(&ref); }
+
+  T* ptr_;
+};
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 typename fancy_pointer<T>::difference_type
+operator-(fancy_pointer<T> x, fancy_pointer<T> y) TEST_NOEXCEPT {
+  return x.ptr_ - y.ptr_;
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 typename fancy_pointer<T>::difference_type
+operator-(fancy_pointer<const T> x, fancy_pointer<T> y) TEST_NOEXCEPT {
+  return x.ptr_ - y.ptr_;
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 typename fancy_pointer<T>::difference_type
+operator-(fancy_pointer<T> x, fancy_pointer<const T> y) TEST_NOEXCEPT {
+  return x.ptr_ - y.ptr_;
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 typename fancy_pointer<T>::difference_type
+operator-(fancy_pointer<const T> x, fancy_pointer<const T> y) TEST_NOEXCEPT {
+  return x.ptr_ - y.ptr_;
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator==(fancy_pointer<T> x, fancy_pointer<T> y) TEST_NOEXCEPT {
+  return x.get() == y.get();
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator==(fancy_pointer<const T> x, fancy_pointer<T> y) TEST_NOEXCEPT {
+  return x.get() == y.get();
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator==(fancy_pointer<T> x, fancy_pointer<const T> y) TEST_NOEXCEPT {
+  return x.get() == y.get();
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator==(fancy_pointer<const T> x, fancy_pointer<const T> y) TEST_NOEXCEPT {
+  return x.get() == y.get();
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator!=(fancy_pointer<T> x, fancy_pointer<T> y) TEST_NOEXCEPT {
+  return !(x == y);
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator!=(fancy_pointer<const T> x, fancy_pointer<T> y) TEST_NOEXCEPT {
+  return !(x == y);
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator!=(fancy_pointer<T> x, fancy_pointer<const T> y) TEST_NOEXCEPT {
+  return !(x == y);
+}
+
+template <typename T>
+TEST_CONSTEXPR_CXX14 bool operator!=(fancy_pointer<const T> x, fancy_pointer<const T> y) TEST_NOEXCEPT {
+  return !(x == y);
+}
+
+template <class T>
+class fancy_pointer_allocator : public std::allocator<T> {
+  typedef std::allocator<T> base;
+
+public:
+  typedef T value_type;
+  typedef fancy_pointer<T> pointer;
+  typedef fancy_pointer<const T> const_pointer;
+  typedef value_type& reference;
+  typedef const value_type& const_reference;
+  typedef std::size_t size_type;
+  typedef std::ptrdiff_t difference_type;
+
+  template <class U>
+  struct rebind {
+    typedef fancy_pointer_allocator<U> other;
+  };
+
+  TEST_CONSTEXPR_CXX20 fancy_pointer_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  TEST_CONSTEXPR explicit fancy_pointer_allocator(fancy_pointer_allocator<U>) TEST_NOEXCEPT {}
+
+  TEST_CONSTEXPR_CXX20 pointer allocate(size_t n) { return base::allocate(n); }
+  TEST_CONSTEXPR_CXX20 void deallocate(pointer p, size_t n) { return base::deallocate(p, n); }
+
+#if TEST_STD_VER > 20
+  TEST_CONSTEXPR_CXX20 std::allocation_result<pointer> allocate_at_least(std::size_t n) { return {allocate(n), n}; }
+#endif
+};
 
 template <class T, std::size_t N>
 class limited_allocator {

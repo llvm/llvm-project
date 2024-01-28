@@ -15,6 +15,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_allocator.h"
 
 template <class CharT, template <class> class Alloc>
 constexpr void test_string() {
@@ -70,6 +71,7 @@ constexpr void test_string() {
 
 constexpr bool test() {
   test_string<char, std::allocator>();
+  test_string<char, fancy_pointer_allocator>();
 
   return true;
 }

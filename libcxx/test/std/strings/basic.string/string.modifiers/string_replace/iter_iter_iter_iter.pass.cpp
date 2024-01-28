@@ -19,6 +19,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 #include "test_iterators.h"
+#include "test_allocator.h"
 
 template <class S, class It>
 TEST_CONSTEXPR_CXX20 void test(S s, typename S::size_type pos1, typename S::size_type n1, It f, It l, S expected) {
@@ -1064,6 +1065,7 @@ int main(int, char**) {
   test<std::string>();
 #if TEST_STD_VER >= 11
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
 #endif
 
   return 0;

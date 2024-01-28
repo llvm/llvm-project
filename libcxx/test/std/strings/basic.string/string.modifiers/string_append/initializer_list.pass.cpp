@@ -19,6 +19,7 @@
 #include "min_allocator.h"
 #include "nasty_string.h"
 #include "asan_testing.h"
+#include "test_allocator.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test() {
@@ -43,6 +44,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
   test<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_string>();
 #endif
