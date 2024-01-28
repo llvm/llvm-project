@@ -3270,8 +3270,6 @@ Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
       BO->setHasNoSignedWrap(SubclassOptionalData &
                              OverflowingBinaryOperator::NoSignedWrap);
     }
-    if (isa<PossiblyExactOperator>(BO))
-      BO->setIsExact(SubclassOptionalData & PossiblyExactOperator::IsExact);
     return BO;
   }
 }

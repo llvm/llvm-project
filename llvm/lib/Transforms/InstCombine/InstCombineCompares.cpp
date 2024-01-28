@@ -973,7 +973,8 @@ Instruction *InstCombinerImpl::foldICmpShrConstConst(ICmpInst &I, Value *A,
   if (AP2.isZero())
     return nullptr;
 
-  bool IsAShr = isa<AShrOperator>(I.getOperand(0));
+  bool IsAShr =
+      cast<Instruction>(I.getOperand(0))->getOpcode() == Instruction::AShr;
   if (IsAShr) {
     if (AP2.isAllOnes())
       return nullptr;

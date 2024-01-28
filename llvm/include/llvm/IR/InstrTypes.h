@@ -761,6 +761,26 @@ public:
   }
 };
 
+/// A div or shr instruction, which can be marked as "exact",
+/// indicating that no bits are destroyed.
+class PossiblyExactInst : public BinaryOperator {
+public:
+  enum { IsExact = (1 << 0) };
+
+  static bool classof(const Instruction *I) {
+    unsigned OpC = I->getOpcode();
+    return OpC == Instruction::SDiv || OpC == Instruction::UDiv ||
+           OpC == Instruction::AShr || OpC == Instruction::LShr;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+// TODO: Drop compatibility alias.
+using PossiblyExactOperator = PossiblyExactInst;
+
 //===----------------------------------------------------------------------===//
 //                               CmpInst Class
 //===----------------------------------------------------------------------===//

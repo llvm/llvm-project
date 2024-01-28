@@ -58,8 +58,7 @@ public:
     auto *RC = dyn_cast<Constant>(RHS);
     if (LC && RC) {
       if (ConstantExpr::isDesirableBinOp(Opc))
-        return ConstantExpr::get(Opc, LC, RC,
-                                 IsExact ? PossiblyExactOperator::IsExact : 0);
+        return ConstantExpr::get(Opc, LC, RC);
       return ConstantFoldBinaryInstruction(Opc, LC, RC);
     }
     return nullptr;

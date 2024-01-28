@@ -320,7 +320,9 @@ void Instruction::setHasNoSignedWrap(bool b) {
 }
 
 void Instruction::setIsExact(bool b) {
-  cast<PossiblyExactOperator>(this)->setIsExact(b);
+  assert(isa<PossiblyExactInst>(this) && "Instruction must support exact flag");
+  SubclassOptionalData = (SubclassOptionalData & ~PossiblyExactInst::IsExact) |
+                         (b * PossiblyExactInst::IsExact);
 }
 
 void Instruction::setNonNeg(bool b) {
@@ -360,7 +362,7 @@ void Instruction::dropPoisonGeneratingFlags() {
   case Instruction::SDiv:
   case Instruction::AShr:
   case Instruction::LShr:
-    cast<PossiblyExactOperator>(this)->setIsExact(false);
+    setIsExact(false);
     break;
 
   case Instruction::Or:
@@ -426,7 +428,8 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
 }
 
 bool Instruction::isExact() const {
-  return cast<PossiblyExactOperator>(this)->isExact();
+  assert(isa<PossiblyExactInst>(this) && "Instruction must support exact flag");
+  return (SubclassOptionalData & PossiblyExactInst::IsExact) != 0;
 }
 
 void Instruction::setFast(bool B) {

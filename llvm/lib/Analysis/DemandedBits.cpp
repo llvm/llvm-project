@@ -197,7 +197,7 @@ void DemandedBits::determineLiveOperandBits(
 
         // If the shift is exact, then the low bits are not dead
         // (they must be zero).
-        if (cast<LShrOperator>(UserI)->isExact())
+        if (UserI->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
       }
     }
@@ -217,7 +217,7 @@ void DemandedBits::determineLiveOperandBits(
 
         // If the shift is exact, then the low bits are not dead
         // (they must be zero).
-        if (cast<AShrOperator>(UserI)->isExact())
+        if (UserI->isExact())
           AB |= APInt::getLowBitsSet(BitWidth, ShiftAmt);
       }
     }

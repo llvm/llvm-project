@@ -678,13 +678,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
       // If any of M's operands demand more bits than MinBW then M cannot be
       // performed safely in MinBW.
-      if (any_of(MI->operands(), [&DB, MinBW](Use &U) {
+      if (any_of(MI->operands(), [&DB, MinBW, MI](Use &U) {
             auto *CI = dyn_cast<ConstantInt>(U);
             // For constants shift amounts, check if the shift would result in
             // poison.
-            if (CI &&
-                isa<ShlOperator, LShrOperator, AShrOperator>(U.getUser()) &&
-                U.getOperandNo() == 1)
+            if (CI && MI->isShift() && U.getOperandNo() == 1)
               return CI->uge(MinBW);
             uint64_t BW = bit_width(DB.getDemandedBits(&U).getZExtValue());
             return bit_ceil(BW) > MinBW;

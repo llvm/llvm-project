@@ -1381,8 +1381,8 @@ template <typename SubPattern_t> struct Exact_match {
   Exact_match(const SubPattern_t &SP) : SubPattern(SP) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *PEO = dyn_cast<PossiblyExactOperator>(V))
-      return PEO->isExact() && SubPattern.match(V);
+    if (auto *PEI = dyn_cast<PossiblyExactInst>(V))
+      return PEI->isExact() && SubPattern.match(V);
     return false;
   }
 };
