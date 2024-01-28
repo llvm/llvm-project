@@ -174,7 +174,7 @@ namespace {
     /// This is used to find and remove nodes from the worklist (by nulling
     /// them) when they are deleted from the underlying DAG. It relies on
     /// stable indices of nodes within the worklist.
-    SmallDenseMap<SDNode *, unsigned, 32> WorklistMap;
+    DenseMap<SDNode *, unsigned> WorklistMap;
 
     /// This records all nodes attempted to be added to the worklist since we
     /// considered a new worklist entry. As we keep do not add duplicate nodes
