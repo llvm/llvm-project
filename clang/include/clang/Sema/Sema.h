@@ -9329,12 +9329,12 @@ public:
 
   TemplateDeductionResult
   DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
-                          const TemplateArgumentList &TemplateArgs,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
   TemplateDeductionResult
   DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
-                          const TemplateArgumentList &TemplateArgs,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
   TemplateDeductionResult SubstituteExplicitTemplateArguments(
@@ -9507,7 +9507,7 @@ public:
 
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
-      const TemplateArgumentList *Innermost = nullptr,
+      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
       bool SkipForSpecialization = false);
@@ -10537,7 +10537,7 @@ public:
                                      bool AtEndOfTU = false);
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-      const TemplateArgumentList &TemplateArgList,
+      const TemplateArgumentList *PartialSpecArgs,
       const TemplateArgumentListInfo &TemplateArgsInfo,
       SmallVectorImpl<TemplateArgument> &Converted,
       SourceLocation PointOfInstantiation,
