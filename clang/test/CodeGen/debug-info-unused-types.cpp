@@ -13,14 +13,12 @@ void quux() {
 // CHECK: !DICompileUnit{{.+}}retainedTypes: [[RETTYPES:![0-9]+]]
 // CHECK: [[TYPE0:![0-9]+]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "baz"
 // CHECK: [[TYPE1:![0-9]+]] = !DIEnumerator(name: "BAZ"
-// CHECK: [[RETTYPES]] = !{[[TYPE2:![0-9]+]], [[TYPE3:![0-9]+]], [[TYPE0]], {{![0-9]+}}}
-// CHECK: [[TYPE2]] = !DIDerivedType(tag: DW_TAG_typedef, name: "foo"
-// CHECK: [[TYPE3]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "bar"
-// CHECK: [[SP:![0-9]+]] = distinct !DISubprogram(name: "quux", {{.*}}, retainedNodes: [[SPRETNODES:![0-9]+]]
-// CHECK: [[SPRETNODES]] = !{[[TYPE4:![0-9]+]], [[TYPE5:![0-9]+]]}
-// CHECK: [[TYPE4]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "y", scope: [[SP]]
-// CHECK: [[TYPE5]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "z", scope: [[SP]]
-// CHECK: [[TYPE6:![0-9]+]] = !DIEnumerator(name: "Z"
+// CHECK: [[TYPE2:![0-9]+]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "z"
+// CHECK: [[TYPE3:![0-9]+]] = !DIEnumerator(name: "Z"
+// CHECK: [[RETTYPES]] = !{[[TYPE4:![0-9]+]], [[TYPE5:![0-9]+]], [[TYPE0]], {{![0-9]+}}, [[TYPE6:![0-9]+]], [[TYPE2]]}
+// CHECK: [[TYPE4]] = !DIDerivedType(tag: DW_TAG_typedef, name: "foo"
+// CHECK: [[TYPE5]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "bar"
+// CHECK: [[TYPE6]] = distinct !DICompositeType(tag: DW_TAG_class_type, name: "y"
 
 // NODBG-NOT: !DI{{CompositeType|Enumerator|DerivedType}}
 

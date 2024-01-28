@@ -783,12 +783,12 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        auto initialize_cu = [&](const FileSpec &file_spec,
+        auto initialize_cu = [&](lldb::SupportFileSP support_file_sp,
                                  LanguageType cu_language,
                                  SupportFileList &&support_files = {}) {
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
-              module_sp, &dwarf_cu, file_spec,
+              module_sp, &dwarf_cu, support_file_sp,
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
@@ -821,7 +821,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
             return false;
           if (support_files.GetSize() == 0)
             return false;
-          initialize_cu(support_files.GetFileSpecAtIndex(0),
+          initialize_cu(support_files.GetSupportFileAtIndex(0),
                         eLanguageTypeUnknown, std::move(support_files));
           return true;
         };
@@ -840,7 +840,8 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
             // case ParseSupportFiles takes care of the remapping.
             MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
 
-            initialize_cu(cu_file_spec, cu_language);
+            initialize_cu(std::make_shared<SupportFile>(cu_file_spec),
+                          cu_language);
           }
         }
       }

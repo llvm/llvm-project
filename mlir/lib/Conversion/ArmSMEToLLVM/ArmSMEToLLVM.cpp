@@ -255,7 +255,7 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     // Step 2. Assign the op a real tile ID.
     // For simplicity, we always use tile 0 (which always exists).
     auto zeroTileId = rewriter.getI32IntegerAttr(0);
-    rewriter.updateRootInPlace(tileOp, [&] { tileOp.setTileId(zeroTileId); });
+    rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(zeroTileId); });
 
     VectorType tileVectorType = tileOp.getTileType();
     auto sliceType = VectorType::Builder(tileVectorType).dropDim(0);

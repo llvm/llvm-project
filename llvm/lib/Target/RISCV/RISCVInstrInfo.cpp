@@ -1580,12 +1580,6 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     break;
-  case RISCV::ADD:
-    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0)
-      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
-    if (MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0)
-      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
-    break;
   case RISCV::ADDI:
     // Operand 1 can be a frameindex but callers expect registers
     if (MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
@@ -2385,7 +2379,11 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TPREL_HI, "riscv-tprel-hi"},
       {MO_TPREL_ADD, "riscv-tprel-add"},
       {MO_TLS_GOT_HI, "riscv-tls-got-hi"},
-      {MO_TLS_GD_HI, "riscv-tls-gd-hi"}};
+      {MO_TLS_GD_HI, "riscv-tls-gd-hi"},
+      {MO_TLSDESC_HI, "riscv-tlsdesc-hi"},
+      {MO_TLSDESC_LOAD_LO, "riscv-tlsdesc-load-lo"},
+      {MO_TLSDESC_ADD_LO, "riscv-tlsdesc-add-lo"},
+      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"}};
   return ArrayRef(TargetFlags);
 }
 bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
@@ -2440,10 +2438,8 @@ RISCVInstrInfo::getOutliningCandidateInfo(
 
   unsigned SequenceSize = 0;
 
-  auto I = RepeatedSequenceLocs[0].front();
-  auto E = std::next(RepeatedSequenceLocs[0].back());
-  for (; I != E; ++I)
-    SequenceSize += getInstSizeInBytes(*I);
+  for (auto &MI : RepeatedSequenceLocs[0])
+    SequenceSize += getInstSizeInBytes(MI);
 
   // call t0, function = 8 bytes.
   unsigned CallOverhead = 8;
@@ -2559,33 +2555,6 @@ std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
     return RegImmPair{MI.getOperand(1).getReg(), MI.getOperand(2).getImm()};
 
   return std::nullopt;
-}
-
-bool RISCVInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
-                                             const Register Reg,
-                                             int64_t &ImmVal) const {
-  // Handle moves of X0.
-  if (auto DestSrc = isCopyInstr(MI)) {
-    if (DestSrc->Source->getReg() != RISCV::X0)
-      return false;
-    const Register DstReg = DestSrc->Destination->getReg();
-    if (DstReg != Reg)
-      return false;
-    ImmVal = 0;
-    return true;
-  }
-
-  if (!(MI.getOpcode() == RISCV::ADDI || MI.getOpcode() == RISCV::ADDIW ||
-        MI.getOpcode() == RISCV::ORI))
-    return false;
-  if (MI.getOperand(0).getReg() != Reg)
-    return false;
-  if (!MI.getOperand(1).isReg() || MI.getOperand(1).getReg() != RISCV::X0)
-    return false;
-  if (!MI.getOperand(2).isImm())
-    return false;
-  ImmVal = MI.getOperand(2).getImm();
-  return true;
 }
 
 // MIR printer helper function to annotate Operands with a comment.
@@ -3159,17 +3128,38 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else {
+  } else if (STI.hasStdExtM() || STI.hasStdExtZmmul()) {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     movImm(MBB, II, DL, N, NumOfVReg, Flag);
-    if (!STI.hasStdExtM() && !STI.hasStdExtZmmul())
-      MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
-          MF.getFunction(),
-          "M- or Zmmul-extension must be enabled to calculate the vscaled size/"
-          "offset."});
     BuildMI(MBB, II, DL, get(RISCV::MUL), DestReg)
         .addReg(DestReg, RegState::Kill)
         .addReg(N, RegState::Kill)
+        .setMIFlag(Flag);
+  } else {
+    Register Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, get(RISCV::ADDI), Acc)
+        .addReg(RISCV::X0)
+        .addImm(0)
+        .setMIFlag(Flag);
+    uint32_t PrevShiftAmount = 0;
+    for (uint32_t ShiftAmount = 0; NumOfVReg >> ShiftAmount; ShiftAmount++) {
+      if (NumOfVReg & (1LL << ShiftAmount)) {
+        if (ShiftAmount)
+          BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
+              .addReg(DestReg, RegState::Kill)
+              .addImm(ShiftAmount - PrevShiftAmount)
+              .setMIFlag(Flag);
+        if (NumOfVReg >> (ShiftAmount + 1))
+          BuildMI(MBB, II, DL, get(RISCV::ADD), Acc)
+              .addReg(Acc, RegState::Kill)
+              .addReg(DestReg)
+              .setMIFlag(Flag);
+        PrevShiftAmount = ShiftAmount;
+      }
+    }
+    BuildMI(MBB, II, DL, get(RISCV::ADD), DestReg)
+        .addReg(DestReg, RegState::Kill)
+        .addReg(Acc)
         .setMIFlag(Flag);
   }
 }

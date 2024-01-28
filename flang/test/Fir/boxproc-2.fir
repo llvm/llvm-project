@@ -94,3 +94,11 @@ func.func @block_arg_rewrite(%arg0: !fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()
 // CHECK:           fir.call @dosomething(%[[VAL_3]]) : (!fir.ref<!fir.type<tUnboxProc{p:() -> ()}>>) -> ()
 
 func.func private @dosomething(!fir.ref<!fir.type<t{p:!fir.boxproc<() -> ()>}>>)
+
+!t2 = !fir.type<t2{i:!fir.boxproc<() -> ()>}>
+func.func @box_addr_test(%arg0: !fir.box<!t2>) -> !fir.ref<!t2> {
+  %3 = fir.box_addr %arg0 : (!fir.box<!t2>) -> !fir.ref<!t2>
+  return %3 : !fir.ref<!t2>
+}
+// CHECK: func.func @box_addr_test(
+// CHECK:   fir.box_addr %{{.*}} : (!fir.box<!fir.type<t2UnboxProc{i:() -> ()}>>) -> !fir.ref<!fir.type<t2UnboxProc{i:() -> ()}>>
