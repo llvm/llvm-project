@@ -1004,7 +1004,7 @@ define double @test_positive_zero_nsz(double %X) {
 
 define double @test_negative_zero_nsz(double %X) {
 ; CHECK-LABEL: @test_negative_zero_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv nnan nsz double [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.copysign.f64(double 0x7FF0000000000000, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %1 = fdiv nnan nsz double %X, -0.0
@@ -1040,7 +1040,7 @@ define <2 x double> @test_positive_zero_vector_nsz(<2 x double> %X) {
 
 define <2 x double> @test_negative_zero_vector_nsz(<2 x double> %X) {
 ; CHECK-LABEL: @test_negative_zero_vector_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv nnan nsz <2 x double> [[X:%.*]], <double -0.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz <2 x double> @llvm.copysign.v2f64(<2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = fdiv nnan nsz <2 x double> %X, <double -0.0, double 0.0>
