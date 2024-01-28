@@ -157,14 +157,21 @@ static bool resultDependsOnExec(const MachineInstr &MI) {
     Register DstReg = MI.getOperand(0).getReg();
     if (!DstReg.isVirtual())
       return true;
-    for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
-      switch (Use.getOpcode()) {
+    for (MachineOperand &Use : MRI.use_nodbg_operands(DstReg)) {
+      MachineInstr &User = *Use.getParent();
+      switch (User.getOpcode()) {
       case AMDGPU::S_AND_SAVEEXEC_B32:
       case AMDGPU::S_AND_SAVEEXEC_B64:
         break;
+      case AMDGPU::SI_IF:
+      case AMDGPU::SI_IF_BREAK:
+        if (Use.getOperandNo() != 1)
+          return true;
+        // These are lowered to an AND with EXEC.
+        break;
       case AMDGPU::S_AND_B32:
       case AMDGPU::S_AND_B64:
-        if (!Use.readsRegister(AMDGPU::EXEC))
+        if (!User.readsRegister(AMDGPU::EXEC))
           return true;
         break;
       default:

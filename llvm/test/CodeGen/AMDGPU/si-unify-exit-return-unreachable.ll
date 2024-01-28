@@ -110,22 +110,22 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_load_dword s10, s[4:5], 0x0
-; GCN-NEXT:    s_mov_b64 s[8:9], -1
+; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lt_i32 s10, 1
-; GCN-NEXT:    s_mov_b64 s[6:7], 0
+; GCN-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_7
 ; GCN-NEXT:  ; %bb.1: ; %LeafBlock1
 ; GCN-NEXT:    s_cmp_lg_u32 s10, 1
-; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GCN-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:    s_cbranch_execz .LBB0_8
 ; GCN-NEXT:  .LBB0_2: ; %Flow11
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; GCN-NEXT:  .LBB0_3: ; %do.body
 ; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:  .LBB0_4: ; %Flow17
-; GCN-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GCN-NEXT:  ; %bb.5: ; %UnifiedUnreachableBlock
 ; GCN-NEXT:    ; divergent unreachable
@@ -133,58 +133,58 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .LBB0_7: ; %Flow
-; GCN-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; GCN-NEXT:    s_andn2_b64 vcc, exec, s[6:7]
 ; GCN-NEXT:    s_cbranch_vccnz .LBB0_2
 ; GCN-NEXT:  .LBB0_8: ; %LeafBlock
 ; GCN-NEXT:    s_cmp_eq_u32 s10, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_10
 ; GCN-NEXT:  ; %bb.9:
-; GCN-NEXT:    s_mov_b64 s[6:7], -1
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[8:9], -1
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_3
 ; GCN-NEXT:    s_branch .LBB0_4
 ; GCN-NEXT:  .LBB0_10: ; %NodeBlock7
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v0
+; GCN-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-NEXT:    s_mov_b64 s[8:9], 0
-; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
+; GCN-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:  ; %bb.11: ; %LeafBlock5
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
+; GCN-NEXT:    s_mov_b64 s[8:9], exec
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 2, v0
+; GCN-NEXT:    s_and_b64 s[10:11], s[4:5], exec
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:  ; %bb.12: ; %Flow13
-; GCN-NEXT:    s_andn2_saveexec_b64 s[10:11], s[4:5]
+; GCN-NEXT:    s_andn2_saveexec_b64 s[12:13], s[6:7]
 ; GCN-NEXT:  ; %bb.13: ; %LeafBlock3
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v0
-; GCN-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
+; GCN-NEXT:    v_cmp_ne_u32_e64 s[6:7], 0, v0
 ; GCN-NEXT:    s_andn2_b64 s[8:9], s[8:9], exec
+; GCN-NEXT:    s_andn2_b64 s[10:11], s[10:11], exec
+; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[12:13], vcc, exec
-; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[4:5]
-; GCN-NEXT:    s_or_b64 s[8:9], s[8:9], s[12:13]
+; GCN-NEXT:    s_or_b64 s[8:9], s[8:9], s[6:7]
+; GCN-NEXT:    s_or_b64 s[10:11], s[10:11], s[4:5]
 ; GCN-NEXT:  ; %bb.14: ; %Flow14
-; GCN-NEXT:    s_or_b64 exec, exec, s[10:11]
+; GCN-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    s_and_saveexec_b64 s[10:11], s[8:9]
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[10:11]
 ; GCN-NEXT:    s_cbranch_execz .LBB0_18
 ; GCN-NEXT:  ; %bb.15: ; %LeafBlock9
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v0
-; GCN-NEXT:    s_mov_b64 s[8:9], -1
+; GCN-NEXT:    s_mov_b64 s[10:11], -1
 ; GCN-NEXT:    s_and_saveexec_b64 s[12:13], vcc
 ; GCN-NEXT:  ; %bb.16: ; %do.body.i.i.i.i
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_xor_b64 s[8:9], exec, -1
+; GCN-NEXT:    s_xor_b64 s[10:11], exec, -1
 ; GCN-NEXT:  ; %bb.17: ; %Flow16
 ; GCN-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GCN-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
-; GCN-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; GCN-NEXT:    s_or_b64 s[6:7], s[6:7], s[8:9]
+; GCN-NEXT:    s_andn2_b64 s[8:9], s[8:9], exec
+; GCN-NEXT:    s_and_b64 s[10:11], s[10:11], exec
+; GCN-NEXT:    s_or_b64 s[8:9], s[8:9], s[10:11]
 ; GCN-NEXT:  .LBB0_18: ; %Flow15
-; GCN-NEXT:    s_or_b64 exec, exec, s[10:11]
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
+; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_3
 ; GCN-NEXT:    s_branch .LBB0_4
 entry:
