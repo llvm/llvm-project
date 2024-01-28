@@ -1488,7 +1488,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   };
 
-  if (I.getMetadata(LLVMContext::MD_nontemporal) != nullptr)
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
     Info.flags |= MachineMemOperand::MONonTemporal;
 
   Info.flags |= RISCVTargetLowering::getTargetMMOFlags(I);
