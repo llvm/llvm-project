@@ -101,7 +101,8 @@ protected:
 
   void PrintChildrenPostamble(bool print_dotdotdot);
 
-  lldb::ValueObjectSP GenerateChild(ValueObject *synth_valobj, size_t idx);
+  std::optional<lldb::ValueObjectSP> GenerateChild(ValueObject *synth_valobj,
+                                                   size_t idx);
 
   void PrintChild(lldb::ValueObjectSP child_sp,
                   const DumpValueObjectOptions::PointerDepth &curr_ptr_depth);

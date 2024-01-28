@@ -409,7 +409,7 @@ public:
       Stream &s,
       GetExpressionPathFormat = eGetExpressionPathFormatDereferencePointers);
 
-  lldb::ValueObjectSP GetValueForExpressionPath(
+  std::optional<lldb::ValueObjectSP> GetValueForExpressionPath(
       llvm::StringRef expression,
       ExpressionPathScanEndReason *reason_to_stop = nullptr,
       ExpressionPathEndResultType *final_value_type = nullptr,
@@ -465,14 +465,18 @@ public:
   /// Returns a unique id for this ValueObject.
   lldb::user_id_t GetID() const { return m_id.GetID(); }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx,
-                                              bool can_create = true);
+  virtual std::optional<lldb::ValueObjectSP>
+  GetChildAtIndex(size_t idx, bool can_create = true);
 
-  // The method always creates missing children in the path, if necessary.
-  lldb::ValueObjectSP GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names);
 
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
+  /// The method always creates missing children in the path, if necessary.
+  std::optional<lldb::ValueObjectSP>
+  GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names);
+
+  virtual std::optional<lldb::ValueObjectSP>
+  GetChildMemberWithName(llvm::StringRef name, bool can_create = true);
 
   virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
 
@@ -536,7 +540,11 @@ public:
 
   bool UpdateFormatsIfNeeded();
 
-  lldb::ValueObjectSP GetSP() { return m_manager->GetSharedPointer(this); }
+  lldb::ValueObjectSP GetSP() {
+    auto shared_pointer = m_manager->GetSharedPointer(this);
+    lldb::ValueObjectSP value_object_sp(std::move(shared_pointer));
+    return value_object_sp;
+  }
 
   /// Change the name of the current ValueObject. Should *not* be used from a
   /// synthetic child provider as it would change the name of the non synthetic
@@ -548,26 +556,28 @@ public:
 
   lldb::addr_t GetPointerValue(AddressType *address_type = nullptr);
 
-  lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
+  std::optional<lldb::ValueObjectSP> GetSyntheticChild(ConstString key) const;
 
-  lldb::ValueObjectSP GetSyntheticArrayMember(size_t index, bool can_create);
+  std::optional<lldb::ValueObjectSP> GetSyntheticArrayMember(size_t index,
+                                                             bool can_create);
 
-  lldb::ValueObjectSP GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
-                                                bool can_create);
+  std::optional<lldb::ValueObjectSP>
+  GetSyntheticBitFieldChild(uint32_t from, uint32_t to, bool can_create);
 
-  lldb::ValueObjectSP GetSyntheticExpressionPathChild(const char *expression,
-                                                      bool can_create);
+  std::optional<lldb::ValueObjectSP>
+  GetSyntheticExpressionPathChild(const char *expression, bool can_create);
 
-  virtual lldb::ValueObjectSP
+  virtual std::optional<lldb::ValueObjectSP>
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
                             bool can_create,
                             ConstString name_const_str = ConstString());
 
-  virtual lldb::ValueObjectSP
+  virtual std::optional<lldb::ValueObjectSP>
   GetSyntheticBase(uint32_t offset, const CompilerType &type, bool can_create,
                    ConstString name_const_str = ConstString());
 
-  virtual lldb::ValueObjectSP GetDynamicValue(lldb::DynamicValueType valueType);
+  virtual std::optional<lldb::ValueObjectSP>
+  GetDynamicValue(lldb::DynamicValueType valueType);
 
   lldb::DynamicValueType GetDynamicValueType();
 
@@ -575,7 +585,7 @@ public:
 
   virtual lldb::ValueObjectSP GetNonSyntheticValue() { return GetSP(); }
 
-  lldb::ValueObjectSP GetSyntheticValue();
+  std::optional<lldb::ValueObjectSP> GetSyntheticValue();
 
   virtual bool HasSyntheticValue();
 
@@ -587,7 +597,7 @@ public:
 
   virtual lldb::ValueObjectSP CreateConstantValue(ConstString name);
 
-  virtual lldb::ValueObjectSP Dereference(Status &error);
+  virtual lldb::ValueObjectSP Dereference();
 
   /// Creates a copy of the ValueObject with a new name and setting the current
   /// ValueObject as its parent. It should be used when we want to change the
@@ -595,7 +605,7 @@ public:
   /// (e.g. sythetic child provider).
   virtual lldb::ValueObjectSP Clone(ConstString new_name);
 
-  virtual lldb::ValueObjectSP AddressOf(Status &error);
+  virtual lldb::ValueObjectSP AddressOf();
 
   virtual lldb::addr_t GetLiveAddress() { return LLDB_INVALID_ADDRESS; }
 
@@ -606,11 +616,11 @@ public:
 
   virtual lldb::ValueObjectSP DoCast(const CompilerType &compiler_type);
 
-  virtual lldb::ValueObjectSP CastPointerType(const char *name,
-                                              CompilerType &ast_type);
+  virtual std::optional<lldb::ValueObjectSP>
+  CastPointerType(const char *name, CompilerType &ast_type);
 
-  virtual lldb::ValueObjectSP CastPointerType(const char *name,
-                                              lldb::TypeSP &type_sp);
+  virtual std::optional<lldb::ValueObjectSP>
+  CastPointerType(const char *name, lldb::TypeSP &type_sp);
 
   /// If this object represents a C++ class with a vtable, return an object
   /// that represents the virtual function table. If the object isn't a class
@@ -642,18 +652,18 @@ public:
 
   void Dump(Stream &s, const DumpValueObjectOptions &options);
 
-  static lldb::ValueObjectSP
+  static std::optional<lldb::ValueObjectSP>
   CreateValueObjectFromExpression(llvm::StringRef name,
                                   llvm::StringRef expression,
                                   const ExecutionContext &exe_ctx);
 
-  static lldb::ValueObjectSP
+  static std::optional<lldb::ValueObjectSP>
   CreateValueObjectFromExpression(llvm::StringRef name,
                                   llvm::StringRef expression,
                                   const ExecutionContext &exe_ctx,
                                   const EvaluateExpressionOptions &options);
 
-  static lldb::ValueObjectSP
+  static std::optional<lldb::ValueObjectSP>
   CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
                                CompilerType type);
@@ -662,7 +672,7 @@ public:
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
 
-  lldb::ValueObjectSP Persist();
+  std::optional<lldb::ValueObjectSP> Persist();
 
   /// Returns true if this is a char* or a char[] if it is a char* and
   /// check_pointer is true, it also checks that the pointer is valid.
@@ -873,7 +883,7 @@ protected:
 
   /// We have to hold onto a shared  pointer to this one because it is created
   /// as an independent ValueObjectConstResult, which isn't managed by us.
-  lldb::ValueObjectSP m_addr_of_valobj_sp;
+  std::optional<lldb::ValueObjectSP> m_addr_of_valobj_sp;
 
   lldb::Format m_format = lldb::eFormatDefault;
   lldb::Format m_last_format = lldb::eFormatDefault;
@@ -997,7 +1007,7 @@ private:
     GetRoot()->DoUpdateChildrenAddressType(*this);
   }
 
-  lldb::ValueObjectSP GetValueForExpressionPath_Impl(
+  std::optional<lldb::ValueObjectSP> GetValueForExpressionPath_Impl(
       llvm::StringRef expression_cstr,
       ExpressionPathScanEndReason *reason_to_stop,
       ExpressionPathEndResultType *final_value_type,

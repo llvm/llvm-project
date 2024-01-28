@@ -608,8 +608,8 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
   return false;
 }
 
-static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
-                                             bool deref_pointer) {
+static std::optional<ValueObjectSP>
+ExpandIndexedExpression(ValueObject *valobj, size_t index, bool deref_pointer) {
   Log *log = GetLog(LLDBLog::DataFormatters);
   std::string name_to_deref = llvm::formatv("[{0}]", index);
   LLDB_LOG(log, "[ExpandIndexedExpression] name to deref: {0}", name_to_deref);
@@ -619,7 +619,7 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
   ValueObject::ExpressionPathAftermath what_next =
       (deref_pointer ? ValueObject::eExpressionPathAftermathDereference
                      : ValueObject::eExpressionPathAftermathNothing);
-  ValueObjectSP item = valobj->GetValueForExpressionPath(
+  std::optional<ValueObjectSP> item = valobj->GetValueForExpressionPath(
       name_to_deref, &reason_to_stop, &final_value_type, options, &what_next);
   if (!item) {
     LLDB_LOGF(log,
@@ -690,8 +690,9 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     custom_format = entry.fmt;
     val_obj_display = (ValueObject::ValueObjectRepresentationStyle)entry.number;
     if (!valobj->IsSynthetic()) {
-      valobj = valobj->GetSyntheticValue().get();
-      if (valobj == nullptr)
+      if (std::optional<ValueObjectSP> temp = valobj->GetSyntheticValue())
+        valobj = temp.value().get();
+      else
         return false;
     }
     break;
@@ -756,7 +757,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
         valobj
             ->GetValueForExpressionPath(expr_path.c_str(), &reason_to_stop,
                                         &final_value_type, options, &what_next)
-            .get();
+            ->get();
 
     if (!target) {
       LLDB_LOGF(log,
@@ -789,13 +790,13 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     // I have not deref-ed yet, let's do it
     // this happens when we are not going through
     // GetValueForVariableExpressionPath to get to the target ValueObject
-    Status error;
-    target = target->Dereference(error).get();
-    if (error.Fail()) {
+    ValueObjectSP temp = target->Dereference();
+    if (temp->GetError().Fail()) {
       LLDB_LOGF(log, "[Debugger::FormatPrompt] ERROR: %s\n",
-                error.AsCString("unknown"));
+                temp->GetError().AsCString("unknown"));
       return false;
     }
+    target = temp.get();
     do_deref_pointer = false;
   }
 
@@ -933,7 +934,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
     bool success = true;
     for (int64_t index = index_lower; index <= index_higher; ++index) {
-      ValueObject *item = ExpandIndexedExpression(target, index, false).get();
+      ValueObject *item = ExpandIndexedExpression(target, index, false)->get();
 
       if (!item) {
         LLDB_LOGF(log,
@@ -1356,10 +1357,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
-          ValueObjectSP return_valobj_sp =
+          std::optional<ValueObjectSP> return_valobj_sp =
               StopInfo::GetReturnValueObject(stop_info_sp);
           if (return_valobj_sp) {
-            return_valobj_sp->Dump(s);
+            return_valobj_sp.value()->Dump(s);
             return true;
           }
         }
@@ -1376,7 +1377,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           ExpressionVariableSP expression_var_sp =
               StopInfo::GetExpressionVariable(stop_info_sp);
           if (expression_var_sp && expression_var_sp->GetValueObject()) {
-            expression_var_sp->GetValueObject()->Dump(s);
+            expression_var_sp->GetValueObject().value()->Dump(s);
             return true;
           }
         }

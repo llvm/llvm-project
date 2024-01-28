@@ -115,23 +115,25 @@ std::string CXXSyntheticChildren::GetDescription() {
   return std::string(sstr.GetString());
 }
 
-lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
+std::optional<lldb::ValueObjectSP>
+SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
     llvm::StringRef name, llvm::StringRef expression,
     const ExecutionContext &exe_ctx) {
-  ValueObjectSP valobj_sp(
+  std::optional<ValueObjectSP> valobj_sp(
       ValueObject::CreateValueObjectFromExpression(name, expression, exe_ctx));
   if (valobj_sp)
-    valobj_sp->SetSyntheticChildrenGenerated(true);
+    valobj_sp.value()->SetSyntheticChildrenGenerated(true);
   return valobj_sp;
 }
 
-lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromAddress(
+std::optional<lldb::ValueObjectSP>
+SyntheticChildrenFrontEnd::CreateValueObjectFromAddress(
     llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
     CompilerType type) {
-  ValueObjectSP valobj_sp(
+  std::optional<ValueObjectSP> valobj_sp(
       ValueObject::CreateValueObjectFromAddress(name, address, exe_ctx, type));
   if (valobj_sp)
-    valobj_sp->SetSyntheticChildrenGenerated(true);
+    valobj_sp.value()->SetSyntheticChildrenGenerated(true);
   return valobj_sp;
 }
 
@@ -140,8 +142,7 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromData(
     const ExecutionContext &exe_ctx, CompilerType type) {
   ValueObjectSP valobj_sp(
       ValueObject::CreateValueObjectFromData(name, data, exe_ctx, type));
-  if (valobj_sp)
-    valobj_sp->SetSyntheticChildrenGenerated(true);
+  valobj_sp->SetSyntheticChildrenGenerated(true);
   return valobj_sp;
 }
 
@@ -166,10 +167,10 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
 
 ScriptedSyntheticChildren::FrontEnd::~FrontEnd() = default;
 
-lldb::ValueObjectSP
+std::optional<ValueObjectSP>
 ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(size_t idx) {
   if (!m_wrapper_sp || !m_interpreter)
-    return lldb::ValueObjectSP();
+    return {};
 
   return m_interpreter->GetChildAtIndex(m_wrapper_sp, idx);
 }
@@ -212,9 +213,10 @@ size_t ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(
                                                 name.GetCString());
 }
 
-lldb::ValueObjectSP ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue() {
+std::optional<ValueObjectSP>
+ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue() {
   if (!m_wrapper_sp || m_interpreter == nullptr)
-    return nullptr;
+    return {};
 
   return m_interpreter->GetSyntheticValue(m_wrapper_sp);
 }

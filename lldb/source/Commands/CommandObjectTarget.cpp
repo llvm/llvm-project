@@ -855,8 +855,7 @@ protected:
       ValueObjectSP valobj_sp(ValueObjectVariable::Create(
           exe_ctx.GetBestExecutionContextScope(), var_sp));
 
-      if (valobj_sp)
-        DumpValueObject(s, var_sp, valobj_sp, var_sp->GetName().GetCString());
+      DumpValueObject(s, var_sp, valobj_sp, var_sp->GetName().GetCString());
     }
   }
 
@@ -898,14 +897,14 @@ protected:
           for (uint32_t global_idx = 0; global_idx < matches; ++global_idx) {
             VariableSP var_sp(variable_list.GetVariableAtIndex(global_idx));
             if (var_sp) {
-              ValueObjectSP valobj_sp(
+              std::optional<ValueObjectSP> valobj_sp(
                   valobj_list.GetValueObjectAtIndex(global_idx));
               if (!valobj_sp)
                 valobj_sp = ValueObjectVariable::Create(
                     m_exe_ctx.GetBestExecutionContextScope(), var_sp);
 
               if (valobj_sp)
-                DumpValueObject(s, var_sp, valobj_sp,
+                DumpValueObject(s, var_sp, valobj_sp.value(),
                                 use_var_name ? var_sp->GetName().GetCString()
                                              : arg.c_str());
             }

@@ -414,7 +414,7 @@ public:
                                   bool broadcast = false);
 
   Status ReturnFromFrame(lldb::StackFrameSP frame_sp,
-                         lldb::ValueObjectSP return_value_sp,
+                         std::optional<lldb::ValueObjectSP> return_value_sp,
                          bool broadcast = false);
 
   Status JumpToLine(const FileSpec &file, uint32_t line,
@@ -1213,7 +1213,7 @@ public:
   ///     LLDB_INVALID_ADDRESS is returned if no token is available.
   virtual uint64_t GetExtendedBacktraceToken() { return LLDB_INVALID_ADDRESS; }
 
-  lldb::ValueObjectSP GetCurrentException();
+  std::optional<lldb::ValueObjectSP> GetCurrentException();
 
   lldb::ThreadSP GetCurrentExceptionBacktrace();
 

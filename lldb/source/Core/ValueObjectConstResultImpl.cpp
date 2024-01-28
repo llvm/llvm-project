@@ -37,11 +37,15 @@ ValueObjectConstResultImpl::ValueObjectConstResultImpl(
       m_live_address_type(eAddressTypeLoad),
       m_address_of_backend() {}
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Status &error) {
-  if (m_impl_backend == nullptr)
-    return lldb::ValueObjectSP();
+lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference() {
+  if (m_impl_backend == nullptr) {
+    Status error;
+    error.SetErrorString("Unable to dereference result because the "
+                         "implementation details backend is null.");
+    return ValueObjectConstResult::Create(nullptr, error);
+  }
 
-  return m_impl_backend->ValueObject::Dereference(error);
+  return m_impl_backend->ValueObject::Dereference();
 }
 
 ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
@@ -109,22 +113,28 @@ ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
   return valobj;
 }
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::GetSyntheticChildAtOffset(
+std::optional<lldb::ValueObjectSP>
+ValueObjectConstResultImpl::GetSyntheticChildAtOffset(
     uint32_t offset, const CompilerType &type, bool can_create,
     ConstString name_const_str) {
   if (m_impl_backend == nullptr)
-    return lldb::ValueObjectSP();
+    return {};
 
   return m_impl_backend->ValueObject::GetSyntheticChildAtOffset(
       offset, type, can_create, name_const_str);
 }
 
-lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
-  if (m_address_of_backend.get() != nullptr)
-    return m_address_of_backend;
+lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf() {
+  if (m_address_of_backend)
+    return m_address_of_backend.value();
 
-  if (m_impl_backend == nullptr)
-    return lldb::ValueObjectSP();
+  if (m_impl_backend == nullptr) {
+    Status error;
+    error.SetErrorString("Unable to get address because the implementation "
+                         "details backend is null.");
+    return ValueObjectConstResult::Create(nullptr, error);
+  }
+
   if (m_live_address != LLDB_INVALID_ADDRESS) {
     CompilerType compiler_type(m_impl_backend->GetCompilerType());
 
@@ -139,18 +149,23 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::AddressOf(Status &error) {
         ConstString(new_name.c_str()), buffer, endian::InlHostByteOrder(),
         exe_ctx.GetAddressByteSize());
 
-    m_address_of_backend->GetValue().SetValueType(Value::ValueType::Scalar);
-    m_address_of_backend->GetValue().GetScalar() = m_live_address;
+    m_address_of_backend.value()->GetValue().SetValueType(
+        Value::ValueType::Scalar);
+    m_address_of_backend.value()->GetValue().GetScalar() = m_live_address;
 
-    return m_address_of_backend;
+    return m_address_of_backend.value();
   } else
-    return m_impl_backend->ValueObject::AddressOf(error);
+    return m_impl_backend->ValueObject::AddressOf();
 }
 
 lldb::ValueObjectSP
 ValueObjectConstResultImpl::Cast(const CompilerType &compiler_type) {
-  if (m_impl_backend == nullptr)
-    return lldb::ValueObjectSP();
+  if (m_impl_backend == nullptr) {
+    Status error;
+    error.SetErrorString(
+        "Unable to cast because the implementation details backend is null.");
+    return ValueObjectConstResult::Create(nullptr, error);
+  }
 
   ValueObjectConstResultCast *result_cast =
       new ValueObjectConstResultCast(*m_impl_backend, m_impl_backend->GetName(),

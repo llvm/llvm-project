@@ -9,7 +9,9 @@
 #ifndef LLDB_LLDB_FORWARD_H
 #define LLDB_LLDB_FORWARD_H
 
+#include <assert.h>
 #include <memory>
+#include <optional>
 
 // lldb forward declarations
 namespace lldb_private {
@@ -468,7 +470,16 @@ typedef std::shared_ptr<lldb_private::UnixSignals> UnixSignalsSP;
 typedef std::weak_ptr<lldb_private::UnixSignals> UnixSignalsWP;
 typedef std::shared_ptr<lldb_private::UnwindAssembly> UnwindAssemblySP;
 typedef std::shared_ptr<lldb_private::UnwindPlan> UnwindPlanSP;
-typedef std::shared_ptr<lldb_private::ValueObject> ValueObjectSP;
+class ValueObjectSP : public std::shared_ptr<lldb_private::ValueObject> {
+  ValueObjectSP() = delete;
+  operator bool() = delete;
+
+public:
+  ValueObjectSP(std::shared_ptr<lldb_private::ValueObject> &&pointer)
+      : std::shared_ptr<lldb_private::ValueObject>(std::move(pointer)) {
+    assert(pointer);
+  }
+};
 typedef std::shared_ptr<lldb_private::Value> ValueSP;
 typedef std::shared_ptr<lldb_private::Variable> VariableSP;
 typedef std::shared_ptr<lldb_private::VariableList> VariableListSP;

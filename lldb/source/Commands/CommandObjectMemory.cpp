@@ -807,21 +807,14 @@ protected:
         name_strm.Printf("0x%" PRIx64, item_addr);
         ValueObjectSP valobj_sp(ValueObjectMemory::Create(
             exe_scope, name_strm.GetString(), address, compiler_type));
-        if (valobj_sp) {
-          Format format = m_format_options.GetFormat();
-          if (format != eFormatDefault)
-            valobj_sp->SetFormat(format);
+        Format format = m_format_options.GetFormat();
+        if (format != eFormatDefault)
+          valobj_sp->SetFormat(format);
 
-          DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
-              eLanguageRuntimeDescriptionDisplayVerbosityFull, format));
+        DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
+            eLanguageRuntimeDescriptionDisplayVerbosityFull, format));
 
-          valobj_sp->Dump(*output_stream_p, options);
-        } else {
-          result.AppendErrorWithFormat(
-              "failed to create a value object for: (%s) %s\n",
-              view_as_type_cstr, name_strm.GetData());
-          return;
-        }
+        valobj_sp->Dump(*output_stream_p, options);
       }
       return;
     }
@@ -1052,16 +1045,16 @@ protected:
       buffer.CopyData(str);
     } else if (m_memory_options.m_expr.OptionWasSet()) {
       StackFrame *frame = m_exe_ctx.GetFramePtr();
-      ValueObjectSP result_sp;
+      std::optional<lldb::ValueObjectSP> result_sp;
       if ((eExpressionCompleted ==
            process->GetTarget().EvaluateExpression(
                m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(
                    ""),
                frame, result_sp)) &&
           result_sp) {
-        uint64_t value = result_sp->GetValueAsUnsigned(0);
+        uint64_t value = result_sp.value()->GetValueAsUnsigned(0);
         std::optional<uint64_t> size =
-            result_sp->GetCompilerType().GetByteSize(nullptr);
+            result_sp.value()->GetCompilerType().GetByteSize(nullptr);
         if (!size)
           return;
         switch (*size) {

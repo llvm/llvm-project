@@ -33,7 +33,7 @@ public:
 
   size_t CalculateNumChildren() override { return m_backend.GetNumChildren(); }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  std::optional<lldb::ValueObjectSP> GetChildAtIndex(size_t idx) override {
     return m_backend.GetChildAtIndex(idx);
   }
 
@@ -107,10 +107,10 @@ size_t ValueObjectSynthetic::CalculateNumChildren(uint32_t max) {
   }
 }
 
-lldb::ValueObjectSP
+std::optional<lldb::ValueObjectSP>
 ValueObjectSynthetic::GetDynamicValue(lldb::DynamicValueType valueType) {
   if (!m_parent)
-    return lldb::ValueObjectSP();
+    return {};
   if (IsDynamic() && GetDynamicValueType() == valueType)
     return GetSP();
   return m_parent->GetDynamicValue(valueType);
@@ -138,9 +138,8 @@ void ValueObjectSynthetic::CreateSynthFilter() {
     CompilerType type = m_parent->GetCompilerType();
     if (type.IsValid() && type.IsPointerOrReferenceType())
     {
-      Status error;
-      lldb::ValueObjectSP deref_sp = m_parent->Dereference(error);
-      if (error.Success())
+      lldb::ValueObjectSP deref_sp = m_parent->Dereference();
+      if (deref_sp->GetError().Success())
         valobj_for_frontend = deref_sp.get();
     }
   }
@@ -208,16 +207,17 @@ bool ValueObjectSynthetic::UpdateValue() {
 
   m_provides_value = eLazyBoolCalculate;
 
-  lldb::ValueObjectSP synth_val(m_synth_filter_up->GetSyntheticValue());
+  std::optional<lldb::ValueObjectSP> synth_val(
+      m_synth_filter_up->GetSyntheticValue());
 
-  if (synth_val && synth_val->CanProvideValue()) {
+  if (synth_val.has_value() && synth_val.value()->CanProvideValue()) {
     LLDB_LOGF(log,
               "[ValueObjectSynthetic::UpdateValue] name=%s, synthetic "
               "filter said it can provide a value",
               GetName().AsCString());
 
     m_provides_value = eLazyBoolYes;
-    CopyValueData(synth_val.get());
+    CopyValueData(synth_val->get());
   } else {
     LLDB_LOGF(log,
               "[ValueObjectSynthetic::UpdateValue] name=%s, synthetic "
@@ -234,8 +234,8 @@ bool ValueObjectSynthetic::UpdateValue() {
   return true;
 }
 
-lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
-                                                          bool can_create) {
+std::optional<lldb::ValueObjectSP>
+ValueObjectSynthetic::GetChildAtIndex(size_t idx, bool can_create) {
   Log *log = GetLog(LLDBLog::DataFormatters);
 
   LLDB_LOGF(log,
@@ -262,16 +262,18 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
                 "index %zu not cached and will be created",
                 GetName().AsCString(), idx);
 
-      lldb::ValueObjectSP synth_guy = m_synth_filter_up->GetChildAtIndex(idx);
+      std::optional<lldb::ValueObjectSP> synth_guy =
+          m_synth_filter_up->GetChildAtIndex(idx);
 
       LLDB_LOGF(
           log,
           "[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index "
           "%zu created as %p (is "
           "synthetic: %s)",
-          GetName().AsCString(), idx, static_cast<void *>(synth_guy.get()),
-          synth_guy.get()
-              ? (synth_guy->IsSyntheticChildrenGenerated() ? "yes" : "no")
+          GetName().AsCString(), idx, static_cast<void *>(synth_guy->get()),
+          synth_guy.has_value()
+              ? (synth_guy.value()->IsSyntheticChildrenGenerated() ? "yes"
+                                                                   : "no")
               : "no");
 
       if (!synth_guy)
@@ -279,11 +281,11 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
 
       {
         std::lock_guard<std::mutex> guard(m_child_mutex);
-        if (synth_guy->IsSyntheticChildrenGenerated())
-          m_synthetic_children_cache.push_back(synth_guy);
-        m_children_byindex[idx] = synth_guy.get();
+        if (synth_guy.value()->IsSyntheticChildrenGenerated())
+          m_synthetic_children_cache.push_back(synth_guy.value());
+        m_children_byindex[idx] = synth_guy->get();
       }
-      synth_guy->SetPreferredDisplayLanguageIfNeeded(
+      synth_guy.value()->SetPreferredDisplayLanguageIfNeeded(
           GetPreferredDisplayLanguage());
       return synth_guy;
     } else {
@@ -294,7 +296,7 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
                 GetName().AsCString(), idx, can_create ? "yes" : "no",
                 static_cast<void *>(m_synth_filter_up.get()));
 
-      return lldb::ValueObjectSP();
+      return {};
     }
   } else {
     LLDB_LOGF(log,
@@ -306,7 +308,7 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
   }
 }
 
-lldb::ValueObjectSP
+std::optional<lldb::ValueObjectSP>
 ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
                                              bool can_create) {
   UpdateValueIfNeeded();
@@ -314,7 +316,7 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
   uint32_t index = GetIndexOfChildWithName(name);
 
   if (index == UINT32_MAX)
-    return lldb::ValueObjectSP();
+    return {};
 
   return GetChildAtIndex(index, can_create);
 }

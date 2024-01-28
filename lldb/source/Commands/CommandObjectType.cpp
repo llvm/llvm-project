@@ -2855,28 +2855,30 @@ protected:
 
     StackFrameSP frame_sp =
         thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
-    ValueObjectSP result_valobj_sp;
+    std::optional<ValueObjectSP> result_valobj_sp;
     EvaluateExpressionOptions options;
     lldb::ExpressionResults expr_result = target_sp->EvaluateExpression(
         command, frame_sp.get(), result_valobj_sp, options);
     if (expr_result == eExpressionCompleted && result_valobj_sp) {
       result_valobj_sp =
-          result_valobj_sp->GetQualifiedRepresentationIfAvailable(
+          result_valobj_sp.value()->GetQualifiedRepresentationIfAvailable(
               target_sp->GetPreferDynamicValue(),
               target_sp->GetEnableSyntheticValue());
       typename FormatterType::SharedPointer formatter_sp =
-          m_discovery_function(*result_valobj_sp);
+          m_discovery_function(*result_valobj_sp.value());
       if (formatter_sp) {
         std::string description(formatter_sp->GetDescription());
         result.GetOutputStream()
             << m_formatter_name << " applied to ("
-            << result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>")
+            << result_valobj_sp.value()->GetDisplayTypeName().AsCString(
+                   "<unknown>")
             << ") " << command << " is: " << description << "\n";
         result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
       } else {
         result.GetOutputStream()
             << "no " << m_formatter_name << " applies to ("
-            << result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>")
+            << result_valobj_sp.value()->GetDisplayTypeName().AsCString(
+                   "<unknown>")
             << ") " << command << "\n";
         result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
       }

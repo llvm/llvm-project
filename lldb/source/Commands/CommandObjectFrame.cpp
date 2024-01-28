@@ -137,7 +137,7 @@ protected:
     Thread *thread = m_exe_ctx.GetThreadPtr();
     StackFrameSP frame_sp = thread->GetSelectedFrame(SelectMostRelevantFrame);
 
-    ValueObjectSP valobj_sp;
+    std::optional<lldb::ValueObjectSP> valobj_sp;
 
     if (m_options.address) {
       if (m_options.reg || m_options.offset) {
@@ -170,15 +170,15 @@ protected:
                      Stream &stream) -> bool {
       const ValueObject::GetExpressionPathFormat format = ValueObject::
           GetExpressionPathFormat::eGetExpressionPathFormatHonorPointers;
-      valobj_sp->GetExpressionPath(stream, format);
+      valobj_sp.value()->GetExpressionPath(stream, format);
       stream.PutCString(" =");
       return true;
     };
 
     DumpValueObjectOptions options;
     options.SetDeclPrintingHelper(helper);
-    ValueObjectPrinter printer(valobj_sp.get(), &result.GetOutputStream(),
-                               options);
+    ValueObjectPrinter printer(valobj_sp.value().get(),
+                               &result.GetOutputStream(), options);
     printer.PrintValueObject();
   }
 
@@ -545,7 +545,7 @@ protected:
       result.AppendError(error.AsCString());
 
     }
-    ValueObjectSP valobj_sp;
+    std::optional<ValueObjectSP> valobj_sp;
 
     TypeSummaryImplSP summary_format_sp;
     if (!m_option_variable.summary.IsCurrentValueEmpty())
@@ -607,7 +607,7 @@ protected:
                                                 show_module))
                       s.PutCString(": ");
                   }
-                  valobj_sp->Dump(result.GetOutputStream(), options);
+                  valobj_sp.value()->Dump(result.GetOutputStream(), options);
                 }
               }
             } else {
@@ -644,12 +644,12 @@ protected:
 
               options.SetFormat(format);
               options.SetVariableFormatDisplayLanguage(
-                  valobj_sp->GetPreferredDisplayLanguage());
+                  valobj_sp.value()->GetPreferredDisplayLanguage());
 
               Stream &output_stream = result.GetOutputStream();
               options.SetRootValueObjectName(
-                  valobj_sp->GetParent() ? entry.c_str() : nullptr);
-              valobj_sp->Dump(output_stream, options);
+                  valobj_sp.value()->GetParent() ? entry.c_str() : nullptr);
+              valobj_sp.value()->Dump(output_stream, options);
             } else {
               if (auto error_cstr = error.AsCString(nullptr))
                 result.AppendError(error_cstr);
@@ -680,10 +680,11 @@ protected:
             if (valobj_sp) {
               // When dumping all variables, don't print any variables that are
               // not in scope to avoid extra unneeded output
-              if (valobj_sp->IsInScope()) {
-                if (!valobj_sp->GetTargetSP()
+              if (valobj_sp.value()->IsInScope()) {
+                if (!valobj_sp.value()
+                         ->GetTargetSP()
                          ->GetDisplayRuntimeSupportValues() &&
-                    valobj_sp->IsRuntimeSupportValue())
+                    valobj_sp.value()->IsRuntimeSupportValue())
                   continue;
 
                 if (!scope_string.empty())
@@ -697,10 +698,10 @@ protected:
 
                 options.SetFormat(format);
                 options.SetVariableFormatDisplayLanguage(
-                    valobj_sp->GetPreferredDisplayLanguage());
+                    valobj_sp.value()->GetPreferredDisplayLanguage());
                 options.SetRootValueObjectName(
                     var_sp ? var_sp->GetName().AsCString() : nullptr);
-                valobj_sp->Dump(result.GetOutputStream(), options);
+                valobj_sp.value()->Dump(result.GetOutputStream(), options);
               }
             }
           }
@@ -719,9 +720,10 @@ protected:
           for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
             options.SetFormat(m_option_format.GetFormat());
             options.SetVariableFormatDisplayLanguage(
-                rec_value_sp->GetPreferredDisplayLanguage());
-            options.SetRootValueObjectName(rec_value_sp->GetName().AsCString());
-            rec_value_sp->Dump(result.GetOutputStream(), options);
+                rec_value_sp.value()->GetPreferredDisplayLanguage());
+            options.SetRootValueObjectName(
+                rec_value_sp.value()->GetName().AsCString());
+            rec_value_sp.value()->Dump(result.GetOutputStream(), options);
           }
         }
       }

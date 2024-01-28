@@ -1445,9 +1445,10 @@ Status Thread::ReturnFromFrameWithIndex(uint32_t frame_idx,
   return ReturnFromFrame(frame_sp, return_value_sp, broadcast);
 }
 
-Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
-                               lldb::ValueObjectSP return_value_sp,
-                               bool broadcast) {
+Status
+Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
+                        std::optional<lldb::ValueObjectSP> return_value_sp,
+                        bool broadcast) {
   Status return_error;
 
   if (!frame_sp) {
@@ -1482,8 +1483,9 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
         if (return_type) {
           StreamString s;
           return_type.DumpTypeDescription(&s);
-          ValueObjectSP cast_value_sp = return_value_sp->Cast(return_type);
-          if (cast_value_sp) {
+          ValueObjectSP cast_value_sp =
+              return_value_sp.value()->Cast(return_type);
+          if (cast_value_sp->GetError().Success()) {
             cast_value_sp->SetFormat(eFormatHex);
             return_value_sp = cast_value_sp;
           }
@@ -1491,7 +1493,8 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
       }
     }
 
-    return_error = abi->SetReturnValueObject(older_frame_sp, return_value_sp);
+    return_error =
+        abi->SetReturnValueObject(older_frame_sp, return_value_sp.value());
     if (!return_error.Success())
       return return_error;
   }
@@ -1997,7 +2000,7 @@ Status Thread::StepOut(uint32_t frame_idx) {
   return error;
 }
 
-ValueObjectSP Thread::GetCurrentException() {
+std::optional<ValueObjectSP> Thread::GetCurrentException() {
   if (auto frame_sp = GetStackFrameAtIndex(0))
     if (auto recognized_frame = frame_sp->GetRecognizedFrame())
       if (auto e = recognized_frame->GetExceptionObject())
@@ -2010,18 +2013,18 @@ ValueObjectSP Thread::GetCurrentException() {
       return e;
   }
 
-  return ValueObjectSP();
+  return {};
 }
 
 ThreadSP Thread::GetCurrentExceptionBacktrace() {
-  ValueObjectSP exception = GetCurrentException();
+  std::optional<ValueObjectSP> exception = GetCurrentException();
   if (!exception)
     return ThreadSP();
 
   // NOTE: Even though this behavior is generalized, only ObjC is actually
   // supported at the moment.
   for (LanguageRuntime *runtime : GetProcess()->GetLanguageRuntimes()) {
-    if (auto bt = runtime->GetBacktraceThreadFromException(exception))
+    if (auto bt = runtime->GetBacktraceThreadFromException(exception.value()))
       return bt;
   }
 

@@ -51,15 +51,15 @@ public:
 
   lldb::ValueType GetValueType() const override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx,
-                                      bool can_create = true) override;
+  std::optional<lldb::ValueObjectSP>
+  GetChildAtIndex(size_t idx, bool can_create = true) override;
 
-  lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
-                                             bool can_create = true) override;
+  std::optional<lldb::ValueObjectSP>
+  GetChildMemberWithName(llvm::StringRef name, bool can_create = true) override;
 
   size_t GetIndexOfChildWithName(llvm::StringRef name) override;
 
-  lldb::ValueObjectSP
+  std::optional<lldb::ValueObjectSP>
   GetDynamicValue(lldb::DynamicValueType valueType) override;
 
   bool IsInScope() override;

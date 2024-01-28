@@ -33,7 +33,7 @@ public:
 
   ~ValueObjectConstResultCast() override;
 
-  lldb::ValueObjectSP Dereference(Status &error) override;
+  lldb::ValueObjectSP Dereference() override;
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
@@ -42,11 +42,11 @@ public:
     return ValueObjectCast::GetCompilerType();
   }
 
-  lldb::ValueObjectSP GetSyntheticChildAtOffset(
+  std::optional<lldb::ValueObjectSP> GetSyntheticChildAtOffset(
       uint32_t offset, const CompilerType &type, bool can_create,
       ConstString name_const_str = ConstString()) override;
 
-  lldb::ValueObjectSP AddressOf(Status &error) override;
+  lldb::ValueObjectSP AddressOf() override;
 
   size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                         uint32_t item_count = 1) override;

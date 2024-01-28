@@ -39,7 +39,7 @@ public:
 
   ~ValueObjectConstResultChild() override;
 
-  lldb::ValueObjectSP Dereference(Status &error) override;
+  lldb::ValueObjectSP Dereference() override;
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
@@ -48,11 +48,11 @@ public:
     return ValueObjectChild::GetCompilerType();
   }
 
-  lldb::ValueObjectSP GetSyntheticChildAtOffset(
+  std::optional<lldb::ValueObjectSP> GetSyntheticChildAtOffset(
       uint32_t offset, const CompilerType &type, bool can_create,
       ConstString name_const_str = ConstString()) override;
 
-  lldb::ValueObjectSP AddressOf(Status &error) override;
+  lldb::ValueObjectSP AddressOf() override;
 
   lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
                             AddressType *address_type = nullptr) override;

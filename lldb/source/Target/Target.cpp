@@ -2659,7 +2659,7 @@ Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
 
 ExpressionResults Target::EvaluateExpression(
     llvm::StringRef expr, ExecutionContextScope *exe_scope,
-    lldb::ValueObjectSP &result_valobj_sp,
+    std::optional<lldb::ValueObjectSP> &result_valobj_sp,
     const EvaluateExpressionOptions &options, std::string *fixed_expression,
     ValueObject *ctx_obj) {
   result_valobj_sp.reset();

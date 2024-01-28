@@ -126,7 +126,7 @@ bool ValueObjectPrinter::GetMostSpecializedValue() {
     } else {
       if (m_options.m_use_dynamic != eNoDynamicValues) {
         ValueObject *dynamic_value =
-            m_orig_valobj->GetDynamicValue(m_options.m_use_dynamic).get();
+            m_orig_valobj->GetDynamicValue(m_options.m_use_dynamic)->get();
         if (dynamic_value)
           m_valobj = dynamic_value;
         else
@@ -143,7 +143,7 @@ bool ValueObjectPrinter::GetMostSpecializedValue() {
       }
     } else {
       if (m_options.m_use_synthetic) {
-        ValueObject *synthetic = m_valobj->GetSyntheticValue().get();
+        ValueObject *synthetic = m_valobj->GetSyntheticValue()->get();
         if (synthetic)
           m_valobj = synthetic;
       }
@@ -679,8 +679,8 @@ static constexpr size_t PhysicalIndexForLogicalIndex(size_t base, size_t stride,
   return base + logical * stride;
 }
 
-ValueObjectSP ValueObjectPrinter::GenerateChild(ValueObject *synth_valobj,
-                                                size_t idx) {
+std::optional<ValueObjectSP>
+ValueObjectPrinter::GenerateChild(ValueObject *synth_valobj, size_t idx) {
   if (m_options.m_pointer_as_array) {
     // if generating pointer-as-array children, use GetSyntheticArrayMember
     return synth_valobj->GetSyntheticArrayMember(
@@ -705,15 +705,16 @@ void ValueObjectPrinter::PrintChildren(
     bool any_children_printed = false;
 
     for (size_t idx = 0; idx < num_children; ++idx) {
-      if (ValueObjectSP child_sp = GenerateChild(synth_m_valobj, idx)) {
+      if (std::optional<ValueObjectSP> child_sp =
+              GenerateChild(synth_m_valobj, idx)) {
         if (m_options.m_child_printing_decider &&
-            !m_options.m_child_printing_decider(child_sp->GetName()))
+            !m_options.m_child_printing_decider(child_sp.value()->GetName()))
           continue;
         if (!any_children_printed) {
           PrintChildrenPreamble(value_printed, summary_printed);
           any_children_printed = true;
         }
-        PrintChild(child_sp, curr_ptr_depth);
+        PrintChild(child_sp.value(), curr_ptr_depth);
       }
     }
 
@@ -759,25 +760,26 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
 
     bool did_print_children = false;
     for (uint32_t idx = 0; idx < num_children; ++idx) {
-      lldb::ValueObjectSP child_sp(synth_m_valobj->GetChildAtIndex(idx));
+      std::optional<ValueObjectSP> child_sp(
+          synth_m_valobj->GetChildAtIndex(idx));
       if (child_sp)
-        child_sp = child_sp->GetQualifiedRepresentationIfAvailable(
+        child_sp = child_sp.value()->GetQualifiedRepresentationIfAvailable(
             m_options.m_use_dynamic, m_options.m_use_synthetic);
       if (child_sp) {
         if (m_options.m_child_printing_decider &&
-            !m_options.m_child_printing_decider(child_sp->GetName()))
+            !m_options.m_child_printing_decider(child_sp.value()->GetName()))
           continue;
         if (idx && did_print_children)
           m_stream->PutCString(", ");
         did_print_children = true;
         if (!hide_names) {
-          const char *name = child_sp.get()->GetName().AsCString();
+          const char *name = child_sp.value()->GetName().AsCString();
           if (name && *name) {
             m_stream->PutCString(name);
             m_stream->PutCString(" = ");
           }
         }
-        child_sp->DumpPrintableRepresentation(
+        child_sp.value()->DumpPrintableRepresentation(
             *m_stream, ValueObject::eValueObjectRepresentationStyleSummary,
             m_options.m_format,
             ValueObject::PrintableRepresentationSpecialCases::eDisable);

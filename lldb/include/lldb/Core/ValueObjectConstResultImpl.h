@@ -36,17 +36,17 @@ public:
 
   virtual ~ValueObjectConstResultImpl() = default;
 
-  lldb::ValueObjectSP Dereference(Status &error);
+  lldb::ValueObjectSP Dereference();
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index);
 
-  lldb::ValueObjectSP
+  std::optional<lldb::ValueObjectSP>
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
                             bool can_create,
                             ConstString name_const_str = ConstString());
 
-  lldb::ValueObjectSP AddressOf(Status &error);
+  lldb::ValueObjectSP AddressOf();
 
   lldb::addr_t GetLiveAddress() { return m_live_address; }
 
@@ -68,7 +68,7 @@ private:
   ValueObject *m_impl_backend;
   lldb::addr_t m_live_address;
   AddressType m_live_address_type;
-  lldb::ValueObjectSP m_address_of_backend;
+  std::optional<lldb::ValueObjectSP> m_address_of_backend;
 
   ValueObjectConstResultImpl(const ValueObjectConstResultImpl &) = delete;
   const ValueObjectConstResultImpl &
