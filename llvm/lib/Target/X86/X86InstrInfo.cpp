@@ -862,6 +862,28 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
   // AVX-512
+  case X86::VPBROADCASTBZ128rm:
+  case X86::VPBROADCASTBZ256rm:
+  case X86::VPBROADCASTBZrm:
+  case X86::VBROADCASTF32X2Z256rm:
+  case X86::VBROADCASTF32X2Zrm:
+  case X86::VBROADCASTI32X2Z128rm:
+  case X86::VBROADCASTI32X2Z256rm:
+  case X86::VBROADCASTI32X2Zrm:
+  case X86::VPBROADCASTWZ128rm:
+  case X86::VPBROADCASTWZ256rm:
+  case X86::VPBROADCASTWZrm:
+  case X86::VPBROADCASTDZ128rm:
+  case X86::VPBROADCASTDZ256rm:
+  case X86::VPBROADCASTDZrm:
+  case X86::VBROADCASTSSZ128rm:
+  case X86::VBROADCASTSSZ256rm:
+  case X86::VBROADCASTSSZrm:
+  case X86::VPBROADCASTQZ128rm:
+  case X86::VPBROADCASTQZ256rm:
+  case X86::VPBROADCASTQZrm:
+  case X86::VBROADCASTSDZ256rm:
+  case X86::VBROADCASTSDZrm:
   case X86::VMOVSSZrm:
   case X86::VMOVSSZrm_alt:
   case X86::VMOVSDZrm:
@@ -8067,6 +8089,39 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MOs.push_back(MachineOperand::CreateReg(0, false));
     break;
   }
+  case X86::VPBROADCASTBZ128rm:
+  case X86::VPBROADCASTBZ256rm:
+  case X86::VPBROADCASTBZrm:
+  case X86::VBROADCASTF32X2Z256rm:
+  case X86::VBROADCASTF32X2Zrm:
+  case X86::VBROADCASTI32X2Z128rm:
+  case X86::VBROADCASTI32X2Z256rm:
+  case X86::VBROADCASTI32X2Zrm:
+    // No instructions currently fuse with 8bits or 32bits x 2.
+    return nullptr;
+
+#define FOLD_BROADCAST(SIZE)                                                   \
+  MOs.append(LoadMI.operands_begin() + NumOps - X86::AddrNumOperands,          \
+             LoadMI.operands_begin() + NumOps);                                \
+  return foldMemoryBroadcast(MF, MI, Ops[0], MOs, InsertPt, /*Size=*/SIZE,     \
+                             Alignment, /*AllowCommute=*/true);
+  case X86::VPBROADCASTWZ128rm:
+  case X86::VPBROADCASTWZ256rm:
+  case X86::VPBROADCASTWZrm:
+    FOLD_BROADCAST(16);
+  case X86::VPBROADCASTDZ128rm:
+  case X86::VPBROADCASTDZ256rm:
+  case X86::VPBROADCASTDZrm:
+  case X86::VBROADCASTSSZ128rm:
+  case X86::VBROADCASTSSZ256rm:
+  case X86::VBROADCASTSSZrm:
+    FOLD_BROADCAST(32);
+  case X86::VPBROADCASTQZ128rm:
+  case X86::VPBROADCASTQZ256rm:
+  case X86::VPBROADCASTQZrm:
+  case X86::VBROADCASTSDZ256rm:
+  case X86::VBROADCASTSDZrm:
+    FOLD_BROADCAST(64);
   default: {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
@@ -8079,6 +8134,78 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
                                /*Size=*/0, Alignment, /*AllowCommute=*/true);
+}
+
+MachineInstr *X86InstrInfo::foldMemoryBroadcast(
+    MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
+    ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
+    unsigned BitsSize, Align Alignment, bool AllowCommute) const {
+
+  if (auto *I = lookupBroadcastFoldTable(MI.getOpcode(), OpNum))
+    return matchBroadcastSize(*I, BitsSize)
+               ? FuseInst(MF, I->DstOp, OpNum, MOs, InsertPt, MI, *this)
+               : nullptr;
+
+  // TODO: Share code with foldMemoryOperandImpl for the commute
+  if (AllowCommute) {
+    unsigned CommuteOpIdx1 = OpNum, CommuteOpIdx2 = CommuteAnyOperandIndex;
+    if (findCommutedOpIndices(MI, CommuteOpIdx1, CommuteOpIdx2)) {
+      bool HasDef = MI.getDesc().getNumDefs();
+      Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
+      Register Reg1 = MI.getOperand(CommuteOpIdx1).getReg();
+      Register Reg2 = MI.getOperand(CommuteOpIdx2).getReg();
+      bool Tied1 =
+          0 == MI.getDesc().getOperandConstraint(CommuteOpIdx1, MCOI::TIED_TO);
+      bool Tied2 =
+          0 == MI.getDesc().getOperandConstraint(CommuteOpIdx2, MCOI::TIED_TO);
+
+      // If either of the commutable operands are tied to the destination
+      // then we can not commute + fold.
+      if ((HasDef && Reg0 == Reg1 && Tied1) ||
+          (HasDef && Reg0 == Reg2 && Tied2))
+        return nullptr;
+
+      MachineInstr *CommutedMI =
+          commuteInstruction(MI, false, CommuteOpIdx1, CommuteOpIdx2);
+      if (!CommutedMI) {
+        // Unable to commute.
+        return nullptr;
+      }
+      if (CommutedMI != &MI) {
+        // New instruction. We can't fold from this.
+        CommutedMI->eraseFromParent();
+        return nullptr;
+      }
+
+      // Attempt to fold with the commuted version of the instruction.
+      MachineInstr *NewMI = foldMemoryBroadcast(MF, MI, CommuteOpIdx2, MOs,
+                                                InsertPt, BitsSize, Alignment,
+                                                /*AllowCommute=*/false);
+      if (NewMI)
+        return NewMI;
+
+      // Folding failed again - undo the commute before returning.
+      MachineInstr *UncommutedMI =
+          commuteInstruction(MI, false, CommuteOpIdx1, CommuteOpIdx2);
+      if (!UncommutedMI) {
+        // Unable to commute.
+        return nullptr;
+      }
+      if (UncommutedMI != &MI) {
+        // New instruction. It doesn't need to be kept.
+        UncommutedMI->eraseFromParent();
+        return nullptr;
+      }
+
+      // Return here to prevent duplicate fuse failure report.
+      return nullptr;
+    }
+  }
+
+  // No fusion
+  if (PrintFailedFusing && !MI.isCopy())
+    dbgs() << "We failed to fuse operand " << OpNum << " in " << MI;
+  return nullptr;
 }
 
 static SmallVector<MachineMemOperand *, 2>
