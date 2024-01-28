@@ -272,3 +272,33 @@ define void @align_func() align 2 {
 ; CHECK-LABEL: @align_decl
 ; CHECK-SAME: attributes {alignment = 64 : i64}
 declare void @align_decl() align 64
+
+; // -----
+
+; CHECK-LABEL: @func_attr_unsafe_fp_math
+; CHECK-SAME: attributes {unsafe_fp_math = true}
+declare void @func_attr_unsafe_fp_math() "unsafe-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_infs_fp_math
+; CHECK-SAME: attributes {no_infs_fp_math = true}
+declare void @func_attr_no_infs_fp_math() "no-infs-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_nans_fp_math
+; CHECK-SAME: attributes {no_nans_fp_math = true}
+declare void @func_attr_no_nans_fp_math() "no-nans-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_approx_func_fp_math
+; CHECK-SAME: attributes {approx_func_fp_math = true}
+declare void @func_attr_approx_func_fp_math() "approx-func-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math
+; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
+declare void @func_attr_no_signed_zeros_fp_math() "no-signed-zeros-fp-math"="true"
