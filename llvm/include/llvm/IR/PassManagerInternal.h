@@ -28,6 +28,8 @@ namespace llvm {
 template <typename IRUnitT> class AllAnalysesOn;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 class PreservedAnalyses;
+class MachineFunction;
+class MachineFunctionProperties;
 
 // Implementation details of the pass manager interfaces.
 namespace detail {
@@ -35,9 +37,9 @@ namespace detail {
 /// Template for the abstract base class used to dispatch
 /// polymorphically over pass objects.
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
-struct PassConcept {
+struct PassConceptBase {
   // Boiler plate necessary for the container of derived classes.
-  virtual ~PassConcept() = default;
+  virtual ~PassConceptBase() = default;
 
   /// The polymorphic API which runs the pass over a given IR entity.
   ///
@@ -60,6 +62,10 @@ struct PassConcept {
   virtual bool isRequired() const = 0;
 };
 
+template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
+struct PassConcept
+    : public PassConceptBase<IRUnitT, AnalysisManagerT, ExtraArgTs...> {};
+
 /// A template wrapper used to implement the polymorphic API.
 ///
 /// Can be instantiated for any object which provides a \c run method accepting
@@ -69,6 +75,13 @@ template <typename IRUnitT, typename PassT, typename PreservedAnalysesT,
           typename AnalysisManagerT, typename... ExtraArgTs>
 struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   explicit PassModel(PassT Pass) : Pass(std::move(Pass)) {}
+
+  template <typename MachineFunctionT = IRUnitT,
+            typename = std::enable_if_t<
+                std::is_same_v<MachineFunctionT, MachineFunction>>>
+  explicit PassModel(PassT Pass, MachineFunctionProperties RequiredProperties,
+                     MachineFunctionProperties SetProperties,
+                     MachineFunctionProperties ClearedProperties);
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   PassModel(const PassModel &Arg) : Pass(Arg.Pass) {}

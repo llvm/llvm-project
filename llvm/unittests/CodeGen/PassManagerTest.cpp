@@ -52,7 +52,7 @@ private:
 AnalysisKey TestFunctionAnalysis::Key;
 
 class TestMachineFunctionAnalysis
-    : public AnalysisInfoMixin<TestMachineFunctionAnalysis> {
+    : public MachineFunctionAnalysisInfoMixin<TestMachineFunctionAnalysis> {
 public:
   struct Result {
     Result(int Count) : InstructionCount(Count) {}
@@ -70,7 +70,7 @@ public:
   }
 
 private:
-  friend AnalysisInfoMixin<TestMachineFunctionAnalysis>;
+  friend MachineFunctionAnalysisInfoMixin<TestMachineFunctionAnalysis>;
   static AnalysisKey Key;
 };
 
@@ -79,7 +79,8 @@ AnalysisKey TestMachineFunctionAnalysis::Key;
 const std::string DoInitErrMsg = "doInitialization failed";
 const std::string DoFinalErrMsg = "doFinalization failed";
 
-struct TestMachineFunctionPass : public PassInfoMixin<TestMachineFunctionPass> {
+struct TestMachineFunctionPass
+    : public MachinePassInfoMixin<TestMachineFunctionPass> {
   TestMachineFunctionPass(int &Count, std::vector<int> &BeforeInitialization,
                           std::vector<int> &BeforeFinalization,
                           std::vector<int> &MachineFunctionPassCount)
@@ -139,7 +140,8 @@ struct TestMachineFunctionPass : public PassInfoMixin<TestMachineFunctionPass> {
   std::vector<int> &MachineFunctionPassCount;
 };
 
-struct TestMachineModulePass : public PassInfoMixin<TestMachineModulePass> {
+struct TestMachineModulePass
+    : public MachinePassInfoMixin<TestMachineModulePass> {
   TestMachineModulePass(int &Count, std::vector<int> &MachineModulePassCount)
       : Count(Count), MachineModulePassCount(MachineModulePassCount) {}
 

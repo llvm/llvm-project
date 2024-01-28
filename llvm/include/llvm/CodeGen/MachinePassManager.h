@@ -25,15 +25,13 @@
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachinePassManagerInternal.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
 
 #include <map>
 
 namespace llvm {
-class Module;
-class Function;
-class MachineFunction;
 
 extern template class AnalysisManager<MachineFunction>;
 
@@ -43,7 +41,31 @@ extern template class AnalysisManager<MachineFunction>;
 /// automatically mixes in \c PassInfoMixin.
 template <typename DerivedT>
 struct MachinePassInfoMixin : public PassInfoMixin<DerivedT> {
-  // TODO: Add MachineFunctionProperties support.
+  // MachineFunctionProperties support
+  static MachineFunctionProperties getRequiredProperties() {
+    return MachineFunctionProperties();
+  }
+
+  static MachineFunctionProperties getSetProperties() {
+    return MachineFunctionProperties();
+  }
+
+  static MachineFunctionProperties getClearedProperties() {
+    return MachineFunctionProperties();
+  }
+};
+
+/// A CRTP mix-in that provides informational APIs needed for MachineFunction
+/// analysis passes. See also \c PassInfoMixin.
+template <typename DerivedT>
+struct MachineFunctionAnalysisInfoMixin
+    : public MachinePassInfoMixin<DerivedT> {
+  static AnalysisKey *ID() {
+    static_assert(
+        std::is_base_of<MachineFunctionAnalysisInfoMixin, DerivedT>::value,
+        "Must pass the derived type as the template argument!");
+    return &DerivedT::Key;
+  }
 };
 
 /// An AnalysisManager<MachineFunction> that also exposes IR analysis results.
@@ -170,6 +192,17 @@ public:
     addRunOnModule<PassT>(P);
   }
 
+  // Avoid diamond problem.
+  static MachineFunctionProperties getRequiredProperties() {
+    return MachineFunctionProperties();
+  }
+  static MachineFunctionProperties getSetProperties() {
+    return MachineFunctionProperties();
+  }
+  static MachineFunctionProperties getClearedProperties() {
+    return MachineFunctionProperties();
+  }
+
 private:
   template <typename PassT>
   using has_init_t = decltype(std::declval<PassT &>().doInitialization(
@@ -183,9 +216,7 @@ private:
   template <typename PassT>
   std::enable_if_t<is_detected<has_init_t, PassT>::value>
   addDoInitialization(PassConceptT *Pass) {
-    using PassModelT =
-        detail::PassModel<MachineFunction, PassT, PreservedAnalyses,
-                          MachineFunctionAnalysisManager>;
+    using PassModelT = detail::MachinePassModel<PassT>;
     auto *P = static_cast<PassModelT *>(Pass);
     InitializationFuncs.emplace_back(
         [=](Module &M, MachineFunctionAnalysisManager &MFAM) {
@@ -205,9 +236,7 @@ private:
   template <typename PassT>
   std::enable_if_t<is_detected<has_fini_t, PassT>::value>
   addDoFinalization(PassConceptT *Pass) {
-    using PassModelT =
-        detail::PassModel<MachineFunction, PassT, PreservedAnalyses,
-                          MachineFunctionAnalysisManager>;
+    using PassModelT = detail::MachinePassModel<PassT>;
     auto *P = static_cast<PassModelT *>(Pass);
     FinalizationFuncs.emplace_back(
         [=](Module &M, MachineFunctionAnalysisManager &MFAM) {
@@ -236,9 +265,7 @@ private:
                   "machine module pass needs to define machine function pass "
                   "api. sorry.");
 
-    using PassModelT =
-        detail::PassModel<MachineFunction, PassT, PreservedAnalyses,
-                          MachineFunctionAnalysisManager>;
+    using PassModelT = detail::MachinePassModel<PassT>;
     auto *P = static_cast<PassModelT *>(Pass);
     MachineModulePasses.emplace(
         Passes.size() - 1,
