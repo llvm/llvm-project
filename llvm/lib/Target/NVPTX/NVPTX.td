@@ -40,7 +40,7 @@ foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
 
 def SM90a: FeatureSM<"90a", 901>;
 
-foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 63, 64, 65,
+foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
                    70, 71, 72, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83] in
   def PTX#version: FeaturePTX<version>;
 
@@ -65,7 +65,7 @@ def : Proc<"sm_61", [SM61, PTX50]>;
 def : Proc<"sm_62", [SM62, PTX50]>;
 def : Proc<"sm_70", [SM70, PTX60]>;
 def : Proc<"sm_72", [SM72, PTX61]>;
-def : Proc<"sm_75", [SM75, PTX63]>;
+def : Proc<"sm_75", [SM75, PTX62, PTX63]>;
 def : Proc<"sm_80", [SM80, PTX70]>;
 def : Proc<"sm_86", [SM86, PTX71]>;
 def : Proc<"sm_87", [SM87, PTX74]>;
