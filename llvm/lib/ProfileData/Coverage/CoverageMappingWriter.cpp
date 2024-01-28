@@ -175,10 +175,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
                   : 2 * Kind);
     };
 
-    auto LHSKindKey = getKindKey(LHS.Kind);
-    auto RHSKindKey = getKindKey(RHS.Kind);
-
-    return LHSKindKey < RHSKindKey;
+    return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
   });
 
   // Write out the fileid -> filename mapping.
