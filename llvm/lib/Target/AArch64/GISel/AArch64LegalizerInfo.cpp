@@ -988,9 +988,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   if (HasCSSC)
     ABSActions
         .legalFor({s32, s64});
-  ABSActions
-      .legalFor(PackedVectorAllTypeList)
-      .lowerIf(isScalar(0));
+  ABSActions.legalFor(PackedVectorAllTypeList)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0)
+      .lower();
 
   // For fadd reductions we have pairwise operations available. We treat the
   // usual legal types as legal and handle the lowering to pairwise instructions
