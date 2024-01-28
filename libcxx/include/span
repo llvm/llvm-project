@@ -304,8 +304,8 @@ public:
   }
 
   template <size_t _Offset, size_t _Count = dynamic_extent>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto subspan() const noexcept
-      -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto
+  subspan() const noexcept -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
     static_assert(_Offset <= _Extent, "span<T, N>::subspan<Offset, Count>(): Offset out of range");
     static_assert(_Count == dynamic_extent || _Count <= _Extent - _Offset,
                   "span<T, N>::subspan<Offset, Count>(): Offset + Count out of range");

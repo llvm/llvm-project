@@ -75,8 +75,8 @@ template <class _Tp, class _Up = _Tp, bool _Swappable = __swappable_with<_Tp, _U
 struct __nothrow_swappable_with {
   static const bool value =
 #ifndef _LIBCPP_HAS_NO_NOEXCEPT
-      noexcept(swap(std::declval<_Tp>(), std::declval<_Up>()))&& noexcept(
-          swap(std::declval<_Up>(), std::declval<_Tp>()));
+      noexcept(swap(std::declval<_Tp>(), std::declval<_Up>())) &&
+      noexcept(swap(std::declval<_Up>(), std::declval<_Tp>()));
 #else
       false;
 #endif

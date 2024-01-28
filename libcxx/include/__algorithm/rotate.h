@@ -136,11 +136,11 @@ __rotate_impl(_ForwardIterator __first, _ForwardIterator __middle, _ForwardItera
 }
 
 template <class _AlgPolicy, class _BidirectionalIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _BidirectionalIterator __rotate_impl(
-    _BidirectionalIterator __first,
-    _BidirectionalIterator __middle,
-    _BidirectionalIterator __last,
-    bidirectional_iterator_tag) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _BidirectionalIterator
+__rotate_impl(_BidirectionalIterator __first,
+              _BidirectionalIterator __middle,
+              _BidirectionalIterator __last,
+              bidirectional_iterator_tag) {
   typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
   if (is_trivially_move_assignable<value_type>::value) {
     if (_IterOps<_AlgPolicy>::next(__first) == __middle)
@@ -152,11 +152,11 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _BidirectionalIterato
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator __rotate_impl(
-    _RandomAccessIterator __first,
-    _RandomAccessIterator __middle,
-    _RandomAccessIterator __last,
-    random_access_iterator_tag) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator
+__rotate_impl(_RandomAccessIterator __first,
+              _RandomAccessIterator __middle,
+              _RandomAccessIterator __last,
+              random_access_iterator_tag) {
   typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
   if (is_trivially_move_assignable<value_type>::value) {
     if (_IterOps<_AlgPolicy>::next(__first) == __middle)

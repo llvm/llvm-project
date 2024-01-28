@@ -52,12 +52,12 @@ template <class _ExecutionPolicy,
           class _UnaryOperation,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
-    _ExecutionPolicy&& __policy,
-    _ForwardIterator __first,
-    _ForwardIterator __last,
-    _ForwardOutIterator __result,
-    _UnaryOperation __op) {
+_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator
+transform(_ExecutionPolicy&& __policy,
+          _ForwardIterator __first,
+          _ForwardIterator __last,
+          _ForwardOutIterator __result,
+          _UnaryOperation __op) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator);
   _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, decltype(__op(*__first)));
@@ -93,13 +93,13 @@ template <class _ExecutionPolicy,
           class _BinaryOperation,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
-    _ExecutionPolicy&& __policy,
-    _ForwardIterator1 __first1,
-    _ForwardIterator1 __last1,
-    _ForwardIterator2 __first2,
-    _ForwardOutIterator __result,
-    _BinaryOperation __op) {
+_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator
+transform(_ExecutionPolicy&& __policy,
+          _ForwardIterator1 __first1,
+          _ForwardIterator1 __last1,
+          _ForwardIterator2 __first2,
+          _ForwardOutIterator __result,
+          _BinaryOperation __op) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1);
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2);
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator);

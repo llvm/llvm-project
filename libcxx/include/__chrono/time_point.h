@@ -78,7 +78,7 @@ public:
 
 template <class _Clock, class _Duration1, class _Duration2>
 struct _LIBCPP_TEMPLATE_VIS
-    common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2> > {
+common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2> > {
   typedef chrono::time_point<_Clock, typename common_type<_Duration1, _Duration2>::type> type;
 };
 
@@ -180,9 +180,9 @@ operator<=>(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock
 // time_point operator+(time_point x, duration y);
 
 template <class _Clock, class _Duration1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-    time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type>
-    operator+(const time_point<_Clock, _Duration1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type>
+operator+(const time_point<_Clock, _Duration1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   typedef time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type> _Tr;
   return _Tr(__lhs.time_since_epoch() + __rhs);
 }
@@ -190,18 +190,18 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 // time_point operator+(duration x, time_point y);
 
 template <class _Rep1, class _Period1, class _Clock, class _Duration2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-    time_point<_Clock, typename common_type<duration<_Rep1, _Period1>, _Duration2>::type>
-    operator+(const duration<_Rep1, _Period1>& __lhs, const time_point<_Clock, _Duration2>& __rhs) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 time_point<_Clock, typename common_type<duration<_Rep1, _Period1>, _Duration2>::type>
+operator+(const duration<_Rep1, _Period1>& __lhs, const time_point<_Clock, _Duration2>& __rhs) {
   return __rhs + __lhs;
 }
 
 // time_point operator-(time_point x, duration y);
 
 template <class _Clock, class _Duration1, class _Rep2, class _Period2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-    time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type>
-    operator-(const time_point<_Clock, _Duration1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type>
+operator-(const time_point<_Clock, _Duration1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
   typedef time_point<_Clock, typename common_type<_Duration1, duration<_Rep2, _Period2> >::type> _Ret;
   return _Ret(__lhs.time_since_epoch() - __rhs);
 }

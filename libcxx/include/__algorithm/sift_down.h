@@ -80,10 +80,10 @@ __sift_down(_RandomAccessIterator __first,
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator __floyd_sift_down(
-    _RandomAccessIterator __first,
-    _Compare&& __comp,
-    typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator
+__floyd_sift_down(_RandomAccessIterator __first,
+                  _Compare&& __comp,
+                  typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
   _LIBCPP_ASSERT_INTERNAL(__len >= 2, "shouldn't be called unless __len >= 2");
 

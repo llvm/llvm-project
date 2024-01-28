@@ -90,9 +90,9 @@ minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __com
 }
 
 template <class _ForwardIterator>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-    pair<_ForwardIterator, _ForwardIterator>
-    minmax_element(_ForwardIterator __first, _ForwardIterator __last) {
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_ForwardIterator, _ForwardIterator>
+minmax_element(_ForwardIterator __first, _ForwardIterator __last) {
   return std::minmax_element(__first, __last, __less<>());
 }
 

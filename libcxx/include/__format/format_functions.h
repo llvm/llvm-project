@@ -405,9 +405,10 @@ using wformat_string = basic_format_string<wchar_t, type_identity_t<_Args>...>;
 
 template <class _OutIt, class _CharT, class _FormatOutIt>
   requires(output_iterator<_OutIt, const _CharT&>)
-_LIBCPP_HIDE_FROM_ABI _OutIt __vformat_to(_OutIt __out_it,
-                                          basic_string_view<_CharT> __fmt,
-                                          basic_format_args<basic_format_context<_FormatOutIt, _CharT>> __args) {
+_LIBCPP_HIDE_FROM_ABI _OutIt
+__vformat_to(_OutIt __out_it,
+             basic_string_view<_CharT> __fmt,
+             basic_format_args<basic_format_context<_FormatOutIt, _CharT>> __args) {
   if constexpr (same_as<_OutIt, _FormatOutIt>)
     return std::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()}, std::__format_context_create(std::move(__out_it), __args));
@@ -537,11 +538,11 @@ formatted_size(wformat_string<_Args...> __fmt, _Args&&... __args) {
 
 template <class _OutIt, class _CharT, class _FormatOutIt>
   requires(output_iterator<_OutIt, const _CharT&>)
-_LIBCPP_HIDE_FROM_ABI _OutIt __vformat_to(
-    _OutIt __out_it,
-    locale __loc,
-    basic_string_view<_CharT> __fmt,
-    basic_format_args<basic_format_context<_FormatOutIt, _CharT>> __args) {
+_LIBCPP_HIDE_FROM_ABI _OutIt
+__vformat_to(_OutIt __out_it,
+             locale __loc,
+             basic_string_view<_CharT> __fmt,
+             basic_format_args<basic_format_context<_FormatOutIt, _CharT>> __args) {
   if constexpr (same_as<_OutIt, _FormatOutIt>)
     return std::__format::__vformat_to(basic_format_parse_context{__fmt, __args.__size()},
                                        std::__format_context_create(std::move(__out_it), __args, std::move(__loc)));

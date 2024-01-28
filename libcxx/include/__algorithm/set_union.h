@@ -65,13 +65,13 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_union_result<_InIter1,
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_union(
-    _InputIterator1 __first1,
-    _InputIterator1 __last1,
-    _InputIterator2 __first2,
-    _InputIterator2 __last2,
-    _OutputIterator __result,
-    _Compare __comp) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+set_union(_InputIterator1 __first1,
+          _InputIterator1 __last1,
+          _InputIterator2 __first2,
+          _InputIterator2 __last2,
+          _OutputIterator __result,
+          _Compare __comp) {
   return std::__set_union<_ClassicAlgPolicy, __comp_ref_type<_Compare> >(
              std::move(__first1),
              std::move(__last1),
@@ -83,12 +83,12 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_union(
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_union(
-    _InputIterator1 __first1,
-    _InputIterator1 __last1,
-    _InputIterator2 __first2,
-    _InputIterator2 __last2,
-    _OutputIterator __result) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+set_union(_InputIterator1 __first1,
+          _InputIterator1 __last1,
+          _InputIterator2 __first2,
+          _InputIterator2 __last2,
+          _OutputIterator __result) {
   return std::set_union(
       std::move(__first1),
       std::move(__last1),

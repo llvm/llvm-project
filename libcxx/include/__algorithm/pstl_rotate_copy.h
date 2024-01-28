@@ -63,12 +63,12 @@ template <class _ExecutionPolicy,
           class _ForwardOutIterator,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator rotate_copy(
-    _ExecutionPolicy&& __policy,
-    _ForwardIterator __first,
-    _ForwardIterator __middle,
-    _ForwardIterator __last,
-    _ForwardOutIterator __result) {
+_LIBCPP_HIDE_FROM_ABI _ForwardOutIterator
+rotate_copy(_ExecutionPolicy&& __policy,
+            _ForwardIterator __first,
+            _ForwardIterator __middle,
+            _ForwardIterator __last,
+            _ForwardOutIterator __result) {
   auto __res =
       std::__rotate_copy(__policy, std::move(__first), std::move(__middle), std::move(__last), std::move(__result));
   if (!__res)

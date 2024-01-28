@@ -30,7 +30,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
   ::abort();
 }
 
-exception_ptr exception_ptr::__from_native_exception_pointer(void *__e) noexcept {
+exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {
 #warning exception_ptr not yet implemented
   fprintf(stderr, "exception_ptr not yet implemented\n");
   ::abort();

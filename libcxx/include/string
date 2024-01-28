@@ -922,7 +922,11 @@ public:
       // Turning off ASan instrumentation for variable initialization with _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
       // does not work consistently during initialization of __r_, so we instead unpoison __str's memory manually first.
       // __str's memory needs to be unpoisoned only in the case where it's a short string.
-      : __r_([](basic_string &__s) -> decltype(__s.__r_)&& { if(!__s.__is_long()) __s.__annotate_delete(); return std::move(__s.__r_); }(__str)) {
+      : __r_([](basic_string& __s) -> decltype(__s.__r_)&& {
+          if (!__s.__is_long())
+            __s.__annotate_delete();
+          return std::move(__s.__r_);
+        }(__str)) {
     __str.__r_.first() = __rep();
     __str.__annotate_new(0);
     if (!__is_long())
@@ -1054,8 +1058,8 @@ public:
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
                               !__is_same_uncvref<_Tp, basic_string>::value,
                           int> = 0>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(
-      const _Tp& __t, const allocator_type& __a)
+  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t, const allocator_type& __a)
       : __r_(__default_init_tag(), __a) {
     __self_view __sv = __t;
     __init(__sv.data(), __sv.size());
@@ -1287,8 +1291,8 @@ public:
                           int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
 
-      basic_string&
-      append(const _Tp& __t, size_type __pos, size_type __n = npos);
+  basic_string&
+  append(const _Tp& __t, size_type __pos, size_type __n = npos);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* __s, size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* __s);
@@ -1902,7 +1906,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
-    (void) __current_size;
+    (void)__current_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
@@ -1917,7 +1921,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
-    (void) __n;
+    (void)__n;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
@@ -1925,7 +1929,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    (void) __old_size;
+    (void)__old_size;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
     if (!__libcpp_is_constant_evaluated() && (__asan_short_string_is_annotated() || __is_long()))
       __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
@@ -1979,15 +1983,15 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20
 #if _LIBCPP_ABI_VERSION >= 2 //  We want to use the function in the dylib in ABIv1
-      _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI
 #endif
-          _LIBCPP_DEPRECATED_("use __grow_by_without_replace") void __grow_by(
-              size_type __old_cap,
-              size_type __delta_cap,
-              size_type __old_sz,
-              size_type __n_copy,
-              size_type __n_del,
-              size_type __n_add = 0);
+  _LIBCPP_DEPRECATED_("use __grow_by_without_replace") void __grow_by(
+      size_type __old_cap,
+      size_type __delta_cap,
+      size_type __old_sz,
+      size_type __n_copy,
+      size_type __n_del,
+      size_type __n_add = 0);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __grow_by_without_replace(
       size_type __old_cap,
       size_type __delta_cap,
@@ -2153,8 +2157,8 @@ template <class _CharT,
           class _Traits,
           class _Allocator = allocator<_CharT>,
           class            = enable_if_t<__is_allocator<_Allocator>::value> >
-explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _Allocator())
-    -> basic_string<_CharT, _Traits, _Allocator>;
+explicit basic_string(basic_string_view<_CharT, _Traits>,
+                      const _Allocator& = _Allocator()) -> basic_string<_CharT, _Traits, _Allocator>;
 
 template <class _CharT,
           class _Traits,
@@ -2389,15 +2393,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
 template <class _CharT, class _Traits, class _Allocator>
 void _LIBCPP_CONSTEXPR_SINCE_CXX20
 #if _LIBCPP_ABI_VERSION >= 2 // We want to use the function in the dylib in ABIv1
-    _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_HIDE_FROM_ABI
 #endif
-    _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Traits, _Allocator>::__grow_by(
-        size_type __old_cap,
-        size_type __delta_cap,
-        size_type __old_sz,
-        size_type __n_copy,
-        size_type __n_del,
-        size_type __n_add) {
+_LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Traits, _Allocator>::__grow_by(
+    size_type __old_cap,
+    size_type __delta_cap,
+    size_type __old_sz,
+    size_type __n_copy,
+    size_type __n_del,
+    size_type __n_add) {
   size_type __ms = max_size();
   if (__delta_cap > __ms - __old_cap)
     __throw_length_error();

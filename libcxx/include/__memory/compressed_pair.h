@@ -110,7 +110,7 @@ public:
 
   template <bool _Dummy = true,
             class       = __enable_if_t< __dependent_type<is_default_constructible<_T1>, _Dummy>::value &&
-                                   __dependent_type<is_default_constructible<_T2>, _Dummy>::value > >
+                                         __dependent_type<is_default_constructible<_T2>, _Dummy>::value > >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __compressed_pair()
       : _Base1(__value_init_tag()), _Base2(__value_init_tag()) {}
 

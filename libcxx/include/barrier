@@ -124,7 +124,7 @@ public:
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI
   __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
       : __expected_(__expected),
-        __base_(std::__construct_barrier_algorithm_base(this->__expected_), &__destroy_barrier_algorithm_base),
+        __base_(std::__construct_barrier_algorithm_base(this -> __expected_), &__destroy_barrier_algorithm_base),
         __expected_adjustment_(0),
         __completion_(std::move(__completion)),
         __phase_(0) {}
@@ -265,8 +265,8 @@ public:
 
   static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return __barrier_base<_CompletionF>::max(); }
 
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI explicit barrier(
-      ptrdiff_t __count, _CompletionF __completion = _CompletionF())
+  _LIBCPP_AVAILABILITY_SYNC
+      _LIBCPP_HIDE_FROM_ABI explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
       : __b_(__count, std::move(__completion)) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count >= 0,

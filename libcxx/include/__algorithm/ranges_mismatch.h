@@ -71,8 +71,8 @@ struct __fn {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires indirectly_comparable<iterator_t<_R1>, iterator_t<_R2>, _Pred, _Proj1, _Proj2>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr mismatch_result<borrowed_iterator_t<_R1>,
-                                                                        borrowed_iterator_t<_R2>>
+  _LIBCPP_NODISCARD_EXT
+  _LIBCPP_HIDE_FROM_ABI constexpr mismatch_result<borrowed_iterator_t<_R1>, borrowed_iterator_t<_R2>>
   operator()(_R1&& __r1, _R2&& __r2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     return __go(
         ranges::begin(__r1), ranges::end(__r1), ranges::begin(__r2), ranges::end(__r2), __pred, __proj1, __proj2);
