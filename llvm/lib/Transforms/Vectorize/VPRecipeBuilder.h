@@ -148,6 +148,10 @@ public:
   /// and DST.
   VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlan &Plan);
 
+  /// A helper that returns the previously computed predicate of the edge
+  /// between SRC and DST.
+  VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
+
   /// Mark given ingredient for recording its recipe once one is created for
   /// it.
   void recordRecipeOf(Instruction *I) {
