@@ -21,13 +21,11 @@ using namespace llvm;
 namespace {
 class ClangOpcodesEmitter {
   RecordKeeper &Records;
-  const Record Root;
   unsigned NumTypes;
 
 public:
   ClangOpcodesEmitter(RecordKeeper &R)
-    : Records(R), Root("Opcode", SMLoc(), R),
-      NumTypes(Records.getAllDerivedDefinitions("Type").size()) {}
+      : Records(R), NumTypes(Records.getAllDerivedDefinitions("Type").size()) {}
 
   void run(raw_ostream &OS);
 
@@ -86,7 +84,7 @@ void Enumerate(const Record *R, StringRef N,
 } // namespace
 
 void ClangOpcodesEmitter::run(raw_ostream &OS) {
-  for (const auto *Opcode : Records.getAllDerivedDefinitions(Root.getName())) {
+  for (const auto *Opcode : Records.getAllDerivedDefinitions("Opcode")) {
     // The name is the record name, unless overriden.
     StringRef N = Opcode->getValueAsString("Name");
     if (N.empty())
