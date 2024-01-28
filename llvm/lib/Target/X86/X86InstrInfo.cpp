@@ -7891,10 +7891,11 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Determine the alignment of the load.
   Align Alignment;
+  unsigned LoadOpc = LoadMI.getOpcode();
   if (LoadMI.hasOneMemOperand())
     Alignment = (*LoadMI.memoperands_begin())->getAlign();
   else
-    switch (LoadMI.getOpcode()) {
+    switch (LoadOpc) {
     case X86::AVX512_512_SET0:
     case X86::AVX512_512_SETALLONES:
       Alignment = Align(64);
@@ -7958,7 +7959,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
-  switch (LoadMI.getOpcode()) {
+  switch (LoadOpc) {
   case X86::MMX_SET0:
   case X86::V_SET0:
   case X86::V_SETALLONES:
@@ -8001,32 +8002,55 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     // Create a constant-pool entry.
     MachineConstantPool &MCP = *MF.getConstantPool();
     Type *Ty;
-    unsigned Opc = LoadMI.getOpcode();
-    if (Opc == X86::FsFLD0SS || Opc == X86::AVX512_FsFLD0SS)
+    bool IsAllOnes = false;
+    switch (LoadOpc) {
+    case X86::FsFLD0SS:
+    case X86::AVX512_FsFLD0SS:
       Ty = Type::getFloatTy(MF.getFunction().getContext());
-    else if (Opc == X86::FsFLD0SD || Opc == X86::AVX512_FsFLD0SD)
+      break;
+    case X86::FsFLD0SD:
+    case X86::AVX512_FsFLD0SD:
       Ty = Type::getDoubleTy(MF.getFunction().getContext());
-    else if (Opc == X86::FsFLD0F128 || Opc == X86::AVX512_FsFLD0F128)
+      break;
+    case X86::FsFLD0F128:
+    case X86::AVX512_FsFLD0F128:
       Ty = Type::getFP128Ty(MF.getFunction().getContext());
-    else if (Opc == X86::FsFLD0SH || Opc == X86::AVX512_FsFLD0SH)
+      break;
+    case X86::FsFLD0SH:
+    case X86::AVX512_FsFLD0SH:
       Ty = Type::getHalfTy(MF.getFunction().getContext());
-    else if (Opc == X86::AVX512_512_SET0 || Opc == X86::AVX512_512_SETALLONES)
+      break;
+    case X86::AVX512_512_SETALLONES:
+      IsAllOnes = true;
+      [[fallthrough]];
+    case X86::AVX512_512_SET0:
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
                                 16);
-    else if (Opc == X86::AVX2_SETALLONES || Opc == X86::AVX_SET0 ||
-             Opc == X86::AVX512_256_SET0 || Opc == X86::AVX1_SETALLONES)
+      break;
+    case X86::AVX1_SETALLONES:
+    case X86::AVX2_SETALLONES:
+      IsAllOnes = true;
+      [[fallthrough]];
+    case X86::AVX512_256_SET0:
+    case X86::AVX_SET0:
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
                                 8);
-    else if (Opc == X86::MMX_SET0)
+
+      break;
+    case X86::MMX_SET0:
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
                                 2);
-    else
+      break;
+    case X86::V_SETALLONES:
+      IsAllOnes = true;
+      [[fallthrough]];
+    case X86::V_SET0:
+    case X86::AVX512_128_SET0:
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
                                 4);
+      break;
+    }
 
-    bool IsAllOnes =
-        (Opc == X86::V_SETALLONES || Opc == X86::AVX2_SETALLONES ||
-         Opc == X86::AVX512_512_SETALLONES || Opc == X86::AVX1_SETALLONES);
     const Constant *C =
         IsAllOnes ? Constant::getAllOnesValue(Ty) : Constant::getNullValue(Ty);
     unsigned CPI = MCP.getConstantPoolIndex(C, Alignment);
