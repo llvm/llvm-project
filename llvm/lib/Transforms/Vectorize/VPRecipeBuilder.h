@@ -67,14 +67,16 @@ class VPRecipeBuilder {
   /// Check if the load or store instruction \p I should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
-  VPRecipeBase *tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
-                                 VFRange &Range, VPlanPtr &Plan);
+  VPWidenMemoryInstructionRecipe *tryToWidenMemory(Instruction *I,
+                                                   ArrayRef<VPValue *> Operands,
+                                                   VFRange &Range,
+                                                   VPlanPtr &Plan);
 
   /// Check if an induction recipe should be constructed for \p Phi. If so build
   /// and return it. If not, return null.
-  VPRecipeBase *tryToOptimizeInductionPHI(PHINode *Phi,
-                                          ArrayRef<VPValue *> Operands,
-                                          VPlan &Plan, VFRange &Range);
+  VPHeaderPHIRecipe *tryToOptimizeInductionPHI(PHINode *Phi,
+                                               ArrayRef<VPValue *> Operands,
+                                               VPlan &Plan, VFRange &Range);
 
   /// Optimize the special case where the operand of \p I is a constant integer
   /// induction variable.
@@ -82,10 +84,9 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range, VPlan &Plan);
 
-  /// Handle non-loop phi nodes. Return a VPValue, if all incoming values match
-  /// or a new VPBlendRecipe otherwise. Currently all such phi nodes are turned
-  /// into a sequence of select instructions as the vectorizer currently
-  /// performs full if-conversion.
+  /// Handle non-loop phi nodes. Return a new VPBlendRecipe otherwise. Currently
+  /// all such phi nodes are turned into a sequence of select instructions as
+  /// the vectorizer currently performs full if-conversion.
   VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands,
                             VPlanPtr &Plan);
 
@@ -98,8 +99,8 @@ class VPRecipeBuilder {
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPRecipeBase *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
-                           VPBasicBlock *VPBB, VPlanPtr &Plan);
+  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
+                            VPBasicBlock *VPBB, VPlanPtr &Plan);
 
 public:
   VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
@@ -109,9 +110,8 @@ public:
       : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), PSE(PSE),
         Builder(Builder) {}
 
-  /// Check if an existing VPValue can be used for \p Instr or a recipe can be
-  /// create for \p I withing the given VF \p Range. If an existing VPValue can
-  /// be used or if a recipe can be created, return it.
+  /// Create and return a widened recipe for \p I if one can be created within
+  /// the given VF \p Range.
   VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range, VPBasicBlock *VPBB,
@@ -162,7 +162,8 @@ public:
   /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
   /// last operand. Range.End may be decreased to ensure same recipe behavior
   /// from \p Range.Start to \p Range.End.
-  VPRecipeBase *handleReplication(Instruction *I, VFRange &Range, VPlan &Plan);
+  VPReplicateRecipe *handleReplication(Instruction *I, VFRange &Range,
+                                       VPlan &Plan);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.

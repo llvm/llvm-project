@@ -8101,10 +8101,9 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlan &Plan) {
   BlockMaskCache[BB] = BlockMask;
 }
 
-VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
-                                                ArrayRef<VPValue *> Operands,
-                                                VFRange &Range,
-                                                VPlanPtr &Plan) {
+VPWidenMemoryInstructionRecipe *
+VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
+                                  VFRange &Range, VPlanPtr &Plan) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Must be called with either a load or store");
 
@@ -8176,7 +8175,7 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
   return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, IndDesc);
 }
 
-VPRecipeBase *VPRecipeBuilder::tryToOptimizeInductionPHI(
+VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
     PHINode *Phi, ArrayRef<VPValue *> Operands, VPlan &Plan, VFRange &Range) {
 
   // Check if this is an integer or fp induction. If so, build the recipe that
@@ -8241,13 +8240,16 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   SmallVector<VPValue *, 2> OperandsWithMask;
 
   for (unsigned In = 0; In < NumIncoming; In++) {
+    OperandsWithMask.push_back(Operands[In]);
     VPValue *EdgeMask =
         createEdgeMask(Phi->getIncomingBlock(In), Phi->getParent(), *Plan);
-    assert((EdgeMask || NumIncoming == 1 || Operands[In] == Operands[0]) &&
-           "Multiple predecessors with one having a full mask");
-    OperandsWithMask.push_back(Operands[In]);
-    if (EdgeMask)
-      OperandsWithMask.push_back(EdgeMask);
+    if (!EdgeMask) {
+      assert(In == 0 && "Both null and non-null edge masks found");
+      assert(all_equal(Operands) &&
+             "Distinct incoming values with one having a full mask");
+      break;
+    }
+    OperandsWithMask.push_back(EdgeMask);
   }
   return new VPBlendRecipe(Phi, OperandsWithMask);
 }
@@ -8358,9 +8360,9 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
                                                              Range);
 }
 
-VPRecipeBase *VPRecipeBuilder::tryToWiden(Instruction *I,
-                                          ArrayRef<VPValue *> Operands,
-                                          VPBasicBlock *VPBB, VPlanPtr &Plan) {
+VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
+                                           ArrayRef<VPValue *> Operands,
+                                           VPBasicBlock *VPBB, VPlanPtr &Plan) {
   switch (I->getOpcode()) {
   default:
     return nullptr;
@@ -8417,8 +8419,9 @@ void VPRecipeBuilder::fixHeaderPhis() {
   }
 }
 
-VPRecipeBase *VPRecipeBuilder::handleReplication(Instruction *I, VFRange &Range,
-                                                 VPlan &Plan) {
+VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
+                                                      VFRange &Range,
+                                                      VPlan &Plan) {
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
@@ -8991,7 +8994,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // the phi until LoopExitValue. We keep track of the previous item
     // (PreviousLink) to tell which of the two operands of a Link will remain
     // scalar and which will be reduced. For minmax by select(cmp), Link will be
-    // the select instructions.
+    // the select instructions. Blend recipes will get folded to their non-phi
+    // operand, as the reduction recipe handles the condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
     for (VPSingleDefRecipe *CurrentLink : Worklist.getArrayRef().drop_front()) {
       Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
@@ -9024,13 +9028,15 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       } else {
         auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink);
         if (PhiR->isInLoop() && Blend) {
-          assert(Blend->getNumIncomingValues() == 2);
-          assert(any_of(Blend->operands(),
-                        [PhiR](VPValue *Op) { return Op == PhiR; }));
+          assert(Blend->getNumIncomingValues() == 2 &&
+                 "Blend must have 2 incoming values");
           if (Blend->getIncomingValue(0) == PhiR)
             Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
-          else
+          else {
             Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
+            assert(Blend->getIncomingValue(1) == PhiR &&
+                   "PhiR must be an operand of the blend");
+          }
           continue;
         }
 

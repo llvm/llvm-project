@@ -829,14 +829,11 @@ static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // Try to remove redundant blend recipes.
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
-    bool AllEqual = true;
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      AllEqual &= Blend->getIncomingValue(0) == Blend->getIncomingValue(I);
-    if (AllEqual) {
-      Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
-      Blend->eraseFromParent();
-      return;
-    }
+      if (Blend->getIncomingValue(0) != Blend->getIncomingValue(I))
+        return;
+    Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
+    Blend->eraseFromParent();
     return;
   }
 
