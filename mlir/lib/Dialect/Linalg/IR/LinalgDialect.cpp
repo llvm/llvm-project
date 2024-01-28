@@ -104,7 +104,9 @@ void addNamedOpBuilders(
 template <typename... Ops>
 struct LinalgOpInterfaceHelper {
   static void declareOpInterface(LinalgDialect *dialect) {
-    (dialect->declarePromisedInterface<Ops, bufferization::BufferizableOpInterface>(), ...);
+    (dialect->declarePromisedInterface<
+         Ops, bufferization::BufferizableOpInterface>(),
+     ...);
   }
 };
 
@@ -159,7 +161,7 @@ void mlir::linalg::LinalgDialect::initialize() {
   LinalgOpInterfaceHelper<
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-        >::declareOpInterface(this);
+      >::declareOpInterface(this);
 }
 
 LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
