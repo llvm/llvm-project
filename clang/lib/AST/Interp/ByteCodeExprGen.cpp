@@ -1830,7 +1830,29 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
   if (Ty->isVoidType())
     return true;
 
-  return this->visitZeroInitializer(classifyPrim(Ty), Ty, E);
+  if (std::optional<PrimType> T = classify(Ty))
+    return this->visitZeroInitializer(*T, Ty, E);
+
+  assert(Ty->isAnyComplexType());
+  if (!Initializing) {
+    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
+
+  // Initialize both fields to 0.
+  QualType ElemQT = Ty->getAs<ComplexType>()->getElementType();
+  PrimType ElemT = classifyPrim(ElemQT);
+
+  for (unsigned I = 0; I != 2; ++I) {
+    if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+      return false;
+    if (!this->emitInitElem(ElemT, I, E))
+      return false;
+  }
+  return true;
 }
 
 template <class Emitter>
