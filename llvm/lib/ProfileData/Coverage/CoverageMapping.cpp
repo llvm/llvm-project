@@ -620,7 +620,7 @@ private:
     }
 
     /// Determine whether DecisionRecord dominates `R`.
-    bool dominates(const CounterMappingRegion &R) {
+    bool dominates(const CounterMappingRegion &R) const {
       // Determine whether `R` is included in `DecisionRegion`.
       if (R.FileID == DecisionRegion->FileID &&
           R.startLoc() >= DecisionStartLoc && R.endLoc() <= DecisionEndLoc)
