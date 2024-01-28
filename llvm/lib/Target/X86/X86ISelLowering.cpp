@@ -5725,7 +5725,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       return false;
     // We can't assume an undef src element gives an undef dst - the other src
     // might be zero.
-    assert(UndefElts.isZero() && "Expected UNDEF element in AND/ANDNP mask");
+    assert(UndefElts.isZero() && "Unexpected UNDEF element in AND/ANDNP mask");
     for (int i = 0, e = (int)EltBits.size(); i != e; ++i) {
       const APInt &ByteBits = EltBits[i];
       if (ByteBits != 0 && ByteBits != 255)
