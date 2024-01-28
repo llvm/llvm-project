@@ -587,7 +587,6 @@ namespace {
 
 /// Collect Decisions, Branchs, and Expansions and associate them.
 class MCDCDecisionRecorder {
-
 private:
   /// This holds the DecisionRegion and MCDCBranches under it.
   /// Also traverses Expansion(s).
@@ -694,16 +693,15 @@ public:
     assert(Decisions.empty() && "All Decisions have not been resolved");
   }
 
-  /// Register Region and start recording if it is MCDCDecisionRegion.
-  /// \param Region to be inspected
-  /// \returns true if recording started.
-  bool registerDecision(const CounterMappingRegion &Region) {
-    if (Region.Kind != CounterMappingRegion::MCDCDecisionRegion)
-      return false;
+  /// Register Region and start recording.
+  void registerDecision(const CounterMappingRegion &Decision) {
+    Decisions.emplace_back(Decision);
+  }
 
-    // Start recording Region to create DecisionRecord
-    Decisions.emplace_back(Region);
-    return true;
+  void recordExpansion(const CounterMappingRegion &Expansion) {
+    any_of(Decisions, [&Expansion](auto &Decision) {
+      return Decision.recordExpansion(Expansion);
+    });
   }
 
   using DecisionAndBranches =
@@ -711,31 +709,16 @@ public:
                 SmallVector<const CounterMappingRegion *> /// Branches
                 >;
 
-  /// If Region is ExpansionRegion, record it.
-  /// If Region is MCDCBranchRegion, add it to DecisionRecord.
-  /// \param Region to be inspected
+  /// Add MCDCBranchRegion to DecisionRecord.
+  /// \param Branch to be processed
   /// \returns DecisionsAndBranches if DecisionRecord completed.
   ///     Or returns nullopt.
   std::optional<DecisionAndBranches>
-  processRegion(const CounterMappingRegion &Region) {
-
-    // Record ExpansionRegion.
-    if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
-      for (auto &Decision : reverse(Decisions)) {
-        if (Decision.recordExpansion(Region))
-          break;
-      }
-      return std::nullopt; // It doesn't complete.
-    }
-
-    // Do nothing unless MCDCBranchRegion.
-    if (Region.Kind != CounterMappingRegion::MCDCBranchRegion)
-      return std::nullopt;
-
+  processBranch(const CounterMappingRegion &Branch) {
     // Seek each Decision and apply Region to it.
     for (auto DecisionIter = Decisions.begin(), DecisionEnd = Decisions.end();
          DecisionIter != DecisionEnd; ++DecisionIter)
-      switch (DecisionIter->addBranch(Region)) {
+      switch (DecisionIter->addBranch(Branch)) {
       case DecisionRecord::NotProcessed:
         continue;
       case DecisionRecord::Processed:
@@ -815,8 +798,10 @@ Error CoverageMapping::loadFunctionRecord(
   for (const auto &Region : Record.MappingRegions) {
     // MCDCDecisionRegion should be handled first since it overlaps with
     // others inside.
-    if (MCDCDecisions.registerDecision(Region))
+    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
+      MCDCDecisions.registerDecision(Region);
       continue;
+    }
     Expected<int64_t> ExecutionCount = Ctx.evaluate(Region.Count);
     if (auto E = ExecutionCount.takeError()) {
       consumeError(std::move(E));
@@ -829,7 +814,17 @@ Error CoverageMapping::loadFunctionRecord(
     }
     Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
 
-    auto Result = MCDCDecisions.processRegion(Region);
+    // Record ExpansionRegion.
+    if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
+      MCDCDecisions.recordExpansion(Region);
+      continue;
+    }
+
+    // Do nothing unless MCDCBranchRegion.
+    if (Region.Kind != CounterMappingRegion::MCDCBranchRegion)
+      continue;
+
+    auto Result = MCDCDecisions.processBranch(Region);
     if (!Result) // Any Decision doesn't complete.
       continue;
 
