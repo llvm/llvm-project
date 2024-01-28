@@ -2588,7 +2588,8 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1032-NEXT:    v_div_fmas_f32 v1, v1, v2, v3
 ; GFX1032-NEXT:    v_div_fixup_f32 v1, v1, s0, v0
 ; GFX1032-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1032-NEXT:    v_fma_f32 v0, -v1, s0, v0
+; GFX1032-NEXT:    v_fma_f32 v1, -v1, s0, v0
+; GFX1032-NEXT:    v_bfi_b32 v0, 0x7fffffff, v1, v0
 ; GFX1032-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_lshr_b32 s0, vcc_lo, 1
 ; GFX1032-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0
@@ -2620,7 +2621,8 @@ define amdgpu_kernel void @fcmp64(float %n, float %s) {
 ; GFX1064-NEXT:    v_div_fmas_f32 v1, v1, v2, v3
 ; GFX1064-NEXT:    v_div_fixup_f32 v1, v1, s2, v0
 ; GFX1064-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1064-NEXT:    v_fma_f32 v0, -v1, s2, v0
+; GFX1064-NEXT:    v_fma_f32 v1, -v1, s2, v0
+; GFX1064-NEXT:    v_bfi_b32 v0, 0x7fffffff, v1, v0
 ; GFX1064-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_lshr_b64 s[0:1], vcc, 1
 ; GFX1064-NEXT:    v_cmp_nlg_f32_e32 vcc, 0, v0
@@ -2777,7 +2779,8 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1032-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
 ; GFX1032-NEXT:    v_div_fixup_f32 v1, v1, s0, v0
 ; GFX1032-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1032-NEXT:    v_fma_f32 v0, -v1, s0, v0
+; GFX1032-NEXT:    v_fma_f32 v1, -v1, s0, v0
+; GFX1032-NEXT:    v_bfi_b32 v0, 0x7fffffff, v1, v0
 ; GFX1032-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_lshr_b32 s0, vcc_lo, 1
 ; GFX1032-NEXT:    v_cmp_nlg_f32_e32 vcc_lo, 0, v0
@@ -2809,7 +2812,8 @@ define amdgpu_kernel void @fcmp32(float %n, float %s) {
 ; GFX1064-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
 ; GFX1064-NEXT:    v_div_fixup_f32 v1, v1, s2, v0
 ; GFX1064-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1064-NEXT:    v_fma_f32 v0, -v1, s2, v0
+; GFX1064-NEXT:    v_fma_f32 v1, -v1, s2, v0
+; GFX1064-NEXT:    v_bfi_b32 v0, 0x7fffffff, v1, v0
 ; GFX1064-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_lshr_b32 s0, vcc_lo, 1
 ; GFX1064-NEXT:    v_cmp_nlg_f32_e32 vcc, 0, v0

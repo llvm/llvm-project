@@ -2377,6 +2377,14 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   return true;
 }
 
+static bool allowNoSignedZeros(const MachineFunction &MF, unsigned Flags) {
+  return (Flags & MachineInstr::FmNsz) ||
+         MF.getTarget().Options.NoSignedZerosFPMath;
+}
+
+// Legalize frem(x, y) -> copysign(x - y * trunc(x / y), x)
+// The copysign is only required to get the correct result -0.0 when x is -0.0
+// (and y is non-zero). With NSZ it can be dropped.
 bool AMDGPULegalizerInfo::legalizeFrem(
   MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineIRBuilder &B) const {
@@ -2385,11 +2393,15 @@ bool AMDGPULegalizerInfo::legalizeFrem(
     Register Src1Reg = MI.getOperand(2).getReg();
     auto Flags = MI.getFlags();
     LLT Ty = MRI.getType(DstReg);
+    bool NSZ = allowNoSignedZeros(B.getMF(), Flags);
 
     auto Div = B.buildFDiv(Ty, Src0Reg, Src1Reg, Flags);
     auto Trunc = B.buildIntrinsicTrunc(Ty, Div, Flags);
     auto Neg = B.buildFNeg(Ty, Trunc, Flags);
-    B.buildFMA(DstReg, Neg, Src1Reg, Src0Reg, Flags);
+    DstOp FMADst = NSZ ? DstOp(DstReg) : DstOp(Ty);
+    auto FMA = B.buildFMA(FMADst, Neg, Src1Reg, Src0Reg, Flags);
+    if (!NSZ)
+      B.buildFCopysign(DstReg, FMA, Src0Reg);
     MI.eraseFromParent();
     return true;
 }

@@ -2304,19 +2304,23 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   return DAG.getMergeValues(Res, DL);
 }
 
-// (frem x, y) -> (fma (fneg (ftrunc (fdiv x, y))), y, x)
+// (frem x, y) -> (fcopysign (fma (fneg (ftrunc (fdiv x, y))), y, x), x)
+// The fcopysign is only required to get the correct result -0.0 when x is -0.0
+// (and y is non-zero). With NSZ it can be dropped.
 SDValue AMDGPUTargetLowering::LowerFREM(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
   auto Flags = Op->getFlags();
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
+  bool NSZ = mayIgnoreSignedZero(Op);
 
   SDValue Div = DAG.getNode(ISD::FDIV, SL, VT, X, Y, Flags);
   SDValue Trunc = DAG.getNode(ISD::FTRUNC, SL, VT, Div, Flags);
   SDValue Neg = DAG.getNode(ISD::FNEG, SL, VT, Trunc, Flags);
   // TODO: For f32 use FMAD instead if !hasFastFMA32?
-  return DAG.getNode(ISD::FMA, SL, VT, Neg, Y, X, Flags);
+  SDValue FMA = DAG.getNode(ISD::FMA, SL, VT, Neg, Y, X, Flags);
+  return NSZ ? FMA : DAG.getNode(ISD::FCOPYSIGN, SL, VT, FMA, X);
 }
 
 SDValue AMDGPUTargetLowering::LowerFCEIL(SDValue Op, SelectionDAG &DAG) const {
