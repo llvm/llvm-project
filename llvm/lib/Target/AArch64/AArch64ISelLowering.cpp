@@ -15710,7 +15710,7 @@ unsigned AArch64TargetLowering::getNumInterleavedAccesses(
 MachineMemOperand::Flags
 AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (Subtarget->getProcFamily() == AArch64Subtarget::Falkor &&
-      I.getMetadata(FALKOR_STRIDED_ACCESS_MD) != nullptr)
+      I.hasMetadata(FALKOR_STRIDED_ACCESS_MD))
     return MOStridedAccess;
   return MachineMemOperand::MONone;
 }
