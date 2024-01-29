@@ -366,6 +366,10 @@ def testDenseIntAttr():
         # CHECK: i1
         print(ShapedType(a.type).element_type)
 
+        shape = Attribute.parse("dense<[0, 1, 2, 3]> : vector<4xindex>")
+        # CHECK: attr: dense<[0, 1, 2, 3]>
+        print("attr:", shape)
+
 
 @run
 def testDenseArrayGetItem():
