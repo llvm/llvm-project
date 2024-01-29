@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m
   integer :: foo
   !Note: PGI, Intel, and GNU allow this; NAG and Sun do not
@@ -96,7 +96,7 @@ contains
   end
 end
 subroutine s6
-  !ERROR: Generic 'g' may not have specific procedures 'sa' and 'sb' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' should not have specific procedures 'sa' and 'sb' as their interfaces are not distinguishable by the incomplete rules in the standard
   use m6a, g => gg
   use m6b, g => gg
 end
@@ -180,7 +180,7 @@ contains
   end
 end module
 subroutine s9
-  !ERROR: USE-associated generic 'g' may not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
+  !PORTABILITY: USE-associated generic 'g' should not have specific procedures 'g' and 'g' as their interfaces are not distinguishable by the incomplete rules in the standard
   use m9a
   use m9b
 end
@@ -197,7 +197,7 @@ contains
 end
 module m10b
   use m10a
-  !ERROR: Generic 'g' may not have specific procedures 's' and 's' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'g' should not have specific procedures 's' and 's' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface g
     module procedure s
   end interface
