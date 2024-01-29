@@ -4600,6 +4600,14 @@ def int_nvvm_vote_ballot_sync :
   ClangBuiltin<"__nvvm_vote_ballot_sync">;
 
 //
+// ACTIVEMASK
+//
+def int_nvvm_activemask :
+  Intrinsic<[llvm_i32_ty], [],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback, IntrHasSideEffects], "llvm.nvvm.activemask">,
+  ClangBuiltin<"__nvvm_activemask">;
+
+//
 // MATCH.SYNC
 //
 // match.any.sync.b32 mask, value
