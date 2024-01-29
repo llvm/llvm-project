@@ -9008,8 +9008,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // the phi until LoopExitValue. We keep track of the previous item
     // (PreviousLink) to tell which of the two operands of a Link will remain
     // scalar and which will be reduced. For minmax by select(cmp), Link will be
-    // the select instructions. Blend recipes will get folded to their non-phi
-    // operand, as the reduction recipe handles the condition directly.
+    // the select instructions. Blend recipes of in-loop reduction phi's  will
+    // get folded to their non-phi operand, as the reduction recipe handles the
+    // condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
     for (VPSingleDefRecipe *CurrentLink : Worklist.getArrayRef().drop_front()) {
       Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
@@ -9047,9 +9048,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           if (Blend->getIncomingValue(0) == PhiR)
             Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
           else {
-            Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
             assert(Blend->getIncomingValue(1) == PhiR &&
                    "PhiR must be an operand of the blend");
+            Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
           }
           continue;
         }
