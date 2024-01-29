@@ -5943,9 +5943,7 @@ void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
   mlir::Value command = fir::getBase(args[0]);
   const fir::ExtendedValue &exitstat = args[1];
-
-  if (!command)
-    fir::emitFatalError(loc, "expected COMMAND parameter");
+  assert(command && "expected COMMAND parameter");
 
   mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
 
@@ -5959,9 +5957,9 @@ void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
   // when cmdstat is assigned with a non-zero value but not present
   mlir::Value tempValue =
       builder.createIntegerConstant(loc, builder.getI2Type(), 0);
-  mlir::Value temp = builder.createTemporary(loc, builder.getI2Type());
+  mlir::Value temp = builder.createTemporary(loc, builder.getI16Type());
   mlir::Value castVal =
-      builder.createConvert(loc, builder.getI2Type(), tempValue);
+      builder.createConvert(loc, builder.getI16Type(), tempValue);
   builder.create<fir::StoreOp>(loc, castVal, temp);
   mlir::Value cmdstatBox = builder.createBox(loc, temp);
 
