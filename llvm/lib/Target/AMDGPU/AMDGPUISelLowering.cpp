@@ -4246,19 +4246,13 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
   // operands, so we have to place the mul in the LHS
   if (SDValue MulOper = IsFoldableAdd(N0)) {
     SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N1, MulOper);
-    return DAG.getNode(ISD::ADD, DL, VT, MulVal,
-                       DAG.getZExtOrTrunc(N1, DL, VT));
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal, N1);
   }
 
   if (SDValue MulOper = IsFoldableAdd(N1)) {
     SDValue MulVal = DAG.getNode(N->getOpcode(), DL, VT, N0, MulOper);
-    return DAG.getNode(ISD::ADD, DL, VT, MulVal,
-                       DAG.getZExtOrTrunc(N0, DL, VT));
+    return DAG.getNode(ISD::ADD, DL, VT, MulVal, N0);
   }
-
-  // Skip if already mul24.
-  if (N->getOpcode() != ISD::MUL)
-    return SDValue();
 
   // There are i16 integer mul/mad.
   if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
@@ -5083,7 +5077,7 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::MUL_I24: {
     if (SDValue Simplified = simplifyMul24(N, DCI))
       return Simplified;
-    return performMulCombine(N, DCI);
+    break;
   }
   case AMDGPUISD::MULHI_I24:
   case AMDGPUISD::MULHI_U24:

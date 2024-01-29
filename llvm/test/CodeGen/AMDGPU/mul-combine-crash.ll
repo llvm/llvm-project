@@ -8,10 +8,9 @@ define i64 @test(i64 %x, i32 %z) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; CHECK-NEXT:    v_and_b32_e32 v2, 1, v2
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v2, v[0:1]
+; CHECK-NEXT:    v_and_b32_e32 v1, 1, v2
+; CHECK-NEXT:    v_add_u32_e32 v1, 1, v1
+; CHECK-NEXT:    v_mul_u32_u24_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -29,10 +28,9 @@ define i64 @test_swapped(i64 %x, i32 %z) {
 ; CHECK-LABEL: test_swapped:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; CHECK-NEXT:    v_and_b32_e32 v2, 1, v2
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v2, v[0:1]
+; CHECK-NEXT:    v_and_b32_e32 v1, 1, v2
+; CHECK-NEXT:    v_add_u32_e32 v1, 1, v1
+; CHECK-NEXT:    v_mul_u32_u24_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
