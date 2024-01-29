@@ -35,12 +35,11 @@ define void @quux() #1 {
 ; CHECK-NEXT:    .cfi_offset w30, -88
 ; CHECK-NEXT:    .cfi_offset w29, -96
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mul x9, x8, x8
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    subs x8, x8, x9
-; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    str x8, [x19, #384]
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    str x9, [x19, #384]
 ; CHECK-NEXT:    strh w8, [x19, #394]
 ; CHECK-NEXT:    str w8, [x19, #396]
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0

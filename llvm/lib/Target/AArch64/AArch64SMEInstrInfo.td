@@ -37,6 +37,10 @@ def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
 def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
                               [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
 
+let usesCustomInserter = 1 in {
+  def ExpandZABuffer : Pseudo<(outs), (ins), []>, Sched<[WriteI]> {}
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
