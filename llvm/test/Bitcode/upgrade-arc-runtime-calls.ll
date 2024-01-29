@@ -55,7 +55,7 @@ unwindBlock:
 // Check that auto-upgrader converts function calls to intrinsic calls. Note that
 // the auto-upgrader doesn't touch invoke instructions.
 
-// ARC: define void @testRuntimeCalls(ptr %[[A:.*]], ptr %[[B:.*]], ptr %[[C:.*]], ptr %[[D:.*]], ptr %[[E:.*]]) personality
+// ARC: define void @testRuntimeCalls(ptr %[[A:.*]], ptr %[[B:.*]], ptr %[[C:.*]], ptr %[[D:.*]], ptr %[[E:.*]]) #0 personality
 // ARC: %[[V0:.*]] = tail call ptr @llvm.objc.autorelease(ptr %[[A]])
 // ARC-NEXT: tail call void @llvm.objc.autoreleasePoolPop(ptr %[[A]])
 // ARC-NEXT: %[[V1:.*]] = tail call ptr @llvm.objc.autoreleasePoolPush()
@@ -88,7 +88,7 @@ unwindBlock:
 // ARC-NEXT: tail call void @llvm.objc.arc.annotation.bottomup.bbend(ptr %[[B]], ptr %[[C]])
 // ARC-NEXT: invoke void @objc_autoreleasePoolPop(ptr %[[A]])
 
-// NOUPGRADE: define void @testRuntimeCalls(ptr %[[A:.*]], ptr %[[B:.*]], ptr %[[C:.*]], ptr %[[D:.*]], ptr %[[E:.*]]) personality
+// NOUPGRADE: define void @testRuntimeCalls(ptr %[[A:.*]], ptr %[[B:.*]], ptr %[[C:.*]], ptr %[[D:.*]], ptr %[[E:.*]]) #0 personality
 // NOUPGRADE: %[[V0:.*]] = tail call ptr @objc_autorelease(ptr %[[A]])
 // NOUPGRADE-NEXT: tail call void @objc_autoreleasePoolPop(ptr %[[A]])
 // NOUPGRADE-NEXT: %[[V1:.*]] = tail call ptr @objc_autoreleasePoolPush()

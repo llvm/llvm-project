@@ -5155,7 +5155,51 @@ struct StrictFPUpgradeVisitor : public InstVisitor<StrictFPUpgradeVisitor> {
 };
 } // namespace
 
-void llvm::UpgradeFunctionAttributes(Function &F) {
+// Check if the module attribute is present and not zero.
+static bool isModuleAttributeSet(const Module *M, const StringRef &ModAttr) {
+  if (const auto *Attr =
+          mdconst::extract_or_null<ConstantInt>(M->getModuleFlag(ModAttr)))
+    if (Attr->getZExtValue())
+      return true;
+  return false;
+}
+
+// Copy an attribute from module to the function if exists.
+// First value of the pair is used when the module attribute is not zero
+// the second otherwise.
+static void
+CopyModuleAttributeToFunction(Function &F, StringRef FnAttrName,
+                              StringRef ModAttrName,
+                              std::pair<StringRef, StringRef> Values) {
+  Module *M = F.getParent();
+  assert(M && "Missing module");
+  if (F.hasFnAttribute(FnAttrName))
+    return;
+  if (isModuleAttributeSet(M, ModAttrName))
+    F.addFnAttr(FnAttrName, Values.first);
+  else
+    F.addFnAttr(FnAttrName, Values.second);
+}
+
+// Copy a boolean attribute from module to the function if exists.
+// Module attribute treated false if zero otherwise true.
+static void CopyModuleAttributeToFunction(Function &F, StringRef AttrName) {
+  CopyModuleAttributeToFunction(
+      F, AttrName, AttrName,
+      std::make_pair<StringRef, StringRef>("true", "false"));
+}
+
+// Copy an attribute from module to the function if exists.
+// First value of the pair is used when the module attribute is not zero
+// the second otherwise.
+static void
+CopyModuleAttributeToFunction(Function &F, StringRef AttrName,
+                              std::pair<StringRef, StringRef> Values) {
+  CopyModuleAttributeToFunction(F, AttrName, AttrName, Values);
+}
+
+void llvm::UpgradeFunctionAttributes(Function &F,
+                                     bool ModuleMetadataIsMaterialized) {
   // If a function definition doesn't have the strictfp attribute,
   // convert any callsite strictfp attributes to nobuiltin.
   if (!F.isDeclaration() && !F.hasFnAttribute(Attribute::StrictFP)) {
@@ -5167,6 +5211,37 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
+
+  if (!ModuleMetadataIsMaterialized)
+    return;
+  if (F.isDeclaration())
+    return;
+  Module *M = F.getParent();
+  if (!M)
+    return;
+
+  Triple T(M->getTargetTriple());
+  // Convert module level attributes to function level attributes because
+  // after merging modules the attributes might change and would have different
+  // effect on the functions as the original module would have.
+  if (T.isThumb() || T.isARM() || T.isAArch64()) {
+    if (!F.hasFnAttribute("sign-return-address")) {
+      StringRef SignType = "none";
+      if (isModuleAttributeSet(M, "sign-return-address"))
+        SignType = "non-leaf";
+
+      if (isModuleAttributeSet(M, "sign-return-address-all"))
+        SignType = "all";
+
+      F.addFnAttr("sign-return-address", SignType);
+    }
+    CopyModuleAttributeToFunction(F, "branch-target-enforcement");
+    CopyModuleAttributeToFunction(F, "branch-protection-pauth-lr");
+    CopyModuleAttributeToFunction(F, "guarded-control-stack");
+    CopyModuleAttributeToFunction(
+        F, "sign-return-address-key",
+        std::make_pair<StringRef, StringRef>("b_key", "a_key"));
+  }
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
