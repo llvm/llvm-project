@@ -4,23 +4,14 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @test(ptr %a, ptr %b, ptr %out) #0 {
+define void @test(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    subl $72, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 92
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl 12(%eax), %ebx
@@ -298,28 +289,17 @@ define void @test(ptr %a, ptr %b, ptr %out) #0 {
 ; X86-NEXT:    movl %eax, 24(%esi)
 ; X86-NEXT:    movl %edx, 28(%esi)
 ; X86-NEXT:    addl $72, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %r15
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    pushq %r14
-; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 32
-; X64-NEXT:    .cfi_offset %rbx, -32
-; X64-NEXT:    .cfi_offset %r14, -24
-; X64-NEXT:    .cfi_offset %r15, -16
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq (%rdi), %rbx
 ; X64-NEXT:    movq 8(%rdi), %r11
@@ -375,11 +355,8 @@ define void @test(ptr %a, ptr %b, ptr %out) #0 {
 ; X64-NEXT:    movq %rax, 16(%rcx)
 ; X64-NEXT:    movq %rdx, 24(%rcx)
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 24
 ; X64-NEXT:    popq %r14
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    popq %r15
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 entry:
   %av = load i256, ptr %a
@@ -388,5 +365,3 @@ entry:
   store i256 %r, ptr %out
   ret void
 }
-
-attributes #0 = { norecurse nounwind uwtable }
