@@ -1156,6 +1156,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    PtrAdd,
   };
 
 private:
@@ -2502,6 +2503,12 @@ public:
             IndDesc.getKind(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
             Start, CanonicalIV, Step) {}
+
+  VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind, VPValue *Start,
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
+                    FPMathOperator *FPBinOp)
+      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
+        Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 

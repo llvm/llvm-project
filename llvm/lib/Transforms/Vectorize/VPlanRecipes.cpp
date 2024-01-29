@@ -127,6 +127,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::PtrAdd:
       return false;
     default:
       return true;
@@ -489,6 +490,23 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
 
     return ReducedPartRdx;
   }
+  case VPInstruction::PtrAdd: {
+    if (vputils::onlyFirstLaneUsed(this)) {
+      auto *P = Builder.CreatePtrAdd(
+          State.get(getOperand(0), VPIteration(Part, 0)),
+          State.get(getOperand(1), VPIteration(Part, 0)), Name);
+      State.set(this, P, VPIteration(Part, 0));
+    } else {
+      for (unsigned Lane = 0; Lane != State.VF.getKnownMinValue(); ++Lane) {
+        Value *P = Builder.CreatePtrAdd(
+            State.get(getOperand(0), VPIteration(Part, Lane)),
+            State.get(getOperand(1), VPIteration(Part, Lane)), Name);
+
+        State.set(this, P, VPIteration(Part, Lane));
+      }
+    }
+    return nullptr;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -515,6 +533,8 @@ void VPInstruction::execute(VPTransformState &State) {
     State.Builder.setFastMathFlags(getFastMathFlags());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *GeneratedValue = generateInstruction(State, Part);
+    if (!GeneratedValue)
+      continue;
     if (!hasResult())
       continue;
     assert(GeneratedValue && "generateInstruction must produce a value");
@@ -540,6 +560,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ICmp:
+  case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ComputeReductionResult:
@@ -598,6 +619,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::PtrAdd:
+    O << "ptradd";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
