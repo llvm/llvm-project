@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass=register-coalescer,rename-independent-subregs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass=register-coalescer,rename-independent-subregs -o - %s | FileCheck -check-prefix=GCN %s
 ---
 
 # GCN-LABEL: name: mac_invalid_operands

@@ -4011,67 +4011,110 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
 std::pair<Value *, FPClassTest>
 llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
                       const APFloat *ConstRHS, bool LookThroughSrc) {
+
+  auto [Src, ClassIfTrue, ClassIfFalse] =
+      fcmpImpliesClass(Pred, F, LHS, *ConstRHS, LookThroughSrc);
+  if (Src && ClassIfTrue == ~ClassIfFalse)
+    return {Src, ClassIfTrue};
+  return {nullptr, fcAllFlags};
+}
+
+/// Return the return value for fcmpImpliesClass for a compare that produces an
+/// exact class test.
+static std::tuple<Value *, FPClassTest, FPClassTest> exactClass(Value *V,
+                                                                FPClassTest M) {
+  return {V, M, ~M};
+}
+
+std::tuple<Value *, FPClassTest, FPClassTest>
+llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                       FPClassTest RHSClass, bool LookThroughSrc) {
+  assert(RHSClass != fcNone);
+
+  const FPClassTest OrigClass = RHSClass;
+
+  Value *Src = LHS;
+  const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
+  const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
+  const bool IsNaN = (RHSClass & ~fcNan) == fcNone;
+
+  if (IsNaN) {
+    // fcmp o__ x, nan -> false
+    // fcmp u__ x, nan -> true
+    return exactClass(Src, CmpInst::isOrdered(Pred) ? fcNone : fcAllFlags);
+  }
+
   // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
-  if (Pred == FCmpInst::FCMP_ORD && !ConstRHS->isNaN())
-    return {LHS, ~fcNan};
+  if (Pred == FCmpInst::FCMP_ORD)
+    return exactClass(Src, ~fcNan);
 
   // fcmp uno x, zero|normal|subnormal|inf -> fcNan
-  if (Pred == FCmpInst::FCMP_UNO && !ConstRHS->isNaN())
-    return {LHS, fcNan};
+  if (Pred == FCmpInst::FCMP_UNO)
+    return exactClass(Src, fcNan);
 
-  if (ConstRHS->isZero()) {
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return exactClass(Src, fcAllFlags);
+
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return exactClass(Src, fcNone);
+
+  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+  if (IsFabs)
+    RHSClass = llvm::inverse_fabs(RHSClass);
+
+  const bool IsZero = (OrigClass & fcZero) == OrigClass;
+  if (IsZero) {
+    assert(Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO);
     // Compares with fcNone are only exactly equal to fcZero if input denormals
     // are not flushed.
     // TODO: Handle DAZ by expanding masks to cover subnormal cases.
-    if (Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO &&
-        !inputDenormalIsIEEE(F, LHS->getType()))
-      return {nullptr, fcAllFlags};
+    if (!inputDenormalIsIEEE(F, LHS->getType()))
+      return {nullptr, fcAllFlags, fcAllFlags};
 
     switch (Pred) {
     case FCmpInst::FCMP_OEQ: // Match x == 0.0
-      return {LHS, fcZero};
+      return exactClass(Src, fcZero);
     case FCmpInst::FCMP_UEQ: // Match isnan(x) || (x == 0.0)
-      return {LHS, fcZero | fcNan};
+      return exactClass(Src, fcZero | fcNan);
     case FCmpInst::FCMP_UNE: // Match (x != 0.0)
-      return {LHS, ~fcZero};
+      return exactClass(Src, ~fcZero);
     case FCmpInst::FCMP_ONE: // Match !isnan(x) && x != 0.0
-      return {LHS, ~fcNan & ~fcZero};
+      return exactClass(Src, ~fcNan & ~fcZero);
     case FCmpInst::FCMP_ORD:
       // Canonical form of ord/uno is with a zero. We could also handle
       // non-canonical other non-NaN constants or LHS == RHS.
-      return {LHS, ~fcNan};
+      return exactClass(Src, ~fcNan);
     case FCmpInst::FCMP_UNO:
-      return {LHS, fcNan};
+      return exactClass(Src, fcNan);
     case FCmpInst::FCMP_OGT: // x > 0
-      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf};
+      return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf);
     case FCmpInst::FCMP_UGT: // isnan(x) || x > 0
-      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan};
+      return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan);
     case FCmpInst::FCMP_OGE: // x >= 0
-      return {LHS, fcPositive | fcNegZero};
+      return exactClass(Src, fcPositive | fcNegZero);
     case FCmpInst::FCMP_UGE: // isnan(x) || x >= 0
-      return {LHS, fcPositive | fcNegZero | fcNan};
+      return exactClass(Src, fcPositive | fcNegZero | fcNan);
     case FCmpInst::FCMP_OLT: // x < 0
-      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf};
+      return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf);
     case FCmpInst::FCMP_ULT: // isnan(x) || x < 0
-      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan};
+      return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan);
     case FCmpInst::FCMP_OLE: // x <= 0
-      return {LHS, fcNegative | fcPosZero};
+      return exactClass(Src, fcNegative | fcPosZero);
     case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
-      return {LHS, fcNegative | fcPosZero | fcNan};
+      return exactClass(Src, fcNegative | fcPosZero | fcNan);
     default:
-      break;
+      llvm_unreachable("all compare types are handled");
     }
 
-    return {nullptr, fcAllFlags};
+    return {nullptr, fcAllFlags, fcAllFlags};
   }
 
-  Value *Src = LHS;
-  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+  const bool IsDenormalRHS = (OrigClass & fcSubnormal) == OrigClass;
 
-  // Compute the test mask that would return true for the ordered comparisons.
-  FPClassTest Mask;
+  const bool IsInf = (OrigClass & fcInf) == OrigClass;
+  if (IsInf) {
+    FPClassTest Mask = fcAllFlags;
 
-  if (ConstRHS->isInfinity()) {
     switch (Pred) {
     case FCmpInst::FCMP_OEQ:
     case FCmpInst::FCMP_UNE: {
@@ -4086,8 +4129,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       //   fcmp une fabs(x), +inf -> is_fpclass x, ~fcInf
       //   fcmp une x, -inf -> is_fpclass x, ~fcNegInf
       //   fcmp une fabs(x), -inf -> is_fpclass x, fcAllFlags -> true
-
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         Mask = fcNegInf;
         if (IsFabs)
           Mask = fcNone;
@@ -4096,7 +4138,6 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
         if (IsFabs)
           Mask |= fcNegInf;
       }
-
       break;
     }
     case FCmpInst::FCMP_ONE:
@@ -4111,7 +4152,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       //   fcmp ueq (fabs x), +inf -> is_fpclass x, fcInf|fcNan
       //   fcmp ueq x, -inf -> is_fpclass x, fcNegInf|fcNan
       //   fcmp ueq fabs(x), -inf -> is_fpclass x, fcNan
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         Mask = ~fcNegInf & ~fcNan;
         if (IsFabs)
           Mask = ~fcNan;
@@ -4125,7 +4166,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OLT:
     case FCmpInst::FCMP_UGE: {
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         // No value is ordered and less than negative infinity.
         // All values are unordered with or at least negative infinity.
         // fcmp olt x, -inf -> false
@@ -4145,7 +4186,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGE:
     case FCmpInst::FCMP_ULT: {
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         // fcmp oge x, -inf -> ~fcNan
         // fcmp oge fabs(x), -inf -> ~fcNan
         // fcmp ult x, -inf -> fcNan
@@ -4165,7 +4206,7 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_OGT:
     case FCmpInst::FCMP_ULE: {
-      if (ConstRHS->isNegative()) {
+      if (IsNegativeRHS) {
         // fcmp ogt x, -inf -> fcmp one x, -inf
         // fcmp ogt fabs(x), -inf -> fcmp ord x, x
         // fcmp ule x, -inf -> fcmp ueq x, -inf
@@ -4178,10 +4219,146 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       Mask = fcNone;
       break;
     }
-    default:
-      return {nullptr, fcAllFlags};
+    case FCmpInst::FCMP_OLE:
+    case FCmpInst::FCMP_UGT: {
+      if (IsNegativeRHS) {
+        Mask = IsFabs ? fcNone : fcNegInf;
+        break;
+      }
+
+      // fcmp ole x, +inf -> fcmp ord x, x
+      // fcmp ole fabs(x), +inf -> fcmp ord x, x
+      // fcmp ole x, -inf -> fcmp oeq x, -inf
+      // fcmp ole fabs(x), -inf -> false
+      Mask = ~fcNan;
+      break;
     }
-  } else if (ConstRHS->isSmallestNormalized() && !ConstRHS->isNegative()) {
+    default:
+      llvm_unreachable("all compare types are handled");
+    }
+
+    // Invert the comparison for the unordered cases.
+    if (FCmpInst::isUnordered(Pred))
+      Mask = ~Mask;
+
+    return exactClass(Src, Mask);
+  }
+
+  if (Pred == FCmpInst::FCMP_OEQ)
+    return {Src, RHSClass, fcAllFlags};
+
+  if (Pred == FCmpInst::FCMP_UEQ) {
+    FPClassTest Class = RHSClass | fcNan;
+    return {Src, Class, ~fcNan};
+  }
+
+  if (Pred == FCmpInst::FCMP_ONE)
+    return {Src, ~fcNan, RHSClass | fcNan};
+
+  if (Pred == FCmpInst::FCMP_UNE)
+    return {Src, fcAllFlags, RHSClass};
+
+  assert((RHSClass == fcNone || RHSClass == fcPosNormal ||
+          RHSClass == fcNegNormal || RHSClass == fcNormal ||
+          RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal ||
+          RHSClass == fcSubnormal) &&
+         "should have been recognized as an exact class test");
+
+  if (IsNegativeRHS) {
+    // TODO: Handle fneg(fabs)
+    if (IsFabs) {
+      // fabs(x) o> -k -> fcmp ord x, x
+      // fabs(x) u> -k -> true
+      // fabs(x) o< -k -> false
+      // fabs(x) u< -k -> fcmp uno x, x
+      switch (Pred) {
+      case FCmpInst::FCMP_OGT:
+      case FCmpInst::FCMP_OGE:
+        return {Src, ~fcNan, fcNan};
+      case FCmpInst::FCMP_UGT:
+      case FCmpInst::FCMP_UGE:
+        return {Src, fcAllFlags, fcNone};
+      case FCmpInst::FCMP_OLT:
+      case FCmpInst::FCMP_OLE:
+        return {Src, fcNone, fcAllFlags};
+      case FCmpInst::FCMP_ULT:
+      case FCmpInst::FCMP_ULE:
+        return {Src, fcNan, ~fcNan};
+      default:
+        break;
+      }
+
+      return {nullptr, fcAllFlags, fcAllFlags};
+    }
+
+    FPClassTest ClassesLE = fcNegInf | fcNegNormal;
+    FPClassTest ClassesGE = fcPositive | fcNegZero | fcNegSubnormal;
+
+    if (IsDenormalRHS)
+      ClassesLE |= fcNegSubnormal;
+    else
+      ClassesGE |= fcNegNormal;
+
+    switch (Pred) {
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_OGE:
+      return {Src, ClassesGE, ~ClassesGE | RHSClass};
+    case FCmpInst::FCMP_UGT:
+    case FCmpInst::FCMP_UGE:
+      return {Src, ClassesGE | fcNan, ~(ClassesGE | fcNan) | RHSClass};
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_OLE:
+      return {Src, ClassesLE, ~ClassesLE | RHSClass};
+    case FCmpInst::FCMP_ULT:
+    case FCmpInst::FCMP_ULE:
+      return {Src, ClassesLE | fcNan, ~(ClassesLE | fcNan) | RHSClass};
+    default:
+      break;
+    }
+  } else if (IsPositiveRHS) {
+    FPClassTest ClassesGE = fcPosNormal | fcPosInf;
+    FPClassTest ClassesLE = fcNegative | fcPosZero | fcPosSubnormal;
+    if (IsDenormalRHS)
+      ClassesGE |= fcPosSubnormal;
+    else
+      ClassesLE |= fcPosNormal;
+
+    if (IsFabs) {
+      ClassesGE = llvm::inverse_fabs(ClassesGE);
+      ClassesLE = llvm::inverse_fabs(ClassesLE);
+    }
+
+    switch (Pred) {
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_OGE:
+      return {Src, ClassesGE, ~ClassesGE | RHSClass};
+    case FCmpInst::FCMP_UGT:
+    case FCmpInst::FCMP_UGE:
+      return {Src, ClassesGE | fcNan, ~(ClassesGE | fcNan) | RHSClass};
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_OLE:
+      return {Src, ClassesLE, ~ClassesLE | RHSClass};
+    case FCmpInst::FCMP_ULT:
+    case FCmpInst::FCMP_ULE:
+      return {Src, ClassesLE | fcNan, ~(ClassesLE | fcNan) | RHSClass};
+    default:
+      break;
+    }
+  }
+
+  return {nullptr, fcAllFlags, fcAllFlags};
+}
+
+std::tuple<Value *, FPClassTest, FPClassTest>
+llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                       const APFloat &ConstRHS, bool LookThroughSrc) {
+  // We can refine checks against smallest normal / largest denormal to an
+  // exact class test.
+  if (!ConstRHS.isNegative() && ConstRHS.isSmallestNormalized()) {
+    Value *Src = LHS;
+    const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+
+    FPClassTest Mask;
     // Match pattern that's used in __builtin_isnormal.
     switch (Pred) {
     case FCmpInst::FCMP_OLT:
@@ -4208,20 +4385,29 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
       break;
     }
     default:
-      return {nullptr, fcAllFlags};
+      return fcmpImpliesClass(Pred, F, LHS, ConstRHS.classify(),
+                              LookThroughSrc);
     }
-  } else if (ConstRHS->isNaN()) {
-    // fcmp o__ x, nan -> false
-    // fcmp u__ x, nan -> true
-    Mask = fcNone;
-  } else
-    return {nullptr, fcAllFlags};
 
-  // Invert the comparison for the unordered cases.
-  if (FCmpInst::isUnordered(Pred))
-    Mask = ~Mask;
+    // Invert the comparison for the unordered cases.
+    if (FCmpInst::isUnordered(Pred))
+      Mask = ~Mask;
 
-  return {Src, Mask};
+    return exactClass(Src, Mask);
+  }
+
+  return fcmpImpliesClass(Pred, F, LHS, ConstRHS.classify(), LookThroughSrc);
+}
+
+std::tuple<Value *, FPClassTest, FPClassTest>
+llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                       Value *RHS, bool LookThroughSrc) {
+  const APFloat *ConstRHS;
+  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
+    return {nullptr, fcAllFlags, fcAllFlags};
+
+  // TODO: Just call computeKnownFPClass for RHS to handle non-constants.
+  return fcmpImpliesClass(Pred, F, LHS, *ConstRHS, LookThroughSrc);
 }
 
 static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
@@ -4248,18 +4434,12 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
     Value *LHS, *RHS;
     uint64_t ClassVal = 0;
     if (match(I->getArgOperand(0), m_FCmp(Pred, m_Value(LHS), m_Value(RHS)))) {
-      auto [TestedValue, TestedMask] =
-          fcmpToClassTest(Pred, *F, LHS, RHS, true);
-      // First see if we can fold in fabs/fneg into the test.
-      if (TestedValue == V)
-        KnownFromAssume &= TestedMask;
-      else {
-        // Try again without the lookthrough if we found a different source
-        // value.
-        auto [TestedValue, TestedMask] =
-            fcmpToClassTest(Pred, *F, LHS, RHS, false);
-        if (TestedValue == V)
-          KnownFromAssume &= TestedMask;
+      const APFloat *CRHS;
+      if (match(RHS, m_APFloat(CRHS))) {
+        auto [CmpVal, MaskIfTrue, MaskIfFalse] =
+            fcmpImpliesClass(Pred, *F, LHS, *CRHS, LHS != V);
+        if (CmpVal == V)
+          KnownFromAssume &= MaskIfTrue;
       }
     } else if (match(I->getArgOperand(0),
                      m_Intrinsic<Intrinsic::is_fpclass>(
@@ -4407,7 +4587,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     FPClassTest FilterRHS = fcAllFlags;
 
     Value *TestedValue = nullptr;
-    FPClassTest TestedMask = fcNone;
+    FPClassTest MaskIfTrue = fcAllFlags;
+    FPClassTest MaskIfFalse = fcAllFlags;
     uint64_t ClassVal = 0;
     const Function *F = cast<Instruction>(Op)->getFunction();
     CmpInst::Predicate Pred;
@@ -4419,20 +4600,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // TODO: In some degenerate cases we can infer something if we try again
       // without looking through sign operations.
       bool LookThroughFAbsFNeg = CmpLHS != LHS && CmpLHS != RHS;
-      std::tie(TestedValue, TestedMask) =
-          fcmpToClassTest(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
+      std::tie(TestedValue, MaskIfTrue, MaskIfFalse) =
+          fcmpImpliesClass(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
     } else if (match(Cond,
                      m_Intrinsic<Intrinsic::is_fpclass>(
                          m_Value(TestedValue), m_ConstantInt(ClassVal)))) {
-      TestedMask = static_cast<FPClassTest>(ClassVal);
+      FPClassTest TestedMask = static_cast<FPClassTest>(ClassVal);
+      MaskIfTrue = TestedMask;
+      MaskIfFalse = ~TestedMask;
     }
 
     if (TestedValue == LHS) {
       // match !isnan(x) ? x : y
-      FilterLHS = TestedMask;
-    } else if (TestedValue == RHS) {
+      FilterLHS = MaskIfTrue;
+    } else if (TestedValue == RHS) { // && IsExactClass
       // match !isnan(x) ? y : x
-      FilterRHS = ~TestedMask;
+      FilterRHS = MaskIfFalse;
     }
 
     KnownFPClass Known2;

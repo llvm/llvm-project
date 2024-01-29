@@ -27,6 +27,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
 
+#define GET_RISCV_MACRO_FUSION_PRED_DECL
+#include "RISCVGenMacroFusion.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "RISCVGenSubtargetInfo.inc"
 
@@ -150,6 +153,13 @@ public:
   bool hasHalfFPLoadStoreMove() const {
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
+
+  bool hasConditionalMoveFusion() const {
+    // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
+    return (hasConditionalCompressedMoveFusion() && hasStdExtCOrZca()) ||
+           hasShortForwardBranchOpt();
+  }
+
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
@@ -187,11 +197,6 @@ public:
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
-  }
-
-  bool hasMacroFusion() const {
-    return hasLUIADDIFusion() || hasAUIPCADDIFusion() || hasZExtHFusion() ||
-           hasZExtWFusion() || hasShiftedZExtWFusion() || hasLDADDFusion();
   }
 
   // Vector codegen related methods.

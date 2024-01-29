@@ -20,7 +20,7 @@ TEST(LlvmLibcUniStd, LseekTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/lseek.test";
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   constexpr const char LSEEK_TEST[] = "lseek test";
   constexpr int LSEEK_TEST_SIZE = sizeof(LSEEK_TEST) - 1;
@@ -54,7 +54,7 @@ TEST(LlvmLibcUniStd, LseekFailsTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/lseek.test";
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   EXPECT_THAT(LIBC_NAMESPACE::lseek(fd, -1, SEEK_CUR), Fails(EINVAL));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));

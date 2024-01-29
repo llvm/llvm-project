@@ -70,7 +70,7 @@ struct DeviceTy {
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
 
-  __tgt_target_table *loadBinary(__tgt_device_image *Img);
+  llvm::Expected<__tgt_device_binary> loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -159,10 +159,13 @@ struct DeviceTy {
   /// }
 
   /// Register \p Entry as an offload entry that is avalable on this device.
-  void addOffloadEntry(OffloadEntryTy &Entry);
+  void addOffloadEntry(const OffloadEntryTy &Entry);
 
   /// Print all offload entries to stderr.
   void dumpOffloadEntries();
+
+  /// Ask the device whether the runtime should use auto zero-copy.
+  bool useAutoZeroCopy();
 
 private:
   /// Deinitialize the device (and plugin).
@@ -170,7 +173,7 @@ private:
 
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
-      llvm::DenseMap<llvm::StringRef, OffloadEntryTy *>;
+      llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
   ProtectedObj<DeviceOffloadEntriesMapTy> DeviceOffloadEntries;
 
   /// Handler to collect and organize host-2-device mapping information.

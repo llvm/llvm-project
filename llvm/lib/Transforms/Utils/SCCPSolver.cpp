@@ -310,6 +310,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
         new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
       }
 
+      DefaultDest->removePredecessor(BB);
       SI->setDefaultDest(NewUnreachableBB);
       Updates.push_back({DominatorTree::Delete, BB, DefaultDest});
       Updates.push_back({DominatorTree::Insert, BB, NewUnreachableBB});
@@ -1063,14 +1064,17 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
     // is ready.
     if (SCValue.isConstantRange(/*UndefAllowed=*/false)) {
       const ConstantRange &Range = SCValue.getConstantRange();
+      unsigned ReachableCaseCount = 0;
       for (const auto &Case : SI->cases()) {
         const APInt &CaseValue = Case.getCaseValue()->getValue();
-        if (Range.contains(CaseValue))
+        if (Range.contains(CaseValue)) {
           Succs[Case.getSuccessorIndex()] = true;
+          ++ReachableCaseCount;
+        }
       }
 
-      // TODO: Determine whether default case is reachable.
-      Succs[SI->case_default()->getSuccessorIndex()] = true;
+      Succs[SI->case_default()->getSuccessorIndex()] =
+          Range.isSizeLargerThan(ReachableCaseCount);
       return;
     }
 

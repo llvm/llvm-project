@@ -151,6 +151,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   }
 
   setBooleanContents(ZeroOrOneBooleanContent);
+  setMaxAtomicSizeInBitsSupported(64);
 
   // Function alignments
   setMinFunctionAlignment(Align(8));

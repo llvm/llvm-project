@@ -14,11 +14,12 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <queue>
+#include <sstream>
 
 using namespace llvm;
 using namespace clang;
@@ -232,6 +233,11 @@ AST_MATCHER_P(Stmt, notInSafeBufferOptOut, const UnsafeBufferUsageHandler *,
   return !Handler->isSafeBufferOptOut(Node.getBeginLoc());
 }
 
+AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
+              const UnsafeBufferUsageHandler *, Handler) {
+  return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
+}
+
 AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
   return innerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
 }
@@ -324,6 +330,73 @@ isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
   auto IfStmtElse = ifStmt(hasElse(InnerMatcher));
   // FIXME: Handle loop bodies.
   return stmt(anyOf(CompStmt, IfStmtThen, IfStmtElse));
+}
+
+// Given a two-param std::span construct call, matches iff the call has the
+// following forms:
+//   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
+//   2. `std::span<T>{new T, 1}`
+//   3. `std::span<T>{&var, 1}`
+//   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
+//   `n`
+//   5. `std::span<T>{any, 0}`
+AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
+  assert(Node.getNumArgs() == 2 &&
+         "expecting a two-parameter std::span constructor");
+  const Expr *Arg0 = Node.getArg(0)->IgnoreImplicit();
+  const Expr *Arg1 = Node.getArg(1)->IgnoreImplicit();
+  auto HaveEqualConstantValues = [&Finder](const Expr *E0, const Expr *E1) {
+    if (auto E0CV = E0->getIntegerConstantExpr(Finder->getASTContext()))
+      if (auto E1CV = E1->getIntegerConstantExpr(Finder->getASTContext())) {
+        return APSInt::compareValues(*E0CV, *E1CV) == 0;
+      }
+    return false;
+  };
+  auto AreSameDRE = [](const Expr *E0, const Expr *E1) {
+    if (auto *DRE0 = dyn_cast<DeclRefExpr>(E0))
+      if (auto *DRE1 = dyn_cast<DeclRefExpr>(E1)) {
+        return DRE0->getDecl() == DRE1->getDecl();
+      }
+    return false;
+  };
+  std::optional<APSInt> Arg1CV =
+      Arg1->getIntegerConstantExpr(Finder->getASTContext());
+
+  if (Arg1CV && Arg1CV->isZero())
+    // Check form 5:
+    return true;
+  switch (Arg0->IgnoreImplicit()->getStmtClass()) {
+  case Stmt::CXXNewExprClass:
+    if (auto Size = cast<CXXNewExpr>(Arg0)->getArraySize()) {
+      // Check form 1:
+      return AreSameDRE((*Size)->IgnoreImplicit(), Arg1) ||
+             HaveEqualConstantValues(*Size, Arg1);
+    }
+    // TODO: what's placeholder type? avoid it for now.
+    if (!cast<CXXNewExpr>(Arg0)->hasPlaceholderType()) {
+      // Check form 2:
+      return Arg1CV && Arg1CV->isOne();
+    }
+    break;
+  case Stmt::UnaryOperatorClass:
+    if (cast<UnaryOperator>(Arg0)->getOpcode() ==
+        UnaryOperator::Opcode::UO_AddrOf)
+      // Check form 3:
+      return Arg1CV && Arg1CV->isOne();
+    break;
+  default:
+    break;
+  }
+
+  QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
+
+  if (Arg0Ty->isConstantArrayType()) {
+    const APInt &ConstArrSize = cast<ConstantArrayType>(Arg0Ty)->getSize();
+
+    // Check form 4:
+    return Arg1CV && APSInt::compareValues(APSInt(ConstArrSize), *Arg1CV) == 0;
+  }
+  return false;
 }
 } // namespace clang::ast_matchers
 
@@ -594,6 +667,44 @@ public:
   // FIXME: this gadge will need a fix-it
 };
 
+class SpanTwoParamConstructorGadget : public WarningGadget {
+  static constexpr const char *const SpanTwoParamConstructorTag =
+      "spanTwoParamConstructor";
+  const CXXConstructExpr *Ctor; // the span constructor expression
+
+public:
+  SpanTwoParamConstructorGadget(const MatchFinder::MatchResult &Result)
+      : WarningGadget(Kind::SpanTwoParamConstructor),
+        Ctor(Result.Nodes.getNodeAs<CXXConstructExpr>(
+            SpanTwoParamConstructorTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::SpanTwoParamConstructor;
+  }
+
+  static Matcher matcher() {
+    auto HasTwoParamSpanCtorDecl = hasDeclaration(
+        cxxConstructorDecl(hasDeclContext(isInStdNamespace()), hasName("span"),
+                           parameterCountIs(2)));
+
+    return stmt(cxxConstructExpr(HasTwoParamSpanCtorDecl,
+                                 unless(isSafeSpanTwoParamConstruct()))
+                    .bind(SpanTwoParamConstructorTag));
+  }
+
+  const Stmt *getBaseStmt() const override { return Ctor; }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    // If the constructor call is of the form `std::span{var, n}`, `var` is
+    // considered an unsafe variable.
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Ctor->getArg(0))) {
+      if (isa<VarDecl>(DRE->getDecl()))
+        return {DRE};
+    }
+    return {};
+  }
+};
+
 /// A pointer initialization expression of the form:
 ///  \code
 ///  int *p = q;
@@ -739,9 +850,10 @@ public:
   }
 
   static Matcher matcher() {
+    Matcher callExpr = cxxMemberCallExpr(
+        callee(cxxMethodDecl(hasName("data"), ofClass(hasName("std::span")))));
     return stmt(
-        explicitCastExpr(has(cxxMemberCallExpr(callee(cxxMethodDecl(
-                             hasName("data"), ofClass(hasName("std::span")))))))
+        explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
             .bind(OpTag));
   }
   const Stmt *getBaseStmt() const override { return Op; }
@@ -1209,6 +1321,10 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
 #define WARNING_GADGET(x)                                                      \
           allOf(x ## Gadget::matcher().bind(#x),                               \
                 notInSafeBufferOptOut(&Handler)),
+#define WARNING_CONTAINER_GADGET(x)                                            \
+          allOf(x ## Gadget::matcher().bind(#x),                               \
+                notInSafeBufferOptOut(&Handler),                               \
+                unless(ignoreUnsafeBufferInContainer(&Handler))),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
             // Avoid a hanging comma.
             unless(stmt())

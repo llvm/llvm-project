@@ -87,9 +87,6 @@ private:
                               Constant *copr0, Constant *copr1);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
-  // sqrt
-  bool fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
-
   /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
   /// of cos, sincos call).
   std::tuple<Value *, Value *, Value *> insertSinCos(Value *Arg,
@@ -672,8 +669,6 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
     // Specialized optimizations for each function call.
     //
-    // TODO: Handle other simple intrinsic wrappers. Sqrt.
-    //
     // TODO: Handle native functions
     switch (FInfo.getId()) {
     case AMDGPULibFunc::EI_EXP:
@@ -794,7 +789,9 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     case AMDGPULibFunc::EI_ROOTN:
       return fold_rootn(FPOp, B, FInfo);
     case AMDGPULibFunc::EI_SQRT:
-      return fold_sqrt(FPOp, B, FInfo);
+      // TODO: Allow with strictfp + constrained intrinsic
+      return tryReplaceLibcallWithSimpleIntrinsic(
+          B, CI, Intrinsic::sqrt, true, true, /*AllowStrictFP=*/false);
     case AMDGPULibFunc::EI_COS:
     case AMDGPULibFunc::EI_SIN:
       return fold_sincos(FPOp, B, FInfo);
@@ -1271,29 +1268,6 @@ bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(
     return false;
   replaceLibCallWithSimpleIntrinsic(B, CI, IntrID);
   return true;
-}
-
-// fold sqrt -> native_sqrt (x)
-bool AMDGPULibCalls::fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B,
-                               const FuncInfo &FInfo) {
-  if (!isUnsafeMath(FPOp))
-    return false;
-
-  if (getArgType(FInfo) == AMDGPULibFunc::F32 && (getVecSize(FInfo) == 1) &&
-      (FInfo.getPrefix() != AMDGPULibFunc::NATIVE)) {
-    Module *M = B.GetInsertBlock()->getModule();
-
-    if (FunctionCallee FPExpr = getNativeFunction(
-            M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
-      Value *opr0 = FPOp->getOperand(0);
-      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> "
-                        << "sqrt(" << *opr0 << ")\n");
-      Value *nval = CreateCallEx(B,FPExpr, opr0, "__sqrt");
-      replaceCall(FPOp, nval);
-      return true;
-    }
-  }
-  return false;
 }
 
 std::tuple<Value *, Value *, Value *>

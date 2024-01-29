@@ -21,11 +21,11 @@ TEST(LlvmLibcUnlinkatTest, CreateAndDeleteTest) {
   constexpr const char *TEST_DIR = "testdata";
   constexpr const char *TEST_FILE = "openat.test";
   int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(dir_fd, 0);
   int write_fd =
       LIBC_NAMESPACE::openat(dir_fd, TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::unlinkat(dir_fd, TEST_FILE, 0), Succeeds(0));
@@ -35,7 +35,7 @@ TEST(LlvmLibcUnlinkatTest, CreateAndDeleteTest) {
 TEST(LlvmLibcUnlinkatTest, UnlinkatNonExistentFile) {
   constexpr const char *TEST_DIR = "testdata";
   int dir_fd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(dir_fd, 0);
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
