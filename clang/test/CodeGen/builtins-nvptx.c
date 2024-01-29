@@ -134,11 +134,13 @@ __device__ long long read_clocks() {
 
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock()
 // CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64()
+// CHECK: call i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
 
   int a = __nvvm_read_ptx_sreg_clock();
   long long b = __nvvm_read_ptx_sreg_clock64();
+  long long c = __nvvm_read_ptx_sreg_globaltimer();
 
-  return a + b;
+  return a + b + c;
 }
 
 __device__ int read_pms() {
