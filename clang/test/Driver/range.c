@@ -35,6 +35,9 @@
 // RUN: %clang -### -target x86_64 -ffast-math -fno-cx-limited-range -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=FULL %s
 
+// RUN: %clang -c -target x86_64 -fcx-limited-range %s -Xclang -verify=range
+// RUN: %clang -c -target x86_64 -fcx-fortran-rules %s -Xclang -verify=range
+
 // LMTD: -complex-range=limited
 // FULL: -complex-range=full
 // LMTD-NOT: -complex-range=fortran
@@ -44,3 +47,4 @@
 // CHECK-NOT: -complex-range=fortran
 // WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN2: warning: overriding '-fcx-fortran-rules' option with '-fcx-limited-range' [-Woverriding-option]
+// range-no-diagnostics
