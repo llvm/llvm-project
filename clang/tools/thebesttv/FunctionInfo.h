@@ -71,6 +71,10 @@ struct BlockGraph {
             // add edges to successors
             for (auto SI = B.succ_begin(); SI != B.succ_end(); ++SI) {
                 const CFGBlock *Succ = *SI;
+                // Successor may be null in case of optimized-out edges. See:
+                // https://clang.llvm.org/doxygen/classclang_1_1CFGBlock.html#details
+                if (!Succ)
+                    continue;
                 g.addEdge(B.getBlockID(), Succ->getBlockID());
             }
         }
@@ -104,13 +108,20 @@ struct FunctionInfo {
         std::string name = D->getQualifiedNameAsString();
         int line = FullLocation.getSpellingLineNumber();
         int column = FullLocation.getSpellingColumnNumber();
-        StringRef file = FullLocation.getFileEntry()->tryGetRealPathName();
+        const FileEntry *fileEntry = FullLocation.getFileEntry();
+        if (!fileEntry)
+            return nullptr;
+        StringRef file = fileEntry->tryGetRealPathName();
         requireTrue(!file.empty());
 
         // build CFG
         CFG *cfg = CFG::buildCFG(D, D->getBody(), &D->getASTContext(),
                                  CFG::BuildOptions())
                        .release();
+        // CFG may be null (may be because the function is in STL, e.g.
+        // "std::destroy_at")
+        if (!cfg)
+            return nullptr;
 
         // build graph for each CFGBlock
         BlockGraph *bg = new BlockGraph(cfg);
