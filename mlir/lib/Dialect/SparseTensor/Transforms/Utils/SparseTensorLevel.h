@@ -246,7 +246,7 @@ makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit, Value offset,
 /// Helper function to create a SparseIterator object that iterate over the
 /// non-empty subsections set.
 std::unique_ptr<SparseIterator> makeNonEmptySubSectIterator(
-    OpBuilder &b, Location l, const SparseIterator *parent,
+    OpBuilder &b, Location l, const SparseIterator *parent, Value loopBound,
     std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride);
 
 /// Helper function to create a SparseIterator object that iterate over a

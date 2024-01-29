@@ -1271,7 +1271,7 @@ static const IterType *unwrapFilter(const SparseIterator *it) {
 }
 
 std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
-    OpBuilder &b, Location l, const SparseIterator *parent,
+    OpBuilder &b, Location l, const SparseIterator *parent, Value loopBound,
     std::unique_ptr<SparseIterator> &&delegate, Value size, unsigned stride) {
 
   // Try unwrap the NonEmptySubSectIterator from a filter parent.
@@ -1279,9 +1279,12 @@ std::unique_ptr<SparseIterator> sparse_tensor::makeNonEmptySubSectIterator(
   auto it = std::make_unique<NonEmptySubSectIterator>(
       b, l, parent, std::move(delegate), size);
 
-  if (stride != 1)
+  if (stride != 1) {
+    // TODO: We can safely skip bound checking on sparse levels, but for dense
+    // iteration space, we need the bound to infer the dense loop range.
     return std::make_unique<FilterIterator>(std::move(it), /*offset=*/C_IDX(0),
-                                            C_IDX(stride), /*size=*/C_IDX(-1));
+                                            C_IDX(stride), /*size=*/loopBound);
+  }
   return it;
 }
 

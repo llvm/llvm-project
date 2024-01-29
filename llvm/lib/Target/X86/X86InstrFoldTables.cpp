@@ -291,12 +291,15 @@ struct X86BroadcastFoldTable {
 static bool matchBroadcastSize(const X86FoldTableEntry &Entry,
                                unsigned BroadcastBits) {
   switch (Entry.Flags & TB_BCAST_MASK) {
-  case TB_BCAST_SD:
-  case TB_BCAST_Q:
-    return BroadcastBits == 64;
-  case TB_BCAST_SS:
+  case TB_BCAST_W:
+  case TB_BCAST_SH:
+    return BroadcastBits == 16;
   case TB_BCAST_D:
+  case TB_BCAST_SS:
     return BroadcastBits == 32;
+  case TB_BCAST_Q:
+  case TB_BCAST_SD:
+    return BroadcastBits == 64;
   }
   return false;
 }

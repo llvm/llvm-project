@@ -32,8 +32,8 @@ struct ArchInfo;
 struct CpuInfo;
 
 // Function Multi Versioning CPU features. They must be kept in sync with
-// compiler-rt enum CPUFeatures in lib/builtins/cpu_model.c with FEAT_MAX as
-// sentinel.
+// compiler-rt enum CPUFeatures in lib/builtins/cpu_model/aarch64.c with
+// FEAT_MAX as sentinel.
 enum CPUFeatures {
   FEAT_RNG,
   FEAT_FLAGM,

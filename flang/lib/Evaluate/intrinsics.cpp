@@ -1113,6 +1113,12 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"kiabs", {{"a", TypePattern{IntType, KindCode::exactKind, 8}}},
          TypePattern{IntType, KindCode::exactKind, 8}},
         "abs"},
+    {{"kidnnt", {{"a", DoublePrecision}},
+         TypePattern{IntType, KindCode::exactKind, 8}},
+        "nint"},
+    {{"knint", {{"a", DefaultReal}},
+         TypePattern{IntType, KindCode::exactKind, 8}},
+        "nint"},
     {{"len", {{"string", DefaultChar, Rank::anyOrAssumedRank}}, DefaultInt,
         Rank::scalar, IntrinsicClass::inquiryFunction}},
     {{"lge", {{"string_a", DefaultChar}, {"string_b", DefaultChar}},
@@ -1395,6 +1401,19 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"count_max", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"signal",
+        {{"number", AnyInt, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            // note: any pointer also accepts AnyInt
+            {"handler", AnyPointer, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"sleep",
+        {{"seconds", AnyInt, Rank::scalar, Optionality::required,
+            common::Intent::In}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
 // TODO: Intrinsic subroutine EVENT_QUERY
@@ -1412,9 +1431,12 @@ static DynamicType GetBuiltinDerivedType(
   auto iter{
       builtinsScope->find(semantics::SourceName{which, std::strlen(which)})};
   if (iter == builtinsScope->cend()) {
+    // keep the string all together
+    // clang-format off
     common::die(
         "INTERNAL: The __fortran_builtins module does not define the type '%s'",
         which);
+    // clang-format on
   }
   const semantics::Symbol &symbol{*iter->second};
   const semantics::Scope &scope{DEREF(symbol.scope())};
@@ -2663,13 +2685,28 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     }
     if (const auto *expr{arguments[1].value().UnwrapExpr()}) {
       int fptrRank{expr->Rank()};
+      auto at{arguments[1]->sourceLocation()};
       if (auto type{expr->GetType()}) {
         if (type->HasDeferredTypeParameter()) {
-          context.messages().Say(arguments[1]->sourceLocation(),
+          context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
+        } else if (type->category() == TypeCategory::Derived) {
+          if (type->IsUnlimitedPolymorphic()) {
+            context.messages().Say(at,
+                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
+          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
+                         semantics::Attr::BIND_C)) {
+            context.messages().Say(at,
+                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
+          }
+        } else if (!IsInteroperableIntrinsicType(
+                       *type, &context.languageFeatures())) {
+          context.messages().Say(at,
+              "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type %s"_warn_en_US,
+              type->AsFortran());
         }
         if (ExtractCoarrayRef(*expr)) {
-          context.messages().Say(arguments[1]->sourceLocation(),
+          context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() may not be a coindexed object"_err_en_US);
         }
         characteristics::DummyDataObject fptr{
@@ -2678,8 +2715,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
         fptr.attrs.set(characteristics::DummyDataObject::Attr::Pointer);
         dummies.emplace_back("fptr"s, std::move(fptr));
       } else {
-        context.messages().Say(arguments[1]->sourceLocation(),
-            "FPTR= argument to C_F_POINTER() must have a type"_err_en_US);
+        context.messages().Say(
+            at, "FPTR= argument to C_F_POINTER() must have a type"_err_en_US);
       }
       if (arguments[2] && fptrRank == 0) {
         context.messages().Say(arguments[2]->sourceLocation(),
@@ -2881,8 +2918,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
-  } else if (name == "associated" || name == "reduce") {
-    // Now handled in Semantics/check-call.cpp
   } else if (name == "atomic_and" || name == "atomic_or" ||
       name == "atomic_xor") {
     return CheckForCoindexedObject(
@@ -2923,20 +2958,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
       context.messages().Say(
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
-    }
-  } else if (name == "present") {
-    const auto &arg{call.arguments[0]};
-    if (arg) {
-      if (const auto *expr{arg->UnwrapExpr()}) {
-        if (const Symbol *symbol{UnwrapWholeSymbolDataRef(*expr)}) {
-          ok = symbol->attrs().test(semantics::Attr::OPTIONAL);
-        }
-      }
-    }
-    if (!ok) {
-      context.messages().Say(
-          arg ? arg->sourceLocation() : context.messages().at(),
-          "Argument of PRESENT() must be the name of an OPTIONAL dummy argument"_err_en_US);
     }
   } else if (name == "ucobound") {
     return CheckDimAgainstCorank(call, context);
@@ -3106,23 +3127,31 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
             if (auto specificCall{
                     matchOrBufferMessages(*genIter->second, specificBuffer)}) {
               // Force the call result type to the specific intrinsic result
-              // type
+              // type, if possible.
+              DynamicType genericType{
+                  DEREF(specificCall->specificIntrinsic.characteristics.value()
+                            .functionResult.value()
+                            .GetTypeAndShape())
+                      .type()};
               DynamicType newType{GetReturnType(*specIter->second, defaults_)};
-              if (context.languageFeatures().ShouldWarn(
-                      common::LanguageFeature::
-                          UseGenericIntrinsicWhenSpecificDoesntMatch)) {
-                context.messages().Say(
-                    "Argument types do not match specific intrinsic '%s' "
-                    "requirements; using '%s' generic instead and converting "
-                    "the "
-                    "result to %s if needed"_port_en_US,
-                    call.name, genericName, newType.AsFortran());
+              if (genericType.category() == newType.category() ||
+                  ((genericType.category() == TypeCategory::Integer ||
+                       genericType.category() == TypeCategory::Real) &&
+                      (newType.category() == TypeCategory::Integer ||
+                          newType.category() == TypeCategory::Real))) {
+                if (context.languageFeatures().ShouldWarn(
+                        common::LanguageFeature::
+                            UseGenericIntrinsicWhenSpecificDoesntMatch)) {
+                  context.messages().Say(
+                      "Argument types do not match specific intrinsic '%s' requirements; using '%s' generic instead and converting the result to %s if needed"_port_en_US,
+                      call.name, genericName, newType.AsFortran());
+                }
+                specificCall->specificIntrinsic.name = call.name;
+                specificCall->specificIntrinsic.characteristics.value()
+                    .functionResult.value()
+                    .SetType(newType);
+                return specificCall;
               }
-              specificCall->specificIntrinsic.name = call.name;
-              specificCall->specificIntrinsic.characteristics.value()
-                  .functionResult.value()
-                  .SetType(newType);
-              return specificCall;
             }
           }
         }

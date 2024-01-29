@@ -79,7 +79,8 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
   let mnemonic = "shard";
 
   let parameters = (ins
-    AttrParameter<"::mlir::FlatSymbolRefAttr", "cluster placed">:$cluster,
+    AttrParameter<"::mlir::FlatSymbolRefAttr",
+     "The mesh on which tensors are sharded.">:$mesh,
     ArrayRefParameter<"MeshAxesAttr">:$split_axes,
     OptionalArrayRefParameter<"MeshAxis">:$partial_axes,
     OptionalParameter<"::mlir::mesh::Partial">:$partial_type
@@ -91,9 +92,9 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     The MeshSharding attribute could be used in the encoding of a
     `RankedTensorType` or the mesh.shard op. it contains three sub-attributes:
 
-    1. `cluster`: this attribute is a FlatSymbolRefAttr that refers to the mesh
-    cluster where the distributed tensor is placed. The symbol must resolve to a
-    `mesh.cluster` operation.
+    1. `mesh`: this attribute is a FlatSymbolRefAttr that refers to the device
+    mesh where the distributed tensor is placed. The symbol must resolve to a
+    `mesh.mesh` operation.
 
     2. `split_axes`: is an array composed of int64_t sub-arrays. The outer array's
     maximum size is the `rank` of the related tensor. For the i-th sub-array, if
@@ -117,7 +118,7 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     Example:
 
     ```
-    mesh.cluster @mesh0(shape = 2x2x4)
+    mesh.mesh @mesh0(shape = 2x2x4)
 
     // The tensor is fully replicated on @mesh0.
     // Currently, there must be at least one sub-array present in axes, even
@@ -140,12 +141,12 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
     ```
   }];
   let assemblyFormat = [{
-    `<` $cluster `,` `[` $split_axes `]` (`,` `partial` `=` $partial_type `[`
+    `<` $mesh `,` `[` $split_axes `]` (`,` `partial` `=` $partial_type `[`
        $partial_axes^ `]`)? `>`
   }];
 
   let builders = [
-    AttrBuilder<(ins "FlatSymbolRefAttr":$cluster,
+    AttrBuilder<(ins "FlatSymbolRefAttr":$mesh,
                      "ArrayRef<SmallVector<MeshAxis>>":$split_axes,
                      "ArrayRef<MeshAxis>": $partial_axes,
                      "mesh::Partial": $partial_type), [{
@@ -153,12 +154,12 @@ def MeshSharding : AttrDef<Mesh_Dialect, "MeshSharding"> {
                   split_axes, [&](ArrayRef<MeshAxis> array) {
           return MeshAxesAttr::get($_ctxt, array);
       });
-      return $_get($_ctxt, cluster, splitAxesAttr, partial_axes,
+      return $_get($_ctxt, mesh, splitAxesAttr, partial_axes,
                    partial_type);
     }]>,
-    AttrBuilder<(ins "FlatSymbolRefAttr":$cluster,
+    AttrBuilder<(ins "FlatSymbolRefAttr":$mesh,
                      "ArrayRef<SmallVector<MeshAxis>>":$split_axes), [{
-      return MeshShardingAttr::get($_ctxt, cluster, split_axes, {}, Partial::Sum);
+      return MeshShardingAttr::get($_ctxt, mesh, split_axes, {}, Partial::Sum);
     }]>
   ];
 
