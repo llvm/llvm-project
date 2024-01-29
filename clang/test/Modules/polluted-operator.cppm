@@ -46,12 +46,10 @@ module;
 export module a;
 
 //--- b.cppm
+// This is actually an ODR violation. But given https://github.com/llvm/llvm-project/issues/79240,
+// we don't count it as an ODR violation any more.
+// expected-no-diagnostics
 module;
 #include "bar.h"
 export module b;
 import a;
-
-// expected-error@* {{has different definitions in different modules; first difference is defined here found data member '_S_copy_ctor' with an initializer}}
-// expected-note@* {{but in 'a.<global>' found data member '_S_copy_ctor' with a different initializer}}
-// expected-error@* {{from module 'a.<global>' is not present in definition of 'variant<_Types...>' provided earlier}}
-// expected-note@* {{declaration of 'swap' does not match}}

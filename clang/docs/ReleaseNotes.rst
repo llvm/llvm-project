@@ -188,6 +188,11 @@ C++20 Feature Support
   This feature is still experimental. Accordingly, ``__cpp_nontype_template_args`` was not updated.
   However, its support can be tested with ``__has_extension(cxx_generalized_nttp)``.
 
+- Clang won't perform ODR checks for decls in the global module fragment any
+  more to ease the implementation and improve the user's using experience.
+  This follows the MSVC's behavior.
+  (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Implemented `P0847R7: Deducing this <https://wg21.link/P0847R7>`_. Some related core issues were also
