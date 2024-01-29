@@ -1137,12 +1137,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DIAGNOSE_WARNING(...)
 #  endif
 
-#  if __has_attribute(__diagnose_if__)
-#    define _LIBCPP_DIAGNOSE_ERROR(...) __attribute__((__diagnose_if__(__VA_ARGS__, "error")))
-#  else
-#    define _LIBCPP_DIAGNOSE_ERROR(...)
-#  endif
-
 // Use a function like macro to imply that it must be followed by a semicolon
 #  if __has_cpp_attribute(fallthrough)
 #    define _LIBCPP_FALLTHROUGH() [[fallthrough]]
