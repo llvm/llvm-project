@@ -44,15 +44,15 @@ TEST_F(LlvmLibcCoshfTest, SpecialNumbers) {
 TEST_F(LlvmLibcCoshfTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::coshf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::coshf(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::coshf(float(FPBits(0x42cffff8U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::coshf(FPBits(0x42cffff8U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::coshf(float(FPBits(0x42d00008U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::coshf(FPBits(0x42d00008U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
@@ -60,7 +60,7 @@ TEST_F(LlvmLibcCoshfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH(mpfr::Operation::Cosh, x, LIBC_NAMESPACE::coshf(x), 0.5);
@@ -68,12 +68,12 @@ TEST_F(LlvmLibcCoshfTest, InFloatRange) {
 }
 
 TEST_F(LlvmLibcCoshfTest, SmallValues) {
-  float x = float(FPBits(0x17800000U));
+  float x = FPBits(0x17800000U).get_val();
   float result = LIBC_NAMESPACE::coshf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cosh, x, result, 0.5);
   EXPECT_FP_EQ(1.0f, result);
 
-  x = float(FPBits(0x0040000U));
+  x = FPBits(0x0040000U).get_val();
   result = LIBC_NAMESPACE::coshf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cosh, x, result, 0.5);
   EXPECT_FP_EQ(1.0f, result);

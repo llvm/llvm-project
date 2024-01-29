@@ -4820,10 +4820,7 @@ define i1 @clang_builtin_isnormal_inf_check_olt(half %x) {
 
 define i1 @clang_builtin_isnormal_inf_check_ole(half %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_ole(
-; CHECK-NEXT:    [[FABS_X:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole half [[FABS_X]], 0xH7C00
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[CMP]]
+; CHECK-NEXT:    [[AND:%.*]] = fcmp ord half [[X:%.*]], 0xH0000
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs.x = call half @llvm.fabs.f16(half %x)

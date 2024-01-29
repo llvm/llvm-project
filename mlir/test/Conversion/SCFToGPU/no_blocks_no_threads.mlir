@@ -17,8 +17,8 @@ func.func @one_d_loop(%A : memref<?xf32>, %B : memref<?xf32>) {
   // CHECK-BLOCKS-NEXT: %{{.*}} = arith.constant 1 : index
   // CHECK-BLOCKS-NEXT: %[[ONE:.*]] = arith.constant 1 : index
 
-  // CHECK-THREADS-NEXT: gpu.launch blocks(%[[B0:.*]], %[[B1:.*]], %[[B2:.*]]) in (%{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]], %{{.*}}0 = %[[ONE]]) threads(%[[T0:.*]], %[[T1:.*]], %[[T2:.*]]) in (%{{.*}} = %[[BOUND]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]])
-  // CHECK-BLOCKS-NEXT: gpu.launch blocks(%[[B0:.*]], %[[B1:.*]], %[[B2:.*]]) in (%{{.*}} = %[[BOUND]], %{{.*}} = %[[ONE]], %{{.*}}0 = %[[ONE]]) threads(%[[T0:.*]], %[[T1:.*]], %[[T2:.*]]) in (%{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]])
+  // CHECK-THREADS-NEXT: gpu.launch blocks(%[[B0:.*]], %[[B1:.*]], %[[B2:.*]]) in (%{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]]) threads(%[[T0:.*]], %[[T1:.*]], %[[T2:.*]]) in (%{{.*}} = %[[BOUND]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]])
+  // CHECK-BLOCKS-NEXT: gpu.launch blocks(%[[B0:.*]], %[[B1:.*]], %[[B2:.*]]) in (%{{.*}} = %[[BOUND]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]]) threads(%[[T0:.*]], %[[T1:.*]], %[[T2:.*]]) in (%{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]])
   affine.for %i = 0 to 42 {
   // CHECK-THREADS-NEXT: %[[INDEX:.*]] = arith.addi %{{.*}}, %[[T0]]
   // CHECK-THREADS-NEXT: memref.load %{{.*}}[%[[INDEX]]]

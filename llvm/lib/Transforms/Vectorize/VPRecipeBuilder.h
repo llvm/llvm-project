@@ -138,12 +138,19 @@ public:
 
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True or the loop mask when
-  /// tail folding. It returns the *entry* mask for the block BB.
-  VPValue *createBlockInMask(BasicBlock *BB, VPlan &Plan);
+  /// tail folding.
+  void createBlockInMask(BasicBlock *BB, VPlan &Plan);
+
+  /// Returns the *entry* mask for the block \p BB.
+  VPValue *getBlockInMask(BasicBlock *BB) const;
 
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
   VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlan &Plan);
+
+  /// A helper that returns the previously computed predicate of the edge
+  /// between SRC and DST.
+  VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
 
   /// Mark given ingredient for recording its recipe once one is created for
   /// it.

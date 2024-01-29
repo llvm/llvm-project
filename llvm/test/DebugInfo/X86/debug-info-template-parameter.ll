@@ -1,4 +1,5 @@
 ; RUN: llc  %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc  --try-experimental-debuginfo-iterators %s -filetype=obj -o - | llvm-dwarfdump -v - | FileCheck %s
 
 ; C++ source to regenerate:
 

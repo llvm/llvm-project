@@ -157,6 +157,11 @@ def NVVM_ClusterId : NVVM_SpecialRegisterOp<"read.ptx.sreg.cluster.ctarank">;
 def NVVM_ClusterDim : NVVM_SpecialRegisterOp<"read.ptx.sreg.cluster.nctarank">;
 
 //===----------------------------------------------------------------------===//
+// Clock registers
+def NVVM_ClockOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock">;
+def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64">;
+
+//===----------------------------------------------------------------------===//
 // NVVM approximate op definitions
 //===----------------------------------------------------------------------===//
 
@@ -373,22 +378,74 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
 }
 
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Arrive Op";
+  let description = [{
+    The `cluster.arrive` can be used by the threads within the cluster for synchronization and
+    communication. The `cluster.arrive` instruction marks the warps' arrival at the barrier
+    without causing the executing thread to wait for other participating threads.
+
+    The `aligned` attribute, when provided, generates the .aligned version of the PTX instruction.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
   }];
   let assemblyFormat = "attr-dict";
 }
 
 def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Relaxed Arrive Op";
+  let description = [{
+    The `cluster.arrive` can be used by the threads within the cluster for synchronization and
+    communication. The `cluster.arrive` instruction marks the warps' arrival at the barrier
+    without causing the executing thread to wait for other participating threads.
+
+    The `aligned` attribute, when provided, generates the .aligned version of the PTX instruction.
+    The .relaxed qualifier on `cluster.arrive` specifies that there are no memory
+    ordering and visibility guarantees provided for the memory accesses performed prior to
+    `cluster.arrive`.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
   }];
   let assemblyFormat = "attr-dict";
 }
 
 def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Wait Op";
+  let description = [{
+    The `cluster.wait` causes the executing thread to wait for all non-exited threads
+    of the cluster to perform `cluster.arrive`. The `aligned` attribute, when provided,
+    generates the .aligned version of the PTX instruction.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
   }];
   let assemblyFormat = "attr-dict";
 }
@@ -458,17 +515,17 @@ def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max reg
 }
 def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
 
-def NVVM_SetMaxRegisterOp : NVVM_PTXBuilder_Op<"setmaxregister"> {
+def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
   let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
   let assemblyFormat = "$action $regCount attr-dict";
-  let extraClassDefinition = [{        
-    std::string $cppClass::getPtx() {
-      if(getAction() == NVVM::SetMaxRegisterAction::increase)
-        return std::string("setmaxnreg.inc.sync.aligned.u32 %0;");
-      return std::string("setmaxnreg.dec.sync.aligned.u32 %0;");
-    }
-  }];
   let hasVerifier = 1;
+  string llvmBuilder = [{
+    auto intId = (op.getAction() == NVVM::SetMaxRegisterAction::increase) ?
+      llvm::Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32 :
+      llvm::Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32;
+
+    createIntrinsicCall(builder, intId, builder.getInt32($regCount));
+  }];
 }
 
 def NVVM_FenceMbarrierInitOp : NVVM_PTXBuilder_Op<"fence.mbarrier.init"> {
@@ -1340,8 +1397,8 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
       ptx += ".x" + std::to_string(d);
       if (getLayout() == NVVM::MMALayout::col)
         ptx += ".trans";
-      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1}";
-      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2}";
+      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1};";
+      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2};";
       if(d == 4) ptx += ".m8n8.shared.b16 [%0], {%1, %2, %3, %4};";
       return ptx;
     }
@@ -1534,14 +1591,49 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 // NVVM TMA Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_CpAsyncBulkCommitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.commit.group">,
+def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("cp.async.bulk.commit_group;"); }
+  let description = [{
+    This Op commits all prior initiated but uncommitted cp.async.bulk
+    instructions into a cp.async.bulk-group.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-commit-group)
+  }];
+
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_cp_async_bulk_commit_group);
   }];
 }
 
+def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group">,
+  Arguments<(ins 
+    ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
+    OptionalAttr<UnitAttr>:$read)> {
+  let assemblyFormat = "$group attr-dict";
+  let description = [{
+    Op waits for completion of the most recent bulk async-groups.
+
+    The `$group` operand tells waiting has to be done until for $group or fewer
+    of the most recent bulk async-groups. If `$group` is 0, the op wait until 
+    all the most recent bulk async-groups have completed.
+
+    The `$read` indicates that the waiting has to be done until all the bulk 
+    async operations in the specified bulk async-group have completed reading 
+    from their source locations.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-wait-group)
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = op.getRead() ?
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group_read :
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group;
+    createIntrinsicCall(builder, intId, builder.getInt32($group));
+  }];
+}
 
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : 
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
@@ -1747,11 +1839,14 @@ def WGMMATypeB1 : I32EnumAttrCase<"b1", 4>;
 def WGMMATypeBF16 : I32EnumAttrCase<"bf16", 5>;
 def WGMMATypeF8E4M3 : I32EnumAttrCase<"e4m3", 6>;
 def WGMMATypeF8E5M2 : I32EnumAttrCase<"e5m2", 7>;
+def WGMMATypeF32 : I32EnumAttrCase<"f32", 8>;
+def WGMMATypeS32 : I32EnumAttrCase<"s32", 9>;
+
 def WGMMATypes : I32EnumAttr<"WGMMATypes", "NVVM WGMMA types",
   [WGMMATypeF16, WGMMATypeTF32,
     WGMMATypeU8, WGMMATypeS8,
     WGMMATypeB1, WGMMATypeBF16, WGMMATypeF8E4M3, 
-    WGMMATypeF8E5M2]> {
+    WGMMATypeF8E5M2, WGMMATypeF32, WGMMATypeS32]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -1773,6 +1868,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     NVVM_MMAShapeAttr:$shape,
     WGMMATypesAttr:$typeA,
     WGMMATypesAttr:$typeB,
+    WGMMATypesAttr:$typeD,
     WGMMAScaleOutAttr:$scaleD,
     WGMMAScaleInAttr:$scaleA,
     WGMMAScaleInAttr:$scaleB, 
@@ -1782,8 +1878,8 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
   );  
   
    let assemblyFormat = [{ 
-      $descriptorA `,` $descriptorB `,` $shape `,` 
-      `D` `[` $inouts `,` $scaleD (`,` $satfinite^)? `]` `,`
+      $descriptorA `,` $descriptorB `,` $inouts `,` $shape `,`
+      `D` `[` $typeD `,` $scaleD (`,` $satfinite^)? `]` `,`
       `A` `[` $typeA `,` $scaleA `,` $layoutA `]` `,` 
       `B` `[` $typeB `,` $scaleB `,` $layoutB `]`
       attr-dict `:` 

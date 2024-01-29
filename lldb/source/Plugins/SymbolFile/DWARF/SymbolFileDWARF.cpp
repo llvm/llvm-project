@@ -294,7 +294,7 @@ static void ParseSupportFilesFromPrologue(
     }
 
     // Unconditionally add an entry, so the indices match up.
-    support_files.EmplaceBack(remapped_file, style, checksum);
+    support_files.EmplaceBack(FileSpec(remapped_file, style), checksum);
   }
 }
 
@@ -519,8 +519,6 @@ void SymbolFileDWARF::InitializeObject() {
 
     if (apple_names.GetByteSize() > 0 || apple_namespaces.GetByteSize() > 0 ||
         apple_types.GetByteSize() > 0 || apple_objc.GetByteSize() > 0) {
-      Progress progress(llvm::formatv("Loading Apple DWARF index for {0}",
-                                      module_desc.GetData()));
       m_index = AppleDWARFIndex::Create(
           *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
           apple_types, apple_objc, m_context.getOrLoadStrData());
@@ -532,8 +530,7 @@ void SymbolFileDWARF::InitializeObject() {
     DWARFDataExtractor debug_names;
     LoadSectionData(eSectionTypeDWARFDebugNames, debug_names);
     if (debug_names.GetByteSize() > 0) {
-      Progress progress(
-          llvm::formatv("Loading DWARF5 index for {0}", module_desc.GetData()));
+      Progress progress("Loading DWARF5 index", module_desc.GetData());
       llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>> index_or =
           DebugNamesDWARFIndex::Create(*GetObjectFile()->GetModule(),
                                        debug_names,
@@ -786,12 +783,12 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        auto initialize_cu = [&](const FileSpec &file_spec,
+        auto initialize_cu = [&](lldb::SupportFileSP support_file_sp,
                                  LanguageType cu_language,
                                  SupportFileList &&support_files = {}) {
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
-              module_sp, &dwarf_cu, file_spec,
+              module_sp, &dwarf_cu, support_file_sp,
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
@@ -824,7 +821,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
             return false;
           if (support_files.GetSize() == 0)
             return false;
-          initialize_cu(support_files.GetFileSpecAtIndex(0),
+          initialize_cu(support_files.GetSupportFileAtIndex(0),
                         eLanguageTypeUnknown, std::move(support_files));
           return true;
         };
@@ -843,7 +840,8 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
             // case ParseSupportFiles takes care of the remapping.
             MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
 
-            initialize_cu(cu_file_spec, cu_language);
+            initialize_cu(std::make_shared<SupportFile>(cu_file_spec),
+                          cu_language);
           }
         }
       }
@@ -2574,11 +2572,12 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
 
       Module::LookupInfo no_tp_lookup_info(lookup_info);
       no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
-      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
-        if (resolved_dies.insert(die.GetDIE()).second)
-          ResolveFunction(die, include_inlines, sc_list);
-        return true;
-      });
+      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx,
+                            [&](DWARFDIE die) {
+                              if (resolved_dies.insert(die.GetDIE()).second)
+                                ResolveFunction(die, include_inlines, sc_list);
+                              return true;
+                            });
     }
   }
 
@@ -3138,7 +3137,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
     }
 
     const DWARFDeclContext die_dwarf_decl_ctx = GetDWARFDeclContext(die);
-    m_index->GetTypes(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
+    m_index->GetFullyQualifiedType(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
       // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
@@ -3165,9 +3164,8 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         return true;
       }
 
-      DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
-
       if (log) {
+        DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
         GetObjectFile()->GetModule()->LogMessage(
             log,
             "SymbolFileDWARF::"
@@ -3176,10 +3174,6 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
             DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
             type_dwarf_decl_ctx.GetQualifiedName());
       }
-
-      // Make sure the decl contexts match all the way up
-      if (die_dwarf_decl_ctx != type_dwarf_decl_ctx)
-        return true;
 
       Type *resolved_type = ResolveType(type_die, false);
       if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)

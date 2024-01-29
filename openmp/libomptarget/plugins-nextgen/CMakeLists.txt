@@ -19,71 +19,82 @@ add_subdirectory(common)
 # - tmachine_libname: machine name to be appended to the plugin library name.
 macro(build_generic_elf64 tmachine tmachine_name tmachine_libname tmachine_triple elf_machine_id)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
+  # Define macro to be used as prefix of the runtime messages for this target.
+  add_definitions("-DTARGET_NAME=${tmachine_name}")
+
+  # Define debug prefix. TODO: This should be automatized in the Debug.h but
+  # it requires changing the original plugins.
+  add_definitions(-DDEBUG_PREFIX="TARGET ${tmachine_name} RTL")
+
+  # Define the macro with the ELF e_machine for this target.
+  add_definitions("-DTARGET_ELF_ID=${elf_machine_id}")
+
+  # Define target triple
+  add_definitions("-DLIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE=${tmachine}")
+
+  add_llvm_library("omptarget.rtl.${tmachine_libname}"
+    SHARED
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../generic-elf-64bit/src/rtl.cpp
+
+    ADDITIONAL_HEADER_DIRS
+      ${LIBOMPTARGET_INCLUDE_DIR}
+
+    LINK_LIBS
+      PRIVATE
+      PluginCommon
+      ${OPENMP_PTHREAD_LIB}
+
+    NO_INSTALL_RPATH
+  )
+
   if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
-
-    libomptarget_say("Building ${tmachine_name} NextGen offloading plugin.")
-
-    # Define macro to be used as prefix of the runtime messages for this target.
-    add_definitions("-DTARGET_NAME=${tmachine_name}")
-
-    # Define debug prefix. TODO: This should be automatized in the Debug.h but
-    # it requires changing the original plugins.
-    add_definitions(-DDEBUG_PREFIX="TARGET ${tmachine_name} RTL")
-
-    # Define macro with the ELF ID for this target.
-    add_definitions("-DTARGET_ELF_ID=${elf_machine_id}")
-
-    # Define target regiple
-    add_definitions("-DLIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE=${tmachine}")
-
-    add_llvm_library("omptarget.rtl.${tmachine_libname}"
-      SHARED
-
-      ${CMAKE_CURRENT_SOURCE_DIR}/../generic-elf-64bit/src/rtl.cpp
-
-      ADDITIONAL_HEADER_DIRS
-      ${LIBOMPTARGET_INCLUDE_DIR}
-      ${LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR}
-
-        LINK_LIBS
-        PRIVATE
-        PluginCommon
-        ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
-        ${OPENMP_PTHREAD_LIB}
-
-      NO_INSTALL_RPATH
-    )
-
-    if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
-      target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE OMPT)
+    libomptarget_say("Building ${tmachine_libname} plugin linked with libffi")
+    if(FFI_STATIC_LIBRARIES)
+      target_link_libraries(
+        "omptarget.rtl.${tmachine_libname}" PRIVATE FFI::ffi_static)
+    else()
+      target_link_libraries(
+        "omptarget.rtl.${tmachine_libname}" PRIVATE FFI::ffi)
     endif()
+  else()
+     libomptarget_say("Building ${tmachine_libname} plugie for dlopened libffi")
+     target_sources("omptarget.rtl.${tmachine_libname}" PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../generic-elf-64bit/dynamic_ffi/ffi.cpp)
+     target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../generic-elf-64bit/dynamic_ffi)
+  endif()
 
-    if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-      target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE
-        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
-    endif()
+  if(OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+    target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE OMPT)
+  endif()
 
-    # Install plugin under the lib destination folder.
-    install(TARGETS "omptarget.rtl.${tmachine_libname}"
-      LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
-    set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES
-      INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
-      POSITION_INDEPENDENT_CODE ON
-      CXX_VISIBILITY_PRESET protected)
+  if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+    target_link_libraries("omptarget.rtl.${tmachine_libname}" PRIVATE
+      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
+  endif()
 
-    target_include_directories( "omptarget.rtl.${tmachine_libname}" PRIVATE
-      ${LIBOMPTARGET_INCLUDE_DIR}
-      ${LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR})
+  # Install plugin under the lib destination folder.
+  install(TARGETS "omptarget.rtl.${tmachine_libname}"
+          LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES
+    INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+    POSITION_INDEPENDENT_CODE ON
+    CXX_VISIBILITY_PRESET protected)
 
+  target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
+                             ${LIBOMPTARGET_INCLUDE_DIR})
+
+  if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
     list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.${tmachine_libname}")
     set(LIBOMPTARGET_TESTED_PLUGINS
         "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
-    set(LIBOMPTARGET_SYSTEM_TARGETS 
-        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple} ${tmachine_triple}-LTO" PARENT_SCOPE)
-
-  else(LIBOMPTARGET_DEP_LIBFFI_FOUND)
-    libomptarget_say("Not building ${tmachine_name} NextGen offloading plugin: libffi dependency not found.")
-  endif(LIBOMPTARGET_DEP_LIBFFI_FOUND)
+    set(LIBOMPTARGET_SYSTEM_TARGETS
+        "${LIBOMPTARGET_SYSTEM_TARGETS} ${tmachine_triple}
+        ${tmachine_triple}-LTO" PARENT_SCOPE)
+  else()
+    libomptarget_say("Not generating ${tmachine_name} tests. LibFFI not found.")
+  endif()
 else()
   libomptarget_say("Not building ${tmachine_name} NextGen offloading plugin: machine not found in the system.")
 endif()

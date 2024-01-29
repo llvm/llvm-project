@@ -10,7 +10,7 @@ runner. For example:
 --
 $ env PYTHONPATH=$(echo ~/llvm/clang/bindings/python/) \
       CLANG_LIBRARY_PATH=$(llvm-config --libdir) \
-  python -m unittest discover -v
+  python3 -m unittest discover -v
 tests.cindex.test_index.test_create ... ok
 ...
 

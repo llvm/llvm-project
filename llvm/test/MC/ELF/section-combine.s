@@ -39,10 +39,10 @@ bar:
 .section .foo,"o",@progbits,bar,unique,1
 .byte 5
 
-.section .foo,"Go",@progbits,comdat0,comdat,bar,unique,1
+.section .foo,"Go",@progbits,bar,comdat0,comdat,unique,1
 .byte 6
 
-.section .foo,"Go",@progbits,comdat1,comdat,bar,unique,1
+.section .foo,"Go",@progbits,bar,comdat1,comdat,unique,1
 .byte 7
-.section .foo,"Go",@progbits,comdat1,comdat,bar,unique,1
+.section .foo,"oG",@progbits,bar,comdat1,comdat,unique,1
 .byte 8

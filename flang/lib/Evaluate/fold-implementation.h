@@ -1124,14 +1124,17 @@ Expr<T> RewriteSpecificMINorMAX(
   intrinsic.characteristics.value().functionResult.value().SetType(*resultType);
   auto insertConversion{[&](const auto &x) -> Expr<T> {
     using TR = ResultType<decltype(x)>;
-    FunctionRef<TR> maxRef{std::move(funcRef.proc()), std::move(args)};
+    FunctionRef<TR> maxRef{
+        ProcedureDesignator{funcRef.proc()}, ActualArguments{args}};
     return Fold(context, ConvertToType<T>(AsCategoryExpr(std::move(maxRef))));
   }};
   if (auto *sx{UnwrapExpr<Expr<SomeReal>>(*resultTypeArg)}) {
     return common::visit(insertConversion, sx->u);
+  } else if (auto *sx{UnwrapExpr<Expr<SomeInteger>>(*resultTypeArg)}) {
+    return common::visit(insertConversion, sx->u);
+  } else {
+    return Expr<T>{std::move(funcRef)}; // error recovery
   }
-  auto &sx{DEREF(UnwrapExpr<Expr<SomeInteger>>(*resultTypeArg))};
-  return common::visit(insertConversion, sx.u);
 }
 
 // FoldIntrinsicFunction()

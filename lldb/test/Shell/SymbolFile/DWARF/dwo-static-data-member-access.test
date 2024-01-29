@@ -1,0 +1,24 @@
+# In DWARFv5, C++ static data members are represented
+# as DW_TAG_variable. We make sure LLDB's expression
+# evaluator doesn't crash when trying to parse such
+# a DW_TAG_variable DIE, whose parent DIE is only
+# a forward declaration.
+
+# RUN: %clangxx_host %S/Inputs/dwo-static-data-member.cpp \
+# RUN:   -g -gdwarf-5 -gsplit-dwarf -flimit-debug-info -o %t
+# RUN: %lldb %t -s %s -o exit 2>&1 | FileCheck %s
+
+breakpoint set -n main
+process launch
+
+# CHECK: Process {{.*}} stopped
+
+# FIXME: The expression evaluator tries to attach
+# the static member's VarDecl to the NoCtor RecordDecl
+# before passing the AST to clang; this requires the
+# RecordDecl to be a full definition. But the debug-info
+# only contains forward declaration for NoCtor. So
+# LLDB fails to evaluate the expression.
+expression NoCtor::i
+# CHECK-LABEL: expression NoCtor::i
+# CHECK:       use of undeclared identifier 'NoCtor'

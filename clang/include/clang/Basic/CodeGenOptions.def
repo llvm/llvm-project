@@ -12,6 +12,9 @@
 // that have enumeration type and VALUE_CODEGENOPT is a code
 // generation option that describes a value rather than a flag.
 //
+// AFFECTING_VALUE_CODEGENOPT is used for code generation options that can
+// affect the AST.
+//
 //===----------------------------------------------------------------------===//
 #ifndef CODEGENOPT
 #  error Define the CODEGENOPT macro to handle language options
@@ -25,6 +28,11 @@ CODEGENOPT(Name, Bits, Default)
 #ifndef ENUM_CODEGENOPT
 #  define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
 CODEGENOPT(Name, Bits, Default)
+#endif
+
+#ifndef AFFECTING_VALUE_CODEGENOPT
+#  define AFFECTING_VALUE_CODEGENOPT(Name, Bits, Default) \
+VALUE_CODEGENOPT(Name, Bits, Default)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
@@ -193,8 +201,10 @@ ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
 CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1)
 CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0)
 
-VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
-VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
+
+// The optimization options affect frontend options, whicn in turn do affect the AST.
+AFFECTING_VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
+AFFECTING_VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
 CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
 /// Choose profile instrumenation kind or no instrumentation.
@@ -359,6 +369,9 @@ ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibr
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 
+/// Whether to enable TLSDESC. AArch64 enables TLSDESC regardless of this value.
+CODEGENOPT(EnableTLSDESC, 1, 0)
+
 /// Bit size of immediate TLS offsets (0 == use the default).
 VALUE_CODEGENOPT(TLSSize, 8, 0)
 
@@ -437,3 +450,4 @@ CODEGENOPT(CtorDtorReturnThis, 1, 0)
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
+#undef AFFECTING_VALUE_CODEGENOPT
