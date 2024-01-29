@@ -168,13 +168,9 @@ public:
     return Buf.BufferIndex != StaticBufferCount;
   }
 
-  void disable() NO_THREAD_SAFETY_ANALYSIS {
-    Mutex.lock();
-  }
+  void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
 
-  void enable() NO_THREAD_SAFETY_ANALYSIS {
-    Mutex.unlock();
-  }
+  void enable() NO_THREAD_SAFETY_ANALYSIS { Mutex.unlock(); }
 
 private:
   Buffer getDynamicBuffer(const uptr NumElements) {
@@ -333,13 +329,9 @@ public:
 
   uptr getBufferNumElements() const { return BufferNumElements; }
 
-  static void disable() NO_THREAD_SAFETY_ANALYSIS {
-    Buffers.disable();
-  }
+  static void disable() NO_THREAD_SAFETY_ANALYSIS { Buffers.disable(); }
 
-  static void enable() NO_THREAD_SAFETY_ANALYSIS {
-    Buffers.enable();
-  }
+  static void enable() NO_THREAD_SAFETY_ANALYSIS { Buffers.enable(); }
 
 private:
   // We may consider making this configurable if there are cases which may

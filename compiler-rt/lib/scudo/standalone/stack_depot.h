@@ -137,13 +137,9 @@ public:
     return atomic_load_relaxed(&Ring[RingPos & RingMask]);
   }
 
-  void disable() NO_THREAD_SAFETY_ANALYSIS {
-    RingEndMu.lock();
-  }
+  void disable() NO_THREAD_SAFETY_ANALYSIS { RingEndMu.lock(); }
 
-  void enable() NO_THREAD_SAFETY_ANALYSIS {
-    RingEndMu.unlock();
-  }
+  void enable() NO_THREAD_SAFETY_ANALYSIS { RingEndMu.unlock(); }
 };
 
 } // namespace scudo
