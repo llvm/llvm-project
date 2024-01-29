@@ -17,6 +17,14 @@ declare float @llvm.sin.f32(float)
 declare double @tan(double)
 declare fp128 @tanl(fp128)
 
+declare double @fabs(double)
+declare double @llvm.fabs.f64(double)
+declare float @fabsf(float)
+declare float @llvm.fabs.f32(float)
+
+declare double @llvm.copysign(double, double)
+declare float @llvm.copysign.f32(float, float)
+
 ; cos(-x) -> cos(x);
 
 define double @cos_negated_arg(double %x) {
@@ -97,6 +105,77 @@ define float @cosf_unary_negated_arg_FMF(float %x) {
 ;
   %neg = fneg float %x
   %r = call nnan reassoc float @cosf(float %neg)
+  ret float %r
+}
+
+; cos(fabs(x)) -> cos(x)
+
+define double @cos_unary_fabs_arg(double %x) {
+; ANY-LABEL: @cos_unary_fabs_arg(
+; ANY-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = call double @cos(double [[FABS]])
+; ANY-NEXT:    ret double [[R]]
+;
+  %fabs = tail call double @llvm.fabs.f64(double %x)
+  %r = call double @cos(double %fabs)
+  ret double %r
+}
+
+define float @cosf_unary_fabs_arg(float %x) {
+; ANY-LABEL: @cosf_unary_fabs_arg(
+; ANY-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = call float @cosf(float [[FABS]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %fabs = tail call float @llvm.fabs.f32(float %x)
+  %r = call float @cosf(float %fabs)
+  ret float %r
+}
+
+define float @cosf_unary_fabs_arg_FMF(float %x) {
+; ANY-LABEL: @cosf_unary_fabs_arg_FMF(
+; ANY-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = call reassoc nnan float @cosf(float [[FABS]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %fabs = tail call float @llvm.fabs.f32(float %x)
+  %r = call nnan reassoc float @cosf(float %fabs)
+  ret float %r
+}
+
+; cos(copysign(x, y)) -> cos(x)
+
+define double @cos_copysign_arg(double %x, double %y) {
+; ANY-LABEL: @cos_copysign_arg(
+; ANY-NEXT:    [[COPYSIGN:%.*]] = tail call double @llvm.copysign.f64(double [[X:%.*]], double [[Y:%.*]])
+; ANY-NEXT:    [[R:%.*]] = call double @cos(double [[COPYSIGN]])
+; ANY-NEXT:    ret double [[R]]
+;
+  %copysign = tail call double @llvm.copysign(double %x, double %y)
+  %r = call double @cos(double %copysign)
+  ret double %r
+}
+
+
+define float @cosf_unary_copysign_arg(float %x) {
+; ANY-LABEL: @cosf_unary_copysign_arg(
+; ANY-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = call float @cosf(float [[COPYSIGN]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %copysign = tail call float @llvm.copysign.f32(float %x, float 1.0)
+  %r = call float @cosf(float %copysign)
+  ret float %r
+}
+
+define float @cosf_copysign_arg_FMF(float %x, float %y) {
+; ANY-LABEL: @cosf_copysign_arg_FMF(
+; ANY-NEXT:    [[COPYSIGN:%.*]] = tail call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
+; ANY-NEXT:    [[R:%.*]] = call reassoc nnan float @cosf(float [[COPYSIGN]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %copysign = tail call float @llvm.copysign.f32(float %x, float %y)
+  %r = call nnan reassoc float @cosf(float %copysign)
   ret float %r
 }
 
