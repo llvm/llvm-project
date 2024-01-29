@@ -70,13 +70,6 @@ module;
 export module B;
 import A;
 
-#ifdef DIFFERENT
-// expected-error@foo.h:41 {{'__fn::operator()' from module 'A.<global>' is not present in definition of '__fn' provided earlier}}
-// expected-note@* 1+{{declaration of 'operator()' does not match}}
-#else
-// expected-no-diagnostics
-#endif
-
 template <class T>
 struct U {
   auto operator+(U) { return 0; }
@@ -94,3 +87,10 @@ void foo() {
 
     __fn{}(U<int>(), U<int>());
 }
+
+#ifdef DIFFERENT
+// expected-error@B.cppm:* {{call to object of type '__fn' is ambiguous}}
+// expected-note@* 1+{{candidate function}}
+#else
+// expected-no-diagnostics
+#endif
