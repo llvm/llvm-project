@@ -8191,7 +8191,6 @@ bool X86InstrInfo::unfoldMemoryOperand(
   unsigned Index = I->Flags & TB_INDEX_MASK;
   bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
   bool FoldedStore = I->Flags & TB_FOLDED_STORE;
-  bool FoldedBCast = I->Flags & TB_FOLDED_BCAST;
   if (UnfoldLoad && !FoldedLoad)
     return false;
   UnfoldLoad &= FoldedLoad;
@@ -8231,7 +8230,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
     auto MMOs = extractLoadMMOs(MI.memoperands(), MF);
 
     unsigned Opc;
-    if (FoldedBCast) {
+    if (I->Flags & TB_BCAST_MASK) {
       Opc = getBroadcastOpcode(I, RC, Subtarget);
     } else {
       unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
@@ -8341,7 +8340,6 @@ bool X86InstrInfo::unfoldMemoryOperand(
   unsigned Index = I->Flags & TB_INDEX_MASK;
   bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
   bool FoldedStore = I->Flags & TB_FOLDED_STORE;
-  bool FoldedBCast = I->Flags & TB_FOLDED_BCAST;
   const MCInstrDesc &MCID = get(Opc);
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
@@ -8377,7 +8375,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
     // memory access is slow above.
 
     unsigned Opc;
-    if (FoldedBCast) {
+    if (I->Flags & TB_BCAST_MASK) {
       Opc = getBroadcastOpcode(I, RC, Subtarget);
     } else {
       unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
