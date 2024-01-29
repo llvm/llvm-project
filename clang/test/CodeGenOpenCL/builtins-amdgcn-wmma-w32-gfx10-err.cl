@@ -16,7 +16,7 @@ typedef short  v16s  __attribute__((ext_vector_type(16)));
 
 // Wave32
 
-void test_amdgcn_wmma_f32_16x16x16_bf16_w32(global v8f* out8f, v16s a16s, v16s b16s, v8f c8f, 
+void test_amdgcn_wmma_f32_16x16x16_bf16_w32(global v8f* out8f, v16s a16s, v16s b16s, v8f c8f,
                                             global v16h* out16h, v16h a16h, v16h b16h, v16h c16h,
                                             global v16s* out16s, v2i a2i, v2i b2i, v16s c16s,
                                             global v8i* out8i, v4i a4i, v4i b4i, v8i c8i)

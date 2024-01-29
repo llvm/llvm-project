@@ -44,7 +44,7 @@ void g() {
     struct dr2303::F -> B -> A<int, int>
     struct dr2303::F -> E -> A<int, int>}} */
 }
-} //namespace dr2303
+} // namespace dr2303
 #endif
 
 // dr2331: na

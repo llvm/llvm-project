@@ -129,6 +129,16 @@ function(create_libc_unittest fq_target_name)
   list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
                            libc.test.UnitTest.ErrnoSetterMatcher)
   list(REMOVE_DUPLICATES fq_deps_list)
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Adding unit test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS LIBC_UNITTEST_DEPENDS)
+        message(STATUS "  ${fq_target_name} depends on ${dep}")
+      endforeach()
+    endif()
+  endif()
+
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
@@ -157,15 +167,6 @@ function(create_libc_unittest fq_target_name)
     return()
   endif()
 
-  if(SHOW_INTERMEDIATE_OBJECTS)
-    message(STATUS "Adding unit test ${fq_target_name}")
-    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
-      foreach(dep IN LISTS ADD_OBJECT_DEPENDS)
-        message(STATUS "  ${fq_target_name} depends on ${dep}")
-      endforeach()
-    endif()
-  endif()
-
   if(LIBC_UNITTEST_NO_RUN_POSTBUILD)
     set(fq_build_target_name ${fq_target_name})
   else()
@@ -187,7 +188,7 @@ function(create_libc_unittest fq_target_name)
   if(LLVM_LIBC_FULL_BUILD)
     target_compile_options(
       ${fq_build_target_name}
-      PRIVATE -ffreestanding
+      PRIVATE -ffreestanding -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
     )
   endif()
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
@@ -435,6 +436,13 @@ function(add_libc_fuzzer target_name)
 
 endfunction(add_libc_fuzzer)
 
+# Get libgcc_s to be used in hermetic and integration tests.
+if(NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
+                  OUTPUT_VARIABLE LIBGCC_S_LOCATION)
+  string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
+endif()
+
 # DEPRECATED: Use add_hermetic_test instead.
 #
 # Rule to add an integration test. An integration test is like a unit test
@@ -514,7 +522,7 @@ function(add_integration_test test_name)
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
-      set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+      set(msg "Skipping integration test ${fq_target_name} as it has missing deps: "
               "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
@@ -564,8 +572,13 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    # Older version of gcc does not support `nostdlib++` flag.  We use
+    # `nostdlib` and link against libgcc_s, which cannot be linked statically.
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
+    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
@@ -692,7 +705,7 @@ function(add_libc_hermetic_test test_name)
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
-    set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
+    set(msg "Skipping hermetic test ${fq_target_name} as it has missing deps: "
             "${skipped_entrypoints_list}.")
     message(STATUS ${msg})
     return()
@@ -741,8 +754,13 @@ function(add_libc_hermetic_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
-  else()
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  else()
+    # Older version of gcc does not support `nostdlib++` flag.  We use
+    # `nostdlib` and link against libgcc_s, which cannot be linked statically.
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
+    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}

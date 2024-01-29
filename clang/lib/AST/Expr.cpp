@@ -690,7 +690,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
 
         if (!Buffer.empty() && Buffer.front() == '\01')
           return std::string(Buffer.substr(1));
-        return std::string(Buffer.str());
+        return std::string(Buffer);
       }
       return std::string(ND->getIdentifier()->getName());
     }
@@ -986,7 +986,7 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   SmallString<64> S;
   FixedPointValueToString(
       S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale);
-  return std::string(S.str());
+  return std::string(S);
 }
 
 void CharacterLiteral::print(unsigned Val, CharacterLiteralKind Kind,
@@ -2219,7 +2219,10 @@ SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
     : Expr(SourceLocExprClass, ResultTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext) {
   SourceLocExprBits.Kind = llvm::to_underlying(Kind);
-  setDependence(ExprDependence::None);
+  // In dependent contexts, function names may change.
+  setDependence(MayBeDependent(Kind) && ParentContext->isDependentContext()
+                    ? ExprDependence::Value
+                    : ExprDependence::None);
 }
 
 StringRef SourceLocExpr::getBuiltinStr() const {
@@ -3394,6 +3397,11 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
       return Exp->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     break;
   }
+  case PackIndexingExprClass: {
+    return cast<PackIndexingExpr>(this)
+        ->getSelectedExpr()
+        ->isConstantInitializer(Ctx, false, Culprit);
+  }
   case CXXFunctionalCastExprClass:
   case CXXStaticCastExprClass:
   case ImplicitCastExprClass:
@@ -3569,6 +3577,9 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     // These never have a side-effect.
     return false;
 
+  case PackIndexingExprClass:
+    return cast<PackIndexingExpr>(this)->getSelectedExpr()->HasSideEffects(
+        Ctx, IncludePossibleEffects);
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(

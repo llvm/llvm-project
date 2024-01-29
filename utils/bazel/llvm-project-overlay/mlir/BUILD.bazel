@@ -870,6 +870,19 @@ exports_files(
     glob(["lib/Bindings/Python/**/*.cpp"]),
 )
 
+# In the targets related to Python bindings, the projects @pybind11 and
+# @local_config_python are defined by @pybind11_bazel. The latter contains
+# python headers, and can be configured in an out-of-tree bazel project via
+#
+#   load("@pybind11_bazel//:python_configure.bzl", "python_configure")
+#   python_configure(name = "local_config_python")
+#
+# For more up-to-date instructions, see
+# https://github.com/pybind/pybind11_bazel
+#
+# Some out-of-tree projects alias @python_runtime//:headers to
+# @local_config_python//:python_headers.
+
 MLIR_BINDINGS_PYTHON_HEADERS = [
     "lib/Bindings/Python/*.h",
     "include/mlir-c/Bindings/Python/*.h",
@@ -890,7 +903,7 @@ cc_library(
     deps = [
         ":CAPIIRHeaders",
         "@pybind11",
-        "@python_runtime//:headers",
+        "@local_config_python//:python_headers",
     ],
 )
 
@@ -908,7 +921,7 @@ cc_library(
     deps = [
         ":CAPIIR",
         "@pybind11",
-        "@python_runtime//:headers",
+        "@local_config_python//:python_headers",
     ],
 )
 
@@ -951,7 +964,7 @@ cc_library(
         ":Support",
         "//llvm:Support",
         "@pybind11",
-        "@python_runtime//:headers",
+        "@local_config_python//:python_headers",
     ],
 )
 
@@ -971,7 +984,7 @@ cc_library(
         ":MLIRBindingsPythonHeaders",
         "//llvm:Support",
         "@pybind11",
-        "@python_runtime//:headers",
+        "@local_config_python//:python_headers",
     ],
 )
 
@@ -1082,7 +1095,7 @@ cc_binary(
         ":CAPIExecutionEngine",
         ":MLIRBindingsPythonHeadersAndDeps",
         "@pybind11",
-        "@python_runtime//:headers",
+        "@local_config_python//:python_headers",
     ],
 )
 
@@ -1102,7 +1115,7 @@ cc_binary(
         ":CAPILinalg",
         ":MLIRBindingsPythonHeadersAndDeps",
         "@pybind11",
-        "@python_runtime//:headers",
+        "@local_config_python//:python_headers",
     ],
 )
 
@@ -1530,10 +1543,16 @@ cc_library(
         ":AMDGPUUtils",
         ":ArithDialect",
         ":ControlFlowDialect",
+        ":FuncDialect",
+        ":GPUDialect",
         ":IR",
+        ":MemRefDialect",
         ":Pass",
+        ":Support",
         ":TransformUtils",
         ":Transforms",
+        ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -2718,6 +2737,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
@@ -3884,6 +3904,7 @@ cc_library(
         ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToAMDGPU",
+        ":ArithToArmSME",
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
@@ -4568,6 +4589,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":TransformDialect",
+        ":TransformUtils",
     ],
 )
 
@@ -6271,7 +6293,7 @@ cc_library(
 
 cc_library(
     name = "NVVMToLLVM",
-    srcs = glob(["lib/Conversion/NVVMToLLVM/NVVMToLLVM.cpp"]),
+    srcs = ["lib/Conversion/NVVMToLLVM/NVVMToLLVM.cpp"],
     hdrs = glob(["include/mlir/Conversion/NVVMToLLVM/*.h"]),
     includes = ["include"],
     deps = [
@@ -7261,8 +7283,7 @@ cc_library(
         ":TensorTransforms",
         ":TensorUtils",
         ":TransformDialect",
-        ":ValueBoundsOpInterface",
-        "//llvm:Support",
+        ":TransformUtils",
     ],
 )
 
@@ -8024,6 +8045,7 @@ cc_library(
     deps = [
         ":AMDGPUDialect",
         ":ArithDialect",
+        ":ArithUtils",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
         ":IR",
@@ -8032,6 +8054,27 @@ cc_library(
         ":Support",
         ":Transforms",
         ":VectorDialect",
+    ],
+)
+
+cc_library(
+    name = "ArithToArmSME",
+    srcs = glob([
+        "lib/Conversion/ArithToArmSME/*.cpp",
+        "lib/Conversion/ArithToArmSME/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ArithToArmSME/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArmSMEDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":Pass",
+        ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -9569,6 +9612,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":AtomicInterfacesTdFiles",
+        ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -9719,6 +9763,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":IR",
         ":LLVMDialect",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":OpenACCOpsIncGen",
         ":OpenACCOpsInterfacesIncGen",

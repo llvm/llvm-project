@@ -6,7 +6,7 @@ define void @main(<16 x i32> %0, i32 %1) {
 ; SSE-LABEL: main:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movd %edi, %xmm4
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,0,0,0]
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [1,0,0,0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm4[1,0]
 ; SSE-NEXT:    paddd %xmm0, %xmm0
 ; SSE-NEXT:    paddd %xmm1, %xmm1

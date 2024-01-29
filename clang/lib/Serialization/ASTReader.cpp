@@ -6946,6 +6946,10 @@ void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   TL.setRParenLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+  TL.setEllipsisLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   TL.setKWLoc(readSourceLocation());
   TL.setLParenLoc(readSourceLocation());
@@ -7460,6 +7464,7 @@ ASTRecordReader::readTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind) {
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
   case TemplateArgument::NullPtr:
+  case TemplateArgument::StructuralValue:
   case TemplateArgument::Pack:
     // FIXME: Is this right?
     return TemplateArgumentLocInfo();
@@ -9533,12 +9538,21 @@ void ASTReader::finishPendingActions() {
       auto *FD = PendingDeducedFunctionTypes[I].first;
       FD->setType(GetType(PendingDeducedFunctionTypes[I].second));
 
-      // If we gave a function a deduced return type, remember that we need to
-      // propagate that along the redeclaration chain.
-      auto *DT = FD->getReturnType()->getContainedDeducedType();
-      if (DT && DT->isDeduced())
-        PendingDeducedTypeUpdates.insert(
-            {FD->getCanonicalDecl(), FD->getReturnType()});
+      if (auto *DT = FD->getReturnType()->getContainedDeducedType()) {
+        // If we gave a function a deduced return type, remember that we need to
+        // propagate that along the redeclaration chain.
+        if (DT->isDeduced()) {
+          PendingDeducedTypeUpdates.insert(
+              {FD->getCanonicalDecl(), FD->getReturnType()});
+          continue;
+        }
+
+        // The function has undeduced DeduceType return type. We hope we can
+        // find the deduced type by iterating the redecls in other modules
+        // later.
+        PendingUndeducedFunctionDecls.push_back(FD);
+        continue;
+      }
     }
     PendingDeducedFunctionTypes.clear();
 
@@ -9733,6 +9747,9 @@ void ASTReader::finishPendingActions() {
 
         if (!FD->isLateTemplateParsed() &&
             !NonConstDefn->isLateTemplateParsed() &&
+            // We only perform ODR checks for decls not in the explicit
+            // global module fragment.
+            !isFromExplicitGMF(FD) &&
             FD->getODRHash() != NonConstDefn->getODRHash()) {
           if (!isa<CXXMethodDecl>(FD)) {
             PendingFunctionOdrMergeFailures[FD].push_back(NonConstDefn);
@@ -10104,6 +10121,13 @@ void ASTReader::FinishedDeserializing() {
         getContext().adjustDeducedFunctionResultType(Update.first,
                                                      Update.second);
       }
+
+      auto UDTUpdates = std::move(PendingUndeducedFunctionDecls);
+      PendingUndeducedFunctionDecls.clear();
+      // We hope we can find the deduced type for the functions by iterating
+      // redeclarations in other modules.
+      for (FunctionDecl *UndeducedFD : UDTUpdates)
+        (void)UndeducedFD->getMostRecentDecl();
     }
 
     if (ReadTimer)
