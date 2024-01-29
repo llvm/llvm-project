@@ -39,6 +39,54 @@ enum class ParameterKind : uint8_t {
   DXIL_HANDLE,
 };
 
+/// The kind of resource for an SRV or UAV resource. Sometimes referred to as
+/// "Shape" in the DXIL docs.
+enum class ResourceKind : uint32_t {
+  Invalid = 0,
+  Texture1D,
+  Texture2D,
+  Texture2DMS,
+  Texture3D,
+  TextureCube,
+  Texture1DArray,
+  Texture2DArray,
+  Texture2DMSArray,
+  TextureCubeArray,
+  TypedBuffer,
+  RawBuffer,
+  StructuredBuffer,
+  CBuffer,
+  Sampler,
+  TBuffer,
+  RTAccelerationStructure,
+  FeedbackTexture2D,
+  FeedbackTexture2DArray,
+  NumEntries,
+};
+
+/// The element type of an SRV or UAV resource.
+enum class ElementType : uint32_t {
+  Invalid = 0,
+  I1,
+  I16,
+  U16,
+  I32,
+  U32,
+  I64,
+  U64,
+  F16,
+  F32,
+  F64,
+  SNormF16,
+  UNormF16,
+  SNormF32,
+  UNormF32,
+  SNormF64,
+  UNormF64,
+  PackedS8x32,
+  PackedU8x32,
+};
+
 } // namespace dxil
 } // namespace llvm
 
