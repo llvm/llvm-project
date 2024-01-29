@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
 ! Tests based on examples in C.10.6
 
 ! C.10.6(10)
@@ -55,7 +55,7 @@ end
 ! C.10.6(17)
 ! BAD4(1.0,2,Y=3.0,Z=4) could apply to either procedure
 module m4
-  !ERROR: Generic 'bad4' may not have specific procedures 's4a' and 's4b' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'bad4' should not have specific procedures 's4a' and 's4b' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface BAD4
     subroutine S4A(W, X, Y, Z)
       real :: W, Y
@@ -68,7 +68,7 @@ module m4
   end interface
 end
 module m4b
-  !ERROR: Generic 'bad4' may not have specific procedures 's4b' and 's4a' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'bad4' should not have specific procedures 's4b' and 's4a' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface BAD4
     subroutine S4B(X, W, Z, Y)
       real :: X, Y
@@ -109,7 +109,7 @@ end
 ! type(BOSC) :: A_BOSC
 ! BAD6(A_PEAR,A_BOSC)  ! could be s6a or s6b
 module m6
-  !ERROR: Generic 'bad6' may not have specific procedures 's6a' and 's6b' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'bad6' should not have specific procedures 's6a' and 's6b' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface BAD6
     subroutine S6A(X, Y)
       use FRUITS
@@ -123,7 +123,7 @@ module m6
   end interface
 end
 module m6b
-  !ERROR: Generic 'bad6' may not have specific procedures 's6b' and 's6a' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'bad6' should not have specific procedures 's6b' and 's6a' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface BAD6
     subroutine S6B(X, Y)
       use FRUITS
@@ -170,7 +170,7 @@ end
 ! C.10.6(25)
 ! Invalid generic (according to the rules), despite the fact that it is unambiguous
 module m8
-  !ERROR: Generic 'bad8' may not have specific procedures 's8a' and 's8b' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'bad8' should not have specific procedures 's8a' and 's8b' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface BAD8
     subroutine S8A(X, Y, Z)
       real, optional :: X
