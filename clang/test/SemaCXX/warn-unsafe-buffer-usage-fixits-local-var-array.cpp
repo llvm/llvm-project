@@ -22,6 +22,22 @@ void comments_in_declaration(unsigned idx) {
   buffer_w[idx] = 0;
 }
 
+void auto_size(unsigned idx) {
+  int buffer[] = {0, 1, 2};
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+// FIXME: implement support
+
+  buffer[idx] = 0;
+}
+
+void universal_initialization(unsigned idx) {
+  int buffer[] {0, 1, 2};
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
+// FIXME: implement support
+
+  buffer[idx] = 0;
+}
+
 void multi_decl1(unsigned idx) {
   int a, buffer[10];
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]

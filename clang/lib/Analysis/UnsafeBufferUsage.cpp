@@ -2516,6 +2516,15 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     if (!MaybeArraySizeTxt)
       return {};
     const llvm::StringRef ArraySizeTxt = MaybeArraySizeTxt->trim();
+    if (ArraySizeTxt.empty()) {
+      // FIXME: Support array size getting determined from the initializer.
+      // Examples:
+      //    int arr1[] = {0, 1, 2};
+      //    int arr2{3, 4, 5};
+      // We might be able to preserve the non-specified size with `auto` and `std::to_array`:
+      //    auto arr1 = std::to_array<int>({0, 1, 2});
+      return {};
+    }
 
     std::optional<StringRef> IdentText =
         getVarDeclIdentifierText(D, Ctx.getSourceManager(), Ctx.getLangOpts());
