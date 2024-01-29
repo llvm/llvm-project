@@ -27,6 +27,11 @@ class FunctionAttrPass : public fir::impl::FunctionAttrBase<FunctionAttrPass> {
 public:
   FunctionAttrPass(const fir::FunctionAttrOptions &options) {
     framePointerKind = options.framePointerKind;
+    noInfsFPMath = options.noInfsFPMath;
+    noNaNsFPMath = options.noNaNsFPMath;
+    approxFuncFPMath = options.approxFuncFPMath;
+    noSignedZerosFPMath = options.noSignedZerosFPMath;
+    unsafeFPMath = options.unsafeFPMath;
   }
   FunctionAttrPass() {}
   void runOnOperation() override;
@@ -45,14 +50,32 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get(
                                        context, framePointerKind));
 
+  if (noInfsFPMath)
+    func->setAttr("no_infs_fp_math", mlir::BoolAttr::get(context, true));
+  if (noNaNsFPMath)
+    func->setAttr("no_nans_fp_math", mlir::BoolAttr::get(context, true));
+  if (approxFuncFPMath)
+    func->setAttr("approx_func_fp_math", mlir::BoolAttr::get(context, true));
+  if (noSignedZerosFPMath)
+    func->setAttr("no_signed_zeros_fp_math",
+                  mlir::BoolAttr::get(context, true));
+  if (unsafeFPMath)
+    func->setAttr("unsafe_fp_math", mlir::BoolAttr::get(context, true));
+
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
 
-std::unique_ptr<mlir::Pass>
-fir::createFunctionAttrPass(fir::FunctionAttrTypes &functionAttr) {
+std::unique_ptr<mlir::Pass> fir::createFunctionAttrPass(
+    fir::FunctionAttrTypes &functionAttr, bool noInfsFPMath, bool noNaNsFPMath,
+    bool approxFuncFPMath, bool noSignedZerosFPMath, bool unsafeFPMath) {
   FunctionAttrOptions opts;
   // Frame pointer
   opts.framePointerKind = functionAttr.framePointerKind;
+  opts.noInfsFPMath = noInfsFPMath;
+  opts.noNaNsFPMath = noNaNsFPMath;
+  opts.approxFuncFPMath = approxFuncFPMath;
+  opts.noSignedZerosFPMath = noSignedZerosFPMath;
+  opts.unsafeFPMath = unsafeFPMath;
 
   return std::make_unique<FunctionAttrPass>(opts);
 }
