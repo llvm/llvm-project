@@ -25,12 +25,12 @@ end function
 ! CHECK: %[[pi:.*]] = arith.constant 3.1415926535897931 : f64
 ! CHECK: %{{.*}} = arith.divf %[[atan]], %[[pi]] fastmath<contract> : f64
 
-function test_real4_all_args(y,x)
+function test_real4_yx(y,x)
   real(4) :: x, y, test_real4
   test_real4 = atanpi(y,x)
 end function
 
-! CHECK-LABEL: @_QPtest_real4_all_args
+! CHECK-LABEL: @_QPtest_real4_yx
 ! CHECK: %[[terminationCheck:.*]] = arith.andi %[[YEq0:.*]], %[[XEq0:.*]] : i1
 ! CHECK: fir.if %[[terminationCheck]]
 ! CHECK: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f32
@@ -38,12 +38,12 @@ end function
 ! CHECK: %[[pi:.*]] = fir.convert %[[dpi]] : (f64) -> f32
 ! CHECK: %{{.*}} = arith.divf %[[atan2]], %[[pi]] fastmath<contract> : f32
 
-function test_real8_all_args(y,x)
+function test_real8_yx(y,x)
   real(8) :: x, y, test_real8
   test_real8 = atanpi(y,x)
 end function
 
-! CHECK-LABEL: @_QPtest_real8_all_args
+! CHECK-LABEL: @_QPtest_real8_yx
 ! CHECK: %[[terminationCheck:.*]] = arith.andi %[[YEq0:.*]], %[[XEq0:.*]] : i1
 ! CHECK: fir.if %[[terminationCheck]]
 ! CHECK: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f64
