@@ -62,14 +62,25 @@ C++ Language Changes
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Clang won't perform ODR checks for decls in the global module fragment any
+  more to ease the implementation and improve the user's using experience.
+  This follows the MSVC's behavior.
+  (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
+
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Substitute template parameter pack, when it is not explicitly specified
+  in the template parameters, but is deduced from a previous argument.
+  (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
 
 C Language Changes
 ------------------
@@ -97,6 +108,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now applies syntax highlighting to the code snippets it
+  prints.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -119,6 +132,12 @@ Bug Fixes to C++ Support
   parameter where we did an incorrect specialization of the initialization of
   the default parameter.
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
+- Fixed a bug where variables referenced by requires-clauses inside
+  nested generic lambdas were not properly injected into the constraint scope.
+  (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+- Fixed deducing auto& from const int in template parameters of partial
+  specializations.
+  (`#77189 <https://github.com/llvm/llvm-project/issues/77189>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
