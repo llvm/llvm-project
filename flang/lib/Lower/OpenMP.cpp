@@ -3317,6 +3317,29 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
                                       /*outer=*/false, &dsp);
 }
 
+static void createSimdWsLoop(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval, llvm::omp::Directive ompDirective,
+    const Fortran::parser::OmpClauseList &beginClauseList,
+    const Fortran::parser::OmpClauseList *endClauseList, mlir::Location loc) {
+  ClauseProcessor cp(converter, beginClauseList);
+  cp.processTODO<
+      Fortran::parser::OmpClause::Aligned, Fortran::parser::OmpClause::Allocate,
+      Fortran::parser::OmpClause::Linear, Fortran::parser::OmpClause::Safelen,
+      Fortran::parser::OmpClause::Simdlen, Fortran::parser::OmpClause::Order>(
+      loc, ompDirective);
+  // TODO: Add support for vectorization - add vectorization hints inside loop
+  // body.
+  // OpenMP standard does not specify the length of vector instructions.
+  // Currently we safely assume that for !$omp do simd pragma the SIMD length
+  // is equal to 1 (i.e. we generate standard workshare loop).
+  // When support for vectorization is enabled, then we need to add handling of
+  // if clause. Currently if clause can be skipped because we always assume
+  // SIMD length = 1.
+  createWsLoop(converter, eval, ompDirective, beginClauseList, endClauseList,
+               loc);
+}
+
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::SymMap &symTable,
                    Fortran::semantics::SemanticsContext &semanticsContext,
@@ -3383,8 +3406,13 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                               ")");
   }
 
-  // 2.9.3.1 SIMD construct
-  if (llvm::omp::allSimdSet.test(ompDirective)) {
+  if (llvm::omp::allDoSimdSet.test(ompDirective)) {
+    // 2.9.3.2 Workshare SIMD construct
+    createSimdWsLoop(converter, eval, ompDirective, loopOpClauseList,
+                     endClauseList, currentLocation);
+
+  } else if (llvm::omp::allSimdSet.test(ompDirective)) {
+    // 2.9.3.1 SIMD construct
     createSimdLoop(converter, eval, ompDirective, loopOpClauseList,
                    currentLocation);
   } else {

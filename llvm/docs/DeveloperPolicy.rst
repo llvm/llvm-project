@@ -1,3 +1,5 @@
+.. _developer_policy:
+
 =====================
 LLVM Developer Policy
 =====================
@@ -468,6 +470,8 @@ What are the expectations around a revert?
   actively responding.
 * When re-applying a reverted patch, the commit message should be updated to
   indicate the problem that was addressed and how it was addressed.
+
+.. _obtaining_commit_access:
 
 Obtaining Commit Access
 -----------------------
