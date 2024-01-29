@@ -852,13 +852,13 @@ used in constant expressions have currently no folding support at all.
 - **Syntax:** `CALL EXECUTE_COMMAND_LINE(COMMAND [, WAIT, EXITSTAT, CMDSTAT, CMDMSG ])`
 - **Arguments:**
 
-  | Argument  | Description                                                  |
-  |-----------|--------------------------------------------------------------|
-  | `COMMAND` | Shall be a default CHARACTER scalar.                         |
-  | `WAIT`    | (Optional) Shall be a default LOGICAL scalar.                |
-  | `EXITSTAT`| (Optional) Shall be an INTEGER of the default kind.          |
-  | `CMDSTAT` | (Optional) Shall be an INTEGER of the default kind.          |
-  | `CMDMSG`  | (Optional) Shall be a CHARACTER scalar of the default kind.  |
+| Argument   | Description                                                           |
+|------------|-----------------------------------------------------------------------|
+| `COMMAND`  | Shall be a default CHARACTER scalar.                                  |
+| `WAIT`     | (Optional) Shall be a default LOGICAL scalar.                         |
+| `EXITSTAT` | (Optional) Shall be an INTEGER with kind greater than or equal to 4.  |
+| `CMDSTAT`  | (Optional) Shall be an INTEGER with kind greater than or equal to 2.  |
+| `CMDMSG`   | (Optional) Shall be a CHARACTER scalar of the default kind.           |
 
 #### Implementation Specifics
 
