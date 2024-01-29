@@ -3755,6 +3755,30 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
+def warn_sme_streaming_caller_pass_args_to_non_streaming : Warning<
+  "streaming caller passes a VL-dependent argument to non-streaming callee, "
+  "the streaming and non-streaming vector lengths may be different">,
+  InGroup<IgnoredAttributes>;
+def warn_sme_non_streaming_callee_returns_to_streaming : Warning<
+  "non-streaming callee returns a VL-dependent value to streaming caller, "
+  "the streaming and non-streaming vector lengths may be different">,
+  InGroup<IgnoredAttributes>;
+def warn_sme_non_streaming_caller_pass_args_to_streaming : Warning<
+  "non-streaming caller passes a VL-dependent argument to streaming callee, "
+  "the streaming and non-streaming vector lengths may be different">,
+  InGroup<IgnoredAttributes>;
+def warn_sme_non_streaming_caller_returns_to_streaming : Warning<
+  "non-streaming callee returns a VL-dependent value to streaming caller, "
+  "the streaming and non-streaming vector lengths may be different">,
+  InGroup<IgnoredAttributes>;
+def warn_sme_locally_streaming_has_vl_args : Warning<
+  "non-streaming callee receives a VL-dependent argument and the callee has an arm_locally_streaming attribute, "
+  "the streaming and non-streaming vector lengths may be different">,
+  InGroup<IgnoredAttributes>;
+def warn_sme_locally_streaming_returns_vl : Warning<
+  "non-streaming callee returns a VL-dependent value and the callee has an arm_locally_streaming attribute, "
+  "the streaming and non-streaming vector lengths may be different">,
+  InGroup<IgnoredAttributes>;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_sme_streaming_cannot_be_multiversioned : Error<
