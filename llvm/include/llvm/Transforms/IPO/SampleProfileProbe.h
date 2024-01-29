@@ -81,8 +81,11 @@ private:
   uint64_t getFunctionHash() const { return FunctionHash; }
   uint32_t getBlockId(const BasicBlock *BB) const;
   uint32_t getCallsiteId(const Instruction *Call) const;
-  void computeCFGHash();
-  void computeProbeIdForBlocks();
+  void findInvokeNormalDests(DenseSet<BasicBlock *> &InvokeNormalDests);
+  void computeCFGHash(const DenseSet<BasicBlock *> &InvokeNormalDests,
+                      const DenseSet<BasicBlock *> &KnownColdBlocks);
+  void computeProbeIdForBlocks(const DenseSet<BasicBlock *> &InvokeNormalDests,
+                               const DenseSet<BasicBlock *> &KnownColdBlocks);
   void computeProbeIdForCallsites();
 
   Function *F;

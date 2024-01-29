@@ -173,20 +173,49 @@ SampleProfileProber::SampleProfileProber(Function &Func,
   BlockProbeIds.clear();
   CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
-  computeProbeIdForBlocks();
+
+  DenseSet<BasicBlock *> InvokeNormalDests;
+  findInvokeNormalDests(InvokeNormalDests);
+  DenseSet<BasicBlock *> KnownColdBlocks;
+  computeEHOnlyBlocks(*F, KnownColdBlocks);
+
+  computeProbeIdForBlocks(InvokeNormalDests, KnownColdBlocks);
   computeProbeIdForCallsites();
-  computeCFGHash();
+  computeCFGHash(InvokeNormalDests, KnownColdBlocks);
+}
+
+void SampleProfileProber::findInvokeNormalDests(
+    DenseSet<BasicBlock *> &InvokeNormalDests) {
+  for (auto &BB : *F) {
+    auto *TI = BB.getTerminator();
+    if (auto *II = dyn_cast<InvokeInst>(TI))
+      InvokeNormalDests.insert(II->getNormalDest());
+  }
 }
 
 // Compute Hash value for the CFG: the lower 32 bits are CRC32 of the index
 // value of each BB in the CFG. The higher 32 bits record the number of edges
 // preceded by the number of indirect calls.
 // This is derived from FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash().
-void SampleProfileProber::computeCFGHash() {
+void SampleProfileProber::computeCFGHash(
+    const DenseSet<BasicBlock *> &InvokeNormalDests,
+    const DenseSet<BasicBlock *> &KnownColdBlocks) {
   std::vector<uint8_t> Indexes;
   JamCRC JC;
   for (auto &BB : *F) {
-    for (BasicBlock *Succ : successors(&BB)) {
+    // Skip the EH flow blocks.
+    if (InvokeNormalDests.contains(&BB) || KnownColdBlocks.contains(&BB))
+      continue;
+
+    // Find the original successors by skipping the EH flow succs.
+    auto *BBPtr = &BB;
+    auto *TI = BBPtr->getTerminator();
+    while (auto *II = dyn_cast<InvokeInst>(TI)) {
+      BBPtr = II->getNormalDest();
+      TI = BBPtr->getTerminator();
+    }
+
+    for (BasicBlock *Succ : successors(BBPtr)) {
       auto Index = getBlockId(Succ);
       for (int J = 0; J < 4; J++)
         Indexes.push_back((uint8_t)(Index >> (J * 8)));
@@ -207,15 +236,15 @@ void SampleProfileProber::computeCFGHash() {
                     << ", Hash = " << FunctionHash << "\n");
 }
 
-void SampleProfileProber::computeProbeIdForBlocks() {
-  DenseSet<BasicBlock *> KnownColdBlocks;
-  computeEHOnlyBlocks(*F, KnownColdBlocks);
+void SampleProfileProber::computeProbeIdForBlocks(
+    const DenseSet<BasicBlock *> &InvokeNormalDests,
+    const DenseSet<BasicBlock *> &KnownColdBlocks) {
   // Insert pseudo probe to non-cold blocks only. This will reduce IR size as
   // well as the binary size while retaining the profile quality.
   for (auto &BB : *F) {
-    ++LastProbeId;
-    if (!KnownColdBlocks.contains(&BB))
-      BlockProbeIds[&BB] = LastProbeId;
+    if (InvokeNormalDests.contains(&BB) || KnownColdBlocks.contains(&BB))
+      continue;
+    BlockProbeIds[&BB] = ++LastProbeId;
   }
 }
 
