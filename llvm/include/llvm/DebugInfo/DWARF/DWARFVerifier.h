@@ -40,6 +40,7 @@ public:
       : IncludeDetail(includeDetail) {}
   void EnableDetail() { IncludeDetail = true; }
   void DisableDetail() { IncludeDetail = false; }
+  size_t GetNumCategories() const { return Aggregation.size(); }
   void Report(StringRef s, std::function<void()> detailCallback);
   void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
 };
@@ -365,7 +366,7 @@ public:
       void (DWARFObject::*)(function_ref<void(const DWARFSection &)>) const);
 
   /// Emits any aggregate information collected, depending on the dump options
-  void summarize(bool Success);
+  void summarize();
 };
 
 static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,
