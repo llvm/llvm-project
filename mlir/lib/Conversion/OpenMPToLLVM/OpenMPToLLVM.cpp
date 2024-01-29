@@ -46,6 +46,17 @@ struct RegionOpConversion : public ConvertOpToLLVMPattern<OpType> {
                                            *this->getTypeConverter())))
       return failure();
 
+    if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
+      auto llvmType = this->getTypeConverter()->convertType(
+          adaptor.getFunctionType().getInput(0));
+
+      if (!llvmType)
+        return rewriter.notifyMatchFailure(curOp,
+                                           "signature conversion failed");
+      newOp.setFunctionType(
+          FunctionType::get(rewriter.getContext(), {llvmType}, {llvmType}));
+    }
+
     rewriter.eraseOp(curOp);
     return success();
   }
@@ -231,11 +242,12 @@ void mlir::configureOpenMPToLLVMConversionLegality(
       mlir::omp::DataOp, mlir::omp::OrderedRegionOp, mlir::omp::ParallelOp,
       mlir::omp::WsLoopOp, mlir::omp::SimdLoopOp, mlir::omp::MasterOp,
       mlir::omp::SectionOp, mlir::omp::SectionsOp, mlir::omp::SingleOp,
-      mlir::omp::TaskGroupOp, mlir::omp::TaskOp>([&](Operation *op) {
-    return typeConverter.isLegal(&op->getRegion(0)) &&
-           typeConverter.isLegal(op->getOperandTypes()) &&
-           typeConverter.isLegal(op->getResultTypes());
-  });
+      mlir::omp::TaskGroupOp, mlir::omp::TaskOp, mlir::omp::PrivateClauseOp>(
+      [&](Operation *op) {
+        return typeConverter.isLegal(&op->getRegion(0)) &&
+               typeConverter.isLegal(op->getOperandTypes()) &&
+               typeConverter.isLegal(op->getResultTypes());
+      });
   target.addDynamicallyLegalOp<
       mlir::omp::AtomicReadOp, mlir::omp::AtomicWriteOp, mlir::omp::FlushOp,
       mlir::omp::ThreadprivateOp, mlir::omp::YieldOp, mlir::omp::EnterDataOp,
@@ -275,6 +287,7 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       RegionOpConversion<omp::SimdLoopOp>, RegionOpConversion<omp::SingleOp>,
       RegionOpConversion<omp::TaskGroupOp>, RegionOpConversion<omp::TaskOp>,
       RegionOpConversion<omp::DataOp>, RegionOpConversion<omp::TargetOp>,
+      RegionOpConversion<omp::PrivateClauseOp>,
       RegionLessOpWithVarOperandsConversion<omp::AtomicWriteOp>,
       RegionOpWithVarOperandsConversion<omp::AtomicUpdateOp>,
       RegionLessOpWithVarOperandsConversion<omp::FlushOp>,

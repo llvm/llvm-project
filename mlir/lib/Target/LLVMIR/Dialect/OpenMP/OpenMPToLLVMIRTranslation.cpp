@@ -1000,6 +1000,29 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Replace the region arguments of the parallel op (which correspond to private
+/// variables) with the actual private varibles they correspond to. This
+/// prepares the parallel op so that it matches what is expected by the
+/// OMPIRBuilder.
+static void prepareOmpParallel(omp::ParallelOp opInst) {
+  auto &region = opInst.getRegion();
+  auto privateVars = opInst.getPrivateVars();
+
+  auto privateVarsIt = privateVars.begin();
+  for (size_t argIdx = 0; argIdx < region.getNumArguments();
+       ++argIdx, ++privateVarsIt) {
+    for (auto &block : region) {
+      for (auto &op : block) {
+        op.replaceUsesOfWith(region.getArgument(argIdx), *privateVarsIt);
+      }
+    }
+  }
+
+  for (size_t argIdx = 0; argIdx < region.getNumArguments(); ++argIdx) {
+    region.eraseArgument(argIdx);
+  }
+}
+
 /// Converts the OpenMP parallel operation to LLVM IR.
 static LogicalResult
 convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
@@ -1008,6 +1031,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   // TODO: support error propagation in OpenMPIRBuilder and use it instead of
   // relying on captured variables.
   LogicalResult bodyGenStatus = success();
+  prepareOmpParallel(opInst);
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
@@ -1091,6 +1115,75 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                     llvm::Value &, llvm::Value &vPtr,
                     llvm::Value *&replacementValue) -> InsertPointTy {
     replacementValue = &vPtr;
+
+    // If this is a private value, this lambda will return the corresponding
+    // mlir value and its `PrivateClauseOp`. Otherwise, empty values are
+    // returned.
+    auto [privVar,
+          privInit] = [&]() -> std::pair<mlir::Value, omp::PrivateClauseOp> {
+      if (!opInst.getPrivateVars().empty()) {
+        auto privVars = opInst.getPrivateVars();
+        auto privInits = opInst.getPrivatizers();
+        assert(privInits && privInits->size() == privVars.size());
+
+        const auto *privInitIt = privInits->begin();
+        for (auto privVarIt = privVars.begin(); privVarIt != privVars.end();
+             ++privVarIt, ++privInitIt) {
+          auto *llvmPrivVarOp = moduleTranslation.lookupValue(*privVarIt);
+          if (llvmPrivVarOp != &vPtr) {
+            continue;
+          }
+
+          auto privSym = llvm::cast<SymbolRefAttr>(*privInitIt);
+          auto privOp =
+              SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
+                  opInst, privSym);
+
+          return {*privVarIt, privOp};
+        }
+      }
+
+      return {mlir::Value(), omp::PrivateClauseOp()};
+    }();
+
+    if (privVar) {
+
+      // Replace the privatizer block argument with mlir value being privatized.
+      // This way, the body of the privatizer will be changed from using the
+      // region/block argument to the value being privatized.
+      assert(privInit->getRegions().front().getNumArguments() == 1);
+
+      auto arg = privInit->getRegions().front().getArgument(0);
+      for (auto &op : privInit->getRegions().front().front()) {
+        op.replaceUsesOfWith(arg, privVar);
+      }
+
+      auto oldIP = builder.saveIP();
+      builder.restoreIP(allocaIP);
+
+      // Temporarily unlink the terminator from its parent since
+      // `inlineConvertOmpRegions` expects the insertion block to **not**
+      // contain a terminator.
+      auto &allocaTerminator = builder.GetInsertBlock()->back();
+      assert(allocaTerminator.isTerminator());
+      allocaTerminator.removeFromParent();
+
+      SmallVector<llvm::Value *, 1> yieldedValues;
+      if (failed(inlineConvertOmpRegions(privInit->getRegion(0),
+                                         "omp.privatizer", builder,
+                                         moduleTranslation, &yieldedValues))) {
+        // TODO proper error-handling.
+        builder.restoreIP(oldIP);
+        return codeGenIP;
+      }
+
+      allocaTerminator.insertAfter(&builder.GetInsertBlock()->back());
+
+      assert(yieldedValues.size() == 1);
+      replacementValue = yieldedValues.front();
+
+      builder.restoreIP(oldIP);
+    }
 
     return codeGenIP;
   };
@@ -3009,12 +3102,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       .Case([&](omp::TargetOp) {
         return convertOmpTarget(*op, builder, moduleTranslation);
       })
-      .Case<omp::MapInfoOp, omp::DataBoundsOp>([&](auto op) {
-        // No-op, should be handled by relevant owning operations e.g.
-        // TargetOp, EnterDataOp, ExitDataOp, DataOp etc. and then
-        // discarded
-        return success();
-      })
+      .Case<omp::MapInfoOp, omp::DataBoundsOp, omp::PrivateClauseOp>(
+          [&](auto op) {
+            // No-op, should be handled by relevant owning operations e.g.
+            // TargetOp, EnterDataOp, ExitDataOp, DataOp etc. and then
+            // discarded
+            return success();
+          })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")
                << inst->getName();

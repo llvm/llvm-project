@@ -16,6 +16,7 @@
 
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -179,7 +180,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
              Variadic<AnyType>:$allocators_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
-             OptionalAttr<ProcBindKindAttr>:$proc_bind_val);
+             OptionalAttr<ProcBindKindAttr>:$proc_bind_val,
+             Variadic<AnyType>:$private_vars,
+             OptionalAttr<SymbolRefArrayAttr>:$privatizers);
 
   let regions = (region AnyRegion:$region);
 
@@ -203,6 +206,10 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
+          | `private` `(`
+              custom<PrivateVarList>(
+                $private_vars, type($private_vars), $privatizers
+              ) `)`
     ) $region attr-dict
   }];
   let hasVerifier = 1;
@@ -612,7 +619,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
      ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
-     "AtomicUpdateOp", "SimdLoopOp"]>]> {
+     "AtomicUpdateOp", "SimdLoopOp", "PrivateClauseOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -1479,6 +1486,38 @@ def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
 //===----------------------------------------------------------------------===//
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
+def PrivateClauseOp : OpenMP_Op<"private", [
+    IsolatedFromAbove, FunctionOpInterface
+  ]> {
+  let summary = "TODO";
+  let description = [{}];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttrOf<FunctionType>:$function_type);
+
+  let regions = (region AnyRegion:$body);
+
+  let builders = [OpBuilder<(ins
+    "::mlir::Type":$privateVarType,
+    "::llvm::StringRef":$privatizerName
+  )>];
+
+  let extraClassDeclaration = [{
+    ::mlir::Region *getCallableRegion() {
+      return &getBody();
+    }
+
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() {
+      return getFunctionType().getInputs();
+    }
+
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() {
+      return getFunctionType().getResults();
+    }
+  }];
+}
 
 def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, MapClauseOwningOpInterface,
                                    OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
