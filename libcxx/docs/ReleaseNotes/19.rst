@@ -35,12 +35,9 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 19.0.0?
 ==============================
 
-- P2637R3 - Member ``visit``
-
-
 Implemented Papers
 ------------------
-TODO
+- P2637R3 - Member ``visit``
 
 
 Improvements and New Features
