@@ -283,27 +283,35 @@ struct is_same<T, T> { enum {value = 1}; };
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
+// This function can be used to hide some objects from compiler optimizations.
+//
+// For example, this is useful to hide the result of a call to `new` and ensure
+// that the compiler doesn't elide the call to new/delete. Otherwise, elliding
+// calls to new/delete is allowed by the Standard and compilers actually do it
+// when optimizations are enabled.
 template <class Tp>
-inline
-void DoNotOptimize(Tp const& value) {
+inline Tp const& DoNotOptimize(Tp const& value) {
     asm volatile("" : : "r,m"(value) : "memory");
+    return value;
 }
 
 template <class Tp>
-inline void DoNotOptimize(Tp& value) {
+inline Tp& DoNotOptimize(Tp& value) {
 #if defined(__clang__)
   asm volatile("" : "+r,m"(value) : : "memory");
 #else
   asm volatile("" : "+m,r"(value) : : "memory");
 #endif
+  return value;
 }
 #else
 #include <intrin.h>
 template <class Tp>
-inline void DoNotOptimize(Tp const& value) {
+inline Tp const& DoNotOptimize(Tp const& value) {
   const volatile void* volatile unused = __builtin_addressof(value);
   static_cast<void>(unused);
   _ReadWriteBarrier();
+  return value;
 }
 #endif
 
@@ -441,6 +449,10 @@ inline void DoNotOptimize(Tp const& value) {
 
 #ifdef _LIBCPP_SHORT_WCHAR
 #  define TEST_SHORT_WCHAR
+#endif
+
+#ifdef _LIBCPP_ABI_MICROSOFT
+#  define TEST_ABI_MICROSOFT
 #endif
 
 // This is a temporary workaround for user-defined `operator new` definitions

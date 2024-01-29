@@ -998,15 +998,19 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
+    (void)__current_size;
+#ifndef _LIBCPP_HAS_NO_ASAN
     if (__current_size == 0)
       __annotate_from_to(0, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     else {
       __annotate_from_to(0, __start_, __asan_poison, __asan_front_moved);
       __annotate_from_to(__start_ + __current_size, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     }
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
+#ifndef _LIBCPP_HAS_NO_ASAN
     if (empty()) {
       for (size_t __i = 0; __i < __map_.size(); ++__i) {
         __annotate_whole_block(__i, __asan_unposion);
@@ -1015,30 +1019,52 @@ private:
       __annotate_from_to(0, __start_, __asan_unposion, __asan_front_moved);
       __annotate_from_to(__start_ + size(), __map_.size() * __block_size, __asan_unposion, __asan_back_moved);
     }
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_front(size_type __n) const _NOEXCEPT {
+    (void)__n;
+#ifndef _LIBCPP_HAS_NO_ASAN
     __annotate_from_to(__start_ - __n, __start_, __asan_unposion, __asan_front_moved);
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_back(size_type __n) const _NOEXCEPT {
+    (void)__n;
+#ifndef _LIBCPP_HAS_NO_ASAN
     __annotate_from_to(__start_ + size(), __start_ + size() + __n, __asan_unposion, __asan_back_moved);
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_front(size_type __old_size, size_type __old_start) const _NOEXCEPT {
+    (void)__old_size;
+    (void)__old_start;
+#ifndef _LIBCPP_HAS_NO_ASAN
     __annotate_from_to(__old_start, __old_start + (__old_size - size()), __asan_poison, __asan_front_moved);
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_back(size_type __old_size, size_type __old_start) const _NOEXCEPT {
+    (void)__old_size;
+    (void)__old_start;
+#ifndef _LIBCPP_HAS_NO_ASAN
     __annotate_from_to(__old_start + size(), __old_start + __old_size, __asan_poison, __asan_back_moved);
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_poison_block(const void* __beginning, const void* __end) const _NOEXCEPT {
+    (void)__beginning;
+    (void)__end;
+#ifndef _LIBCPP_HAS_NO_ASAN
     __annotate_double_ended_contiguous_container(__beginning, __end, __beginning, __end, __end, __end);
+#endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void
   __annotate_whole_block(size_t __block_index, __asan_annotation_type __annotation_type) const _NOEXCEPT {
+    (void)__block_index;
+    (void)__annotation_type;
+#ifndef _LIBCPP_HAS_NO_ASAN
     __map_const_iterator __block_it = __map_.begin() + __block_index;
     const void* __block_start       = std::__to_address(*__block_it);
     const void* __block_end         = std::__to_address(*__block_it + __block_size);
@@ -1049,6 +1075,7 @@ private:
       __annotate_double_ended_contiguous_container(
           __block_start, __block_end, __block_start, __block_start, __block_start, __block_end);
     }
+#endif
   }
 #if !defined(_LIBCPP_HAS_NO_ASAN)
 

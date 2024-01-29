@@ -1429,7 +1429,7 @@ bool CallAnalyzer::accumulateGEPOffset(GEPOperator &GEP, APInt &Offset) {
       continue;
     }
 
-    APInt TypeSize(IntPtrWidth, DL.getTypeAllocSize(GTI.getIndexedType()));
+    APInt TypeSize(IntPtrWidth, GTI.getSequentialElementStride(DL));
     Offset += OpC->getValue().sextOrTrunc(IntPtrWidth) * TypeSize;
   }
   return true;
@@ -2819,9 +2819,8 @@ InlineResult CallAnalyzer::analyze() {
 
     // If we're unable to select a particular successor, just count all of
     // them.
-    for (unsigned TIdx = 0, TSize = TI->getNumSuccessors(); TIdx != TSize;
-         ++TIdx)
-      BBWorklist.insert(TI->getSuccessor(TIdx));
+    for (BasicBlock *Succ : successors(BB))
+      BBWorklist.insert(Succ);
 
     onBlockAnalyzed(BB);
   }

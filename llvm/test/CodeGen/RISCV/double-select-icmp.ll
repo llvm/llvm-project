@@ -508,4 +508,3 @@ define double @select_icmp_sgt_zero(i32 signext %a) {
   %2 = select i1 %1, double 0.000000e+00, double 1.000000e+00
   ret double %2
 }
-

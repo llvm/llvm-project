@@ -66,6 +66,7 @@
 ; SPV-DAG: %[[#ones_16:]] = OpConstantComposite %[[#vec_16]] %[[#one_16]] %[[#one_16]]
 ; SPV-DAG: %[[#ones_32:]] = OpConstantComposite %[[#vec_32]] %[[#one_32]] %[[#one_32]]
 ; SPV-DAG: %[[#ones_64:]] = OpConstantComposite %[[#vec_64]] %[[#one_64]] %[[#one_64]]
+; SPV-DAG: %[[#pointer:]] = OpTypePointer CrossWorkgroup %[[#float]]
 
 ; SPV-DAG: OpFunction
 ; SPV-DAG: %[[#A:]] = OpFunctionParameter %[[#]]
@@ -81,7 +82,8 @@ entry:
 ; SPV-DAG: %[[#select_res:]] = OpSelect %[[#int_32]] %[[#cmp_res]] %[[#one_32]] %[[#zero_32]]
 ; SPV-DAG: %[[#utof_res:]] = OpConvertUToF %[[#float]] %[[#select_res]]
   %conv = uitofp i1 %cmp to float
-; SPV-DAG: OpStore %[[#A]] %[[#utof_res]]
+; SPV-DAG: %[[#bitcast:]] = OpBitcast %[[#pointer]] %[[#A]]
+; SPV-DAG: OpStore %[[#bitcast]] %[[#utof_res]]
   store float %conv, float addrspace(1)* %A, align 4;
 
 ; SPV-DAG: %[[#s1]] = OpSelect %[[#int_8]] %[[#i1s]] %[[#mone_8]] %[[#zero_8]]

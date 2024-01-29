@@ -819,7 +819,7 @@ struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
     auto resultIndex = source.cast<OpResult>().getResultNumber();
     auto initOperand = destOp.getDpsInitOperand(resultIndex);
 
-    rewriter.updateRootInPlace(
+    rewriter.modifyOpInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(initOperand->get()); });
     return success();
   }
@@ -1752,7 +1752,7 @@ struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
         srcType, collapseShapeOp.getReassociationMaps());
 
     if (newResultType == collapseShapeOp.getResultType()) {
-      rewriter.updateRootInPlace(collapseShapeOp, [&]() {
+      rewriter.modifyOpInPlace(collapseShapeOp, [&]() {
         collapseShapeOp.getSrcMutable().assign(castOp.getSource());
       });
     } else {
@@ -2930,7 +2930,7 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadOp> {
         padTensorOp.getResultType().getShape());
 
     if (newResultType == padTensorOp.getResultType()) {
-      rewriter.updateRootInPlace(padTensorOp, [&]() {
+      rewriter.modifyOpInPlace(padTensorOp, [&]() {
         padTensorOp.getSourceMutable().assign(castOp.getSource());
       });
     } else {
@@ -3466,44 +3466,6 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 // PackOp/UnPackOp Common
 //===----------------------------------------------------------------------===//
 
-namespace {
-
-/// Packing one-dimensional tensor can be expressed as an expand shape op.
-struct SimplifyPackToExandShape : public OpRewritePattern<PackOp> {
-  using OpRewritePattern<PackOp>::OpRewritePattern;
-
-  Value insertExpand(RewriterBase &rewriter, Location loc, Value operand,
-                     Type newOperandType, ArrayAttr reassociation) const {
-    if (operand.getType() == newOperandType)
-      return operand;
-    return rewriter.create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                                  reassociation);
-  }
-
-  LogicalResult matchAndRewrite(PackOp packOp,
-                                PatternRewriter &rewriter) const override {
-    RankedTensorType sourceType = packOp.getSourceType();
-    RankedTensorType destType = packOp.getDestType();
-    if (sourceType.getRank() != 1 || packOp.getPaddingValue())
-      return failure();
-    auto reassociation =
-        getReassociationIndicesForReshape(sourceType, destType);
-    if (!reassociation)
-      return failure();
-    Value expanded = insertExpand(
-        rewriter, packOp.getLoc(), packOp.getSource(), destType,
-        getReassociationIndicesAttribute(rewriter, *reassociation));
-    rewriter.replaceOp(packOp, expanded);
-    return success();
-  }
-};
-
-} // namespace
-
-void mlir::tensor::populateSimplifyTensorPack(RewritePatternSet &patterns) {
-  patterns.add<SimplifyPackToExandShape>(patterns.getContext());
-}
-
 template <typename OpTy>
 static LogicalResult
 reifyResultShapesImpl(OpTy op, OpBuilder &builder,
@@ -4032,9 +3994,9 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
 
   // Fold optional PaddingValue operand away if padding is not needed.
   if (packOp.getPaddingValue() && paddingIsNotNeeded(packOp)) {
-    rewriter.startRootUpdate(packOp);
+    rewriter.startOpModification(packOp);
     packOp.getPaddingValueMutable().clear();
-    rewriter.finalizeRootUpdate(packOp);
+    rewriter.finalizeOpModification(packOp);
     return success();
   }
   return failure();
@@ -4204,8 +4166,8 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
           unPackOp.getDest().getDefiningOp<DestinationStyleOpInterface>()) {
     auto destValue = unPackOp.getDest().cast<OpResult>();
     Value newDest = dstStyleOp.getDpsInits()[destValue.getResultNumber()];
-    rewriter.updateRootInPlace(
-        unPackOp, [&]() { unPackOp.setDpsInitOperand(0, newDest); });
+    rewriter.modifyOpInPlace(unPackOp,
+                             [&]() { unPackOp.setDpsInitOperand(0, newDest); });
     return success();
   }
   return failure();

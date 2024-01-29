@@ -37,8 +37,7 @@ bool utils::elf::isELF(StringRef Buffer) {
 }
 
 Expected<bool> utils::elf::checkMachine(StringRef Object, uint16_t EMachine) {
-  if (!isELF(Object))
-    return createError("Input is not an ELF.");
+  assert(isELF(Object) && "Input is not an ELF!");
 
   Expected<ELF64LEObjectFile> ElfOrErr =
       ELF64LEObjectFile::create(MemoryBufferRef(Object, /*Identifier=*/""),

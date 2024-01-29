@@ -617,7 +617,7 @@ define i4 @ptr_N_signed_positive_assume(ptr %src, ptr %lower, ptr %upper, i16 %N
 ; CHECK-NEXT:    [[SRC_STEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i16 [[STEP]]
 ; CHECK-NEXT:    [[CMP_STEP_START:%.*]] = icmp slt ptr [[SRC_STEP]], [[LOWER]]
 ; CHECK-NEXT:    [[CMP_STEP_END:%.*]] = icmp sge ptr [[SRC_STEP]], [[UPPER]]
-; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 [[CMP_STEP_START]], [[CMP_STEP_END]]
+; CHECK-NEXT:    [[OR_CHECK:%.*]] = or i1 true, [[CMP_STEP_END]]
 ; CHECK-NEXT:    br i1 [[OR_CHECK]], label [[TRAP_BB]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i4 3

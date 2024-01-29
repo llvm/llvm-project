@@ -729,22 +729,6 @@ def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
   let imm12 = 0b110000000000;
 }
 
-let Predicates = [HasStdExtZawrs] in {
-def WRS_NTO : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "wrs.nto", "">,
-              Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = 0b000000001101;
-}
-
-def WRS_STO : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "wrs.sto", "">,
-              Sched<[]> {
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = 0b000000011101;
-}
-} // Predicates = [HasStdExtZawrs]
-
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
 def CSRRW : CSR_ir<0b001, "csrrw">;
@@ -1387,6 +1371,24 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
                             ReadSFBALU, ReadSFBALU]>;
 }
 
+// This should always expand to a branch+c.mv so the size is 6 or 4 if the
+// branch is compressible.
+let Predicates = [HasConditionalMoveFusion, NoShortForwardBranchOpt],
+    Constraints = "$dst = $falsev", isCommutable = 1, Size = 6 in {
+// This instruction moves $truev to $dst when the condition is true. It will
+// be expanded to control flow in RISCVExpandPseudoInsts.
+// We use GPRNoX0 because c.mv cannot encode X0.
+def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
+                                (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                                 GPRNoX0:$falsev, GPRNoX0:$truev),
+                                [(set GPRNoX0:$dst,
+                                  (riscv_selectcc_frag:$cc (XLenVT GPR:$lhs),
+                                                           (XLenVT GPR:$rhs),
+                                                           cond, (XLenVT GPRNoX0:$truev),
+                                                           (XLenVT GPRNoX0:$falsev)))]>,
+                         Sched<[]>;
+}
+
 // Conditional binops, that updates update $dst to (op rs1, rs2) when condition
 // is true. Returns $falsev otherwise. Selected by optimizeSelect.
 // TODO: Can we use DefaultOperands on the regular binop to accomplish this more
@@ -1517,6 +1519,23 @@ def PseudoCCSRAIW : Pseudo<(outs GPR:$dst),
                             GPR:$falsev, GPR:$rs1, simm12:$rs2), []>,
                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
                            ReadSFBALU]>;
+
+// Zbb/Zbkb instructions
+def PseudoCCANDN : Pseudo<(outs GPR:$dst),
+                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
+def PseudoCCORN : Pseudo<(outs GPR:$dst),
+                         (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                          GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                  Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                         ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
+def PseudoCCXNOR : Pseudo<(outs GPR:$dst),
+                          (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                           GPR:$falsev, GPR:$rs1, GPR:$rs2), []>,
+                   Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
+                          ReadSFBALU, ReadSFBALU, ReadSFBALU]>;
 }
 
 multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
@@ -1535,7 +1554,7 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
              (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
-let Predicates = [NoShortForwardBranchOpt] in
+let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 class SelectCompressOpt<CondCode Cond>
@@ -1722,6 +1741,35 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32, isCodeGenOnly = 0 in
+def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tlsdesc", "$dst, $src">;
+
+def TLSDESCCallSymbol : AsmOperandClass {
+  let Name = "TLSDESCCallSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTLSDESCCallSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %tlsdesc_call variant.
+def tlsdesc_call_symbol : Operand<XLenVT> {
+  let ParserMatchClass = TLSDESCCallSymbol;
+}
+// This is a special case of the JALR instruction used to facilitate the use of a
+// fourth operand to emit a relocation on a symbol relating to this instruction.
+// The relocation does not affect any bits of the instruction itself but is used
+// as a hint to the linker.
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
+                         (ins GPR:$rs1, simm12:$imm12, tlsdesc_call_symbol:$src), [],
+                         "jalr", "$rd, ${imm12}(${rs1}), $src">,
+                         Sched<[WriteJalr, ReadJalr]> {
+  let Defs = [X10];
+  let Uses = [X10];
+}
 
 
 /// Sign/Zero Extends
@@ -2095,6 +2143,7 @@ include "RISCVInstrInfoM.td"
 
 // Atomic
 include "RISCVInstrInfoA.td"
+include "RISCVInstrInfoZa.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
@@ -2111,13 +2160,16 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
-// Integer
-include "RISCVInstrInfoZicbo.td"
-include "RISCVInstrInfoZicond.td"
-
 // Compressed
 include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
+
+// Integer
+include "RISCVInstrInfoZimop.td"
+include "RISCVInstrInfoZicbo.td"
+include "RISCVInstrInfoZicond.td"
+include "RISCVInstrInfoZicfiss.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

@@ -308,7 +308,7 @@ void ModuleMap::resolveHeader(Module *Mod,
         setUmbrellaHeaderAsWritten(Mod, *File, Header.FileName,
                                    RelativePathName.str());
     } else {
-      Module::Header H = {Header.FileName, std::string(RelativePathName.str()),
+      Module::Header H = {Header.FileName, std::string(RelativePathName),
                           *File};
       addHeader(Mod, H, headerKindToRole(Header.Kind));
     }
@@ -984,7 +984,9 @@ static void inferFrameworkLink(Module *Mod) {
   assert(!Mod->isSubFramework() &&
          "Can only infer linking for top-level frameworks");
 
-  Mod->LinkLibraries.push_back(Module::LinkLibrary(Mod->Name,
+  StringRef FrameworkName(Mod->Name);
+  FrameworkName.consume_back("_Private");
+  Mod->LinkLibraries.push_back(Module::LinkLibrary(FrameworkName.str(),
                                                    /*IsFramework=*/true));
 }
 

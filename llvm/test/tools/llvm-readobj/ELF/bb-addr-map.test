@@ -1,8 +1,5 @@
 ## This test checks how we handle the --bb-addr-map option.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 ## Check 64-bit:
 # RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
 # RUN: llvm-readobj %t1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=CHECK

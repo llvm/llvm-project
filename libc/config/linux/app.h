@@ -93,7 +93,7 @@ struct AppProperties {
   AuxEntry *auxv_ptr;
 };
 
-extern AppProperties app;
+[[gnu::weak]] extern AppProperties app;
 
 // The descriptor of a thread's TLS area.
 struct TLSDescriptor {
@@ -118,6 +118,9 @@ void init_tls(TLSDescriptor &tls);
 
 // Cleanup the TLS area as described in |tls_descriptor|.
 void cleanup_tls(uintptr_t tls_addr, uintptr_t tls_size);
+
+// Set the thread pointer for the current thread.
+bool set_thread_ptr(uintptr_t val);
 
 } // namespace LIBC_NAMESPACE
 

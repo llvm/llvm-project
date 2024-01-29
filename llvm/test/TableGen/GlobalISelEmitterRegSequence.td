@@ -55,10 +55,10 @@ def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 // CHECK-NEXT: GIR_AddImm8, /*InsnID*/0, /*SubRegIndex*/1,
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
 // CHECK-NEXT: GIR_AddImm8, /*InsnID*/0, /*SubRegIndex*/2,
-// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, GIMT_Encode2(Test::DRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/1, GIMT_Encode2(Test::SRegsRegClassID),
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/3, GIMT_Encode2(Test::SRegsRegClassID),
+// CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 def : Pat<(i32 (sext SOP:$src)),
           (REG_SEQUENCE DRegs, (SUBSOME_INSN SOP:$src), sub0,
                                (SUBSOME_INSN SOP:$src), sub1)>;

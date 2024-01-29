@@ -11,7 +11,6 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "test/UnitTest/FPMatcher.h"
 
@@ -50,7 +49,7 @@ template <> struct ExtraPrecision<long double> {
 template <typename T>
 static inline unsigned int get_precision(double ulp_tolerance) {
   if (ulp_tolerance <= 0.5) {
-    return LIBC_NAMESPACE::fputil::FloatProperties<T>::MANTISSA_PRECISION;
+    return LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN + 1;
   } else {
     return ExtraPrecision<T>::VALUE;
   }
@@ -452,15 +451,15 @@ public:
     if (is_nan()) {
       if (FPBits<T>(input).is_nan())
         return MPFRNumber(0.0);
-      return MPFRNumber(static_cast<T>(FPBits<T>::inf()));
+      return MPFRNumber(FPBits<T>::inf().get_val());
     }
 
     int thisExponent = FPBits<T>(thisAsT).get_exponent();
     int inputExponent = FPBits<T>(input).get_exponent();
     // Adjust the exponents for denormal numbers.
-    if (FPBits<T>(thisAsT).get_biased_exponent() == 0)
+    if (FPBits<T>(thisAsT).is_subnormal())
       ++thisExponent;
-    if (FPBits<T>(input).get_biased_exponent() == 0)
+    if (FPBits<T>(input).is_subnormal())
       ++inputExponent;
 
     if (thisAsT * input < 0 || thisExponent == inputExponent) {
@@ -482,9 +481,9 @@ public:
     int minExponent = FPBits<T>(min).get_exponent();
     int maxExponent = FPBits<T>(max).get_exponent();
     // Adjust the exponents for denormal numbers.
-    if (FPBits<T>(min).get_biased_exponent() == 0)
+    if (FPBits<T>(min).is_subnormal())
       ++minExponent;
-    if (FPBits<T>(max).get_biased_exponent() == 0)
+    if (FPBits<T>(max).is_subnormal())
       ++maxExponent;
 
     MPFRNumber minMPFR(min);

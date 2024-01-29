@@ -295,12 +295,11 @@ struct CounterMappingRegion {
         Kind(Kind) {}
 
   CounterMappingRegion(MCDCParameters MCDCParams, unsigned FileID,
-                       unsigned ExpandedFileID, unsigned LineStart,
-                       unsigned ColumnStart, unsigned LineEnd,
-                       unsigned ColumnEnd, RegionKind Kind)
-      : MCDCParams(MCDCParams), ExpandedFileID(ExpandedFileID),
-        LineStart(LineStart), ColumnStart(ColumnStart), LineEnd(LineEnd),
-        ColumnEnd(ColumnEnd), Kind(Kind) {}
+                       unsigned LineStart, unsigned ColumnStart,
+                       unsigned LineEnd, unsigned ColumnEnd, RegionKind Kind)
+      : MCDCParams(MCDCParams), FileID(FileID), LineStart(LineStart),
+        ColumnStart(ColumnStart), LineEnd(LineEnd), ColumnEnd(ColumnEnd),
+        Kind(Kind) {}
 
   static CounterMappingRegion
   makeRegion(Counter Count, unsigned FileID, unsigned LineStart,
@@ -354,7 +353,7 @@ struct CounterMappingRegion {
   makeDecisionRegion(MCDCParameters MCDCParams, unsigned FileID,
                      unsigned LineStart, unsigned ColumnStart, unsigned LineEnd,
                      unsigned ColumnEnd) {
-    return CounterMappingRegion(MCDCParams, FileID, 0, LineStart, ColumnStart,
+    return CounterMappingRegion(MCDCParams, FileID, LineStart, ColumnStart,
                                 LineEnd, ColumnEnd, MCDCDecisionRegion);
   }
 
@@ -447,7 +446,7 @@ public:
   bool isConditionIndependencePairCovered(unsigned Condition) const {
     auto It = PosToID.find(Condition);
     if (It != PosToID.end())
-      return (IndependencePairs.find(It->second) != IndependencePairs.end());
+      return IndependencePairs.contains(It->second);
     llvm_unreachable("Condition ID without an Ordinal mapping");
   }
 
@@ -588,8 +587,9 @@ public:
   /// Return an MCDC record that indicates executed test vectors and condition
   /// pairs.
   Expected<MCDCRecord>
-  evaluateMCDCRegion(CounterMappingRegion Region, BitVector Bitmap,
-                     ArrayRef<CounterMappingRegion> Branches);
+  evaluateMCDCRegion(const CounterMappingRegion &Region,
+                     const BitVector &Bitmap,
+                     ArrayRef<const CounterMappingRegion *> Branches);
 
   unsigned getMaxCounterID(const Counter &C) const;
 };

@@ -20,5 +20,6 @@ static_library("TextAPI") {
     "TextStub.cpp",
     "TextStubCommon.cpp",
     "TextStubV5.cpp",
+    "Utils.cpp",
   ]
 }

@@ -2506,7 +2506,7 @@ void OpEmitter::genPopulateDefaultAttributes() {
       }))
     return;
 
-  if (op.getDialect().usePropertiesForAttributes()) {
+  if (emitHelper.hasProperties()) {
     SmallVector<MethodParameter> paramList;
     paramList.emplace_back("::mlir::OperationName", "opName");
     paramList.emplace_back("Properties &", "properties");

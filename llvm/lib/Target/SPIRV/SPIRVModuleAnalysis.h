@@ -189,7 +189,7 @@ struct ModuleAnalysisInfo {
   }
   unsigned getNextID() { return MaxID++; }
   bool hasMBBRegister(const MachineBasicBlock &MBB) {
-    return BBNumToRegMap.find(MBB.getNumber()) != BBNumToRegMap.end();
+    return BBNumToRegMap.contains(MBB.getNumber());
   }
   // Convert MBB's number to corresponding ID register.
   Register getOrCreateMBBRegister(const MachineBasicBlock &MBB) {

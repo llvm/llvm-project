@@ -266,13 +266,11 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
 }
 void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
   BuilderState.reset(new State());
-  // Initializing to full size because there could be cross CU references with
-  // different abbrev offsets. LLVM happens to output CUs that have cross CU
-  // references with the same abbrev table. So destinations end up in the first
-  // set, even if they themselves don't have src cross cu ref. We could have
-  // cases where this is not the case. In which case this container needs to be
-  // big enough for all.
-  getState().CloneUnitCtxMap.resize(DwarfContext->getNumCompileUnits());
+  // Allocating enough for current batch being processed.
+  // In real use cases we either processing a batch of CUs with no cross
+  // references, or if they do have them it is due to LTO. With clang they will
+  // share the same abbrev table. In either case this vector will not grow.
+  getState().CloneUnitCtxMap.resize(CUs.size());
   getState().Type = ProcessingType::CUs;
   for (DWARFUnit *CU : CUs)
     registerUnit(*CU, false);
@@ -897,6 +895,10 @@ void DIEBuilder::registerUnit(DWARFUnit &DU, bool NeedSort) {
                 });
   }
   getState().UnitIDMap[getHash(DU)] = getState().DUList.size();
+  // This handles the case where we do have cross cu references, but CUs do not
+  // share the same abbrev table.
+  if (getState().DUList.size() == getState().CloneUnitCtxMap.size())
+    getState().CloneUnitCtxMap.emplace_back();
   getState().DUList.push_back(&DU);
 }
 

@@ -147,47 +147,47 @@ declare void @exit(i32 signext) noreturn
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
-; RV64I-NEXT:    call nge@plt
+; RV64I-NEXT:    call nge
 ; RV64I-NEXT:    bnez a0, .LBB4_9
 ; RV64I-NEXT:  # %bb.1: # %if.end
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call nge@plt
+; RV64I-NEXT:    call nge
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    bne a0, a1, .LBB4_9
 ; RV64I-NEXT:  # %bb.2: # %if.end4
 ; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
-; RV64I-NEXT:    call ngt@plt
+; RV64I-NEXT:    call ngt
 ; RV64I-NEXT:    bnez a0, .LBB4_9
 ; RV64I-NEXT:  # %bb.3: # %if.end8
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call ngt@plt
+; RV64I-NEXT:    call ngt
 ; RV64I-NEXT:    li s1, -1
 ; RV64I-NEXT:    bne a0, s1, .LBB4_9
 ; RV64I-NEXT:  # %bb.4: # %if.end12
 ; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
-; RV64I-NEXT:    call nle@plt
+; RV64I-NEXT:    call nle
 ; RV64I-NEXT:    bne a0, s1, .LBB4_9
 ; RV64I-NEXT:  # %bb.5: # %if.end16
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call nle@plt
+; RV64I-NEXT:    call nle
 ; RV64I-NEXT:    bnez a0, .LBB4_9
 ; RV64I-NEXT:  # %bb.6: # %if.end20
 ; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
-; RV64I-NEXT:    call nlt@plt
+; RV64I-NEXT:    call nlt
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    bne a0, a1, .LBB4_9
 ; RV64I-NEXT:  # %bb.7: # %if.end24
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call nlt@plt
+; RV64I-NEXT:    call nlt
 ; RV64I-NEXT:    bnez a0, .LBB4_9
 ; RV64I-NEXT:  # %bb.8: # %if.end28
-; RV64I-NEXT:    call exit@plt
+; RV64I-NEXT:    call exit
 ; RV64I-NEXT:  .LBB4_9: # %if.then
-; RV64I-NEXT:    call abort@plt
+; RV64I-NEXT:    call abort
 ;
 ; RV64I-LABEL: OUTLINED_FUNCTION_0:
 ; RV64I:       # %bb.0:

@@ -2495,13 +2495,17 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
 
   // log(pow(x,y)) -> y*log(x)
   AttributeList NoAttrs;
-  if (ArgLb == PowLb || ArgID == Intrinsic::pow) {
+  if (ArgLb == PowLb || ArgID == Intrinsic::pow || ArgID == Intrinsic::powi) {
     Value *LogX =
         Log->doesNotAccessMemory()
             ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
                            Arg->getOperand(0), "log")
             : emitUnaryFloatFnCall(Arg->getOperand(0), TLI, LogNm, B, NoAttrs);
-    Value *MulY = B.CreateFMul(Arg->getArgOperand(1), LogX, "mul");
+    Value *Y = Arg->getArgOperand(1);
+    // Cast exponent to FP if integer.
+    if (ArgID == Intrinsic::powi)
+      Y = B.CreateSIToFP(Y, Ty, "cast");
+    Value *MulY = B.CreateFMul(Y, LogX, "mul");
     // Since pow() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
     substituteInParent(Arg, MulY);
@@ -3735,26 +3739,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
 
   // Also try to simplify calls to fortified library functions.
   if (Value *SimplifiedFortifiedCI =
-          FortifiedSimplifier.optimizeCall(CI, Builder)) {
-    // Try to further simplify the result.
-    CallInst *SimplifiedCI = dyn_cast<CallInst>(SimplifiedFortifiedCI);
-    if (SimplifiedCI && SimplifiedCI->getCalledFunction()) {
-      // Ensure that SimplifiedCI's uses are complete, since some calls have
-      // their uses analyzed.
-      replaceAllUsesWith(CI, SimplifiedCI);
-
-      // Set insertion point to SimplifiedCI to guarantee we reach all uses
-      // we might replace later on.
-      IRBuilderBase::InsertPointGuard Guard(Builder);
-      Builder.SetInsertPoint(SimplifiedCI);
-      if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, Builder)) {
-        // If we were able to further simplify, remove the now redundant call.
-        substituteInParent(SimplifiedCI, V);
-        return V;
-      }
-    }
+          FortifiedSimplifier.optimizeCall(CI, Builder))
     return SimplifiedFortifiedCI;
-  }
 
   // Then check for known library functions.
   if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {

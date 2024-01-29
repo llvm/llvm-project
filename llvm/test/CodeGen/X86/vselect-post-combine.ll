@@ -4,7 +4,7 @@
 define ptr @test_mul(ptr %addr) {
 ; AVX2-LABEL: test_mul:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [255,0,0,0]
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [255,0,0,0]
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    vpblendvb %xmm0, (%rdi), %xmm1, %xmm0
 ; AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero

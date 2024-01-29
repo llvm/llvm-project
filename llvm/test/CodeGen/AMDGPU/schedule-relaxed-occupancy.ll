@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs  < %s | FileCheck --check-prefix=OCC %s
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs -amdgpu-schedule-relaxed-occupancy=true  < %s | FileCheck --check-prefix=RELAX %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs  < %s | FileCheck --check-prefix=OCC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs -amdgpu-schedule-relaxed-occupancy=true  < %s | FileCheck --check-prefix=RELAX %s
 
 
 ; Using -amgpu-schedule-relaxed-occupancy allows scheduler to produce better ILP by further relaxing occupancy target

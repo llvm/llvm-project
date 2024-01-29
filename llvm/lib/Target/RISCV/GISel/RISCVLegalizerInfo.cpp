@@ -47,10 +47,50 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  const LLT nxv1s8 = LLT::scalable_vector(1, s8);
+  const LLT nxv2s8 = LLT::scalable_vector(2, s8);
+  const LLT nxv4s8 = LLT::scalable_vector(4, s8);
+  const LLT nxv8s8 = LLT::scalable_vector(8, s8);
+  const LLT nxv16s8 = LLT::scalable_vector(16, s8);
+  const LLT nxv32s8 = LLT::scalable_vector(32, s8);
+  const LLT nxv64s8 = LLT::scalable_vector(64, s8);
+
+  const LLT nxv1s16 = LLT::scalable_vector(1, s16);
+  const LLT nxv2s16 = LLT::scalable_vector(2, s16);
+  const LLT nxv4s16 = LLT::scalable_vector(4, s16);
+  const LLT nxv8s16 = LLT::scalable_vector(8, s16);
+  const LLT nxv16s16 = LLT::scalable_vector(16, s16);
+  const LLT nxv32s16 = LLT::scalable_vector(32, s16);
+
+  const LLT nxv1s32 = LLT::scalable_vector(1, s32);
+  const LLT nxv2s32 = LLT::scalable_vector(2, s32);
+  const LLT nxv4s32 = LLT::scalable_vector(4, s32);
+  const LLT nxv8s32 = LLT::scalable_vector(8, s32);
+  const LLT nxv16s32 = LLT::scalable_vector(16, s32);
+
+  const LLT nxv1s64 = LLT::scalable_vector(1, s64);
+  const LLT nxv2s64 = LLT::scalable_vector(2, s64);
+  const LLT nxv4s64 = LLT::scalable_vector(4, s64);
+  const LLT nxv8s64 = LLT::scalable_vector(8, s64);
+
   using namespace TargetOpcode;
+
+  auto AllVecTys = {nxv1s8,   nxv2s8,  nxv4s8,  nxv8s8,  nxv16s8, nxv32s8,
+                    nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
+                    nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
+                    nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
+      .legalIf(all(
+          typeInSet(0, AllVecTys),
+          LegalityPredicate([=, &ST](const LegalityQuery &Query) {
+            return ST.hasVInstructions() &&
+                   (Query.Types[0].getScalarSizeInBits() != 64 ||
+                    ST.hasVInstructionsI64()) &&
+                   (Query.Types[0].getElementCount().getKnownMinValue() != 1 ||
+                    ST.getELen() == 64);
+          })))
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
 
@@ -101,7 +141,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
-  if (ST.hasStdExtZbb()) {
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb()) {
     RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
     // Widen s32 rotate amount to s64 so SDAG patterns will match.
     if (ST.is64Bit())
@@ -113,7 +153,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
   auto &BSWAPActions = getActionDefinitionsBuilder(G_BSWAP);
-  if (ST.hasStdExtZbb())
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
     BSWAPActions.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
   else
     BSWAPActions.maxScalar(0, sXLen).lower();
@@ -411,8 +451,9 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   return true;
 }
 
-bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
-                                        MachineInstr &MI) const {
+bool RISCVLegalizerInfo::legalizeCustom(
+    LegalizerHelper &Helper, MachineInstr &MI,
+    LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
   switch (MI.getOpcode()) {

@@ -2003,4 +2003,3 @@ define <vscale x 8 x i64> @vandn_vx_swapped_nxv8i64(i64 %x, <vscale x 8 x i64> %
   %b = and <vscale x 8 x i64> %splat, %y
   ret <vscale x 8 x i64> %b
 }
-

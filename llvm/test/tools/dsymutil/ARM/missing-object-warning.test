@@ -1,0 +1,5 @@
+RUN: dsymutil -oso-prepend-path %p/../Inputs --dump-debug-map %p/../Inputs/private/tmp/missing/foobar.out 2>&1 | FileCheck %s
+
+CHECK: bar.o unable to open object file
+CHECK-NOT: could not find object file symbol for symbol _bar
+CHECK-NOT: could not find object file symbol for symbol _main

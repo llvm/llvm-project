@@ -254,7 +254,6 @@ static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
 enum {
   MO_None = 0,
   MO_CALL = 1,
-  MO_PLT = 2,
   MO_LO = 3,
   MO_HI = 4,
   MO_PCREL_LO = 5,
@@ -265,11 +264,15 @@ enum {
   MO_TPREL_ADD = 10,
   MO_TLS_GOT_HI = 11,
   MO_TLS_GD_HI = 12,
+  MO_TLSDESC_HI = 13,
+  MO_TLSDESC_LOAD_LO = 14,
+  MO_TLSDESC_ADD_LO = 15,
+  MO_TLSDESC_CALL = 16,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
   // multiple "bitmask" flags.
-  MO_DIRECT_FLAG_MASK = 15
+  MO_DIRECT_FLAG_MASK = 31
 };
 } // namespace RISCVII
 
@@ -401,6 +404,7 @@ int getLoadFPImm(APFloat FPImm);
 namespace RISCVSysReg {
 struct SysReg {
   const char *Name;
+  const char *AltName;
   const char *DeprecatedName;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
@@ -424,22 +428,9 @@ struct SysReg {
       return true;
     return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
-
-  bool haveVendorRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
-    // Not in 32-bit mode.
-    if (isRV32Only && ActiveFeatures[RISCV::Feature64Bit])
-      return false;
-    // No required feature associated with the system register.
-    if (FeaturesRequired.none())
-      return false;
-    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
 };
 
-struct SiFiveReg : SysReg {};
-
 #define GET_SysRegsList_DECL
-#define GET_SiFiveRegsList_DECL
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 

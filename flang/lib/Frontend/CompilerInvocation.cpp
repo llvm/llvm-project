@@ -245,6 +245,23 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
+  // -mframe-pointer=none/non-leaf/all option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
+    std::optional<llvm::FramePointerKind> val =
+        llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
+            .Case("none", llvm::FramePointerKind::None)
+            .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("all", llvm::FramePointerKind::All)
+            .Default(std::nullopt);
+
+    if (!val.has_value()) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+    } else
+      opts.setFramePointer(val.value());
+  }
+
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
@@ -918,6 +935,8 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
           res.getLangOpts().OpenMPTargetDebug = 1;
       }
+      if (args.hasArg(clang::driver::options::OPT_nogpulib))
+        res.getLangOpts().NoGPULib = 1;
     }
 
     switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
@@ -1037,28 +1056,45 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
 /// \param [out] diags DiagnosticsEngine to report erros with
 static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  LangOptions &opts = invoc.getLangOpts();
-  if (const auto arg =
-          args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ)) {
-    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    unsigned VScaleMin;
-    if (argValue.getAsInteger(/*Radix=*/10, VScaleMin)) {
-      diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << arg->getSpelling() << argValue;
-      return false;
-    }
-    opts.VScaleMin = VScaleMin;
+  const auto *vscaleMin =
+      args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ);
+  const auto *vscaleMax =
+      args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ);
+
+  if (!vscaleMin && !vscaleMax)
+    return true;
+
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+  if (!triple.isAArch64() && !triple.isRISCV()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "`-mvscale-max` and `-mvscale-min` are not "
+                              "supported for this architecture: %0");
+    diags.Report(diagID) << triple.getArchName();
+    return false;
   }
-  if (const auto arg =
-          args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ)) {
-    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    unsigned VScaleMax;
-    if (argValue.getAsInteger(/*Radix=w*/ 10, VScaleMax)) {
+
+  LangOptions &opts = invoc.getLangOpts();
+  if (vscaleMin) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMin->getValue());
+    unsigned vscaleMinVal;
+    if (argValue.getAsInteger(/*Radix=*/10, vscaleMinVal)) {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << arg->getSpelling() << argValue;
+          << vscaleMax->getSpelling() << argValue;
       return false;
     }
-    opts.VScaleMax = VScaleMax;
+    opts.VScaleMin = vscaleMinVal;
+  }
+
+  if (vscaleMax) {
+    llvm::StringRef argValue = llvm::StringRef(vscaleMax->getValue());
+    unsigned vscaleMaxVal;
+    if (argValue.getAsInteger(/*Radix=w*/ 10, vscaleMaxVal)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << vscaleMax->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMax = vscaleMaxVal;
   }
   return true;
 }

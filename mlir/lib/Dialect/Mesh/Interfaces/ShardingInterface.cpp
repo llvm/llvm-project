@@ -215,11 +215,10 @@ namespace {
 // Update the given `shardingOption` according to `meshAxes` and `loopIdx`
 static LogicalResult fillShardingOption(Operation *op,
                                         ShardingOption &shardingOption,
-                                        SymbolRefAttr cluster,
-                                        ArrayRef<int32_t> meshAxes,
+                                        FlatSymbolRefAttr mesh,
+                                        ArrayRef<MeshAxis> meshAxes,
                                         unsigned loopIdx) {
-  if ((shardingOption.cluster && cluster &&
-       shardingOption.cluster != cluster) ||
+  if ((shardingOption.mesh && mesh && shardingOption.mesh != mesh) ||
       (!shardingOption.shardingArray[loopIdx].empty() &&
        shardingOption.shardingArray[loopIdx] != meshAxes)) {
     LLVM_DEBUG(DBGS() << "sharding option conflicts on loop iterator "
@@ -230,7 +229,7 @@ static LogicalResult fillShardingOption(Operation *op,
     if (i == loopIdx)
       continue;
 
-    for (int32_t axis : meshAxes) {
+    for (MeshAxis axis : meshAxes) {
       if (llvm::is_contained(shardingOption.shardingArray[i], axis)) {
         LLVM_DEBUG(DBGS() << "sharding option conflicts because mesh axes "
                           << axis << " duplicate");
@@ -238,8 +237,8 @@ static LogicalResult fillShardingOption(Operation *op,
       }
     }
   }
-  if (cluster)
-    shardingOption.cluster = cluster;
+  if (mesh)
+    shardingOption.mesh = mesh;
   if (shardingOption.shardingArray[loopIdx].empty())
     shardingOption.shardingArray[loopIdx].append(meshAxes.begin(),
                                                  meshAxes.end());
@@ -260,7 +259,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
   SmallVector<AffineMap> maps = shardingOp.getIndexingMaps();
   unsigned numOperands = op->getNumOperands();
   shardingOption.shardingArray.resize(loopTypes.size());
-  llvm::SmallVector<int32_t> partialMeshAxes;
+  llvm::SmallVector<MeshAxis> partialMeshAxes;
   Partial partialType;
   llvm::SmallSet<unsigned, 4> visitedLoopIndices;
   bool anyShardingInResultsOrOperands = false;
@@ -277,18 +276,18 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
     // shardingOption[index]
     for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
       AffineExpr expr = std::get<0>(it);
-      ArrayRef<int32_t> axes = std::get<1>(it).asArrayRef();
+      ArrayRef<MeshAxis> axes = std::get<1>(it).asArrayRef();
       auto dim = cast<AffineDimExpr>(expr);
       unsigned index = dim.getPosition();
       visitedLoopIndices.insert(index);
-      if (failed(fillShardingOption(op, shardingOption, shardAttr.getCluster(),
+      if (failed(fillShardingOption(op, shardingOption, shardAttr.getMesh(),
                                     axes, index)))
         return failure();
     }
 
     // Handle the partial axes: at this stage, the exact loop index/indices
     // cannot be decided because there could be multiple reduction loops.
-    ArrayRef<int32_t> partialAxes = shardAttr.getPartialAxes();
+    ArrayRef<MeshAxis> partialAxes = shardAttr.getPartialAxes();
     if (!partialAxes.empty()) {
       if (!partialMeshAxes.empty())
         return op->emitOpError() << "at most one result with partial axes is "
@@ -321,7 +320,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
     // then the operands with multiple loop indices.
     for (auto it : llvm::zip(map.getResults(), shardAttr.getSplitAxes())) {
       AffineExpr expr = std::get<0>(it);
-      ArrayRef<int32_t> axes = std::get<1>(it).asArrayRef();
+      ArrayRef<MeshAxis> axes = std::get<1>(it).asArrayRef();
       FailureOr<llvm::SmallSet<unsigned, 2>> loopIndices =
           checkOperandAffineExpr(expr, numDims);
       if (failed(loopIndices))
@@ -333,8 +332,8 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
       if (loopIndices->size() == 1) {
         unsigned loopIdx = *loopIndices->begin();
         visitedLoopIndices.insert(loopIdx);
-        if (failed(fillShardingOption(op, shardingOption,
-                                      shardAttr.getCluster(), axes, loopIdx)))
+        if (failed(fillShardingOption(op, shardingOption, shardAttr.getMesh(),
+                                      axes, loopIdx)))
           return failure();
       }
       // If multiple loop indices correspond to a dimension of an operand, it is
@@ -362,7 +361,7 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
   if (!partialMeshAxes.empty()) {
     bool anyNonEmptyReductionLoop = llvm::any_of(
         llvm::enumerate(shardingOption.shardingArray), [&](auto it) {
-          SmallVector<int32_t> &subArray = it.value();
+          SmallVector<MeshAxis> &subArray = it.value();
           int64_t idx = it.index();
           return isReductionLoop(loopTypes[idx]) && !subArray.empty();
         });
@@ -406,8 +405,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
     return success();
 
   auto resultType = result.getType().cast<RankedTensorType>();
-  SmallVector<SmallVector<int32_t>> splitAxes(resultType.getRank());
-  SmallVector<int32_t> partialAxes;
+  SmallVector<SmallVector<MeshAxis>> splitAxes(resultType.getRank());
+  SmallVector<MeshAxis> partialAxes;
 
   // process the split axes
   for (auto it : llvm::enumerate(map.getResults())) {
@@ -431,15 +430,14 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
         assert(partialType == curPartialType &&
                "Only one reduction type is supported");
       partialType = curPartialType;
-      const SmallVector<int32_t> &axis = std::get<1>(it);
+      const SmallVector<MeshAxis> &axis = std::get<1>(it);
       partialAxes.append(axis);
     }
   }
 
   removeTrailingEmptySubArray(splitAxes);
-  MeshShardingAttr shardAttr =
-      MeshShardingAttr::get(b.getContext(), shardingOption.cluster, splitAxes,
-                            partialAxes, partialType);
+  MeshShardingAttr shardAttr = MeshShardingAttr::get(
+      b.getContext(), shardingOption.mesh, splitAxes, partialAxes, partialType);
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPointAfterValue(result);
   auto shardOp = b.create<ShardOp>(result.getLoc(), resultType, result,
@@ -459,7 +457,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
     return success();
   Value operand = opOperand.get();
   auto operandType = operand.getType().cast<RankedTensorType>();
-  SmallVector<SmallVector<int32_t>> splitAxes(operandType.getRank());
+  SmallVector<SmallVector<MeshAxis>> splitAxes(operandType.getRank());
   unsigned numDims = map.getNumDims();
   for (auto it : llvm::enumerate(map.getResults())) {
     int64_t idx = it.index();
@@ -485,7 +483,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
 
   removeTrailingEmptySubArray(splitAxes);
   MeshShardingAttr shardAttr =
-      MeshShardingAttr::get(b.getContext(), shardingOption.cluster, splitAxes);
+      MeshShardingAttr::get(b.getContext(), shardingOption.mesh, splitAxes);
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(opOperand.getOwner());
   auto shardOp = b.create<ShardOp>(operand.getLoc(), operandType, operand,

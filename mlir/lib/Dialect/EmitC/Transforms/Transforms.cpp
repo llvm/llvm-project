@@ -96,10 +96,7 @@ struct FoldExpressionOp : public OpRewritePattern<ExpressionOp> {
         assert(clonedExpressionRootOp->getNumResults() == 1 &&
                "Expected cloned root to have a single result");
 
-        Value clonedExpressionResult = clonedExpressionRootOp->getResult(0);
-
-        usedExpression.getResult().replaceAllUsesWith(clonedExpressionResult);
-        rewriter.eraseOp(usedExpression);
+        rewriter.replaceOp(usedExpression, clonedExpressionRootOp);
         anythingFolded = true;
       }
     }
