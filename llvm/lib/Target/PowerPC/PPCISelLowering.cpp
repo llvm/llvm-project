@@ -16804,10 +16804,8 @@ void PPCTargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
       IntrinsicID != Intrinsic::ppc_trapd && IntrinsicID != Intrinsic::ppc_trap)
     return;
 
-  if (I.hasMetadata("annotation")) {
-    MDNode *MDN = I.getMetadata("annotation");
+  if (MDNode *MDN = I.getMetadata(LLVMContext::MD_annotation))
     Ops.push_back(DAG.getMDNode(MDN));
-  }
 }
 
 // isLegalAddressingMode - Return true if the addressing mode represented
