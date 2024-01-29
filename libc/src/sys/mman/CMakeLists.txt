@@ -52,6 +52,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mlock2
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mlock2
+)
+
+add_entrypoint_object(
   munlock
   ALIAS
   DEPENDS

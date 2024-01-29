@@ -89,6 +89,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mlock2
+  SRCS
+    mlock2.cpp
+  HDRS
+    ../mlock2.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   munlock
   SRCS
     munlock.cpp

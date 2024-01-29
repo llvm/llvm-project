@@ -1,4 +1,4 @@
-//===-- Implementation header for mlock function ----------------*- C++ -*-===//
+//===-- Implementation header for mlock2 function ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_MMAN_MLOCK_H
-#define LLVM_LIBC_SRC_SYS_MMAN_MLOCK_H
+#ifndef LLVM_LIBC_SRC_SYS_MMAN_MLOCK2_H
+#define LLVM_LIBC_SRC_SYS_MMAN_MLOCK2_H
 
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE {
 
-int mlock(const void *addr, size_t len);
+#ifdef SYS_mlock2
+int mlock2(const void *addr, size_t len, int flags);
+#endif
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SYS_MMAN_MLOCK_H
+#endif // LLVM_LIBC_SRC_SYS_MMAN_MLOCK2_H

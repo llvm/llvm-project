@@ -98,6 +98,7 @@ add_libc_unittest(
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
     libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
     libc.src.sys.mman.munlock
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall

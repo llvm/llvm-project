@@ -11,6 +11,7 @@
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mincore.h"
 #include "src/sys/mman/mlock.h"
+#include "src/sys/mman/mlock2.h"
 #include "src/sys/mman/mlockall.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munlock.h"
