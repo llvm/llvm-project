@@ -133,6 +133,13 @@ define i64 @test_clock64() {
   ret i64 %ret
 }
 
+; CHECK-LABEL: test_exit
+define void @test_exit() {
+; CHECK: exit;
+  call void @llvm.nvvm.exit()
+  ret void
+}
+
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
@@ -146,3 +153,4 @@ declare i64 @llvm.ctpop.i64(i64)
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.clock()
 declare i64 @llvm.nvvm.read.ptx.sreg.clock64()
+declare void @llvm.nvvm.exit()
