@@ -1235,6 +1235,26 @@ func.func @experimental_vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %ve
   return
 }
 
+// -----
+
+/// result vector type is not scalable.
+
+func.func @experimental_vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<4xf16>
+  return
+}
+
+// -----
+
+
+/// element type doesn't match.
+
+func.func @experimental_vector_interleave2_bad_type3(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[4]xf32>
+  return
+}
 
 // -----
 

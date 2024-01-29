@@ -974,11 +974,12 @@ def LLVM_experimental_vector_interleave2
         /*overloadedResults=*/[0], /*overloadedOperands=*/[],
         /*traits=*/[
           Pure, AllTypesMatch<["vec1", "vec2"]>,
-          TypesMatchWith<
+          PredOpTrait<
             "result has twice as many elements as 'vec1'",
-            "vec1", "res",
-            "VectorType(VectorType::Builder(::llvm::cast<VectorType>($_self))"
-              ".setDim(0, ::llvm::cast<VectorType>($_self).getShape()[0] * 2))">
+            And<[CPred<"getVectorNumElements($res.getType()) == "
+                       "getVectorNumElements($vec1.getType()) * 2">,
+                 CPred<"getVectorElementType($vec1.getType()) == "
+                       "getVectorElementType($res.getType())">]>>,
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 
