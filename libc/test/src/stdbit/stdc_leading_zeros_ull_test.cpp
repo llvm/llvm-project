@@ -11,14 +11,13 @@
 #include "test/UnitTest/Test.h"
 #include <stddef.h>
 
-#define LZ(x) LIBC_NAMESPACE::stdc_leading_zeros_ull((x))
-
 TEST(LlvmLibcStdcLeadingZerosUllTest, Zero) {
-  EXPECT_EQ(LZ(0ULL), static_cast<unsigned long long>(ULLONG_WIDTH));
+  EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_ull(0ULL),
+            static_cast<unsigned long long>(ULLONG_WIDTH));
 }
 
 TEST(LlvmLibcStdcLeadingZerosUllTest, OneHot) {
   for (unsigned i = 0U; i != ULLONG_WIDTH; ++i)
-    EXPECT_EQ(LZ(1ULL << i),
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_ull(1ULL << i),
               static_cast<unsigned long long>(ULLONG_WIDTH - i - 1));
 }
