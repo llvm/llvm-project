@@ -140,7 +140,8 @@ def _write_dict_to_file(repository_ctx, filepath, header, vars):
 
     repository_ctx.file(filepath, content = fci + fcd + fct)
 
-def _native_target_defines(arch, triple, include_native_target):
+def _native_target_defines(arch, triple, targets):
+    include_native_target = arch in targets
     llvm_native_target_defines = []
     if include_native_target:
         # Not having these defined for the project is useful when building a compiler that can _only_ cross-compile.
@@ -179,15 +180,14 @@ def _llvm_configure_impl(repository_ctx):
 
     # Create a starlark file with the requested LLVM targets.
     targets = repository_ctx.attr.targets
-    include_native_target = repository_ctx.attr.include_native_target
     llvm_native_target_defines = select({
-        "@bazel_tools//src/conditions:windows": _native_target_defines("X86", "x86_64-pc-win32", include_native_target),
-        "@bazel_tools//src/conditions:darwin_arm64": _native_target_defines("AArch64", "arm64-apple-darwin", include_native_target),
-        "@bazel_tools//src/conditions:darwin_x86_64": _native_target_defines("X86", "x86_64-unknown-darwin", include_native_target),
-        "@bazel_tools//src/conditions:linux_aarch64": _native_target_defines("AArch64", "aarch64-unknown-linux-gnu", include_native_target),
-        "@bazel_tools//src/conditions:linux_ppc64le": _native_target_defines("PowerPC", "powerpc64le-unknown-linux-gnu", include_native_target),
-        "@bazel_tools//src/conditions:linux_s390x": _native_target_defines("SystemZ", "systemz-unknown-linux_gnu", include_native_target),
-        "//conditions:default": _native_target_defines("X86", "x86_64-unknown-linux-gnu", include_native_target),
+        "@bazel_tools//src/conditions:windows": _native_target_defines("X86", "x86_64-pc-win32", targets),
+        "@bazel_tools//src/conditions:darwin_arm64": _native_target_defines("AArch64", "arm64-apple-darwin", targets),
+        "@bazel_tools//src/conditions:darwin_x86_64": _native_target_defines("X86", "x86_64-unknown-darwin", targets),
+        "@bazel_tools//src/conditions:linux_aarch64": _native_target_defines("AArch64", "aarch64-unknown-linux-gnu", targets),
+        "@bazel_tools//src/conditions:linux_ppc64le": _native_target_defines("PowerPC", "powerpc64le-unknown-linux-gnu", targets),
+        "@bazel_tools//src/conditions:linux_s390x": _native_target_defines("SystemZ", "systemz-unknown-linux_gnu", targets),
+        "//conditions:default": _native_target_defines("X86", "x86_64-unknown-linux-gnu", targets),
     })
     repository_ctx.file(
         "llvm/targets.bzl",
@@ -204,6 +204,5 @@ llvm_configure = repository_rule(
     configure = True,
     attrs = {
         "targets": attr.string_list(default = DEFAULT_TARGETS),
-        "include_native_target": attr.bool(default = True),
     },
 )
