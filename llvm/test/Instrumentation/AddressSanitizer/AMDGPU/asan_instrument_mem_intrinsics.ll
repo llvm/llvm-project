@@ -774,7 +774,7 @@ entry:
   ;CHECK-NEXT: [[VR15:%.*]] = call ptr @__asan_memset(ptr [[VR14]], i32 1, i64 128)
   ;CHECK-NEXT: [[VR16:%.*]] = addrspacecast ptr addrspace(3) [[PTR3]] to ptr
   ;CHECK-NEXT: [[VR17:%.*]] = call ptr @__asan_memset(ptr [[VR16]], i32 1, i64 128)
-  ;CHECK-NEXT: [[VR18:%.*]] = addrspacecast ptr addrspace(4) [[PTR5]] to ptr
+  ;CHECK-NEXT: [[VR18:%.*]] = addrspacecast ptr addrspace(4) [[PTR4]] to ptr
   ;CHECK-NEXT: [[VR19:%.*]] = call ptr @__asan_memset(ptr [[VR18]], i32 1, i64 128)
   ;CHECK-NEXT: [[VR20:%.*]] = addrspacecast ptr addrspace(5) [[PTR5]] to ptr
   ;CHECK-NEXT: [[VR21:%.*]] = call ptr @__asan_memset(ptr [[VR20]], i32 1, i64 128)
