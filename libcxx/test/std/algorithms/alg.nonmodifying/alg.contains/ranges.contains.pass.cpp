@@ -91,7 +91,7 @@ constexpr void test_iterators() {
 
   { // check that an empty range works
     std::array<ValueT, 0> a = {};
-    auto whole = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
+    auto whole              = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
     {
       bool ret = std::ranges::contains(whole.begin(), whole.end(), 1);
       assert(!ret);
