@@ -18,6 +18,38 @@ def NeoverseNoLSL : MCSchedPredicate<
                       CheckAll<[CheckShiftLSL,
                                 CheckShiftBy0]>>;
 
+def Check32Ext : CheckAny<[CheckExtUXTB,
+			   CheckExtUXTH,
+			   CheckExtUXTX,
+			   CheckExtSXTB,
+		           CheckExtSXTH,
+			   CheckExtSXTW,
+			   CheckExtSXTX]>;
+
+def Check64Ext : CheckAny<[CheckExtUXTB,
+			   CheckExtUXTH,
+			   CheckExtUXTW,
+			   CheckExtSXTB,
+			   CheckExtSXTH,
+			   CheckExtSXTW,
+			   CheckExtSXTX]>;
+
+// Identify arithmetic instructions with an extended register.
+def RegExtendAndShiftFn : TIIPredicate<"hasExtendAndShiftReg",
+			      MCOpcodeSwitchStatement<
+				[MCOpcodeSwitchCase<
+				   IsArith64ExtOp.ValidOpcodes,
+				     MCReturnStatement<
+				       CheckAll<[
+					 Check64Ext,
+					 CheckAny<[
+					   CheckExtBy1,
+					   CheckExtBy2,
+					   CheckExtBy3,
+					   CheckExtBy4]>]>>>],
+				     MCReturnStatement<FalsePred>>>;
+def RegExtendAndShiftPred   : MCSchedPredicate<RegExtendAndShiftFn>;
+
 // Identify LDR/STR H/Q-form scaled (and potentially extended) FP instructions
 def NeoverseHQForm : MCSchedPredicate<
                        CheckAll<[
@@ -82,3 +114,14 @@ def NeoverseZeroMove : MCSchedPredicate<
                            CheckAll<[CheckOpcode<[MOVID, MOVIv2d_ns]>,
                                      CheckImmOperand<1, 0>]>
                          ]>>;
+
+// Identify a load or store using the register offset addressing mode
+// with a scaled register.
+def NeoverseScaledIdxFn       : TIIPredicate<"isNeoverseScaledAddr",
+                                     MCOpcodeSwitchStatement<
+                                       [MCOpcodeSwitchCase<
+                                          IsLoadStoreRegOffsetOp.ValidOpcodes,
+                                          MCReturnStatement<
+                                            CheckAny<[CheckMemScaled]>>>],
+                                       MCReturnStatement<FalsePred>>>;
+def NeoverseScaledIdxPred     : MCSchedPredicate<NeoverseScaledIdxFn>;
