@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
+#include <set>
 
 namespace llvm {
 class DataLayout;
@@ -111,7 +112,7 @@ public:
   }
 
   /// Create a folding context. Careful: this is very expensive.
-  Fortran::evaluate::FoldingContext createFoldingContext() const;
+  Fortran::evaluate::FoldingContext createFoldingContext();
 
   Fortran::semantics::SemanticsContext &getSemanticsContext() const {
     return semanticsContext;
@@ -164,6 +165,7 @@ private:
   const Fortran::lower::LoweringOptions &loweringOptions;
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
+  std::set<std::string> tempNames;
 };
 
 } // namespace lower
