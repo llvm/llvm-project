@@ -8167,10 +8167,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  SDValue Result = LowerCallResult(Chain, InGlue, CallConv, IsVarArg, RVLocs,
-                                   DL, DAG, InVals, IsThisReturn,
-                                   IsThisReturn ? OutVals[0] : SDValue(),
-                                   RequiresSMChange);
+  SDValue Result = LowerCallResult(
+      Chain, InGlue, CallConv, IsVarArg, RVLocs, DL, DAG, InVals, IsThisReturn,
+      IsThisReturn ? OutVals[0] : SDValue(), RequiresSMChange);
 
   if (!Ins.empty())
     InGlue = Result.getValue(Result->getNumValues() - 1);

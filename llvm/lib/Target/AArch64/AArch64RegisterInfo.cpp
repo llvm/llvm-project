@@ -1044,9 +1044,9 @@ bool AArch64RegisterInfo::shouldCoalesce(
   // with a whole Z-register, such that after coalescing the register allocator
   // will try to spill/reload the entire Z register.
   //
-  // We do this by checking if the node has any defs/uses that are COALESCER_BARRIER
-  // pseudos. These are 'nops' in practice, but they exist to instruct the
-  // coalescer to avoid coalescing the copy.
+  // We do this by checking if the node has any defs/uses that are
+  // COALESCER_BARRIER pseudos. These are 'nops' in practice, but they exist to
+  // instruct the coalescer to avoid coalescing the copy.
   if (MI->isCopy() && SubReg != DstSubReg &&
       (AArch64::ZPRRegClass.hasSubClassEq(DstRC) ||
        AArch64::ZPRRegClass.hasSubClassEq(SrcRC))) {
