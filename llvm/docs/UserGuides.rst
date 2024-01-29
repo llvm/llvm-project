@@ -43,6 +43,7 @@ intermediate LLVM representation.
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstrProfileFormat
    InstrRefDebugInfo
    LinkTimeOptimization
    LoopTerminology
@@ -61,6 +62,7 @@ intermediate LLVM representation.
    ReportingGuide
    ResponseGuide
    Remarks
+   RemoveDIsDebugInfo
    RISCVUsage
    SourceLevelDebugging
    SPIRVUsage
@@ -176,6 +178,13 @@ Optimizations
    This document explains how LLVM uses value tracking, or instruction
    referencing, to determine variable locations for debug info in the final
    stages of compilation.
+
+:doc:`RemoveDIsDebugInfo`
+   This is a migration guide describing how to move from debug info using
+   intrinsics such as dbg.value to using the non-instruction DPValue object.
+
+:doc:`InstrProfileFormat`
+   This document explains two binary formats of instrumentation-based profiles.
 
 Code Generation
 ---------------

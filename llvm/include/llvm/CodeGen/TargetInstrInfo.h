@@ -1710,7 +1710,7 @@ public:
   /// then the caller may assume that DefMI has been erased from its parent
   /// block. The caller may assume that it will not be erased by this
   /// function otherwise.
-  virtual bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+  virtual bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                              Register Reg, MachineRegisterInfo *MRI) const {
     return false;
   }

@@ -264,7 +264,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
 
     // This constant must always match the default code object ABI version
     // of the AMDGPU backend.
-    addControlConstant("__oclc_ABI_version", 400, 32);
+    addControlConstant("__oclc_ABI_version", 500, 32);
   }
 
   // Determine libraries we need to link - order matters due to dependencies

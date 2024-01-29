@@ -477,11 +477,12 @@ for.end:                                          ; preds = %for.body
 define void @expensive_expand_short_tc(ptr %a, i32 %offset, i32 %n) {
 ; CHECK-LABEL: @expensive_expand_short_tc(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OFFSET_NONZERO:%.*]] = or i32 [[OFFSET:%.*]], 1
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 84
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[OFFSET:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[OFFSET_NONZERO]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 84
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
@@ -489,13 +490,14 @@ define void @expensive_expand_short_tc(ptr %a, i32 %offset, i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[OFFSET]]
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[OFFSET_NONZERO]]
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %offset.nonzero = or i32 %offset, 1
   %uglygep = getelementptr i8, ptr %a, i64 84
   br label %for.body
 
@@ -504,7 +506,7 @@ for.body:                                         ; preds = %for.body, %entry
   %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 0, %entry ]
   store i32 1, ptr %lsr.iv1, align 4
   %lsr.iv.next = add nsw i32 %lsr.iv, 1
-  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 %offset
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 %offset.nonzero
   %exitcond.not = icmp eq i32 %lsr.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !prof !{!"branch_weights", i32 1, i32 3}
 
@@ -515,11 +517,12 @@ for.end:                                          ; preds = %for.body
 define void @expensive_expand_long_tc(ptr %a, i32 %offset, i32 %n) {
 ; CHECK-LABEL: @expensive_expand_long_tc(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OFFSET_NONZERO:%.*]] = or i32 [[OFFSET:%.*]], 1
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 84
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[OFFSET:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[OFFSET_NONZERO]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 84
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
@@ -527,13 +530,14 @@ define void @expensive_expand_long_tc(ptr %a, i32 %offset, i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[OFFSET]]
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[OFFSET_NONZERO]]
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %offset.nonzero = or i32 %offset, 1
   %uglygep = getelementptr i8, ptr %a, i64 84
   br label %for.body
 
@@ -542,7 +546,7 @@ for.body:                                         ; preds = %for.body, %entry
   %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 0, %entry ]
   store i32 1, ptr %lsr.iv1, align 4
   %lsr.iv.next = add nsw i32 %lsr.iv, 1
-  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 %offset
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 %offset.nonzero
   %exitcond.not = icmp eq i32 %lsr.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !prof !{!"branch_weights", i32 1, i32 300}
 
@@ -553,11 +557,12 @@ for.end:                                          ; preds = %for.body
 define void @expensive_expand_unknown_tc(ptr %a, i32 %offset, i32 %n) {
 ; CHECK-LABEL: @expensive_expand_unknown_tc(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OFFSET_NONZERO:%.*]] = or i32 [[OFFSET:%.*]], 1
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 84
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[OFFSET:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[OFFSET_NONZERO]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 84
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
@@ -565,13 +570,14 @@ define void @expensive_expand_unknown_tc(ptr %a, i32 %offset, i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[UGLYGEP2:%.*]], [[FOR_BODY]] ], [ [[UGLYGEP]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 1, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[OFFSET]]
+; CHECK-NEXT:    [[UGLYGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[OFFSET_NONZERO]]
 ; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[UGLYGEP2]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %offset.nonzero = or i32 %offset, 1
   %uglygep = getelementptr i8, ptr %a, i64 84
   br label %for.body
 
@@ -580,7 +586,7 @@ for.body:                                         ; preds = %for.body, %entry
   %lsr.iv = phi i32 [ %lsr.iv.next, %for.body ], [ 0, %entry ]
   store i32 1, ptr %lsr.iv1, align 4
   %lsr.iv.next = add nsw i32 %lsr.iv, 1
-  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 %offset
+  %uglygep2 = getelementptr i8, ptr %lsr.iv1, i32 %offset.nonzero
   %exitcond.not = icmp eq i32 %lsr.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
 

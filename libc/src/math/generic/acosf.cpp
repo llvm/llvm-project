@@ -38,6 +38,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS = {{
 
 LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+  using Sign = fputil::Sign;
   FPBits xbits(x);
   uint32_t x_uint = xbits.uintval();
   uint32_t x_abs = xbits.uintval() & 0x7fff'ffffU;
@@ -84,7 +85,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x + FPBits::build_quiet_nan(0);
+    return x + FPBits::build_quiet_nan().get_val();
   }
 
   // When 0.5 < |x| < 1, we perform range reduction as follow:
@@ -109,7 +110,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   //   acos(x) = pi - acos(-x)
   // which is reduced to the postive case.
 
-  xbits.set_sign(false);
+  xbits.set_sign(Sign::POS);
   double xd = static_cast<double>(xbits.get_val());
   double u = fputil::multiply_add(-0.5, xd, 0.5);
   double cv = 2 * fputil::sqrt(u);

@@ -25,13 +25,13 @@ Record *RecordsSlice::addRecord(StringRef Name, SymbolFlags Flags,
   auto [APIName, SymKind] = parseSymbol(Name, Flags);
   Name = APIName;
   switch (SymKind) {
-  case SymbolKind::GlobalSymbol:
+  case EncodeKind::GlobalSymbol:
     return addGlobal(Name, Linkage, GV, Flags);
-  case SymbolKind::ObjectiveCClass:
+  case EncodeKind::ObjectiveCClass:
     return addObjCInterface(Name, Linkage);
-  case SymbolKind::ObjectiveCClassEHType:
+  case EncodeKind::ObjectiveCClassEHType:
     return addObjCInterface(Name, Linkage, /*HasEHType=*/true);
-  case SymbolKind::ObjectiveCInstanceVariable: {
+  case EncodeKind::ObjectiveCInstanceVariable: {
     auto [Super, IVar] = Name.split('.');
     // Attempt to find super class.
     ObjCContainerRecord *Container = findContainer(/*isIVar=*/false, Super);
@@ -332,9 +332,8 @@ llvm::MachO::convertToInterfaceFile(const Records &Slices) {
   }
 
   File = createInterfaceFile(Slices, *InstallNames.begin());
-  for (auto it = std::next(InstallNames.begin()); it != InstallNames.end();
-       ++it)
-    File->addDocument(createInterfaceFile(Slices, *it));
+  for (StringRef IN : llvm::drop_begin(InstallNames))
+    File->addDocument(createInterfaceFile(Slices, IN));
 
   return File;
 }

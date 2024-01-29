@@ -1079,6 +1079,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::ADDIStocHA8:
   case PPC::ADDItocL:
   case PPC::LOAD_STACK_GUARD:
+  case PPC::PPCLdFixedAddr:
   case PPC::XXLXORz:
   case PPC::XXLXORspz:
   case PPC::XXLXORdpz:
@@ -1973,14 +1974,6 @@ void PPCInstrInfo::LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
   unsigned Opcode = getLoadOpcodeForSpill(RC);
   NewMIs.push_back(addFrameReference(BuildMI(MF, DL, get(Opcode), DestReg),
                                      FrameIdx));
-  PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-
-  if (PPC::CRRCRegClass.hasSubClassEq(RC) ||
-      PPC::CRBITRCRegClass.hasSubClassEq(RC))
-    FuncInfo->setSpillsCR();
-
-  if (isXFormMemOp(Opcode))
-    FuncInfo->setHasNonRISpills();
 }
 
 void PPCInstrInfo::loadRegFromStackSlotNoUpd(
@@ -1991,9 +1984,6 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
   SmallVector<MachineInstr*, 4> NewMIs;
   DebugLoc DL;
   if (MI != MBB.end()) DL = MI->getDebugLoc();
-
-  PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-  FuncInfo->setHasSpills();
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
@@ -2111,7 +2101,7 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 // Folds zero into instructions which have a load immediate zero as an operand
 // but also recognize zero as immediate zero. If the definition of the load
 // has no more users it is deleted.
-bool PPCInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool PPCInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                  Register Reg, MachineRegisterInfo *MRI) const {
   bool Changed = onlyFoldImmediate(UseMI, DefMI, Reg);
   if (MRI->use_nodbg_empty(Reg))
@@ -2155,11 +2145,17 @@ bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
 bool PPCInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                         const MachineBasicBlock *MBB,
                                         const MachineFunction &MF) const {
+  switch (MI.getOpcode()) {
+  default:
+    break;
   // Set MFFS and MTFSF as scheduling boundary to avoid unexpected code motion
   // across them, since some FP operations may change content of FPSCR.
   // TODO: Model FPSCR in PPC instruction definitions and remove the workaround
-  if (MI.getOpcode() == PPC::MFFS || MI.getOpcode() == PPC::MTFSF)
+  case PPC::MFFS:
+  case PPC::MTFSF:
+  case PPC::FENCE:
     return true;
+  }
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
@@ -3103,6 +3099,46 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addImm(Offset)
         .addReg(Reg);
     return true;
+  }
+  case PPC::PPCLdFixedAddr: {
+    assert(Subtarget.getTargetTriple().isOSGlibc() &&
+           "Only targets with Glibc expected to contain PPCLdFixedAddr");
+    int64_t Offset = 0;
+    const unsigned Reg = Subtarget.isPPC64() ? PPC::X13 : PPC::R2;
+    MI.setDesc(get(PPC::LWZ));
+    uint64_t FAType = MI.getOperand(1).getImm();
+#undef PPC_LNX_FEATURE
+#undef PPC_LNX_CPU
+#define PPC_LNX_DEFINE_OFFSETS
+#include "llvm/TargetParser/PPCTargetParser.def"
+    bool IsLE = Subtarget.isLittleEndian();
+    bool Is64 = Subtarget.isPPC64();
+    if (FAType == PPC_FAWORD_HWCAP) {
+      if (IsLE)
+        Offset = Is64 ? PPC_HWCAP_OFFSET_LE64 : PPC_HWCAP_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_HWCAP_OFFSET_BE64 : PPC_HWCAP_OFFSET_BE32;
+    } else if (FAType == PPC_FAWORD_HWCAP2) {
+      if (IsLE)
+        Offset = Is64 ? PPC_HWCAP2_OFFSET_LE64 : PPC_HWCAP2_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_HWCAP2_OFFSET_BE64 : PPC_HWCAP2_OFFSET_BE32;
+    } else if (FAType == PPC_FAWORD_CPUID) {
+      if (IsLE)
+        Offset = Is64 ? PPC_CPUID_OFFSET_LE64 : PPC_CPUID_OFFSET_LE32;
+      else
+        Offset = Is64 ? PPC_CPUID_OFFSET_BE64 : PPC_CPUID_OFFSET_BE32;
+    }
+    assert(Offset && "Do not know the offset for this fixed addr load");
+    MI.removeOperand(1);
+    Subtarget.getTargetMachine().setGlibcHWCAPAccess();
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+        .addImm(Offset)
+        .addReg(Reg);
+    return true;
+#define PPC_TGT_PARSER_UNDEF_MACROS
+#include "llvm/TargetParser/PPCTargetParser.def"
+#undef PPC_TGT_PARSER_UNDEF_MACROS
   }
   case PPC::DFLOADf32:
   case PPC::DFLOADf64:

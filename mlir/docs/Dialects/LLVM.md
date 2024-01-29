@@ -52,7 +52,7 @@ module attributes {llvm.data_layout = "e",
 LLVM functions are represented by a special operation, `llvm.func`, that has
 syntax similar to that of the built-in function operation but supports
 LLVM-related features such as linkage and variadic argument lists. See detailed
-description in the operation list [below](#llvmfunc-mlirllvmllvmfuncop).
+description in the operation list [below](#llvmfunc-llvmllvmfuncop).
 
 ### PHI Nodes and Block Arguments
 

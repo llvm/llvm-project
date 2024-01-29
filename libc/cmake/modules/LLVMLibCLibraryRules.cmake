@@ -173,7 +173,17 @@ function(create_header_library fq_target_name)
   target_sources(${fq_target_name} INTERFACE ${ADD_HEADER_HDRS})
   if(ADD_HEADER_DEPENDS)
     add_dependencies(${fq_target_name} ${ADD_HEADER_DEPENDS})
-    target_link_libraries(${fq_target_name} INTERFACE ${ADD_HEADER_DEPENDS})
+
+    # `*.__copied_hdr__` is created only to copy the header files to the target
+    # location, not to be linked against.
+    set(link_lib "")
+    foreach(dep ${ADD_HEADER_DEPENDS})
+      if (NOT dep MATCHES "__copied_hdr__")
+        list(APPEND link_lib ${dep})
+      endif()
+    endforeach()
+
+    target_link_libraries(${fq_target_name} INTERFACE ${link_lib})
   endif()
   if(ADD_HEADER_COMPILE_OPTIONS)
     target_compile_options(${fq_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})

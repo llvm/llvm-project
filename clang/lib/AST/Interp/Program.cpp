@@ -315,14 +315,14 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, const Expr *Init) {
   // Classes and structures.
-  if (auto *RT = Ty->getAs<RecordType>()) {
-    if (auto *Record = getOrCreateRecord(RT->getDecl()))
+  if (const auto *RT = Ty->getAs<RecordType>()) {
+    if (const auto *Record = getOrCreateRecord(RT->getDecl()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable);
   }
 
   // Arrays.
-  if (auto ArrayType = Ty->getAsArrayTypeUnsafe()) {
+  if (const auto ArrayType = Ty->getAsArrayTypeUnsafe()) {
     QualType ElemTy = ArrayType->getElementType();
     // Array of well-known bounds.
     if (auto CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
@@ -338,7 +338,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       } else {
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
-        Descriptor *ElemDesc = createDescriptor(
+        const Descriptor *ElemDesc = createDescriptor(
             D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
@@ -358,8 +358,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         return allocateDescriptor(D, *T, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
-        Descriptor *Desc = createDescriptor(D, ElemTy.getTypePtr(), MDSize,
-                                            IsConst, IsTemporary);
+        const Descriptor *Desc = createDescriptor(D, ElemTy.getTypePtr(),
+                                                  MDSize, IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
         return allocateDescriptor(D, Desc, IsTemporary,
@@ -369,14 +369,14 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
   }
 
   // Atomic types.
-  if (auto *AT = Ty->getAs<AtomicType>()) {
+  if (const auto *AT = Ty->getAs<AtomicType>()) {
     const Type *InnerTy = AT->getValueType().getTypePtr();
     return createDescriptor(D, InnerTy, MDSize, IsConst, IsTemporary,
                             IsMutable);
   }
 
   // Complex types - represented as arrays of elements.
-  if (auto *CT = Ty->getAs<ComplexType>()) {
+  if (const auto *CT = Ty->getAs<ComplexType>()) {
     PrimType ElemTy = *Ctx.classify(CT->getElementType());
     return allocateDescriptor(D, ElemTy, MDSize, 2, IsConst, IsTemporary,
                               IsMutable);

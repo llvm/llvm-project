@@ -234,7 +234,7 @@ define <8 x i16> @mul_const8(<8 x i16> %x) {
 define <8 x i32> @mul_const9(<8 x i32> %x) {
 ; CHECK-LABEL: mul_const9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,0,0,0]
+; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = [2,0,0,0]
 ; CHECK-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %y = mul <8 x i32> %x, <i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
