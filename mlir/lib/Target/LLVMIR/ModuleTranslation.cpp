@@ -1205,7 +1205,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("aarch64_out_za");
   else if (func.getArmInoutZa())
     llvmFunc->addFnAttr("aarch64_inout_za");
-  if (func.getArmPreservesZa())
+  else if (func.getArmPreservesZa())
     llvmFunc->addFnAttr("aarch64_preserves_za");
 
   if (auto targetCpu = func.getTargetCpu())

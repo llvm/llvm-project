@@ -31,7 +31,7 @@ level ACLE attributes:
   is used for functions with ``__arm_locally_streaming`` and is
   only valid on function definitions (not declarations)
 
-``aarch64_pstate_new_za``
+``aarch64_new_za``
   is used for functions with ``__arm_new("za")``
 
 ``aarch64_in_za``
