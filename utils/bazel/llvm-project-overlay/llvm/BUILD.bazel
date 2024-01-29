@@ -7,7 +7,7 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
-load(":targets.bzl", "llvm_targets")
+load(":targets.bzl", "llvm_targets", "llvm_native_target_defines")
 load(":tblgen.bzl", "gentbl")
 
 package(
@@ -150,7 +150,7 @@ cc_library(
         "include/llvm/Config/llvm-config.h",
     ],
     copts = llvm_copts,
-    defines = llvm_config_defines,
+    defines = llvm_config_defines + llvm_native_target_defines,
     includes = ["include"],
     textual_hdrs = [
         "include/llvm/Config/AsmParsers.def",
