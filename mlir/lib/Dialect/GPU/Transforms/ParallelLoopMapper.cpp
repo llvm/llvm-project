@@ -118,7 +118,6 @@ static void mapParallelOp(ParallelOp parallelOp,
   int dimOffset = (numLoops > 2) ? 0 : (3 - numLoops);
   SmallVector<ParallelLoopDimMappingAttr, 4> attrs;
   attrs.reserve(numLoops);
-
   for (int i = 0, e = numLoops; i < e; ++i) {
     attrs.push_back(b.getAttr<ParallelLoopDimMappingAttr>(
         getHardwareIdForMapping(mappingLevel, i + dimOffset),
