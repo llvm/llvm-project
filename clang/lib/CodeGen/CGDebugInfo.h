@@ -29,7 +29,9 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include <map>
 #include <optional>
+#include <string>
 
 namespace llvm {
 class MDNode;
