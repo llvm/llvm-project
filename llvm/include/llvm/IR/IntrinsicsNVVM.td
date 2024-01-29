@@ -4813,4 +4813,8 @@ def int_nvvm_setmaxnreg_dec_sync_aligned_u32
               [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
               "llvm.nvvm.setmaxnreg.dec.sync.aligned.u32">;
 
+// Exit
+def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
+    Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
+
 } // let TargetPrefix = "nvvm"

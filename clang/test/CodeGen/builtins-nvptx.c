@@ -173,6 +173,13 @@ __device__ void activemask() {
 
 }
 
+__device__ void exit() {
+
+// CHECK: call void @llvm.nvvm.exit()
+
+  __nvvm_exit();
+
+}
 
 // NVVM intrinsics
 
