@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-use-std-min-max %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-use-std-min-max %t -- -- -fno-delayed-template-parsing
 #define MY_MACRO_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 constexpr int myConstexprMin(int a, int b) {
@@ -12,7 +12,7 @@ constexpr int myConstexprMax(int a, int b) {
 #define MY_IF_MACRO(condition, statement) \
   if (condition) {                        \
     statement                             \
-  }                                       \
+  }                                       
 
 class MyClass {
 public:
@@ -24,12 +24,6 @@ template<typename T>
 
 void foo(T value7) {
   int value1,value2,value3;
-  short value4;
-  unsigned int value5;
-  unsigned char value6;
-  const int value8 = 5;
-  volatile int value9 = 6;
-  MyClass obj;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value1, value2);
@@ -54,9 +48,10 @@ void foo(T value7) {
   // No suggestion needed here
   if (value1 == value2)
     value1 = value2;
-  
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+
+  // CHECK-MESSAGES: :[[@LINE+3]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max<int>(value1, value4);
+  short value4;
   if(value1<value4)
     value1=value4; 
   
@@ -95,8 +90,9 @@ void foo(T value7) {
   if (value2 >= value1)
     value2 = value1; 
   
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+  // CHECK-MESSAGES: :[[@LINE+3]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member1 = std::max(obj.member1, obj.member2);
+  MyClass obj;
   if (obj.member1 < obj.member2)
     obj.member1 = obj.member2; 
 
@@ -206,9 +202,11 @@ void foo(T value7) {
       value2 = value3;
     }
   }
-
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  
+  // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value6 = std::min<unsigned int>(value5, value6);
+  unsigned int value5;
+  unsigned char value6;
   if(value5<value6){
     value6 = value5;
   }
@@ -218,13 +216,15 @@ void foo(T value7) {
     value6 = value7;
   }
 
-  //CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  //CHECK-MESSAGES: :[[@LINE+3]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   //CHECK-FIXES: value1 = std::min(value8, value1);
+  const int value8 = 5;
   if(value8<value1)
     value1 = value8;
   
-  //CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  //CHECK-MESSAGES: :[[@LINE+3]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   //CHECK-FIXES: value1 = std::min(value9, value1);
+  volatile int value9 = 6;
   if(value9<value1)
     value1 = value9;
 }

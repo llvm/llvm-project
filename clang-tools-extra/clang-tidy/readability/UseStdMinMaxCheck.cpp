@@ -9,83 +9,12 @@
 #include "UseStdMinMaxCheck.h"
 #include "../utils/ASTUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
-
-static bool isImplicitCastType(const clang::CastKind castKind) {
-  switch (castKind) {
-  case clang::CK_CPointerToObjCPointerCast:
-  case clang::CK_BlockPointerToObjCPointerCast:
-  case clang::CK_BitCast:
-  case clang::CK_AnyPointerToBlockPointerCast:
-  case clang::CK_NullToMemberPointer:
-  case clang::CK_NullToPointer:
-  case clang::CK_IntegralToPointer:
-  case clang::CK_PointerToIntegral:
-  case clang::CK_IntegralCast:
-  case clang::CK_BooleanToSignedIntegral:
-  case clang::CK_IntegralToFloating:
-  case clang::CK_FloatingToIntegral:
-  case clang::CK_FloatingCast:
-  case clang::CK_ObjCObjectLValueCast:
-  case clang::CK_FloatingRealToComplex:
-  case clang::CK_FloatingComplexToReal:
-  case clang::CK_FloatingComplexCast:
-  case clang::CK_FloatingComplexToIntegralComplex:
-  case clang::CK_IntegralRealToComplex:
-  case clang::CK_IntegralComplexToReal:
-  case clang::CK_IntegralComplexCast:
-  case clang::CK_IntegralComplexToFloatingComplex:
-  case clang::CK_FloatingToFixedPoint:
-  case clang::CK_FixedPointToFloating:
-  case clang::CK_FixedPointCast:
-  case clang::CK_FixedPointToIntegral:
-  case clang::CK_IntegralToFixedPoint:
-  case clang::CK_MatrixCast:
-  case clang::CK_PointerToBoolean:
-  case clang::CK_IntegralToBoolean:
-  case clang::CK_FloatingToBoolean:
-  case clang::CK_MemberPointerToBoolean:
-  case clang::CK_FloatingComplexToBoolean:
-  case clang::CK_IntegralComplexToBoolean:
-  case clang::CK_UserDefinedConversion:
-    return true;
-  default:
-    return false;
-  }
-}
-
-class ExprVisitor : public clang::RecursiveASTVisitor<ExprVisitor> {
-public:
-  bool visitStmt(const clang::Stmt *S, bool &found,
-                 clang::QualType &GlobalImplicitCastType) {
-
-    if (isa<clang::ImplicitCastExpr>(S) && !found) {
-      const auto CastKind = cast<clang::ImplicitCastExpr>(S)->getCastKind();
-      if (isImplicitCastType(CastKind)) {
-        found = true;
-        const clang::ImplicitCastExpr *ImplicitCast =
-            cast<clang::ImplicitCastExpr>(S);
-        GlobalImplicitCastType = ImplicitCast->getType();
-        // Stop visiting children.
-        return false;
-      }
-    }
-    // Continue visiting children.
-    for (const clang::Stmt *Child : S->children()) {
-      if (Child) {
-        this->visitStmt(Child, found, GlobalImplicitCastType);
-      }
-    }
-
-    return true; // Continue visiting other nodes.
-  }
-};
 
 static const llvm::StringRef AlgorithmHeader("<algorithm>");
 
@@ -121,12 +50,12 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
   return false;
 }
 
-static std::string createReplacement(const BinaryOperator::Opcode Op,
-                                     const Expr *CondLhs, const Expr *CondRhs,
+static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
                                      const Expr *AssignLhs,
                                      const SourceManager &Source,
                                      const LangOptions &LO,
-                                     StringRef FunctionName, const IfStmt *If) {
+                                     StringRef FunctionName,
+                                     const BinaryOperator *BO) {
   const llvm::StringRef CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
   const llvm::StringRef CondRhsStr = Lexer::getSourceText(
@@ -134,20 +63,19 @@ static std::string createReplacement(const BinaryOperator::Opcode Op,
   const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
-  bool IsImplicitCastTypeNeeded = false;
   clang::QualType GlobalImplicitCastType;
-  if ((CondLhs->getType()->getUnqualifiedDesugaredType() !=
-       CondRhs->getType()->getUnqualifiedDesugaredType()) &&
-      (CondLhs->getType().getCanonicalType() !=
-       (CondRhs->getType().getCanonicalType()))) {
-    IsImplicitCastTypeNeeded = true;
-    bool Found = false;
-    ExprVisitor Visitor;
-    Visitor.visitStmt(If, Found, GlobalImplicitCastType);
+  if (CondLhs->getType()
+          .getCanonicalType()
+          .getNonReferenceType()
+          .getUnqualifiedType() != CondRhs->getType()
+                                       .getCanonicalType()
+                                       .getNonReferenceType()
+                                       .getUnqualifiedType()) {
+    GlobalImplicitCastType = BO->getLHS()->getType();
   }
 
   return (AssignLhsStr + " = " + FunctionName +
-          (IsImplicitCastTypeNeeded
+          (!GlobalImplicitCastType.isNull()
                ? "<" + GlobalImplicitCastType.getCanonicalType().getAsString() +
                      ">("
                : "(") +
@@ -165,24 +93,35 @@ void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
+// Ignore if statements that are inside macros.
+AST_MATCHER(IfStmt, isIfInMacro) {
+  return Node.getIfLoc().isMacroID() || Node.getEndLoc().isMacroID();
+}
+
+// Ignore expressions that are of dependent types.
+AST_MATCHER(Expr, isExprDependentType) {
+  return Node.getType()->isDependentType();
+}
+
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperator =
       binaryOperator(hasOperatorName("="), hasLHS(expr().bind("AssignLhs")),
                      hasRHS(expr().bind("AssignRhs")));
-
+  auto BinaryOperator =
+      binaryOperator(
+          hasAnyOperatorName("<", ">", "<=", ">="),
+          hasLHS(expr(unless(isExprDependentType())).bind("CondLhs")),
+          hasRHS(expr(unless(isExprDependentType())).bind("CondRhs")))
+          .bind("binaryOp");
   Finder->addMatcher(
-      ifStmt(
-          stmt().bind("if"),
-          unless(hasElse(stmt())), // Ensure `if` has no `else`
-          hasCondition(binaryOperator(hasAnyOperatorName("<", ">", "<=", ">="),
-                                      hasLHS(expr().bind("CondLhs")),
-                                      hasRHS(expr().bind("CondRhs")))
-                           .bind("binaryOp")),
-          hasThen(
-              anyOf(stmt(AssignOperator),
-                    compoundStmt(statementCountIs(1), has(AssignOperator)))),
-          hasParent(stmt(unless(ifStmt(hasElse(
-              equalsBoundNode("if"))))))), // Ensure `if` has no `else if`
+      ifStmt(stmt().bind("if"), unless(isIfInMacro()),
+             unless(hasElse(stmt())), // Ensure `if` has no `else`
+             hasCondition(BinaryOperator),
+             hasThen(
+                 anyOf(stmt(AssignOperator),
+                       compoundStmt(statementCountIs(1), has(AssignOperator)))),
+             hasParent(stmt(unless(ifStmt(hasElse(
+                 equalsBoundNode("if"))))))), // Ensure `if` has no `else if`
       this);
 }
 
@@ -194,45 +133,34 @@ void UseStdMinMaxCheck::registerPPCallbacks(const SourceManager &SM,
 
 void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
-  const auto &Context = *Result.Context;
-  const auto &LO = Context.getLangOpts();
+  const auto &LO = (*Result.Context).getLangOpts();
   const auto *CondLhs = Result.Nodes.getNodeAs<Expr>("CondLhs");
   const auto *CondRhs = Result.Nodes.getNodeAs<Expr>("CondRhs");
   const auto *AssignLhs = Result.Nodes.getNodeAs<Expr>("AssignLhs");
   const auto *AssignRhs = Result.Nodes.getNodeAs<Expr>("AssignRhs");
   const auto *BinaryOp = Result.Nodes.getNodeAs<BinaryOperator>("binaryOp");
   const auto BinaryOpcode = BinaryOp->getOpcode();
-  const auto OperatorStr = BinaryOp->getOpcodeStr();
-  const SourceManager &Source = Context.getSourceManager();
   const SourceLocation IfLocation = If->getIfLoc();
   const SourceLocation ThenLocation = If->getEndLoc();
 
-  // Ignore Macros
-  if (IfLocation.isMacroID() || ThenLocation.isMacroID())
-    return;
-
-  // Ignore Dependent types
-  if (CondLhs->getType()->isDependentType() ||
-      CondRhs->getType()->isDependentType())
-    return;
-
   auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
+    const SourceManager &Source = (*Result.Context).getSourceManager();
     diag(IfLocation, "use `%0` instead of `%1`")
-        << FunctionName << OperatorStr
+        << FunctionName << BinaryOp->getOpcodeStr()
         << FixItHint::CreateReplacement(
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
-               createReplacement(BinaryOpcode, CondLhs, CondRhs, AssignLhs,
-                                 Source, LO, FunctionName, If))
+               createReplacement(CondLhs, CondRhs, AssignLhs, Source, LO,
+                                 FunctionName, BinaryOp))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };
 
   if (minCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
-                   Context)) {
+                   (*Result.Context))) {
     ReplaceAndDiagnose("std::min");
   } else if (maxCondition(BinaryOpcode, CondLhs, CondRhs, AssignLhs, AssignRhs,
-                          Context)) {
+                          (*Result.Context))) {
     ReplaceAndDiagnose("std::max");
   }
 }
