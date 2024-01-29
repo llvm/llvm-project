@@ -4068,9 +4068,7 @@ SDValue ARMTargetLowering::LowerEH_SJLJ_SETUP_DISPATCH(SDValue Op,
 SDValue ARMTargetLowering::LowerINTRINSIC_VOID(
     SDValue Op, SelectionDAG &DAG, const ARMSubtarget *Subtarget) const {
   unsigned IntNo =
-      cast<ConstantSDNode>(
-          Op.getOperand(Op.getOperand(0).getValueType() == MVT::Other))
-          ->getZExtValue();
+      Op.getConstantOperandVal(Op.getOperand(0).getValueType() == MVT::Other);
   switch (IntNo) {
     default:
       return SDValue();  // Don't custom lower most intrinsics.

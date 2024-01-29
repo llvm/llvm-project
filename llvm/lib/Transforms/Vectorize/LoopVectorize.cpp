@@ -8038,6 +8038,17 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
   return EdgeMaskCache[Edge] = EdgeMask;
 }
 
+VPValue *VPRecipeBuilder::getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const {
+  assert(is_contained(predecessors(Dst), Src) && "Invalid edge");
+
+  // Look for cached value.
+  std::pair<BasicBlock *, BasicBlock *> Edge(Src, Dst);
+  EdgeMaskCacheTy::const_iterator ECEntryIt = EdgeMaskCache.find(Edge);
+  assert(ECEntryIt != EdgeMaskCache.end() &&
+         "looking up mask for edge which has not been created");
+  return ECEntryIt->second;
+}
+
 void VPRecipeBuilder::createHeaderMask(VPlan &Plan) {
   BasicBlock *Header = OrigLoop->getHeader();
 
@@ -8728,10 +8739,13 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   DFS.perform(LI);
 
   VPBasicBlock *VPBB = HeaderVPBB;
-  bool NeedsMasks = CM.foldTailByMasking() ||
-                    any_of(OrigLoop->blocks(), [this](BasicBlock *BB) {
-                      return Legal->blockNeedsPredication(BB);
-                    });
+  BasicBlock *HeaderBB = OrigLoop->getHeader();
+  bool NeedsMasks =
+      CM.foldTailByMasking() ||
+      any_of(OrigLoop->blocks(), [this, HeaderBB](BasicBlock *BB) {
+        bool NeedsBlends = BB != HeaderBB && !BB->phis().empty();
+        return Legal->blockNeedsPredication(BB) || NeedsBlends;
+      });
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
@@ -8750,7 +8764,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       Instruction *Instr = &I;
       SmallVector<VPValue *, 4> Operands;
       auto *Phi = dyn_cast<PHINode>(Instr);
-      if (Phi && Phi->getParent() == OrigLoop->getHeader()) {
+      if (Phi && Phi->getParent() == HeaderBB) {
         Operands.push_back(Plan->getVPValueOrAddLiveIn(
             Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader())));
       } else {
