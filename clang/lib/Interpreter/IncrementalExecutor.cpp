@@ -63,6 +63,35 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
   }
 }
 
+IncrementalExecutor::IncrementalExecutor(
+    llvm::orc::ThreadSafeContext &TSC, llvm::Error &Err,
+    const clang::TargetInfo &TI,
+    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC, llvm::StringRef OrcRuntimePath)
+    : TSCtx(TSC) {
+  using namespace llvm::orc;
+  llvm::ErrorAsOutParameter EAO(&Err);
+
+  auto JTMB = JITTargetMachineBuilder(TI.getTriple());
+  JTMB.addFeatures(TI.getTargetOpts().Features);
+  LLJITBuilder Builder;
+  Builder.setJITTargetMachineBuilder(JTMB);
+  Builder.setPrePlatformSetup([](LLJIT &J) {
+    // Try to enable debugging of JIT'd code (only works with JITLink for
+    // ELF and MachO).
+    consumeError(enableDebuggerSupport(J));
+    return llvm::Error::success();
+  });
+  Builder.setExecutorProcessControl(std::move(EPC));
+  Builder.setPlatformSetUp(llvm::orc::ExecutorNativePlatform(OrcRuntimePath.str()));
+
+  if (auto JitOrErr = Builder.create()) {
+    Jit = std::move(*JitOrErr);
+  } else {
+    Err = JitOrErr.takeError();
+    return;
+  }
+}
+
 IncrementalExecutor::~IncrementalExecutor() {}
 
 llvm::Error IncrementalExecutor::addModule(PartialTranslationUnit &PTU) {

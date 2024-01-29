@@ -21,6 +21,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 #include <memory>
@@ -81,6 +82,11 @@ class Interpreter {
   // An optional parser for CUDA offloading
   std::unique_ptr<IncrementalParser> DeviceParser;
 
+  // An optional parameter for an out-of-process executor
+  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
+
+  llvm::StringRef OrcRuntimePath;
+
   Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
 
   llvm::Error CreateExecutor();
@@ -98,6 +104,10 @@ public:
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
+  static llvm::Expected<std::unique_ptr<Interpreter>>
+  createWithOutOfProcessExecutor(
+      std::unique_ptr<CompilerInstance> CI,
+      std::unique_ptr<llvm::orc::ExecutorProcessControl> EI, llvm::StringRef OrcRuntimePath);
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;

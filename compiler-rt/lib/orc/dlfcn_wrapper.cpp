@@ -20,6 +20,7 @@ using namespace __orc_rt;
 
 extern "C" const char *__orc_rt_jit_dlerror();
 extern "C" void *__orc_rt_jit_dlopen(const char *path, int mode);
+extern "C" void *__orc_rt_jit_dlupdate(const char *path, int mode);
 extern "C" int __orc_rt_jit_dlclose(void *dso_handle);
 
 ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
@@ -40,6 +41,19 @@ __orc_rt_jit_dlopen_wrapper(const char *ArgData, size_t ArgSize) {
              })
       .release();
 }
+
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+__orc_rt_jit_dlupdate_wrapper(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<SPSExecutorAddr(SPSString, int32_t)>::handle(
+             ArgData, ArgSize,
+             [](const std::string &Path, int32_t mode) {
+               return ExecutorAddr::fromPtr(
+                   __orc_rt_jit_dlupdate(Path.c_str(), mode));
+             })
+      .release();
+}
+
+
 
 ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_jit_dlclose_wrapper(const char *ArgData, size_t ArgSize) {

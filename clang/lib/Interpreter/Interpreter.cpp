@@ -36,6 +36,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
@@ -242,6 +243,15 @@ Interpreter::~Interpreter() {
           llvm::Twine("Failed to clean up IncrementalExecutor: ") +
           toString(std::move(Err)));
   }
+
+    if (EPC) {
+    if (auto Err = EPC->disconnect()) {
+      llvm::report_fatal_error(
+          llvm::Twine("Failed to clean up EPC (IncrementalExecutor has not yet "
+                      "been created): ") +
+          toString(std::move(Err)));
+    }
+  }
 }
 
 // These better to put in a runtime header but we can't. This is because we
@@ -315,6 +325,20 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   return Interp;
 }
 
+
+llvm::Expected<std::unique_ptr<Interpreter>>
+Interpreter::createWithOutOfProcessExecutor(
+    std::unique_ptr<CompilerInstance> CI,
+    std::unique_ptr<llvm::orc::ExecutorProcessControl> EI, llvm::StringRef OrcRuntimePath) {
+  auto Interp = create(std::move(CI));
+  if (auto E = Interp.takeError()) {
+    return std::move(E);
+  }
+  (*Interp)->EPC = std::move(EI);
+  (*Interp)->OrcRuntimePath = OrcRuntimePath;
+  return Interp;
+}
+
 const CompilerInstance *Interpreter::getCompilerInstance() const {
   return IncrParser->getCI();
 }
@@ -363,7 +387,13 @@ llvm::Error Interpreter::CreateExecutor() {
   const clang::TargetInfo &TI =
       getCompilerInstance()->getASTContext().getTargetInfo();
   llvm::Error Err = llvm::Error::success();
-  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
+  std::unique_ptr<IncrementalExecutor> Executor;
+  if (EPC) {
+    Executor =
+        std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI, std::move(EPC), OrcRuntimePath);
+  } else {
+    Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
+  }
   if (!Err)
     IncrExecutor = std::move(Executor);
 
@@ -460,13 +490,8 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
   if (!EE)
     return EE.takeError();
 
-  auto &DL = EE->getDataLayout();
-
-  if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
-          name, DL.getGlobalPrefix()))
-    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
-  else
-    return DLSG.takeError();
+  if (auto DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
+          EE->getExecutionSession(), name))
 
   return llvm::Error::success();
 }

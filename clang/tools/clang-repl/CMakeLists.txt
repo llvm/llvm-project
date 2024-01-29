@@ -4,6 +4,7 @@ set( LLVM_LINK_COMPONENTS
   LineEditor
   Option
   OrcJIT
+  OrcShared
   Support
   )
 

@@ -16,13 +16,20 @@
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
 
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include <netdb.h>
 #include <optional>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 // Disable LSan for this test.
 // FIXME: Re-enable once we can assume GCC 13.2 or higher.
@@ -44,6 +51,20 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
+
+static llvm::cl::OptionCategory OOPCategory("Out-of-process Execution Options");
+static llvm::cl::opt<std::string> OutOfProcessExecutor(
+    "oop-executor",
+    llvm::cl::desc("Launch an out-of-process executor to run code"),
+    llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string> OutOfProcessExecutorConnect(
+    "oop-executor-connect",
+    llvm::cl::desc("Connect to an out-of-process executor via TCP"),
+    llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string> OrcRuntimePath(
+    "orc-runtime",
+    llvm::cl::desc("Path to the ORC runtime"),
+    llvm::cl::cat(OOPCategory));
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
@@ -143,6 +164,193 @@ ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos,
   return Comps;
 }
 
+static llvm::Error sanitizeArguments(const char *ArgV0) {
+  // Only one of -oop-executor and -oop-executor-connect can be used.
+  if (!!OutOfProcessExecutor.getNumOccurrences() &&
+      !!OutOfProcessExecutorConnect.getNumOccurrences())
+    return llvm::make_error<llvm::StringError>(
+        "Only one of -" + OutOfProcessExecutor.ArgStr + " and -" +
+            OutOfProcessExecutorConnect.ArgStr + " can be specified",
+        llvm::inconvertibleErrorCode());
+
+  // If -oop-executor was used but no value was specified then use a sensible
+  // default.
+  if (!!OutOfProcessExecutor.getNumOccurrences() &&
+      OutOfProcessExecutor.empty()) {
+    llvm::SmallString<256> OOPExecutorPath(llvm::sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
+    llvm::sys::path::remove_filename(OOPExecutorPath);
+    llvm::sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
+    OutOfProcessExecutor = OOPExecutorPath.str().str();
+  }
+
+  // Out-of-process executors must run with the ORC runtime for destructor support.
+  if (OrcRuntimePath.empty() && (OutOfProcessExecutor.getNumOccurrences() || OutOfProcessExecutorConnect.getNumOccurrences())) {
+    llvm::SmallString<256> OrcPath(llvm::sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
+    llvm::sys::path::remove_filename(OrcPath); // Remove clang-repl filename.
+    llvm::sys::path::remove_filename(OrcPath); // Remove ./bin directory.
+    llvm::sys::path::append(OrcPath, "lib/clang/18/lib/x86_64-unknown-linux-gnu/liborc_rt.a");
+    OrcRuntimePath = OrcPath.str().str();
+  }
+
+  return llvm::Error::success();
+}
+
+static llvm::Expected<std::unique_ptr<llvm::orc::ExecutorProcessControl>>
+launchExecutor() {
+  constexpr int ReadEnd = 0;
+  constexpr int WriteEnd = 1;
+
+  // Pipe FDs.
+  int ToExecutor[2];
+  int FromExecutor[2];
+
+  pid_t ChildPID;
+
+  // Create pipes to/from the executor..
+  if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
+    return llvm::make_error<llvm::StringError>(
+        "Unable to create pipe for executor", llvm::inconvertibleErrorCode());
+
+  ChildPID = fork();
+
+  if (ChildPID == 0) {
+    // In the child...
+
+    // Close the parent ends of the pipes
+    close(ToExecutor[WriteEnd]);
+    close(FromExecutor[ReadEnd]);
+
+    // Execute the child process.
+    std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
+    {
+      ExecutorPath = std::make_unique<char[]>(OutOfProcessExecutor.size() + 1);
+      strcpy(ExecutorPath.get(), OutOfProcessExecutor.data());
+
+      std::string FDSpecifierStr("filedescs=");
+      FDSpecifierStr += llvm::utostr(ToExecutor[ReadEnd]);
+      FDSpecifierStr += ',';
+      FDSpecifierStr += llvm::utostr(FromExecutor[WriteEnd]);
+      FDSpecifier = std::make_unique<char[]>(FDSpecifierStr.size() + 1);
+      strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
+    }
+
+    char *const Args[] = {ExecutorPath.get(), FDSpecifier.get(), nullptr};
+    int RC = execvp(ExecutorPath.get(), Args);
+    if (RC != 0) {
+      llvm::errs() << "unable to launch out-of-process executor \""
+                   << ExecutorPath.get() << "\"\n";
+      exit(1);
+    }
+  }
+  // else we're the parent...
+
+  // Close the child ends of the pipes
+  close(ToExecutor[ReadEnd]);
+  close(FromExecutor[WriteEnd]);
+
+  auto S = llvm::orc::SimpleRemoteEPC::Setup();
+
+  return llvm::orc::SimpleRemoteEPC::Create<
+      llvm::orc::FDSimpleRemoteEPCTransport>(
+      std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(),
+      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+}
+
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
+static llvm::Error createTCPSocketError(llvm::Twine Details) {
+  return llvm::make_error<llvm::StringError>(
+      formatv("Failed to connect TCP socket '{0}': {1}",
+              OutOfProcessExecutorConnect, Details),
+      llvm::inconvertibleErrorCode());
+}
+
+static llvm::Expected<int> connectTCPSocket(std::string Host,
+                                            std::string PortStr) {
+  addrinfo *AI;
+  addrinfo Hints{};
+  Hints.ai_family = AF_INET;
+  Hints.ai_socktype = SOCK_STREAM;
+  Hints.ai_flags = AI_NUMERICSERV;
+
+  if (int EC = getaddrinfo(Host.c_str(), PortStr.c_str(), &Hints, &AI))
+    return createTCPSocketError("Address resolution failed (" +
+                                llvm::StringRef(gai_strerror(EC)) + ")");
+
+  // Cycle through the returned addrinfo structures and connect to the first
+  // reachable endpoint.
+  int SockFD;
+  addrinfo *Server;
+  for (Server = AI; Server != nullptr; Server = Server->ai_next) {
+    // socket might fail, e.g. if the address family is not supported. Skip to
+    // the next addrinfo structure in such a case.
+    if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
+      continue;
+
+    // If connect returns null, we exit the loop with a working socket.
+    if (connect(SockFD, Server->ai_addr, Server->ai_addrlen) == 0)
+      break;
+
+    close(SockFD);
+  }
+  freeaddrinfo(AI);
+
+  // If we reached the end of the loop without connecting to a valid endpoint,
+  // dump the last error that was logged in socket() or connect().
+  if (Server == nullptr)
+    return createTCPSocketError(std::strerror(errno));
+
+  return SockFD;
+}
+#endif
+
+static llvm::Expected<std::unique_ptr<llvm::orc::ExecutorProcessControl>>
+connectToExecutor() {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add TCP support for Windows.
+  return llvm::make_error<StringError>(
+      "-" + OutOfProcessExecutorConnect.ArgStr +
+          " not supported on non-unix platforms",
+      inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  // Out of process mode using SimpleRemoteEPC depends on threads.
+  return llvm::make_error<StringError>(
+      "-" + OutOfProcessExecutorConnect.ArgStr +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
+      inconvertibleErrorCode());
+#else
+
+  llvm::StringRef Host, PortStr;
+  std::tie(Host, PortStr) =
+      llvm::StringRef(OutOfProcessExecutorConnect).split(':');
+  if (Host.empty())
+    return createTCPSocketError("Host name for -" +
+                                OutOfProcessExecutorConnect.ArgStr +
+                                " can not be empty");
+  if (PortStr.empty())
+    return createTCPSocketError("Port number in -" +
+                                OutOfProcessExecutorConnect.ArgStr +
+                                " can not be empty");
+  int Port = 0;
+  if (PortStr.getAsInteger(10, Port))
+    return createTCPSocketError("Port number '" + PortStr +
+                                "' is not a valid integer");
+
+  llvm::Expected<int> SockFD = connectTCPSocket(Host.str(), PortStr.str());
+  if (!SockFD)
+    return SockFD.takeError();
+
+  auto S = llvm::orc::SimpleRemoteEPC::Setup();
+
+  return llvm::orc::SimpleRemoteEPC::Create<
+      llvm::orc::FDSimpleRemoteEPCTransport>(
+      std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(),
+      std::move(S), *SockFD, *SockFD);
+#endif
+}
+
 llvm::ExitOnError ExitOnErr;
 int main(int argc, const char **argv) {
   ExitOnErr.setBanner("clang-repl: ");
@@ -205,6 +413,8 @@ int main(int argc, const char **argv) {
   if (CudaEnabled)
     DeviceCI->LoadRequestedPlugins();
 
+  ExitOnErr(sanitizeArguments(argv[0]));
+
   std::unique_ptr<clang::Interpreter> Interp;
 
   if (CudaEnabled) {
@@ -217,6 +427,16 @@ int main(int argc, const char **argv) {
       auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
+  } else if (OutOfProcessExecutor.getNumOccurrences()) {
+    // Create an instance of llvm-jitlink-executor in a separate process.
+    auto oopExecutor = ExitOnErr(launchExecutor());
+    Interp = ExitOnErr(clang::Interpreter::createWithOutOfProcessExecutor(
+        std::move(CI), std::move(oopExecutor), OrcRuntimePath));
+  } else if (OutOfProcessExecutorConnect.getNumOccurrences()) {
+    /// If -oop-executor-connect is passed then connect to the executor.
+    auto REPC = ExitOnErr(connectToExecutor());
+    Interp = ExitOnErr(clang::Interpreter::createWithOutOfProcessExecutor(
+        std::move(CI), std::move(REPC), OrcRuntimePath));
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 

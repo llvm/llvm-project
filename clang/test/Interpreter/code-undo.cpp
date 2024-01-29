@@ -1,5 +1,6 @@
 // UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl | FileCheck %s
+// RUN: cat %s | clang-repl -oop-executor | FileCheck %s
 extern "C" int printf(const char *, ...);
 int x1 = 0;
 int x2 = 42;

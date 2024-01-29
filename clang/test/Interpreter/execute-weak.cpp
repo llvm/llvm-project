@@ -1,5 +1,6 @@
 // UNSUPPORTED: system-aix, system-windows
 // RUN: cat %s | clang-repl | FileCheck %s
+// RUN: cat %s | clang-repl -oop-executor | FileCheck %s
 
 extern "C" int printf(const char *, ...);
 int __attribute__((weak)) bar() { return 42; }

@@ -116,6 +116,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
+  void *dlupdate(std::string_view Name, int Mode);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, std::string_view Symbol);
 
@@ -142,6 +143,7 @@ private:
   Expected<ELFNixJITDylibInitializerSequence>
   getJITDylibInitializersByName(std::string_view Path);
   Expected<void *> dlopenInitialize(std::string_view Path, int Mode);
+  Expected<void *> dlupdateInitialize(std::string_view Path, int Mode);
   Error initializeJITDylib(ELFNixJITDylibInitializers &MOJDIs);
 
   static ELFNixPlatformRuntimeState *MOPS;
@@ -229,6 +231,18 @@ void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   }
 
   auto H = dlopenInitialize(Path, Mode);
+  if (!H) {
+    DLFcnError = toString(H.takeError());
+    return nullptr;
+  }
+
+  return *H;
+}
+
+void *ELFNixPlatformRuntimeState::dlupdate(std::string_view Path, int Mode) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
+
+  auto H = dlupdateInitialize(Path, Mode);
   if (!H) {
     DLFcnError = toString(H.takeError());
     return nullptr;
@@ -395,6 +409,27 @@ ELFNixPlatformRuntimeState::dlopenInitialize(std::string_view Path, int Mode) {
       return std::move(Err);
 
   // Return the header for the last item in the list.
+  auto *JDS = getJITDylibStateByHeaderAddr(
+      InitSeq->back().DSOHandleAddress.toPtr<void *>());
+  assert(JDS && "Missing state entry for JD");
+  return JDS->Header;
+}
+
+Expected<void *>
+ELFNixPlatformRuntimeState::dlupdateInitialize(std::string_view Path,
+                                               int Mode) {
+  auto InitSeq = getJITDylibInitializersByName(Path);
+  if (!InitSeq)
+    return InitSeq.takeError();
+
+  // Init sequences can be empty becaue we are (possibly) reinitializing
+  if (InitSeq->empty())
+    return getJITDylibStateByName(Path)->Header;
+
+  for (auto &MOJDIs : *InitSeq)
+    if (auto Err = initializeJITDylib(MOJDIs))
+      return std::move(Err);
+
   auto *JDS = getJITDylibStateByHeaderAddr(
       InitSeq->back().DSOHandleAddress.toPtr<void *>());
   assert(JDS && "Missing state entry for JD");
@@ -581,6 +616,10 @@ const char *__orc_rt_elfnix_jit_dlerror() {
 
 void *__orc_rt_elfnix_jit_dlopen(const char *path, int mode) {
   return ELFNixPlatformRuntimeState::get().dlopen(path, mode);
+}
+
+void *__orc_rt_elfnix_jit_dlupdate(const char *path, int mode) {
+  return ELFNixPlatformRuntimeState::get().dlupdate(path, mode);
 }
 
 int __orc_rt_elfnix_jit_dlclose(void *dso_handle) {

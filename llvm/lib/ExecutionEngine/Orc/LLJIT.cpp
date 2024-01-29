@@ -105,9 +105,18 @@ public:
     auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
         [](const JITDylibSearchOrder &SO) { return SO; });
 
+    std::string WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
+    auto Triple = ES.getTargetTriple();
+    if (Triple.isOSBinFormatELF()) {
+      WrapperToCall = FirstInitialization ? "__orc_rt_jit_dlopen_wrapper" : "__orc_rt_jit_dlupdate_wrapper";
+      if (FirstInitialization) {
+        FirstInitialization = false;
+      }
+    }
+
     if (auto WrapperAddr =
             ES.lookup(MainSearchOrder,
-                      J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
+                      J.mangleAndIntern(WrapperToCall))) {
       return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                              DSOHandles[&JD], JD.getName(),
                                              int32_t(ORC_RT_RTLD_LAZY));
@@ -143,6 +152,7 @@ public:
 private:
   orc::LLJIT &J;
   DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+  bool FirstInitialization = true; // Used to track if reinitialization is needed for ELF
 };
 
 class GenericLLVMIRPlatformSupport;
@@ -1109,6 +1119,15 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
 
   auto &ES = J.getExecutionSession();
   auto &PlatformJD = ES.createBareJITDylib("<Platform>");
+
+  // Required to help out-of-process executors find definitions for setting
+  // up the ORC platform
+  if (auto DylibSearchGeneratorOrErr =
+          llvm::orc::EPCDynamicLibrarySearchGenerator::GetForTargetProcess(
+              ES)) {
+    PlatformJD.addGenerator(std::move(*DylibSearchGeneratorOrErr));
+  }
+
   PlatformJD.addToLinkOrder(*ProcessSymbolsJD);
 
   J.setPlatformSupport(std::make_unique<ORCPlatformSupport>(J));

@@ -237,6 +237,7 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
           {"__orc_rt_run_program", "__orc_rt_elfnix_run_program"},
           {"__orc_rt_jit_dlerror", "__orc_rt_elfnix_jit_dlerror"},
           {"__orc_rt_jit_dlopen", "__orc_rt_elfnix_jit_dlopen"},
+          {"__orc_rt_jit_dlupdate", "__orc_rt_elfnix_jit_dlupdate"},
           {"__orc_rt_jit_dlclose", "__orc_rt_elfnix_jit_dlclose"},
           {"__orc_rt_jit_dlsym", "__orc_rt_elfnix_jit_dlsym"},
           {"__orc_rt_log_error", "__orc_rt_log_error_to_stderr"}};
@@ -544,10 +545,17 @@ Error ELFNixPlatform::registerInitInfo(
 
       auto SearchOrder =
           JD.withLinkOrderDo([](const JITDylibSearchOrder &SO) { return SO; });
-      if (auto Err = ES.lookup(SearchOrder, DSOHandleSymbol).takeError())
+      auto SymOrErr = ES.lookup(SearchOrder, DSOHandleSymbol);
+      if (auto Err = SymOrErr.takeError()) {
         return Err;
+      }
 
       Lock.lock();
+      // We can allow reinitialization by reinserting the handles to each 
+      // JITDylib into InitSeqs.
+      InitSeqs.insert(std::make_pair(
+          &JD,
+          ELFNixJITDylibInitializers(JD.getName(), (*SymOrErr).getAddress())));
       I = InitSeqs.find(&JD);
       assert(I != InitSeqs.end() &&
              "Entry missing after header symbol lookup?");
