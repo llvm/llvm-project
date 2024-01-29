@@ -1267,11 +1267,11 @@ void AccAttributeVisitor::CheckAssociatedLoop(
   };
 
   Symbol::Flag flag;
-  llvm::SmallVector<Symbol*> ivs;
+  llvm::SmallVector<Symbol *> ivs;
   using Bounds = parser::LoopControl::Bounds;
   for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
     // Go through all nested loops to ensure index variable exists.
-    if (const parser::Name *ivName{GetLoopIndex(*loop)}) {
+    if (const parser::Name * ivName{GetLoopIndex(*loop)}) {
       if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
         if (auto &control = loop->GetLoopControl()) {
           if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
