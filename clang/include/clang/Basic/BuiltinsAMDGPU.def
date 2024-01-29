@@ -414,6 +414,7 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_fp8_f32, "ifiiIi", "nc", "fp8-conversion-
 // GFX950 only builtins.
 //===----------------------------------------------------------------------===//
 TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_16x16x32_f16, "V4fV8hV8hV4fIiIiIi", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_16x16x32_bf16, "V4fV8yV8yV4fIiIiIi", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_32x32x16_f16, "V16fV8hV8hV16fIiIiIi", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_mfma_i32_16x16x64_i8, "V4iV4iV4iV4iIiIiIi", "nc", "gfx950-insts")
 TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_32x32x16_bf16, "V16fV8yV8yV16fIiIiIi", "nc", "gfx950-insts")

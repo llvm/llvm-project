@@ -40,3 +40,10 @@ void test_mfma_i32_32x32x32_i8(__global int16* out, int4 a, int4 b, int16 c, int
   *out = __builtin_amdgcn_mfma_i32_32x32x32_i8(a, b, c, 0, X, 0);  // expected-error{{argument to '__builtin_amdgcn_mfma_i32_32x32x32_i8' must be a constant integer}}
   *out = __builtin_amdgcn_mfma_i32_32x32x32_i8(a, b, c, 0, 0, X);  // expected-error{{argument to '__builtin_amdgcn_mfma_i32_32x32x32_i8' must be a constant integer}}
 }
+
+void test_mfma_f32_16x16x32_bf16(__global float4* out, bfloat8 a, bfloat8 b, float4 c, int X) {
+
+  *out = __builtin_amdgcn_mfma_f32_16x16x32_bf16(a, b, c, X, 0, 0); // expected-error{{argument to '__builtin_amdgcn_mfma_f32_16x16x32_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_mfma_f32_16x16x32_bf16(a, b, c, 0, X, 0); // expected-error{{argument to '__builtin_amdgcn_mfma_f32_16x16x32_bf16' must be a constant integer}}
+  *out = __builtin_amdgcn_mfma_f32_16x16x32_bf16(a, b, c, 0, 0, X); // expected-error{{argument to '__builtin_amdgcn_mfma_f32_16x16x32_bf16' must be a constant integer}}
+}
