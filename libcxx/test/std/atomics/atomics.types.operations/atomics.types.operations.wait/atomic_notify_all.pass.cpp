@@ -8,7 +8,7 @@
 //
 // UNSUPPORTED: no-threads
 // XFAIL: c++03
-// XFAIL: !has-64-bit-atomics
+// XFAIL: !has-128-bit-atomics
 
 // XFAIL: availability-synchronization_library-missing
 
