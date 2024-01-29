@@ -147,7 +147,7 @@ updateUndistributedLoopDirection(std::vector<Dependence::DVEntry> &DV,
     // Set the direction of the loop to EQ if the loop won't affect the
     // SCEV of Src and Dst.
     if (!DistributedLoops.test(II)) {
-      dbgs() << "Set level " << II << " loop direction to =\n";
+      LLVM_DEBUG(dbgs() << "Set level " << II << " loop direction to =\n");
       DV[II - 1].Direction = Dependence::DVEntry::EQ;
     }
 }
