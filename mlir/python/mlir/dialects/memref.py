@@ -6,43 +6,52 @@ from itertools import accumulate
 from typing import Optional
 
 from ._memref_ops_gen import *
-from .arith import ConstantOp
-from .transform.structured import _dispatch_mixed_values, MixedValues
+from ._ods_common import _dispatch_mixed_values, MixedValues
+from .arith import ConstantOp, _is_integer_like_type
 from ..ir import Value, MemRefType, StridedLayoutAttr, ShapedType
 
 
-def _is_constant(i):
-    return isinstance(i, Value) and isinstance(i.owner.opview, ConstantOp)
+def _is_constant_int_like(i):
+    return (
+        isinstance(i, Value)
+        and isinstance(i.owner.opview, ConstantOp)
+        and _is_integer_like_type(i.type)
+    )
 
 
-def _is_static(i):
-    return (isinstance(i, int) and not ShapedType.is_dynamic_size(i)) or _is_constant(i)
+def _is_static_int_like(i):
+    return (
+        isinstance(i, int) and not ShapedType.is_dynamic_size(i)
+    ) or _is_constant_int_like(i)
 
 
 def _infer_memref_subview_result_type(
     source_memref_type, offsets, static_sizes, static_strides
 ):
-    source_strides, source_offset = source_memref_type.strides_and_offset
+    source_strides, source_offset = source_memref_type.get_strides_and_offset()
     # "canonicalize" from tuple|list -> list
     offsets, static_sizes, static_strides, source_strides = map(
         list, (offsets, static_sizes, static_strides, source_strides)
     )
 
-    assert all(
-        all(_is_static(i) for i in s)
+    if not all(
+        all(_is_static_int_like(i) for i in s)
         for s in [
             static_sizes,
             static_strides,
             source_strides,
         ]
-    ), f"Only inferring from python or mlir integer constant is supported"
+    ):
+        raise ValueError(
+            "Only inferring from python or mlir integer constant is supported."
+        )
 
     for s in [offsets, static_sizes, static_strides]:
         for idx, i in enumerate(s):
-            if _is_constant(i):
+            if _is_constant_int_like(i):
                 s[idx] = i.owner.opview.literal_value
 
-    if any(not _is_static(i) for i in offsets + [source_offset]):
+    if any(not _is_static_int_like(i) for i in offsets + [source_offset]):
         target_offset = ShapedType.get_dynamic_size()
     else:
         target_offset = source_offset
@@ -91,22 +100,22 @@ def subview(
         sizes = []
     if strides is None:
         strides = []
-    source_strides, source_offset = source.type.strides_and_offset
+    source_strides, source_offset = source.type.get_strides_and_offset()
     if result_type is None and all(
-        all(_is_static(i) for i in s) for s in [sizes, strides, source_strides]
+        all(_is_static_int_like(i) for i in s) for s in [sizes, strides, source_strides]
     ):
         # If any are arith.constant results then this will canonicalize to python int
-        # (which can then be used to fully specific the subview).
+        # (which can then be used to fully specify the subview).
         (
             offsets,
             sizes,
             strides,
             result_type,
         ) = _infer_memref_subview_result_type(source.type, offsets, sizes, strides)
-    else:
-        assert (
-            result_type is not None
-        ), "mixed static/dynamic offset/sizes/strides requires explicit result type"
+    elif result_type is None:
+        raise ValueError(
+            "mixed static/dynamic offset/sizes/strides requires explicit result type."
+        )
 
     offsets, _packed_offsets, static_offsets = _dispatch_mixed_values(offsets)
     sizes, _packed_sizes, static_sizes = _dispatch_mixed_values(sizes)

@@ -411,9 +411,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type);
 /// Returns the strides of the MemRef if the layout map is in strided form.
 /// Both strides and offset are out params. strides must point to pre-allocated
 /// memory of length equal to the rank of the memref.
-MLIR_CAPI_EXPORTED void mlirMemRefTypeGetStridesAndOffset(MlirType type,
-                                                          int64_t *strides,
-                                                          int64_t *offset);
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(
+    MlirType type, int64_t *strides, int64_t *offset);
 
 /// Returns the memory spcae of the given Unranked MemRef type.
 MLIR_CAPI_EXPORTED MlirAttribute

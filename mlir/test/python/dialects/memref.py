@@ -141,7 +141,7 @@ def testSubViewOpInferReturnTypeSemantics():
                     [ShapedType.get_dynamic_size(), 3],
                     [1, 1],
                 )
-            except AssertionError as e:
+            except ValueError as e:
                 # CHECK: Only inferring from python or mlir integer constant is supported
                 print(e)
 
@@ -152,7 +152,7 @@ def testSubViewOpInferReturnTypeSemantics():
                     [ShapedType.get_dynamic_size(), 3],
                     [1, 1],
                 )
-            except AssertionError as e:
+            except ValueError as e:
                 # CHECK: mixed static/dynamic offset/sizes/strides requires explicit result type
                 print(e)
 

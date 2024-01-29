@@ -9,12 +9,14 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Support/LogicalResult.h"
 
 #include <algorithm>
 
@@ -428,16 +430,16 @@ MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type) {
   return wrap(llvm::cast<MemRefType>(unwrap(type)).getMemorySpace());
 }
 
-void mlirMemRefTypeGetStridesAndOffset(MlirType type, int64_t *strides,
-                                       int64_t *offset) {
+MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
+                                                    int64_t *strides,
+                                                    int64_t *offset) {
   MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
-  std::pair<SmallVector<int64_t>, int64_t> stridesOffsets =
-      getStridesAndOffset(memrefType);
-  assert(stridesOffsets.first.size() == memrefType.getRank() &&
-         "Strides and rank don't match for memref");
-  (void)std::copy(stridesOffsets.first.begin(), stridesOffsets.first.end(),
-                  strides);
-  *offset = stridesOffsets.second;
+  SmallVector<int64_t> strides_;
+  if (failed(getStridesAndOffset(memrefType, strides_, *offset)))
+    return mlirLogicalResultFailure();
+
+  (void)std::copy(strides_.begin(), strides_.end(), strides);
+  return mlirLogicalResultSuccess();
 }
 
 MlirTypeID mlirUnrankedMemRefTypeGetTypeID() {
