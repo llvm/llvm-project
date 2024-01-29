@@ -156,8 +156,6 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   // Handle cases where caller must allocate the result or a fir.box for it.
   bool mustPopSymMap = false;
-
-  // Is procedure pointer functin result.
   if (caller.mustMapInterfaceSymbols()) {
     symMap.pushScope();
     mustPopSymMap = true;
@@ -448,7 +446,6 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
       callResult = call.getResult(0);
   }
 
-  // if (!isProcedurePointer && caller.mustSaveResult()) {
   if (caller.mustSaveResult()) {
     assert(allocatedResult.has_value());
     builder.create<fir::SaveResultOp>(loc, callResult,
