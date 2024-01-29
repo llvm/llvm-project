@@ -1,0 +1,124 @@
+# This test tests that PT_LOAD segment has properly aligned p_offset
+# in the presented layout (The presense of PT_PHDR and PT_INTERP is important).
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --program-headers %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1000
+    Size:            4096
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1000
+    Size:            0x1938c9
+  - Name:            .text3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1000
+    Size:            4096
+  - Name:            .text4
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1000
+    Size:            4096
+  - Name:            .text5
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1000
+    Size:            1658880
+ProgramHeaders:
+  - Type:     PT_PHDR
+    Flags:    [ PF_R ]
+    Offset:   0x40
+    VAddr:    0x40
+    PAddr:    0x40
+    FileSize: 0x268
+    MemSize:  0x268
+    Align:    0x8
+  - Type:     PT_INTERP
+    Flags:    [ PF_R ]
+    Offset:   0x195000
+    VAddr:    0x195000
+    PAddr:    0x195000
+    FileSize: 0xf
+    MemSize:  0xf
+    Align:    0x1
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text2
+    FileSize: 0x1948c9
+    MemSize:  0x1948c9
+    Offset:   0
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .text3
+    LastSec:  .text4
+    FileSize: 0xdf960
+    MemSize:  0xdf960
+    Offset:   0x195000
+    VAddr:    0x195000
+    PAddr:    0x195000
+
+#CHECK: ProgramHeaders [
+#CHECK-NEXT:   ProgramHeader {
+#CHECK-NEXT:     Type: PT_PHDR (0x6)
+#CHECK-NEXT:     Offset: 0x40
+#CHECK-NEXT:     VirtualAddress: 0x40
+#CHECK-NEXT:     PhysicalAddress: 0x40
+#CHECK-NEXT:     FileSize: 616
+#CHECK-NEXT:     MemSize: 616
+#CHECK-NEXT:     Flags [ (0x4)
+#CHECK-NEXT:       PF_R (0x4)
+#CHECK-NEXT:     ]
+#CHECK-NEXT:     Alignment: 8
+#CHECK-NEXT:   }
+#CHECK-NEXT:   ProgramHeader {
+#CHECK-NEXT:     Type: PT_INTERP (0x3)
+#CHECK-NEXT:     Offset: 0x1948C9
+#CHECK-NEXT:     VirtualAddress: 0x195000
+#CHECK-NEXT:     PhysicalAddress: 0x195000
+#CHECK-NEXT:     FileSize: 15
+#CHECK-NEXT:     MemSize: 15
+#CHECK-NEXT:     Flags [ (0x4)
+#CHECK-NEXT:       PF_R (0x4)
+#CHECK-NEXT:     ]
+#CHECK-NEXT:     Alignment: 1
+#CHECK-NEXT:   }
+#CHECK-NEXT:   ProgramHeader {
+#CHECK-NEXT:     Type: PT_LOAD (0x1)
+#CHECK-NEXT:     Offset: 0x0
+#CHECK-NEXT:     VirtualAddress: 0x0
+#CHECK-NEXT:     PhysicalAddress: 0x0
+#CHECK-NEXT:     FileSize: 1657033
+#CHECK-NEXT:     MemSize: 1657033
+#CHECK-NEXT:     Flags [ (0x5)
+#CHECK-NEXT:       PF_R (0x4)
+#CHECK-NEXT:       PF_X (0x1)
+#CHECK-NEXT:     ]
+#CHECK-NEXT:     Alignment: 4096
+#CHECK-NEXT:   }
+#CHECK-NEXT:   ProgramHeader {
+#CHECK-NEXT:     Type: PT_LOAD (0x1)
+#CHECK-NEXT:     Offset: 0x195000
+#CHECK-NEXT:     VirtualAddress: 0x195000
+#CHECK-NEXT:     PhysicalAddress: 0x195000
+#CHECK-NEXT:     FileSize: 915808
+#CHECK-NEXT:     MemSize: 915808
+#CHECK-NEXT:     Flags [ (0x4)
+#CHECK-NEXT:       PF_R (0x4)
+#CHECK-NEXT:     ]
+#CHECK-NEXT:     Alignment: 4096
+#CHECK-NEXT:   }
+#CHECK-NEXT: ]

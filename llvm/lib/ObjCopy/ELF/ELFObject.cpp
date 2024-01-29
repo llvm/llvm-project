@@ -2280,17 +2280,17 @@ static uint64_t layoutSegments(std::vector<Segment *> &Segments,
   // segments. So we can simply layout segments one after the other accounting
   // for alignment.
   for (Segment *Seg : Segments) {
+    uint64_t SegAlign = std::max<uint64_t>(Seg->Align, 1);
     // We assume that segments have been ordered by OriginalOffset and Index
     // such that a parent segment will always come before a child segment in
     // OrderedSegments. This means that the Offset of the ParentSegment should
     // already be set and we can set our offset relative to it.
     if (Seg->ParentSegment != nullptr) {
       Segment *Parent = Seg->ParentSegment;
-      Seg->Offset =
-          Parent->Offset + Seg->OriginalOffset - Parent->OriginalOffset;
+      Seg->Offset = alignTo(Parent->Offset, SegAlign) + Seg->OriginalOffset -
+                    Parent->OriginalOffset;
     } else {
-      Seg->Offset =
-          alignTo(Offset, std::max<uint64_t>(Seg->Align, 1), Seg->VAddr);
+      Seg->Offset = alignTo(Offset, SegAlign, Seg->VAddr);
     }
     Offset = std::max(Offset, Seg->Offset + Seg->FileSize);
   }
