@@ -7726,8 +7726,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
   }
 
-  unsigned CPol = cast<ConstantSDNode>(
-      Op.getOperand(ArgOffset + Intr->CachePolicyIndex))->getZExtValue();
+  unsigned CPol = Op.getConstantOperandVal(ArgOffset + Intr->CachePolicyIndex);
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
   if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
