@@ -30,6 +30,24 @@ Matrix<T>::Matrix(unsigned rows, unsigned columns, unsigned reservedRows,
 }
 
 template <typename T>
+bool Matrix<T>::operator==(const Matrix<T> &m) const {
+  if (nRows != m.getNumRows())
+    return false;
+  if (nColumns != m.getNumColumns())
+    return false;
+
+  for (unsigned i = 0; i < nRows; i++) {
+    for (unsigned j = 0; j < nColumns; j++) {
+      if (at(i, j) == m.at(i, j))
+        continue;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template <typename T>
 Matrix<T> Matrix<T>::identity(unsigned dimension) {
   Matrix matrix(dimension, dimension);
   for (unsigned i = 0; i < dimension; ++i)

@@ -355,7 +355,10 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
 
     if (!vertex)
       continue;
-    // If this subset corresponds to a vertex, store it.
+    if (std::find(vertices.begin(), vertices.end(), vertex) != vertices.end())
+      continue;
+    // If this subset corresponds to a vertex that has not been considered,
+    // store it.
     vertices.push_back(*vertex);
 
     // Let the current vertex be [X | y], where
@@ -379,22 +382,6 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     for (unsigned i = 0; i < numIneqs - numVars; i++) {
       activeRegion.setRow(i, vertex->preMultiplyWithRow(a2.getRow(i)));
       activeRegion.addToRow(i, b2c2.getRow(i), 1);
-    }
-
-    // If any row of activeRegion is all-zero, that means that the
-    // corresponding inequality in `remaining` is *also* satisfied by the
-    // vertex for any values of the parameters. Thus we remove it from
-    // activeRegion and add that inequality to `subset`.
-    // Note that if the row is not all-zero, it is still possible for the
-    // inequality to be satisfied by the corresponding vertex *in some subset of
-    // the parameter space*. However, since this subset is defined by an
-    // equality, it is not full-dimensional; here and in the chamber
-    // decomposition, we ignore full-dimensional chambers.
-    for (int i = activeRegion.getNumRows() - 1; i >= 0; --i) {
-      if (!isRangeZero(activeRegion.getRow(i)))
-        continue;
-      subset.appendExtraRow(remainder.getRow(i));
-      activeRegion.removeRow(i);
     }
 
     // We convert the representation of the active region to an integers-only

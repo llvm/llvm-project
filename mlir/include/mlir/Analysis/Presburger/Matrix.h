@@ -74,6 +74,8 @@ public:
 
   T operator()(unsigned row, unsigned column) const { return at(row, column); }
 
+  bool operator==(const Matrix<T> &m) const;
+
   /// Swap the given columns.
   void swapColumns(unsigned column, unsigned otherColumn);
 
