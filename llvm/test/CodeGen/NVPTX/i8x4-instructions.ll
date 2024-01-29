@@ -285,33 +285,51 @@ define <4 x i8> @test_smax(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_umax(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-LABEL: test_umax(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b32 %r<19>;
+; CHECK-NEXT: .reg .pred      %p<5>;
+; CHECK-NEXT: .reg .b16       %rs<17>;
+; CHECK-NEXT: .reg .b32       %r<19>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r2, [test_umax_param_1];
-; CHECK-NEXT:    ld.param.u32 %r1, [test_umax_param_0];
-; CHECK-NEXT:    bfe.s32 %r3, %r1, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r4, %r2, 24, 8;
-; CHECK-NEXT:    setp.hi.u32 %p1, %r3, %r4;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r6, %r2, 16, 8;
-; CHECK-NEXT:    setp.hi.u32 %p2, %r5, %r6;
-; CHECK-NEXT:    bfe.s32 %r7, %r1, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r8, %r2, 8, 8;
-; CHECK-NEXT:    setp.hi.u32 %p3, %r7, %r8;
-; CHECK-NEXT:    bfe.s32 %r9, %r1, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r10, %r2, 0, 8;
-; CHECK-NEXT:    setp.hi.u32 %p4, %r9, %r10;
-; CHECK-NEXT:    selp.b32 %r11, %r9, %r10, %p4;
-; CHECK-NEXT:    selp.b32 %r12, %r7, %r8, %p3;
-; CHECK-NEXT:    bfi.b32 %r13, %r12, %r11, 8, 8;
-; CHECK-NEXT:    selp.b32 %r14, %r5, %r6, %p2;
-; CHECK-NEXT:    bfi.b32 %r15, %r14, %r13, 16, 8;
-; CHECK-NEXT:    selp.b32 %r16, %r3, %r4, %p1;
-; CHECK-NEXT:    bfi.b32 %r17, %r16, %r15, 24, 8;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r17;
-; CHECK-NEXT:    ret;
+; CHECK-NEXT: ld.param.u32    %r1, [test_umax_param_0];
+; CHECK-NEXT: ld.param.u32    %r2, [test_umax_param_1];
+; CHECK-NEXT: bfe.s32         %r3, %r2, 24, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs1, %r3;
+; CHECK-NEXT: and.b16         %rs2, %rs1, 255;
+; CHECK-NEXT: bfe.s32         %r4, %r1, 24, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs3, %r4;
+; CHECK-NEXT: and.b16         %rs4, %rs3, 255;
+; CHECK-NEXT: setp.gt.u16     %p1, %rs4, %rs2;
+; CHECK-NEXT: bfe.s32         %r5, %r2, 16, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs5, %r5;
+; CHECK-NEXT: and.b16         %rs6, %rs5, 255;
+; CHECK-NEXT: bfe.s32         %r6, %r1, 16, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs7, %r6;
+; CHECK-NEXT: and.b16         %rs8, %rs7, 255;
+; CHECK-NEXT: setp.gt.u16     %p2, %rs8, %rs6;
+; CHECK-NEXT: bfe.s32         %r7, %r2, 8, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs9, %r7;
+; CHECK-NEXT: and.b16         %rs10, %rs9, 255;
+; CHECK-NEXT: bfe.s32         %r8, %r1, 8, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs11, %r8;
+; CHECK-NEXT: and.b16         %rs12, %rs11, 255;
+; CHECK-NEXT: setp.gt.u16     %p3, %rs12, %rs10;
+; CHECK-NEXT: bfe.s32         %r9, %r2, 0, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs13, %r9;
+; CHECK-NEXT: and.b16         %rs14, %rs13, 255;
+; CHECK-NEXT: bfe.s32         %r10, %r1, 0, 8;
+; CHECK-NEXT: cvt.u16.u32     %rs15, %r10;
+; CHECK-NEXT: and.b16         %rs16, %rs15, 255;
+; CHECK-NEXT: setp.gt.u16     %p4, %rs16, %rs14;
+; CHECK-NEXT: selp.b32        %r11, %r10, %r9, %p4;
+; CHECK-NEXT: selp.b32        %r12, %r8, %r7, %p3;
+; CHECK-NEXT: bfi.b32         %r13, %r12, %r11, 8, 8;
+; CHECK-NEXT: selp.b32        %r14, %r6, %r5, %p2;
+; CHECK-NEXT: bfi.b32         %r15, %r14, %r13, 16, 8;
+; CHECK-NEXT: selp.b32        %r16, %r4, %r3, %p1;
+; CHECK-NEXT: bfi.b32         %r17, %r16, %r15, 24, 8;
+; CHECK-NEXT: st.param.b32    [func_retval0+0], %r17;
+; CHECK-NEXT: ret;
+
   %cmp = icmp ugt <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %r
@@ -355,32 +373,49 @@ define <4 x i8> @test_smin(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_umin(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-LABEL: test_umin(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b32 %r<19>;
+; CHECK-NEXT: .reg .pred      %p<5>;
+; CHECK-NEXT: .reg .b16       %rs<17>;
+; CHECK-NEXT: .reg .b32       %r<19>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_umin_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_umin_param_0];
-; CHECK-NEXT:    bfe.s32 %r3, %r1, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r4, %r2, 24, 8;
-; CHECK-NEXT:    setp.ls.u32 %p1, %r3, %r4;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r6, %r2, 16, 8;
-; CHECK-NEXT:    setp.ls.u32 %p2, %r5, %r6;
-; CHECK-NEXT:    bfe.s32 %r7, %r1, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r8, %r2, 8, 8;
-; CHECK-NEXT:    setp.ls.u32 %p3, %r7, %r8;
-; CHECK-NEXT:    bfe.s32 %r9, %r1, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r10, %r2, 0, 8;
-; CHECK-NEXT:    setp.ls.u32 %p4, %r9, %r10;
-; CHECK-NEXT:    selp.b32 %r11, %r9, %r10, %p4;
-; CHECK-NEXT:    selp.b32 %r12, %r7, %r8, %p3;
-; CHECK-NEXT:    bfi.b32 %r13, %r12, %r11, 8, 8;
-; CHECK-NEXT:    selp.b32 %r14, %r5, %r6, %p2;
-; CHECK-NEXT:    bfi.b32 %r15, %r14, %r13, 16, 8;
-; CHECK-NEXT:    selp.b32 %r16, %r3, %r4, %p1;
-; CHECK-NEXT:    bfi.b32 %r17, %r16, %r15, 24, 8;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r17;
+; CHECK-NEXT:    bfe.s32         %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs1, %r3;
+; CHECK-NEXT:    and.b16         %rs2, %rs1, 255;
+; CHECK-NEXT:    bfe.s32         %r4, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs3, %r4;
+; CHECK-NEXT:    and.b16         %rs4, %rs3, 255;
+; CHECK-NEXT:    setp.le.u16     %p1, %rs4, %rs2;
+; CHECK-NEXT:    bfe.s32         %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs5, %r5;
+; CHECK-NEXT:    and.b16         %rs6, %rs5, 255;
+; CHECK-NEXT:    bfe.s32         %r6, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs7, %r6;
+; CHECK-NEXT:    and.b16         %rs8, %rs7, 255;
+; CHECK-NEXT:    setp.le.u16     %p2, %rs8, %rs6;
+; CHECK-NEXT:    bfe.s32         %r7, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs9, %r7;
+; CHECK-NEXT:    and.b16         %rs10, %rs9, 255;
+; CHECK-NEXT:    bfe.s32         %r8, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs11, %r8;
+; CHECK-NEXT:    and.b16         %rs12, %rs11, 255;
+; CHECK-NEXT:    setp.le.u16     %p3, %rs12, %rs10;
+; CHECK-NEXT:    bfe.s32         %r9, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs13, %r9;
+; CHECK-NEXT:    and.b16         %rs14, %rs13, 255;
+; CHECK-NEXT:    bfe.s32         %r10, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs15, %r10;
+; CHECK-NEXT:    and.b16         %rs16, %rs15, 255;
+; CHECK-NEXT:    setp.le.u16     %p4, %rs16, %rs14;
+; CHECK-NEXT:    selp.b32        %r11, %r10, %r9, %p4;
+; CHECK-NEXT:    selp.b32        %r12, %r8, %r7, %p3;
+; CHECK-NEXT:    bfi.b32         %r13, %r12, %r11, 8, 8;
+; CHECK-NEXT:    selp.b32        %r14, %r6, %r5, %p2;
+; CHECK-NEXT:    bfi.b32         %r15, %r14, %r13, 16, 8;
+; CHECK-NEXT:    selp.b32        %r16, %r4, %r3, %p1;
+; CHECK-NEXT:    bfi.b32         %r17, %r16, %r15, 24, 8;
+; CHECK-NEXT:    st.param.b32    [func_retval0+0], %r17;
 ; CHECK-NEXT:    ret;
   %cmp = icmp ule <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %b
@@ -390,37 +425,54 @@ define <4 x i8> @test_umin(<4 x i8> %a, <4 x i8> %b) #0 {
 define <4 x i8> @test_eq(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) #0 {
 ; CHECK-LABEL: test_eq(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b32 %r<24>;
+; CHECK-NEXT: .reg .pred      %p<5>;
+; CHECK-NEXT: .reg .b16       %rs<17>;
+; CHECK-NEXT: .reg .b32       %r<24>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r3, [test_eq_param_2];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_eq_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_eq_param_0];
-; CHECK-NEXT:    bfe.s32 %r4, %r2, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 24, 8;
-; CHECK-NEXT:    setp.eq.u32 %p1, %r5, %r4;
-; CHECK-NEXT:    bfe.s32 %r6, %r2, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r7, %r1, 16, 8;
-; CHECK-NEXT:    setp.eq.u32 %p2, %r7, %r6;
-; CHECK-NEXT:    bfe.s32 %r8, %r2, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r9, %r1, 8, 8;
-; CHECK-NEXT:    setp.eq.u32 %p3, %r9, %r8;
-; CHECK-NEXT:    bfe.s32 %r10, %r2, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r11, %r1, 0, 8;
-; CHECK-NEXT:    setp.eq.u32 %p4, %r11, %r10;
-; CHECK-NEXT:    bfe.s32 %r12, %r3, 0, 8;
-; CHECK-NEXT:    selp.b32 %r13, %r11, %r12, %p4;
-; CHECK-NEXT:    bfe.s32 %r14, %r3, 8, 8;
-; CHECK-NEXT:    selp.b32 %r15, %r9, %r14, %p3;
-; CHECK-NEXT:    bfi.b32 %r16, %r15, %r13, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r17, %r3, 16, 8;
-; CHECK-NEXT:    selp.b32 %r18, %r7, %r17, %p2;
-; CHECK-NEXT:    bfi.b32 %r19, %r18, %r16, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r20, %r3, 24, 8;
-; CHECK-NEXT:    selp.b32 %r21, %r5, %r20, %p1;
-; CHECK-NEXT:    bfi.b32 %r22, %r21, %r19, 24, 8;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r22;
+; CHECK-NEXT:    bfe.s32         %r4, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs1, %r4;
+; CHECK-NEXT:    and.b16         %rs2, %rs1, 255;
+; CHECK-NEXT:    bfe.s32         %r5, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs3, %r5;
+; CHECK-NEXT:    and.b16         %rs4, %rs3, 255;
+; CHECK-NEXT:    setp.eq.s16     %p1, %rs4, %rs2;
+; CHECK-NEXT:    bfe.s32         %r6, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs5, %r6;
+; CHECK-NEXT:    and.b16         %rs6, %rs5, 255;
+; CHECK-NEXT:    bfe.s32         %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs7, %r7;
+; CHECK-NEXT:    and.b16         %rs8, %rs7, 255;
+; CHECK-NEXT:    setp.eq.s16     %p2, %rs8, %rs6;
+; CHECK-NEXT:    bfe.s32         %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs9, %r8;
+; CHECK-NEXT:    and.b16         %rs10, %rs9, 255;
+; CHECK-NEXT:    bfe.s32         %r9, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs11, %r9;
+; CHECK-NEXT:    and.b16         %rs12, %rs11, 255;
+; CHECK-NEXT:    setp.eq.s16     %p3, %rs12, %rs10;
+; CHECK-NEXT:    bfe.s32         %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs13, %r10;
+; CHECK-NEXT:    and.b16         %rs14, %rs13, 255;
+; CHECK-NEXT:    bfe.s32         %r11, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs15, %r11;
+; CHECK-NEXT:    and.b16         %rs16, %rs15, 255;
+; CHECK-NEXT:    setp.eq.s16     %p4, %rs16, %rs14;
+; CHECK-NEXT:    bfe.s32         %r12, %r3, 0, 8;
+; CHECK-NEXT:    selp.b32        %r13, %r11, %r12, %p4;
+; CHECK-NEXT:    bfe.s32         %r14, %r3, 8, 8;
+; CHECK-NEXT:    selp.b32        %r15, %r9, %r14, %p3;
+; CHECK-NEXT:    bfi.b32         %r16, %r15, %r13, 8, 8;
+; CHECK-NEXT:    bfe.s32         %r17, %r3, 16, 8;
+; CHECK-NEXT:    selp.b32        %r18, %r7, %r17, %p2;
+; CHECK-NEXT:    bfi.b32         %r19, %r18, %r16, 16, 8;
+; CHECK-NEXT:    bfe.s32         %r20, %r3, 24, 8;
+; CHECK-NEXT:    selp.b32        %r21, %r5, %r20, %p1;
+; CHECK-NEXT:    bfi.b32         %r22, %r21, %r19, 24, 8;
+; CHECK-NEXT:    st.param.b32    [func_retval0+0], %r22;
 ; CHECK-NEXT:    ret;
   %cmp = icmp eq <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %c
@@ -430,37 +482,54 @@ define <4 x i8> @test_eq(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) #0 {
 define <4 x i8> @test_ne(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) #0 {
 ; CHECK-LABEL: test_ne(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b32 %r<24>;
+; CHECK-NEXT: .reg .pred      %p<5>;
+; CHECK-NEXT: .reg .b16       %rs<17>;
+; CHECK-NEXT: .reg .b32       %r<24>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r3, [test_ne_param_2];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_ne_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_ne_param_0];
-; CHECK-NEXT:    bfe.s32 %r4, %r2, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r5, %r1, 24, 8;
-; CHECK-NEXT:    setp.ne.u32 %p1, %r5, %r4;
-; CHECK-NEXT:    bfe.s32 %r6, %r2, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r7, %r1, 16, 8;
-; CHECK-NEXT:    setp.ne.u32 %p2, %r7, %r6;
-; CHECK-NEXT:    bfe.s32 %r8, %r2, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r9, %r1, 8, 8;
-; CHECK-NEXT:    setp.ne.u32 %p3, %r9, %r8;
-; CHECK-NEXT:    bfe.s32 %r10, %r2, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r11, %r1, 0, 8;
-; CHECK-NEXT:    setp.ne.u32 %p4, %r11, %r10;
-; CHECK-NEXT:    bfe.s32 %r12, %r3, 0, 8;
-; CHECK-NEXT:    selp.b32 %r13, %r11, %r12, %p4;
-; CHECK-NEXT:    bfe.s32 %r14, %r3, 8, 8;
-; CHECK-NEXT:    selp.b32 %r15, %r9, %r14, %p3;
-; CHECK-NEXT:    bfi.b32 %r16, %r15, %r13, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r17, %r3, 16, 8;
-; CHECK-NEXT:    selp.b32 %r18, %r7, %r17, %p2;
-; CHECK-NEXT:    bfi.b32 %r19, %r18, %r16, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r20, %r3, 24, 8;
-; CHECK-NEXT:    selp.b32 %r21, %r5, %r20, %p1;
-; CHECK-NEXT:    bfi.b32 %r22, %r21, %r19, 24, 8;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r22;
+; CHECK-NEXT:    bfe.s32         %r4, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs1, %r4;
+; CHECK-NEXT:    and.b16         %rs2, %rs1, 255;
+; CHECK-NEXT:    bfe.s32         %r5, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs3, %r5;
+; CHECK-NEXT:    and.b16         %rs4, %rs3, 255;
+; CHECK-NEXT:    setp.ne.s16     %p1, %rs4, %rs2;
+; CHECK-NEXT:    bfe.s32         %r6, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs5, %r6;
+; CHECK-NEXT:    and.b16         %rs6, %rs5, 255;
+; CHECK-NEXT:    bfe.s32         %r7, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs7, %r7;
+; CHECK-NEXT:    and.b16         %rs8, %rs7, 255;
+; CHECK-NEXT:    setp.ne.s16     %p2, %rs8, %rs6;
+; CHECK-NEXT:    bfe.s32         %r8, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs9, %r8;
+; CHECK-NEXT:    and.b16         %rs10, %rs9, 255;
+; CHECK-NEXT:    bfe.s32         %r9, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs11, %r9;
+; CHECK-NEXT:    and.b16         %rs12, %rs11, 255;
+; CHECK-NEXT:    setp.ne.s16     %p3, %rs12, %rs10;
+; CHECK-NEXT:    bfe.s32         %r10, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs13, %r10;
+; CHECK-NEXT:    and.b16         %rs14, %rs13, 255;
+; CHECK-NEXT:    bfe.s32         %r11, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs15, %r11;
+; CHECK-NEXT:    and.b16         %rs16, %rs15, 255;
+; CHECK-NEXT:    setp.ne.s16     %p4, %rs16, %rs14;
+; CHECK-NEXT:    bfe.s32         %r12, %r3, 0, 8;
+; CHECK-NEXT:    selp.b32        %r13, %r11, %r12, %p4;
+; CHECK-NEXT:    bfe.s32         %r14, %r3, 8, 8;
+; CHECK-NEXT:    selp.b32        %r15, %r9, %r14, %p3;
+; CHECK-NEXT:    bfi.b32         %r16, %r15, %r13, 8, 8;
+; CHECK-NEXT:    bfe.s32         %r17, %r3, 16, 8;
+; CHECK-NEXT:    selp.b32        %r18, %r7, %r17, %p2;
+; CHECK-NEXT:    bfi.b32         %r19, %r18, %r16, 16, 8;
+; CHECK-NEXT:    bfe.s32         %r20, %r3, 24, 8;
+; CHECK-NEXT:    selp.b32        %r21, %r5, %r20, %p1;
+; CHECK-NEXT:    bfi.b32         %r22, %r21, %r19, 24, 8;
+; CHECK-NEXT:    st.param.b32    [func_retval0+0], %r22;
 ; CHECK-NEXT:    ret;
   %cmp = icmp ne <4 x i8> %a, %b
   %r = select <4 x i1> %cmp, <4 x i8> %a, <4 x i8> %c
@@ -912,42 +981,59 @@ define <4 x i8> @test_select(<4 x i8> %a, <4 x i8> %b, i1 zeroext %c) #0 {
 define <4 x i8> @test_select_cc(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> %d) #0 {
 ; CHECK-LABEL: test_select_cc(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
+; CHECK-NEXT: .reg .pred      %p<5>;
+; CHECK-NEXT: .reg .b16       %rs<17>;
+; CHECK-NEXT: .reg .b32       %r<29>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r4, [test_select_cc_param_3];
 ; CHECK-NEXT:    ld.param.u32 %r3, [test_select_cc_param_2];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_select_cc_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_select_cc_param_0];
-; CHECK-NEXT:    bfe.s32 %r5, %r4, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r6, %r3, 24, 8;
-; CHECK-NEXT:    setp.ne.u32 %p1, %r6, %r5;
-; CHECK-NEXT:    bfe.s32 %r7, %r4, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r8, %r3, 16, 8;
-; CHECK-NEXT:    setp.ne.u32 %p2, %r8, %r7;
-; CHECK-NEXT:    bfe.s32 %r9, %r4, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r10, %r3, 8, 8;
-; CHECK-NEXT:    setp.ne.u32 %p3, %r10, %r9;
-; CHECK-NEXT:    bfe.s32 %r11, %r4, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r12, %r3, 0, 8;
-; CHECK-NEXT:    setp.ne.u32 %p4, %r12, %r11;
-; CHECK-NEXT:    bfe.s32 %r13, %r2, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r14, %r1, 0, 8;
-; CHECK-NEXT:    selp.b32 %r15, %r14, %r13, %p4;
-; CHECK-NEXT:    bfe.s32 %r16, %r2, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r17, %r1, 8, 8;
-; CHECK-NEXT:    selp.b32 %r18, %r17, %r16, %p3;
-; CHECK-NEXT:    bfi.b32 %r19, %r18, %r15, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r20, %r2, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r21, %r1, 16, 8;
-; CHECK-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; CHECK-NEXT:    bfi.b32 %r23, %r22, %r19, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r24, %r2, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r25, %r1, 24, 8;
-; CHECK-NEXT:    selp.b32 %r26, %r25, %r24, %p1;
-; CHECK-NEXT:    bfi.b32 %r27, %r26, %r23, 24, 8;
-; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r27;
+; CHECK-NEXT:    bfe.s32         %r5, %r4, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs1, %r5;
+; CHECK-NEXT:    and.b16         %rs2, %rs1, 255;
+; CHECK-NEXT:    bfe.s32         %r6, %r3, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs3, %r6;
+; CHECK-NEXT:    and.b16         %rs4, %rs3, 255;
+; CHECK-NEXT:    setp.ne.s16     %p1, %rs4, %rs2;
+; CHECK-NEXT:    bfe.s32         %r7, %r4, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs5, %r7;
+; CHECK-NEXT:    and.b16         %rs6, %rs5, 255;
+; CHECK-NEXT:    bfe.s32         %r8, %r3, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs7, %r8;
+; CHECK-NEXT:    and.b16         %rs8, %rs7, 255;
+; CHECK-NEXT:    setp.ne.s16     %p2, %rs8, %rs6;
+; CHECK-NEXT:    bfe.s32         %r9, %r4, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs9, %r9;
+; CHECK-NEXT:    and.b16         %rs10, %rs9, 255;
+; CHECK-NEXT:    bfe.s32         %r10, %r3, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs11, %r10;
+; CHECK-NEXT:    and.b16         %rs12, %rs11, 255;
+; CHECK-NEXT:    setp.ne.s16     %p3, %rs12, %rs10;
+; CHECK-NEXT:    bfe.s32         %r11, %r4, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs13, %r11;
+; CHECK-NEXT:    and.b16         %rs14, %rs13, 255;
+; CHECK-NEXT:    bfe.s32         %r12, %r3, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs15, %r12;
+; CHECK-NEXT:    and.b16         %rs16, %rs15, 255;
+; CHECK-NEXT:    setp.ne.s16     %p4, %rs16, %rs14;
+; CHECK-NEXT:    bfe.s32         %r13, %r2, 0, 8;
+; CHECK-NEXT:    bfe.s32         %r14, %r1, 0, 8;
+; CHECK-NEXT:    selp.b32        %r15, %r14, %r13, %p4;
+; CHECK-NEXT:    bfe.s32         %r16, %r2, 8, 8;
+; CHECK-NEXT:    bfe.s32         %r17, %r1, 8, 8;
+; CHECK-NEXT:    selp.b32        %r18, %r17, %r16, %p3;
+; CHECK-NEXT:    bfi.b32         %r19, %r18, %r15, 8, 8;
+; CHECK-NEXT:    bfe.s32         %r20, %r2, 16, 8;
+; CHECK-NEXT:    bfe.s32         %r21, %r1, 16, 8;
+; CHECK-NEXT:    selp.b32        %r22, %r21, %r20, %p2;
+; CHECK-NEXT:    bfi.b32         %r23, %r22, %r19, 16, 8;
+; CHECK-NEXT:    bfe.s32         %r24, %r2, 24, 8;
+; CHECK-NEXT:    bfe.s32         %r25, %r1, 24, 8;
+; CHECK-NEXT:    selp.b32        %r26, %r25, %r24, %p1;
+; CHECK-NEXT:    bfi.b32         %r27, %r26, %r23, 24, 8;
+; CHECK-NEXT:    st.param.b32    [func_retval0+0], %r27;
 ; CHECK-NEXT:    ret;
   %cc = icmp ne <4 x i8> %c, %d
   %r = select <4 x i1> %cc, <4 x i8> %a, <4 x i8> %b
@@ -957,31 +1043,48 @@ define <4 x i8> @test_select_cc(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <4 x i8> 
 define <4 x i32> @test_select_cc_i32_i8(<4 x i32> %a, <4 x i32> %b,
 ; CHECK-LABEL: test_select_cc_i32_i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b32 %r<23>;
+; CHECK-NEXT: .reg .pred      %p<5>;
+; CHECK-NEXT: .reg .b16       %rs<17>;
+; CHECK-NEXT: .reg .b32       %r<23>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.u32 {%r5, %r6, %r7, %r8}, [test_select_cc_i32_i8_param_1];
 ; CHECK-NEXT:    ld.param.v4.u32 {%r1, %r2, %r3, %r4}, [test_select_cc_i32_i8_param_0];
 ; CHECK-NEXT:    ld.param.u32 %r10, [test_select_cc_i32_i8_param_3];
 ; CHECK-NEXT:    ld.param.u32 %r9, [test_select_cc_i32_i8_param_2];
-; CHECK-NEXT:    bfe.s32 %r11, %r10, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r12, %r9, 0, 8;
-; CHECK-NEXT:    setp.ne.u32 %p1, %r12, %r11;
-; CHECK-NEXT:    bfe.s32 %r13, %r10, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r14, %r9, 8, 8;
-; CHECK-NEXT:    setp.ne.u32 %p2, %r14, %r13;
-; CHECK-NEXT:    bfe.s32 %r15, %r10, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r16, %r9, 16, 8;
-; CHECK-NEXT:    setp.ne.u32 %p3, %r16, %r15;
-; CHECK-NEXT:    bfe.s32 %r17, %r10, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r18, %r9, 24, 8;
-; CHECK-NEXT:    setp.ne.u32 %p4, %r18, %r17;
-; CHECK-NEXT:    selp.b32 %r19, %r4, %r8, %p4;
-; CHECK-NEXT:    selp.b32 %r20, %r3, %r7, %p3;
-; CHECK-NEXT:    selp.b32 %r21, %r2, %r6, %p2;
-; CHECK-NEXT:    selp.b32 %r22, %r1, %r5, %p1;
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0+0], {%r22, %r21, %r20, %r19};
+; CHECK-NEXT:    bfe.s32         %r11, %r10, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs1, %r11;
+; CHECK-NEXT:    and.b16         %rs2, %rs1, 255;
+; CHECK-NEXT:    bfe.s32         %r12, %r9, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs3, %r12;
+; CHECK-NEXT:    and.b16         %rs4, %rs3, 255;
+; CHECK-NEXT:    setp.ne.s16     %p1, %rs4, %rs2;
+; CHECK-NEXT:    bfe.s32         %r13, %r10, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs5, %r13;
+; CHECK-NEXT:    and.b16         %rs6, %rs5, 255;
+; CHECK-NEXT:    bfe.s32         %r14, %r9, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs7, %r14;
+; CHECK-NEXT:    and.b16         %rs8, %rs7, 255;
+; CHECK-NEXT:    setp.ne.s16     %p2, %rs8, %rs6;
+; CHECK-NEXT:    bfe.s32         %r15, %r10, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs9, %r15;
+; CHECK-NEXT:    and.b16         %rs10, %rs9, 255;
+; CHECK-NEXT:    bfe.s32         %r16, %r9, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs11, %r16;
+; CHECK-NEXT:    and.b16         %rs12, %rs11, 255;
+; CHECK-NEXT:    setp.ne.s16     %p3, %rs12, %rs10;
+; CHECK-NEXT:    bfe.s32         %r17, %r10, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs13, %r17;
+; CHECK-NEXT:    and.b16         %rs14, %rs13, 255;
+; CHECK-NEXT:    bfe.s32         %r18, %r9, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs15, %r18;
+; CHECK-NEXT:    and.b16         %rs16, %rs15, 255;
+; CHECK-NEXT:    setp.ne.s16     %p4, %rs16, %rs14;
+; CHECK-NEXT:    selp.b32        %r19, %r4, %r8, %p4;
+; CHECK-NEXT:    selp.b32        %r20, %r3, %r7, %p3;
+; CHECK-NEXT:    selp.b32        %r21, %r2, %r6, %p2;
+; CHECK-NEXT:    selp.b32        %r22, %r1, %r5, %p1;
+; CHECK-NEXT:    st.param.v4.b32         [func_retval0+0], {%r22, %r21, %r20, %r19};
 ; CHECK-NEXT:    ret;
                                            <4 x i8> %c, <4 x i8> %d) #0 {
   %cc = icmp ne <4 x i8> %c, %d
@@ -1414,9 +1517,10 @@ entry:
 define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: test_sext_v4i1_to_v4i8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<5>;
-; CHECK-NEXT:    .reg .b32 %r<18>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT: .reg .pred      %p<5>;
+; CHECK-NEXT: .reg .b16       %rs<17>;
+; CHECK-NEXT: .reg .b32       %r<18>;
+; CHECK-NEXT: .reg .b64       %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.u64 %rd3, [test_sext_v4i1_to_v4i8_param_2];
@@ -1424,26 +1528,42 @@ define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_sext_v4i1_to_v4i8_param_0];
 ; CHECK-NEXT:    ld.u32 %r1, [%rd1];
 ; CHECK-NEXT:    ld.u32 %r2, [%rd2];
-; CHECK-NEXT:    bfe.s32 %r3, %r2, 24, 8;
-; CHECK-NEXT:    bfe.s32 %r4, %r1, 24, 8;
-; CHECK-NEXT:    setp.hi.u32 %p1, %r4, %r3;
-; CHECK-NEXT:    bfe.s32 %r5, %r2, 16, 8;
-; CHECK-NEXT:    bfe.s32 %r6, %r1, 16, 8;
-; CHECK-NEXT:    setp.hi.u32 %p2, %r6, %r5;
-; CHECK-NEXT:    bfe.s32 %r7, %r2, 8, 8;
-; CHECK-NEXT:    bfe.s32 %r8, %r1, 8, 8;
-; CHECK-NEXT:    setp.hi.u32 %p3, %r8, %r7;
-; CHECK-NEXT:    bfe.s32 %r9, %r2, 0, 8;
-; CHECK-NEXT:    bfe.s32 %r10, %r1, 0, 8;
-; CHECK-NEXT:    setp.hi.u32 %p4, %r10, %r9;
-; CHECK-NEXT:    selp.s32 %r11, -1, 0, %p4;
-; CHECK-NEXT:    selp.s32 %r12, -1, 0, %p3;
-; CHECK-NEXT:    bfi.b32 %r13, %r12, %r11, 8, 8;
-; CHECK-NEXT:    selp.s32 %r14, -1, 0, %p2;
-; CHECK-NEXT:    bfi.b32 %r15, %r14, %r13, 16, 8;
-; CHECK-NEXT:    selp.s32 %r16, -1, 0, %p1;
-; CHECK-NEXT:    bfi.b32 %r17, %r16, %r15, 24, 8;
-; CHECK-NEXT:    st.u32 [%rd3], %r17;
+; CHECK-NEXT:    bfe.s32         %r3, %r2, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs1, %r3;
+; CHECK-NEXT:    and.b16         %rs2, %rs1, 255;
+; CHECK-NEXT:    bfe.s32         %r4, %r1, 24, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs3, %r4;
+; CHECK-NEXT:    and.b16         %rs4, %rs3, 255;
+; CHECK-NEXT:    setp.gt.u16     %p1, %rs4, %rs2;
+; CHECK-NEXT:    bfe.s32         %r5, %r2, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs5, %r5;
+; CHECK-NEXT:    and.b16         %rs6, %rs5, 255;
+; CHECK-NEXT:    bfe.s32         %r6, %r1, 16, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs7, %r6;
+; CHECK-NEXT:    and.b16         %rs8, %rs7, 255;
+; CHECK-NEXT:    setp.gt.u16     %p2, %rs8, %rs6;
+; CHECK-NEXT:    bfe.s32         %r7, %r2, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs9, %r7;
+; CHECK-NEXT:    and.b16         %rs10, %rs9, 255;
+; CHECK-NEXT:    bfe.s32         %r8, %r1, 8, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs11, %r8;
+; CHECK-NEXT:    and.b16         %rs12, %rs11, 255;
+; CHECK-NEXT:    setp.gt.u16     %p3, %rs12, %rs10;
+; CHECK-NEXT:    bfe.s32         %r9, %r2, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs13, %r9;
+; CHECK-NEXT:    and.b16         %rs14, %rs13, 255;
+; CHECK-NEXT:    bfe.s32         %r10, %r1, 0, 8;
+; CHECK-NEXT:    cvt.u16.u32     %rs15, %r10;
+; CHECK-NEXT:    and.b16         %rs16, %rs15, 255;
+; CHECK-NEXT:    setp.gt.u16     %p4, %rs16, %rs14;
+; CHECK-NEXT:    selp.s32        %r11, -1, 0, %p4;
+; CHECK-NEXT:    selp.s32        %r12, -1, 0, %p3;
+; CHECK-NEXT:    bfi.b32         %r13, %r12, %r11, 8, 8;
+; CHECK-NEXT:    selp.s32        %r14, -1, 0, %p2;
+; CHECK-NEXT:    bfi.b32         %r15, %r14, %r13, 16, 8;
+; CHECK-NEXT:    selp.s32        %r16, -1, 0, %p1;
+; CHECK-NEXT:    bfi.b32         %r17, %r16, %r15, 24, 8;
+; CHECK-NEXT:    st.u32  [%rd3], %r17;
 ; CHECK-NEXT:    ret;
 entry:
   %t1 = load <4 x i8>, ptr %a, align 4
