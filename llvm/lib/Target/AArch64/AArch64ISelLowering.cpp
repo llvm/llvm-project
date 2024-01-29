@@ -27140,7 +27140,7 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
     return false;
 
   // If the vector is scalable, SVE is enabled, implying support for complex
-  // numbers. Otherwirse, we need to ensure complex number support is avaialble
+  // numbers. Otherwise, we need to ensure complex number support is available
   if (!VTy->isScalableTy() && !Subtarget->hasComplxNum())
     return false;
 
@@ -27156,7 +27156,7 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
       !llvm::isPowerOf2_32(VTyWidth))
     return false;
 
-  if (ScalarTy->isIntegerTy() && Subtarget->hasSVE2()) {
+  if (ScalarTy->isIntegerTy() && Subtarget->hasSVE2() && VTy->isScalableTy()) {
     unsigned ScalarWidth = ScalarTy->getScalarSizeInBits();
     return 8 <= ScalarWidth && ScalarWidth <= 64;
   }
