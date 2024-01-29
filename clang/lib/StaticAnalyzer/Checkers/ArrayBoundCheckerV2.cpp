@@ -130,7 +130,12 @@ class ArrayBoundCheckerV2 : public Checker<check::PostStmt<ArraySubscriptExpr>,
   void performCheck(const Expr *E, CheckerContext &C) const;
 
   void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
-                 NonLoc Offset, bool IsTaintBug = false) const;
+                 NonLoc Offset, std::optional<NonLoc> Extent,
+                 bool IsTaintBug = false) const;
+
+  static void markPartsInteresting(PathSensitiveBugReport &BR,
+                                   ProgramStateRef ErrorState, NonLoc Val,
+                                   bool MarkTaint);
 
   static bool isFromCtypeMacro(const Stmt *S, ASTContext &AC);
 
@@ -551,7 +556,7 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
       if (!WithinLowerBound) {
         // ...and it cannot be valid (>= 0), so report an error.
         Messages Msgs = getPrecedesMsgs(Reg, ByteOffset);
-        reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset);
+        reportOOB(C, PrecedesLowerBound, Msgs, ByteOffset, std::nullopt);
         return;
       }
       // ...but it can be valid as well, so the checker will (optimistically)
@@ -586,7 +591,7 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
 
         Messages Msgs = getExceedsMsgs(C.getASTContext(), Reg, ByteOffset,
                                        *KnownSize, Location);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset);
+        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize);
         return;
       }
       // ...and it can be valid as well...
@@ -602,7 +607,8 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
             OffsetName = "index";
 
         Messages Msgs = getTaintMsgs(Reg, OffsetName);
-        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, /*IsTaintBug=*/true);
+        reportOOB(C, ExceedsUpperBound, Msgs, ByteOffset, KnownSize,
+                  /*IsTaintBug=*/true);
         return;
       }
       // ...and it isn't tainted, so the checker will (optimistically) assume
@@ -621,9 +627,32 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
   C.addTransition(State, SUR.createNoteTag(C));
 }
 
+void ArrayBoundCheckerV2::markPartsInteresting(PathSensitiveBugReport &BR,
+                                               ProgramStateRef ErrorState,
+                                               NonLoc Val, bool MarkTaint) {
+  if (SymbolRef Sym = Val.getAsSymbol()) {
+    // If the offset is a symbolic value, iterate over its "parts" with
+    // `SymExpr::symbols()` and mark each of them as interesting.
+    // For example, if the offset is `x*4 + y` then we put interestingness onto
+    // the SymSymExpr `x*4 + y`, the SymIntExpr `x*4` and the two data symbols
+    // `x` and `y`.
+    for (SymbolRef PartSym : Sym->symbols())
+      BR.markInteresting(PartSym);
+  }
+
+  if (MarkTaint) {
+    // If the issue that we're reporting depends on the taintedness of the
+    // offset, then put interestingness onto symbols that could be the origin
+    // of the taint.
+    for (SymbolRef Sym : getTaintedSymbols(ErrorState, Val))
+      BR.markInteresting(Sym);
+  }
+}
+
 void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
                                     ProgramStateRef ErrorState, Messages Msgs,
-                                    NonLoc Offset, bool IsTaintBug) const {
+                                    NonLoc Offset, std::optional<NonLoc> Extent,
+                                    bool IsTaintBug) const {
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
   if (!ErrorNode)
@@ -644,25 +673,10 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
   //   it places a "Storing uninitialized value" note on the `malloc` call
   //   (which is technically true, but irrelevant).
   // If trackExpressionValue() becomes reliable, it should be applied instead
-  // of the manual markInteresting() calls.
-
-  if (SymbolRef OffsetSym = Offset.getAsSymbol()) {
-    // If the offset is a symbolic value, iterate over its "parts" with
-    // `SymExpr::symbols()` and mark each of them as interesting.
-    // For example, if the offset is `x*4 + y` then we put interestingness onto
-    // the SymSymExpr `x*4 + y`, the SymIntExpr `x*4` and the two data symbols
-    // `x` and `y`.
-    for (SymbolRef PartSym : OffsetSym->symbols())
-      BR->markInteresting(PartSym);
-  }
-
-  if (IsTaintBug) {
-    // If the issue that we're reporting depends on the taintedness of the
-    // offset, then put interestingness onto symbols that could be the origin
-    // of the taint.
-    for (SymbolRef Sym : getTaintedSymbols(ErrorState, Offset))
-      BR->markInteresting(Sym);
-  }
+  // of this custom markPartsInteresting().
+  markPartsInteresting(*BR, ErrorState, Offset, IsTaintBug);
+  if (Extent)
+    markPartsInteresting(*BR, ErrorState, *Extent, IsTaintBug);
 
   C.emitReport(std::move(BR));
 }
