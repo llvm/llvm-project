@@ -70,9 +70,7 @@ Deprecations and Removals
 - TODO: The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have
   been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
 
-- TODO: The macro ``_LIBCPP_INLINE_VISIBILITY`` has been removed in LLVM 19.
-
-- TODO: The macro ``_VSTD`` has been removed in LLVM 19.
+- The ``_LIBCPP_INLINE_VISIBILITY`` and ``_VSTD`` macros have been removed in LLVM 19.
 
 
 Upcoming Deprecations and Removals
