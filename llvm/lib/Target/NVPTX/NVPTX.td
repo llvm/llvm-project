@@ -65,7 +65,7 @@ def : Proc<"sm_61", [SM61, PTX50]>;
 def : Proc<"sm_62", [SM62, PTX50]>;
 def : Proc<"sm_70", [SM70, PTX60]>;
 def : Proc<"sm_72", [SM72, PTX61]>;
-def : Proc<"sm_75", [SM75, PTX62, PTX63]>;
+def : Proc<"sm_75", [SM75, PTX63]>;
 def : Proc<"sm_80", [SM80, PTX70]>;
 def : Proc<"sm_86", [SM86, PTX71]>;
 def : Proc<"sm_87", [SM87, PTX74]>;
