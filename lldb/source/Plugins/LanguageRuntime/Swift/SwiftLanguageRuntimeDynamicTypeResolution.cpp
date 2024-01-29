@@ -397,9 +397,7 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
   // The stride is the size rounded up to alignment.
   const size_t byte_stride = llvm::alignTo(*byte_size, byte_align);
   unsigned extra_inhabitants = 0;
-  if (clang_type.IsPointerType() &&
-      TypeSystemSwiftTypeRef::IsKnownSpecialImportedType(
-          clang_type.GetDisplayTypeName().GetStringRef()))
+  if (clang_type.IsPointerType())
     extra_inhabitants = swift::swift_getHeapObjectExtraInhabitantCount();
 
   if (fields.empty()) {
