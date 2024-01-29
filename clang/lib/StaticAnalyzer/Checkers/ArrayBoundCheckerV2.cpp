@@ -442,13 +442,9 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
       // Even if the byte offset isn't interesting (e.g. it's a constant value),
       // the assumption can still be interesting if it provides information
       // about an interesting symbolic upper bound.
-      // FIXME: This code path is currently non-functional and untested because
-      // `getSimplifiedOffsets()` only works when the RHS (extent) is constant.
-
-      // In this case don't display the "offset is non-negative" assumption
-      // (because the offset isn't interesting).
       ShouldReportNonNegative = false;
     } else {
+      // We don't have anything interesting, don't report the assumption.
       return "";
     }
   }

@@ -165,3 +165,35 @@ int assumingPlainOffset(struct foo f, int arg) {
   // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
   return b + c;
 }
+
+typedef __typeof(sizeof(int)) size_t;
+void *malloc(size_t size);
+void free(void *ptr);
+
+int assumingExtent(int arg) {
+  // Verify that the assumption note is printed when the extent is interesting
+  // (even if the index isn't interesting).
+  int *mem = (int*)malloc(arg);
+
+  mem[12] = 123;
+  // expected-note@-1 {{Assuming index '12' is less than the number of 'int' elements in the heap area}}
+
+  free(mem);
+
+  return TenElements[arg];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at an overflowing index, while it holds only 10 'int' elements}}
+}
+
+int *extentInterestingness(int arg) {
+  // Verify that in an out-of-bounds access issue the extent is marked as
+  // interesting (so assumptions about its value are printed).
+  int *mem = (int*)malloc(arg);
+
+  TenElements[arg] = 123;
+  // expected-note@-1 {{Assuming index is non-negative and less than 10, the number of 'int' elements in 'TenElements'}}
+
+  return &mem[12];
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at index 12}}
+}
