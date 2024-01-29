@@ -288,7 +288,7 @@ StringRef CachingOnDiskFileSystemImpl::canonicalizeWorkingDirectory(
     const Twine &Path, StringRef WorkingDirectory,
     SmallVectorImpl<char> &Storage) {
   // Not portable.
-  assert(WorkingDirectory.startswith("/"));
+  assert(WorkingDirectory.starts_with("/"));
   Path.toVector(Storage);
   if (Storage.empty())
     return WorkingDirectory;
