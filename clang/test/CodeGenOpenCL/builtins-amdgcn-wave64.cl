@@ -44,6 +44,6 @@ void test_read_exec_hi(global ulong* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
 
-#if defined(__AMDGCN_WAVEFRONT_SIZE__) && __AMDGCN_WAVEFRONT_SIZE__ != 64
+#if __AMDGCN_WAVEFRONT_SIZE != 64
 #error Wrong wavesize detected
 #endif
