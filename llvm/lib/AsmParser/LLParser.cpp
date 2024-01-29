@@ -62,6 +62,8 @@ static cl::opt<bool> AllowIncompleteIR(
         "Allow incomplete IR on a best effort basis (references to unknown "
         "metadata will be dropped)"));
 
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+
 static std::string getTypeString(Type *T) {
   std::string Result;
   raw_string_ostream Tmp(Result);
@@ -6041,6 +6043,17 @@ bool LLParser::parseTypeAndBasicBlock(BasicBlock *&BB, LocTy &Loc,
   return false;
 }
 
+bool isOldDbgFormatIntrinsic(StringRef Name) {
+  // Exit early for the common (non-debug-intrinsic) case.
+  // We can make this the only check when we begin supporting all "llvm.dbg"
+  // intrinsics in the new debug info format.
+  if (!Name.starts_with("llvm.dbg."))
+    return false;
+  Intrinsic::ID FnID = Function::lookupIntrinsicID(Name);
+  return FnID == Intrinsic::dbg_declare || FnID == Intrinsic::dbg_value ||
+         FnID == Intrinsic::dbg_assign;
+}
+
 /// FunctionHeader
 ///   ::= OptionalLinkage OptionalPreemptionSpecifier OptionalVisibility
 ///       OptionalCallingConv OptRetAttrs OptUnnamedAddr Type GlobalName
@@ -6228,6 +6241,13 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
     }
   }
 
+  if (isOldDbgFormatIntrinsic(FunctionName)) {
+    if (SeenNewDbgInfoFormat)
+      return error(NameLoc, "llvm.dbg intrinsic should not appear in a module "
+                            "using non-intrinsic debug info");
+    SeenOldDbgInfoFormat = true;
+  }
+
   Fn = Function::Create(FT, GlobalValue::ExternalLinkage, AddrSpace,
                         FunctionName, M);
 
@@ -6390,9 +6410,29 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 
   std::string NameStr;
 
-  // parse the instructions in this block until we get a terminator.
+  // parse the instructions and debug values in this block until we get a
+  // terminator.
   Instruction *Inst;
+  DPValue *DPV;
+  SmallVector<std::unique_ptr<DPValue>> TrailingDPValues;
   do {
+    // Handle debug records first - there should always be an instruction
+    // following the debug records, i.e. they cannot appear after the block
+    // terminator.
+    while (Lex.getKind() == lltok::hash) {
+      if (SeenOldDbgInfoFormat)
+        return error(Lex.getLoc(), "debug record should not appear in a module "
+                                   "containing debug info intrinsics");
+      SeenNewDbgInfoFormat = true;
+      Lex.Lex();
+      if (!BB->getModule()->IsNewDbgInfoFormat)
+        BB->getModule()->convertToNewDbgValues();
+
+      if (parseDebugProgramValue(DPV, PFS))
+        return true;
+      TrailingDPValues.emplace_back(DPV);
+    }
+
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -6437,11 +6477,103 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     // Set the name on the instruction.
     if (PFS.setInstName(NameID, NameStr, NameLoc, Inst))
       return true;
+
+    // Attach any preceding debug values to this instruction.
+    for (std::unique_ptr<DPValue> &DPV : TrailingDPValues) {
+      BB->insertDPValueBefore(DPV.release(), Inst->getIterator());
+    }
+    TrailingDPValues.clear();
   } while (!Inst->isTerminator());
+
+  assert(TrailingDPValues.empty() &&
+         "All debug values should have been attached to an instruction.");
 
   return false;
 }
 
+/// parseDebugProgramValue
+///   ::= #dbg_Type { (ValueAsMetadata|DIArgList|MDNode), MetadataID,
+///   DIExpression, DILocation }
+bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
+  using LocType = DPValue::LocationType;
+  LocTy DPVLoc = Lex.getLoc();
+  if (Lex.getKind() != lltok::DbgRecordType) {
+    return error(DPVLoc, "expected debug record type here");
+  }
+  auto Type = StringSwitch<LocType>(Lex.getStrVal())
+                  .Case("declare", LocType::Declare)
+                  .Case("value", LocType::Value)
+                  .Case("assign", LocType::Assign)
+                  .Default(LocType::End);
+  if (Type == LocType::End)
+    return error(DPVLoc, "expected valid #dbg record here");
+  Lex.Lex();
+  if (parseToken(lltok::lbrace, "Expected '{' here"))
+    return true;
+
+  // Parse Value field...
+  Metadata *ValLocMD;
+  if (parseMetadata(ValLocMD, &PFS))
+    return true;
+  if (parseToken(lltok::comma, "Expected ',' here"))
+    return true;
+
+  // Parse Variable field...
+  MDNode *Variable;
+  if (parseMDNode(Variable))
+    return true;
+  if (parseToken(lltok::comma, "Expected ',' here"))
+    return true;
+
+  // Parse Expression field...
+  LocTy ExprLoc = Lex.getLoc();
+  Metadata *Expression;
+  if (parseMetadata(Expression, &PFS))
+    return true;
+  if (!isa<DIExpression>(Expression))
+    return error(ExprLoc, "expected valid DIExpression here");
+  if (parseToken(lltok::comma, "Expected ',' here"))
+    return true;
+
+  // Parse additional fields for #dbg_assign.
+  MDNode *AssignID = nullptr;
+  Metadata *AddressLocation = nullptr;
+  Metadata *AddressExpression = nullptr;
+  if (Type == LocType::Assign) {
+    // Parse DIAssignID...
+    if (parseMDNode(AssignID))
+      return true;
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+
+    // Parse address ValueAsMetadata...
+    if (parseMetadata(AddressLocation, &PFS))
+      return true;
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+
+    // Parse address DIExpression...
+    LocTy AddressExprLoc = Lex.getLoc();
+    if (parseMetadata(AddressExpression, &PFS))
+      return true;
+    if (!isa<DIExpression>(Expression))
+      return error(AddressExprLoc, "expected valid DIExpression here");
+    if (parseToken(lltok::comma, "Expected ',' here"))
+      return true;
+  }
+
+  /// Parse DILocation...
+  MDNode *DebugLoc;
+  if (parseMDNode(DebugLoc))
+    return true;
+
+  if (parseToken(lltok::rbrace, "Expected '}' here"))
+    return true;
+  DPV = DPValue::createUnresolvedDPValue(
+      Type, ValLocMD, Variable, cast<DIExpression>(Expression), AssignID,
+      AddressLocation, cast_or_null<DIExpression>(AddressExpression), DebugLoc);
+  return false;
+}
 //===----------------------------------------------------------------------===//
 // Instruction Parsing.
 //===----------------------------------------------------------------------===//
@@ -7668,6 +7800,16 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
                             "floating-point scalar or vector return type");
     }
     CI->setFastMathFlags(FMF);
+  }
+
+  if (CalleeID.Kind == ValID::t_GlobalName &&
+      isOldDbgFormatIntrinsic(CalleeID.StrVal)) {
+    if (SeenNewDbgInfoFormat) {
+      CI->deleteValue();
+      return error(CallLoc, "llvm.dbg intrinsic should not appear in a module "
+                            "using non-intrinsic debug info");
+    }
+    SeenOldDbgInfoFormat = true;
   }
   CI->setAttributes(PAL);
   ForwardRefAttrGroups[CI] = FwdRefAttrGrps;

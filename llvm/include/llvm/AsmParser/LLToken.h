@@ -36,6 +36,7 @@ enum Kind {
   exclaim, // !
   bar,     // |
   colon,   // :
+  hash,    // #
 
   kw_vscale,
   kw_x,
@@ -482,6 +483,8 @@ enum Kind {
 
   // Type valued tokens (TyVal).
   Type,
+
+  DbgRecordType,
 
   APFloat, // APFloatVal
   APSInt   // APSInt

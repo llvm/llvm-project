@@ -143,6 +143,23 @@ DPLabel::DPLabel(DILabel *Label, DebugLoc DL)
   assert(Label && "Unexpected nullptr");
 }
 
+DPValue::DPValue(DPValue::LocationType Type, Metadata *Val, MDNode *Variable,
+                 MDNode *Expression, MDNode *AssignID, Metadata *Address,
+                 MDNode *AddressExpression, MDNode *DI)
+    : DebugValueUser({Val, Address, AssignID}), Variable(Variable),
+      Expression(Expression), DbgLoc(DI), AddressExpression(AddressExpression),
+      Type(Type) {}
+
+DPValue *DPValue::createUnresolvedDPValue(DPValue::LocationType Type,
+                                          Metadata *Val, MDNode *Variable,
+                                          MDNode *Expression,
+                                          MDNode *AssignID, Metadata *Address,
+                                          MDNode *AddressExpression,
+                                          MDNode *DI) {
+  return new DPValue(Type, Val, Variable, Expression, AssignID, Address,
+                     AddressExpression, DI);
+}
+
 DPValue *DPValue::createDPValue(Value *Location, DILocalVariable *DV,
                                 DIExpression *Expr, const DILocation *DI) {
   return new DPValue(ValueAsMetadata::get(Location), DV, Expr, DI,
