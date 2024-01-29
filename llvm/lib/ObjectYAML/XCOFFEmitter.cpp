@@ -40,8 +40,8 @@ public:
   bool writeXCOFF();
 
 private:
-  void ErrOverwrite(uint64_t currentOffset, uint64_t specifiedOffset,
-                    const Twine &fieldName);
+  void reportOverwrite(uint64_t currentOffset, uint64_t specifiedOffset,
+                       const Twine &fieldName);
   bool nameShouldBeInStringTable(StringRef SymbolName);
   bool initFileHeader(uint64_t CurrentOffset);
   void initAuxFileHeader();
@@ -92,8 +92,9 @@ static void writeName(StringRef StrName, support::endian::Writer W) {
   W.write(NameRef);
 }
 
-void XCOFFWriter::ErrOverwrite(uint64_t CurrentOffset, uint64_t specifiedOffset,
-                               const Twine &fieldName) {
+void XCOFFWriter::reportOverwrite(uint64_t CurrentOffset,
+                                  uint64_t specifiedOffset,
+                                  const Twine &fieldName) {
   ErrHandler("current file offset (" + Twine(CurrentOffset) +
              ") is bigger than the specified " + fieldName + " (" +
              Twine(specifiedOffset) + ") ");
@@ -119,9 +120,9 @@ bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
       // If the YAML file specified an offset to relocations, we use it.
       if (InitSection.FileOffsetToRelocations) {
         if (CurrentOffset > InitSection.FileOffsetToRelocations) {
-          ErrOverwrite(CurrentOffset, InitSection.FileOffsetToRelocations,
-                       "FileOffsetToRelocations for the " +
-                           InitSection.SectionName + " section");
+          reportOverwrite(CurrentOffset, InitSection.FileOffsetToRelocations,
+                          "FileOffsetToRelocations for the " +
+                              InitSection.SectionName + " section");
           return false;
         }
         CurrentOffset = InitSection.FileOffsetToRelocations;
@@ -190,9 +191,9 @@ bool XCOFFWriter::initSectionHeaders(uint64_t &CurrentOffset) {
       if (InitSections[I].FileOffsetToData) {
         // Use the providedFileOffsetToData.
         if (CurrentOffset > InitSections[I].FileOffsetToData) {
-          ErrOverwrite(CurrentOffset, InitSections[I].FileOffsetToData,
-                       "FileOffsetToData for the " +
-                           InitSections[I].SectionName + " section");
+          reportOverwrite(CurrentOffset, InitSections[I].FileOffsetToData,
+                          "FileOffsetToData for the " +
+                              InitSections[I].SectionName + " section");
           return false;
         }
         CurrentOffset = InitSections[I].FileOffsetToData;
@@ -312,8 +313,8 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
   if (InitFileHdr.NumberOfSymTableEntries) {
     if (Obj.Header.SymbolTableOffset) {
       if (CurrentOffset > Obj.Header.SymbolTableOffset) {
-        ErrOverwrite(CurrentOffset, Obj.Header.SymbolTableOffset,
-                     "SymbolTableOffset");
+        reportOverwrite(CurrentOffset, Obj.Header.SymbolTableOffset,
+                        "SymbolTableOffset");
         return false;
       }
       CurrentOffset = Obj.Header.SymbolTableOffset;
@@ -546,7 +547,7 @@ bool XCOFFWriter::writeSectionData() {
       int64_t PaddingSize = (uint64_t)InitSections[I].FileOffsetToData -
                             (W.OS.tell() - StartOffset);
       if (PaddingSize < 0) {
-        ErrHandler("unexpected data was written before section data");
+        ErrHandler("redundant data was written before section data");
         return false;
       }
       W.OS.write_zeros(PaddingSize);
@@ -563,7 +564,7 @@ bool XCOFFWriter::writeRelocations() {
       int64_t PaddingSize =
           InitSections[I].FileOffsetToRelocations - (W.OS.tell() - StartOffset);
       if (PaddingSize < 0) {
-        ErrHandler("unexpected data was written before relocations");
+        ErrHandler("redundant data was written before relocations");
         return false;
       }
       W.OS.write_zeros(PaddingSize);
@@ -704,7 +705,7 @@ bool XCOFFWriter::writeSymbols() {
   int64_t PaddingSize =
       InitFileHdr.SymbolTableOffset - (W.OS.tell() - StartOffset);
   if (PaddingSize < 0) {
-    ErrHandler("unexpected data was written before symbols");
+    ErrHandler("redundant data was written before symbols");
     return false;
   }
   W.OS.write_zeros(PaddingSize);
