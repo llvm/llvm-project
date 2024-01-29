@@ -445,10 +445,9 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // others.
 
     // Regex in initial directive token: -re
-    if (DToken.ends_with("-re")) {
+    if (DToken.consume_back("-re")) {
       D.RegexKind = true;
       KindStr = "regex";
-      DToken = DToken.substr(0, DToken.size()-3);
     }
 
     // Type in initial directive token: -{error|warning|note|no-diagnostics}
