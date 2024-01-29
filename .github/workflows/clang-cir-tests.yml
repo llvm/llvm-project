@@ -34,4 +34,5 @@ jobs:
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-clang-cir
-      projects: clang;mlir;cir
+      projects: clang;mlir
+      extra_cmake_args: -DCLANG_ENABLE_CIR=ON
