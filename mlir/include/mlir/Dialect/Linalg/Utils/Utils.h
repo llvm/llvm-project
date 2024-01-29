@@ -367,13 +367,22 @@ struct GenerateLoopNest {
 };
 
 /// Returns an attribute list that excludes pre-defined attributes.
+/// If the input is linalg::LinalgOp, there is no method of
+/// `op.getAttributeNames()`. For this special case, using function template
+/// specialization to get attribute names from linalg::GenericOp, because all
+/// Linalg ops have the same attributes as linalg.generic ops.
 template <typename OpTy>
 SmallVector<NamedAttribute> getPrunedAttributeList(OpTy op) {
-  // op.getAttributeNames() doesn't work when the op is linalg::LinalgOp.
-  // Instead use the static function to get attribute names.
-  auto elidedAttrs = llvm::to_vector(linalg::GenericOp::getAttributeNames());
+  auto elidedAttrs = llvm::to_vector(op.getAttributeNames());
   if (isa<linalg::LinalgOp>(op.getOperation()))
     elidedAttrs.push_back(LinalgDialect::kMemoizedIndexingMapsAttrName);
+  return getPrunedAttributeList(op, elidedAttrs);
+}
+
+template <>
+inline SmallVector<NamedAttribute> getPrunedAttributeList(linalg::LinalgOp op) {
+  auto elidedAttrs = llvm::to_vector(linalg::GenericOp::getAttributeNames());
+  elidedAttrs.push_back(LinalgDialect::kMemoizedIndexingMapsAttrName);
   return getPrunedAttributeList(op, elidedAttrs);
 }
 
