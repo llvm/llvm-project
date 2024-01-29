@@ -1068,6 +1068,8 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_EpilogStart:
     case AArch64::SEH_EpilogEnd:
     case AArch64::SEH_PACSignLR:
+    case AArch64::SEH_SaveAnyRegQP:
+    case AArch64::SEH_SaveAnyRegQPX:
       return true;
   }
 }
@@ -4094,16 +4096,6 @@ AArch64InstrInfo::getLdStOffsetOp(const MachineInstr &MI) {
       AArch64InstrInfo::isPairedLdSt(MI) || AArch64InstrInfo::isPreLdSt(MI) ? 3
                                                                             : 2;
   return MI.getOperand(Idx);
-}
-
-const MachineOperand &
-AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case AArch64::LDRBBroX:
-    return MI.getOperand(4);
-  }
 }
 
 static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
@@ -8067,9 +8059,10 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_S, "aarch64-s"},
       {MO_TLS, "aarch64-tls"},
       {MO_DLLIMPORT, "aarch64-dllimport"},
-      {MO_DLLIMPORTAUX, "aarch64-dllimportaux"},
       {MO_PREL, "aarch64-prel"},
-      {MO_TAGGED, "aarch64-tagged"}};
+      {MO_TAGGED, "aarch64-tagged"},
+      {MO_ARM64EC_CALLMANGLE, "aarch64-arm64ec-callmangle"},
+  };
   return ArrayRef(TargetFlags);
 }
 
@@ -8227,11 +8220,11 @@ std::optional<outliner::OutlinedFunction>
 AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-  unsigned SequenceSize =
-      std::accumulate(FirstCand.front(), std::next(FirstCand.back()), 0,
-                      [this](unsigned Sum, const MachineInstr &MI) {
-                        return Sum + getInstSizeInBytes(MI);
-                      });
+
+  unsigned SequenceSize = 0;
+  for (auto &MI : FirstCand)
+    SequenceSize += getInstSizeInBytes(MI);
+
   unsigned NumBytesToCreateFrame = 0;
 
   // We only allow outlining for functions having exactly matching return
@@ -8284,7 +8277,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
         AArch64PAuth::getCheckerSizeInBytes(LRCheckMethod);
     // Checking the authenticated LR value may significantly impact
     // SequenceSize, so account for it for more precise results.
-    if (isTailCallReturnInst(*RepeatedSequenceLocs[0].back()))
+    if (isTailCallReturnInst(RepeatedSequenceLocs[0].back()))
       SequenceSize += NumBytesToCheckLRInTCEpilogue;
 
     // We have to check if sp modifying instructions would get outlined.
@@ -8293,37 +8286,36 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // are not
     auto hasIllegalSPModification = [&TRI](outliner::Candidate &C) {
       int SPValue = 0;
-      MachineBasicBlock::iterator MBBI = C.front();
-      for (;;) {
-        if (MBBI->modifiesRegister(AArch64::SP, &TRI)) {
-          switch (MBBI->getOpcode()) {
+      for (auto &MI : C) {
+        if (MI.modifiesRegister(AArch64::SP, &TRI)) {
+          switch (MI.getOpcode()) {
           case AArch64::ADDXri:
           case AArch64::ADDWri:
-            assert(MBBI->getNumOperands() == 4 && "Wrong number of operands");
-            assert(MBBI->getOperand(2).isImm() &&
+            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+            assert(MI.getOperand(2).isImm() &&
                    "Expected operand to be immediate");
-            assert(MBBI->getOperand(1).isReg() &&
+            assert(MI.getOperand(1).isReg() &&
                    "Expected operand to be a register");
             // Check if the add just increments sp. If so, we search for
             // matching sub instructions that decrement sp. If not, the
             // modification is illegal
-            if (MBBI->getOperand(1).getReg() == AArch64::SP)
-              SPValue += MBBI->getOperand(2).getImm();
+            if (MI.getOperand(1).getReg() == AArch64::SP)
+              SPValue += MI.getOperand(2).getImm();
             else
               return true;
             break;
           case AArch64::SUBXri:
           case AArch64::SUBWri:
-            assert(MBBI->getNumOperands() == 4 && "Wrong number of operands");
-            assert(MBBI->getOperand(2).isImm() &&
+            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+            assert(MI.getOperand(2).isImm() &&
                    "Expected operand to be immediate");
-            assert(MBBI->getOperand(1).isReg() &&
+            assert(MI.getOperand(1).isReg() &&
                    "Expected operand to be a register");
             // Check if the sub just decrements sp. If so, we search for
             // matching add instructions that increment sp. If not, the
             // modification is illegal
-            if (MBBI->getOperand(1).getReg() == AArch64::SP)
-              SPValue -= MBBI->getOperand(2).getImm();
+            if (MI.getOperand(1).getReg() == AArch64::SP)
+              SPValue -= MI.getOperand(2).getImm();
             else
               return true;
             break;
@@ -8331,9 +8323,6 @@ AArch64InstrInfo::getOutliningCandidateInfo(
             return true;
           }
         }
-        if (MBBI == C.back())
-          break;
-        ++MBBI;
       }
       if (SPValue)
         return true;
@@ -8354,7 +8343,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   for (outliner::Candidate &C : RepeatedSequenceLocs)
     FlagsSetInAll &= C.Flags;
 
-  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
+  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back().getOpcode();
 
   // Helper lambda which sets call information for every candidate.
   auto SetCandidateCallInfo =
@@ -8373,8 +8362,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // We check to see if CFI Instructions are present, and if they are
   // we find the number of CFI Instructions in the candidates.
   unsigned CFICount = 0;
-  for (auto &I : make_range(RepeatedSequenceLocs[0].front(),
-                            std::next(RepeatedSequenceLocs[0].back()))) {
+  for (auto &I : RepeatedSequenceLocs[0]) {
     if (I.isCFIInstruction())
       CFICount++;
   }
@@ -8449,12 +8437,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // True if it's possible to fix up each stack instruction in this sequence.
   // Important for frames/call variants that modify the stack.
-  bool AllStackInstrsSafe = std::all_of(
-      FirstCand.front(), std::next(FirstCand.back()), IsSafeToFixup);
+  bool AllStackInstrsSafe = llvm::all_of(FirstCand, IsSafeToFixup);
 
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
-  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+  if (RepeatedSequenceLocs[0].back().isTerminator()) {
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = 0;
     unsigned NumBytesForCall = 4 + NumBytesToCheckLRInTCEpilogue;
@@ -8580,9 +8567,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       //
       if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
         erase_if(RepeatedSequenceLocs, [this, &TRI](outliner::Candidate &C) {
-          return (std::any_of(
-                     C.front(), std::next(C.back()),
-                     [](const MachineInstr &MI) { return MI.isCall(); })) &&
+          auto IsCall = [](const MachineInstr &MI) { return MI.isCall(); };
+          return (llvm::any_of(C, IsCall)) &&
                  (!C.isAvailableAcrossAndOutOfSeq(AArch64::LR, TRI) ||
                   !findRegisterToSaveLRTo(C));
         });
@@ -8602,7 +8588,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // Check if the range contains a call. These require a save + restore of the
     // link register.
     bool ModStackToSaveLR = false;
-    if (std::any_of(FirstCand.front(), FirstCand.back(),
+    if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
                     [](const MachineInstr &MI) { return MI.isCall(); }))
       ModStackToSaveLR = true;
 
@@ -8612,7 +8598,7 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // it being valid to tail call this sequence. We should consider this as
     // well.
     else if (FrameID != MachineOutlinerThunk &&
-             FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
+             FrameID != MachineOutlinerTailCall && FirstCand.back().isCall())
       ModStackToSaveLR = true;
 
     if (ModStackToSaveLR) {

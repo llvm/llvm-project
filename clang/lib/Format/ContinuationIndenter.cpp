@@ -740,7 +740,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   if (!DryRun) {
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
-                                  State.Column + Spaces + PPColumnCorrection);
+                                  State.Column + Spaces + PPColumnCorrection,
+                                  /*IsAligned=*/false, State.Line->InMacroBody);
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
@@ -770,15 +771,25 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
   // columns.
+  auto IsOpeningBracket = [&](const FormatToken &Tok) {
+    auto IsStartOfBracedList = [&]() {
+      return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
+             Style.Cpp11BracedListStyle;
+    };
+    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
+        !IsStartOfBracedList()) {
+      return false;
+    }
+    if (!Tok.Previous)
+      return true;
+    if (Tok.Previous->isIf())
+      return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
+    return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
+                                  tok::kw_switch);
+  };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
-      (Previous.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) ||
-       (Previous.is(tok::l_brace) && Previous.isNot(BK_Block) &&
-        Style.Cpp11BracedListStyle)) &&
-      State.Column > getNewLineColumn(State) &&
-      (!Previous.Previous ||
-       !Previous.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                   tok::kw_switch)) &&
+      IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //

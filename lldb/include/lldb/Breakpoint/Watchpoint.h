@@ -235,8 +235,6 @@ private:
 
   void SendWatchpointChangedEvent(lldb::WatchpointEventType eventKind);
 
-  void SendWatchpointChangedEvent(WatchpointEventData *data);
-
   Watchpoint(const Watchpoint &) = delete;
   const Watchpoint &operator=(const Watchpoint &) = delete;
 };

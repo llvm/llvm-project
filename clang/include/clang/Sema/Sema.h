@@ -2602,6 +2602,14 @@ public:
   /// context, such as when building a type for decltype(auto).
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
 
+  QualType ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                 SourceLocation Loc,
+                                 SourceLocation EllipsisLoc);
+  QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                 SourceLocation Loc, SourceLocation EllipsisLoc,
+                                 bool FullySubstituted = false,
+                                 ArrayRef<QualType> Expansions = {});
+
   using UTTKind = UnaryTransformType::UTTKind;
   QualType BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
                                    SourceLocation Loc);
@@ -5873,6 +5881,18 @@ public:
                                           IdentifierInfo &Name,
                                           SourceLocation NameLoc,
                                           SourceLocation RParenLoc);
+
+  ExprResult ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
+                                   SourceLocation EllipsisLoc,
+                                   SourceLocation LSquareLoc, Expr *IndexExpr,
+                                   SourceLocation RSquareLoc);
+
+  ExprResult BuildPackIndexingExpr(Expr *PackExpression,
+                                   SourceLocation EllipsisLoc, Expr *IndexExpr,
+                                   SourceLocation RSquareLoc,
+                                   ArrayRef<Expr *> ExpandedExprs = {},
+                                   bool EmptyPack = false);
+
   ExprResult ActOnPostfixUnaryOp(Scope *S, SourceLocation OpLoc,
                                  tok::TokenKind Kind, Expr *Input);
 
@@ -7139,6 +7159,11 @@ public:
   bool ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS,
                                            const DeclSpec &DS,
                                            SourceLocation ColonColonLoc);
+
+  bool ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
+                                              const DeclSpec &DS,
+                                              SourceLocation ColonColonLoc,
+                                              QualType Type);
 
   bool IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
                                  NestedNameSpecInfo &IdInfo,
@@ -13932,8 +13957,9 @@ private:
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
-  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
-  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
+  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
+  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
+                                   unsigned BuiltinID);
   bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
@@ -14036,6 +14062,8 @@ private:
                             VariadicCallType CallType, SourceLocation Loc,
                             SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
+
+  void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
 
   void CheckAbsoluteValueFunction(const CallExpr *Call,
                                   const FunctionDecl *FDecl);

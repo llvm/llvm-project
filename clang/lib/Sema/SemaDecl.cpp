@@ -163,6 +163,7 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw_char32_t:
   case tok::kw_typeof:
   case tok::annot_decltype:
+  case tok::annot_pack_indexing_type:
   case tok::kw_decltype:
     return getLangOpts().CPlusPlus;
 
@@ -12234,12 +12235,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
+    bool UsesZT0 = Attr && Attr->isNewZT0();
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
           EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
       UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
                 FunctionType::ARM_None;
+      UsesZT0 |= FunctionType::getArmZT0State(EPI.AArch64SMEAttributes) !=
+                 FunctionType::ARM_None;
     }
 
     if (UsesSM || UsesZA) {
@@ -12252,6 +12256,14 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         else
           Diag(NewFD->getLocation(),
                diag::err_sme_definition_using_za_in_non_sme_target);
+      }
+    }
+    if (UsesZT0) {
+      llvm::StringMap<bool> FeatureMap;
+      Context.getFunctionFeatureMap(FeatureMap, NewFD);
+      if (!FeatureMap.contains("sme2")) {
+        Diag(NewFD->getLocation(),
+             diag::err_sme_definition_using_zt0_in_non_sme2_target);
       }
     }
   }

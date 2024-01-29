@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=aarch64-none-eabi -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-eabi -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:  warning: Instruction selection used fallback path for v3i32_i32
-
 define i64 @i64_i64(i64 %a, i64 %b, i64 %d, i64 %e) {
 ; CHECK-LABEL: i64_i64:
 ; CHECK:       // %bb.0: // %entry
@@ -165,11 +163,33 @@ entry:
 }
 
 define <3 x i32> @v3i32_i32(<3 x i32> %a, <3 x i32> %b, <3 x i32> %d, <3 x i32> %e) {
-; CHECK-LABEL: v3i32_i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v3i32_i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v3i32_i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
+; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    fmov s4, w8
+; CHECK-GI-NEXT:    mov v4.s[1], w8
+; CHECK-GI-NEXT:    mov v4.s[2], w8
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    fmov s5, w8
+; CHECK-GI-NEXT:    mov v5.s[1], w8
+; CHECK-GI-NEXT:    mov v4.s[3], w8
+; CHECK-GI-NEXT:    mov v5.s[2], w8
+; CHECK-GI-NEXT:    neg v1.4s, v4.4s
+; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    mov v5.s[3], w8
+; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v5.16b
+; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %c = icmp slt <3 x i32> %a, %b
   %s = select <3 x i1> %c, <3 x i32> %d, <3 x i32> %e

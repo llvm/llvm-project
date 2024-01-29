@@ -274,9 +274,21 @@ static cl::list<ValidationEvent> ValidationCounters(
         "The name of a validation counter to run concurrently with the main "
         "counter to validate benchmarking assumptions"),
     cl::CommaSeparated, cl::cat(BenchmarkOptions),
-    cl::values(clEnumValN(ValidationEvent::InstructionRetired,
-                          "instructions-retired",
-                          "Count retired instructions")));
+    cl::values(
+        clEnumValN(ValidationEvent::InstructionRetired, "instructions-retired",
+                   "Count retired instructions"),
+        clEnumValN(ValidationEvent::L1DCacheLoadMiss, "l1d-cache-load-misses",
+                   "Count L1D load cache misses"),
+        clEnumValN(ValidationEvent::L1DCacheStoreMiss, "l1d-cache-store-misses",
+                   "Count L1D store cache misses"),
+        clEnumValN(ValidationEvent::L1ICacheLoadMiss, "l1i-cache-load-misses",
+                   "Count L1I load cache misses"),
+        clEnumValN(ValidationEvent::DataTLBLoadMiss, "data-tlb-load-misses",
+                   "Count DTLB load misses"),
+        clEnumValN(ValidationEvent::DataTLBStoreMiss, "data-tlb-store-misses",
+                   "Count DTLB store misses"),
+        clEnumValN(ValidationEvent::InstructionTLBLoadMiss,
+                   "instruction-tlb-load-misses", "Count ITLB load misses")));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
@@ -426,7 +438,7 @@ static void runBenchmarkConfigurations(
         // Errors from executing the snippets are fine.
         // All other errors are a framework issue and should fail.
         if (!Err.isA<SnippetExecutionFailure>()) {
-          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+          errs() << "llvm-exegesis error: " << toString(std::move(Err));
           exit(1);
         }
         BenchmarkResult.Error = toString(std::move(Err));
@@ -445,8 +457,7 @@ static void runBenchmarkConfigurations(
     if (RepetitionMode == Benchmark::RepetitionModeE::AggregateMin) {
       for (const Benchmark &OtherResult :
            ArrayRef<Benchmark>(AllResults).drop_front()) {
-        llvm::append_range(Result.AssembledSnippet,
-                           OtherResult.AssembledSnippet);
+        append_range(Result.AssembledSnippet, OtherResult.AssembledSnippet);
         // Aggregate measurements, but only if all measurements succeeded.
         if (Result.Measurements.empty())
           continue;
@@ -655,14 +666,14 @@ static void analysisMain() {
   }
   auto TripleAndCpu = *TriplesAndCpus.begin();
   if (AnalysisOverrideBenchmarksTripleAndCpu) {
-    llvm::errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
-                 << ") with provided tripled (" << TripleName
-                 << ") and CPU name (" << MCPU << ")\n";
+    errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
+           << ") with provided tripled (" << TripleName << ") and CPU name ("
+           << MCPU << ")\n";
     TripleAndCpu.LLVMTriple = TripleName;
     TripleAndCpu.CpuName = MCPU;
   }
-  llvm::errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
-               << TripleAndCpu.CpuName << "'\n";
+  errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
+         << TripleAndCpu.CpuName << "'\n";
 
   // Read benchmarks.
   const LLVMState State = ExitOnErr(
@@ -713,9 +724,8 @@ int main(int Argc, char **Argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&llvm::exegesis::Options,
-                            &llvm::exegesis::BenchmarkOptions,
-                            &llvm::exegesis::AnalysisOptions});
+  cl::HideUnrelatedOptions({&exegesis::Options, &exegesis::BenchmarkOptions,
+                            &exegesis::AnalysisOptions});
 
   cl::ParseCommandLineOptions(Argc, Argv,
                               "llvm host machine instruction characteristics "

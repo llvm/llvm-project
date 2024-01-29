@@ -1556,6 +1556,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_FCMP:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    narrowScalarDst(MI, NarrowTy, 0, TargetOpcode::G_ZEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_SEXT_INREG: {
     if (TypeIdx != 0)
       return UnableToLegalize;
@@ -5198,7 +5207,10 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FMAXIMUM:
   case TargetOpcode::G_STRICT_FADD:
   case TargetOpcode::G_STRICT_FSUB:
-  case TargetOpcode::G_STRICT_FMUL: {
+  case TargetOpcode::G_STRICT_FMUL:
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR: {
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, MoreTy, 1);
     moreElementsVectorSrc(MI, MoreTy, 2);
@@ -5242,6 +5254,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
+  case TargetOpcode::G_ABS:
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -5314,14 +5327,18 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   }
-  case TargetOpcode::G_ICMP: {
-    // TODO: the symmetric MoreTy works for targets like, e.g. NEON.
-    // For targets, like e.g. MVE, the result is a predicated vector (i1).
-    // This will need some refactoring.
+  case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_FCMP: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, MoreTy, 2);
     moreElementsVectorSrc(MI, MoreTy, 3);
-    moreElementsVectorDst(MI, MoreTy, 0);
+    LLT CondTy = LLT::fixed_vector(
+        MoreTy.getNumElements(),
+        MRI.getType(MI.getOperand(0).getReg()).getElementType());
+    moreElementsVectorDst(MI, CondTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -7943,13 +7960,11 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
-  // Implement vector G_SELECT in terms of XOR, AND, OR.
+  // Implement G_SELECT in terms of XOR, AND, OR.
   auto [DstReg, DstTy, MaskReg, MaskTy, Op1Reg, Op1Ty, Op2Reg, Op2Ty] =
       MI.getFirst4RegLLTs();
-  if (!DstTy.isVector())
-    return UnableToLegalize;
 
-  bool IsEltPtr = DstTy.getElementType().isPointer();
+  bool IsEltPtr = DstTy.getScalarType().isPointer();
   if (IsEltPtr) {
     LLT ScalarPtrTy = LLT::scalar(DstTy.getScalarSizeInBits());
     LLT NewTy = DstTy.changeElementType(ScalarPtrTy);
@@ -7959,7 +7974,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   }
 
   if (MaskTy.isScalar()) {
-    // Turn the scalar condition into a vector condition mask.
+    // Turn the scalar condition into a vector condition mask if needed.
 
     Register MaskElt = MaskReg;
 
@@ -7969,13 +7984,20 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
       MaskElt = MIRBuilder.buildSExtInReg(MaskTy, MaskElt, 1).getReg(0);
 
     // Continue the sign extension (or truncate) to match the data type.
-    MaskElt = MIRBuilder.buildSExtOrTrunc(DstTy.getElementType(),
-                                          MaskElt).getReg(0);
+    MaskElt =
+        MIRBuilder.buildSExtOrTrunc(DstTy.getScalarType(), MaskElt).getReg(0);
 
-    // Generate a vector splat idiom.
-    auto ShufSplat = MIRBuilder.buildShuffleSplat(DstTy, MaskElt);
-    MaskReg = ShufSplat.getReg(0);
+    if (DstTy.isVector()) {
+      // Generate a vector splat idiom.
+      auto ShufSplat = MIRBuilder.buildShuffleSplat(DstTy, MaskElt);
+      MaskReg = ShufSplat.getReg(0);
+    } else {
+      MaskReg = MaskElt;
+    }
     MaskTy = DstTy;
+  } else if (!DstTy.isVector()) {
+    // Cannot handle the case that mask is a vector and dst is a scalar.
+    return UnableToLegalize;
   }
 
   if (MaskTy.getSizeInBits() != DstTy.getSizeInBits()) {

@@ -3391,6 +3391,8 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E,
   const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
   if (!VD)
     return NamedReturnInfo();
+  if (VD->getInit() && VD->getInit()->containsErrors())
+    return NamedReturnInfo();
   NamedReturnInfo Res = getNamedReturnInfo(VD);
   if (Res.Candidate && !E->isXValue() &&
       (Mode == SimplerImplicitMoveMode::ForceOn ||

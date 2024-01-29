@@ -3351,7 +3351,7 @@ void SIInstrInfo::removeModOperands(MachineInstr &MI) const {
   }
 }
 
-bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
   if (!MRI->hasOneNonDBGUse(Reg))
     return false;
@@ -6126,7 +6126,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 
   // Try to eliminate the copy if it is copying an immediate value.
   if (Def->isMoveImmediate() && DstRC != &AMDGPU::VReg_1RegClass)
-    FoldImmediate(*Copy, *Def, OpReg, &MRI);
+    foldImmediate(*Copy, *Def, OpReg, &MRI);
 
   bool ImpDef = Def->isImplicitDef();
   while (!ImpDef && Def && Def->isCopy()) {

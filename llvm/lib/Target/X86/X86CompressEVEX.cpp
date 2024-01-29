@@ -200,7 +200,6 @@ static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
       !MI.getOperand(2).isReg() || MI.getOperand(2).getReg() != Reg0)
     return false;
   // Opcode may change after commute, e.g. SHRD -> SHLD
-  // TODO: Add test for this after ND SHRD/SHLD is supported
   ST.getInstrInfo()->commuteInstruction(MI, false, 1, 2);
   return true;
 }

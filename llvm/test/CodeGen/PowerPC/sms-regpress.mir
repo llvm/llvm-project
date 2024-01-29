@@ -1,5 +1,7 @@
 # RUN: llc --verify-machineinstrs -mcpu=pwr9 -o - %s -run-pass=pipeliner -ppc-enable-pipeliner  -pipeliner-register-pressure -pipeliner-max-mii=50 -pipeliner-ii-search-range=30 -pipeliner-max-stages=10 -debug-only=pipeliner 2>&1 | FileCheck %s
 
+# REQUIRES: asserts
+
 # Check that if the register pressure is too high, the schedule is rejected, II is incremented, and scheduling continues.
 # The specific value of II is not important.
 
