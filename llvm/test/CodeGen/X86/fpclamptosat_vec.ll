@@ -198,7 +198,7 @@ define <2 x i32> @ustest_f64i32(<2 x double> %x) nounwind {
 ; AVX2-NEXT:    vcvttsd2si %xmm0, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4294967295,4294967295]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4294967295,0,4294967295,0]
 ; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -576,8 +576,7 @@ define <4 x i32> @ustest_f32i32(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,2,4,6,0,0,0,0]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -1060,8 +1059,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,2,4,6,0,0,0,0]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -2855,7 +2853,7 @@ define <2 x i32> @ustest_f64i32_mm(<2 x double> %x) nounwind {
 ; AVX2-NEXT:    vcvttsd2si %xmm0, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4294967295,4294967295]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4294967295,0,4294967295,0]
 ; AVX2-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -3228,8 +3226,7 @@ define <4 x i32> @ustest_f32i32_mm(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,2,4,6,0,0,0,0]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
@@ -3707,8 +3704,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) nounwind {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
-; AVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,2,4,6,0,0,0,0]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper

@@ -155,7 +155,7 @@ define <8 x i1> @t2_narrow(<8 x i16> %X) nounwind {
 ; CHECK-SSE41-LABEL: t2_narrow:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [21845,65535,65535,65535,21845,65535,65535,65535]
+; CHECK-SSE41-NEXT:    pmovsxdq {{.*#+}} xmm1 = [18446744073709507925,18446744073709507925]
 ; CHECK-SSE41-NEXT:    pminuw %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
