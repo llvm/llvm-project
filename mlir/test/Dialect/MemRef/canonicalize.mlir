@@ -1023,3 +1023,16 @@ func.func @fold_identity_transpose(%arg0: memref<1x2x3x4x5xf32>) -> memref<1x2x3
   // CHECK: return %[[arg0]]
   return %1 : memref<1x2x3x4x5xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @cannot_fold_transpose_cast(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?x4xf32, strided<[?, ?], offset: ?>>
+func.func @cannot_fold_transpose_cast(%arg0: memref<?x4xf32, strided<[?, ?], offset: ?>>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+    // CHECK: %[[CAST:.*]] = memref.cast %[[arg0]] : memref<?x4xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    %cast = memref.cast %arg0 : memref<?x4xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    // CHECK: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]] (d0, d1) -> (d1, d0) : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    %transpose = memref.transpose %cast (d0, d1) -> (d1, d0) : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    // CHECK: return %[[TRANSPOSE]]
+    return %transpose : memref<?x?xf32, strided<[?, ?], offset: ?>>
+}
