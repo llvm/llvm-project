@@ -557,6 +557,10 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable]>;
 
+  def int_nvvm_nanosleep : ClangBuiltin<"__nvvm_nanosleep">,
+      DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+                            [IntrConvergent, IntrNoMem, IntrHasSideEffects]>;
+
 //
 // Min Max
 //
