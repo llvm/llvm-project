@@ -329,7 +329,7 @@ module acc_declare
 
 ! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_allocate_with_stat()
 ! CHECK: fir.call @_FortranAPointerAllocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocate_with_statElocalptr_acc_declare_update_desc_post_alloc>}
-! CHECK: fir.call @_FortranAPointerDeallocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} {acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declareFacc_declare_allocate_with_statElocalptr_acc_declare_update_desc_pre_dealloc>}
+! CHECK: fir.call @_FortranAPointerDeallocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} {acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declareFacc_declare_allocate_with_statElocalptr_acc_declare_update_desc_pre_dealloc, postDealloc = @_QMacc_declareFacc_declare_allocate_with_statElocalptr_acc_declare_update_desc_post_dealloc>}
 end module
 
 module acc_declare_allocatable_test
