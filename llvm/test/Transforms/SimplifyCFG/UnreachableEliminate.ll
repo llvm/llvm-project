@@ -444,6 +444,28 @@ else:
 define void @test9_gep_inbounds_nonzero(i1 %X, ptr %Y) {
 ; CHECK-LABEL: @test9_gep_inbounds_nonzero(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 12
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_nonnull_noundef_arg(ptr [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, ptr %phi, i64 12
+  call ptr @fn_nonnull_noundef_arg(ptr %gep)
+  ret void
+}
+
+define void @test9_gep_inbounds_nonzero_null_defined(i1 %X, ptr %Y) #0 {
+; CHECK-LABEL: @test9_gep_inbounds_nonzero_null_defined(
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SPEC_SELECT]], i64 12
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @fn_nonnull_noundef_arg(ptr [[GEP]])
@@ -462,9 +484,30 @@ else:
   ret void
 }
 
+define void @test9_gep_inbounds_unknown_null(i1 %X, ptr %Y, i64 %I) {
+; CHECK-LABEL: @test9_gep_inbounds_unknown_null(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_nonnull_noundef_arg(ptr [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
 
-define void @test9_gep_inbouds_unknown_null(i1 %X, ptr %Y, i64 %I) {
-; CHECK-LABEL: @test9_gep_inbouds_unknown_null(
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, ptr %phi, i64 %I
+  call ptr @fn_nonnull_noundef_arg(ptr %gep)
+  ret void
+}
+
+define void @test9_gep_inbounds_unknown_null_defined(i1 %X, ptr %Y, i64 %I) #0 {
+; CHECK-LABEL: @test9_gep_inbounds_unknown_null_defined(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SPEC_SELECT]], i64 [[I:%.*]]
@@ -481,6 +524,27 @@ else:
   %phi = phi ptr [ %Y, %entry ], [ null, %if ]
   %gep = getelementptr inbounds i8, ptr %phi, i64 %I
   call ptr @fn_nonnull_noundef_arg(ptr %gep)
+  ret void
+}
+
+define void @test9_gep_inbounds_unknown_null_call_noundef(i1 %X, ptr %Y, i64 %I) {
+; CHECK-LABEL: @test9_gep_inbounds_unknown_null_call_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SPEC_SELECT]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @fn_noundef_arg(ptr [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, ptr %phi, i64 %I
+  call ptr @fn_noundef_arg(ptr %gep)
   ret void
 }
 

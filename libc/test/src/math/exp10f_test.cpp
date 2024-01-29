@@ -42,30 +42,31 @@ TEST_F(LlvmLibcExp10fTest, SpecialNumbers) {
 TEST_F(LlvmLibcExp10fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x43000000U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(FPBits(0x43000000U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x43000001U))), FE_OVERFLOW);
+      inf, LIBC_NAMESPACE::exp10f(FPBits(0x43000001U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
 TEST_F(LlvmLibcExp10fTest, Underflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
-      0.0f, LIBC_NAMESPACE::exp10f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
+      0.0f, LIBC_NAMESPACE::exp10f(FPBits(0xff7fffffU).get_val()),
+      FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  float x = float(FPBits(0xc2cffff8U));
+  float x = FPBits(0xc2cffff8U).get_val();
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                  LIBC_NAMESPACE::exp10f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
 
-  x = float(FPBits(0xc2d00008U));
+  x = FPBits(0xc2d00008U).get_val();
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                  LIBC_NAMESPACE::exp10f(x), 0.5);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -97,7 +98,7 @@ TEST_F(LlvmLibcExp10fTest, TrickyInputs) {
   };
   for (int i = 0; i < N; ++i) {
     libc_errno = 0;
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
                                    LIBC_NAMESPACE::exp10f(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, -x,
@@ -109,7 +110,7 @@ TEST_F(LlvmLibcExp10fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = float(FPBits(v));
+    float x = FPBits(v).get_val();
     if (isnan(x) || isinf(x))
       continue;
     libc_errno = 0;

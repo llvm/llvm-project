@@ -235,6 +235,9 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
     return std::nullopt;
   } else if (MaybeExpr result{AsGenericExpr(std::move(ref))}) {
     return result;
+  } else if (semantics::HadUseError(
+                 context_, GetContextualMessages().at(), &symbol)) {
+    return std::nullopt;
   } else {
     if (!context_.HasError(last) && !context_.HasError(symbol)) {
       AttachDeclaration(

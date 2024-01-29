@@ -1716,8 +1716,10 @@ static void AppendCPUSpecificCPUDispatchMangling(const CodeGenModule &CGM,
 static void AppendTargetVersionMangling(const CodeGenModule &CGM,
                                         const TargetVersionAttr *Attr,
                                         raw_ostream &Out) {
-  if (Attr->isDefaultVersion())
+  if (Attr->isDefaultVersion()) {
+    Out << ".default";
     return;
+  }
   Out << "._";
   const TargetInfo &TI = CGM.getTarget();
   llvm::SmallVector<StringRef, 8> Feats;
@@ -1780,8 +1782,10 @@ static void AppendTargetClonesMangling(const CodeGenModule &CGM,
   const TargetInfo &TI = CGM.getTarget();
   if (TI.getTriple().isAArch64()) {
     StringRef FeatureStr = Attr->getFeatureStr(VersionIndex);
-    if (FeatureStr == "default")
+    if (FeatureStr == "default") {
+      Out << ".default";
       return;
+    }
     Out << "._";
     SmallVector<StringRef, 8> Features;
     FeatureStr.split(Features, "+");
@@ -2411,6 +2415,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (auto *Attr = D->getAttr<ArmNewAttr>()) {
     if (Attr->isNewZA())
       B.addAttribute("aarch64_pstate_za_new");
+    if (Attr->isNewZT0())
+      B.addAttribute("aarch64_new_zt0");
   }
 
   // Track whether we need to add the optnone LLVM attribute,
@@ -4029,6 +4035,8 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
         EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
     // Ensure that the resolver function is also emitted.
     GetOrCreateMultiVersionResolver(GD);
+  } else if (FD->hasAttr<TargetVersionAttr>()) {
+    GetOrCreateMultiVersionResolver(GD);
   } else
     EmitGlobalFunctionDefinition(GD, GV);
 }
@@ -4210,14 +4218,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
-      // In Aarch64, default versions of multiversioned functions are mangled to
-      // their 'normal' assembly name. This deviates from other targets which
-      // append a '.default' string. As a result we need to continue appending
-      // .ifunc in Aarch64.
-      // FIXME: Should Aarch64 mangling for 'default' multiversion function and
-      // in turn ifunc function match that of other targets?
-      if (FD->isTargetClonesMultiVersion() &&
-          !getTarget().getTriple().isAArch64()) {
+      if (FD->isTargetClonesMultiVersion()) {
         const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
         llvm::FunctionType *DeclTy = getTypes().GetFunctionType(FI);
         std::string MangledName = getMangledNameImpl(
@@ -4398,14 +4399,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   // a separate resolver).
   std::string ResolverName = MangledName;
   if (getTarget().supportsIFunc()) {
-    // In Aarch64, default versions of multiversioned functions are mangled to
-    // their 'normal' assembly name. This deviates from other targets which
-    // append a '.default' string. As a result we need to continue appending
-    // .ifunc in Aarch64.
-    // FIXME: Should Aarch64 mangling for 'default' multiversion function and
-    // in turn ifunc function match that of other targets?
-    if (!FD->isTargetClonesMultiVersion() ||
-        getTarget().getTriple().isAArch64())
+    if (!FD->isTargetClonesMultiVersion())
       ResolverName += ".ifunc";
   } else if (FD->isTargetMultiVersion()) {
     ResolverName += ".resolver";
@@ -6336,7 +6330,8 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
 ConstantAddress
 CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
                                                   StringRef Name) {
-  CharUnits Alignment = getContext().getAlignOfGlobalVarInChars(S->getType());
+  CharUnits Alignment =
+      getContext().getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);
 
   llvm::Constant *C = GetConstantArrayFromStringLiteral(S);
   llvm::GlobalVariable **Entry = nullptr;
@@ -6399,8 +6394,8 @@ CodeGenModule::GetAddrOfConstantStringFromObjCEncode(const ObjCEncodeExpr *E) {
 ConstantAddress CodeGenModule::GetAddrOfConstantCString(
     const std::string &Str, const char *GlobalName) {
   StringRef StrWithNull(Str.c_str(), Str.size() + 1);
-  CharUnits Alignment =
-    getContext().getAlignOfGlobalVarInChars(getContext().CharTy);
+  CharUnits Alignment = getContext().getAlignOfGlobalVarInChars(
+      getContext().CharTy, /*VD=*/nullptr);
 
   llvm::Constant *C =
       llvm::ConstantDataArray::getString(getLLVMContext(), StrWithNull, false);

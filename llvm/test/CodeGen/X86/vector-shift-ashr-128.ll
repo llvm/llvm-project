@@ -1160,9 +1160,9 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ;
 ; XOPAVX1-LABEL: splatvar_modulo_shift_v16i8:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; XOPAVX1-NEXT:    vpshab %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    retq
@@ -1420,7 +1420,7 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ;
 ; SSE41-LABEL: constant_shift_v8i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,u,16384,8192,4096,2048,1024,512>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [u,u,16384,8192,4096,2048,1024,512]
 ; SSE41-NEXT:    pmulhw %xmm0, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; SSE41-NEXT:    psraw $1, %xmm0

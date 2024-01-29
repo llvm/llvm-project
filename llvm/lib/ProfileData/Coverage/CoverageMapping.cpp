@@ -229,6 +229,7 @@ Expected<BitVector> CounterMappingContext::evaluateBitmap(
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NC, CHAR_BIT);
   unsigned SizeInBytes = SizeInBits / CHAR_BIT;
 
+  assert(ID + SizeInBytes <= BitmapBytes.size() && "BitmapBytes overrun");
   ArrayRef<uint8_t> Bytes(&BitmapBytes[ID], SizeInBytes);
 
   // Mask each bitmap byte into the BitVector. Go in reverse so that the
@@ -247,14 +248,14 @@ class MCDCRecordProcessor {
   /// Each index of the bitmap corresponds to a possible test vector. An index
   /// with a bit value of '1' indicates that the corresponding Test Vector
   /// identified by that index was executed.
-  BitVector &ExecutedTestVectorBitmap;
+  const BitVector &ExecutedTestVectorBitmap;
 
   /// Decision Region to which the ExecutedTestVectorBitmap applies.
-  CounterMappingRegion &Region;
+  const CounterMappingRegion &Region;
 
   /// Array of branch regions corresponding each conditions in the boolean
   /// expression.
-  ArrayRef<CounterMappingRegion> Branches;
+  ArrayRef<const CounterMappingRegion *> Branches;
 
   /// Total number of conditions in the boolean expression.
   unsigned NumConditions;
@@ -276,8 +277,9 @@ class MCDCRecordProcessor {
   MCDCRecord::TestVectors ExecVectors;
 
 public:
-  MCDCRecordProcessor(BitVector &Bitmap, CounterMappingRegion &Region,
-                      ArrayRef<CounterMappingRegion> Branches)
+  MCDCRecordProcessor(const BitVector &Bitmap,
+                      const CounterMappingRegion &Region,
+                      ArrayRef<const CounterMappingRegion *> Branches)
       : ExecutedTestVectorBitmap(Bitmap), Region(Region), Branches(Branches),
         NumConditions(Region.MCDCParams.NumConditions),
         Folded(NumConditions, false), IndependencePairs(NumConditions),
@@ -342,7 +344,7 @@ private:
 
   /// Walk the bits in the bitmap.  A bit set to '1' indicates that the test
   /// vector at the corresponding index was executed during a test run.
-  void findExecutedTestVectors(BitVector &ExecutedTestVectorBitmap) {
+  void findExecutedTestVectors(const BitVector &ExecutedTestVectorBitmap) {
     for (unsigned Idx = 0; Idx < ExecutedTestVectorBitmap.size(); ++Idx) {
       if (ExecutedTestVectorBitmap[Idx] == 0)
         continue;
@@ -445,11 +447,11 @@ public:
     //   visualize where the condition is.
     // - Record whether the condition is constant folded so that we exclude it
     //   from being measured.
-    for (const auto &B : Branches) {
-      Map[B.MCDCParams.ID] = &B;
-      PosToID[I] = B.MCDCParams.ID - 1;
-      CondLoc[I] = B.startLoc();
-      Folded[I++] = (B.Count.isZero() && B.FalseCount.isZero());
+    for (const auto *B : Branches) {
+      Map[B->MCDCParams.ID] = B;
+      PosToID[I] = B->MCDCParams.ID - 1;
+      CondLoc[I] = B->startLoc();
+      Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
 
     // Initialize a base test vector as 'DontCare'.
@@ -473,8 +475,9 @@ public:
 };
 
 Expected<MCDCRecord> CounterMappingContext::evaluateMCDCRegion(
-    CounterMappingRegion Region, BitVector ExecutedTestVectorBitmap,
-    ArrayRef<CounterMappingRegion> Branches) {
+    const CounterMappingRegion &Region,
+    const BitVector &ExecutedTestVectorBitmap,
+    ArrayRef<const CounterMappingRegion *> Branches) {
 
   MCDCRecordProcessor MCDCProcessor(ExecutedTestVectorBitmap, Region, Branches);
   return MCDCProcessor.processMCDCRecord();
@@ -566,14 +569,14 @@ static unsigned getMaxBitmapSize(const CounterMappingContext &Ctx,
                                  const CoverageMappingRecord &Record) {
   unsigned MaxBitmapID = 0;
   unsigned NumConditions = 0;
-  // The last DecisionRegion has the highest bitmap byte index used in the
-  // function, which when combined with its number of conditions, yields the
-  // full bitmap size.
+  // Scan max(BitmapIdx).
+  // Note that `<=` is used insted of `<`, because `BitmapIdx == 0` is valid
+  // and `MaxBitmapID is `unsigned`. `BitmapIdx` is unique in the record.
   for (const auto &Region : reverse(Record.MappingRegions)) {
-    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
+    if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion &&
+        MaxBitmapID <= Region.MCDCParams.BitmapIdx) {
       MaxBitmapID = Region.MCDCParams.BitmapIdx;
       NumConditions = Region.MCDCParams.NumConditions;
-      break;
     }
   }
   unsigned SizeInBits = llvm::alignTo(uint64_t(1) << NumConditions, CHAR_BIT);
@@ -638,7 +641,7 @@ Error CoverageMapping::loadFunctionRecord(
 
   unsigned NumConds = 0;
   const CounterMappingRegion *MCDCDecision;
-  std::vector<CounterMappingRegion> MCDCBranches;
+  std::vector<const CounterMappingRegion *> MCDCBranches;
 
   FunctionRecord Function(OrigFuncName, Record.Filenames);
   for (const auto &Region : Record.MappingRegions) {
@@ -666,7 +669,7 @@ Error CoverageMapping::loadFunctionRecord(
     // correspond to it in a vector, according to the number of conditions
     // recorded for the region (tracked by NumConds).
     if (NumConds > 0 && Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      MCDCBranches.push_back(Region);
+      MCDCBranches.push_back(&Region);
 
       // As we move through all of the MCDCBranchRegions that follow the
       // MCDCDecisionRegion, decrement NumConds to make sure we account for
