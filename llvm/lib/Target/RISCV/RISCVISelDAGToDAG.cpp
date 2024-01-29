@@ -831,8 +831,7 @@ void RISCVDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
          "Unexpected vsetvli intrinsic");
 
   // imm, imm, imm, simm5/scalar, sew, log2lmul, vl
-  auto *SewSDNode = cast<ConstantSDNode>(Node->getOperand(6));
-  unsigned Log2SEW = Log2_32(SewSDNode->getZExtValue());
+  unsigned Log2SEW = Log2_32(Node->getConstantOperandVal(6));
   SDValue SEWOp =
       CurDAG->getTargetConstant(Log2SEW, DL, Subtarget->getXLenVT());
   SmallVector<SDValue, 8> Operands = {Node->getOperand(2), Node->getOperand(3),
