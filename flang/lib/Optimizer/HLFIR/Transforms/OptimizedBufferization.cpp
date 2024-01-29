@@ -823,7 +823,7 @@ public:
       return rewriter.notifyMatchFailure(mloc,
                                          "Did not find valid minloc/maxloc");
 
-    constexpr bool isMax = std::is_same_v<Op, hlfir::MaxlocOp>;
+    bool isMax = std::is_same_v<Op, hlfir::MaxlocOp>;
 
     auto elemental =
         mloc.getMask().template getDefiningOp<hlfir::ElementalOp>();
