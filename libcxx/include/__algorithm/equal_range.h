@@ -31,6 +31,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _Iter, class _Sent, class _Tp, class _Proj>
@@ -76,5 +79,7 @@ equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_EQUAL_RANGE_H

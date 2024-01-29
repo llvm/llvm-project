@@ -124,3 +124,113 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
   coeff = getCoefficientInRationalFunction(3, numerator, denominator);
   EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
 }
+
+TEST(BarvinokTest, computeNumTerms) {
+  // The following test is taken from
+  // Verdoolaege, Sven, et al. "Counting integer points in parametric
+  // polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
+  // 37-66.
+  // It represents a right-angled triangle with right angle at the origin,
+  // with height and base lengths (p/2).
+  GeneratingFunction gf(
+      1, {1, 1, 1},
+      {makeFracMatrix(2, 2, {{0, Fraction(1, 2)}, {0, 0}}),
+       makeFracMatrix(2, 2, {{0, Fraction(1, 2)}, {0, 0}}),
+       makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
+      {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}});
+
+  QuasiPolynomial numPoints = computeNumTerms(gf).collectTerms();
+
+  // First, we make sure that all the affine functions are of the form ⌊p/2⌋.
+  for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine()) {
+    for (const SmallVector<Fraction> &aff : term) {
+      EXPECT_EQ(aff.size(), 2u);
+      EXPECT_EQ(aff[0], Fraction(1, 2));
+      EXPECT_EQ(aff[1], Fraction(0, 1));
+    }
+  }
+
+  // Now, we can gather the like terms because we know there's only
+  // either ⌊p/2⌋^2, ⌊p/2⌋, or constants.
+  // The total coefficient of ⌊p/2⌋^2 is the sum of coefficients of all
+  // terms with 2 affine functions, and
+  // the coefficient of total ⌊p/2⌋ is the sum of coefficients of all
+  // terms with 1 affine function,
+  Fraction pSquaredCoeff = 0, pCoeff = 0, constantTerm = 0;
+  SmallVector<Fraction> coefficients = numPoints.getCoefficients();
+  for (unsigned i = 0; i < numPoints.getCoefficients().size(); i++)
+    if (numPoints.getAffine()[i].size() == 2)
+      pSquaredCoeff = pSquaredCoeff + coefficients[i];
+    else if (numPoints.getAffine()[i].size() == 1)
+      pCoeff = pCoeff + coefficients[i];
+
+  // We expect the answer to be (1/2)⌊p/2⌋^2 + (3/2)⌊p/2⌋ + 1.
+  EXPECT_EQ(pSquaredCoeff, Fraction(1, 2));
+  EXPECT_EQ(pCoeff, Fraction(3, 2));
+  EXPECT_EQ(numPoints.getConstantTerm(), Fraction(1, 1));
+
+  // The following generating function corresponds to a cuboid
+  // with length M (x-axis), width N (y-axis), and height P (z-axis).
+  // There are eight terms.
+  gf = GeneratingFunction(
+      3, {1, 1, 1, 1, 1, 1, 1, 1},
+      {makeFracMatrix(4, 3, {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{0, 0, 0}, {0, 0, 0}, {0, 0, 1}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 0}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 0, 0}, {0, 0, 1}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{0, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}),
+       makeFracMatrix(4, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}})},
+      {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+       {{-1, 0, 0}, {0, 1, 0}, {0, 0, 1}},
+       {{1, 0, 0}, {0, -1, 0}, {0, 0, 1}},
+       {{1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+       {{-1, 0, 0}, {0, -1, 0}, {0, 0, 1}},
+       {{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+       {{1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+       {{-1, 0, 0}, {0, -1, 0}, {0, 0, -1}}});
+
+  numPoints = computeNumTerms(gf);
+  numPoints = numPoints.collectTerms().simplify();
+
+  // First, we make sure all the affine functions are either
+  // M, N, P, or 1.
+  for (const std::vector<SmallVector<Fraction>> &term : numPoints.getAffine()) {
+    for (const SmallVector<Fraction> &aff : term) {
+      // First, ensure that the coefficients are all nonnegative integers.
+      for (const Fraction &c : aff) {
+        EXPECT_TRUE(c >= 0);
+        EXPECT_EQ(c, c.getAsInteger());
+      }
+      // Now, if the coefficients add up to 1, we can be sure the term is
+      // either M, N, P, or 1.
+      EXPECT_EQ(aff[0] + aff[1] + aff[2] + aff[3], 1);
+    }
+  }
+
+  // We store the coefficients of M, N and P in this array.
+  Fraction count[2][2][2];
+  coefficients = numPoints.getCoefficients();
+  for (unsigned i = 0, e = coefficients.size(); i < e; i++) {
+    unsigned mIndex = 0, nIndex = 0, pIndex = 0;
+    for (const SmallVector<Fraction> &aff : numPoints.getAffine()[i]) {
+      if (aff[0] == 1)
+        mIndex = 1;
+      if (aff[1] == 1)
+        nIndex = 1;
+      if (aff[2] == 1)
+        pIndex = 1;
+      EXPECT_EQ(aff[3], 0);
+    }
+    count[mIndex][nIndex][pIndex] += coefficients[i];
+  }
+
+  // We expect the answer to be
+  // (⌊M⌋ + 1)(⌊N⌋ + 1)(⌊P⌋ + 1) =
+  // ⌊M⌋⌊N⌋⌊P⌋ + ⌊M⌋⌊N⌋ + ⌊N⌋⌊P⌋ + ⌊M⌋⌊P⌋ + ⌊M⌋ + ⌊N⌋ + ⌊P⌋ + 1.
+  for (unsigned i = 0; i < 2; i++)
+    for (unsigned j = 0; j < 2; j++)
+      for (unsigned k = 0; k < 2; k++)
+        EXPECT_EQ(count[i][j][k], 1);
+}

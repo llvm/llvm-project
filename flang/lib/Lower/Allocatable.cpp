@@ -454,7 +454,9 @@ private:
                            const fir::MutableBoxValue &box) {
     if (!box.isDerived() && !errorManager.hasStatSpec() &&
         !alloc.type.IsPolymorphic() && !alloc.hasCoarraySpec() &&
-        !useAllocateRuntime) {
+        !useAllocateRuntime && !box.isPointer()) {
+      // Pointers must use PointerAllocate so that their deallocations
+      // can be validated.
       genInlinedAllocation(alloc, box);
       return;
     }

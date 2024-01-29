@@ -3,12 +3,12 @@
 
 define void @vec3_i32(<3 x i32> %a, <3 x i32> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec3_i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <3 x i32>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <3 x i32>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <3 x i32> %l, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp uge <3 x i32> %add, %a
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = sub <3 x i32> %add, %a
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select <3 x i1> %cmp, <3 x i32> %add, <3 x i32> %sub
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i32> %sel, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i32> %sel, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <3 x i32>, ptr %src, align 1
@@ -41,12 +41,12 @@ define void @vec3_i32_default_alignment(<3 x i32> %a, <3 x i32> %b, ptr %src, pt
 
 define void @vec3_i16(<3 x i16> %a, <3 x i16> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec3_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <3 x i16>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <3 x i16>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <3 x i16> %l, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp = icmp uge <3 x i16> %add, %a
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = sub <3 x i16> %add, %a
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select <3 x i1> %cmp, <3 x i16> %add, <3 x i16> %sub
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i16> %sel, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i16> %sel, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <3 x i16>, ptr %src, align 1
@@ -60,9 +60,9 @@ define void @vec3_i16(<3 x i16> %a, <3 x i16> %b, ptr %src, ptr %dst) {
 
 define void @vec7_i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec7_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <7 x i16>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %l = load <7 x i16>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <7 x i16> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i16> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <7 x i16> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <7 x i16>, ptr %src, align 1
@@ -73,9 +73,9 @@ define void @vec7_i16(ptr %src, ptr %dst) {
 
 define void @vec6_i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec6_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <6 x i16>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <6 x i16>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <6 x i16> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i16> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i16> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <6 x i16>, ptr %src, align 1
@@ -86,9 +86,9 @@ define void @vec6_i16(ptr %src, ptr %dst) {
 
 define void @vec5_i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec5_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <5 x i16>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <5 x i16>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <5 x i16> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i16> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i16> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <5 x i16>, ptr %src, align 1
@@ -99,12 +99,12 @@ define void @vec5_i16(ptr %src, ptr %dst) {
 
 define void @vec3_i16_zext_i32(<3 x i32> %a, <3 x i32> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec3_i16_zext_i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <3 x i16>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <3 x i16>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l.ext = zext <3 x i16> %l to <3 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <3 x i32> %l.ext, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = sub <3 x i32> %add, %a
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub.trunc = trunc <3 x i32> %sub to <3 x i16>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i16> %sub.trunc, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i16> %sub.trunc, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <3 x i16>, ptr %src, align 1
@@ -190,10 +190,10 @@ define void @vec3_i30(<3 x i30> %a, <3 x i30> %b, ptr %src, ptr %dst) {
 
 define void @vec3_float(<3 x float> %a, <3 x float> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec3_float'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <3 x float>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <3 x float>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = fadd <3 x float> %l, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = fsub <3 x float> %add, %a
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x float> %sub, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x float> %sub, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <3 x float>, ptr %src, align 1
@@ -205,10 +205,10 @@ define void @vec3_float(<3 x float> %a, <3 x float> %b, ptr %src, ptr %dst) {
 
 define void @vec3_half(<3 x half> %a, <3 x half> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec3_half'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <3 x half>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <3 x half>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %add = fadd <3 x half> %l, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sub = fsub <3 x half> %add, %a
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x half> %sub, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x half> %sub, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <3 x half>, ptr %src, align 1
@@ -220,9 +220,9 @@ define void @vec3_half(<3 x half> %a, <3 x half> %b, ptr %src, ptr %dst) {
 
 define void @vec15_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec15_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <15 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %l = load <15 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <15 x i8> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <15 x i8> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i8> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <15 x i8>, ptr %src, align 1
@@ -233,9 +233,9 @@ define void @vec15_i8(ptr %src, ptr %dst) {
 
 define void @vec14_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec14_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <14 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %l = load <14 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <14 x i8> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <14 x i8> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i8> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <14 x i8>, ptr %src, align 1
@@ -246,9 +246,9 @@ define void @vec14_i8(ptr %src, ptr %dst) {
 
 define void @vec13_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec13_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <13 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %l = load <13 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <13 x i8> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <13 x i8> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i8> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <13 x i8>, ptr %src, align 1
@@ -259,9 +259,9 @@ define void @vec13_i8(ptr %src, ptr %dst) {
 
 define void @vec12_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec12_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <12 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <12 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <12 x i8> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <12 x i8> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <12 x i8> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <12 x i8>, ptr %src, align 1
@@ -272,9 +272,9 @@ define void @vec12_i8(ptr %src, ptr %dst) {
 
 define void @vec11_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec11_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <11 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %l = load <11 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <11 x i8> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <11 x i8> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i8> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <11 x i8>, ptr %src, align 1
@@ -285,10 +285,10 @@ define void @vec11_i8(ptr %src, ptr %dst) {
 
 define void @vec7_i8(<7 x i8> %a, <7 x i8> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec7_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <7 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %l = load <7 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <7 x i8> %l, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sub = sub <7 x i8> %add, %a
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i8> %sub, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <7 x i8> %sub, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <7 x i8>, ptr %src, align 1
@@ -300,9 +300,9 @@ define void @vec7_i8(<7 x i8> %a, <7 x i8> %b, ptr %src, ptr %dst) {
 
 define void @vec6_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec6_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <6 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <6 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <6 x i8> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i8> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i8> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <6 x i8>, ptr %src, align 1
@@ -313,9 +313,9 @@ define void @vec6_i8(ptr %src, ptr %dst) {
 
 define void @vec5_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec5_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l = load <5 x i8>, ptr %src, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l = load <5 x i8>, ptr %src, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %add = add <5 x i8> %l, %l
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i8> %add, ptr %dst, align 1
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i8> %add, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l = load <5 x i8>, ptr %src, align 1

@@ -6,6 +6,9 @@
 # RUN: llvm-otool -vs __DATA __objc_selrefs %t.out >> %t.txt
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out >> %t.txt
 # RUN: FileCheck %s < %t.txt
+# RUN: %no-fatal-warnings-lld -arch x86_64 -lSystem -o %t.out %t.o -objc_stubs_small 2>&1 | FileCheck %s --check-prefix=WARNING
+
+# WARNING: warning: -objc_stubs_small is not yet implemented, defaulting to -objc_stubs_fast
 
 # CHECK: Sections:
 # CHECK: __got            {{[0-9a-f]*}} [[#%x, GOTSTART:]] DATA

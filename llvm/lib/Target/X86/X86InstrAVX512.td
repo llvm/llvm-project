@@ -12422,7 +12422,7 @@ multiclass GF2P8AFFINE_avx512_rmb_imm<bits<8> Op, string OpStr, SDNode OpNode,
            : avx512_3Op_rm_imm8<Op, OpStr, OpNode, sched, VTI, VTI> {
   let ExeDomain = VTI.ExeDomain in
   defm rmbi : AVX512_maskable<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
-                (ins VTI.RC:$src1, VTI.ScalarMemOp:$src2, u8imm:$src3),
+                (ins VTI.RC:$src1, BcstVTI.ScalarMemOp:$src2, u8imm:$src3),
                 OpStr, "$src3, ${src2}"#BcstVTI.BroadcastStr#", $src1",
                 "$src1, ${src2}"#BcstVTI.BroadcastStr#", $src3",
                 (OpNode (VTI.VT VTI.RC:$src1),
