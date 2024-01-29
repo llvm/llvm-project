@@ -32,9 +32,12 @@ struct test_initialization {
             if (!TEST_IS_CONSTANT_EVALUATED || !std::is_trivially_default_constructible<T>::value)
 #endif
             {
-                std::array<T, 1> a1; (void)a1;
-                std::array<T, 2> a2; (void)a2;
-                std::array<T, 3> a3; (void)a3;
+              std::array<T, 1> a1;
+              (void)a1;
+              std::array<T, 2> a2;
+              (void)a2;
+              std::array<T, 3> a3;
+              (void)a3;
             }
 
             std::array<NoDefault, 0> nodefault; (void)nodefault;
