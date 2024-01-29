@@ -342,6 +342,15 @@ _LIBCPP_HARDENING_MODE_DEBUG
 // clang-format off
 // Fast hardening mode checks.
 
+// List all checks
+
+// VALID_INPUT_RANGE: Description of reason to use the check.
+// VALID_ELEMENT_ACCESS: Description of reason to use the check.
+// COMPATIBLE_ALLOCATOR: Description of reason to use the check.
+// PEDANTIC: Description of reason to use the check.
+// INTERNAL: Description of reason to use the check.
+// UNCATEGORIZED: Description of reason to use the check.
+
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 
 // Enabled checks.
@@ -362,6 +371,16 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
+#    define VALID_INPUT_RANGE 1
+#    define VALID_PRECONDITIONS 1
+#    define VALID_ELEMENT_ACCESS 1
+#    define NON_NULL 0
+#    define OVERLAPPING_RANGES 0
+#    define COMPATIBLE_ALLOCATOR 0
+#    define PEDANTIC 0
+#    define INTERNAL 0
+#    define UNCATEGORIZED 0
+
 // Extensive hardening mode checks.
 
 #  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
@@ -381,6 +400,17 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
+#    define VALID_INPUT_RANGE 1
+#    define VALID_ELEMENT_ACCESS 1
+#    define VALID_PRECONDITIONS 1
+#    define NON_NULL 1
+#    define OVERLAPPING_RANGES 1
+#    define COMPATIBLE_ALLOCATOR 1
+#    define PEDANTIC 1
+#    define UNCATEGORIZED 1
+
+#    define INTERNAL 0
+
 // Debug hardening mode checks.
 
 #  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
@@ -398,6 +428,16 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
+
+#    define VALID_INPUT_RANGE 1
+#    define VALID_ELEMENT_ACCESS 1
+#    define VALID_PRECONDITIONS 1
+#    define NON_NULL 1
+#    define OVERLAPPING_RANGES 1
+#    define COMPATIBLE_ALLOCATOR 1
+#    define PEDANTIC 1
+#    define INTERNAL 1
+#    define UNCATEGORIZED 1
 
 // Disable all checks if hardening is not enabled.
 
@@ -417,7 +457,27 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
+#    define VALID_INPUT_RANGE 0
+#    define VALID_ELEMENT_ACCESS 0
+#    define VALID_PRECONDITIONS 0
+#    define NON_NULL 0
+#    define OVERLAPPING_RANGES 0
+#    define COMPATIBLE_ALLOCATOR 0
+#    define PEDANTIC 0
+#    define INTERNAL 0
+#    define UNCATEGORIZED 0
+
 #  endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
+
+#define _LIBCPP_ASSERT_P(reason, expression, message) \
+do {                                                  \
+  if (reason) {                                       \
+      _LIBCPP_ASSERT(expression, message);            \
+  } else {                                            \
+      _LIBCPP_ASSUME(expression);                     \
+  }                                                   \
+} while (0)
+
 // clang-format on
 
 // } HARDENING
