@@ -114,7 +114,9 @@ public:
       return iface->convertParameterAttr(function, argIdx, attribute,
                                          moduleTranslation);
     }
-    return failure();
+    function.emitWarning("Unhandled parameter attribute '" +
+                         attribute.getName().str() + "'");
+    return success();
   }
 };
 
