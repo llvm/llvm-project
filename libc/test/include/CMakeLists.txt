@@ -28,6 +28,7 @@ add_libc_test(
     # simply testing the macros provided by stdbit.h, not the implementation of
     # the underlying functions which the type generic macros may dispatch to.
   COMPILE_OPTIONS
-    # stdbit is full of type generic macros implemented via C11 _Generic.
+    # stdbit.h is full of type generic macros implemented via C11 _Generic.
+    # Clang will produce -Wno-c11-extensions when using _Generic in C++ mode.
     -Wno-c11-extensions
 )
