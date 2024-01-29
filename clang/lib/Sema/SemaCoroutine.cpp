@@ -32,8 +32,6 @@
 using namespace clang;
 using namespace sema;
 
-static bool isNoThrow(Sema &S, const Stmt *E);
-
 static LookupResult lookupMember(Sema &S, const char *Name, CXXRecordDecl *RD,
                                  SourceLocation Loc, bool &Res) {
   DeclarationName DN = S.PP.getIdentifierInfo(Name);
@@ -494,10 +492,6 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     }
   }
 
-  if (Calls.Results[ACT::ACT_Suspend]) {
-    Calls.IsSuspendNoThrow = isNoThrow(S, Calls.Results[ACT::ACT_Suspend]);
-  }
-
   BuildSubExpr(ACT::ACT_Resume, "await_resume", std::nullopt);
 
   // Make sure the awaiter object gets a chance to be cleaned up.
@@ -648,59 +642,6 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
     return nullptr;
 
   return ScopeInfo;
-}
-
-/// Recursively check \p E and all its children to see if any call target
-/// (including constructor call) is declared noexcept. Also any value returned
-/// from the call has a noexcept destructor.
-static bool isNoThrow(Sema &S, const Stmt *E) {
-  auto isDeclNoexcept = [&](const Decl *D, bool IsDtor = false) -> bool {
-    // In the case of dtor, the call to dtor is implicit and hence we should
-    // pass nullptr to canCalleeThrow.
-    if (Sema::canCalleeThrow(S, IsDtor ? nullptr : cast<Expr>(E), D)) {
-      return false;
-    }
-    return true;
-  };
-
-  if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
-    CXXConstructorDecl *Ctor = CE->getConstructor();
-    if (!isDeclNoexcept(Ctor)) {
-      return false;
-    }
-    // Check the corresponding destructor of the constructor.
-    if (!isDeclNoexcept(Ctor->getParent()->getDestructor(), /*IsDtor=*/true)) {
-      return false;
-    }
-  } else if (auto *CE = dyn_cast<CallExpr>(E)) {
-    if (CE->isTypeDependent())
-      return false;
-
-    if (!isDeclNoexcept(CE->getCalleeDecl())) {
-      return false;
-    }
-
-    QualType ReturnType = CE->getCallReturnType(S.getASTContext());
-    // Check the destructor of the call return type, if any.
-    if (ReturnType.isDestructedType() ==
-        QualType::DestructionKind::DK_cxx_destructor) {
-      const auto *T =
-          cast<RecordType>(ReturnType.getCanonicalType().getTypePtr());
-      if (!isDeclNoexcept(cast<CXXRecordDecl>(T->getDecl())->getDestructor(),
-                          /*IsDtor=*/true)) {
-        return false;
-      }
-    }
-  }
-  for (const auto *Child : E->children()) {
-    if (!Child)
-      continue;
-    if (!isNoThrow(S, Child)) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 /// Recursively check \p E and all its children to see if any call target
@@ -1003,7 +944,7 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
 
   Expr *Res = new (Context) CoawaitExpr(
       Loc, Operand, Awaiter, RSS.Results[0], RSS.Results[1], RSS.Results[2],
-      RSS.IsSuspendNoThrow, RSS.OpaqueValue, RSS.OpaqueFramePtr, IsImplicit);
+      RSS.OpaqueValue, RSS.OpaqueFramePtr, IsImplicit);
 
   return Res;
 }
@@ -1059,9 +1000,9 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res = new (Context) CoyieldExpr(
-      Loc, Operand, E, RSS.Results[0], RSS.Results[1], RSS.Results[2],
-      RSS.IsSuspendNoThrow, RSS.OpaqueValue, RSS.OpaqueFramePtr);
+  Expr *Res = new (Context)
+      CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
+                  RSS.Results[2], RSS.OpaqueValue, RSS.OpaqueFramePtr);
 
   return Res;
 }

@@ -173,6 +173,10 @@ static bool ResumeStmtCanThrow(const Stmt *S) {
   return false;
 }
 
+static bool AwaitSuspendStmtCanThrow(const Stmt *S) {
+  return ResumeStmtCanThrow(S);
+}
+
 // Emit suspend expression which roughly looks like:
 //
 //   auto && x = CommonExpr();
@@ -233,8 +237,11 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   auto *NullPtr = llvm::ConstantPointerNull::get(CGF.CGM.Int8PtrTy);
   auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
 
+  const auto AwaitSuspendCanThrow =
+      AwaitSuspendStmtCanThrow(S.getSuspendExpr());
+
   auto SuspendHelper = CodeGenFunction(CGF.CGM).generateAwaitSuspendHelper(
-      CGF.CurFn->getName(), Prefix, S);
+      CGF.CurFn->getName(), Prefix, S, AwaitSuspendCanThrow);
 
   llvm::CallBase *SuspendRet = nullptr;
 
@@ -262,13 +269,12 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
     llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(IID);
     // FIXME: add call attributes?
-    if (S.isSuspendNoThrow()) {
-      SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
-                                               SuspendHelperCallArgs);
-    } else {
+    if (AwaitSuspendCanThrow)
       SuspendRet =
           CGF.EmitCallOrInvoke(AwaitSuspendIntrinsic, SuspendHelperCallArgs);
-    }
+    else
+      SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
+                                               SuspendHelperCallArgs);
 
     CGF.CurCoro.InSuspendBlock = false;
   }
@@ -380,10 +386,9 @@ static QualType getCoroutineSuspendExprReturnType(const ASTContext &Ctx,
 }
 #endif
 
-llvm::Function *
-CodeGenFunction::generateAwaitSuspendHelper(Twine const &CoroName,
-                                            Twine const &SuspendPointName,
-                                            CoroutineSuspendExpr const &S) {
+llvm::Function *CodeGenFunction::generateAwaitSuspendHelper(
+    Twine const &CoroName, Twine const &SuspendPointName,
+    CoroutineSuspendExpr const &S, bool CanThrow) {
   std::string FuncName = "__await_suspend_helper_";
   FuncName += CoroName.str();
   FuncName += '_';
@@ -424,7 +429,7 @@ CodeGenFunction::generateAwaitSuspendHelper(Twine const &CoroName,
   Fn->setMustProgress();
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
 
-  if (S.isSuspendNoThrow()) {
+  if (!CanThrow) {
     Fn->addFnAttr(llvm::Attribute::AttrKind::NoUnwind);
   }
 
