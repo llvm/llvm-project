@@ -121,13 +121,11 @@ lookupFoldTableImpl(ArrayRef<X86FoldTableEntry> Table, unsigned RegOp) {
   return nullptr;
 }
 
-const X86FoldTableEntry *
-llvm::lookupTwoAddrFoldTable(unsigned RegOp) {
+const X86FoldTableEntry *llvm::lookupTwoAddrFoldTable(unsigned RegOp) {
   return lookupFoldTableImpl(Table2Addr, RegOp);
 }
 
-const X86FoldTableEntry *
-llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
+const X86FoldTableEntry *llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
   ArrayRef<X86FoldTableEntry> FoldTable;
   if (OpNum == 0)
     FoldTable = ArrayRef(Table0);
@@ -181,19 +179,19 @@ struct X86MemUnfoldTable {
     // Broadcast tables.
     for (const X86FoldTableEntry &Entry : BroadcastTable1)
       // Index 1, folded broadcast
-      addTableEntry(Entry, TB_INDEX_1 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
+      addTableEntry(Entry, TB_INDEX_1 | TB_FOLDED_LOAD);
 
     for (const X86FoldTableEntry &Entry : BroadcastTable2)
       // Index 2, folded broadcast
-      addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
+      addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD);
 
     for (const X86FoldTableEntry &Entry : BroadcastTable3)
       // Index 3, folded broadcast
-      addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
+      addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD);
 
     for (const X86FoldTableEntry &Entry : BroadcastTable4)
       // Index 4, folded broadcast
-      addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
+      addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD);
 
     // Sort the memory->reg unfold table.
     array_pod_sort(Table.begin(), Table.end());
@@ -203,18 +201,16 @@ struct X86MemUnfoldTable {
            "Memory unfolding table is not unique!");
   }
 
-  void addTableEntry(const X86FoldTableEntry &Entry,
-                     uint16_t ExtraFlags) {
+  void addTableEntry(const X86FoldTableEntry &Entry, uint16_t ExtraFlags) {
     // NOTE: This swaps the KeyOp and DstOp in the table so we can sort it.
     if ((Entry.Flags & TB_NO_REVERSE) == 0)
       Table.push_back({Entry.DstOp, Entry.KeyOp,
-                      static_cast<uint16_t>(Entry.Flags | ExtraFlags) });
+                       static_cast<uint16_t>(Entry.Flags | ExtraFlags)});
   }
 };
-}
+} // namespace
 
-const X86FoldTableEntry *
-llvm::lookupUnfoldTable(unsigned MemOp) {
+const X86FoldTableEntry *llvm::lookupUnfoldTable(unsigned MemOp) {
   static X86MemUnfoldTable MemUnfoldTable;
   auto &Table = MemUnfoldTable.Table;
   auto I = llvm::lower_bound(Table, MemOp);
@@ -238,8 +234,8 @@ struct X86BroadcastFoldTable {
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86FoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 2)) {
         unsigned MemOp = Reg2Mem->DstOp;
-        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_2 |
-                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        uint16_t Flags =
+            Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_2 | TB_FOLDED_LOAD;
         Table.push_back({MemOp, BcstOp, Flags});
       }
     }
@@ -248,8 +244,8 @@ struct X86BroadcastFoldTable {
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86FoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 2)) {
         unsigned MemOp = Reg2Mem->DstOp;
-        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_2 |
-                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        uint16_t Flags =
+            Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_2 | TB_FOLDED_LOAD;
         Table.push_back({MemOp, BcstOp, Flags});
       }
     }
@@ -259,8 +255,8 @@ struct X86BroadcastFoldTable {
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86FoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 3)) {
         unsigned MemOp = Reg2Mem->DstOp;
-        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_3 |
-                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        uint16_t Flags =
+            Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_3 | TB_FOLDED_LOAD;
         Table.push_back({MemOp, BcstOp, Flags});
       }
     }
@@ -269,8 +265,8 @@ struct X86BroadcastFoldTable {
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86FoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 3)) {
         unsigned MemOp = Reg2Mem->DstOp;
-        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_3 |
-                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        uint16_t Flags =
+            Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_3 | TB_FOLDED_LOAD;
         Table.push_back({MemOp, BcstOp, Flags});
       }
     }
@@ -280,8 +276,8 @@ struct X86BroadcastFoldTable {
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86FoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 4)) {
         unsigned MemOp = Reg2Mem->DstOp;
-        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_4 |
-                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        uint16_t Flags =
+            Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_4 | TB_FOLDED_LOAD;
         Table.push_back({MemOp, BcstOp, Flags});
       }
     }
