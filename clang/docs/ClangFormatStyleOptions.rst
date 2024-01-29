@@ -1547,13 +1547,14 @@ the configuration (without a prefix: ``Auto``).
       };
       int f();
       int f() { return 1; }
-      int foooooooooooooooooooooooooooooooooooooooooooooooo::
-          baaaaaaaaaaaaaaaaaaaaar();
+      int LongName::
+          AnotherLongName();
 
   * ``RTBS_AllowShortType`` (in configuration: ``AllowShortType``)
-    Break after return type automatically, while allowing a break after
-    short return types.
-    ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    Break after return type automatically.
+    This mode doesn't have the same inherent restriction on breaking after
+    short return types as ``RTBS_None`` and is solely based on
+    ``PenaltyReturnTypeOnItsOwnLine``.
 
     .. code-block:: c++
 
@@ -1563,7 +1564,7 @@ the configuration (without a prefix: ``Auto``).
       int f();
       int f() { return 1; }
       int
-      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+      LongName::AnotherLongName();
 
   * ``RTBS_All`` (in configuration: ``All``)
     Always break after the return type.
@@ -1582,6 +1583,8 @@ the configuration (without a prefix: ``Auto``).
       f() {
         return 1;
       }
+      int
+      LongName::AnotherLongName();
 
   * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
     Always break after the return types of top-level functions.
@@ -1598,7 +1601,7 @@ the configuration (without a prefix: ``Auto``).
         return 1;
       }
       int
-      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+      LongName::AnotherLongName();
 
   * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
     Always break after the return type of function definitions.
@@ -1617,7 +1620,7 @@ the configuration (without a prefix: ``Auto``).
         return 1;
       }
       int
-      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+      LongName::AnotherLongName();
 
   * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
     Always break after the return type of top-level definitions.
@@ -1633,7 +1636,7 @@ the configuration (without a prefix: ``Auto``).
         return 1;
       }
       int
-      foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+      LongName::AnotherLongName();
 
 
 

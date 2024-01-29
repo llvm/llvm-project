@@ -922,13 +922,14 @@ struct FormatStyle {
     ///   };
     ///   int f();
     ///   int f() { return 1; }
-    ///   int foooooooooooooooooooooooooooooooooooooooooooooooo::
-    ///       baaaaaaaaaaaaaaaaaaaaar();
+    ///   int LongName::
+    ///       AnotherLongName();
     /// \endcode
     RTBS_None,
-    /// Break after return type automatically, while allowing a break after
-    /// short return types.
-    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    /// Break after return type automatically.
+    /// This mode doesn't have the same inherent restriction on breaking after
+    /// short return types as ``RTBS_None`` and is solely based on
+    /// ``PenaltyReturnTypeOnItsOwnLine``.
     /// \code
     ///   class A {
     ///     int f() { return 0; };
@@ -936,7 +937,7 @@ struct FormatStyle {
     ///   int f();
     ///   int f() { return 1; }
     ///   int
-    ///   foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_AllowShortType,
     /// Always break after the return type.
@@ -953,6 +954,8 @@ struct FormatStyle {
     ///   f() {
     ///     return 1;
     ///   }
+    ///   int
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_All,
     /// Always break after the return types of top-level functions.
@@ -967,7 +970,7 @@ struct FormatStyle {
     ///     return 1;
     ///   }
     ///   int
-    ///   foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevel,
     /// Always break after the return type of function definitions.
@@ -984,7 +987,7 @@ struct FormatStyle {
     ///     return 1;
     ///   }
     ///   int
-    ///   foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_AllDefinitions,
     /// Always break after the return type of top-level definitions.
@@ -998,7 +1001,7 @@ struct FormatStyle {
     ///     return 1;
     ///   }
     ///   int
-    ///   foooooooooooooooooooooooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();
+    ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_TopLevelDefinitions,
   };
