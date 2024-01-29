@@ -4604,7 +4604,7 @@ def int_nvvm_vote_ballot_sync :
 //
 def int_nvvm_activemask :
   Intrinsic<[llvm_i32_ty], [],
-            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.activemask">,
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback, IntrHasSideEffects], "llvm.nvvm.activemask">,
   ClangBuiltin<"__nvvm_activemask">;
 
 //
