@@ -4274,14 +4274,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         Left.isOneOf(tok::kw_new, tok::kw_delete) &&
         Right.isNot(TT_OverloadedOperatorLParen) &&
         !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
-      if (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
-              FormatStyle::SpaceBeforeParensCustom::APO_Always ||
-          (Style.SpaceBeforeParensOptions.AfterPlacementOperator ==
-               FormatStyle::SpaceBeforeParensCustom::APO_Leave &&
-           Right.hasWhitespaceBefore())) {
-        return true;
-      }
-      return false;
+      return Style.SpaceBeforeParensOptions.AfterPlacementOperator;
     }
     if (Line.Type == LT_ObjCDecl)
       return true;
@@ -4322,14 +4315,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       }
       if (Left.isOneOf(tok::kw_new, tok::kw_delete)) {
         return ((!Line.MightBeFunctionDecl || !Left.Previous) &&
-                Style.SpaceBeforeParens != FormatStyle::SBPO_Never) ||
+                Style.SpaceBeforeParens > FormatStyle::SBPO_Never) ||
                spaceRequiredBeforeParens(Right);
       }
 
       if (Left.is(tok::r_square) && Left.MatchingParen &&
           Left.MatchingParen->Previous &&
           Left.MatchingParen->Previous->is(tok::kw_delete)) {
-        return (Style.SpaceBeforeParens != FormatStyle::SBPO_Never) ||
+        return (Style.SpaceBeforeParens > FormatStyle::SBPO_Never) ||
                spaceRequiredBeforeParens(Right);
       }
     }
