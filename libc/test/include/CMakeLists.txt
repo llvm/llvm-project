@@ -22,8 +22,8 @@ add_libc_test(
   SRCS
     stdbit_test.cpp
   DEPENDS
-    libc.__support.CPP.limits
     libc.include.llvm-libc-macros.stdbit_macros
+    libc.src.__support.CPP.limits
     libc.src.stdbit.stdc_leading_zeros_uc
     libc.src.stdbit.stdc_leading_zeros_ui
     libc.src.stdbit.stdc_leading_zeros_ul
