@@ -75,7 +75,7 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
           ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -124,10 +124,10 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
           ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
-          name: ${{ matrix.config }}-results
+          name: ${{ matrix.config }}-${{ matrix.cxx }}-results
           path: |
             **/test-results.xml
             **/*.abilist
@@ -189,7 +189,7 @@ jobs:
           CC: clang-18
           CXX: clang++-18
           ENABLE_CLANG_TIDY: "OFF"
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
           name: ${{ matrix.config }}-results
