@@ -39,6 +39,9 @@ namespace clang {
 namespace replace {
 
 namespace detail {
+
+static constexpr std::array<StringRef, 3> AllowedExtensions = {".yaml", ".yml", ""};
+
 template <typename TranslationUnits>
 static std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TranslationUnits &TUs,
@@ -56,9 +59,9 @@ static std::error_code collectReplacementsFromDirectory(
       continue;
     }
 
-    if (extension(I->path()) != ".yaml")
+     if (!is_contained(AllowedExtensions, extension(I->path())))
       continue;
-
+    
     TUFiles.push_back(I->path());
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> Out =

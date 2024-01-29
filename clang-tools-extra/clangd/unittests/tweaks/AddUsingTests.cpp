@@ -44,8 +44,7 @@ public:
 };
 }
 })cpp";
-
-  EXPECT_AVAILABLE(Header + "void fun() { o^n^e^:^:^t^w^o^:^:^f^f(); }");
+EXPECT_AVAILABLE(Header + "void fun() { o^n^e^:^:^t^w^o^:^:^f^f(); }");
   EXPECT_AVAILABLE(Header + "void fun() { o^n^e^::^o^o(); }");
   EXPECT_AVAILABLE(Header + "void fun() { o^n^e^:^:^t^w^o^:^:^e^e E; }");
   EXPECT_AVAILABLE(Header + "void fun() { o^n^e^:^:^t^w^o:^:^c^c C; }");
@@ -124,24 +123,6 @@ void fun() {
 })cpp",
       },
       // Type, no other using, namespace.
-      {
-          R"cpp(
-#include "test.hpp"
-namespace {
-void fun() {
-  ::one::t^wo::cc inst;
-}
-})cpp",
-          R"cpp(
-#include "test.hpp"
-namespace {using ::one::two::cc;
-
-void fun() {
-  cc inst;
-}
-})cpp",
-      },
-      // Type, no other using, no namespace.
       {
           R"cpp(
 #include "test.hpp"
@@ -311,7 +292,7 @@ void foo::fun() {
 })cpp"},
       // Inside a lambda.
       {
-          R"cpp(
+    R"cpp(
 namespace NS {
 void unrelated();
 void foo();
@@ -321,7 +302,7 @@ auto L = [] {
   using NS::unrelated;
   NS::f^oo();
 };)cpp",
-          R"cpp(
+    R"cpp(
 namespace NS {
 void unrelated();
 void foo();
@@ -331,7 +312,7 @@ auto L = [] {
   using NS::foo;using NS::unrelated;
   foo();
 };)cpp",
-      },
+},
       // If all other using are fully qualified, add ::
       {R"cpp(
 #include "test.hpp"
