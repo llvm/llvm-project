@@ -1,29 +1,23 @@
-## This test checks how we handle PGO Analysis Map in --bb-addr-map.
-
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
+## This test checks how llvm-readobj prints the PGO Analysis Map with the
+## --bb-addr-map option.
 
 ## Check 64-bit:
-# RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
+# RUN: yaml2obj %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
 # RUN: llvm-readobj %t1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=CHECK
 # RUN: llvm-readelf %t1.x64.o --bb-addr-map | FileCheck %s --check-prefix=GNU
 
-## Check 64-bit:
-# RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.v1.x64.o
-# RUN: llvm-readobj %t1.v1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.v1.x64.o --check-prefix=CHECK
-
 ## Check 32-bit:
-# RUN: yaml2obj --docnum=1 %s -DBITS=32 -o %t1.x32.o
+# RUN: yaml2obj %s -DBITS=32 -o %t1.x32.o
 # RUN: llvm-readobj %t1.x32.o --bb-addr-map 2>&1 | FileCheck -DADDR=0x11111 %s -DFILE=%t1.x32.o --check-prefix=CHECK
 # RUN: llvm-readelf %t1.x32.o --bb-addr-map | FileCheck %s --check-prefix=GNU
 
 ## Check that a malformed section can be handled.
-# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DSIZE=6 -o %t2.o
-# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s -DOFFSET=0x00000006 -DFILE=%t2.o --check-prefix=TRUNCATED
+# RUN: yaml2obj %s -DBITS=32 -DSIZE=24 -o %t2.o
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck %s -DOFFSET=0x00000018 -DFILE=%t2.o --check-prefix=TRUNCATED
 
-## Check that invalid metadata can be handled.
-# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DMETADATA=0xF000002 -o %t3.o
-# RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALIDMD
+## Check that missing features can be handled.
+# RUN: yaml2obj %s -DBITS=32 -DFEATURE=0x2 -o %t3.o
+# RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s -DFILE=%t3.o --check-prefix=INVALIDFT
 
 # CHECK:      BBAddrMap [
 # CHECK-NEXT:   Function {
@@ -136,8 +130,7 @@
 # TRUNCATED-NEXT:   }
 # TRUNCATED-NEXT: ]
 
-# INVALIDMD:      BBAddrMap [
-# INVALIDMD-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: invalid encoding for BBEntry::Metadata: 0xf000002
+# INVALIDFT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 5: unable to decode LEB128 at offset 0x00000010: malformed uleb128, extends past end
 
 --- !ELF
 FileHeader:
@@ -163,7 +156,7 @@ Sections:
           - ID:            0
             AddressOffset: 0x0
             Size:          0x1
-            Metadata:      [[METADATA=0x2]]
+            Metadata:      0x2
           - ID:            2
             AddressOffset: 0x3
             Size:          0x4
@@ -196,7 +189,7 @@ Sections:
     Link: .text.bar
     Entries:
       - Version: 2
-        Feature: 0x1
+        Feature: [[FEATURE=0x1]]
         Address: 0x33333
         BBEntries:
           - ID:            6
