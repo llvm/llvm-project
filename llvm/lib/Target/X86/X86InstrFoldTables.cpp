@@ -179,6 +179,10 @@ struct X86MemUnfoldTable {
       addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD);
 
     // Broadcast tables.
+    for (const X86FoldTableEntry &Entry : BroadcastTable1)
+      // Index 1, folded broadcast
+      addTableEntry(Entry, TB_INDEX_1 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
+
     for (const X86FoldTableEntry &Entry : BroadcastTable2)
       // Index 2, folded broadcast
       addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
