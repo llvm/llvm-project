@@ -580,13 +580,13 @@ Symbols:
       - Type: AUX_FILE
         FileNameOrString: foo
 
-## Case10: Specify a SymbolType outside the range of field definition
+## Case10: Specify a SymbolType outside the range of field definition.
 # RUN: not yaml2obj %s -DSYMTYPE=8 --docnum=8 -o %t10 2>&1 | \ 
 # RUN:   FileCheck %s --check-prefix BADSYMTYPE
 
 # BADSYMTYPE: error: symbol type must be less than 8
 
-## Case11: Specify a SymbolType outside the range of its enumeration
+## Case11: Specify a SymbolType outside the range of its enumeration.
 # RUN: yaml2obj %s -DSYMTYPE=7 --docnum=8 -o %t11
 # RUN: llvm-readobj --syms %t11 | FileCheck %s --check-prefix=STYPE
 

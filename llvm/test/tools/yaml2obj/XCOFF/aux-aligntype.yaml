@@ -1,6 +1,5 @@
-## Check that obj2yaml can parse SymbolAlignmentAndType, SymbolAlignment,
-## and SymbolType.  If either SymbolAlignment or SymbolType are specified
-## along with SymbolAligmentAndType, report an error.
+## Check that yaml2obj can parse SymbolAlignmentAndType, SymbolAlignment,
+## and SymbolType.
 
 # RUN: yaml2obj %s --docnum=1 -DMAGIC=0x01DF -o %t32
 # RUN: obj2yaml %t32 | FileCheck %s --check-prefix=CHECK
@@ -113,4 +112,3 @@ Symbols:
         SymbolAlignmentAndType: 18
         SymbolType: XTY_SD
         SectionOrLengthLo: 4
-
