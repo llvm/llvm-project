@@ -18,6 +18,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_specialization.h>
 #include <__type_traits/is_void.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 #include <tuple>
 
