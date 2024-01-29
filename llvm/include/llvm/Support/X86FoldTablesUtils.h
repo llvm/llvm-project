@@ -53,7 +53,7 @@ enum {
   TB_BCAST_SH = 6 << TB_BCAST_TYPE_SHIFT,
   TB_BCAST_MASK = 0x7 << TB_BCAST_TYPE_SHIFT,
 
-  // Unused bits 15-16
+  // Unused bits 14-16
 };
 } // namespace llvm
 #endif // LLVM_SUPPORT_X86FOLDTABLESUTILS_H
