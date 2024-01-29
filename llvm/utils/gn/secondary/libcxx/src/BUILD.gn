@@ -56,6 +56,9 @@ config("cxx_config") {
     "_LIBCPP_BUILDING_LIBRARY",
     "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
   ]
+  if (current_os != "win") {
+    defines += [ "LIBCXX_BUILDING_LIBCXXABI" ]
+  }
   if (target_os == "win") {
     cflags += [ "/Zl" ]
     defines += [

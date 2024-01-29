@@ -1317,20 +1317,13 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
           continue;
 
         // Extract the memory operand information about this instruction.
-        // FIXME: This doesn't handle loading pseudo instructions which we often
-        // could handle with similarly generic logic. We probably need to add an
-        // MI-layer routine similar to the MC-layer one we use here which maps
-        // pseudos much like this maps real instructions.
-        const MCInstrDesc &Desc = MI.getDesc();
-        int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+        const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(MI);
         if (MemRefBeginIdx < 0) {
           LLVM_DEBUG(dbgs()
                          << "WARNING: unable to harden loading instruction: ";
                      MI.dump());
           continue;
         }
-
-        MemRefBeginIdx += X86II::getOperandBias(Desc);
 
         MachineOperand &BaseMO =
             MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
@@ -1400,11 +1393,8 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
 
         // Check if this is a load whose address needs to be hardened.
         if (HardenLoadAddr.erase(&MI)) {
-          const MCInstrDesc &Desc = MI.getDesc();
-          int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+          const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(MI);
           assert(MemRefBeginIdx >= 0 && "Cannot have an invalid index here!");
-
-          MemRefBeginIdx += X86II::getOperandBias(Desc);
 
           MachineOperand &BaseMO =
               MI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);
@@ -1802,11 +1792,9 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 
         // Otherwise, this is a load and the load component can't be data
         // invariant so check how this register is being used.
-        const MCInstrDesc &Desc = UseMI.getDesc();
-        int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+        const int MemRefBeginIdx = X86::getFirstAddrOperandIdx(UseMI);
         assert(MemRefBeginIdx >= 0 &&
                "Should always have mem references here!");
-        MemRefBeginIdx += X86II::getOperandBias(Desc);
 
         MachineOperand &BaseMO =
             UseMI.getOperand(MemRefBeginIdx + X86::AddrBaseReg);

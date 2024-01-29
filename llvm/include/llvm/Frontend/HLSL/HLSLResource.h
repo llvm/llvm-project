@@ -31,8 +31,8 @@ enum class ResourceClass : uint8_t {
 };
 
 // For now we use DXIL ABI enum values directly. This may change in the future.
-using dxil::ResourceKind;
 using dxil::ElementType;
+using dxil::ResourceKind;
 
 class FrontendResource {
   MDNode *Entry;

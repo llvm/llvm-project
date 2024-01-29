@@ -1427,6 +1427,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<I64Attr>:$alignment,
     OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
     OptionalAttr<FramePointerKindAttr>:$frame_pointer,
+    OptionalAttr<StrAttr>:$target_cpu,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features
   );
 
