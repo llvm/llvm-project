@@ -10,20 +10,16 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 false, i32 0, i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> <i8 poison, i8 0, i8 poison, i8 poison>, i8 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i8> [[TMP4]], <4 x i8> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i8> [[TMP5]] to <4 x i1>
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i8> [[TMP4]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i8> [[TMP8]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i8> [[TMP9]] to <4 x i32>
-; CHECK-NEXT:    [[TMP11:%.*]] = zext <4 x i1> [[TMP6]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> zeroinitializer, [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i32> [[TMP10]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP13]], <4 x i32> [[TMP14]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc <4 x i32> [[TMP15]] to <4 x i1>
-; CHECK-NEXT:    [[TMP17:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP16]])
-; CHECK-NEXT:    [[TMP18:%.*]] = zext i1 [[TMP17]] to i32
-; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 0, [[TMP18]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i8> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i8> [[TMP4]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i8> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i8> [[TMP8]] to <4 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i32> zeroinitializer, [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i32> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP12]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP13]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 0, [[TMP14]]
 ; CHECK-NEXT:    store i32 [[OP_RDX]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
