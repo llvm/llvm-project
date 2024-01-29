@@ -279,14 +279,11 @@ public:
 const SCEV *StackSafetyLocalAnalysis::getSCEVAsPointer(Value *Val) {
   Type *ValTy = Val->getType();
 
-  auto *PtrTy = PointerType::getUnqual(SE.getContext());
-  if (ValTy->isPointerTy()) {
-    if (ValTy->getPointerAddressSpace() != 0)
-      return nullptr;
-    return SE.getSCEV(Val);
-  }
-
-  return SE.getTruncateOrZeroExtend(SE.getSCEV(Val), PtrTy);
+  // We don't handle targets with multiple address spaces.
+  assert(ValTy->isPointerTy());
+  if (ValTy->getPointerAddressSpace() != 0)
+    return nullptr;
+  return SE.getSCEV(Val);
 }
 
 ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
