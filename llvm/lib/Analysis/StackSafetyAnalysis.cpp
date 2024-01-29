@@ -273,6 +273,17 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
     return UnknownRange;
 
   auto *PtrTy = PointerType::getUnqual(SE.getContext());
+
+  // SCEV will crash if we try to extend/truncate between differently-sized
+  // pointer.
+  const auto CanExtend = [&](Type *Ty) {
+    return !Ty->isPointerTy() ||
+           DL.getTypeSizeInBits(Ty) == DL.getTypeSizeInBits(PtrTy);
+  };
+
+  if (!CanExtend(Addr->getType()) || !CanExtend(Base->getType()))
+    return UnknownRange;
+
   const SCEV *AddrExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Addr), PtrTy);
   const SCEV *BaseExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Base), PtrTy);
   const SCEV *Diff = SE.getMinusSCEV(AddrExp, BaseExp);
