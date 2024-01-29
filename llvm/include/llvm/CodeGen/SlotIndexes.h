@@ -57,26 +57,20 @@ class raw_ostream;
     unsigned index;
 
   public:
-    IndexListEntry(MachineInstr *mi, unsigned index) : mi(mi, 0), index(index) {
-    }
+    IndexListEntry(MachineInstr *mi, unsigned index)
+        : mi(mi, 0), index(index) {}
 
-    MachineInstr* getInstr() const { return mi.getPointer(); }
-    void setInstr(MachineInstr *mi) {
-      this->mi.setPointer(mi);
-    }
+    MachineInstr *getInstr() const { return mi.getPointer(); }
+    void setInstr(MachineInstr *mi) { this->mi.setPointer(mi); }
 
     unsigned getIndex() const { return index; }
     void setIndex(unsigned index) {
       this->index = index;
     }
 
-    void setPoison() {
-      mi.setInt(PoisonVal);
-    }
+    void setPoison() { mi.setInt(PoisonVal); }
 
-    bool isPoisoned() const {
-      return mi.getInt();
-    }
+    bool isPoisoned() const { return mi.getInt(); }
   };
 
   template <>
@@ -305,9 +299,7 @@ class raw_ostream;
       return SlotIndex(&*--listEntry()->getIterator(), getSlot());
     }
 
-    bool isPoisoned() const {
-      return listEntry()->isPoisoned();
-    }
+    bool isPoisoned() const { return listEntry()->isPoisoned(); }
   };
 
   inline raw_ostream& operator<<(raw_ostream &os, SlotIndex li) {
