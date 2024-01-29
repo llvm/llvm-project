@@ -18,6 +18,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <optional>
 #include <queue>
@@ -2500,16 +2501,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     auto MaybeElemTypeTxt = getRangeText({D->getBeginLoc(), IdentifierLoc}, Ctx.getSourceManager(), Ctx.getLangOpts());
     if (!MaybeElemTypeTxt)
       return {};
-    std::string ElemTypeTxt = MaybeElemTypeTxt->str();
-    // Trim whitespace from the type spelling.
-    unsigned TrailingWhitespace = 0;
-    for (auto It = ElemTypeTxt.rbegin(); It < ElemTypeTxt.rend(); ++It) {
-      if (!isWhitespace(*It))
-        break;
-      ++TrailingWhitespace;
-    }
-    if (TrailingWhitespace > 0)
-      ElemTypeTxt.erase(ElemTypeTxt.length() - TrailingWhitespace);
+    const llvm::StringRef ElemTypeTxt = MaybeElemTypeTxt->trim();
 
     // Find the '[' token.
     std::optional<Token> NextTok = Lexer::findNextToken(IdentifierLoc, Ctx.getSourceManager(), Ctx.getLangOpts());
@@ -2523,8 +2515,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     auto MaybeArraySizeTxt = getRangeText({LSqBracketLoc.getLocWithOffset(1), D->getTypeSpecEndLoc()}, Ctx.getSourceManager(), Ctx.getLangOpts());
     if (!MaybeArraySizeTxt)
       return {};
-
-    const std::string ArraySizeTxt = MaybeArraySizeTxt->str();
+    const llvm::StringRef ArraySizeTxt = MaybeArraySizeTxt->trim();
 
     std::optional<StringRef> IdentText =
         getVarDeclIdentifierText(D, Ctx.getSourceManager(), Ctx.getLangOpts());

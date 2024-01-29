@@ -10,15 +10,15 @@ void local_array(unsigned idx) {
   buffer[idx] = 0;
 }
 
-void weird_whitespace_in_declaration(unsigned idx) {
-  int      buffer_w   [       10 ] ;
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:35}:"std::array<int,        10 > buffer_w"
+void whitespace_in_declaration(unsigned idx) {
+  int      buffer_w   [       10 ];
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:35}:"std::array<int, 10> buffer_w"
   buffer_w[idx] = 0;
 }
 
-void weird_comments_in_declaration(unsigned idx) {
-  int   /* [ ] */   buffer_w  /* [ ] */ [ /* [ ] */ 10 /* [ ] */ ] ;
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:67}:"std::array<int   /* [ ] */,  /* [ ] */ 10 /* [ ] */ > buffer_w"
+void comments_in_declaration(unsigned idx) {
+  int   /* [A] */   buffer_w  /* [B] */ [  /* [C] */ 10 /* [D] */  ] ;
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:69}:"std::array<int   /* [A] */, /* [C] */ 10 /* [D] */> buffer_w"
   buffer_w[idx] = 0;
 }
 
