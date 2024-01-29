@@ -1227,8 +1227,8 @@ statements that follow the definition.
 The identifier on the left of the ``=`` is defined to be a type name
 whose actual type is given by the type expression on the right of the ``=``.
 
-Currently, only primitive types are supported and ``deftype`` statements can
-only appear at the top level.
+Currently, only primitive types and type aliases are supported to be the source
+type and `deftype` statements can only appear at the top level.
 
 ``defvar`` --- define a variable
 --------------------------------

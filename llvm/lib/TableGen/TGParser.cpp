@@ -3673,7 +3673,7 @@ bool TGParser::ParseDefset() {
 
 /// ParseDeftype - Parse a defvar statement.
 ///
-///   Deftype ::= DEFTYPE Id '=' Value ';'
+///   Deftype ::= DEFTYPE Id '=' Type ';'
 ///
 bool TGParser::ParseDeftype() {
   assert(Lex.getCode() == tgtok::Deftype);
@@ -3690,9 +3690,15 @@ bool TGParser::ParseDeftype() {
   if (!consume(tgtok::equal))
     return TokError("expected '='");
 
+  SMLoc Loc = Lex.getLoc();
   RecTy *Type = ParseType();
   if (!Type)
     return true;
+
+  if (Type->getRecTyKind() == RecTy::RecordRecTyKind)
+    return Error(Loc, "cannot define type alias for class type '" +
+                          Type->getAsString() + "'");
+
   TypeAliases[TypeName] = Type;
 
   if (!consume(tgtok::semi))
