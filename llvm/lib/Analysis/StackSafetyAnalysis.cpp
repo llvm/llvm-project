@@ -243,6 +243,14 @@ class StackSafetyLocalAnalysis {
 
   const ConstantRange UnknownRange;
 
+  /// FIXME: This function is a bandaid, it's only needed
+  /// because this pass doesn't handle address spaces of different pointer
+  /// sizes.
+  ///
+  /// \returns \p Val's SCEV as a pointer of AS zero, or nullptr if it can't be
+  /// converted to AS 0.
+  const SCEV *getSCEVAsPointer(Value *Val);
+
   ConstantRange offsetFrom(Value *Addr, Value *Base);
   ConstantRange getAccessRange(Value *Addr, Value *Base,
                                const ConstantRange &SizeRange);
@@ -268,21 +276,28 @@ public:
   FunctionInfo<GlobalValue> run();
 };
 
+const SCEV *StackSafetyLocalAnalysis::getSCEVAsPointer(Value *Val) {
+  Type *ValTy = Val->getType();
+
+  auto *PtrTy = PointerType::getUnqual(SE.getContext());
+  if (ValTy->isPointerTy()) {
+    if (ValTy->getPointerAddressSpace() != 0)
+      return nullptr;
+    return SE.getSCEV(Val);
+  }
+
+  return SE.getTruncateOrZeroExtend(SE.getSCEV(Val), PtrTy);
+}
+
 ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
   if (!SE.isSCEVable(Addr->getType()) || !SE.isSCEVable(Base->getType()))
     return UnknownRange;
 
-  auto *PtrTy = PointerType::getUnqual(SE.getContext());
-
-  // FIXME: Pass does not deal with pointers from different address spaces that
-  // don't have the same size.
-  if (DL.getTypeSizeInBits(Addr->getType()) != PointerSize ||
-      DL.getTypeSizeInBits(Base->getType()) != PointerSize) {
+  const SCEV *AddrExp = getSCEVAsPointer(Addr);
+  const SCEV *BaseExp = getSCEVAsPointer(Base);
+  if (!AddrExp || !BaseExp)
     return UnknownRange;
-  }
 
-  const SCEV *AddrExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Addr), PtrTy);
-  const SCEV *BaseExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Base), PtrTy);
   const SCEV *Diff = SE.getMinusSCEV(AddrExp, BaseExp);
   if (isa<SCEVCouldNotCompute>(Diff))
     return UnknownRange;
@@ -368,22 +383,13 @@ bool StackSafetyLocalAnalysis::isSafeAccess(const Use &U, AllocaInst *AI,
   if (isa<SCEVCouldNotCompute>(AccessSize))
     return false;
 
-  // FIXME: Pass does not deal with pointers from different address spaces that
-  // don't have the same size.
-  if (DL.getTypeSizeInBits(U->getType()) != PointerSize ||
-      DL.getTypeSizeInBits(AI->getType()) != PointerSize) {
-    return false;
-  }
-
   const auto *I = cast<Instruction>(U.getUser());
 
-  auto ToCharPtr = [&](const SCEV *V) {
-    auto *PtrTy = PointerType::getUnqual(SE.getContext());
-    return SE.getTruncateOrZeroExtend(V, PtrTy);
-  };
+  const SCEV *AddrExp = getSCEVAsPointer(U.get());
+  const SCEV *BaseExp = getSCEVAsPointer(AI);
+  if (!AddrExp || !BaseExp)
+    return false;
 
-  const SCEV *AddrExp = ToCharPtr(SE.getSCEV(U.get()));
-  const SCEV *BaseExp = ToCharPtr(SE.getSCEV(AI));
   const SCEV *Diff = SE.getMinusSCEV(AddrExp, BaseExp);
   if (isa<SCEVCouldNotCompute>(Diff))
     return false;
