@@ -359,9 +359,6 @@ public:
   /// Return the base name of the topmost nominal type.
   static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
 
-  /// Return whether the type is known to be specially handled by the compiler.
-  static bool IsKnownSpecialImportedType(llvm::StringRef name);
-
   /// Use API notes to determine the swiftified name of \p clang_decl.
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;
