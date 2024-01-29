@@ -1778,6 +1778,16 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
     case TargetOpcode::LIFETIME_START:
     case TargetOpcode::LIFETIME_END:
       return outliner::InstrType::Invisible;
+
+    // Pseudo-instructions that must not be outlined
+    case TargetOpcode::FENTRY_CALL:
+    case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+    case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+    case TargetOpcode::PATCHABLE_EVENT_CALL:
+    case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    case TargetOpcode::PATCHABLE_RET:
+    case TargetOpcode::PATCHABLE_TAIL_CALL:
+      return outliner::InstrType::Illegal;
     default:
       break;
   }
@@ -1824,32 +1834,4 @@ outliner::InstrType TargetInstrInfo::getOutliningType(
 
   // If we don't know, delegate to the target-specific hook.
   return getOutliningTypeImpl(MIT, Flags);
-}
-
-bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
-                                             unsigned &Flags) const {
-  // Some instrumentations create special TargetOpcode at the start which
-  // expands to special code sequences which must be present.
-  auto First = MBB.getFirstNonDebugInstr();
-  if (First == MBB.end())
-    return true;
-
-  if (First->getOpcode() == TargetOpcode::FENTRY_CALL ||
-      First->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER)
-    return false;
-
-  // Some instrumentations create special pseudo-instructions at or just before
-  // the end that must be present.
-  auto Last = MBB.getLastNonDebugInstr();
-  if (Last->getOpcode() == TargetOpcode::PATCHABLE_RET ||
-      Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
-    return false;
-
-  if (Last != First && Last->isReturn()) {
-    --Last;
-    if (Last->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_EXIT ||
-        Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
-      return false;
-  }
-  return true;
 }
