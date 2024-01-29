@@ -640,6 +640,12 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 def INT_NVVM_PRMT : F_MATH_3<"prmt.b32 \t$dst, $src0, $src1, $src2;", Int32Regs,
   Int32Regs, Int32Regs, Int32Regs, int_nvvm_prmt>;
 
+def INT_NVVM_NANOSLEEP_I : NVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32 \t$i;",
+                             [(int_nvvm_nanosleep imm:$i)]>,
+        Requires<[hasPTX<63>, hasSM<70>]>;
+def INT_NVVM_NANOSLEEP_R : NVPTXInst<(outs), (ins Int32Regs:$i), "nanosleep.u32 \t$i;",
+                             [(int_nvvm_nanosleep Int32Regs:$i)]>,
+        Requires<[hasPTX<63>, hasSM<70>]>;
 //
 // Min Max
 //

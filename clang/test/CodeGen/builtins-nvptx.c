@@ -818,6 +818,17 @@ __device__ void nvvm_vote(int pred) {
   // CHECK: ret void
 }
 
+// CHECK-LABEL: nvvm_nanosleep
+__device__ void nvvm_nanosleep(int d) {
+#if __CUDA_ARCH__ >= 700
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.nanosleep
+  __nvvm_nanosleep(d);
+
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.nanosleep
+  __nvvm_nanosleep(1);
+#endif
+}
+
 // CHECK-LABEL: nvvm_mbarrier
 __device__ void nvvm_mbarrier(long long* addr, __attribute__((address_space(3))) long long* sharedAddr, int count, long long state) {
   #if __CUDA_ARCH__ >= 800
