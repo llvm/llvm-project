@@ -397,6 +397,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gws"] = true;
       break;
     case GK_GFX950:
+      Features["prng-inst"] = true;
       Features["gfx950-insts"] = true;
       [[fallthrough]];
     case GK_GFX942:

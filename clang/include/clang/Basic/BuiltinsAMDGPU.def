@@ -506,6 +506,8 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w64, "V4fiV2iV4fs", 
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 
+TARGET_BUILTIN(__builtin_amdgcn_prng_b32, "UiUi", "nc", "prng-inst")
+
 //===----------------------------------------------------------------------===//
 // GFX1210+ only builtins.
 //===----------------------------------------------------------------------===//
@@ -529,8 +531,6 @@ TARGET_BUILTIN(__builtin_amdgcn_s_monitor_sleep,  "vIs", "n", "gfx12-10-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_bitop3_b32, "iiiiIUc", "nc", "bitop3-insts")
 TARGET_BUILTIN(__builtin_amdgcn_bitop3_b16, "ssssIUc", "nc", "bitop3-insts")
-
-TARGET_BUILTIN(__builtin_amdgcn_prng_b32, "ii", "nc", "prng-inst")
 
 TARGET_BUILTIN(__builtin_amdgcn_tanhf, "ff", "nc", "tanh-insts")
 TARGET_BUILTIN(__builtin_amdgcn_tanhh, "hh", "nc", "tanh-insts")

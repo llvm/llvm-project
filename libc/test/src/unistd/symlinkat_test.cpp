@@ -32,7 +32,7 @@ TEST(LlvmLibcSymlinkatTest, CreateAndUnlink) {
   libc_errno = 0;
   int write_fd =
       LIBC_NAMESPACE::open(TEST_FILE_PATH, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
@@ -42,7 +42,7 @@ TEST(LlvmLibcSymlinkatTest, CreateAndUnlink) {
 
   int link_fd = LIBC_NAMESPACE::open(TEST_FILE_LINK_PATH, O_PATH);
   ASSERT_GT(link_fd, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(link_fd), Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(dir_fd), Succeeds(0));

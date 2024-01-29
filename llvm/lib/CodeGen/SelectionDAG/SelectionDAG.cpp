@@ -3903,9 +3903,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::USUBSAT: {
-    // The result of usubsat will never be larger than the LHS.
-    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.Zero.setHighBits(Known2.countMinLeadingZeros());
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::usub_sat(Known, Known2);
     break;
   }
   case ISD::UMIN: {

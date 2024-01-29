@@ -729,8 +729,7 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
   if (HasLineAttributes)
     OS << "\n";
   bool IsInBundle = false;
-  for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; ++I) {
-    const MachineInstr &MI = *I;
+  for (const MachineInstr &MI : MBB.instrs()) {
     if (IsInBundle && !MI.isInsideBundle()) {
       OS.indent(2) << "}\n";
       IsInBundle = false;

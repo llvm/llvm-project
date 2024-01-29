@@ -3365,39 +3365,39 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
 // WMMA intrinsics.
 class AMDGPUWmmaIntrinsicModsAB<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       llvm_i1_ty,       // %A_mod: 0 -- none, 1 -- neg
       AB,               // %A
       llvm_i1_ty,       // %B_mod: 0 -- none, 1 -- neg
-      LLVMMatchType<0>, // %B
-      CD,               // %C
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>,               // %C
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 class AMDGPUWmmaIntrinsicModsC<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       AB,               // %A
-      LLVMMatchType<0>, // %B
+      LLVMMatchType<1>, // %B
       llvm_i16_ty,      // %C_mod: 0 - none, 1 - neg, 2 - abs, 3 - neg(abs)
-      CD,               // %C
+      LLVMMatchType<0>,               // %C
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 class AMDGPUWmmaIntrinsicModsAll<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       llvm_i1_ty,       // %A_mod: 0 -- none, 1 -- neg
       AB,               // %A
       llvm_i1_ty,       // %B_mod: 0 -- none, 1 -- neg
-      LLVMMatchType<0>, // %B
+      LLVMMatchType<1>, // %B
       llvm_i16_ty,      // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
-      CD,               // %C
+      LLVMMatchType<0>,               // %C
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
@@ -3439,13 +3439,13 @@ def int_amdgcn_wmma_i32_16x16x128_iu4     : AMDGPUWmmaIntrinsicModsAB<llvm_anyin
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<
-    [LLVMMatchType<2>], // %D
+    [CD], // %D
     [
       llvm_i1_ty,       // %A_mod:  0 - none, 1 - neg
       A,                // %A
       llvm_i1_ty,       // %B_mod:  0 - none, 1 - neg
       B,                // %B
-      CD,               // %C
+      LLVMMatchType<0>, // %C
       Index,            // %Sparsity index for A
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>]

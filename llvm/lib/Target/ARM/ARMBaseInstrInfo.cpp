@@ -3308,7 +3308,7 @@ bool ARMBaseInstrInfo::shouldSink(const MachineInstr &MI) const {
   return true;
 }
 
-bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool ARMBaseInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
   // Fold large immediates into add, sub, or, xor.
