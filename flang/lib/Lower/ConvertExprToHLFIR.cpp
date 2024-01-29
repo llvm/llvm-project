@@ -1433,12 +1433,11 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::ProcedureRef &expr) {
-    fir::FirOpBuilder &builder = getBuilder();
     Fortran::evaluate::ProcedureDesignator proc{expr.proc()};
     auto procTy{Fortran::lower::translateSignature(proc, getConverter())};
-    mlir::Type resType = fir::BoxProcType::get(builder.getContext(), procTy);
-    auto result = Fortran::lower::convertCallToHLFIR(
-        getLoc(), getConverter(), expr, resType, getSymMap(), getStmtCtx());
+    auto result = Fortran::lower::convertCallToHLFIR(getLoc(), getConverter(),
+                                                     expr, procTy.getResult(0),
+                                                     getSymMap(), getStmtCtx());
     assert(result.has_value());
     return *result;
   }
