@@ -2429,7 +2429,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                          Fortran::semantics::SemanticsContext &semanticsContext,
                          Fortran::lower::StatementContext &stmtCtx,
                          const Fortran::parser::AccClauseList &accClauseList) {
-  mlir::Value ifCond, waitDevnum;
+  mlir::Value ifCond;
   llvm::SmallVector<mlir::Value> attachEntryOperands, createEntryOperands,
       copyEntryOperands, copyoutEntryOperands, dataClauseOperands, waitOperands,
       async;
@@ -3037,7 +3037,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
                Fortran::semantics::SemanticsContext &semanticsContext,
                Fortran::lower::StatementContext &stmtCtx,
                const Fortran::parser::AccClauseList &accClauseList) {
-  mlir::Value ifCond, waitDevnum;
+  mlir::Value ifCond;
   llvm::SmallVector<mlir::Value> dataClauseOperands, updateHostOperands,
       waitOperands, deviceTypeOperands, asyncOperands;
   llvm::SmallVector<mlir::Attribute> asyncOperandsDeviceTypes,
