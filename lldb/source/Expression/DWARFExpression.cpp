@@ -94,7 +94,6 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
-
 // static
 bool DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
                                                 lldb::RegisterKind reg_kind,

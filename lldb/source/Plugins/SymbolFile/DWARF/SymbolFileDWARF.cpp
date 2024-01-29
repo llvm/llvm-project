@@ -330,7 +330,7 @@ llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
   if (llvm::isa<lldb_private::wasm::ObjectFileWasm>(*objfile_sp))
     return new wasm::SymbolFileWasm(std::move(objfile_sp),
-                              /*dwo_section_list*/ nullptr);
+                                    /*dwo_section_list*/ nullptr);
   return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
@@ -4511,6 +4511,10 @@ bool SymbolFileWasm::ParseVendorDWARFOpcode(
     uint8_t op, RegisterContext *reg_ctx, const DataExtractor &opcodes,
     const lldb::RegisterKind reg_kind, lldb::offset_t &offset,
     std::vector<Value> &stack, Status *error_ptr) const {
+  if (op != DW_OP_WASM_location) {
+    return false;
+  }
+
   uint8_t wasm_op = opcodes.GetU8(&offset);
 
   /* LLDB doesn't have an address space to represents WebAssembly locals,
@@ -4538,7 +4542,6 @@ bool SymbolFileWasm::ParseVendorDWARFOpcode(
                                                  error_ptr, tmp)) {
     stack.push_back(tmp);
     return true;
-  }
-  else
+  } else
     return false;
 }

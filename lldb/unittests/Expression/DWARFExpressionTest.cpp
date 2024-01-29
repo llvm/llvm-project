@@ -785,7 +785,7 @@ static auto testExpressionVendorExtensions(lldb::ModuleSP module_sp,
   DWARFExpression dwarf_expr(extractor);
   ASSERT_TRUE(dwarf_expr.ContainsThreadLocalStorage(&dwarf_unit));
 }
-} // namespace;
+} // namespace
 
 TEST(DWARFExpression, Extensions) {
   const char *yamldata = R"(
