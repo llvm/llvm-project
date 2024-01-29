@@ -6,14 +6,10 @@
 define void @frem_v2double() {
 ; CHECK-LABEL: define void @frem_v2double() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr @a, align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds (double, ptr @a, i64 1), align 8
-; CHECK-NEXT:    [[B0:%.*]] = load double, ptr @a, align 8
-; CHECK-NEXT:    [[B1:%.*]] = load double, ptr getelementptr inbounds (double, ptr @a, i64 1), align 8
-; CHECK-NEXT:    [[R0:%.*]] = frem double [[A0]], [[B0]]
-; CHECK-NEXT:    [[R1:%.*]] = frem double [[A1]], [[B1]]
-; CHECK-NEXT:    store double [[R0]], ptr @a, align 8
-; CHECK-NEXT:    store double [[R1]], ptr getelementptr inbounds (double, ptr @a, i64 1), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @a, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr @a, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = frem <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr @a, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -31,22 +27,10 @@ entry:
 define void @frem_v4float() {
 ; CHECK-LABEL: define void @frem_v4float() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr @a, align 8
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr getelementptr inbounds (float, ptr @a, i64 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load float, ptr getelementptr inbounds (float, ptr @a, i64 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load float, ptr getelementptr inbounds (float, ptr @a, i64 3), align 8
-; CHECK-NEXT:    [[B0:%.*]] = load float, ptr @a, align 8
-; CHECK-NEXT:    [[B1:%.*]] = load float, ptr getelementptr inbounds (float, ptr @a, i64 1), align 8
-; CHECK-NEXT:    [[B2:%.*]] = load float, ptr getelementptr inbounds (float, ptr @a, i64 2), align 8
-; CHECK-NEXT:    [[B3:%.*]] = load float, ptr getelementptr inbounds (float, ptr @a, i64 3), align 8
-; CHECK-NEXT:    [[R0:%.*]] = frem float [[A0]], [[B0]]
-; CHECK-NEXT:    [[R1:%.*]] = frem float [[A1]], [[B1]]
-; CHECK-NEXT:    [[R2:%.*]] = frem float [[A2]], [[B2]]
-; CHECK-NEXT:    [[R3:%.*]] = frem float [[A3]], [[B3]]
-; CHECK-NEXT:    store float [[R0]], ptr @a, align 8
-; CHECK-NEXT:    store float [[R1]], ptr getelementptr inbounds (float, ptr @a, i64 1), align 8
-; CHECK-NEXT:    store float [[R2]], ptr getelementptr inbounds (float, ptr @a, i64 2), align 8
-; CHECK-NEXT:    store float [[R3]], ptr getelementptr inbounds (float, ptr @a, i64 3), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr @a, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @a, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = frem <4 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr @a, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
