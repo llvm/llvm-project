@@ -1186,6 +1186,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_prng_b32: {
+    auto *Src = II.getArgOperand(0);
+    if (isa<UndefValue>(Src)) {
+      return IC.replaceInstUsesWith(II, Src);
+    }
+  }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
