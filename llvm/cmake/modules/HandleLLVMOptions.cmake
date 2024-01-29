@@ -647,7 +647,7 @@ if ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   # crash if LLVM is built with GCC and LTO enabled (#57740).  Until
   # these bugs are fixed, we need to disable dead store eliminations
   # based on object lifetime.
-  # add_flag_if_supported("-fno-lifetime-dse" CMAKE_CXX_FLAGS)
+  add_flag_if_supported("-fno-lifetime-dse" CMAKE_CXX_FLAGS)
 endif ( LLVM_COMPILER_IS_GCC_COMPATIBLE )
 
 # Modules enablement for GCC-compatible compilers:

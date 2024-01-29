@@ -38,7 +38,8 @@ public:
 
   explicit BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                            BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
-                           ExecutionModeE ExecutionMode);
+                           ExecutionModeE ExecutionMode,
+                           ArrayRef<ValidationEvent> ValCounters);
 
   virtual ~BenchmarkRunner();
 
@@ -93,14 +94,18 @@ public:
     virtual ~FunctionExecutor();
 
     Expected<llvm::SmallVector<int64_t, 4>>
-    runAndSample(const char *Counters) const;
+    runAndSample(const char *Counters,
+                 ArrayRef<const char *> ValidationCounters,
+                 SmallVectorImpl<int64_t> &ValidationCounterValues) const;
 
   protected:
     static void
     accumulateCounterValues(const llvm::SmallVectorImpl<int64_t> &NewValues,
                             llvm::SmallVectorImpl<int64_t> *Result);
     virtual Expected<llvm::SmallVector<int64_t, 4>>
-    runWithCounter(StringRef CounterName) const = 0;
+    runWithCounter(StringRef CounterName,
+                   ArrayRef<const char *> ValidationCounters,
+                   SmallVectorImpl<int64_t> &ValidationCounterValues) const = 0;
   };
 
 protected:
@@ -108,6 +113,11 @@ protected:
   const Benchmark::ModeE Mode;
   const BenchmarkPhaseSelectorE BenchmarkPhaseSelector;
   const ExecutionModeE ExecutionMode;
+
+  SmallVector<ValidationEvent> ValidationCounters;
+
+  Error
+  getValidationCountersToRun(SmallVector<const char *> &ValCountersToRun) const;
 
 private:
   virtual Expected<std::vector<BenchmarkMeasure>>

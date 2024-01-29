@@ -792,7 +792,7 @@ struct FoldCopyOfCast : public OpRewritePattern<CopyOp> {
       if (fromType && toType) {
         if (fromType.getShape() == toType.getShape() &&
             fromType.getElementType() == toType.getElementType()) {
-          rewriter.updateRootInPlace(copyOp, [&] {
+          rewriter.modifyOpInPlace(copyOp, [&] {
             copyOp.getSourceMutable().assign(castOp.getSource());
           });
           modified = true;
@@ -808,7 +808,7 @@ struct FoldCopyOfCast : public OpRewritePattern<CopyOp> {
       if (fromType && toType) {
         if (fromType.getShape() == toType.getShape() &&
             fromType.getElementType() == toType.getElementType()) {
-          rewriter.updateRootInPlace(copyOp, [&] {
+          rewriter.modifyOpInPlace(copyOp, [&] {
             copyOp.getTargetMutable().assign(castOp.getSource());
           });
           modified = true;
@@ -1366,7 +1366,7 @@ static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
         loc, llvm::cast<IntegerAttr>(maybeConstant.template get<Attribute>())
                  .getInt());
     for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
-      // updateRootInplace: lambda cannot capture structured bindings in C++17
+      // modifyOpInPlace: lambda cannot capture structured bindings in C++17
       // yet.
       op->replaceUsesOfWith(result, constantVal);
       atLeastOneReplacement = true;
@@ -2436,7 +2436,7 @@ public:
         op.getReassociationIndices());
 
     if (newResultType == op.getResultType()) {
-      rewriter.updateRootInPlace(
+      rewriter.modifyOpInPlace(
           op, [&]() { op.getSrcMutable().assign(cast.getSource()); });
     } else {
       Value newOp = rewriter.create<CollapseShapeOp>(
@@ -3151,10 +3151,9 @@ void TransposeOp::getAsmResultNames(
 /// Build a strided memref type by applying `permutationMap` to `memRefType`.
 static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            AffineMap permutationMap) {
-  auto rank = memRefType.getRank();
   auto originalSizes = memRefType.getShape();
   auto [originalStrides, offset] = getStridesAndOffset(memRefType);
-  assert(originalStrides.size() == static_cast<unsigned>(rank));
+  assert(originalStrides.size() == static_cast<unsigned>(memRefType.getRank()));
 
   // Compute permuted sizes and strides.
   auto sizes = applyPermutationMap<int64_t>(permutationMap, originalSizes);

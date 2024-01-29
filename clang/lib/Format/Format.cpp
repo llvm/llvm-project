@@ -1054,6 +1054,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.PenaltyBreakFirstLessLess);
     IO.mapOptional("PenaltyBreakOpenParenthesis",
                    Style.PenaltyBreakOpenParenthesis);
+    IO.mapOptional("PenaltyBreakScopeResolution",
+                   Style.PenaltyBreakScopeResolution);
     IO.mapOptional("PenaltyBreakString", Style.PenaltyBreakString);
     IO.mapOptional("PenaltyBreakTemplateDeclaration",
                    Style.PenaltyBreakTemplateDeclaration);
@@ -1083,6 +1085,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.RequiresExpressionIndentation);
     IO.mapOptional("SeparateDefinitionBlocks", Style.SeparateDefinitionBlocks);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
+    IO.mapOptional("SkipMacroDefinitionBody", Style.SkipMacroDefinitionBody);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
     IO.mapOptional("SortJavaStaticImport", Style.SortJavaStaticImport);
     IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
@@ -1554,6 +1557,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.RequiresExpressionIndentation = FormatStyle::REI_OuterScope;
   LLVMStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Leave;
   LLVMStyle.ShortNamespaceLines = 1;
+  LLVMStyle.SkipMacroDefinitionBody = false;
   LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
@@ -1602,6 +1606,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.PenaltyReturnTypeOnItsOwnLine = 60;
   LLVMStyle.PenaltyBreakBeforeFirstCallParameter = 19;
   LLVMStyle.PenaltyBreakOpenParenthesis = 0;
+  LLVMStyle.PenaltyBreakScopeResolution = 500;
   LLVMStyle.PenaltyBreakTemplateDeclaration = prec::Relational;
   LLVMStyle.PenaltyIndentedWhitespace = 0;
 
@@ -1698,8 +1703,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
           /*BasedOnStyle=*/"google",
       },
   };
-  GoogleStyle.AttributeMacros.push_back("GUARDED_BY");
-  GoogleStyle.AttributeMacros.push_back("ABSL_GUARDED_BY");
 
   GoogleStyle.SpacesBeforeTrailingComments = 2;
   GoogleStyle.Standard = FormatStyle::LS_Auto;

@@ -1,4 +1,5 @@
 ; RUN: opt -loop-reduce -S %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -loop-reduce -S %s | FileCheck %s
 
 ;; Test that LSR preserves debug-info for induction variables and scev-based
 ;; salvaging produces short DIExpressions that use a constant offset from the

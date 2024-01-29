@@ -55,6 +55,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"m", {2, 0}},
 
     {"smaia", {1, 0}},
+    {"smepmp", {1, 0}},
     {"ssaia", {1, 0}},
     {"svinval", {1, 0}},
     {"svnapot", {1, 0}},
@@ -88,6 +89,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xtheadvdot", {1, 0}},
     {"xventanacondops", {1, 0}},
 
+    {"za128rs", {1, 0}},
+    {"za64rs", {1, 0}},
     {"zawrs", {1, 0}},
 
     {"zba", {1, 0}},
@@ -116,9 +119,14 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zhinx", {1, 0}},
     {"zhinxmin", {1, 0}},
 
+    {"zic64b", {1, 0}},
     {"zicbom", {1, 0}},
     {"zicbop", {1, 0}},
     {"zicboz", {1, 0}},
+    {"ziccamoa", {1, 0}},
+    {"ziccif", {1, 0}},
+    {"zicclsm", {1, 0}},
+    {"ziccrse", {1, 0}},
     {"zicntr", {2, 0}},
     {"zicsr", {2, 0}},
     {"zifencei", {2, 0}},
@@ -182,12 +190,15 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 };
 
 // NOTE: This table should be sorted alphabetically by extension name.
+// clang-format off
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+    {"zaamo", {0, 2}},
     {"zacas", {1, 0}},
+    {"zalrsc", {0, 2}},
 
     {"zcmop", {0, 2}},
 
-    {"zfbfmin", {0, 8}},
+    {"zfbfmin", {1, 0}},
 
     {"zicfilp", {0, 4}},
     {"zicfiss", {0, 4}},
@@ -198,9 +209,10 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 
     {"ztso", {0, 1}},
 
-    {"zvfbfmin", {0, 8}},
-    {"zvfbfwma", {0, 8}},
+    {"zvfbfmin", {1, 0}},
+    {"zvfbfwma", {1, 0}},
 };
+// clang-format on
 
 static void verifyTables() {
 #ifndef NDEBUG
@@ -538,28 +550,25 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
   // Expected multi-character extension with version number to have no
   // subsequent characters (i.e. must either end string or be followed by
   // an underscore).
-  if (Ext.size() > 1 && In.size()) {
-    std::string Error =
-        "multi-character extensions must be separated by underscores";
-    return createStringError(errc::invalid_argument, Error);
-  }
+  if (Ext.size() > 1 && In.size())
+    return createStringError(
+        errc::invalid_argument,
+        "multi-character extensions must be separated by underscores");
 
   // If experimental extension, require use of current version number
   if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
-    if (!EnableExperimentalExtension) {
-      std::string Error = "requires '-menable-experimental-extensions' for "
-                          "experimental extension '" +
-                          Ext.str() + "'";
-      return createStringError(errc::invalid_argument, Error);
-    }
+    if (!EnableExperimentalExtension)
+      return createStringError(errc::invalid_argument,
+                               "requires '-menable-experimental-extensions' "
+                               "for experimental extension '" +
+                                   Ext + "'");
 
     if (ExperimentalExtensionVersionCheck &&
-        (MajorStr.empty() && MinorStr.empty())) {
-      std::string Error =
-          "experimental extension requires explicit version number `" +
-          Ext.str() + "`";
-      return createStringError(errc::invalid_argument, Error);
-    }
+        (MajorStr.empty() && MinorStr.empty()))
+      return createStringError(
+          errc::invalid_argument,
+          "experimental extension requires explicit version number `" + Ext +
+              "`");
 
     auto SupportedVers = *ExperimentalExtension;
     if (ExperimentalExtensionVersionCheck &&
@@ -814,12 +823,13 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       if (StdExts.contains(C)) {
         return createStringError(
             errc::invalid_argument,
-            "standard user-level extension not given in canonical order '%c'",
-            C);
+            "standard user-level extension not given in canonical order '" +
+                Twine(C) + "'");
       }
 
       return createStringError(errc::invalid_argument,
-                               "invalid standard user-level extension '%c'", C);
+                               "invalid standard user-level extension '" +
+                                   Twine(C) + "'");
     }
 
     // Move to next char to prevent repeated letter.
@@ -848,8 +858,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         continue;
       }
       return createStringError(errc::invalid_argument,
-                               "unsupported standard user-level extension '%c'",
-                               C);
+                               "unsupported standard user-level extension '" +
+                                   Twine(C) + "'");
     }
     ISAInfo->addExtension(StringRef(&C, 1), {Major, Minor});
 
@@ -893,11 +903,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                                  "invalid extension prefix '" + Ext + "'");
       }
 
-      if (!IgnoreUnknown && Name.size() == Type.size()) {
+      if (!IgnoreUnknown && Name.size() == Type.size())
         return createStringError(errc::invalid_argument,
-                                 "%s name missing after '%s'",
-                                 Desc.str().c_str(), Type.str().c_str());
-      }
+                                 Desc + " name missing after '" + Type + "'");
 
       unsigned Major, Minor, ConsumeLength;
       if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
@@ -911,10 +919,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       }
 
       // Check if duplicated extension.
-      if (!IgnoreUnknown && llvm::is_contained(AllExts, Name)) {
-        return createStringError(errc::invalid_argument, "duplicated %s '%s'",
-                                 Desc.str().c_str(), Name.str().c_str());
-      }
+      if (!IgnoreUnknown && llvm::is_contained(AllExts, Name))
+        return createStringError(errc::invalid_argument,
+                                 "duplicated " + Desc + " '" + Name + "'");
 
       if (IgnoreUnknown && !isSupportedExtension(Name))
         continue;
@@ -929,8 +936,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   for (auto Ext : AllExts) {
     if (!isSupportedExtension(Ext)) {
       StringRef Desc = getExtensionTypeDesc(getExtensionType(Ext));
-      return createStringError(errc::invalid_argument, "unsupported %s '%s'",
-                               Desc.str().c_str(), Ext.str().c_str());
+      return createStringError(errc::invalid_argument,
+                               "unsupported " + Desc + " '" + Ext + "'");
     }
   }
 
@@ -964,8 +971,8 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
 
-  if ((Exts.count("zvkg") || Exts.count("zvkned") || Exts.count("zvknha") ||
-       Exts.count("zvksed") || Exts.count("zvksh")) &&
+  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkned") ||
+       Exts.count("zvknha") || Exts.count("zvksed") || Exts.count("zvksh")) &&
       !HasVector)
     return createStringError(
         errc::invalid_argument,
@@ -1278,20 +1285,20 @@ RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
 
 StringRef RISCVISAInfo::computeDefaultABI() const {
   if (XLen == 32) {
+    if (hasExtension("e"))
+      return "ilp32e";
     if (hasExtension("d"))
       return "ilp32d";
     if (hasExtension("f"))
       return "ilp32f";
-    if (hasExtension("e"))
-      return "ilp32e";
     return "ilp32";
   } else if (XLen == 64) {
+    if (hasExtension("e"))
+      return "lp64e";
     if (hasExtension("d"))
       return "lp64d";
     if (hasExtension("f"))
       return "lp64f";
-    if (hasExtension("e"))
-      return "lp64e";
     return "lp64";
   }
   llvm_unreachable("Invalid XLEN");

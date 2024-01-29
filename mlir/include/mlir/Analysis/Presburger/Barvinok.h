@@ -27,6 +27,7 @@
 #include "mlir/Analysis/Presburger/GeneratingFunction.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/QuasiPolynomial.h"
 #include <optional>
 
 namespace mlir {
@@ -82,6 +83,27 @@ ConeH getDual(ConeV cone);
 /// The input cone must be unimodular; it assert-fails otherwise.
 GeneratingFunction unimodularConeGeneratingFunction(ParamPoint vertex, int sign,
                                                     ConeH cone);
+
+/// Find a vector that is not orthogonal to any of the given vectors,
+/// i.e., has nonzero dot product with those of the given vectors
+/// that are not null.
+/// If any of the vectors is null, it is ignored.
+Point getNonOrthogonalVector(ArrayRef<Point> vectors);
+
+/// Find the coefficient of a given power of s in a rational function
+/// given by P(s)/Q(s), where
+/// P is a polynomial, in which the coefficients are QuasiPolynomials
+/// over d parameters (distinct from s), and
+/// and Q is a polynomial with Fraction coefficients.
+QuasiPolynomial getCoefficientInRationalFunction(unsigned power,
+                                                 ArrayRef<QuasiPolynomial> num,
+                                                 ArrayRef<Fraction> den);
+
+/// Find the number of terms in a generating function, as
+/// a quasipolynomial in the parameter space of the input function.
+/// The generating function must be such that for all values of the
+/// parameters, the number of terms is finite.
+QuasiPolynomial computeNumTerms(const GeneratingFunction &gf);
 
 } // namespace detail
 } // namespace presburger

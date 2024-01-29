@@ -170,8 +170,8 @@ public:
   // DIM(X,Y) = MAX(X-Y, 0)
   ValueWithRealFlags<Real> DIM(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
-  // MOD(x,y) = x - AINT(x/y)*y
-  // MODULO(x,y) = x - FLOOR(x/y)*y
+  // MOD(x,y) = x - AINT(x/y)*y (in the standard)
+  // MODULO(x,y) = x - FLOOR(x/y)*y (in the standard)
   ValueWithRealFlags<Real> MOD(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,

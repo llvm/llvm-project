@@ -180,7 +180,7 @@ Decl *Sema::ActOnProperty(Scope *S, SourceLocation AtLoc,
   unsigned Attributes = ODS.getPropertyAttributes();
   FD.D.setObjCWeakProperty((Attributes & ObjCPropertyAttribute::kind_weak) !=
                            0);
-  TypeSourceInfo *TSI = GetTypeForDeclarator(FD.D, S);
+  TypeSourceInfo *TSI = GetTypeForDeclarator(FD.D);
   QualType T = TSI->getType();
   if (!getOwnershipRule(Attributes)) {
     Attributes |= deducePropertyOwnershipFromType(*this, T);

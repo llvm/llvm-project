@@ -14,22 +14,19 @@
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
-#include "llvm/Support/CommandLine.h"
 #include <unordered_map>
 
 using namespace llvm;
 using namespace bolt;
 
-namespace opts {
-
-extern cl::OptionCategory BoltOptCategory;
-
-extern cl::opt<unsigned> ITLBPageSize;
-extern cl::opt<unsigned> ITLBEntries;
-
-} // namespace opts
-
 namespace {
+
+/// The following constants are used to estimate the number of i-TLB cache
+/// misses for a given code layout. Empirically the values result in high
+/// correlations between the estimations and the perf measurements.
+/// The constants do not affect the code layout algorithms.
+constexpr unsigned ITLBPageSize = 4096;
+constexpr unsigned ITLBEntries = 16;
 
 /// Initialize and return a position map for binary basic blocks
 void extractBasicBlockInfo(
@@ -133,9 +130,6 @@ double expectedCacheHitRatio(
     const std::vector<BinaryFunction *> &BinaryFunctions,
     const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBAddr,
     const std::unordered_map<BinaryBasicBlock *, uint64_t> &BBSize) {
-
-  const double PageSize = opts::ITLBPageSize;
-  const uint64_t CacheEntries = opts::ITLBEntries;
   std::unordered_map<const BinaryFunction *, Predecessors> Calls =
       extractFunctionCalls(BinaryFunctions);
   // Compute 'hotness' of the functions
@@ -155,7 +149,8 @@ double expectedCacheHitRatio(
   for (BinaryFunction *BF : BinaryFunctions) {
     if (BF->getLayout().block_empty())
       continue;
-    double Page = BBAddr.at(BF->getLayout().block_front()) / PageSize;
+    const uint64_t Page =
+        BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
     PageSamples[Page] += FunctionSamples.at(BF);
   }
 
@@ -166,15 +161,17 @@ double expectedCacheHitRatio(
     if (BF->getLayout().block_empty() || FunctionSamples.at(BF) == 0.0)
       continue;
     double Samples = FunctionSamples.at(BF);
-    double Page = BBAddr.at(BF->getLayout().block_front()) / PageSize;
+    const uint64_t Page =
+        BBAddr.at(BF->getLayout().block_front()) / ITLBPageSize;
     // The probability that the page is not present in the cache
-    double MissProb = pow(1.0 - PageSamples[Page] / TotalSamples, CacheEntries);
+    const double MissProb =
+        pow(1.0 - PageSamples[Page] / TotalSamples, ITLBEntries);
 
     // Processing all callers of the function
     for (std::pair<BinaryFunction *, uint64_t> Pair : Calls[BF]) {
       BinaryFunction *SrcFunction = Pair.first;
-      double SrcPage =
-          BBAddr.at(SrcFunction->getLayout().block_front()) / PageSize;
+      const uint64_t SrcPage =
+          BBAddr.at(SrcFunction->getLayout().block_front()) / ITLBPageSize;
       // Is this a 'long' or a 'short' call?
       if (Page != SrcPage) {
         // This is a miss

@@ -1485,9 +1485,8 @@ protected:
       for (auto breakpoint_sp : breakpoints.Breakpoints()) {
         if (!breakpoint_sp->IsEnabled() && breakpoint_sp->AllowDelete()) {
           BreakpointID bp_id(breakpoint_sp->GetID());
-          size_t pos = 0;
-          if (!excluded_bp_ids.FindBreakpointID(bp_id, &pos))
-            valid_bp_ids.AddBreakpointID(breakpoint_sp->GetID());
+          if (!excluded_bp_ids.Contains(bp_id))
+            valid_bp_ids.AddBreakpointID(bp_id);
         }
       }
       if (valid_bp_ids.GetSize() == 0) {
@@ -2488,8 +2487,12 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // breakpoint ids in the range, and shove all of those breakpoint id strings
   // into TEMP_ARGS.
 
-  BreakpointIDList::FindAndReplaceIDRanges(args, target, allow_locations,
-                                           purpose, result, temp_args);
+  if (llvm::Error err = BreakpointIDList::FindAndReplaceIDRanges(
+          args, target, allow_locations, purpose, temp_args)) {
+    result.SetError(std::move(err));
+    return;
+  }
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
 
   // NOW, convert the list of breakpoint id strings in TEMP_ARGS into an actual
   // BreakpointIDList:
@@ -2501,33 +2504,31 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
   // At this point,  all of the breakpoint ids that the user passed in have
   // been converted to breakpoint IDs and put into valid_ids.
 
-  if (result.Succeeded()) {
-    // Now that we've converted everything from args into a list of breakpoint
-    // ids, go through our tentative list of breakpoint id's and verify that
-    // they correspond to valid/currently set breakpoints.
+  // Now that we've converted everything from args into a list of breakpoint
+  // ids, go through our tentative list of breakpoint id's and verify that
+  // they correspond to valid/currently set breakpoints.
 
-    const size_t count = valid_ids->GetSize();
-    for (size_t i = 0; i < count; ++i) {
-      BreakpointID cur_bp_id = valid_ids->GetBreakpointIDAtIndex(i);
-      Breakpoint *breakpoint =
-          target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
-      if (breakpoint != nullptr) {
-        const size_t num_locations = breakpoint->GetNumLocations();
-        if (static_cast<size_t>(cur_bp_id.GetLocationID()) > num_locations) {
-          StreamString id_str;
-          BreakpointID::GetCanonicalReference(
-              &id_str, cur_bp_id.GetBreakpointID(), cur_bp_id.GetLocationID());
-          i = valid_ids->GetSize() + 1;
-          result.AppendErrorWithFormat(
-              "'%s' is not a currently valid breakpoint/location id.\n",
-              id_str.GetData());
-        }
-      } else {
+  const size_t count = valid_ids->GetSize();
+  for (size_t i = 0; i < count; ++i) {
+    BreakpointID cur_bp_id = valid_ids->GetBreakpointIDAtIndex(i);
+    Breakpoint *breakpoint =
+        target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+    if (breakpoint != nullptr) {
+      const size_t num_locations = breakpoint->GetNumLocations();
+      if (static_cast<size_t>(cur_bp_id.GetLocationID()) > num_locations) {
+        StreamString id_str;
+        BreakpointID::GetCanonicalReference(
+            &id_str, cur_bp_id.GetBreakpointID(), cur_bp_id.GetLocationID());
         i = valid_ids->GetSize() + 1;
         result.AppendErrorWithFormat(
-            "'%d' is not a currently valid breakpoint ID.\n",
-            cur_bp_id.GetBreakpointID());
+            "'%s' is not a currently valid breakpoint/location id.\n",
+            id_str.GetData());
       }
+    } else {
+      i = valid_ids->GetSize() + 1;
+      result.AppendErrorWithFormat(
+          "'%d' is not a currently valid breakpoint ID.\n",
+          cur_bp_id.GetBreakpointID());
     }
   }
 }

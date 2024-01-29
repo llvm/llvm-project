@@ -562,7 +562,48 @@ void AMDGPUMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 void AMDGPUMCCodeEmitter::getMachineOpValueT16(
     const MCInst &MI, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
-  llvm_unreachable("TODO: Implement getMachineOpValueT16().");
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg()) {
+    unsigned Enc = MRI.getEncodingValue(MO.getReg());
+    unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
+    bool IsVGPR = Enc & AMDGPU::HWEncoding::IS_VGPR_OR_AGPR;
+    Op = Idx | (IsVGPR << 8);
+    return;
+  }
+  getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+  // VGPRs include the suffix/op_sel bit in the register encoding, but
+  // immediates and SGPRs include it in src_modifiers. Therefore, copy the
+  // op_sel bit from the src operands into src_modifier operands if Op is
+  // src_modifiers and the corresponding src is a VGPR
+  int SrcMOIdx = -1;
+  assert(OpNo < INT_MAX);
+  if ((int)OpNo == AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                              AMDGPU::OpName::src0_modifiers)) {
+    SrcMOIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+    int VDstMOIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst);
+    if (VDstMOIdx != -1) {
+      auto DstReg = MI.getOperand(VDstMOIdx).getReg();
+      if (AMDGPU::isHi(DstReg, MRI))
+        Op |= SISrcMods::DST_OP_SEL;
+    }
+  } else if ((int)OpNo == AMDGPU::getNamedOperandIdx(
+                              MI.getOpcode(), AMDGPU::OpName::src1_modifiers))
+    SrcMOIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
+  else if ((int)OpNo == AMDGPU::getNamedOperandIdx(
+                            MI.getOpcode(), AMDGPU::OpName::src2_modifiers))
+    SrcMOIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src2);
+  if (SrcMOIdx == -1)
+    return;
+
+  const MCOperand &SrcMO = MI.getOperand(SrcMOIdx);
+  if (!SrcMO.isReg())
+    return;
+  auto SrcReg = SrcMO.getReg();
+  if (AMDGPU::isSGPR(SrcReg, &MRI))
+    return;
+  if (AMDGPU::isHi(SrcReg, MRI))
+    Op |= SISrcMods::OP_SEL_0;
 }
 
 void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(

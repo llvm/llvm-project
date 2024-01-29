@@ -44,10 +44,11 @@ void g() {
     struct dr2303::F -> B -> A<int, int>
     struct dr2303::F -> E -> A<int, int>}} */
 }
-} //namespace dr2303
+} // namespace dr2303
 #endif
 
 // dr2331: na
+// dr2335 is in dr2335.cxx
 
 #if __cplusplus >= 201103L
 namespace dr2338 { // dr2338: 12
