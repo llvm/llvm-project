@@ -9,7 +9,6 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
 
     @swiftTest
     @skipUnlessDarwin # FIXME.
-    @expectedFailureAll(bugnumber='rdar://121078994')
     def test_any_type(self):
         """Test explicit Swift modules"""
         self.build()
