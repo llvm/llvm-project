@@ -813,7 +813,8 @@ struct CpuAlias {
   StringRef Name;
 };
 
-inline constexpr CpuAlias CpuAliases[] = {{"grace", "neoverse-v2"}};
+inline constexpr CpuAlias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
+                                          {"grace", "neoverse-v2"}};
 
 bool getExtensionFeatures(
     const AArch64::ExtensionBitset &Extensions,
