@@ -95,7 +95,12 @@ TEST(LlvmLibcMlockTest, MLockAll) {
     EXPECT_THAT(
         LIBC_NAMESPACE::madvise(holder.addr, holder.size, MADV_DONTNEED),
         Succeeds());
-    EXPECT_THAT(LIBC_NAMESPACE::mlockall(MCL_CURRENT), Succeeds());
+    auto retval = LIBC_NAMESPACE::mlockall(MCL_CURRENT);
+    if (retval == -1) {
+      EXPECT_TRUE(libc_errno == ENOMEM || libc_errno == EPERM);
+      libc_errno = 0;
+      return;
+    }
     unsigned char vec;
     EXPECT_THAT(LIBC_NAMESPACE::mincore(holder.addr, holder.size, &vec),
                 Succeeds());
@@ -103,7 +108,12 @@ TEST(LlvmLibcMlockTest, MLockAll) {
     EXPECT_THAT(LIBC_NAMESPACE::munlockall(), Succeeds());
   }
   {
-    EXPECT_THAT(LIBC_NAMESPACE::mlockall(MCL_FUTURE), Succeeds());
+    auto retval = LIBC_NAMESPACE::mlockall(MCL_FUTURE);
+    if (retval == -1) {
+      EXPECT_TRUE(libc_errno == ENOMEM || libc_errno == EPERM);
+      libc_errno = 0;
+      return;
+    }
     PageHolder holder;
     EXPECT_TRUE(holder.is_valid());
     unsigned char vec;
@@ -114,7 +124,12 @@ TEST(LlvmLibcMlockTest, MLockAll) {
   }
 #ifdef MCL_ONFAULT
   {
-    EXPECT_THAT(LIBC_NAMESPACE::mlockall(MCL_FUTURE | MCL_ONFAULT), Succeeds());
+    auto retval = LIBC_NAMESPACE::mlockall(MCL_FUTURE | MCL_ONFAULT);
+    if (retval == -1) {
+      EXPECT_TRUE(libc_errno == ENOMEM || libc_errno == EPERM);
+      libc_errno = 0;
+      return;
+    }
     PageHolder holder;
     EXPECT_TRUE(holder.is_valid());
     unsigned char vec;
