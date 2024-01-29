@@ -305,7 +305,7 @@ static bool matchBroadcastSize(const X86FoldTableEntry &Entry,
 }
 
 const X86FoldTableEntry *
-llvm::lookupBroadcastFoldTable(unsigned MemOp, unsigned BroadcastBits) {
+llvm::lookupBroadcastFoldTableBySize(unsigned MemOp, unsigned BroadcastBits) {
   static X86BroadcastFoldTable BroadcastFoldTable;
   auto &Table = BroadcastFoldTable.Table;
   for (auto I = llvm::lower_bound(Table, MemOp);
