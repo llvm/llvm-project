@@ -24147,6 +24147,15 @@ TEST_F(FormatTest, C11Generic) {
                "    double _Complex: dc,\n"
                "    long double _Complex: ldc)");
 
+  verifyFormat("while (_Generic(x, //\n"
+               "           long: x)(x) > x) {\n"
+               "}");
+  verifyFormat("while (_Generic(x, //\n"
+               "           long: x)(x)) {\n"
+               "}");
+  verifyFormat("x(_Generic(x, //\n"
+               "      long: x)(x));");
+
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 40;
   verifyFormat("#define LIMIT_MAX(T)                   \\\n"
