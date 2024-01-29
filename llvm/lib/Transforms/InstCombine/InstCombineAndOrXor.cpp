@@ -3415,14 +3415,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateXor(Or, ConstantInt::get(Ty, *CV));
   }
 
-  // If the operands have no common bits set:
-  // or (mul X, Y), X --> add (mul X, Y), X --> mul X, (Y + 1)
-  if (match(&I, m_c_DisjointOr(m_OneUse(m_Mul(m_Value(X), m_Value(Y))),
-                               m_Deferred(X)))) {
-    Value *IncrementY = Builder.CreateAdd(Y, ConstantInt::get(Ty, 1));
-    return BinaryOperator::CreateMul(X, IncrementY);
-  }
-
   // X | (X ^ Y) --> X | Y (4 commuted patterns)
   if (match(&I, m_c_Or(m_Value(X), m_c_Xor(m_Deferred(X), m_Value(Y)))))
     return BinaryOperator::CreateOr(X, Y);

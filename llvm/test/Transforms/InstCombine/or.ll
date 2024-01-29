@@ -1561,8 +1561,8 @@ define i32 @mul_no_common_bits_commute2(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @mul_no_common_bits_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
 ; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
+; CHECK-NEXT:    [[M1:%.*]] = or disjoint i32 [[Y]], 1
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[M1]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p1, 7
@@ -1612,14 +1612,14 @@ define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
   ret i32 %r
 }
 
-; negative test - probably not good to create an extra mul
+; TODO: is it good to create an extra mul?
 
 define i32 @mul_no_common_bits_const_op_uses(i32 %p) {
 ; CHECK-LABEL: @mul_no_common_bits_const_op_uses(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X]], 24
 ; CHECK-NEXT:    call void @use(i32 [[M]])
-; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[X]], 25
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p, 7

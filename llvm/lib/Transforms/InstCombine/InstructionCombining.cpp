@@ -654,6 +654,11 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Instruction::BinaryOps TopLevelOpcode = I.getOpcode();
 
+  // Treat a disjoint Or like an Add if the inner opcode is a Mul.
+  if (I.getOpcode() == Instruction::Or && InnerOpcode == Instruction::Mul &&
+      cast<PossiblyDisjointInst>(I).isDisjoint())
+    TopLevelOpcode = Instruction::Add;
+
   // Does "X op' Y" always equal "Y op' X"?
   bool InnerCommutative = Instruction::isCommutative(InnerOpcode);
 
