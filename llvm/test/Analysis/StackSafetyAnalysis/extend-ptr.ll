@@ -13,6 +13,7 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 define void @a(ptr addrspace(5) %x) {
 entry:
   %x.ascast = addrspacecast ptr addrspace(5) %x to ptr
-  store i64 0, ptr %x.ascast, align 8
+  %tmp = load i64, ptr %x.ascast
+  store i64 %tmp, ptr %x.ascast, align 8
   ret void
 }

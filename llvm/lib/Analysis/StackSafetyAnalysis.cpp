@@ -274,15 +274,12 @@ ConstantRange StackSafetyLocalAnalysis::offsetFrom(Value *Addr, Value *Base) {
 
   auto *PtrTy = PointerType::getUnqual(SE.getContext());
 
-  // SCEV will crash if we try to extend/truncate between differently-sized
-  // pointer.
-  const auto CanExtend = [&](Type *Ty) {
-    return !Ty->isPointerTy() ||
-           DL.getTypeSizeInBits(Ty) == DL.getTypeSizeInBits(PtrTy);
-  };
-
-  if (!CanExtend(Addr->getType()) || !CanExtend(Base->getType()))
+  // FIXME: Pass does not deal with pointers from different address spaces that
+  // don't have the same size.
+  if (DL.getTypeSizeInBits(Addr->getType()) != PointerSize ||
+      DL.getTypeSizeInBits(Base->getType()) != PointerSize) {
     return UnknownRange;
+  }
 
   const SCEV *AddrExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Addr), PtrTy);
   const SCEV *BaseExp = SE.getTruncateOrZeroExtend(SE.getSCEV(Base), PtrTy);
@@ -370,6 +367,13 @@ bool StackSafetyLocalAnalysis::isSafeAccess(const Use &U, AllocaInst *AI,
     return true; // This only judges whether it is a safe *stack* access.
   if (isa<SCEVCouldNotCompute>(AccessSize))
     return false;
+
+  // FIXME: Pass does not deal with pointers from different address spaces that
+  // don't have the same size.
+  if (DL.getTypeSizeInBits(U->getType()) != PointerSize ||
+      DL.getTypeSizeInBits(AI->getType()) != PointerSize) {
+    return false;
+  }
 
   const auto *I = cast<Instruction>(U.getUser());
 
