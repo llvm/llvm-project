@@ -1540,6 +1540,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return ExtractCost + 2; // worst case pshufhw + pshufd
       }
     }
+    // If the extract subvector is not optimal, treat it as single op shuffle.
+    Kind = TTI::SK_PermuteSingleSrc;
   }
 
   // Subvector insertions are cheap if the subvectors are aligned.
