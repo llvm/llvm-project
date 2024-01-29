@@ -8127,57 +8127,33 @@ static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
   assert((SpillSize == 64 || STI.hasVLX()) &&
          "Can't broadcast less than 64 bytes without AVX512VL!");
 
+#define CASE_BCAST_TYPE_OPC(TYPE, OP16, OP32, OP64)                            \
+  case TYPE:                                                                   \
+    switch (SpillSize) {                                                       \
+    default:                                                                   \
+      llvm_unreachable("Unknown spill size");                                  \
+    case 16:                                                                   \
+      return X86::OP16;                                                        \
+    case 32:                                                                   \
+      return X86::OP32;                                                        \
+    case 64:                                                                   \
+      return X86::OP64;                                                        \
+    }                                                                          \
+    break;
+
   switch (I->Flags & TB_BCAST_MASK) {
   default:
     llvm_unreachable("Unexpected broadcast type!");
-  case TB_BCAST_D:
-    switch (SpillSize) {
-    default:
-      llvm_unreachable("Unknown spill size");
-    case 16:
-      return X86::VPBROADCASTDZ128rm;
-    case 32:
-      return X86::VPBROADCASTDZ256rm;
-    case 64:
-      return X86::VPBROADCASTDZrm;
-    }
-    break;
-  case TB_BCAST_Q:
-    switch (SpillSize) {
-    default:
-      llvm_unreachable("Unknown spill size");
-    case 16:
-      return X86::VPBROADCASTQZ128rm;
-    case 32:
-      return X86::VPBROADCASTQZ256rm;
-    case 64:
-      return X86::VPBROADCASTQZrm;
-    }
-    break;
-  case TB_BCAST_SS:
-    switch (SpillSize) {
-    default:
-      llvm_unreachable("Unknown spill size");
-    case 16:
-      return X86::VBROADCASTSSZ128rm;
-    case 32:
-      return X86::VBROADCASTSSZ256rm;
-    case 64:
-      return X86::VBROADCASTSSZrm;
-    }
-    break;
-  case TB_BCAST_SD:
-    switch (SpillSize) {
-    default:
-      llvm_unreachable("Unknown spill size");
-    case 16:
-      return X86::VMOVDDUPZ128rm;
-    case 32:
-      return X86::VBROADCASTSDZ256rm;
-    case 64:
-      return X86::VBROADCASTSDZrm;
-    }
-    break;
+    CASE_BCAST_TYPE_OPC(TB_BCAST_W, VPBROADCASTWZ128rm, VPBROADCASTWZ256rm,
+                        VPBROADCASTWZrm)
+    CASE_BCAST_TYPE_OPC(TB_BCAST_D, VPBROADCASTDZ128rm, VPBROADCASTDZ256rm,
+                        VPBROADCASTDZrm)
+    CASE_BCAST_TYPE_OPC(TB_BCAST_Q, VPBROADCASTQZ128rm, VPBROADCASTQZ256rm,
+                        VPBROADCASTQZrm)
+    CASE_BCAST_TYPE_OPC(TB_BCAST_SS, VBROADCASTSSZ128rm, VBROADCASTSSZ256rm,
+                        VBROADCASTSSZrm)
+    CASE_BCAST_TYPE_OPC(TB_BCAST_SD, VMOVDDUPZ128rm, VBROADCASTSDZ256rm,
+                        VBROADCASTSDZrm)
   }
 }
 
@@ -8191,7 +8167,6 @@ bool X86InstrInfo::unfoldMemoryOperand(
   unsigned Index = I->Flags & TB_INDEX_MASK;
   bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
   bool FoldedStore = I->Flags & TB_FOLDED_STORE;
-  bool FoldedBCast = I->Flags & TB_FOLDED_BCAST;
   if (UnfoldLoad && !FoldedLoad)
     return false;
   UnfoldLoad &= FoldedLoad;
@@ -8231,7 +8206,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
     auto MMOs = extractLoadMMOs(MI.memoperands(), MF);
 
     unsigned Opc;
-    if (FoldedBCast) {
+    if (I->Flags & TB_BCAST_MASK) {
       Opc = getBroadcastOpcode(I, RC, Subtarget);
     } else {
       unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
@@ -8341,7 +8316,6 @@ bool X86InstrInfo::unfoldMemoryOperand(
   unsigned Index = I->Flags & TB_INDEX_MASK;
   bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
   bool FoldedStore = I->Flags & TB_FOLDED_STORE;
-  bool FoldedBCast = I->Flags & TB_FOLDED_BCAST;
   const MCInstrDesc &MCID = get(Opc);
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
@@ -8377,7 +8351,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
     // memory access is slow above.
 
     unsigned Opc;
-    if (FoldedBCast) {
+    if (I->Flags & TB_BCAST_MASK) {
       Opc = getBroadcastOpcode(I, RC, Subtarget);
     } else {
       unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);

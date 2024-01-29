@@ -296,9 +296,9 @@ private:
     TestVectors[Index].push_back(Result);
   }
 
-  // Walk the binary decision tree and try assigning both false and true to each
-  // node. When a terminal node (ID == 0) is reached, fill in the value in the
-  // truth table.
+  // Walk the binary decision diagram and try assigning both false and true to
+  // each node. When a terminal node (ID == 0) is reached, fill in the value in
+  // the truth table.
   void buildTestVector(MCDCRecord::TestVector &TV, unsigned ID,
                        unsigned Index) {
     const CounterMappingRegion *Branch = Map[ID];
@@ -331,7 +331,10 @@ private:
     }
   }
 
-  // Find an independence pair for each condition.
+  // Find an independence pair for each condition:
+  // - The condition is true in one test and false in the other.
+  // - The decision outcome is true one test and false in the other.
+  // - All other conditions' values must be equal or marked as "don't care".
   void findIndependencePairs() {
     unsigned NumTVs = ExecVectors.size();
     for (unsigned I = 1; I < NumTVs; ++I) {
@@ -391,10 +394,10 @@ public:
       Folded[I++] = (B->Count.isZero() && B->FalseCount.isZero());
     }
 
-    // Initialize a base test vector as 'DontCare'.
+    // Walk the binary decision diagram to enumerate all possible test vectors.
+    // We start at the root node (ID == 1) with all values being DontCare.
+    // `Index` encodes the bitmask of true values and is initially 0.
     MCDCRecord::TestVector TV(NumConditions, MCDCRecord::MCDC_DontCare);
-
-    // Use the base test vector to build the list of all possible test vectors.
     buildTestVector(TV, 1, 0);
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.

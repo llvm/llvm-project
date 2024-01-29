@@ -128,6 +128,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zicclsm", {1, 0}},
     {"ziccrse", {1, 0}},
     {"zicntr", {2, 0}},
+    {"zicond", {1, 0}},
     {"zicsr", {2, 0}},
     {"zifencei", {2, 0}},
     {"zihintntl", {1, 0}},
@@ -202,8 +203,6 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 
     {"zicfilp", {0, 4}},
     {"zicfiss", {0, 4}},
-
-    {"zicond", {1, 0}},
 
     {"zimop", {0, 1}},
 
@@ -550,28 +549,25 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
   // Expected multi-character extension with version number to have no
   // subsequent characters (i.e. must either end string or be followed by
   // an underscore).
-  if (Ext.size() > 1 && In.size()) {
-    std::string Error =
-        "multi-character extensions must be separated by underscores";
-    return createStringError(errc::invalid_argument, Error);
-  }
+  if (Ext.size() > 1 && In.size())
+    return createStringError(
+        errc::invalid_argument,
+        "multi-character extensions must be separated by underscores");
 
   // If experimental extension, require use of current version number
   if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
-    if (!EnableExperimentalExtension) {
-      std::string Error = "requires '-menable-experimental-extensions' for "
-                          "experimental extension '" +
-                          Ext.str() + "'";
-      return createStringError(errc::invalid_argument, Error);
-    }
+    if (!EnableExperimentalExtension)
+      return createStringError(errc::invalid_argument,
+                               "requires '-menable-experimental-extensions' "
+                               "for experimental extension '" +
+                                   Ext + "'");
 
     if (ExperimentalExtensionVersionCheck &&
-        (MajorStr.empty() && MinorStr.empty())) {
-      std::string Error =
-          "experimental extension requires explicit version number `" +
-          Ext.str() + "`";
-      return createStringError(errc::invalid_argument, Error);
-    }
+        (MajorStr.empty() && MinorStr.empty()))
+      return createStringError(
+          errc::invalid_argument,
+          "experimental extension requires explicit version number `" + Ext +
+              "`");
 
     auto SupportedVers = *ExperimentalExtension;
     if (ExperimentalExtensionVersionCheck &&
@@ -826,12 +822,13 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       if (StdExts.contains(C)) {
         return createStringError(
             errc::invalid_argument,
-            "standard user-level extension not given in canonical order '%c'",
-            C);
+            "standard user-level extension not given in canonical order '" +
+                Twine(C) + "'");
       }
 
       return createStringError(errc::invalid_argument,
-                               "invalid standard user-level extension '%c'", C);
+                               "invalid standard user-level extension '" +
+                                   Twine(C) + "'");
     }
 
     // Move to next char to prevent repeated letter.
@@ -860,8 +857,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         continue;
       }
       return createStringError(errc::invalid_argument,
-                               "unsupported standard user-level extension '%c'",
-                               C);
+                               "unsupported standard user-level extension '" +
+                                   Twine(C) + "'");
     }
     ISAInfo->addExtension(StringRef(&C, 1), {Major, Minor});
 
@@ -905,11 +902,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                                  "invalid extension prefix '" + Ext + "'");
       }
 
-      if (!IgnoreUnknown && Name.size() == Type.size()) {
+      if (!IgnoreUnknown && Name.size() == Type.size())
         return createStringError(errc::invalid_argument,
-                                 "%s name missing after '%s'",
-                                 Desc.str().c_str(), Type.str().c_str());
-      }
+                                 Desc + " name missing after '" + Type + "'");
 
       unsigned Major, Minor, ConsumeLength;
       if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
@@ -923,10 +918,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       }
 
       // Check if duplicated extension.
-      if (!IgnoreUnknown && llvm::is_contained(AllExts, Name)) {
-        return createStringError(errc::invalid_argument, "duplicated %s '%s'",
-                                 Desc.str().c_str(), Name.str().c_str());
-      }
+      if (!IgnoreUnknown && llvm::is_contained(AllExts, Name))
+        return createStringError(errc::invalid_argument,
+                                 "duplicated " + Desc + " '" + Name + "'");
 
       if (IgnoreUnknown && !isSupportedExtension(Name))
         continue;
@@ -941,8 +935,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   for (auto Ext : AllExts) {
     if (!isSupportedExtension(Ext)) {
       StringRef Desc = getExtensionTypeDesc(getExtensionType(Ext));
-      return createStringError(errc::invalid_argument, "unsupported %s '%s'",
-                               Desc.str().c_str(), Ext.str().c_str());
+      return createStringError(errc::invalid_argument,
+                               "unsupported " + Desc + " '" + Ext + "'");
     }
   }
 

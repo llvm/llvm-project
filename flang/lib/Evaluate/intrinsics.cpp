@@ -78,6 +78,8 @@ static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
     doublePrecision, defaultCharKind, defaultLogicalKind,
+    greaterOrEqualToKind, // match kind value greater than or equal to a single
+                          // explicit kind value
     any, // matches any kind value; each instance is independent
     // match any kind, but all "same" kinds must be equal. For characters, also
     // implies that lengths must be equal.
@@ -104,7 +106,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
 struct TypePattern {
   CategorySet categorySet;
   KindCode kindCode{KindCode::none};
-  int exactKindValue{0}; // for KindCode::exactKind
+  int kindValue{0}; // for KindCode::exactKind and greaterOrEqualToKind
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
@@ -1320,10 +1322,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
             {"wait", AnyLogical, Rank::scalar, Optionality::optional},
-            {"exitstat", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::InOut},
-            {"cmdstat", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::Out},
+            {"exitstat",
+                TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
+                Rank::scalar, Optionality::optional, common::Intent::InOut},
+            {"cmdstat", TypePattern{IntType, KindCode::greaterOrEqualToKind, 2},
+                Rank::scalar, Optionality::optional, common::Intent::Out},
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
@@ -1391,6 +1394,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
              common::Intent::Out},
             {"put", DefaultInt, Rank::vector, Optionality::optional},
             {"get", DefaultInt, Rank::vector, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"system",
+        {{"command", DefaultChar, Rank::scalar},
+            {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",
@@ -1856,7 +1864,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       argOk = true;
       break;
     case KindCode::exactKind:
-      argOk = type->kind() == d.typePattern.exactKindValue;
+      argOk = type->kind() == d.typePattern.kindValue;
+      break;
+    case KindCode::greaterOrEqualToKind:
+      argOk = type->kind() >= d.typePattern.kindValue;
       break;
     case KindCode::sameAtom:
       if (!sameArg) {
@@ -2199,8 +2210,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       resultType = DynamicType{
           GetBuiltinDerivedType(builtinsScope, "__builtin_team_type")};
       break;
+    case KindCode::greaterOrEqualToKind:
     case KindCode::exactKind:
-      resultType = DynamicType{*category, result.exactKindValue};
+      resultType = DynamicType{*category, result.kindValue};
       break;
     case KindCode::typeless:
     case KindCode::any:
