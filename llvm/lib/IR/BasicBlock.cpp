@@ -60,16 +60,12 @@ DPMarker *BasicBlock::createMarker(InstListType::iterator It) {
   return DPM;
 }
 
-void BasicBlock::convertToNewDbgValues(bool HasNoDebugInfo) {
+void BasicBlock::convertToNewDbgValues() {
   // Is the command line option set?
   if (!UseNewDbgInfoFormat)
     return;
 
   IsNewDbgInfoFormat = true;
-
-  // If the caller knows there's no debug-info in this function, do nothing.
-  if (HasNoDebugInfo)
-    return;
 
   // Iterate over all instructions in the instruction list, collecting dbg.value
   // instructions and converting them to DPValues. Once we find a "real"
@@ -97,13 +93,9 @@ void BasicBlock::convertToNewDbgValues(bool HasNoDebugInfo) {
   }
 }
 
-void BasicBlock::convertFromNewDbgValues(bool HasNoDebugInfo) {
+void BasicBlock::convertFromNewDbgValues() {
   invalidateOrders();
   IsNewDbgInfoFormat = false;
-
-  // If the caller knows there's no debug-info in this function, do nothing.
-  if (HasNoDebugInfo)
-    return;
 
   // Iterate over the block, finding instructions annotated with DPMarkers.
   // Convert any attached DPValues to dbg.values and insert ahead of the

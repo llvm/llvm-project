@@ -1303,7 +1303,7 @@ static void supplementInstrProfile(const WeightedFileVector &Inputs,
                                    unsigned SupplMinSizeThreshold,
                                    float ZeroCounterThreshold,
                                    unsigned InstrProfColdThreshold) {
-  if (OutputFilename.compare("-") == 0)
+  if (OutputFilename == "-")
     exitWithError("cannot write indexed profdata format to stdout");
   if (Inputs.size() != 1)
     exitWithError("expect one input to be an instr profile");

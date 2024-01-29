@@ -405,8 +405,8 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-              fir::BoxType>([&](auto t) -> mlir::Type {
+        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
+              fir::ClassType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
           return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
