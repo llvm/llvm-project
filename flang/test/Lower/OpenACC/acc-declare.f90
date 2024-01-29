@@ -318,6 +318,18 @@ module acc_declare
 
 ! CHECK: acc.copyout accPtr(%[[COPYIN]] : !fir.ref<!fir.array<?xi32>>) bounds(%{{.*}}) to varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>) {dataClause = #acc<data_clause acc_copy>, name = "a(1:10)"}
 
+  subroutine acc_declare_allocate_with_stat()
+    integer :: status
+    real, pointer, dimension(:) :: localptr
+    !$acc declare create(localptr)
+    allocate(localptr(n), stat=status)
+
+    deallocate(localptr, stat=status)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_allocate_with_stat()
+! CHECK: fir.call @_FortranAPointerAllocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocate_with_statElocalptr_acc_declare_update_desc_post_alloc>}
+! CHECK: fir.call @_FortranAPointerDeallocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} {acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declareFacc_declare_allocate_with_statElocalptr_acc_declare_update_desc_pre_dealloc, postDealloc = @_QMacc_declareFacc_declare_allocate_with_statElocalptr_acc_declare_update_desc_post_dealloc>}
 end module
 
 module acc_declare_allocatable_test
