@@ -13,7 +13,6 @@
 
 #include <cassert>
 #include <ranges>
-#include <utility>
 
 #include "types.h"
 struct Container {
