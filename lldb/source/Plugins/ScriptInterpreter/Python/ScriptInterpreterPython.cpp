@@ -17,6 +17,7 @@
 #include "Interfaces/OperatingSystemPythonInterface.h"
 #include "Interfaces/ScriptedPlatformPythonInterface.h"
 #include "Interfaces/ScriptedProcessPythonInterface.h"
+#include "Interfaces/ScriptedThreadPlanPythonInterface.h"
 #include "Interfaces/ScriptedThreadPythonInterface.h"
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
@@ -1533,6 +1534,11 @@ ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
   return std::make_shared<ScriptedThreadPythonInterface>(*this);
 }
 
+ScriptedThreadPlanInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedThreadPlanInterface() {
+  return std::make_shared<ScriptedThreadPlanPythonInterface>(*this);
+}
+
 OperatingSystemInterfaceSP
 ScriptInterpreterPythonImpl::CreateOperatingSystemInterface() {
   return std::make_shared<OperatingSystemPythonInterface>(*this);
@@ -1548,122 +1554,6 @@ ScriptInterpreterPythonImpl::CreateStructuredDataFromScriptObject(
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
   return py_obj.CreateStructuredObject();
 }
-
-StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
-    const char *class_name, const StructuredDataImpl &args_data,
-    std::string &error_str, lldb::ThreadPlanSP thread_plan_sp) {
-  if (class_name == nullptr || class_name[0] == '\0')
-    return StructuredData::ObjectSP();
-
-  if (!thread_plan_sp.get())
-    return {};
-
-  Debugger &debugger = thread_plan_sp->GetTarget().GetDebugger();
-  ScriptInterpreterPythonImpl *python_interpreter =
-      GetPythonInterpreter(debugger);
-
-  if (!python_interpreter)
-    return {};
-
-  Locker py_lock(this,
-                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  PythonObject ret_val = SWIGBridge::LLDBSwigPythonCreateScriptedThreadPlan(
-      class_name, python_interpreter->m_dictionary_name.c_str(), args_data,
-      error_str, thread_plan_sp);
-  if (!ret_val)
-    return {};
-
-  return StructuredData::ObjectSP(
-      new StructuredPythonObject(std::move(ret_val)));
-}
-
-bool ScriptInterpreterPythonImpl::ScriptedThreadPlanExplainsStop(
-    StructuredData::ObjectSP implementor_sp, Event *event, bool &script_error) {
-  bool explains_stop = true;
-  StructuredData::Generic *generic = nullptr;
-  if (implementor_sp)
-    generic = implementor_sp->GetAsGeneric();
-  if (generic) {
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    explains_stop = SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-        generic->GetValue(), "explains_stop", event, script_error);
-    if (script_error)
-      return true;
-  }
-  return explains_stop;
-}
-
-bool ScriptInterpreterPythonImpl::ScriptedThreadPlanShouldStop(
-    StructuredData::ObjectSP implementor_sp, Event *event, bool &script_error) {
-  bool should_stop = true;
-  StructuredData::Generic *generic = nullptr;
-  if (implementor_sp)
-    generic = implementor_sp->GetAsGeneric();
-  if (generic) {
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    should_stop = SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-        generic->GetValue(), "should_stop", event, script_error);
-    if (script_error)
-      return true;
-  }
-  return should_stop;
-}
-
-bool ScriptInterpreterPythonImpl::ScriptedThreadPlanIsStale(
-    StructuredData::ObjectSP implementor_sp, bool &script_error) {
-  bool is_stale = true;
-  StructuredData::Generic *generic = nullptr;
-  if (implementor_sp)
-    generic = implementor_sp->GetAsGeneric();
-  if (generic) {
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    is_stale = SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-        generic->GetValue(), "is_stale", (Event *)nullptr, script_error);
-    if (script_error)
-      return true;
-  }
-  return is_stale;
-}
-
-lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
-    StructuredData::ObjectSP implementor_sp, bool &script_error) {
-  bool should_step = false;
-  StructuredData::Generic *generic = nullptr;
-  if (implementor_sp)
-    generic = implementor_sp->GetAsGeneric();
-  if (generic) {
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    should_step = SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-        generic->GetValue(), "should_step", (Event *)nullptr, script_error);
-    if (script_error)
-      should_step = true;
-  }
-  if (should_step)
-    return lldb::eStateStepping;
-  return lldb::eStateRunning;
-}
-
-bool
-ScriptInterpreterPythonImpl::ScriptedThreadPlanGetStopDescription(
-    StructuredData::ObjectSP implementor_sp, lldb_private::Stream *stream,
-    bool &script_error) {
-  StructuredData::Generic *generic = nullptr;
-  if (implementor_sp)
-    generic = implementor_sp->GetAsGeneric();
-  if (!generic) {
-    script_error = true;
-    return false;
-  }
-  Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  return SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-      generic->GetValue(), "stop_description", stream, script_error);
-}
-
 
 StructuredData::GenericSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointResolver(
