@@ -225,8 +225,11 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   //
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
-  bool IsND = X86II::hasNewDataDest(TSFlags);
-  if (TSFlags & X86II::EVEX_B)
+  // MOVBE*rr is special because it has sematic of NDD but not set EVEX_B.
+  bool IsMovberr =
+      MI.getOpcode() == X86::MOVBE32rr || MI.getOpcode() == X86::MOVBE64rr;
+  bool IsND = X86II::hasNewDataDest(TSFlags) || IsMovberr;
+  if (TSFlags & X86II::EVEX_B || IsMovberr)
     if (!IsND || !isRedundantNewDataDest(MI, ST))
       return false;
 
