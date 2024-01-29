@@ -876,7 +876,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
   endforeach()
 endif()
 
-set(CLANG_BOLT "INSTRUMENT" CACHE STRING "Apply BOLT optimization to Clang. \
+set(CLANG_BOLT OFF CACHE STRING "Apply BOLT optimization to Clang. \
   May be specified as Instrument or Perf or LBR to use a particular profiling \
   mechanism.")
 string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)

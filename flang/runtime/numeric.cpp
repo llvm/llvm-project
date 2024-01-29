@@ -144,6 +144,21 @@ inline RT_API_ATTRS T RealMod(
     return std::numeric_limits<T>::quiet_NaN();
   } else if (std::isinf(p)) {
     return a;
+  } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ||
+      std::is_same_v<T, long double>) {
+    // std::fmod() semantics on signed operands seems to match
+    // the requirements of MOD().  MODULO() needs adjustment.
+    T result{std::fmod(a, p)};
+    if constexpr (IS_MODULO) {
+      if ((a < 0) != (p < 0)) {
+        if (result == 0.) {
+          result = -result;
+        } else {
+          result += p;
+        }
+      }
+    }
+    return result;
   } else {
     // The standard defines MOD(a,p)=a-AINT(a/p)*p and
     // MODULO(a,p)=a-FLOOR(a/p)*p, but those definitions lose

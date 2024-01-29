@@ -1747,9 +1747,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.ends_with("+"))
-        Val = Val.substr(0, Val.size() - 1);
-      else {
+      if (!Val.consume_back("+")) {
         bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
         assert(!Invalid && "Failed to parse value");
         CmdArgs.push_back(
@@ -2712,9 +2710,22 @@ static void EmitComplexRangeDiag(const Driver &D,
         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
 }
 
-static std::string RenderComplexRangeOption(std::string Range) {
+static std::string
+RenderComplexRangeOption(LangOptions::ComplexRangeKind Range) {
   std::string ComplexRangeStr = "-complex-range=";
-  ComplexRangeStr += Range;
+  switch (Range) {
+  case LangOptions::ComplexRangeKind::CX_Full:
+    ComplexRangeStr += "full";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Limited:
+    ComplexRangeStr += "limited";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Fortran:
+    ComplexRangeStr += "fortran";
+    break;
+  default:
+    assert(0 && "Unexpected range option");
+  }
   return ComplexRangeStr;
 }
 
@@ -2764,7 +2775,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
   StringRef BFloat16ExcessPrecision = "";
-  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_Full;
+  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
+  std::string ComplexRangeStr = "";
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2780,23 +2792,19 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fcx_limited_range: {
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Limited);
       Range = LangOptions::ComplexRangeKind::CX_Limited;
-      std::string ComplexRangeStr = RenderComplexRangeOption("limited");
-      if (!ComplexRangeStr.empty())
-        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
     }
     case options::OPT_fno_cx_limited_range:
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_fcx_fortran_rules: {
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Fortran);
       Range = LangOptions::ComplexRangeKind::CX_Fortran;
-      std::string ComplexRangeStr = RenderComplexRangeOption("fortran");
-      if (!ComplexRangeStr.empty())
-        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
     }
     case options::OPT_fno_cx_fortran_rules:
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Full);
       Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_ffp_model_EQ: {
@@ -3068,9 +3076,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SeenUnsafeMathModeOption = true;
       // ffast-math enables fortran rules for complex multiplication and
       // division.
-      std::string ComplexRangeStr = RenderComplexRangeOption("limited");
-      if (!ComplexRangeStr.empty())
-        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
+      Range = LangOptions::ComplexRangeKind::CX_Limited;
       break;
     }
     case options::OPT_fno_fast_math:
@@ -3227,6 +3233,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                    options::OPT_fstrict_float_cast_overflow, false))
     CmdArgs.push_back("-fno-strict-float-cast-overflow");
 
+  if (Range != LangOptions::ComplexRangeKind::CX_None)
+    ComplexRangeStr = RenderComplexRangeOption(Range);
+  if (!ComplexRangeStr.empty())
+    CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
   if (Args.hasArg(options::OPT_fcx_limited_range))
     CmdArgs.push_back("-fcx-limited-range");
   if (Args.hasArg(options::OPT_fcx_fortran_rules))
@@ -4842,9 +4852,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool UnifiedLTO = false;
   if (IsUsingLTO) {
     UnifiedLTO = Args.hasFlag(options::OPT_funified_lto,
-                              options::OPT_fno_unified_lto, Triple.isPS()) ||
-                 Args.hasFlag(options::OPT_ffat_lto_objects,
-                              options::OPT_fno_fat_lto_objects, false);
+                              options::OPT_fno_unified_lto, Triple.isPS());
     if (UnifiedLTO)
       CmdArgs.push_back("-funified-lto");
   }
@@ -5812,6 +5820,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
   }
 
+  if (isTLSDESCEnabled(TC, Args))
+    CmdArgs.push_back("-enable-tlsdesc");
+
   // Add the target cpu
   std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
   if (!CPU.empty()) {
@@ -6325,7 +6336,28 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_inlines_hidden_static_local_var,
                            options::OPT_fno_visibility_inlines_hidden_static_local_var);
-  Args.AddLastArg(CmdArgs, options::OPT_fvisibility_global_new_delete_hidden);
+
+  // -fvisibility-global-new-delete-hidden is a deprecated spelling of
+  // -fvisibility-global-new-delete=force-hidden.
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fvisibility_global_new_delete_hidden)) {
+    D.Diag(diag::warn_drv_deprecated_arg)
+        << A->getAsString(Args)
+        << "-fvisibility-global-new-delete=force-hidden";
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fvisibility_global_new_delete_EQ,
+                          options::OPT_fvisibility_global_new_delete_hidden)) {
+    if (A->getOption().matches(options::OPT_fvisibility_global_new_delete_EQ)) {
+      A->render(Args, CmdArgs);
+    } else {
+      assert(A->getOption().matches(
+          options::OPT_fvisibility_global_new_delete_hidden));
+      CmdArgs.push_back("-fvisibility-global-new-delete=force-hidden");
+    }
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_ftlsmodel_EQ);
 
   if (Args.hasFlag(options::OPT_fnew_infallible,
@@ -6427,6 +6459,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
+      if (Args.hasArg(options::OPT_fopenmp_force_usm))
+        CmdArgs.push_back("-fopenmp-force-usm");
       break;
     default:
       // By default, if Clang doesn't know how to generate useful OpenMP code

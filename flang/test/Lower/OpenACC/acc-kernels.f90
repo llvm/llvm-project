@@ -61,9 +61,9 @@ subroutine acc_kernels
   !$acc kernels wait
   !$acc end kernels
 
-! CHECK:      acc.kernels  {
+! CHECK:      acc.kernels wait {
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {waitOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc kernels wait(1)
   !$acc end kernels

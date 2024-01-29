@@ -1348,6 +1348,14 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
+  case Intrinsic::amdgcn_global_load_tr: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align.reset();
+    Info.flags |= MachineMemOperand::MOLoad;
+    return true;
+  }
   case Intrinsic::amdgcn_ds_gws_init:
   case Intrinsic::amdgcn_ds_gws_barrier:
   case Intrinsic::amdgcn_ds_gws_sema_v:
@@ -1407,6 +1415,7 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
                                             SmallVectorImpl<Value*> &Ops,
                                             Type *&AccessTy) const {
   switch (II->getIntrinsicID()) {
+  case Intrinsic::amdgcn_global_load_tr:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_append:
@@ -1525,13 +1534,14 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     if (AM.BaseOffs % 4 != 0)
       return isLegalMUBUFAddressingMode(AM);
 
-    // There are no SMRD extloads, so if we have to do a small type access we
-    // will use a MUBUF load.
-    // FIXME?: We also need to do this if unaligned, but we don't know the
-    // alignment here.
-    // TODO: Update this for GFX12 which does have scalar sub-dword loads.
-    if (Ty->isSized() && DL.getTypeStoreSize(Ty) < 4)
-      return isLegalGlobalAddressingMode(AM);
+    if (!Subtarget->hasScalarSubwordLoads()) {
+      // There are no SMRD extloads, so if we have to do a small type access we
+      // will use a MUBUF load.
+      // FIXME?: We also need to do this if unaligned, but we don't know the
+      // alignment here.
+      if (Ty->isSized() && DL.getTypeStoreSize(Ty) < 4)
+        return isLegalGlobalAddressingMode(AM);
+    }
 
     if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS) {
       // SMRD instructions have an 8-bit, dword offset on SI.
@@ -2063,11 +2073,45 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
   const SIMachineFunctionInfo &MFI,
   EVT VT,
   AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
-  const ArgDescriptor *Reg;
+  const ArgDescriptor *Reg = nullptr;
   const TargetRegisterClass *RC;
   LLT Ty;
 
-  std::tie(Reg, RC, Ty) = MFI.getPreloadedValue(PVID);
+  CallingConv::ID CC = DAG.getMachineFunction().getFunction().getCallingConv();
+  const ArgDescriptor WorkGroupIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP9);
+  // If GridZ is not programmed in an entry function then the hardware will set
+  // it to all zeros, so there is no need to mask the GridY value in the low
+  // order bits.
+  const ArgDescriptor WorkGroupIDY = ArgDescriptor::createRegister(
+      AMDGPU::TTMP7,
+      AMDGPU::isEntryFunctionCC(CC) && !MFI.hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
+  const ArgDescriptor WorkGroupIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
+  if (Subtarget->hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+    switch (PVID) {
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
+      Reg = &WorkGroupIDX;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
+      Reg = &WorkGroupIDY;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
+      Reg = &WorkGroupIDZ;
+      RC = &AMDGPU::SReg_32RegClass;
+      Ty = LLT::scalar(32);
+      break;
+    default:
+      break;
+    }
+  }
+
+  if (!Reg)
+    std::tie(Reg, RC, Ty) = MFI.getPreloadedValue(PVID);
   if (!Reg) {
     if (PVID == AMDGPUFunctionArgInfo::PreloadedValue::KERNARG_SEGMENT_PTR) {
       // It's possible for a kernarg intrinsic call to appear in a kernel with
@@ -2496,28 +2540,24 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
     }
   }
 
-  if (Info.hasWorkGroupIDX()) {
-    Register Reg = Info.addWorkGroupIDX(HasArchitectedSGPRs);
-    if (!HasArchitectedSGPRs)
+  if (!HasArchitectedSGPRs) {
+    if (Info.hasWorkGroupIDX()) {
+      Register Reg = Info.addWorkGroupIDX();
       MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+      CCInfo.AllocateReg(Reg);
+    }
 
-    CCInfo.AllocateReg(Reg);
-  }
-
-  if (Info.hasWorkGroupIDY()) {
-    Register Reg = Info.addWorkGroupIDY(HasArchitectedSGPRs);
-    if (!HasArchitectedSGPRs)
+    if (Info.hasWorkGroupIDY()) {
+      Register Reg = Info.addWorkGroupIDY();
       MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+      CCInfo.AllocateReg(Reg);
+    }
 
-    CCInfo.AllocateReg(Reg);
-  }
-
-  if (Info.hasWorkGroupIDZ()) {
-    Register Reg = Info.addWorkGroupIDZ(HasArchitectedSGPRs);
-    if (!HasArchitectedSGPRs)
+    if (Info.hasWorkGroupIDZ()) {
+      Register Reg = Info.addWorkGroupIDZ();
       MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
-
-    CCInfo.AllocateReg(Reg);
+      CCInfo.AllocateReg(Reg);
+    }
   }
 
   if (Info.hasWorkGroupInfo()) {
@@ -7686,8 +7726,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
   }
 
-  unsigned CPol = cast<ConstantSDNode>(
-      Op.getOperand(ArgOffset + Intr->CachePolicyIndex))->getZExtValue();
+  unsigned CPol = Op.getConstantOperandVal(ArgOffset + Intr->CachePolicyIndex);
   if (BaseOpcode->Atomic)
     CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
   if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
@@ -7881,6 +7920,17 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   return Loads[0];
 }
 
+SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (!Subtarget->hasArchitectedSGPRs())
+    return {};
+  SDLoc SL(Op);
+  MVT VT = MVT::i32;
+  SDValue TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT);
+  return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
+                     DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
+}
+
 SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
                                           unsigned Dim,
                                           const ArgDescriptor &Arg) const {
@@ -8051,6 +8101,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_workgroup_id_z:
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_wave_id:
+    return lowerWaveID(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);
@@ -8232,6 +8284,36 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue GA = DAG.getTargetGlobalAddress(RelocSymbol, DL, MVT::i32, 0,
                                             SIInstrInfo::MO_ABS32_LO);
     return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};
+  }
+  case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_f16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8: {
+    if (Op.getOperand(4).getValueType() == MVT::i32)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi32 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                       Op.getOperand(3), IndexKeyi32);
+  }
+  case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {
+    if (Op.getOperand(6).getValueType() == MVT::i32)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi32 = DAG.getAnyExtOrTrunc(Op.getOperand(6), SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
+                        IndexKeyi32, Op.getOperand(7)});
   }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

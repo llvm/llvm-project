@@ -828,7 +828,7 @@ static std::string getPdbBaseName(ObjFile *file, StringRef tSPath) {
   // on Windows, so we can assume type server paths are Windows style.
   sys::path::append(path,
                     sys::path::filename(tSPath, sys::path::Style::windows));
-  return std::string(path.str());
+  return std::string(path);
 }
 
 // The casing of the PDB path stamped in the OBJ can differ from the actual path

@@ -12,10 +12,6 @@
 
 // XFAIL: has-no-cxx-module-support
 
-// picolibc does not provide the required timespec_get function, and the
-// "using-if-exists" mechanism apparently did not work here.
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-
 // Make sure that the compile flags contain the expected elements.
 // The tests only look for the expected components and not the exact flags.
 // Otherwise changing the location of the module would break this test.
