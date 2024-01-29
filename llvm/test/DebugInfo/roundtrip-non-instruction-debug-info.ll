@@ -21,16 +21,16 @@
 ; CHECK: @f(i32 %[[VAL_A:[0-9a-zA-Z]+]])
 ; CHECK-NEXT: entry:
 ; OLDDBG-NEXT: call void @llvm.dbg.value(metadata i32 %[[VAL_A]], metadata ![[VAR_A:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_1:[0-9]+]]
-; NEWDBG-NEXT: {{^}}    #dbg_value { i32 %[[VAL_A]], ![[VAR_A:[0-9]+]], !DIExpression(), ![[LOC_1:[0-9]+]] }
+; NEWDBG-NEXT: {{^}}    #dbg_value(i32 %[[VAL_A]], ![[VAR_A:[0-9]+]], !DIExpression(), ![[LOC_1:[0-9]+]])
 ; CHECK-NEXT: {{^}}  %[[VAL_B:[0-9a-zA-Z]+]] = alloca
 ; OLDDBG-NEXT: call void @llvm.dbg.declare(metadata ptr %[[VAL_B]], metadata ![[VAR_B:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_2:[0-9]+]]
-; NEWDBG-NEXT: {{^}}    #dbg_declare { ptr %[[VAL_B]], ![[VAR_B:[0-9]+]], !DIExpression(), ![[LOC_2:[0-9]+]] }
+; NEWDBG-NEXT: {{^}}    #dbg_declare(ptr %[[VAL_B]], ![[VAR_B:[0-9]+]], !DIExpression(), ![[LOC_2:[0-9]+]])
 ; CHECK-NEXT: {{^}}  %[[VAL_ADD:[0-9a-zA-Z]+]] = add i32 %[[VAL_A]], 5
 ; OLDDBG-NEXT: call void @llvm.dbg.value(metadata !DIArgList(i32 %[[VAL_A]], i32 %[[VAL_ADD]]), metadata ![[VAR_A]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)), !dbg ![[LOC_3:[0-9]+]]
-; NEWDBG-NEXT: {{^}}    #dbg_value { !DIArgList(i32 %[[VAL_A]], i32 %[[VAL_ADD]]), ![[VAR_A]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), ![[LOC_3:[0-9]+]] }
+; NEWDBG-NEXT: {{^}}    #dbg_value(!DIArgList(i32 %[[VAL_A]], i32 %[[VAL_ADD]]), ![[VAR_A]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), ![[LOC_3:[0-9]+]])
 ; CHECK-NEXT: {{^}}  store i32 %[[VAL_ADD]]{{.+}}, !DIAssignID ![[ASSIGNID:[0-9]+]]
 ; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata i32 %[[VAL_ADD]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ptr %[[VAL_B]], metadata !DIExpression()), !dbg ![[LOC_4:[0-9]+]]
-; NEWDBG-NEXT: {{^}}    #dbg_assign { i32 %[[VAL_ADD]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ptr %[[VAL_B]], !DIExpression(), ![[LOC_4:[0-9]+]] }
+; NEWDBG-NEXT: {{^}}    #dbg_assign(i32 %[[VAL_ADD]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ptr %[[VAL_B]], !DIExpression(), ![[LOC_4:[0-9]+]])
 ; CHECK-NEXT: {{^}}  ret i32
 
 ; OLDDBG-DAG: declare void @llvm.dbg.value

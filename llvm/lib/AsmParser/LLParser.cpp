@@ -6514,10 +6514,13 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
                   .Case("value", LocType::Value)
                   .Case("assign", LocType::Assign)
                   .Default(LocType::End);
-  if (Type == LocType::End)
-    return error(DPVLoc, "expected valid #dbg record here");
+  // If the file contained an invalid debug record type then parsing should fail
+  // above; the assert here should only fire if the Lexer gives us an invalid
+  // value.
+  assert(Type != LocType::End &&
+         "Lexer returned an invalid DbgRecordType string.");
   Lex.Lex();
-  if (parseToken(lltok::lbrace, "Expected '{' here"))
+  if (parseToken(lltok::lparen, "Expected '(' here"))
     return true;
 
   // Parse Value field.
@@ -6540,7 +6543,7 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
   if (parseMetadata(Expression, &PFS))
     return true;
   if (!isa<DIExpression>(Expression))
-    return error(ExprLoc, "expected valid DIExpression here");
+    return error(ExprLoc, "expected valid inline DIExpression here");
   if (parseToken(lltok::comma, "Expected ',' here"))
     return true;
 
@@ -6565,8 +6568,8 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
     LocTy AddressExprLoc = Lex.getLoc();
     if (parseMetadata(AddressExpression, &PFS))
       return true;
-    if (!isa<DIExpression>(Expression))
-      return error(AddressExprLoc, "expected valid DIExpression here");
+    if (!isa<DIExpression>(AddressExpression))
+      return error(AddressExprLoc, "expected valid inline DIExpression here");
     if (parseToken(lltok::comma, "Expected ',' here"))
       return true;
   }
@@ -6576,7 +6579,7 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
   if (parseMDNode(DebugLoc))
     return true;
 
-  if (parseToken(lltok::rbrace, "Expected '}' here"))
+  if (parseToken(lltok::rparen, "Expected ')' here"))
     return true;
   DPV = DPValue::createUnresolvedDPValue(
       Type, ValLocMD, Variable, cast<DIExpression>(Expression), AssignID,
