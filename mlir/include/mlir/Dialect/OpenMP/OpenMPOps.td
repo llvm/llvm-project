@@ -505,6 +505,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
+
+    /// Returns its nested 'omp.simd' operation, if present.
+    SimdOp getNestedSimd();
   }];
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
@@ -617,11 +620,84 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def SimdOp : OpenMP_Op<"simd",
+    [AttrSizedOperandSegments, MemoryEffects<[MemWrite]>,
+     HasParent<"WsLoopOp">]> {
+ let summary = "simd construct";
+  let description = [{
+    The simd construct can be applied to a loop to indicate that the loop can be
+    transformed into a SIMD loop (that is, multiple iterations of the loop can
+    be executed concurrently using SIMD instructions).
+    
+    This operation is intended to hold SIMD information for a worksharing loop
+    (i.e. "omp for simd"), so it must always be nested inside of a parent
+    "omp.wsloop" operation as its only child. For SIMD loops not combined with a
+    worksharing loop (i.e. "omp simd"), the "omp.simdloop" is used instead.
+
+    The body region can contain any number of blocks. The region is terminated
+    by "omp.yield" instruction without operands.
+
+    The `alignment_values` attribute additionally specifies alignment of each
+    corresponding aligned operand. Note that `aligned_vars` and
+    `alignment_values` should contain the same number of elements.
+
+    When an if clause is present and evaluates to false, the preferred number of
+    iterations to be executed concurrently is one, regardless of whether
+    a simdlen clause is speciﬁed.
+
+    The optional `nontemporal` attribute specifies variables which have low
+    temporal locality across the iterations where they are accessed.
+
+    The optional `order` attribute specifies which order the iterations of the
+    associate loops are executed in. Currently the only option for this
+    attribute is "concurrent".
+
+    When a simdlen clause is present, the preferred number of iterations to be
+    executed concurrently is the value provided to the simdlen clause.
+
+    The safelen clause specifies that no two concurrent iterations within a
+    SIMD chunk can have a distance in the logical iteration space that is
+    greater than or equal to the value given in the clause.
+    ```
+    omp.wsloop for (%i) : index = (%c0) to (%c10) step (%c1) {
+      omp.simd <clauses> {
+        // block operations
+        omp.yield
+      }
+      omp.yield
+    ```
+  }];
+
+  // TODO: Add other clauses
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$aligned_vars,
+             OptionalAttr<I64ArrayAttr>:$alignment_values,
+             Optional<I1>:$if_expr,
+             Variadic<OpenMP_PointerLikeType>:$nontemporal_vars,
+             OptionalAttr<OrderKindAttr>:$order_val,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen
+     );
+
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    oilist(`aligned` `(`
+              custom<AlignedClause>($aligned_vars, type($aligned_vars),
+                                   $alignment_values) `)`
+          |`if` `(` $if_expr `)`
+          |`nontemporal` `(`  $nontemporal_vars `:` type($nontemporal_vars) `)`
+          |`order` `(` custom<ClauseAttr>($order_val) `)`
+          |`simdlen` `(` $simdlen  `)`
+          |`safelen` `(` $safelen  `)`
+    ) $region attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
 
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
      ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
-     "AtomicUpdateOp", "SimdLoopOp"]>]> {
+     "AtomicUpdateOp", "SimdLoopOp", "SimdOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and

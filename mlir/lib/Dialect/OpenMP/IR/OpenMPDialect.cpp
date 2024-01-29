@@ -1131,27 +1131,32 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for Simd construct [2.9.3.1]
+// Verifier for Simd constructs [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
-LogicalResult SimdLoopOp::verify() {
-  if (this->getLowerBound().empty()) {
-    return emitOpError() << "empty lowerbound for simd loop operation";
-  }
-  if (this->getSimdlen().has_value() && this->getSafelen().has_value() &&
-      this->getSimdlen().value() > this->getSafelen().value()) {
-    return emitOpError()
+template <typename OpTy>
+static LogicalResult verifySimdOp(OpTy op) {
+  if (op.getSimdlen().has_value() && op.getSafelen().has_value() &&
+      op.getSimdlen().value() > op.getSafelen().value()) {
+    return op.emitOpError()
            << "simdlen clause and safelen clause are both present, but the "
               "simdlen value is not less than or equal to safelen value";
   }
-  if (verifyAlignedClause(*this, this->getAlignmentValues(),
-                          this->getAlignedVars())
+  if (verifyAlignedClause(op, op.getAlignmentValues(), op.getAlignedVars())
           .failed())
     return failure();
-  if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
+  if (verifyNontemporalClause(op, op.getNontemporalVars()).failed())
     return failure();
   return success();
 }
+
+LogicalResult SimdLoopOp::verify() {
+  if (this->getLowerBound().empty())
+    return emitOpError() << "empty lowerbound for simd loop operation";
+  return verifySimdOp(*this);
+}
+
+LogicalResult SimdOp::verify() { return verifySimdOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // Verifier for Distribute construct [2.9.4.1]
@@ -1329,7 +1334,34 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &state,
   state.addAttributes(attributes);
 }
 
+SimdOp WsLoopOp::getNestedSimd() {
+  auto ops = this->getOps<SimdOp>();
+  assert(std::distance(ops.begin(), ops.end()) <= 1 &&
+         "There can only be a single omp.simd child at most");
+  return ops.empty() ? SimdOp() : *ops.begin();
+}
+
 LogicalResult WsLoopOp::verify() {
+  // Check that, if it has an omp.simd child, it must be the only one.
+  bool hasSimd = false, hasOther = false;
+  for (auto &op : this->getOps()) {
+    if (isa<SimdOp>(op)) {
+      if (hasSimd)
+        return emitOpError() << "cannot have multiple 'omp.simd' child ops";
+      hasSimd = true;
+
+      if (hasOther)
+        break;
+    } else if (!op.hasTrait<OpTrait::IsTerminator>()) {
+      hasOther = true;
+      if (hasSimd)
+        break;
+    }
+  }
+  if (hasSimd && hasOther)
+    return emitOpError() << "if 'omp.simd' is a child, it must be the only "
+                            "non-terminator child op";
+
   return verifyReductionVarList(*this, getReductions(), getReductionVars());
 }
 
