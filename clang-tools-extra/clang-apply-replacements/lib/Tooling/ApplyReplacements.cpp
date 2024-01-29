@@ -13,6 +13,7 @@
 /// FIXME: Use Diagnostics for output instead of llvm::errs().
 ///
 //===----------------------------------------------------------------------===//
+
 #include "clang-apply-replacements/Tooling/ApplyReplacements.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
@@ -270,5 +271,5 @@ bool deleteReplacementFiles(const TUReplacementFiles &Files,
   return Success;
 }
 
-} // end namespace replace
-} // end namespace clang
+} 
+} 
