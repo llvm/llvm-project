@@ -955,6 +955,10 @@ public:
     OpaqueParser = P;
   }
 
+  /// Callback to the parser to parse a type expressed as a string.
+  std::function<TypeResult(StringRef, StringRef, SourceLocation)>
+      ParseTypeFromStringCallback;
+
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
@@ -2102,11 +2106,15 @@ public:
                                  SourceLocation AttrLoc);
 
   CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
-  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
+  bool CheckRebuiltStmtAttributes(ArrayRef<const Attr *> Attrs);
 
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
+
+  /// Check an argument list for placeholders that we won't try to
+  /// handle later.
+  bool CheckArgsForPlaceholders(MultiExprArg args);
 
   /// Build a function type.
   ///
@@ -2153,7 +2161,7 @@ public:
                          SourceLocation Loc);
   QualType BuildBitIntType(bool IsUnsigned, Expr *BitWidth, SourceLocation Loc);
 
-  TypeSourceInfo *GetTypeForDeclarator(Declarator &D, Scope *S);
+  TypeSourceInfo *GetTypeForDeclarator(Declarator &D);
   TypeSourceInfo *GetTypeForDeclaratorCast(Declarator &D, QualType FromTy);
 
   /// Package the given type and TSI into a ParsedType.
@@ -2194,7 +2202,7 @@ public:
       SourceLocation TargetLoc, const FunctionProtoType *Source,
       bool SkipSourceFirstParameter, SourceLocation SourceLoc);
 
-  TypeResult ActOnTypeName(Scope *S, Declarator &D);
+  TypeResult ActOnTypeName(Declarator &D);
 
   /// The parser has parsed the context-sensitive type 'instancetype'
   /// in an Objective-C message declaration. Return the appropriate type.
@@ -2593,6 +2601,14 @@ public:
   /// If AsUnevaluated is false, E is treated as though it were an evaluated
   /// context, such as when building a type for decltype(auto).
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
+
+  QualType ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                 SourceLocation Loc,
+                                 SourceLocation EllipsisLoc);
+  QualType BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                 SourceLocation Loc, SourceLocation EllipsisLoc,
+                                 bool FullySubstituted = false,
+                                 ArrayRef<QualType> Expansions = {});
 
   using UTTKind = UnaryTransformType::UTTKind;
   QualType BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
@@ -3017,6 +3033,9 @@ public:
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
+  QualType AdjustParameterTypeForObjCAutoRefCount(QualType T,
+                                                  SourceLocation NameLoc,
+                                                  TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                               SourceLocation NameLoc, IdentifierInfo *Name,
                               QualType T, TypeSourceInfo *TSInfo,
@@ -4816,6 +4835,29 @@ public:
   /// Valid types should not have multiple attributes with different CCs.
   const AttributedType *getCallingConvAttributedType(QualType T) const;
 
+  /// Check whether a nullability type specifier can be added to the given
+  /// type through some means not written in source (e.g. API notes).
+  ///
+  /// \param Type The type to which the nullability specifier will be
+  /// added. On success, this type will be updated appropriately.
+  ///
+  /// \param Nullability The nullability specifier to add.
+  ///
+  /// \param DiagLoc The location to use for diagnostics.
+  ///
+  /// \param AllowArrayTypes Whether to accept nullability specifiers on an
+  /// array type (e.g., because it will decay to a pointer).
+  ///
+  /// \param OverrideExisting Whether to override an existing, locally-specified
+  /// nullability specifier rather than complaining about the conflict.
+  ///
+  /// \returns true if nullability cannot be applied, false otherwise.
+  bool CheckImplicitNullabilityTypeSpecifier(QualType &Type,
+                                             NullabilityKind Nullability,
+                                             SourceLocation DiagLoc,
+                                             bool AllowArrayTypes,
+                                             bool OverrideExisting);
+
   /// Process the attributes before creating an attributed statement. Returns
   /// the semantic attributes that have been processed.
   void ProcessStmtAttributes(Stmt *Stmt, const ParsedAttributes &InAttrs,
@@ -5839,6 +5881,18 @@ public:
                                           IdentifierInfo &Name,
                                           SourceLocation NameLoc,
                                           SourceLocation RParenLoc);
+
+  ExprResult ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
+                                   SourceLocation EllipsisLoc,
+                                   SourceLocation LSquareLoc, Expr *IndexExpr,
+                                   SourceLocation RSquareLoc);
+
+  ExprResult BuildPackIndexingExpr(Expr *PackExpression,
+                                   SourceLocation EllipsisLoc, Expr *IndexExpr,
+                                   SourceLocation RSquareLoc,
+                                   ArrayRef<Expr *> ExpandedExprs = {},
+                                   bool EmptyPack = false);
+
   ExprResult ActOnPostfixUnaryOp(Scope *S, SourceLocation OpLoc,
                                  tok::TokenKind Kind, Expr *Input);
 
@@ -7106,19 +7160,16 @@ public:
                                            const DeclSpec &DS,
                                            SourceLocation ColonColonLoc);
 
+  bool ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
+                                              const DeclSpec &DS,
+                                              SourceLocation ColonColonLoc,
+                                              QualType Type);
+
   bool IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
                                  NestedNameSpecInfo &IdInfo,
                                  bool EnteringContext);
 
-  /// The kind of conversion to check for. Either all attributes must match exactly,
-  /// or the converted type may add/drop '__arm_preserves_za'.
-  enum class AArch64SMECallConversionKind {
-    MatchExactly,
-    MayAddPreservesZA,
-    MayDropPreservesZA,
-  };
-  bool IsInvalidSMECallConversion(QualType FromType, QualType ToType,
-                                  AArch64SMECallConversionKind C);
+  bool IsInvalidSMECallConversion(QualType FromType, QualType ToType);
 
   /// The parser has parsed a nested-name-specifier
   /// 'template[opt] template-name < template-args >::'.
@@ -8569,8 +8620,8 @@ public:
                                           QualType ParamType,
                                           SourceLocation Loc);
   ExprResult
-  BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
-                                              SourceLocation Loc);
+  BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
+                                             SourceLocation Loc);
 
   /// Enumeration describing how template parameter lists are compared
   /// for equality.
@@ -9357,8 +9408,7 @@ public:
 
   QualType DeduceTemplateSpecializationFromInitializer(
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
-      const InitializationKind &Kind, MultiExprArg Init,
-      ParenListExpr *PL = nullptr);
+      const InitializationKind &Kind, MultiExprArg Init);
 
   QualType deduceVarTypeFromInitializer(VarDecl *VDecl, DeclarationName Name,
                                         QualType Type, TypeSourceInfo *TSI,
@@ -10267,11 +10317,13 @@ public:
     ~ConstraintEvalRAII() { TI.setEvaluateConstraints(OldValue); }
   };
 
-  // Unlike the above, this evaluates constraints, which should only happen at
-  // 'constraint checking' time.
+  // Must be used instead of SubstExpr at 'constraint checking' time.
   ExprResult
   SubstConstraintExpr(Expr *E,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
+  // Unlike the above, this does not evaluates constraints.
+  ExprResult SubstConstraintExprWithoutSatisfaction(
+      Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs);
 
   /// Substitute the given template arguments into a list of
   /// expressions, expanding pack expansions if required.
@@ -11222,6 +11274,11 @@ public:
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
 
+  // Heuristically tells if the function is `get_return_object` member of a
+  // coroutine promise_type by matching the function name.
+  static bool CanBeGetReturnObject(const FunctionDecl *FD);
+  static bool CanBeGetReturnTypeOnAllocFailure(const FunctionDecl *FD);
+
   // As a clang extension, enforces that a non-coroutine function must be marked
   // with [[clang::coro_wrapper]] if it returns a type marked with
   // [[clang::coro_return_type]].
@@ -11348,9 +11405,12 @@ private:
   /// rigorous semantic checking in the new mapped directives.
   bool mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                         ArrayRef<OMPClause *> Clauses,
-                        OpenMPBindClauseKind BindKind,
+                        OpenMPBindClauseKind &BindKind,
                         OpenMPDirectiveKind &Kind,
-                        OpenMPDirectiveKind &PrevMappedDirective);
+                        OpenMPDirectiveKind &PrevMappedDirective,
+                        SourceLocation StartLoc, SourceLocation EndLoc,
+                        const DeclarationNameInfo &DirName,
+                        OpenMPDirectiveKind CancelRegion);
 
 public:
   /// The declarator \p D defines a function in the scope \p S which is nested
@@ -12971,7 +13031,7 @@ public:
   QualType FindCompositeObjCPointerType(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation QuestionLoc);
 
-  bool DiagnoseConditionalForNull(Expr *LHSExpr, Expr *RHSExpr,
+  bool DiagnoseConditionalForNull(const Expr *LHSExpr, const Expr *RHSExpr,
                                   SourceLocation QuestionLoc);
 
   void DiagnoseAlwaysNonNullPointer(Expr *E,
@@ -13851,6 +13911,7 @@ private:
   bool CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool ParseSVEImmChecks(CallExpr *TheCall,
                          SmallVector<std::tuple<int, int, int>, 3> &ImmChecks);
+  bool CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckCDEBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                    CallExpr *TheCall);
   bool CheckARMCoprocessorImmediate(const TargetInfo &TI, const Expr *CoprocArg,
@@ -13896,8 +13957,9 @@ private:
 
   bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
-  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
-  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
+  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
+  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
+                                   unsigned BuiltinID);
   bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
@@ -14000,6 +14062,8 @@ private:
                             VariadicCallType CallType, SourceLocation Loc,
                             SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
+
+  void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
 
   void CheckAbsoluteValueFunction(const CallExpr *Call,
                                   const FunctionDecl *FDecl);

@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace llvm {
+class Instruction;
 class IRBuilderBase;
 } // namespace llvm
 
@@ -52,7 +53,8 @@ public:
   /// translation results and amend the corresponding IR constructs. Does
   /// nothing and succeeds by default.
   virtual LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const {
     return success();
   }
@@ -78,11 +80,13 @@ public:
   /// Acts on the given operation using the interface implemented by the dialect
   /// of one of the operation's dialect attributes.
   virtual LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const {
     if (const LLVMTranslationDialectInterface *iface =
             getInterfaceFor(attribute.getNameDialect())) {
-      return iface->amendOperation(op, attribute, moduleTranslation);
+      return iface->amendOperation(op, instructions, attribute,
+                                   moduleTranslation);
     }
     return success();
   }

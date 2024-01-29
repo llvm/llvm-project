@@ -268,6 +268,28 @@ static cl::opt<unsigned> BenchmarkRepeatCount(
              "before aggregating the results"),
     cl::cat(BenchmarkOptions), cl::init(30));
 
+static cl::list<ValidationEvent> ValidationCounters(
+    "validation-counter",
+    cl::desc(
+        "The name of a validation counter to run concurrently with the main "
+        "counter to validate benchmarking assumptions"),
+    cl::CommaSeparated, cl::cat(BenchmarkOptions),
+    cl::values(
+        clEnumValN(ValidationEvent::InstructionRetired, "instructions-retired",
+                   "Count retired instructions"),
+        clEnumValN(ValidationEvent::L1DCacheLoadMiss, "l1d-cache-load-misses",
+                   "Count L1D load cache misses"),
+        clEnumValN(ValidationEvent::L1DCacheStoreMiss, "l1d-cache-store-misses",
+                   "Count L1D store cache misses"),
+        clEnumValN(ValidationEvent::L1ICacheLoadMiss, "l1i-cache-load-misses",
+                   "Count L1I load cache misses"),
+        clEnumValN(ValidationEvent::DataTLBLoadMiss, "data-tlb-load-misses",
+                   "Count DTLB load misses"),
+        clEnumValN(ValidationEvent::DataTLBStoreMiss, "data-tlb-store-misses",
+                   "Count DTLB store misses"),
+        clEnumValN(ValidationEvent::InstructionTLBLoadMiss,
+                   "instruction-tlb-load-misses", "Count ITLB load misses")));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -410,7 +432,7 @@ static void runBenchmarkConfigurations(
       std::optional<StringRef> DumpFile;
       if (DumpObjectToDisk.getNumOccurrences())
         DumpFile = DumpObjectToDisk;
-      auto [Err, InstrBenchmark] =
+      auto [Err, BenchmarkResult] =
           Runner.runConfiguration(std::move(RC), DumpFile);
       if (Err) {
         // Errors from executing the snippets are fine.
@@ -419,9 +441,9 @@ static void runBenchmarkConfigurations(
           llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
           exit(1);
         }
-        InstrBenchmark.Error = toString(std::move(Err));
+        BenchmarkResult.Error = toString(std::move(Err));
       }
-      AllResults.push_back(std::move(InstrBenchmark));
+      AllResults.push_back(std::move(BenchmarkResult));
     }
     Benchmark &Result = AllResults.front();
 
@@ -437,7 +459,7 @@ static void runBenchmarkConfigurations(
            ArrayRef<Benchmark>(AllResults).drop_front()) {
         llvm::append_range(Result.AssembledSnippet,
                            OtherResult.AssembledSnippet);
-        // Aggregate measurements, but only iff all measurements succeeded.
+        // Aggregate measurements, but only if all measurements succeeded.
         if (Result.Measurements.empty())
           continue;
         assert(OtherResult.Measurements.size() == Result.Measurements.size() &&
@@ -501,7 +523,7 @@ void benchmarkMain() {
   const std::unique_ptr<BenchmarkRunner> Runner =
       ExitOnErr(State.getExegesisTarget().createBenchmarkRunner(
           BenchmarkMode, State, BenchmarkPhaseSelector, ExecutionMode,
-          BenchmarkRepeatCount, ResultAggMode));
+          BenchmarkRepeatCount, ValidationCounters, ResultAggMode));
   if (!Runner) {
     ExitWithError("cannot create benchmark runner");
   }

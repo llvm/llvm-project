@@ -142,6 +142,27 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
+  auto emitFieldInitializer = [&](const Record::Field *F, unsigned FieldOffset,
+                                  const Expr *InitExpr) -> bool {
+    if (std::optional<PrimType> T = this->classify(InitExpr)) {
+      if (!this->visit(InitExpr))
+        return false;
+
+      if (F->isBitField())
+        return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
+      return this->emitInitThisField(*T, FieldOffset, InitExpr);
+    }
+    // Non-primitive case. Get a pointer to the field-to-initialize
+    // on the stack and call visitInitialzer() for it.
+    if (!this->emitGetPtrThisField(FieldOffset, InitExpr))
+      return false;
+
+    if (!this->visitInitializer(InitExpr))
+      return false;
+
+    return this->emitPopPtr(InitExpr);
+  };
+
   // Emit custom code if this is a lambda static invoker.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(F);
       MD && MD->isLambdaStaticInvoker())
@@ -162,29 +183,8 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
       if (const FieldDecl *Member = Init->getMember()) {
         const Record::Field *F = R->getField(Member);
 
-        if (std::optional<PrimType> T = this->classify(InitExpr)) {
-          if (!this->visit(InitExpr))
-            return false;
-
-          if (F->isBitField()) {
-            if (!this->emitInitThisBitField(*T, F, InitExpr))
-              return false;
-          } else {
-            if (!this->emitInitThisField(*T, F->Offset, InitExpr))
-              return false;
-          }
-        } else {
-          // Non-primitive case. Get a pointer to the field-to-initialize
-          // on the stack and call visitInitialzer() for it.
-          if (!this->emitGetPtrThisField(F->Offset, InitExpr))
-            return false;
-
-          if (!this->visitInitializer(InitExpr))
-            return false;
-
-          if (!this->emitPopPtr(InitExpr))
-            return false;
-        }
+        if (!emitFieldInitializer(F, F->Offset, InitExpr))
+          return false;
       } else if (const Type *Base = Init->getBaseClass()) {
         // Base class initializer.
         // Get This Base and call initializer on it.
@@ -197,6 +197,26 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
         if (!this->visitInitializer(InitExpr))
           return false;
         if (!this->emitInitPtrPop(InitExpr))
+          return false;
+      } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
+        assert(IFD->getChainingSize() >= 2);
+
+        unsigned NestedFieldOffset = 0;
+        const Record::Field *NestedField = nullptr;
+        for (const NamedDecl *ND : IFD->chain()) {
+          const auto *FD = cast<FieldDecl>(ND);
+          const Record *FieldRecord =
+              this->P.getOrCreateRecord(FD->getParent());
+          assert(FieldRecord);
+
+          NestedField = FieldRecord->getField(FD);
+          assert(NestedField);
+
+          NestedFieldOffset += NestedField->Offset;
+        }
+        assert(NestedField);
+
+        if (!emitFieldInitializer(NestedField, NestedFieldOffset, InitExpr))
           return false;
       } else {
         assert(Init->isDelegatingInitializer());
@@ -262,7 +282,7 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
   default: {
     if (auto *Exp = dyn_cast<Expr>(S))
       return this->discard(Exp);
-    return this->bail(S);
+    return false;
   }
   }
 }

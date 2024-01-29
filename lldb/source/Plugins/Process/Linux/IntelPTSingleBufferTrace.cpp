@@ -62,7 +62,7 @@ static Expected<uint32_t> ReadIntelPTConfigFile(const char *file,
 
   if (type == BitOffset) {
     const char *prefix = "config:";
-    if (!text_buffer.startswith(prefix))
+    if (!text_buffer.starts_with(prefix))
       return createStringError(inconvertibleErrorCode(),
                                "The file '%s' contents doesn't start with '%s'",
                                file, prefix);

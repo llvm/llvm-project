@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=dse -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=dse -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; void esc(int*);

@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
+;RUN: llc < %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
+;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0
@@ -440,7 +440,7 @@ main_body:
   ret float %val
 }
 
-; Make sure a frame index folding doessn't crash on a MUBUF not used
+; Make sure a frame index folding doesn't crash on a MUBUF not used
 ; for stack access.
 
 ; CHECK-LABEL: {{^}}no_fold_fi_imm_soffset:

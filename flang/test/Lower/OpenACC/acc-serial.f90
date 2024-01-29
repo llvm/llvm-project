@@ -62,7 +62,7 @@ subroutine acc_serial
 
 ! CHECK:      acc.serial {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncAttr}
+! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
 
   !$acc serial async(1)
   !$acc end serial
@@ -83,15 +83,15 @@ subroutine acc_serial
   !$acc serial wait
   !$acc end serial
 
-! CHECK:      acc.serial {
+! CHECK:      acc.serial wait {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {waitAttr}
+! CHECK-NEXT: }
 
   !$acc serial wait(1)
   !$acc end serial
 
 ! CHECK:      [[WAIT1:%.*]] = arith.constant 1 : i32
-! CHECK:      acc.serial wait([[WAIT1]] : i32) {
+! CHECK:      acc.serial wait({[[WAIT1]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -100,7 +100,7 @@ subroutine acc_serial
 
 ! CHECK:      [[WAIT2:%.*]] = arith.constant 1 : i32
 ! CHECK:      [[WAIT3:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.serial wait([[WAIT2]], [[WAIT3]] : i32, i32) {
+! CHECK:      acc.serial wait({[[WAIT2]] : i32, [[WAIT3]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
@@ -109,7 +109,7 @@ subroutine acc_serial
 
 ! CHECK:      [[WAIT4:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:      [[WAIT5:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:      acc.serial wait([[WAIT4]], [[WAIT5]] : i32, i32) {
+! CHECK:      acc.serial wait({[[WAIT4]] : i32, [[WAIT5]] : i32}) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 

@@ -22,11 +22,11 @@ clang_tablegen("arm_sve") {
   output_name = "arm_sve.h"
 }
 
-# Generate arm_sme_draft_spec_subject_to_change.h
-clang_tablegen("arm_sme_draft_spec_subject_to_change") {
+# Generate arm_sme.h
+clang_tablegen("arm_sme") {
   args = [ "-gen-arm-sme-header" ]
   td_file = "//clang/include/clang/Basic/arm_sme.td"
-  output_name = "arm_sme_draft_spec_subject_to_change.h"
+  output_name = "arm_sme.h"
 }
 
 # Generate arm_bf16.h
@@ -50,6 +50,13 @@ clang_tablegen("arm_cde") {
   output_name = "arm_cde.h"
 }
 
+# Generate arm__vector_types.h
+clang_tablegen("arm_vector_types") {
+  args = [ "-gen-arm-vector-type" ]
+  td_file = "//clang/include/clang/Basic/arm_neon.td"
+  output_name = "arm_vector_types.h"
+}
+
 # Generate riscv_vector.h
 clang_tablegen("riscv_vector") {
   args = [ "-gen-riscv-vector-header" ]
@@ -65,8 +72,9 @@ copy("tablegen_headers") {
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
-    ":arm_sme_draft_spec_subject_to_change",
+    ":arm_sme",
     ":arm_sve",
+    ":arm_vector_types",
     ":riscv_vector",
   ]
   sources = []
@@ -112,6 +120,7 @@ copy("Headers") {
     "__stddef_wint_t.h",
     "__wmmintrin_aes.h",
     "__wmmintrin_pclmul.h",
+    "adcintrin.h",
     "adxintrin.h",
     "altivec.h",
     "ammintrin.h",

@@ -29,6 +29,6 @@ func.func @collapse_to_single() {
 // CHECK:           [[V1:%.*]] = arith.muli [[I1_COUNT]], [[C3]] : index
 // CHECK:           [[I0:%.*]] = arith.addi [[V1]], [[C3]] : index
 // CHECK:           "magic.op"([[I0]], [[I1]]) : (index, index) -> index
-// CHECK:           scf.yield
+// CHECK:           scf.reduce
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return

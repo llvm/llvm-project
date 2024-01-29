@@ -142,6 +142,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.mincore
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -173,6 +174,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
+
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -322,6 +326,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl
@@ -362,6 +369,9 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
+
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 

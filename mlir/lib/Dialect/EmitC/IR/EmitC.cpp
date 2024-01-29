@@ -50,6 +50,32 @@ void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<emitc::YieldOp>(loc);
 }
 
+/// Check that the type of the initial value is compatible with the operations
+/// result type.
+static LogicalResult verifyInitializationAttribute(Operation *op,
+                                                   Attribute value) {
+  assert(op->getNumResults() == 1 && "operation must have 1 result");
+
+  if (llvm::isa<emitc::OpaqueAttr>(value))
+    return success();
+
+  if (llvm::isa<StringAttr>(value))
+    return op->emitOpError()
+           << "string attributes are not supported, use #emitc.opaque instead";
+
+  Type resultType = op->getResult(0).getType();
+  Type attrType = cast<TypedAttr>(value).getType();
+
+  if (resultType != attrType)
+    return op->emitOpError()
+           << "requires attribute to either be an #emitc.opaque attribute or "
+              "it's type ("
+           << attrType << ") to match the op's result type (" << resultType
+           << ")";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // AddOp
 //===----------------------------------------------------------------------===//
@@ -169,25 +195,62 @@ LogicalResult emitc::CallOpaqueOp::verify() {
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-/// The constant op requires that the attribute's type matches the return type.
 LogicalResult emitc::ConstantOp::verify() {
-  if (llvm::isa<emitc::OpaqueAttr>(getValueAttr()))
-    return success();
-
-  // Value must not be empty
-  StringAttr strAttr = llvm::dyn_cast<StringAttr>(getValueAttr());
-  if (strAttr && strAttr.empty())
-    return emitOpError() << "value must not be empty";
-
-  auto value = cast<TypedAttr>(getValueAttr());
-  Type type = getType();
-  if (!llvm::isa<NoneType>(value.getType()) && type != value.getType())
-    return emitOpError() << "requires attribute's type (" << value.getType()
-                         << ") to match op's return type (" << type << ")";
+  Attribute value = getValueAttr();
+  if (failed(verifyInitializationAttribute(getOperation(), value)))
+    return failure();
+  if (auto opaqueValue = llvm::dyn_cast<emitc::OpaqueAttr>(value)) {
+    if (opaqueValue.getValue().empty())
+      return emitOpError() << "value must not be empty";
+  }
   return success();
 }
 
 OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// ExpressionOp
+//===----------------------------------------------------------------------===//
+
+Operation *ExpressionOp::getRootOp() {
+  auto yieldOp = cast<YieldOp>(getBody()->getTerminator());
+  Value yieldedValue = yieldOp.getResult();
+  Operation *rootOp = yieldedValue.getDefiningOp();
+  assert(rootOp && "Yielded value not defined within expression");
+  return rootOp;
+}
+
+LogicalResult ExpressionOp::verify() {
+  Type resultType = getResult().getType();
+  Region &region = getRegion();
+
+  Block &body = region.front();
+
+  if (!body.mightHaveTerminator())
+    return emitOpError("must yield a value at termination");
+
+  auto yield = cast<YieldOp>(body.getTerminator());
+  Value yieldResult = yield.getResult();
+
+  if (!yieldResult)
+    return emitOpError("must yield a value at termination");
+
+  Type yieldType = yieldResult.getType();
+
+  if (resultType != yieldType)
+    return emitOpError("requires yielded type to match return type");
+
+  for (Operation &op : region.front().without_terminator()) {
+    if (!isCExpression(op))
+      return emitOpError("contains an unsupported operation");
+    if (op.getNumResults() != 1)
+      return emitOpError("requires exactly one result for each operation");
+    if (!op.getResult(0).hasOneUse())
+      return emitOpError("requires exactly one use for each operation");
+  }
+
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // ForOp
@@ -517,16 +580,24 @@ LogicalResult SubOp::verify() {
 // VariableOp
 //===----------------------------------------------------------------------===//
 
-/// The variable op requires that the attribute's type matches the return type.
 LogicalResult emitc::VariableOp::verify() {
-  if (llvm::isa<emitc::OpaqueAttr>(getValueAttr()))
-    return success();
+  return verifyInitializationAttribute(getOperation(), getValueAttr());
+}
 
-  auto value = cast<TypedAttr>(getValueAttr());
-  Type type = getType();
-  if (!llvm::isa<NoneType>(value.getType()) && type != value.getType())
-    return emitOpError() << "requires attribute's type (" << value.getType()
-                         << ") to match op's return type (" << type << ")";
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult emitc::YieldOp::verify() {
+  Value result = getResult();
+  Operation *containingOp = getOperation()->getParentOp();
+
+  if (result && containingOp->getNumResults() != 1)
+    return emitOpError() << "yields a value not returned by parent";
+
+  if (!result && containingOp->getNumResults() != 0)
+    return emitOpError() << "does not yield a value to be returned by parent";
+
   return success();
 }
 
@@ -550,27 +621,6 @@ LogicalResult emitc::VariableOp::verify() {
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCAttributes.cpp.inc"
 
-Attribute emitc::OpaqueAttr::parse(AsmParser &parser, Type type) {
-  if (parser.parseLess())
-    return Attribute();
-  std::string value;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseOptionalString(&value)) {
-    parser.emitError(loc) << "expected string";
-    return Attribute();
-  }
-  if (parser.parseGreater())
-    return Attribute();
-
-  return get(parser.getContext(), value);
-}
-
-void emitc::OpaqueAttr::print(AsmPrinter &printer) const {
-  printer << "<\"";
-  llvm::printEscapedString(getValue(), printer.getStream());
-  printer << "\">";
-}
-
 //===----------------------------------------------------------------------===//
 // EmitC Types
 //===----------------------------------------------------------------------===//
@@ -582,27 +632,15 @@ void emitc::OpaqueAttr::print(AsmPrinter &printer) const {
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
-Type emitc::OpaqueType::parse(AsmParser &parser) {
-  if (parser.parseLess())
-    return Type();
-  std::string value;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseOptionalString(&value) || value.empty()) {
-    parser.emitError(loc) << "expected non empty string in !emitc.opaque type";
-    return Type();
+LogicalResult mlir::emitc::OpaqueType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    llvm::StringRef value) {
+  if (value.empty()) {
+    return emitError() << "expected non empty string in !emitc.opaque type";
   }
   if (value.back() == '*') {
-    parser.emitError(loc) << "pointer not allowed as outer type with "
-                             "!emitc.opaque, use !emitc.ptr instead";
-    return Type();
+    return emitError() << "pointer not allowed as outer type with "
+                          "!emitc.opaque, use !emitc.ptr instead";
   }
-  if (parser.parseGreater())
-    return Type();
-  return get(parser.getContext(), value);
-}
-
-void emitc::OpaqueType::print(AsmPrinter &printer) const {
-  printer << "<\"";
-  llvm::printEscapedString(getValue(), printer.getStream());
-  printer << "\">";
+  return success();
 }

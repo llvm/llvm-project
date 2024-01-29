@@ -44,6 +44,42 @@ using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
 
+TinyPtrVector<DbgDeclareInst *> llvm::findDbgDeclares(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = LocalAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+  auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
+  if (!MDV)
+    return {};
+
+  TinyPtrVector<DbgDeclareInst *> Declares;
+  for (User *U : MDV->users())
+    if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
+      Declares.push_back(DDI);
+
+  return Declares;
+}
+TinyPtrVector<DPValue *> llvm::findDPVDeclares(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = LocalAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+
+  TinyPtrVector<DPValue *> Declares;
+  for (DPValue *DPV : L->getAllDPValueUsers())
+    if (DPV->getType() == DPValue::LocationType::Declare)
+      Declares.push_back(DPV);
+
+  return Declares;
+}
+
 template <typename IntrinsicT,
           DPValue::LocationType Type = DPValue::LocationType::Any>
 static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
@@ -97,12 +133,6 @@ static void findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
   }
 }
 
-void llvm::findDbgDeclares(SmallVectorImpl<DbgDeclareInst *> &DbgUsers,
-                           Value *V, SmallVectorImpl<DPValue *> *DPValues) {
-  findDbgIntrinsics<DbgDeclareInst, DPValue::LocationType::Declare>(DbgUsers, V,
-                                                                    DPValues);
-}
-
 void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues,
                          Value *V, SmallVectorImpl<DPValue *> *DPValues) {
   findDbgIntrinsics<DbgValueInst, DPValue::LocationType::Value>(DbgValues, V,
@@ -131,6 +161,18 @@ DebugLoc llvm::getDebugValueLoc(DbgVariableIntrinsic *DII) {
   // DebugLoc leaks into any adjacent instructions. Produce an unknown location
   // with the correct scope / inlinedAt fields.
   return DILocation::get(DII->getContext(), 0, 0, Scope, InlinedAt);
+}
+
+DebugLoc llvm::getDebugValueLoc(DPValue *DPV) {
+  // Original dbg.declare must have a location.
+  const DebugLoc &DeclareLoc = DPV->getDebugLoc();
+  MDNode *Scope = DeclareLoc.getScope();
+  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
+  // Because no machine insts can come from debug intrinsics, only the scope
+  // and inlinedAt is significant. Zero line numbers are used in case this
+  // DebugLoc leaks into any adjacent instructions. Produce an unknown location
+  // with the correct scope / inlinedAt fields.
+  return DILocation::get(DPV->getContext(), 0, 0, Scope, InlinedAt);
 }
 
 //===----------------------------------------------------------------------===//
@@ -850,6 +892,9 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
         // Strip heapallocsite attachments, they point into the DIType system.
         if (I.hasMetadataOtherThanDebugLoc())
           I.setMetadata("heapallocsite", nullptr);
+
+        // Strip any DPValues attached.
+        I.dropDbgValues();
       }
     }
   }
@@ -1749,21 +1794,17 @@ AssignmentMarkerRange at::getAssignmentMarkers(DIAssignID *ID) {
 
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
   auto Range = getAssignmentMarkers(Inst);
-  if (Range.empty())
+  SmallVector<DPValue *> DPVAssigns = getDPVAssignmentMarkers(Inst);
+  if (Range.empty() && DPVAssigns.empty())
     return;
   SmallVector<DbgAssignIntrinsic *> ToDelete(Range.begin(), Range.end());
   for (auto *DAI : ToDelete)
     DAI->eraseFromParent();
+  for (auto *DPV : DPVAssigns)
+    DPV->eraseFromParent();
 }
 
 void at::RAUW(DIAssignID *Old, DIAssignID *New) {
-  // Replace MetadataAsValue uses.
-  if (auto *OldIDAsValue =
-          MetadataAsValue::getIfExists(Old->getContext(), Old)) {
-    auto *NewIDAsValue = MetadataAsValue::get(Old->getContext(), New);
-    OldIDAsValue->replaceAllUsesWith(NewIDAsValue);
-  }
-
   // Replace attachments.
   AssignmentInstRange InstRange = getAssignmentInsts(Old);
   // Use intermediate storage for the instruction ptrs because the
@@ -1772,12 +1813,18 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
   SmallVector<Instruction *> InstVec(InstRange.begin(), InstRange.end());
   for (auto *I : InstVec)
     I->setMetadata(LLVMContext::MD_DIAssignID, New);
+
+  Old->replaceAllUsesWith(New);
 }
 
 void at::deleteAll(Function *F) {
   SmallVector<DbgAssignIntrinsic *, 12> ToDelete;
+  SmallVector<DPValue *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
+      for (auto &DPV : I.getDbgValueRange())
+        if (DPV.isDbgAssign())
+          DPToDelete.push_back(&DPV);
       if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
         ToDelete.push_back(DAI);
       else
@@ -1786,11 +1833,38 @@ void at::deleteAll(Function *F) {
   }
   for (auto *DAI : ToDelete)
     DAI->eraseFromParent();
+  for (auto *DPV : DPToDelete)
+    DPV->eraseFromParent();
 }
 
-bool at::calculateFragmentIntersect(
+/// Get the FragmentInfo for the variable if it exists, otherwise return a
+/// FragmentInfo that covers the entire variable if the variable size is
+/// known, otherwise return a zero-sized fragment.
+static DIExpression::FragmentInfo
+getFragmentOrEntireVariable(const DPValue *DPV) {
+  DIExpression::FragmentInfo VariableSlice(0, 0);
+  // Get the fragment or variable size, or zero.
+  if (auto Sz = DPV->getFragmentSizeInBits())
+    VariableSlice.SizeInBits = *Sz;
+  if (auto Frag = DPV->getExpression()->getFragmentInfo())
+    VariableSlice.OffsetInBits = Frag->OffsetInBits;
+  return VariableSlice;
+}
+
+static DIExpression::FragmentInfo
+getFragmentOrEntireVariable(const DbgVariableIntrinsic *DVI) {
+  DIExpression::FragmentInfo VariableSlice(0, 0);
+  // Get the fragment or variable size, or zero.
+  if (auto Sz = DVI->getFragmentSizeInBits())
+    VariableSlice.SizeInBits = *Sz;
+  if (auto Frag = DVI->getExpression()->getFragmentInfo())
+    VariableSlice.OffsetInBits = Frag->OffsetInBits;
+  return VariableSlice;
+}
+template <typename T>
+bool calculateFragmentIntersectImpl(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
-    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
+    uint64_t SliceSizeInBits, const T *AssignRecord,
     std::optional<DIExpression::FragmentInfo> &Result) {
   // There are multiple offsets at play in this function, so let's break it
   // down. Starting with how variables may be stored in allocas:
@@ -1819,7 +1893,7 @@ bool at::calculateFragmentIntersect(
   // dbg.assign, that has been killed, if any.
   //
   //     calculateFragmentIntersect(..., SliceOffsetInBits=0,
-  //                 SliceSizeInBits=32, Dest=%dest, DAI=dbg.assign)
+  //                 SliceSizeInBits=32, Dest=%dest, Assign=dbg.assign)
   //
   // Drawing the store (s) in memory followed by the shortened version ($),
   // then the dbg.assign (d), with the fragment information on a seperate scale
@@ -1832,7 +1906,8 @@ bool at::calculateFragmentIntersect(
   //        |      |
   //       s[######] - Original stores 64 bits to Dest.
   //       $----[##] - DSE says the lower 32 bits are dead, to be removed.
-  //       d    [##] - DAI's address-modifying expression adds 4 bytes to dest.
+  //       d    [##] - Assign's address-modifying expression adds 4 bytes to
+  //       dest.
   // Variable   |  |
   // Fragment   128|
   //  Offsets      159
@@ -1847,10 +1922,10 @@ bool at::calculateFragmentIntersect(
   //
   // 3. That offset along with the store size (32) represents the bits of the
   //    variable that'd be affected by the store. Call it SliceOfVariable.
-  //    Intersect that with DAI's fragment info:
-  //      SliceOfVariable ∩ DAI_fragment = none
+  //    Intersect that with Assign's fragment info:
+  //      SliceOfVariable ∩ Assign_fragment = none
   //
-  // In this case: none of the dead bits of the store affect DAI.
+  // In this case: none of the dead bits of the store affect Assign.
   //
   // # Example 2
   // Similar example with the same goal. This time the upper 16 bits
@@ -1861,7 +1936,7 @@ bool at::calculateFragmentIntersect(
   //               !DIExpression(DW_OP_plus_uconst, 4))
   //
   //     calculateFragmentIntersect(..., SliceOffsetInBits=48,
-  //                 SliceSizeInBits=16, Dest=%dest, DAI=dbg.assign)
+  //                 SliceSizeInBits=16, Dest=%dest, Assign=dbg.assign)
   //
   // Memory
   // offset
@@ -1870,7 +1945,8 @@ bool at::calculateFragmentIntersect(
   //        |      |
   //       s[######] - Original stores 64 bits to Dest.
   //       $[####]-- - DSE says the upper 16 bits are dead, to be removed.
-  //       d    [##] - DAI's address-modifying expression adds 4 bytes to dest.
+  //       d    [##] - Assign's address-modifying expression adds 4 bytes to
+  //       dest.
   // Variable   |  |
   // Fragment   128|
   //  Offsets      159
@@ -1879,13 +1955,14 @@ bool at::calculateFragmentIntersect(
   // 1. SliceOffsetInBits:48 + VarFrag.OffsetInBits:128 = 176
   // 2. 176 - (expression_offset:32 + (d.address - dest):0) = 144
   // 3. SliceOfVariable offset = 144, size = 16:
-  //      SliceOfVariable ∩ DAI_fragment = (offset: 144, size: 16)
-  // SliceOfVariable tells us the bits of the variable described by DAI that are
-  // affected by the DSE.
-  if (DAI->isKillAddress())
+  //      SliceOfVariable ∩ Assign_fragment = (offset: 144, size: 16)
+  // SliceOfVariable tells us the bits of the variable described by Assign that
+  // are affected by the DSE.
+  if (AssignRecord->isKillAddress())
     return false;
 
-  DIExpression::FragmentInfo VarFrag = DAI->getFragmentOrEntireVariable();
+  DIExpression::FragmentInfo VarFrag =
+      getFragmentOrEntireVariable(AssignRecord);
   if (VarFrag.SizeInBits == 0)
     return false; // Variable size is unknown.
 
@@ -1893,12 +1970,14 @@ bool at::calculateFragmentIntersect(
   // address-modifying expression.
   int64_t PointerOffsetInBits;
   {
-    auto DestOffsetInBytes = DAI->getAddress()->getPointerOffsetFrom(Dest, DL);
+    auto DestOffsetInBytes =
+        AssignRecord->getAddress()->getPointerOffsetFrom(Dest, DL);
     if (!DestOffsetInBytes)
       return false; // Can't calculate difference in addresses.
 
     int64_t ExprOffsetInBytes;
-    if (!DAI->getAddressExpression()->extractIfOffset(ExprOffsetInBytes))
+    if (!AssignRecord->getAddressExpression()->extractIfOffset(
+            ExprOffsetInBytes))
       return false;
 
     int64_t PointerOffsetInBytes = *DestOffsetInBytes + ExprOffsetInBytes;
@@ -1912,7 +1991,8 @@ bool at::calculateFragmentIntersect(
   if (NewOffsetInBits < 0)
     return false; // Fragment offsets can only be positive.
   DIExpression::FragmentInfo SliceOfVariable(SliceSizeInBits, NewOffsetInBits);
-  // Intersect the variable slice with DAI's fragment to trim it down to size.
+  // Intersect the variable slice with AssignRecord's fragment to trim it down
+  // to size.
   DIExpression::FragmentInfo TrimmedSliceOfVariable =
       DIExpression::FragmentInfo::intersect(SliceOfVariable, VarFrag);
   if (TrimmedSliceOfVariable == VarFrag)
@@ -1920,6 +2000,20 @@ bool at::calculateFragmentIntersect(
   else
     Result = TrimmedSliceOfVariable;
   return true;
+}
+bool at::calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
+    std::optional<DIExpression::FragmentInfo> &Result) {
+  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
+                                        SliceSizeInBits, DbgAssign, Result);
+}
+bool at::calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DPValue *DPVAssign,
+    std::optional<DIExpression::FragmentInfo> &Result) {
+  return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
+                                        SliceSizeInBits, DPVAssign, Result);
 }
 
 /// Collect constant properies (base, size, offset) of \p StoreDest.
@@ -1971,9 +2065,9 @@ std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
 }
 
 /// Returns nullptr if the assignment shouldn't be attributed to this variable.
-static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
-                               Instruction &StoreLikeInst,
-                               const VarRecord &VarRec, DIBuilder &DIB) {
+static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
+                          Instruction &StoreLikeInst, const VarRecord &VarRec,
+                          DIBuilder &DIB) {
   auto *ID = StoreLikeInst.getMetadata(LLVMContext::MD_DIAssignID);
   assert(ID && "Store instruction must have DIAssignID metadata");
   (void)ID;
@@ -1997,7 +2091,7 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
 
     // Discard stores to bits outside this variable.
     if (FragStartBit >= FragEndBit)
-      return nullptr;
+      return;
 
     StoreToWholeVariable = FragStartBit <= VarStartBit && FragEndBit >= *Size;
   }
@@ -2012,8 +2106,17 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
   }
   DIExpression *AddrExpr =
       DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
-  return DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
-                             AddrExpr, VarRec.DL);
+  if (StoreLikeInst.getParent()->IsNewDbgInfoFormat) {
+    auto *Assign = DPValue::createLinkedDPVAssign(
+        &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);
+    (void)Assign;
+    LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
+    return;
+  }
+  auto *Assign = DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr,
+                                     Dest, AddrExpr, VarRec.DL);
+  (void)Assign;
+  LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
 }
 
 #undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
@@ -2100,12 +2203,8 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
         I.setMetadata(LLVMContext::MD_DIAssignID, ID);
       }
 
-      for (const VarRecord &R : LocalIt->second) {
-        auto *Assign =
-            emitDbgAssign(*Info, ValueComponent, DestComponent, I, R, DIB);
-        (void)Assign;
-        LLVM_DEBUG(if (Assign) errs() << " > INSERT: " << *Assign << "\n");
-      }
+      for (const VarRecord &R : LocalIt->second)
+        emitDbgAssign(*Info, ValueComponent, DestComponent, I, R, DIB);
     }
   }
 }
@@ -2115,38 +2214,48 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   if (F.hasFnAttribute(Attribute::OptimizeNone))
     return /*Changed*/ false;
 
+  // FIXME: https://github.com/llvm/llvm-project/issues/76545
+  if (F.hasFnAttribute(Attribute::SanitizeHWAddress))
+    return /*Changed*/ false;
+
   bool Changed = false;
   auto *DL = &F.getParent()->getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to
   // delete after running `trackAssignments`.
   DenseMap<const AllocaInst *, SmallPtrSet<DbgDeclareInst *, 2>> DbgDeclares;
+  DenseMap<const AllocaInst *, SmallPtrSet<DPValue *, 2>> DPVDeclares;
   // Create another similar map of {storage : variables} that we'll pass to
   // trackAssignments.
   StorageToVarsMap Vars;
+  auto ProcessDeclare = [&](auto *Declare, auto &DeclareList) {
+    // FIXME: trackAssignments doesn't let you specify any modifiers to the
+    // variable (e.g. fragment) or location (e.g. offset), so we have to
+    // leave dbg.declares with non-empty expressions in place.
+    if (Declare->getExpression()->getNumElements() != 0)
+      return;
+    if (!Declare->getAddress())
+      return;
+    if (AllocaInst *Alloca =
+            dyn_cast<AllocaInst>(Declare->getAddress()->stripPointerCasts())) {
+      // FIXME: Skip VLAs for now (let these variables use dbg.declares).
+      if (!Alloca->isStaticAlloca())
+        return;
+      // Similarly, skip scalable vectors (use dbg.declares instead).
+      if (auto Sz = Alloca->getAllocationSize(*DL); Sz && Sz->isScalable())
+        return;
+      DeclareList[Alloca].insert(Declare);
+      Vars[Alloca].insert(VarRecord(Declare));
+    }
+  };
   for (auto &BB : F) {
     for (auto &I : BB) {
-      DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I);
-      if (!DDI)
-        continue;
-      // FIXME: trackAssignments doesn't let you specify any modifiers to the
-      // variable (e.g. fragment) or location (e.g. offset), so we have to
-      // leave dbg.declares with non-empty expressions in place.
-      if (DDI->getExpression()->getNumElements() != 0)
-        continue;
-      if (!DDI->getAddress())
-        continue;
-      if (AllocaInst *Alloca =
-              dyn_cast<AllocaInst>(DDI->getAddress()->stripPointerCasts())) {
-        // FIXME: Skip VLAs for now (let these variables use dbg.declares).
-        if (!Alloca->isStaticAlloca())
-          continue;
-        // Similarly, skip scalable vectors (use dbg.declares instead).
-        if (auto Sz = Alloca->getAllocationSize(*DL); Sz && Sz->isScalable())
-          continue;
-        DbgDeclares[Alloca].insert(DDI);
-        Vars[Alloca].insert(VarRecord(DDI));
+      for (auto &DPV : I.getDbgValueRange()) {
+        if (DPV.isDbgDeclare())
+          ProcessDeclare(&DPV, DPVDeclares);
       }
+      if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I))
+        ProcessDeclare(DDI, DbgDeclares);
     }
   }
 
@@ -2162,27 +2271,30 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   trackAssignments(F.begin(), F.end(), Vars, *DL);
 
   // Delete dbg.declares for variables now tracked with assignment tracking.
-  for (auto &P : DbgDeclares) {
-    const AllocaInst *Alloca = P.first;
-    auto Markers = at::getAssignmentMarkers(Alloca);
+  auto DeleteSubsumedDeclare = [&](const auto &Markers, auto &Declares) {
     (void)Markers;
-    for (DbgDeclareInst *DDI : P.second) {
-      // Assert that the alloca that DDI uses is now linked to a dbg.assign
+    for (auto *Declare : Declares) {
+      // Assert that the alloca that Declare uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare has
       // been replaced by a dbg.assign). Use DebugVariableAggregate to Discard
       // the fragment part because trackAssignments may alter the
       // fragment. e.g. if the alloca is smaller than the variable, then
       // trackAssignments will create an alloca-sized fragment for the
       // dbg.assign.
-      assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
-        return DebugVariableAggregate(DAI) == DebugVariableAggregate(DDI);
+      assert(llvm::any_of(Markers, [Declare](auto *Assign) {
+        return DebugVariableAggregate(Assign) ==
+               DebugVariableAggregate(Declare);
       }));
-      // Delete DDI because the variable location is now tracked using
+      // Delete Declare because the variable location is now tracked using
       // assignment tracking.
-      DDI->eraseFromParent();
+      Declare->eraseFromParent();
       Changed = true;
     }
-  }
+  };
+  for (auto &P : DbgDeclares)
+    DeleteSubsumedDeclare(at::getAssignmentMarkers(P.first), P.second);
+  for (auto &P : DPVDeclares)
+    DeleteSubsumedDeclare(at::getDPVAssignmentMarkers(P.first), P.second);
   return Changed;
 }
 

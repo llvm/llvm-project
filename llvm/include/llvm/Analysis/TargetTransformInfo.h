@@ -560,6 +560,10 @@ public:
     // (set to UINT_MAX to disable). This does not apply in cases where the
     // loop is being fully unrolled.
     unsigned MaxCount;
+    /// Set the maximum upper bound of trip count. Allowing the MaxUpperBound
+    /// to be overrided by a target gives more flexiblity on certain cases.
+    /// By default, MaxUpperBound uses UnrollMaxUpperBound which value is 8.
+    unsigned MaxUpperBound;
     /// Set the maximum unrolling factor for full unrolling. Like MaxCount, but
     /// applies even if full unrolling is selected. This allows a target to fall
     /// back to Partial unrolling if full unrolling is above FullUnrollMaxCount.
@@ -930,6 +934,12 @@ public:
   /// Should the Select Optimization pass be enabled and ran.
   bool enableSelectOptimize() const;
 
+  /// Should the Select Optimization pass treat the given instruction like a
+  /// select, potentially converting it to a conditional branch. This can
+  /// include select-like instructions like or(zext(c), x) that can be converted
+  /// to selects.
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) const;
+
   /// Enable matching of interleaved access groups.
   bool enableInterleavedAccessVectorization() const;
 
@@ -1002,6 +1012,16 @@ public:
   /// more beneficial constant hoisting is).
   InstructionCost getIntImmCodeSizeCost(unsigned Opc, unsigned Idx,
                                         const APInt &Imm, Type *Ty) const;
+
+  /// It can be advantageous to detach complex constants from their uses to make
+  /// their generation cheaper. This hook allows targets to report when such
+  /// transformations might negatively effect the code generation of the
+  /// underlying operation. The motivating example is divides whereby hoisting
+  /// constants prevents the code generator's ability to transform them into
+  /// combinations of simpler operations.
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const;
+
   /// @}
 
   /// \name Vector Target Information
@@ -1160,6 +1180,9 @@ public:
   /// \return The associativity of the cache level, if available.
   std::optional<unsigned> getCacheAssociativity(CacheLevel Level) const;
 
+  /// \return The minimum architectural page size for the target.
+  std::optional<unsigned> getMinPageSize() const;
+
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
   /// instructions.
@@ -1228,6 +1251,18 @@ public:
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr) const;
+
+  /// Returns the cost estimation for alternating opcode pattern that can be
+  /// lowered to a single instruction on the target. In X86 this is for the
+  /// addsub instruction which corrsponds to a Shuffle + Fadd + FSub pattern in
+  /// IR. This function expects two opcodes: \p Opcode1 and \p Opcode2 being
+  /// selected by \p OpcodeMask. The mask contains one bit per lane and is a `0`
+  /// when \p Opcode0 is selected and `1` when Opcode1 is selected.
+  /// \p VecTy is the vector type of the instruction to be generated.
+  InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
   /// The exact mask may be passed as Mask, or else the array will be empty.
@@ -1849,6 +1884,7 @@ public:
   virtual MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
   virtual bool enableSelectOptimize() = 0;
+  virtual bool shouldTreatInstructionLikeSelect(const Instruction *I) = 0;
   virtual bool enableInterleavedAccessVectorization() = 0;
   virtual bool enableMaskedInterleavedAccessVectorization() = 0;
   virtual bool isFPVectorizationPotentiallyUnsafe() = 0;
@@ -1873,6 +1909,8 @@ public:
   virtual InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TargetCostKind CostKind) = 0;
+  virtual bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                             const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
@@ -1895,6 +1933,7 @@ public:
   virtual std::optional<unsigned> getCacheSize(CacheLevel Level) const = 0;
   virtual std::optional<unsigned> getCacheAssociativity(CacheLevel Level)
       const = 0;
+  virtual std::optional<unsigned> getMinPageSize() const = 0;
 
   /// \return How much before a load we should place the prefetch
   /// instruction.  This is currently measured in number of
@@ -1928,6 +1967,10 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       OperandValueInfo Opd1Info, OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
+  virtual InstructionCost getAltInstrCost(
+      VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+      const SmallBitVector &OpcodeMask,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const = 0;
 
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                          ArrayRef<int> Mask,
@@ -2379,6 +2422,9 @@ public:
   bool enableSelectOptimize() override {
     return Impl.enableSelectOptimize();
   }
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) override {
+    return Impl.shouldTreatInstructionLikeSelect(I);
+  }
   bool enableInterleavedAccessVectorization() override {
     return Impl.enableInterleavedAccessVectorization();
   }
@@ -2429,6 +2475,10 @@ public:
                                       const APInt &Imm, Type *Ty,
                                       TargetCostKind CostKind) override {
     return Impl.getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
+  }
+  bool preferToKeepConstantsAttached(const Instruction &Inst,
+                                     const Function &Fn) const override {
+    return Impl.preferToKeepConstantsAttached(Inst, Fn);
   }
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);
@@ -2484,6 +2534,10 @@ public:
     return Impl.getCacheAssociativity(Level);
   }
 
+  std::optional<unsigned> getMinPageSize() const override {
+    return Impl.getMinPageSize();
+  }
+
   /// Return the preferred prefetch distance in terms of instructions.
   ///
   unsigned getPrefetchDistance() const override {
@@ -2534,6 +2588,12 @@ public:
       const Instruction *CxtI = nullptr) override {
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Args, CxtI);
+  }
+  InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
+                                  unsigned Opcode1,
+                                  const SmallBitVector &OpcodeMask,
+                                  TTI::TargetCostKind CostKind) const override {
+    return Impl.getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
   }
 
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,

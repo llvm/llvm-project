@@ -328,7 +328,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
     StringRef Opt = A->getValue(0);
-    if (Opt.startswith("-emscripten-cxx-exceptions-allowed")) {
+    if (Opt.starts_with("-emscripten-cxx-exceptions-allowed")) {
       // '-mllvm -emscripten-cxx-exceptions-allowed' should be used with
       // '-mllvm -enable-emscripten-cxx-exceptions'
       bool EmEHArgExists = false;
@@ -355,7 +355,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       }
     }
 
-    if (Opt.startswith("-wasm-enable-sjlj")) {
+    if (Opt.starts_with("-wasm-enable-sjlj")) {
       // '-mllvm -wasm-enable-sjlj' is not compatible with
       // '-mno-exception-handling'
       if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,

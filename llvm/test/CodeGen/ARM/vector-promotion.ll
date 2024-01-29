@@ -1,5 +1,5 @@
-; RUN: opt -codegenprepare -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon -S | FileCheck --check-prefix=IR-BOTH --check-prefix=IR-NORMAL %s
-; RUN: opt -codegenprepare -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon -S -stress-cgp-store-extract | FileCheck --check-prefix=IR-BOTH --check-prefix=IR-STRESS %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon -S | FileCheck --check-prefix=IR-BOTH --check-prefix=IR-NORMAL %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon -S -stress-cgp-store-extract | FileCheck --check-prefix=IR-BOTH --check-prefix=IR-STRESS %s
 ; RUN: llc -mtriple=thumbv7-apple-ios %s -o - -mattr=+neon | FileCheck --check-prefix=ASM %s
 
 ; IR-BOTH-LABEL: @simpleOneInstructionPromotion

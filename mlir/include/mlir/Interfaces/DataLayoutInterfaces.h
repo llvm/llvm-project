@@ -61,6 +61,14 @@ getDefaultPreferredAlignment(Type type, const DataLayout &dataLayout,
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
 
+/// Default handler for program memory space request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultProgramMemorySpace(DataLayoutEntryInterface entry);
+
+/// Default handler for global memory space request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
+
 /// Default handler for the stack alignment request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
@@ -175,6 +183,12 @@ public:
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
 
+  /// Returns the memory space used for program memory operations.
+  Attribute getProgramMemorySpace() const;
+
+  /// Returns the memory space used for global operations.
+  Attribute getGlobalMemorySpace() const;
+
   /// Returns the natural alignment of the stack in bits. Alignment promotion of
   /// stack variables should be limited to the natural stack alignment to
   /// prevent dynamic stack alignment. Returns zero if the stack alignment is
@@ -203,8 +217,10 @@ private:
   mutable DenseMap<Type, uint64_t> abiAlignments;
   mutable DenseMap<Type, uint64_t> preferredAlignments;
 
-  /// Cache for alloca memory space.
+  /// Cache for alloca, global, and program memory spaces.
   mutable std::optional<Attribute> allocaMemorySpace;
+  mutable std::optional<Attribute> programMemorySpace;
+  mutable std::optional<Attribute> globalMemorySpace;
 
   /// Cache for stack alignment.
   mutable std::optional<uint64_t> stackAlignment;

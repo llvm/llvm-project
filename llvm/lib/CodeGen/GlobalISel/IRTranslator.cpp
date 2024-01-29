@@ -28,7 +28,6 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -48,6 +47,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -162,7 +162,8 @@ public:
     // they could have originated from constants, and we don't want a jumpy
     // debug experience.
     assert((CurrInst->getDebugLoc() == MI.getDebugLoc() ||
-            (MI.getParent()->isEntryBlock() && !MI.getDebugLoc())) &&
+            (MI.getParent()->isEntryBlock() && !MI.getDebugLoc()) ||
+            (MI.isDebugInstr())) &&
            "Line info was not transferred to all instructions");
   }
 };
@@ -751,14 +752,89 @@ bool IRTranslator::translateSwitch(const User &U, MachineIRBuilder &MIB) {
   auto DefaultProb = getEdgeProbability(SwitchMBB, DefaultMBB);
   WorkList.push_back({SwitchMBB, First, Last, nullptr, nullptr, DefaultProb});
 
-  // FIXME: At the moment we don't do any splitting optimizations here like
-  // SelectionDAG does, so this worklist only has one entry.
   while (!WorkList.empty()) {
     SwitchWorkListItem W = WorkList.pop_back_val();
+
+    unsigned NumClusters = W.LastCluster - W.FirstCluster + 1;
+    // For optimized builds, lower large range as a balanced binary tree.
+    if (NumClusters > 3 &&
+        MF->getTarget().getOptLevel() != CodeGenOptLevel::None &&
+        !DefaultMBB->getParent()->getFunction().hasMinSize()) {
+      splitWorkItem(WorkList, W, SI.getCondition(), SwitchMBB, MIB);
+      continue;
+    }
+
     if (!lowerSwitchWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB, MIB))
       return false;
   }
   return true;
+}
+
+void IRTranslator::splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
+                                 const SwitchCG::SwitchWorkListItem &W,
+                                 Value *Cond, MachineBasicBlock *SwitchMBB,
+                                 MachineIRBuilder &MIB) {
+  using namespace SwitchCG;
+  assert(W.FirstCluster->Low->getValue().slt(W.LastCluster->Low->getValue()) &&
+         "Clusters not sorted?");
+  assert(W.LastCluster - W.FirstCluster + 1 >= 2 && "Too small to split!");
+
+  auto [LastLeft, FirstRight, LeftProb, RightProb] =
+      SL->computeSplitWorkItemInfo(W);
+
+  // Use the first element on the right as pivot since we will make less-than
+  // comparisons against it.
+  CaseClusterIt PivotCluster = FirstRight;
+  assert(PivotCluster > W.FirstCluster);
+  assert(PivotCluster <= W.LastCluster);
+
+  CaseClusterIt FirstLeft = W.FirstCluster;
+  CaseClusterIt LastRight = W.LastCluster;
+
+  const ConstantInt *Pivot = PivotCluster->Low;
+
+  // New blocks will be inserted immediately after the current one.
+  MachineFunction::iterator BBI(W.MBB);
+  ++BBI;
+
+  // We will branch to the LHS if Value < Pivot. If LHS is a single cluster,
+  // we can branch to its destination directly if it's squeezed exactly in
+  // between the known lower bound and Pivot - 1.
+  MachineBasicBlock *LeftMBB;
+  if (FirstLeft == LastLeft && FirstLeft->Kind == CC_Range &&
+      FirstLeft->Low == W.GE &&
+      (FirstLeft->High->getValue() + 1LL) == Pivot->getValue()) {
+    LeftMBB = FirstLeft->MBB;
+  } else {
+    LeftMBB = FuncInfo.MF->CreateMachineBasicBlock(W.MBB->getBasicBlock());
+    FuncInfo.MF->insert(BBI, LeftMBB);
+    WorkList.push_back(
+        {LeftMBB, FirstLeft, LastLeft, W.GE, Pivot, W.DefaultProb / 2});
+  }
+
+  // Similarly, we will branch to the RHS if Value >= Pivot. If RHS is a
+  // single cluster, RHS.Low == Pivot, and we can branch to its destination
+  // directly if RHS.High equals the current upper bound.
+  MachineBasicBlock *RightMBB;
+  if (FirstRight == LastRight && FirstRight->Kind == CC_Range && W.LT &&
+      (FirstRight->High->getValue() + 1ULL) == W.LT->getValue()) {
+    RightMBB = FirstRight->MBB;
+  } else {
+    RightMBB = FuncInfo.MF->CreateMachineBasicBlock(W.MBB->getBasicBlock());
+    FuncInfo.MF->insert(BBI, RightMBB);
+    WorkList.push_back(
+        {RightMBB, FirstRight, LastRight, Pivot, W.LT, W.DefaultProb / 2});
+  }
+
+  // Create the CaseBlock record that will be used to lower the branch.
+  CaseBlock CB(ICmpInst::Predicate::ICMP_SLT, false, Cond, Pivot, nullptr,
+               LeftMBB, RightMBB, W.MBB, MIB.getDebugLoc(), LeftProb,
+               RightProb);
+
+  if (W.MBB == SwitchMBB)
+    emitSwitchCase(CB, SwitchMBB, MIB);
+  else
+    SL->SwitchCases.push_back(CB);
 }
 
 void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
@@ -1545,13 +1621,15 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       Offset += DL->getStructLayout(StTy)->getElementOffset(Field);
       continue;
     } else {
-      uint64_t ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
+      uint64_t ElementSize = GTI.getSequentialElementStride(*DL);
 
       // If this is a scalar constant or a splat vector of constants,
       // handle it quickly.
       if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
-        Offset += ElementSize * CI->getSExtValue();
-        continue;
+        if (std::optional<int64_t> Val = CI->getValue().trySExtValue()) {
+          Offset += ElementSize * *Val;
+          continue;
+        }
       }
 
       if (Offset != 0) {
@@ -1842,6 +1920,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_LROUND;
     case Intrinsic::llround:
       return TargetOpcode::G_LLROUND;
+    case Intrinsic::get_fpenv:
+      return TargetOpcode::G_GET_FPENV;
     case Intrinsic::get_fpmode:
       return TargetOpcode::G_GET_FPMODE;
   }
@@ -1927,47 +2007,35 @@ std::optional<MCRegister> IRTranslator::getArgPhysReg(Argument &Arg) {
   return VRegDef->getOperand(1).getReg().asMCReg();
 }
 
-bool IRTranslator::translateIfEntryValueArgument(const DbgValueInst &DebugInst,
+bool IRTranslator::translateIfEntryValueArgument(bool isDeclare, Value *Val,
+                                                 const DILocalVariable *Var,
+                                                 const DIExpression *Expr,
+                                                 const DebugLoc &DL,
                                                  MachineIRBuilder &MIRBuilder) {
-  auto *Arg = dyn_cast<Argument>(DebugInst.getValue());
+  auto *Arg = dyn_cast<Argument>(Val);
   if (!Arg)
     return false;
 
-  const DIExpression *Expr = DebugInst.getExpression();
   if (!Expr->isEntryValue())
     return false;
 
   std::optional<MCRegister> PhysReg = getArgPhysReg(*Arg);
   if (!PhysReg) {
-    LLVM_DEBUG(dbgs() << "Dropping dbg.value: expression is entry_value but "
-                         "couldn't find a physical register\n"
-                      << DebugInst << "\n");
+    LLVM_DEBUG(dbgs() << "Dropping dbg." << (isDeclare ? "declare" : "value")
+                      << ": expression is entry_value but "
+                      << "couldn't find a physical register\n");
+    LLVM_DEBUG(dbgs() << *Var << "\n");
     return true;
   }
 
-  MIRBuilder.buildDirectDbgValue(*PhysReg, DebugInst.getVariable(),
-                                 DebugInst.getExpression());
-  return true;
-}
+  if (isDeclare) {
+    // Append an op deref to account for the fact that this is a dbg_declare.
+    Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
+    MF->setVariableDbgInfo(Var, Expr, *PhysReg, DL);
+  } else {
+    MIRBuilder.buildDirectDbgValue(*PhysReg, Var, Expr);
+  }
 
-bool IRTranslator::translateIfEntryValueArgument(
-    const DbgDeclareInst &DebugInst) {
-  auto *Arg = dyn_cast<Argument>(DebugInst.getAddress());
-  if (!Arg)
-    return false;
-
-  const DIExpression *Expr = DebugInst.getExpression();
-  if (!Expr->isEntryValue())
-    return false;
-
-  std::optional<MCRegister> PhysReg = getArgPhysReg(*Arg);
-  if (!PhysReg)
-    return false;
-
-  // Append an op deref to account for the fact that this is a dbg_declare.
-  Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
-  MF->setVariableDbgInfo(DebugInst.getVariable(), Expr, *PhysReg,
-                         DebugInst.getDebugLoc());
   return true;
 }
 
@@ -2021,32 +2089,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(CI);
     assert(DI.getVariable() && "Missing variable");
-
-    const Value *Address = DI.getAddress();
-    if (!Address || isa<UndefValue>(Address)) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI << "\n");
-      return true;
-    }
-
-    assert(DI.getVariable()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
-    auto AI = dyn_cast<AllocaInst>(Address);
-    if (AI && AI->isStaticAlloca()) {
-      // Static allocas are tracked at the MF level, no need for DBG_VALUE
-      // instructions (in fact, they get ignored if they *do* exist).
-      MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
-                             getOrCreateFrameIndex(*AI), DI.getDebugLoc());
-      return true;
-    }
-
-    if (translateIfEntryValueArgument(DI))
-      return true;
-
-    // A dbg.declare describes the address of a source variable, so lower it
-    // into an indirect DBG_VALUE.
-    MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
-                                     DI.getVariable(), DI.getExpression());
+    translateDbgDeclareRecord(DI.getAddress(), DI.hasArgList(), DI.getVariable(),
+                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::dbg_label: {
@@ -2079,41 +2123,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst &DI = cast<DbgValueInst>(CI);
-    const Value *V = DI.getValue();
-    assert(DI.getVariable()->isValidLocationForIntrinsic(
-               MIRBuilder.getDebugLoc()) &&
-           "Expected inlined-at fields to agree");
-    if (!V || DI.hasArgList()) {
-      // DI cannot produce a valid DBG_VALUE, so produce an undef DBG_VALUE to
-      // terminate any prior location.
-      MIRBuilder.buildIndirectDbgValue(0, DI.getVariable(), DI.getExpression());
-      return true;
-    }
-    if (const auto *CI = dyn_cast<Constant>(V)) {
-      MIRBuilder.buildConstDbgValue(*CI, DI.getVariable(), DI.getExpression());
-      return true;
-    }
-    if (auto *AI = dyn_cast<AllocaInst>(V);
-        AI && AI->isStaticAlloca() && DI.getExpression()->startsWithDeref()) {
-      // If the value is an alloca and the expression starts with a
-      // dereference, track a stack slot instead of a register, as registers
-      // may be clobbered.
-      auto ExprOperands = DI.getExpression()->getElements();
-      auto *ExprDerefRemoved =
-          DIExpression::get(AI->getContext(), ExprOperands.drop_front());
-      MIRBuilder.buildFIDbgValue(getOrCreateFrameIndex(*AI), DI.getVariable(),
-                                 ExprDerefRemoved);
-      return true;
-    }
-    if (translateIfEntryValueArgument(DI, MIRBuilder))
-      return true;
-    for (Register Reg : getOrCreateVRegs(*V)) {
-      // FIXME: This does not handle register-indirect values at offset 0. The
-      // direct/indirect thing shouldn't really be handled by something as
-      // implicit as reg+noreg vs reg+imm in the first place, but it seems
-      // pretty baked in right now.
-      MIRBuilder.buildDirectDbgValue(Reg, DI.getVariable(), DI.getExpression());
-    }
+    translateDbgValueRecord(DI.getValue(), DI.hasArgList(), DI.getVariable(),
+                       DI.getExpression(), DI.getDebugLoc(), MIRBuilder);
     return true;
   }
   case Intrinsic::uadd_with_overflow:
@@ -2423,6 +2434,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                     {getOrCreateVReg(*FpValue)})
         .addImm(TestMaskValue->getZExtValue());
 
+    return true;
+  }
+  case Intrinsic::set_fpenv: {
+    Value *FPEnv = CI.getOperand(0);
+    MIRBuilder.buildInstr(TargetOpcode::G_SET_FPENV, {},
+                          {getOrCreateVReg(*FPEnv)});
+    return true;
+  }
+  case Intrinsic::reset_fpenv: {
+    MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPENV, {}, {});
     return true;
   }
   case Intrinsic::set_fpmode: {
@@ -3134,6 +3155,8 @@ void IRTranslator::finishPendingPhis() {
 #endif // ifndef NDEBUG
   for (auto &Phi : PendingPHIs) {
     const PHINode *PI = Phi.first;
+    if (PI->getType()->isEmptyTy())
+      continue;
     ArrayRef<MachineInstr *> ComponentPHIs = Phi.second;
     MachineBasicBlock *PhiMBB = ComponentPHIs[0]->getParent();
     EntryBuilder->setDebugLoc(PI->getDebugLoc());
@@ -3156,6 +3179,102 @@ void IRTranslator::finishPendingPhis() {
         }
       }
     }
+  }
+}
+
+void IRTranslator::translateDbgValueRecord(Value *V, bool HasArgList,
+                                     const DILocalVariable *Variable,
+                                     const DIExpression *Expression,
+                                     const DebugLoc &DL,
+                                     MachineIRBuilder &MIRBuilder) {
+  assert(Variable->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  // Act as if we're handling a debug intrinsic.
+  MIRBuilder.setDebugLoc(DL);
+
+  if (!V || HasArgList) {
+    // DI cannot produce a valid DBG_VALUE, so produce an undef DBG_VALUE to
+    // terminate any prior location.
+    MIRBuilder.buildIndirectDbgValue(0, Variable, Expression);
+    return;
+  }
+
+  if (const auto *CI = dyn_cast<Constant>(V)) {
+    MIRBuilder.buildConstDbgValue(*CI, Variable, Expression);
+    return;
+  }
+
+  if (auto *AI = dyn_cast<AllocaInst>(V);
+      AI && AI->isStaticAlloca() && Expression->startsWithDeref()) {
+    // If the value is an alloca and the expression starts with a
+    // dereference, track a stack slot instead of a register, as registers
+    // may be clobbered.
+    auto ExprOperands = Expression->getElements();
+    auto *ExprDerefRemoved =
+        DIExpression::get(AI->getContext(), ExprOperands.drop_front());
+    MIRBuilder.buildFIDbgValue(getOrCreateFrameIndex(*AI), Variable,
+                               ExprDerefRemoved);
+    return;
+  }
+  if (translateIfEntryValueArgument(false, V, Variable, Expression, DL,
+                                    MIRBuilder))
+    return;
+  for (Register Reg : getOrCreateVRegs(*V)) {
+    // FIXME: This does not handle register-indirect values at offset 0. The
+    // direct/indirect thing shouldn't really be handled by something as
+    // implicit as reg+noreg vs reg+imm in the first place, but it seems
+    // pretty baked in right now.
+    MIRBuilder.buildDirectDbgValue(Reg, Variable, Expression);
+  }
+  return;
+}
+
+void IRTranslator::translateDbgDeclareRecord(Value *Address, bool HasArgList,
+                                     const DILocalVariable *Variable,
+                                     const DIExpression *Expression,
+                                     const DebugLoc &DL,
+                                     MachineIRBuilder &MIRBuilder) {
+  if (!Address || isa<UndefValue>(Address)) {
+    LLVM_DEBUG(dbgs() << "Dropping debug info for " << *Variable << "\n");
+    return;
+  }
+
+  assert(Variable->isValidLocationForIntrinsic(DL) &&
+         "Expected inlined-at fields to agree");
+  auto AI = dyn_cast<AllocaInst>(Address);
+  if (AI && AI->isStaticAlloca()) {
+    // Static allocas are tracked at the MF level, no need for DBG_VALUE
+    // instructions (in fact, they get ignored if they *do* exist).
+    MF->setVariableDbgInfo(Variable, Expression,
+                           getOrCreateFrameIndex(*AI), DL);
+    return;
+  }
+
+  if (translateIfEntryValueArgument(true, Address, Variable,
+                                    Expression, DL,
+                                    MIRBuilder))
+    return;
+
+  // A dbg.declare describes the address of a source variable, so lower it
+  // into an indirect DBG_VALUE.
+  MIRBuilder.setDebugLoc(DL);
+  MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
+                                   Variable, Expression);
+  return;
+}
+
+void IRTranslator::translateDbgInfo(const Instruction &Inst,
+                                      MachineIRBuilder &MIRBuilder) {
+  for (DPValue &DPV : Inst.getDbgValueRange()) {
+    const DILocalVariable *Variable = DPV.getVariable();
+    const DIExpression *Expression = DPV.getExpression();
+    Value *V = DPV.getVariableLocationOp(0);
+    if (DPV.isDbgDeclare())
+      translateDbgDeclareRecord(V, DPV.hasArgList(), Variable,
+                         Expression, DPV.getDebugLoc(), MIRBuilder);
+    else
+      translateDbgValueRecord(V, DPV.hasArgList(), Variable,
+                         Expression, DPV.getDebugLoc(), MIRBuilder);
   }
 }
 
@@ -3669,6 +3788,10 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 #ifndef NDEBUG
         Verifier.setCurrentInst(&Inst);
 #endif // ifndef NDEBUG
+
+        // Translate any debug-info attached to the instruction.
+        translateDbgInfo(Inst, *CurBuilder.get());
+
         if (translate(Inst))
           continue;
 

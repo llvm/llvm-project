@@ -13,6 +13,7 @@
 #ifndef MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 #define MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -712,7 +713,8 @@ public:
   void eraseBlock(Block *block) override;
 
   /// PatternRewriter hook creating a new block.
-  void notifyBlockCreated(Block *block) override;
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// PatternRewriter hook for splitting a block into two parts.
   Block *splitBlock(Block *block, Block::iterator before) override;
@@ -721,11 +723,6 @@ public:
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
                          ValueRange argValues = std::nullopt) override;
   using PatternRewriter::inlineBlockBefore;
-
-  /// PatternRewriter hook for moving blocks out of a region.
-  void inlineRegionBefore(Region &region, Region &parent,
-                          Region::iterator before) override;
-  using PatternRewriter::inlineRegionBefore;
 
   /// PatternRewriter hook for cloning blocks of one region into another. The
   /// given region to clone *must* not have been modified as part of conversion
@@ -736,19 +733,19 @@ public:
   using PatternRewriter::cloneRegionBefore;
 
   /// PatternRewriter hook for inserting a new operation.
-  void notifyOperationInserted(Operation *op) override;
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  /// Note: These methods only track updates to the top-level operation itself,
+  /// PatternRewriter hook for updating the given operation in-place.
+  /// Note: These methods only track updates to the given operation itself,
   /// and not nested regions. Updates to regions will still require notification
   /// through other more specific hooks above.
-  void startRootUpdate(Operation *op) override;
+  void startOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  void finalizeRootUpdate(Operation *op) override;
+  /// PatternRewriter hook for updating the given operation in-place.
+  void finalizeOpModification(Operation *op) override;
 
-  /// PatternRewriter hook for updating the root operation in-place.
-  void cancelRootUpdate(Operation *op) override;
+  /// PatternRewriter hook for updating the given operation in-place.
+  void cancelOpModification(Operation *op) override;
 
   /// PatternRewriter hook for notifying match failure reasons.
   LogicalResult
@@ -760,8 +757,14 @@ public:
   detail::ConversionPatternRewriterImpl &getImpl();
 
 private:
+  // Hide unsupported pattern rewriter API.
   using OpBuilder::getListener;
   using OpBuilder::setListener;
+
+  void moveOpBefore(Operation *op, Block *block,
+                    Block::iterator iterator) override;
+  void moveOpAfter(Operation *op, Block *block,
+                   Block::iterator iterator) override;
 
   std::unique_ptr<detail::ConversionPatternRewriterImpl> impl;
 };
@@ -1015,6 +1018,7 @@ private:
   MLIRContext &ctx;
 };
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 //===----------------------------------------------------------------------===//
 // PDL Configuration
 //===----------------------------------------------------------------------===//
@@ -1043,6 +1047,19 @@ private:
 
 /// Register the dialect conversion PDL functions with the given pattern set.
 void registerConversionPDLFunctions(RewritePatternSet &patterns);
+
+#else
+
+// Stubs for when PDL in rewriting is not enabled.
+
+inline void registerConversionPDLFunctions(RewritePatternSet &patterns) {}
+
+class PDLConversionConfig final {
+public:
+  PDLConversionConfig(const TypeConverter * /*converter*/) {}
+};
+
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 //===----------------------------------------------------------------------===//
 // Op Conversion Entry Points

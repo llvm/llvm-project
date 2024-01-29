@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_ORCRTBRIDGE_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 
@@ -54,7 +55,7 @@ using SPSSimpleExecutorDylibManagerOpenSignature =
                                                  shared::SPSString, uint64_t);
 
 using SPSSimpleExecutorDylibManagerLookupSignature =
-    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorAddr>>(
+    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorSymbolDef>>(
         shared::SPSExecutorAddr, shared::SPSExecutorAddr,
         shared::SPSRemoteSymbolLookupSet);
 

@@ -1183,6 +1183,11 @@ struct NonTrivialWithVector {
   std::vector<int> it;
 };
 
+struct NonTrivialWithIntAndVector {
+  int x;
+  std::vector<int> it;
+};
+
 struct NonTrivialWithCtor {
   NonTrivialWithCtor();
   NonTrivialWithCtor(std::vector<int> const&);
@@ -1332,6 +1337,14 @@ void testBracedInitTemporaries() {
   v3.push_back(NonTrivialWithCtor{{}});
   v3.push_back({{0}});
   v3.push_back({{}});
+
+  std::vector<NonTrivialWithIntAndVector> v4;
+
+  // These should not be noticed or fixed; after the correction, the code won't
+  // compile.
+  v4.push_back(NonTrivialWithIntAndVector{1, {}});
+  v4.push_back(NonTrivialWithIntAndVector{});
+  v4.push_back({});
 }
 
 void testWithPointerTypes() {

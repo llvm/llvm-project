@@ -64,7 +64,6 @@ class LoopInfo;
 class PreservedAnalyses;
 class TargetLibraryInfo;
 class Value;
-template <typename> class SmallPtrSetImpl;
 
 /// The possible results of an alias query.
 ///
@@ -155,6 +154,8 @@ struct CaptureInfo {
 
   /// Check whether Object is not captured before instruction I. If OrAt is
   /// true, captures by instruction I itself are also considered.
+  ///
+  /// If I is nullptr, then captures at any point will be considered.
   virtual bool isNotCapturedBefore(const Value *Object, const Instruction *I,
                                    bool OrAt) = 0;
 };

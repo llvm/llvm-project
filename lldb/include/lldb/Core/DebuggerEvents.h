@@ -20,9 +20,10 @@ class Stream;
 
 class ProgressEventData : public EventData {
 public:
-  ProgressEventData(uint64_t progress_id, std::string title, std::string update,
-                    uint64_t completed, uint64_t total, bool debugger_specific)
-      : m_title(std::move(title)), m_details(std::move(update)),
+  ProgressEventData(uint64_t progress_id, std::string title,
+                    std::string details, uint64_t completed, uint64_t total,
+                    bool debugger_specific)
+      : m_title(std::move(title)), m_details(std::move(details)),
         m_id(progress_id), m_completed(completed), m_total(total),
         m_debugger_specific(debugger_specific) {}
 

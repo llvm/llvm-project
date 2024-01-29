@@ -1020,6 +1020,27 @@ def G_FNEARBYINT : GenericInstruction {
 // it is modeled as a side effect, because constrained intrinsics use the same
 // method.
 
+// Reading floating-point environment.
+def G_GET_FPENV : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+// Setting floating-point environment.
+def G_SET_FPENV : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = true;
+}
+
+// Setting default floating-point environment.
+def G_RESET_FPENV : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
 // Reading floating-point control modes.
 def G_GET_FPMODE : GenericInstruction {
   let OutOperandList = (outs type0:$dst);

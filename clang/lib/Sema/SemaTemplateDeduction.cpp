@@ -268,6 +268,16 @@ checkDeducedTemplateArguments(ASTContext &Context,
     // All other combinations are incompatible.
     return DeducedTemplateArgument();
 
+  case TemplateArgument::StructuralValue:
+    // If we deduced a value and a dependent expression, keep the value.
+    if (Y.getKind() == TemplateArgument::Expression ||
+        (Y.getKind() == TemplateArgument::StructuralValue &&
+         X.structurallyEquals(Y)))
+      return X;
+
+    // All other combinations are incompatible.
+    return DeducedTemplateArgument();
+
   case TemplateArgument::Template:
     if (Y.getKind() == TemplateArgument::Template &&
         Context.hasSameTemplateName(X.getAsTemplate(), Y.getAsTemplate()))
@@ -636,8 +646,10 @@ static bool IsPossiblyOpaquelyQualifiedTypeInternal(const Type *T) {
   case Type::TypeOf:
   case Type::DependentName:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::UnresolvedUsing:
   case Type::TemplateTypeParm:
+  case Type::Auto:
     return true;
 
   case Type::ConstantArray:
@@ -720,6 +732,7 @@ private:
   void addPack(unsigned Index) {
     // Save the deduced template argument for the parameter pack expanded
     // by this pack expansion, then clear out the deduction.
+    DeducedFromEarlierParameter = !Deduced[Index].isNull();
     DeducedPack Pack(Index);
     Pack.Saved = Deduced[Index];
     Deduced[Index] = TemplateArgument();
@@ -846,6 +859,23 @@ public:
   ~PackDeductionScope() {
     for (auto &Pack : Packs)
       Info.PendingDeducedPacks[Pack.Index] = Pack.Outer;
+  }
+
+  // Return the size of the saved packs if all of them has the same size.
+  std::optional<unsigned> getSavedPackSizeIfAllEqual() const {
+    unsigned PackSize = Packs[0].Saved.pack_size();
+
+    if (std::all_of(Packs.begin() + 1, Packs.end(), [&PackSize](const auto &P) {
+          return P.Saved.pack_size() == PackSize;
+        }))
+      return PackSize;
+    return {};
+  }
+
+  /// Determine whether this pack has already been deduced from a previous
+  /// argument.
+  bool isDeducedFromEarlierParameter() const {
+    return DeducedFromEarlierParameter;
   }
 
   /// Determine whether this pack has already been partially expanded into a
@@ -993,6 +1023,7 @@ private:
   unsigned PackElements = 0;
   bool IsPartiallyExpanded = false;
   bool DeducePackIfNotAlreadyDeduced = false;
+  bool DeducedFromEarlierParameter = false;
   /// The number of expansions, if we have a fully-expanded pack in this scope.
   std::optional<unsigned> FixedNumExpansions;
 
@@ -2234,6 +2265,15 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::Pipe:
       // No template argument deduction for these types
       return Sema::TDK_Success;
+
+    case Type::PackIndexing: {
+      const PackIndexingType *PIT = P->getAs<PackIndexingType>();
+      if (PIT->hasSelectedType()) {
+        return DeduceTemplateArgumentsByTypeMatch(
+            S, TemplateParams, PIT->getSelectedType(), A, Info, Deduced, TDF);
+      }
+      return Sema::TDK_IncompletePack;
+    }
     }
 
   llvm_unreachable("Invalid Type Class!");
@@ -2300,27 +2340,45 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     Info.SecondArg = A;
     return Sema::TDK_NonDeducedMismatch;
 
+  case TemplateArgument::StructuralValue:
+    if (A.getKind() == TemplateArgument::StructuralValue &&
+        A.structurallyEquals(P))
+      return Sema::TDK_Success;
+
+    Info.FirstArg = P;
+    Info.SecondArg = A;
+    return Sema::TDK_NonDeducedMismatch;
+
   case TemplateArgument::Expression:
     if (const NonTypeTemplateParmDecl *NTTP =
             getDeducedParameterFromExpr(Info, P.getAsExpr())) {
-      if (A.getKind() == TemplateArgument::Integral)
+      switch (A.getKind()) {
+      case TemplateArgument::Integral:
+      case TemplateArgument::Expression:
+      case TemplateArgument::StructuralValue:
         return DeduceNonTypeTemplateArgument(
-            S, TemplateParams, NTTP, A.getAsIntegral(), A.getIntegralType(),
-            /*ArrayBound=*/false, Info, Deduced);
-      if (A.getKind() == TemplateArgument::NullPtr)
+            S, TemplateParams, NTTP, DeducedTemplateArgument(A),
+            A.getNonTypeTemplateArgumentType(), Info, Deduced);
+
+      case TemplateArgument::NullPtr:
         return DeduceNullPtrTemplateArgument(S, TemplateParams, NTTP,
                                              A.getNullPtrType(), Info, Deduced);
-      if (A.getKind() == TemplateArgument::Expression)
-        return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
-                                             A.getAsExpr(), Info, Deduced);
-      if (A.getKind() == TemplateArgument::Declaration)
+
+      case TemplateArgument::Declaration:
         return DeduceNonTypeTemplateArgument(
             S, TemplateParams, NTTP, A.getAsDecl(), A.getParamTypeForDecl(),
             Info, Deduced);
 
-      Info.FirstArg = P;
-      Info.SecondArg = A;
-      return Sema::TDK_NonDeducedMismatch;
+      case TemplateArgument::Null:
+      case TemplateArgument::Type:
+      case TemplateArgument::Template:
+      case TemplateArgument::TemplateExpansion:
+      case TemplateArgument::Pack:
+        Info.FirstArg = P;
+        Info.SecondArg = A;
+        return Sema::TDK_NonDeducedMismatch;
+      }
+      llvm_unreachable("Unknown template argument kind");
     }
 
     // Can't deduce anything, but that's okay.
@@ -2505,6 +2563,9 @@ static bool isSameTemplateArg(ASTContext &Context,
     case TemplateArgument::Integral:
       return hasSameExtendedValue(X.getAsIntegral(), Y.getAsIntegral());
 
+    case TemplateArgument::StructuralValue:
+      return X.structurallyEquals(Y);
+
     case TemplateArgument::Expression: {
       llvm::FoldingSetNodeID XID, YID;
       X.getAsExpr()->Profile(XID, Context, true);
@@ -2585,9 +2646,9 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
                                E);
   }
 
-  case TemplateArgument::Integral: {
-    Expr *E =
-        BuildExpressionFromIntegralTemplateArgument(Arg, Loc).getAs<Expr>();
+  case TemplateArgument::Integral:
+  case TemplateArgument::StructuralValue: {
+    Expr *E = BuildExpressionFromNonTypeTemplateArgument(Arg, Loc).get();
     return TemplateArgumentLoc(TemplateArgument(E), E);
   }
 
@@ -4340,6 +4401,34 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
           // corresponding argument is a list?
           PackScope.nextPackElement();
         }
+      } else if (!IsTrailingPack && !PackScope.isPartiallyExpanded() &&
+                 PackScope.isDeducedFromEarlierParameter()) {
+        // [temp.deduct.general#3]
+        // When all template arguments have been deduced
+        // or obtained from default template arguments, all uses of template
+        // parameters in the template parameter list of the template are
+        // replaced with the corresponding deduced or default argument values
+        //
+        // If we have a trailing parameter pack, that has been deduced
+        // previously we substitute the pack here in a similar fashion as
+        // above with the trailing parameter packs. The main difference here is
+        // that, in this case we are not processing all of the remaining
+        // arguments. We are only process as many arguments as we have in
+        // the already deduced parameter.
+        std::optional<unsigned> ArgPosAfterSubstitution =
+            PackScope.getSavedPackSizeIfAllEqual();
+        if (!ArgPosAfterSubstitution)
+          continue;
+
+        unsigned PackArgEnd = ArgIdx + *ArgPosAfterSubstitution;
+        for (; ArgIdx < PackArgEnd && ArgIdx < Args.size(); ArgIdx++) {
+          ParamTypesForArgChecking.push_back(ParamPattern);
+          if (auto Result = DeduceCallArgument(ParamPattern, ArgIdx,
+                                               /*ExplicitObjetArgument=*/false))
+            return Result;
+
+          PackScope.nextPackElement();
+        }
       }
     }
 
@@ -4737,6 +4826,7 @@ namespace {
     QualType Replacement;
     bool ReplacementIsPack;
     bool UseTypeSugar;
+    using inherited = TreeTransform<SubstituteDeducedTypeTransform>;
 
   public:
     SubstituteDeducedTypeTransform(Sema &SemaRef, DependentAuto DA)
@@ -4796,6 +4886,16 @@ namespace {
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       // Lambdas never need to be transformed.
       return E;
+    }
+    bool TransformExceptionSpec(SourceLocation Loc,
+                                FunctionProtoType::ExceptionSpecInfo &ESI,
+                                SmallVectorImpl<QualType> &Exceptions,
+                                bool &Changed) {
+      if (ESI.Type == EST_Uninstantiated) {
+        ESI.instantiate();
+        Changed = true;
+      }
+      return inherited::TransformExceptionSpec(Loc, ESI, Exceptions, Changed);
     }
 
     QualType Apply(TypeLoc TL) {
@@ -6380,6 +6480,15 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                  OnlyDeduced, Depth, Used);
     break;
 
+  case Type::PackIndexing:
+    if (!OnlyDeduced) {
+      MarkUsedTemplateParameters(Ctx, cast<PackIndexingType>(T)->getPattern(),
+                                 OnlyDeduced, Depth, Used);
+      MarkUsedTemplateParameters(Ctx, cast<PackIndexingType>(T)->getIndexExpr(),
+                                 OnlyDeduced, Depth, Used);
+    }
+    break;
+
   case Type::UnaryTransform:
     if (!OnlyDeduced)
       MarkUsedTemplateParameters(Ctx,
@@ -6438,11 +6547,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   case TemplateArgument::Null:
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
-    break;
-
   case TemplateArgument::NullPtr:
-    MarkUsedTemplateParameters(Ctx, TemplateArg.getNullPtrType(), OnlyDeduced,
-                               Depth, Used);
+  case TemplateArgument::StructuralValue:
     break;
 
   case TemplateArgument::Type:

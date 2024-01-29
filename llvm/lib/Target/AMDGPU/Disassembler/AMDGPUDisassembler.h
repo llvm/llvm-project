@@ -251,6 +251,7 @@ public:
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
 
   MCOperand decodeBoolReg(unsigned Val) const;
+  MCOperand decodeSplitBarrier(unsigned Val) const;
 
   int getTTmpIdx(unsigned Val) const;
 

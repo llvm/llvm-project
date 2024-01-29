@@ -916,7 +916,7 @@ static TypeSourceInfo *getLambdaType(Sema &S, LambdaIntroducer &Intro,
       }
     }
 
-    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo, CurScope);
+    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo);
     assert(MethodTyInfo && "no type from lambda-declarator");
 
     // Check for unexpanded parameter packs in the method type.

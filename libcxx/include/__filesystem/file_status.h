@@ -26,35 +26,27 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 class _LIBCPP_EXPORTED_FROM_ABI file_status {
 public:
   // constructors
-  _LIBCPP_HIDE_FROM_ABI
-  file_status() noexcept : file_status(file_type::none) {}
-  _LIBCPP_HIDE_FROM_ABI
-  explicit file_status(file_type __ft, perms __prms = perms::unknown) noexcept
-      : __ft_(__ft),
-        __prms_(__prms) {}
+  _LIBCPP_HIDE_FROM_ABI file_status() noexcept : file_status(file_type::none) {}
+  _LIBCPP_HIDE_FROM_ABI explicit file_status(file_type __ft, perms __prms = perms::unknown) noexcept
+      : __ft_(__ft), __prms_(__prms) {}
 
   _LIBCPP_HIDE_FROM_ABI file_status(const file_status&) noexcept = default;
-  _LIBCPP_HIDE_FROM_ABI file_status(file_status&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status(file_status&&) noexcept      = default;
 
-  _LIBCPP_HIDE_FROM_ABI
-  ~file_status() {}
+  _LIBCPP_HIDE_FROM_ABI ~file_status() {}
 
   _LIBCPP_HIDE_FROM_ABI file_status& operator=(const file_status&) noexcept = default;
-  _LIBCPP_HIDE_FROM_ABI file_status& operator=(file_status&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status& operator=(file_status&&) noexcept      = default;
 
   // observers
-  _LIBCPP_HIDE_FROM_ABI
-  file_type type() const noexcept { return __ft_; }
+  _LIBCPP_HIDE_FROM_ABI file_type type() const noexcept { return __ft_; }
 
-  _LIBCPP_HIDE_FROM_ABI
-  perms permissions() const noexcept { return __prms_; }
+  _LIBCPP_HIDE_FROM_ABI perms permissions() const noexcept { return __prms_; }
 
   // modifiers
-  _LIBCPP_HIDE_FROM_ABI
-  void type(file_type __ft) noexcept { __ft_ = __ft; }
+  _LIBCPP_HIDE_FROM_ABI void type(file_type __ft) noexcept { __ft_ = __ft; }
 
-  _LIBCPP_HIDE_FROM_ABI
-  void permissions(perms __p) noexcept { __prms_ = __p; }
+  _LIBCPP_HIDE_FROM_ABI void permissions(perms __p) noexcept { __prms_ = __p; }
 
 #  if _LIBCPP_STD_VER >= 20
 

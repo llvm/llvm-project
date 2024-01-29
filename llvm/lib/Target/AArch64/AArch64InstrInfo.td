@@ -61,6 +61,9 @@ def HasLOR           : Predicate<"Subtarget->hasLOR()">,
 def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
                        AssemblerPredicateWithAll<(all_of FeaturePAuth), "pauth">;
 
+def HasPAuthLR       : Predicate<"Subtarget->hasPAuthLR()">,
+                       AssemblerPredicateWithAll<(all_of FeaturePAuthLR), "pauth-lr">;
+
 def HasJS            : Predicate<"Subtarget->hasJS()">,
                        AssemblerPredicateWithAll<(all_of FeatureJS), "jsconv">;
 
@@ -170,7 +173,7 @@ def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFAMINMAX), "faminmax">;
 def HasFP8FMA        : Predicate<"Subtarget->hasFP8FMA()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8FMA), "fp8fma">;
-def HasSSVE_FP8FMA   : Predicate<"Subtarget->SSVE_FP8FMA() || "
+def HasSSVE_FP8FMA   : Predicate<"Subtarget->hasSSVE_FP8FMA() || "
                                  "(Subtarget->hasSVE2() && Subtarget->hasFP8FMA())">,
                                  AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8FMA,
                                                            (all_of FeatureSVE2, FeatureFP8FMA)),
@@ -289,6 +292,8 @@ def HasCHK           : Predicate<"Subtarget->hasCHK()">,
                        AssemblerPredicateWithAll<(all_of FeatureCHK), "chk">;
 def HasGCS           : Predicate<"Subtarget->hasGCS()">,
                        AssemblerPredicateWithAll<(all_of FeatureGCS), "gcs">;
+def HasCPA           : Predicate<"Subtarget->hasCPA()">,
+                       AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -637,6 +642,11 @@ def AArch64call_rvmarker: SDNode<"AArch64ISD::CALL_RVMARKER",
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
 
+def AArch64call_arm64ec_to_x64 : SDNode<"AArch64ISD::CALL_ARM64EC_TO_X64",
+                                      SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+                                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                       SDNPVariadic]>;
+
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
@@ -794,6 +804,7 @@ def AArch64uminv    : SDNode<"AArch64ISD::UMINV", SDT_AArch64UnaryVec>;
 def AArch64smaxv    : SDNode<"AArch64ISD::SMAXV", SDT_AArch64UnaryVec>;
 def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 def AArch64uaddlv   : SDNode<"AArch64ISD::UADDLV", SDT_AArch64uaddlp>;
+def AArch64saddlv   : SDNode<"AArch64ISD::SADDLV", SDT_AArch64uaddlp>;
 
 def AArch64uabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abdu node:$lhs, node:$rhs),
@@ -1643,6 +1654,47 @@ let Predicates = [HasPAuth] in {
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
 }
+
+// v9.5-A pointer authentication extensions
+
+// Always accept "pacm" as an alias for "hint #39", but don't emit it when
+// disassembling if we don't have the pauth-lr feature.
+let CRm = 0b0100 in {
+  def PACM : SystemNoOperands<0b111, "hint\t#39">;
+}
+def : InstAlias<"pacm", (PACM), 0>;
+
+let Predicates = [HasPAuthLR] in {
+  let Defs = [LR], Uses = [LR, SP] in {
+    //                                opcode2, opcode,   asm
+    def PACIASPPC : SignAuthFixedRegs<0b00001, 0b101000, "paciasppc">;
+    def PACIBSPPC : SignAuthFixedRegs<0b00001, 0b101001, "pacibsppc">;
+    def PACNBIASPPC : SignAuthFixedRegs<0b00001, 0b100000, "pacnbiasppc">;
+    def PACNBIBSPPC : SignAuthFixedRegs<0b00001, 0b100001, "pacnbibsppc">;
+    //                             opc,  asm
+    def AUTIASPPCi : SignAuthPCRel<0b00, "autiasppc">;
+    def AUTIBSPPCi : SignAuthPCRel<0b01, "autibsppc">;
+    //                              opcode2, opcode,   asm
+    def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppc">;
+    def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppc">;
+    //                                  opcode2, opcode,   asm
+    def PACIA171615 : SignAuthFixedRegs<0b00001, 0b100010, "pacia171615">;
+    def PACIB171615 : SignAuthFixedRegs<0b00001, 0b100011, "pacib171615">;
+    def AUTIA171615 : SignAuthFixedRegs<0b00001, 0b101110, "autia171615">;
+    def AUTIB171615 : SignAuthFixedRegs<0b00001, 0b101111, "autib171615">;
+  }
+
+  let Uses = [LR, SP], isReturn = 1, isTerminator = 1, isBarrier = 1 in {
+    //                                   opc,   op2,     asm
+    def RETAASPPCi : SignAuthReturnPCRel<0b000, 0b11111, "retaasppc">;
+    def RETABSPPCi : SignAuthReturnPCRel<0b001, 0b11111, "retabsppc">;
+    //                                 op3,      asm
+    def RETAASPPCr : SignAuthReturnReg<0b000010, "retaasppc">;
+    def RETABSPPCr : SignAuthReturnReg<0b000011, "retabsppc">;
+  }
+  def : InstAlias<"pacm", (PACM), 1>;
+}
+
 
 // v8.3a floating point conversion for javascript
 let Predicates = [HasJS, HasFPARMv8], Defs = [NZCV] in
@@ -2754,6 +2806,10 @@ let isCall = 1, Defs = [LR], Uses = [SP] in {
                      Sched<[WriteBrReg]>;
   def BLR_BTI : Pseudo<(outs), (ins variable_ops), []>,
                 Sched<[WriteBrReg]>;
+  let Uses = [X16, SP] in
+  def BLR_X16 : Pseudo<(outs), (ins), [(AArch64call_arm64ec_to_x64 X16)]>,
+                Sched<[WriteBrReg]>,
+                PseudoInstExpansion<(BLR X16)>;
 } // isCall
 
 def : Pat<(AArch64call GPR64:$Rn),
@@ -2879,27 +2935,33 @@ def UDF : UDFType<0, "udf">;
 // Pair (indexed, offset)
 defm LDPW : LoadPairOffset<0b00, 0, GPR32z, simm7s4, "ldp">;
 defm LDPX : LoadPairOffset<0b10, 0, GPR64z, simm7s8, "ldp">;
+let Predicates = [HasFPARMv8] in {
 defm LDPS : LoadPairOffset<0b00, 1, FPR32Op, simm7s4, "ldp">;
 defm LDPD : LoadPairOffset<0b01, 1, FPR64Op, simm7s8, "ldp">;
 defm LDPQ : LoadPairOffset<0b10, 1, FPR128Op, simm7s16, "ldp">;
+}
 
 defm LDPSW : LoadPairOffset<0b01, 0, GPR64z, simm7s4, "ldpsw">;
 
 // Pair (pre-indexed)
 def LDPWpre : LoadPairPreIdx<0b00, 0, GPR32z, simm7s4, "ldp">;
 def LDPXpre : LoadPairPreIdx<0b10, 0, GPR64z, simm7s8, "ldp">;
+let Predicates = [HasFPARMv8] in {
 def LDPSpre : LoadPairPreIdx<0b00, 1, FPR32Op, simm7s4, "ldp">;
 def LDPDpre : LoadPairPreIdx<0b01, 1, FPR64Op, simm7s8, "ldp">;
 def LDPQpre : LoadPairPreIdx<0b10, 1, FPR128Op, simm7s16, "ldp">;
+}
 
 def LDPSWpre : LoadPairPreIdx<0b01, 0, GPR64z, simm7s4, "ldpsw">;
 
 // Pair (post-indexed)
 def LDPWpost : LoadPairPostIdx<0b00, 0, GPR32z, simm7s4, "ldp">;
 def LDPXpost : LoadPairPostIdx<0b10, 0, GPR64z, simm7s8, "ldp">;
+let Predicates = [HasFPARMv8] in {
 def LDPSpost : LoadPairPostIdx<0b00, 1, FPR32Op, simm7s4, "ldp">;
 def LDPDpost : LoadPairPostIdx<0b01, 1, FPR64Op, simm7s8, "ldp">;
 def LDPQpost : LoadPairPostIdx<0b10, 1, FPR128Op, simm7s16, "ldp">;
+}
 
 def LDPSWpost : LoadPairPostIdx<0b01, 0, GPR64z, simm7s4, "ldpsw">;
 
@@ -2907,9 +2969,11 @@ def LDPSWpost : LoadPairPostIdx<0b01, 0, GPR64z, simm7s4, "ldpsw">;
 // Pair (no allocate)
 defm LDNPW : LoadPairNoAlloc<0b00, 0, GPR32z, simm7s4, "ldnp">;
 defm LDNPX : LoadPairNoAlloc<0b10, 0, GPR64z, simm7s8, "ldnp">;
+let Predicates = [HasFPARMv8] in {
 defm LDNPS : LoadPairNoAlloc<0b00, 1, FPR32Op, simm7s4, "ldnp">;
 defm LDNPD : LoadPairNoAlloc<0b01, 1, FPR64Op, simm7s8, "ldnp">;
 defm LDNPQ : LoadPairNoAlloc<0b10, 1, FPR128Op, simm7s16, "ldnp">;
+}
 
 def : Pat<(AArch64ldp (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (LDPXi GPR64sp:$Rn, simm7s8:$offset)>;
@@ -2927,11 +2991,13 @@ defm LDRW  : Load32RO<0b10, 0, 0b01, GPR32, "ldr", i32, load>;
 defm LDRX  : Load64RO<0b11, 0, 0b01, GPR64, "ldr", i64, load>;
 
 // Floating-point
+let Predicates = [HasFPARMv8] in {
 defm LDRB : Load8RO<0b00,   1, 0b01, FPR8Op,   "ldr", i8, load>;
 defm LDRH : Load16RO<0b01,  1, 0b01, FPR16Op,  "ldr", f16, load>;
 defm LDRS : Load32RO<0b10,  1, 0b01, FPR32Op,  "ldr", f32, load>;
 defm LDRD : Load64RO<0b11,  1, 0b01, FPR64Op,  "ldr", f64, load>;
 defm LDRQ : Load128RO<0b00, 1, 0b11, FPR128Op, "ldr", f128, load>;
+}
 
 // Load sign-extended half-word
 defm LDRSHW : Load16RO<0b01, 0, 0b11, GPR32, "ldrsh", i32, sextloadi16>;
@@ -3101,6 +3167,7 @@ defm LDRX : LoadUI<0b11, 0, 0b01, GPR64z, uimm12s8, "ldr",
 defm LDRW : LoadUI<0b10, 0, 0b01, GPR32z, uimm12s4, "ldr",
                    [(set GPR32z:$Rt,
                          (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)))]>;
+let Predicates = [HasFPARMv8] in {
 defm LDRB : LoadUI<0b00, 1, 0b01, FPR8Op, uimm12s1, "ldr",
                    [(set FPR8Op:$Rt,
                          (load (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)))]>;
@@ -3116,6 +3183,7 @@ defm LDRD : LoadUI<0b11, 1, 0b01, FPR64Op, uimm12s8, "ldr",
 defm LDRQ : LoadUI<0b00, 1, 0b11, FPR128Op, uimm12s16, "ldr",
                  [(set (f128 FPR128Op:$Rt),
                        (load (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)))]>;
+}
 
 // bf16 load pattern
 def : Pat <(bf16 (load (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))),
@@ -3293,12 +3361,14 @@ def LDRWl : LoadLiteral<0b00, 0, GPR32z, "ldr",
   [(set GPR32z:$Rt, (load (AArch64adr alignedglobal:$label)))]>;
 def LDRXl : LoadLiteral<0b01, 0, GPR64z, "ldr",
   [(set GPR64z:$Rt, (load (AArch64adr alignedglobal:$label)))]>;
+let Predicates = [HasFPARMv8] in {
 def LDRSl : LoadLiteral<0b00, 1, FPR32Op, "ldr",
   [(set (f32 FPR32Op:$Rt), (load (AArch64adr alignedglobal:$label)))]>;
 def LDRDl : LoadLiteral<0b01, 1, FPR64Op, "ldr",
   [(set (f64 FPR64Op:$Rt), (load (AArch64adr alignedglobal:$label)))]>;
 def LDRQl : LoadLiteral<0b10, 1, FPR128Op, "ldr",
   [(set (f128 FPR128Op:$Rt), (load (AArch64adr alignedglobal:$label)))]>;
+}
 
 // load sign-extended word
 def LDRSWl : LoadLiteral<0b10, 0, GPR64z, "ldrsw",
@@ -3321,6 +3391,7 @@ defm LDURX : LoadUnscaled<0b11, 0, 0b01, GPR64z, "ldur",
 defm LDURW : LoadUnscaled<0b10, 0, 0b01, GPR32z, "ldur",
                     [(set GPR32z:$Rt,
                           (load (am_unscaled32 GPR64sp:$Rn, simm9:$offset)))]>;
+let Predicates = [HasFPARMv8] in {
 defm LDURB : LoadUnscaled<0b00, 1, 0b01, FPR8Op, "ldur",
                     [(set FPR8Op:$Rt,
                           (load (am_unscaled8 GPR64sp:$Rn, simm9:$offset)))]>;
@@ -3336,6 +3407,7 @@ defm LDURD : LoadUnscaled<0b11, 1, 0b01, FPR64Op, "ldur",
 defm LDURQ : LoadUnscaled<0b00, 1, 0b11, FPR128Op, "ldur",
                     [(set (f128 FPR128Op:$Rt),
                           (load (am_unscaled128 GPR64sp:$Rn, simm9:$offset)))]>;
+}
 
 defm LDURHH
     : LoadUnscaled<0b01, 0, 0b01, GPR32, "ldurh",
@@ -3595,11 +3667,13 @@ defm LDTRSW  : LoadUnprivileged<0b10, 0, 0b10, GPR64, "ldtrsw">;
 // (immediate pre-indexed)
 def LDRWpre : LoadPreIdx<0b10, 0, 0b01, GPR32z, "ldr">;
 def LDRXpre : LoadPreIdx<0b11, 0, 0b01, GPR64z, "ldr">;
+let Predicates = [HasFPARMv8] in {
 def LDRBpre : LoadPreIdx<0b00, 1, 0b01, FPR8Op,  "ldr">;
 def LDRHpre : LoadPreIdx<0b01, 1, 0b01, FPR16Op, "ldr">;
 def LDRSpre : LoadPreIdx<0b10, 1, 0b01, FPR32Op, "ldr">;
 def LDRDpre : LoadPreIdx<0b11, 1, 0b01, FPR64Op, "ldr">;
 def LDRQpre : LoadPreIdx<0b00, 1, 0b11, FPR128Op, "ldr">;
+}
 
 // load sign-extended half-word
 def LDRSHWpre : LoadPreIdx<0b01, 0, 0b11, GPR32z, "ldrsh">;
@@ -3620,11 +3694,13 @@ def LDRSWpre : LoadPreIdx<0b10, 0, 0b10, GPR64z, "ldrsw">;
 // (immediate post-indexed)
 def LDRWpost : LoadPostIdx<0b10, 0, 0b01, GPR32z, "ldr">;
 def LDRXpost : LoadPostIdx<0b11, 0, 0b01, GPR64z, "ldr">;
+let Predicates = [HasFPARMv8] in {
 def LDRBpost : LoadPostIdx<0b00, 1, 0b01, FPR8Op,  "ldr">;
 def LDRHpost : LoadPostIdx<0b01, 1, 0b01, FPR16Op, "ldr">;
 def LDRSpost : LoadPostIdx<0b10, 1, 0b01, FPR32Op, "ldr">;
 def LDRDpost : LoadPostIdx<0b11, 1, 0b01, FPR64Op, "ldr">;
 def LDRQpost : LoadPostIdx<0b00, 1, 0b11, FPR128Op, "ldr">;
+}
 
 // load sign-extended half-word
 def LDRSHWpost : LoadPostIdx<0b01, 0, 0b11, GPR32z, "ldrsh">;
@@ -3649,30 +3725,38 @@ def LDRSWpost : LoadPostIdx<0b10, 0, 0b10, GPR64z, "ldrsw">;
 // FIXME: Use dedicated range-checked addressing mode operand here.
 defm STPW : StorePairOffset<0b00, 0, GPR32z, simm7s4, "stp">;
 defm STPX : StorePairOffset<0b10, 0, GPR64z, simm7s8, "stp">;
+let Predicates = [HasFPARMv8] in {
 defm STPS : StorePairOffset<0b00, 1, FPR32Op, simm7s4, "stp">;
 defm STPD : StorePairOffset<0b01, 1, FPR64Op, simm7s8, "stp">;
 defm STPQ : StorePairOffset<0b10, 1, FPR128Op, simm7s16, "stp">;
+}
 
 // Pair (pre-indexed)
 def STPWpre : StorePairPreIdx<0b00, 0, GPR32z, simm7s4, "stp">;
 def STPXpre : StorePairPreIdx<0b10, 0, GPR64z, simm7s8, "stp">;
+let Predicates = [HasFPARMv8] in {
 def STPSpre : StorePairPreIdx<0b00, 1, FPR32Op, simm7s4, "stp">;
 def STPDpre : StorePairPreIdx<0b01, 1, FPR64Op, simm7s8, "stp">;
 def STPQpre : StorePairPreIdx<0b10, 1, FPR128Op, simm7s16, "stp">;
+}
 
 // Pair (post-indexed)
 def STPWpost : StorePairPostIdx<0b00, 0, GPR32z, simm7s4, "stp">;
 def STPXpost : StorePairPostIdx<0b10, 0, GPR64z, simm7s8, "stp">;
+let Predicates = [HasFPARMv8] in {
 def STPSpost : StorePairPostIdx<0b00, 1, FPR32Op, simm7s4, "stp">;
 def STPDpost : StorePairPostIdx<0b01, 1, FPR64Op, simm7s8, "stp">;
 def STPQpost : StorePairPostIdx<0b10, 1, FPR128Op, simm7s16, "stp">;
+}
 
 // Pair (no allocate)
 defm STNPW : StorePairNoAlloc<0b00, 0, GPR32z, simm7s4, "stnp">;
 defm STNPX : StorePairNoAlloc<0b10, 0, GPR64z, simm7s8, "stnp">;
+let Predicates = [HasFPARMv8] in {
 defm STNPS : StorePairNoAlloc<0b00, 1, FPR32Op, simm7s4, "stnp">;
 defm STNPD : StorePairNoAlloc<0b01, 1, FPR64Op, simm7s8, "stnp">;
 defm STNPQ : StorePairNoAlloc<0b10, 1, FPR128Op, simm7s16, "stnp">;
+}
 
 def : Pat<(AArch64stp GPR64z:$Rt, GPR64z:$Rt2, (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (STPXi GPR64z:$Rt, GPR64z:$Rt2, GPR64sp:$Rn, simm7s8:$offset)>;
@@ -3692,11 +3776,13 @@ defm STRX  : Store64RO<0b11, 0, 0b00, GPR64, "str",  i64, store>;
 
 
 // Floating-point
+let Predicates = [HasFPARMv8] in {
 defm STRB : Store8RO< 0b00,  1, 0b00, FPR8Op,   "str", i8, store>;
 defm STRH : Store16RO<0b01,  1, 0b00, FPR16Op,  "str", f16,     store>;
 defm STRS : Store32RO<0b10,  1, 0b00, FPR32Op,  "str", f32,     store>;
 defm STRD : Store64RO<0b11,  1, 0b00, FPR64Op,  "str", f64,     store>;
 defm STRQ : Store128RO<0b00, 1, 0b10, FPR128Op, "str">;
+}
 
 let Predicates = [UseSTRQro], AddedComplexity = 10 in {
   def : Pat<(store (f128 FPR128:$Rt),
@@ -3805,6 +3891,7 @@ defm STRX : StoreUIz<0b11, 0, 0b00, GPR64z, uimm12s8, "str",
 defm STRW : StoreUIz<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
                     [(store GPR32z:$Rt,
                             (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))]>;
+let Predicates = [HasFPARMv8] in {
 defm STRB : StoreUI<0b00, 1, 0b00, FPR8Op, uimm12s1, "str",
                     [(store FPR8Op:$Rt,
                             (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))]>;
@@ -3818,6 +3905,7 @@ defm STRD : StoreUI<0b11, 1, 0b00, FPR64Op, uimm12s8, "str",
                     [(store (f64 FPR64Op:$Rt),
                             (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))]>;
 defm STRQ : StoreUI<0b00, 1, 0b10, FPR128Op, uimm12s16, "str", []>;
+}
 
 defm STRHH : StoreUIz<0b01, 0, 0b00, GPR32z, uimm12s2, "strh",
                      [(truncstorei16 GPR32z:$Rt,
@@ -3939,6 +4027,7 @@ defm STURX : StoreUnscaled<0b11, 0, 0b00, GPR64z, "stur",
 defm STURW : StoreUnscaled<0b10, 0, 0b00, GPR32z, "stur",
                          [(store GPR32z:$Rt,
                                  (am_unscaled32 GPR64sp:$Rn, simm9:$offset))]>;
+let Predicates = [HasFPARMv8] in {
 defm STURB : StoreUnscaled<0b00, 1, 0b00, FPR8Op, "stur",
                          [(store FPR8Op:$Rt,
                                  (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
@@ -3954,6 +4043,7 @@ defm STURD : StoreUnscaled<0b11, 1, 0b00, FPR64Op, "stur",
 defm STURQ : StoreUnscaled<0b00, 1, 0b10, FPR128Op, "stur",
                          [(store (f128 FPR128Op:$Rt),
                                  (am_unscaled128 GPR64sp:$Rn, simm9:$offset))]>;
+}
 defm STURHH : StoreUnscaled<0b01, 0, 0b00, GPR32z, "sturh",
                          [(truncstorei16 GPR32z:$Rt,
                                  (am_unscaled16 GPR64sp:$Rn, simm9:$offset))]>;
@@ -4110,11 +4200,13 @@ defm STTRB : StoreUnprivileged<0b00, 0, 0b00, GPR32, "sttrb">;
 // (immediate pre-indexed)
 def STRWpre : StorePreIdx<0b10, 0, 0b00, GPR32z, "str",  pre_store, i32>;
 def STRXpre : StorePreIdx<0b11, 0, 0b00, GPR64z, "str",  pre_store, i64>;
+let Predicates = [HasFPARMv8] in {
 def STRBpre : StorePreIdx<0b00, 1, 0b00, FPR8Op,  "str",  pre_store, i8>;
 def STRHpre : StorePreIdx<0b01, 1, 0b00, FPR16Op, "str",  pre_store, f16>;
 def STRSpre : StorePreIdx<0b10, 1, 0b00, FPR32Op, "str",  pre_store, f32>;
 def STRDpre : StorePreIdx<0b11, 1, 0b00, FPR64Op, "str",  pre_store, f64>;
 def STRQpre : StorePreIdx<0b00, 1, 0b10, FPR128Op, "str", pre_store, f128>;
+}
 
 def STRBBpre : StorePreIdx<0b00, 0, 0b00, GPR32z, "strb", pre_truncsti8,  i32>;
 def STRHHpre : StorePreIdx<0b01, 0, 0b00, GPR32z, "strh", pre_truncsti16, i32>;
@@ -4164,11 +4256,13 @@ def : Pat<(pre_store (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
 // (immediate post-indexed)
 def STRWpost : StorePostIdx<0b10, 0, 0b00, GPR32z,  "str", post_store, i32>;
 def STRXpost : StorePostIdx<0b11, 0, 0b00, GPR64z,  "str", post_store, i64>;
+let Predicates = [HasFPARMv8] in {
 def STRBpost : StorePostIdx<0b00, 1, 0b00, FPR8Op,   "str", post_store, i8>;
 def STRHpost : StorePostIdx<0b01, 1, 0b00, FPR16Op,  "str", post_store, f16>;
 def STRSpost : StorePostIdx<0b10, 1, 0b00, FPR32Op,  "str", post_store, f32>;
 def STRDpost : StorePostIdx<0b11, 1, 0b00, FPR64Op,  "str", post_store, f64>;
 def STRQpost : StorePostIdx<0b00, 1, 0b10, FPR128Op, "str", post_store, f128>;
+}
 
 def STRBBpost : StorePostIdx<0b00, 0, 0b00, GPR32z, "strb", post_truncsti8, i32>;
 def STRHHpost : StorePostIdx<0b01, 0, 0b00, GPR32z, "strh", post_truncsti16, i32>;
@@ -4485,7 +4579,8 @@ def : Pat<(f64 (fdiv (f64 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f64_i32:
 defm FMOV : UnscaledConversion<"fmov">;
 
 // Add pseudo ops for FMOV 0 so we can mark them as isReMaterializable
-let isReMaterializable = 1, isCodeGenOnly = 1, isAsCheapAsAMove = 1 in {
+let isReMaterializable = 1, isCodeGenOnly = 1, isAsCheapAsAMove = 1,
+    Predicates = [HasFPARMv8] in {
 def FMOVH0 : Pseudo<(outs FPR16:$Rd), (ins), [(set f16:$Rd, (fpimm0))]>,
     Sched<[WriteF]>;
 def FMOVS0 : Pseudo<(outs FPR32:$Rd), (ins), [(set f32:$Rd, (fpimm0))]>,
@@ -4712,6 +4807,7 @@ def : Pat<(bf16 (AArch64csel (bf16 FPR16:$Rn), (bf16 FPR16:$Rm), (i32 imm:$cond)
 // CSEL instructions providing f128 types need to be handled by a
 // pseudo-instruction since the eventual code will need to introduce basic
 // blocks and control flow.
+let Predicates = [HasFPARMv8] in
 def F128CSEL : Pseudo<(outs FPR128:$Rd),
                       (ins FPR128:$Rn, FPR128:$Rm, ccode:$cond),
                       [(set (f128 FPR128:$Rd),
@@ -4744,6 +4840,8 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
 }
 
 // Pseudo instructions for Windows EH
@@ -6480,23 +6578,23 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 // f32 bitcast(vector_extract(v4i32 src, lane)) -> EXTRACT_SUBREG(INSvi32lane(-, 0, src, lane))
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi32lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), ssub)>;
-def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, 0)))),
+def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, imm:$Immd)))),
           (EXTRACT_SUBREG (INSvi64lane (IMPLICIT_DEF), 0, V128:$src, imm:$Immd), dsub)>;
-def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, 0)))),
+def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, dsub)>;
 
 // Floating point vector extractions are codegen'd as either a sequence of
 // subregister extractions, or a MOV (aka DUP here) if
 // the lane number is anything other than zero.
-def : Pat<(vector_extract (v2f64 V128:$Rn), 0),
+def : Pat<(f64 (vector_extract (v2f64 V128:$Rn), (i64 0))),
           (f64 (EXTRACT_SUBREG V128:$Rn, dsub))>;
-def : Pat<(vector_extract (v4f32 V128:$Rn), 0),
+def : Pat<(f32 (vector_extract (v4f32 V128:$Rn), (i64 0))),
           (f32 (EXTRACT_SUBREG V128:$Rn, ssub))>;
-def : Pat<(vector_extract (v8f16 V128:$Rn), 0),
+def : Pat<(f16 (vector_extract (v8f16 V128:$Rn), (i64 0))),
           (f16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
-def : Pat<(vector_extract (v8bf16 V128:$Rn), 0),
+def : Pat<(bf16 (vector_extract (v8bf16 V128:$Rn), (i64 0))),
           (bf16 (EXTRACT_SUBREG V128:$Rn, hsub))>;
 
 
@@ -6577,6 +6675,26 @@ multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> 
 defm : SIMDAcrossLaneLongPairIntrinsic<"UADDLV", AArch64uaddlp>;
 defm : SIMDAcrossLaneLongPairIntrinsic<"SADDLV", AArch64saddlp>;
 
+// Pattern is used for GlobalISel
+multiclass SIMDAcrossLaneLongPairIntrinsicGISel<string Opc, SDPatternOperator addlp> {
+  // Patterns for addv(addlp(x)) ==> addlv
+  def : Pat<(i16 (vecreduce_add (v4i16 (addlp (v8i8 V64:$Rn))))),
+            (!cast<Instruction>(Opc#"v8i8v") V64:$Rn)>;
+  def : Pat<(i16 (vecreduce_add (v8i16 (addlp (v16i8 V128:$Rn))))),
+            (!cast<Instruction>(Opc#"v16i8v") V128:$Rn)>;
+  def : Pat<(i32 (vecreduce_add (v4i32 (addlp (v8i16 V128:$Rn))))),
+            (!cast<Instruction>(Opc#"v8i16v") V128:$Rn)>;
+
+  // Patterns for addp(addlp(x))) ==> addlv
+  def : Pat<(i32 (vecreduce_add (v2i32 (addlp (v4i16 V64:$Rn))))),
+            (!cast<Instruction>(Opc#"v4i16v") V64:$Rn)>;
+  def : Pat<(i64 (vecreduce_add (v2i64 (addlp (v4i32 V128:$Rn))))),
+            (!cast<Instruction>(Opc#"v4i32v") V128:$Rn)>;
+}
+
+defm : SIMDAcrossLaneLongPairIntrinsicGISel<"UADDLV", AArch64uaddlp>;
+defm : SIMDAcrossLaneLongPairIntrinsicGISel<"SADDLV", AArch64saddlp>;
+
 // Patterns for uaddlv(uaddlp(x)) ==> uaddlv
 def : Pat<(i64 (int_aarch64_neon_uaddlv (v4i32 (AArch64uaddlp (v8i16 V128:$op))))),
           (i64 (EXTRACT_SUBREG
@@ -6588,23 +6706,34 @@ def : Pat<(i32 (int_aarch64_neon_uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op)))
             (v8i16 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub)),
             ssub))>;
 
+def : Pat<(v2i64 (AArch64uaddlv (v4i32 (AArch64uaddlp (v8i16 V128:$op))))),
+          (v2i64 (SUBREG_TO_REG (i64 0), (UADDLVv8i16v V128:$op), ssub))>;
+
 def : Pat<(v4i32 (AArch64uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op))))),
           (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub))>;
 
 def : Pat<(v4i32 (AArch64uaddlv (v4i16 (AArch64uaddlp (v8i8 V64:$op))))),
           (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$op), hsub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v8i8 V64:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$Rn), hsub))>;
+multiclass SIMDAcrossLaneLongReductionIntrinsic<string Opc, SDPatternOperator addlv> {
+  def : Pat<(v4i32 (addlv (v8i8 V64:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v8i8v") V64:$Rn), hsub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v4i16 V64:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv4i16v V64:$Rn), ssub))>;
+  def : Pat<(v4i32 (addlv (v4i16 V64:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v4i16v") V64:$Rn), ssub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v16i8 V128:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$Rn), hsub))>;
+  def : Pat<(v4i32 (addlv (v16i8 V128:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v16i8v") V128:$Rn), hsub))>;
 
-def : Pat<(v4i32 (AArch64uaddlv (v8i16 V128:$Rn))),
-          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i16v V128:$Rn), ssub))>;
+  def : Pat<(v4i32 (addlv (v8i16 V128:$Rn))),
+            (v4i32 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v8i16v") V128:$Rn), ssub))>;
+
+  def : Pat<(v2i64 (addlv (v4i32 V128:$Rn))),
+            (v2i64 (SUBREG_TO_REG (i64 0), (!cast<Instruction>(Opc#"v4i32v") V128:$Rn), dsub))>;
+}
+
+defm : SIMDAcrossLaneLongReductionIntrinsic<"UADDLV", AArch64uaddlv>;
+defm : SIMDAcrossLaneLongReductionIntrinsic<"SADDLV", AArch64saddlv>;
 
 // Patterns for across-vector intrinsics, that have a node equivalent, that
 // returns a vector (with only the low lane defined) instead of a scalar.
@@ -9285,15 +9414,15 @@ let Predicates = [HasLSE128] in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasRCPC3] in {
-  //                                             size   opc    opc2
-  def STILPWpre:  BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-8]!", "$Rn = $wback">;
-  def STILPXpre:  BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-16]!", "$Rn = $wback">;
-  def STILPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0001, (outs), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
-  def STILPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0001, (outs), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
-  def LDIAPPWpre: BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0000, (outs GPR64sp:$wback, GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #8", "$Rn = $wback">;
-  def LDIAPPXpre: BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0000, (outs GPR64sp:$wback, GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #16", "$Rn = $wback">;
-  def LDIAPPW:    BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
-  def LDIAPPX:    BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+  //                                              size   opc    opc2
+  def STILPWpre:   BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-8]!", "$Rn = $wback">;
+  def STILPXpre:   BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0000, (outs GPR64sp:$wback), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn, #-16]!", "$Rn = $wback">;
+  def STILPW:      BaseLRCPC3IntegerLoadStorePair<0b10, 0b00, 0b0001, (outs), (ins GPR32:$Rt, GPR32:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def STILPX:      BaseLRCPC3IntegerLoadStorePair<0b11, 0b00, 0b0001, (outs), (ins GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), "stilp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPWpost: BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0000, (outs GPR64sp:$wback, GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #8", "$Rn = $wback">;
+  def LDIAPPXpost: BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0000, (outs GPR64sp:$wback, GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn], #16", "$Rn = $wback">;
+  def LDIAPPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
+  def LDIAPPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
 
   def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
   def : Pat<(AArch64stilp GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
@@ -9302,11 +9431,11 @@ let Predicates = [HasRCPC3] in {
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPX GPR64: $Rt, GPR64: $Rt2, GPR64sp:$Rn)>;
 
-  //                                        size   opc
-  def STLRWpre:  BaseLRCPC3IntegerLoadStore<0b10, 0b10, (outs GPR64sp:$wback),            (ins GPR32:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-4]!", "$Rn = $wback">;
-  def STLRXpre:  BaseLRCPC3IntegerLoadStore<0b11, 0b10, (outs GPR64sp:$wback),            (ins GPR64:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-8]!", "$Rn = $wback">;
-  def LDAPRWpre: BaseLRCPC3IntegerLoadStore<0b10, 0b11, (outs GPR64sp:$wback, GPR32:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #4",   "$Rn = $wback">;
-  def LDAPRXpre: BaseLRCPC3IntegerLoadStore<0b11, 0b11, (outs GPR64sp:$wback, GPR64:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #8",   "$Rn = $wback">;
+  //                                         size   opc
+  def STLRWpre:   BaseLRCPC3IntegerLoadStore<0b10, 0b10, (outs GPR64sp:$wback),            (ins GPR32:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-4]!", "$Rn = $wback">;
+  def STLRXpre:   BaseLRCPC3IntegerLoadStore<0b11, 0b10, (outs GPR64sp:$wback),            (ins GPR64:$Rt, GPR64sp:$Rn), "stlr",  "\t$Rt, [$Rn, #-8]!", "$Rn = $wback">;
+  def LDAPRWpost: BaseLRCPC3IntegerLoadStore<0b10, 0b11, (outs GPR64sp:$wback, GPR32:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #4",   "$Rn = $wback">;
+  def LDAPRXpost: BaseLRCPC3IntegerLoadStore<0b11, 0b11, (outs GPR64sp:$wback, GPR64:$Rt), (ins GPR64sp:$Rn),            "ldapr", "\t$Rt, [$Rn], #8",   "$Rn = $wback">;
 }
 
 let Predicates = [HasRCPC3, HasNEON] in {
@@ -9402,6 +9531,10 @@ let Predicates = [HasD128] in {
   }
 }
 
+//===----------------------------===//
+// 2023 Architecture Extensions:
+//===----------------------------===//
+
 let Predicates = [HasFP8] in {
   defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
   defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
@@ -9442,6 +9575,19 @@ let Predicates = [HasFP8DOT4] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
 } // End let Predicates = [HasFP8DOT4]
+
+//===----------------------------------------------------------------------===//
+// Checked Pointer Arithmetic (FEAT_CPA)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasCPA] in {
+  // Scalar add/subtract
+  defm ADDPT : AddSubCPA<0, "addpt">;
+  defm SUBPT : AddSubCPA<1, "subpt">;
+
+  // Scalar multiply-add/subtract
+  def MADDPT : MulAccumCPA<0, "maddpt">;
+  def MSUBPT : MulAccumCPA<1, "msubpt">;
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

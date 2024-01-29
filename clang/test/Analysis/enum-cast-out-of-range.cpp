@@ -226,7 +226,7 @@ enum WidgetKind { A=1, B, C, X=99 }; // expected-note {{enum declared here}}
 void foo() {
   WidgetKind c = static_cast<WidgetKind>(3);  // OK
   WidgetKind x = static_cast<WidgetKind>(99); // OK
-  WidgetKind d = static_cast<WidgetKind>(4);  // expected-warning {{The value provided to the cast expression is not in the valid range of values for 'WidgetKind'}}
+  WidgetKind d = static_cast<WidgetKind>(4);  // expected-warning {{The value '4' provided to the cast expression is not in the valid range of values for 'WidgetKind'}}
 
   ignore_unused(c, x, d);
 }

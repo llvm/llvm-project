@@ -939,19 +939,6 @@ public:
     return RingBufferElements ? ringBufferSizeInBytes(RingBufferElements) : 0;
   }
 
-  static bool setRingBufferSizeForBuffer(char *Buffer, size_t Size) {
-    // Need at least one entry.
-    if (Size < sizeof(AllocationRingBuffer) +
-                   sizeof(typename AllocationRingBuffer::Entry)) {
-      return false;
-    }
-    AllocationRingBuffer *RingBuffer =
-        reinterpret_cast<AllocationRingBuffer *>(Buffer);
-    RingBuffer->Size = (Size - sizeof(AllocationRingBuffer)) /
-                       sizeof(typename AllocationRingBuffer::Entry);
-    return true;
-  }
-
   static const uptr MaxTraceSize = 64;
 
   static void collectTraceMaybe(const StackDepot *Depot,

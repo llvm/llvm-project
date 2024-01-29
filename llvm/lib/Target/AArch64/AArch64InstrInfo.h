@@ -401,6 +401,8 @@ protected:
   /// registers as machine operands.
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
+  std::optional<DestSourcePair>
+  isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;

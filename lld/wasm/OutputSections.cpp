@@ -107,7 +107,7 @@ void DataSection::finalizeContents() {
   });
 #endif
 
-  assert((config->sharedMemory || !config->isPic || config->extendedConst ||
+  assert((config->sharedMemory || !ctx.isPic || config->extendedConst ||
           activeCount <= 1) &&
          "output segments should have been combined by now");
 
@@ -124,7 +124,7 @@ void DataSection::finalizeContents() {
     if (segment->initFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX)
       writeUleb128(os, 0, "memory index");
     if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
-      if (config->isPic && config->extendedConst) {
+      if (ctx.isPic && config->extendedConst) {
         writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
         writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
                      "literal (global index)");
@@ -136,7 +136,7 @@ void DataSection::finalizeContents() {
       } else {
         WasmInitExpr initExpr;
         initExpr.Extended = false;
-        if (config->isPic) {
+        if (ctx.isPic) {
           assert(segment->startVA == 0);
           initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
           initExpr.Inst.Value.Global = WasmSym::memoryBase->getGlobalIndex();

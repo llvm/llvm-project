@@ -42,7 +42,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   PTXVersion = 32;
   for (const StringRef Feature : Opts.FeaturesAsWritten) {
     int PTXV;
-    if (!Feature.startswith("+ptx") ||
+    if (!Feature.starts_with("+ptx") ||
         Feature.drop_front(4).getAsInteger(10, PTXV))
       continue;
     PTXVersion = PTXV; // TODO: should it be max(PTXVersion, PTXV)?
@@ -115,7 +115,8 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   LongAlign = HostTarget->getLongAlign();
   LongLongWidth = HostTarget->getLongLongWidth();
   LongLongAlign = HostTarget->getLongLongAlign();
-  MinGlobalAlign = HostTarget->getMinGlobalAlign(/* TypeSize = */ 0);
+  MinGlobalAlign = HostTarget->getMinGlobalAlign(/* TypeSize = */ 0,
+                                                 /* HasNonWeakDef = */ true);
   NewAlign = HostTarget->getNewAlign();
   DefaultAlignForAttributeAligned =
       HostTarget->getDefaultAlignForAttributeAligned();

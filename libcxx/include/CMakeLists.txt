@@ -22,6 +22,8 @@ set(files
   __algorithm/find_first_of.h
   __algorithm/find_if.h
   __algorithm/find_if_not.h
+  __algorithm/find_segment_if.h
+  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -107,6 +109,7 @@ set(files
   __algorithm/ranges_any_of.h
   __algorithm/ranges_binary_search.h
   __algorithm/ranges_clamp.h
+  __algorithm/ranges_contains.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -566,6 +569,7 @@ set(files
   __numeric/pstl_reduce.h
   __numeric/pstl_transform_reduce.h
   __numeric/reduce.h
+  __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
@@ -911,10 +915,8 @@ set(files
   expected
   experimental/__config
   experimental/__memory
-  experimental/__simd/abi_tag.h
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
-  experimental/__simd/internal_declaration.h
   experimental/__simd/reference.h
   experimental/__simd/scalar.h
   experimental/__simd/simd.h
@@ -1019,9 +1021,11 @@ endforeach()
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1055,6 +1059,12 @@ if (LIBCXX_INSTALL_HEADERS)
   # Install the generated __config_site file to the per-target include dir.
   install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
+  # Install the generated __assertion_handler file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 

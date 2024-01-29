@@ -412,7 +412,7 @@ Operation *OpBuilder::insert(Operation *op) {
     block->getOperations().insert(insertPoint, op);
 
   if (listener)
-    listener->notifyOperationInserted(op);
+    listener->notifyOperationInserted(op, /*previous=*/{});
   return op;
 }
 
@@ -429,7 +429,7 @@ Block *OpBuilder::createBlock(Region *parent, Region::iterator insertPt,
   setInsertionPointToEnd(b);
 
   if (listener)
-    listener->notifyBlockCreated(b);
+    listener->notifyBlockInserted(b, /*previous=*/nullptr, /*previousIt=*/{});
   return b;
 }
 
@@ -486,14 +486,11 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Populate the results with the folded results.
   Dialect *dialect = op->getDialect();
-  for (auto it : llvm::zip(foldResults, opResults.getTypes())) {
+  for (auto it : llvm::zip_equal(foldResults, opResults.getTypes())) {
     Type expectedType = std::get<1>(it);
 
     // Normal values get pushed back directly.
     if (auto value = llvm::dyn_cast_if_present<Value>(std::get<0>(it))) {
-      if (value.getType() != expectedType)
-        return cleanupFailure();
-
       results.push_back(value);
       continue;
     }
@@ -533,7 +530,7 @@ Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   // about any ops that got inserted inside those regions as part of cloning.
   if (listener) {
     auto walkFn = [&](Operation *walkedOp) {
-      listener->notifyOperationInserted(walkedOp);
+      listener->notifyOperationInserted(walkedOp, /*previous=*/{});
     };
     for (Region &region : newOp->getRegions())
       region.walk<WalkOrder::PreOrder>(walkFn);

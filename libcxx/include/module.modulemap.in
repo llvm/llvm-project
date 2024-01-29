@@ -530,10 +530,8 @@ module std_experimental [system] {
     export *
   }
   module simd {
-    module abi_tag              { private header "experimental/__simd/abi_tag.h" }
     module aligned_tag          { private header "experimental/__simd/aligned_tag.h" }
     module declaration          { private header "experimental/__simd/declaration.h" }
-    module internal_declaration { private header "experimental/__simd/internal_declaration.h" }
     module reference            { private header "experimental/__simd/reference.h" }
     module scalar               { private header "experimental/__simd/scalar.h" }
     module simd                 { private header "experimental/__simd/simd.h" }
@@ -665,6 +663,8 @@ module std_private_algorithm_find_end                                    [system
 module std_private_algorithm_find_first_of                               [system] { header "__algorithm/find_first_of.h" }
 module std_private_algorithm_find_if                                     [system] { header "__algorithm/find_if.h" }
 module std_private_algorithm_find_if_not                                 [system] { header "__algorithm/find_if_not.h" }
+module std_private_algorithm_find_segment_if                             [system] { header "__algorithm/find_segment_if.h" }
+module std_private_algorithm_fold                                        [system] { header "__algorithm/fold.h" }
 module std_private_algorithm_for_each                                    [system] { header "__algorithm/for_each.h" }
 module std_private_algorithm_for_each_n                                  [system] { header "__algorithm/for_each_n.h" }
 module std_private_algorithm_for_each_segment                            [system] { header "__algorithm/for_each_segment.h" }
@@ -786,6 +786,7 @@ module std_private_algorithm_ranges_clamp                                [system
   header "__algorithm/ranges_clamp.h"
   export std_private_functional_ranges_operations
 }
+module std_private_algorithm_ranges_contains                             [system] { header "__algorithm/ranges_contains.h" }
 module std_private_algorithm_ranges_copy                                 [system] {
   header "__algorithm/ranges_copy.h"
   export std_private_algorithm_in_out_result
@@ -1579,6 +1580,7 @@ module std_private_numeric_pstl_transform_reduce    [system] {
   export *
 }
 module std_private_numeric_reduce                   [system] { header "__numeric/reduce.h" }
+module std_private_numeric_saturation_arithmetic    [system] { header "__numeric/saturation_arithmetic.h" }
 module std_private_numeric_transform_exclusive_scan [system] { header "__numeric/transform_exclusive_scan.h" }
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
