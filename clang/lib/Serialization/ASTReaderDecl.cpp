@@ -4127,7 +4127,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   // calls to Decl::getASTContext() by Decl's methods will find the
   // TranslationUnitDecl without crashing.
   D->setDeclContext(Context.getTranslationUnitDecl());
-  Reader.Visit(D);
+
+  // Reading some declarations can result in deep recursion.
+  SemaObj->runWithSufficientStackSpace(DeclLoc, [&] { Reader.Visit(D); });
 
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
