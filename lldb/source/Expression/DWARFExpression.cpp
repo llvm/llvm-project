@@ -95,10 +95,12 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
 }
 
 
-static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
-                                      lldb::RegisterKind reg_kind,
-                                      uint32_t reg_num, Status *error_ptr,
-                                      Value &value) {
+// static
+bool DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                                lldb::RegisterKind reg_kind,
+                                                uint32_t reg_num,
+                                                Status *error_ptr,
+                                                Value &value) {
   if (reg_ctx == nullptr) {
     if (error_ptr)
       error_ptr->SetErrorString("No register context in frame.\n");
@@ -344,16 +346,6 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   {
     uint64_t subexpr_len = data.GetULEB128(&offset);
     return (offset - data_offset) + subexpr_len;
-  }
-
-  case DW_OP_WASM_location: {
-    uint8_t wasm_op = data.GetU8(&offset);
-    if (wasm_op == 3) {
-      data.GetU32(&offset);
-    } else {
-      data.GetULEB128(&offset);
-    }
-    return offset - data_offset;
   }
 
   default:
@@ -2605,41 +2597,10 @@ bool DWARFExpression::Evaluate(
       break;
     }
 
-    case DW_OP_WASM_location: {
-      uint8_t wasm_op = opcodes.GetU8(&offset);
-      uint32_t index;
-
-      /* LLDB doesn't have an address space to represents WebAssembly locals,
-       * globals and operand stacks.
-       * We encode these elements into virtual registers:
-       *   | tag: 2 bits | index: 30 bits |
-       *   where tag is:
-       *    0: Not a WebAssembly location
-       *    1: Local
-       *    2: Global
-       *    3: Operand stack value
-       */
-      if (wasm_op == 3) {
-        index = opcodes.GetU32(&offset);
-        wasm_op = 2; // Global
-      } else {
-        index = opcodes.GetULEB128(&offset);
-      }
-
-      reg_num = (((wasm_op + 1) & 0x03) << 30) | (index & 0x3fffffff);
-
-      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr, tmp))
-        stack.push_back(tmp);
-      else
-        return false;
-
-      break;
-    }
-
     default:
       if (dwarf_cu) {
         if (dwarf_cu->GetSymbolFileDWARF().ParseVendorDWARFOpcode(
-                op, opcodes, offset, stack)) {
+                op, reg_ctx, opcodes, reg_kind, offset, stack, error_ptr)) {
           break;
         }
       }

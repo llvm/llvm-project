@@ -31,6 +31,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -327,6 +328,9 @@ llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
+  if (llvm::isa<lldb_private::wasm::ObjectFileWasm>(*objfile_sp))
+    return new wasm::SymbolFileWasm(std::move(objfile_sp),
+                              /*dwo_section_list*/ nullptr);
   return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
@@ -4475,4 +4479,66 @@ void SymbolFileDWARF::GetCompileOptions(
       continue;
     args.insert({comp_unit, Args(flags)});
   }
+}
+
+using namespace lldb_private::plugin::dwarf::wasm;
+
+SymbolFileWasm::SymbolFileWasm(ObjectFileSP objfile_sp,
+                               SectionList *dwo_section_list)
+    : SymbolFileDWARF(objfile_sp, dwo_section_list) {}
+
+SymbolFileWasm::~SymbolFileWasm() = default;
+
+lldb::offset_t
+SymbolFileWasm::GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                         const lldb::offset_t data_offset,
+                                         const uint8_t op) const {
+  if (op != DW_OP_WASM_location) {
+    return LLDB_INVALID_OFFSET;
+  }
+
+  lldb::offset_t offset = data_offset;
+  uint8_t wasm_op = data.GetU8(&offset);
+  if (wasm_op == 3) {
+    data.GetU32(&offset);
+  } else {
+    data.GetULEB128(&offset);
+  }
+  return offset - data_offset;
+}
+
+bool SymbolFileWasm::ParseVendorDWARFOpcode(
+    uint8_t op, RegisterContext *reg_ctx, const DataExtractor &opcodes,
+    const lldb::RegisterKind reg_kind, lldb::offset_t &offset,
+    std::vector<Value> &stack, Status *error_ptr) const {
+  uint8_t wasm_op = opcodes.GetU8(&offset);
+
+  /* LLDB doesn't have an address space to represents WebAssembly locals,
+   * globals and operand stacks.
+   * We encode these elements into virtual registers:
+   *   | tag: 2 bits | index: 30 bits |
+   *   where tag is:
+   *    0: Not a WebAssembly location
+   *    1: Local
+   *    2: Global
+   *    3: Operand stack value
+   */
+  uint32_t index;
+  if (wasm_op == 3) {
+    index = opcodes.GetU32(&offset);
+    wasm_op = 2; // Global
+  } else {
+    index = opcodes.GetULEB128(&offset);
+  }
+
+  uint32_t reg_num = (((wasm_op + 1) & 0x03) << 30) | (index & 0x3fffffff);
+
+  Value tmp;
+  if (DWARFExpression::ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num,
+                                                 error_ptr, tmp)) {
+    stack.push_back(tmp);
+    return true;
+  }
+  else
+    return false;
 }

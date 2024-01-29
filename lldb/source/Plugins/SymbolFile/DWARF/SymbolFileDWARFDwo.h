@@ -47,9 +47,11 @@ public:
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
-  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
-                              lldb::offset_t &offset,
-                              std::vector<Value> &stack) const override;
+  bool ParseVendorDWARFOpcode(uint8_t op, RegisterContext *reg_ctx,
+                              const DataExtractor &opcodes,
+                              const lldb::RegisterKind reg_kind,
+                              lldb::offset_t &offset, std::vector<Value> &stack,
+                              Status *error_ptr) const override;
 
   void FindGlobalVariables(ConstString name,
                            const CompilerDeclContext &parent_decl_ctx,
