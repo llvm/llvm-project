@@ -175,6 +175,8 @@ Predefined Macros
      - Defined when the GPU default stream is set to per-thread mode.
    * - ``HIP_API_PER_THREAD_DEFAULT_STREAM``
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
+   * - ``__AMDGCN_WAVEFRONT_SIZE__``
+     - Represents the target wavefront size for HIP device compilation and defaults to 64 for HIP host compilation.
 
 Compilation Modes
 =================
