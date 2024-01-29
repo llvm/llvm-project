@@ -71,6 +71,15 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
+// Currently, we should always process modules in the old debug info format by
+// default regardless of the module's format in IR; convert it to the old format
+// here.
+bool finalizeDebugInfoFormat(Module *M) {
+  if (M)
+    M->setIsNewDbgInfoFormat(false);
+  return false;
+}
+
 /// Run: module ::= toplevelentity*
 bool LLParser::Run(bool UpgradeDebugInfo,
                    DataLayoutCallbackTy DataLayoutCallback) {
@@ -88,7 +97,7 @@ bool LLParser::Run(bool UpgradeDebugInfo,
   }
 
   return parseTopLevelEntities() || validateEndOfModule(UpgradeDebugInfo) ||
-         validateEndOfIndex();
+         validateEndOfIndex() || finalizeDebugInfoFormat(M);
 }
 
 bool LLParser::parseStandaloneConstantValue(Constant *&C,
@@ -6410,10 +6419,9 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 
   std::string NameStr;
 
-  // parse the instructions and debug values in this block until we get a
+  // Parse the instructions and debug values in this block until we get a
   // terminator.
   Instruction *Inst;
-  DPValue *DPV;
   SmallVector<std::unique_ptr<DPValue>> TrailingDPValues;
   do {
     // Handle debug records first - there should always be an instruction
@@ -6425,9 +6433,10 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
                                    "containing debug info intrinsics");
       SeenNewDbgInfoFormat = true;
       Lex.Lex();
-      if (!BB->getModule()->IsNewDbgInfoFormat)
-        BB->getModule()->convertToNewDbgValues();
+      if (!M->IsNewDbgInfoFormat)
+        M->convertToNewDbgValues();
 
+      DPValue *DPV;
       if (parseDebugProgramValue(DPV, PFS))
         return true;
       TrailingDPValues.emplace_back(DPV);
@@ -6479,9 +6488,8 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       return true;
 
     // Attach any preceding debug values to this instruction.
-    for (std::unique_ptr<DPValue> &DPV : TrailingDPValues) {
+    for (std::unique_ptr<DPValue> &DPV : TrailingDPValues)
       BB->insertDPValueBefore(DPV.release(), Inst->getIterator());
-    }
     TrailingDPValues.clear();
   } while (!Inst->isTerminator());
 
@@ -6492,14 +6500,15 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
 }
 
 /// parseDebugProgramValue
-///   ::= #dbg_Type { (ValueAsMetadata|DIArgList|MDNode), MetadataID,
-///   DIExpression, DILocation }
+///   ::= #dbg_Type '{' (ValueAsMetadata|DIArgList|MDNode) ',' MetadataID ','
+///   DIExpression ','
+///   (DIAssignID',' (ValueAsMetadata|MDNode)',' DIExpression] ',')?
+///   DILocation '}'
 bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
   using LocType = DPValue::LocationType;
   LocTy DPVLoc = Lex.getLoc();
-  if (Lex.getKind() != lltok::DbgRecordType) {
+  if (Lex.getKind() != lltok::DbgRecordType)
     return error(DPVLoc, "expected debug record type here");
-  }
   auto Type = StringSwitch<LocType>(Lex.getStrVal())
                   .Case("declare", LocType::Declare)
                   .Case("value", LocType::Value)
@@ -6511,21 +6520,21 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
   if (parseToken(lltok::lbrace, "Expected '{' here"))
     return true;
 
-  // Parse Value field...
+  // Parse Value field.
   Metadata *ValLocMD;
   if (parseMetadata(ValLocMD, &PFS))
     return true;
   if (parseToken(lltok::comma, "Expected ',' here"))
     return true;
 
-  // Parse Variable field...
+  // Parse Variable field.
   MDNode *Variable;
   if (parseMDNode(Variable))
     return true;
   if (parseToken(lltok::comma, "Expected ',' here"))
     return true;
 
-  // Parse Expression field...
+  // Parse Expression field.
   LocTy ExprLoc = Lex.getLoc();
   Metadata *Expression;
   if (parseMetadata(Expression, &PFS))
@@ -6540,19 +6549,19 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
   Metadata *AddressLocation = nullptr;
   Metadata *AddressExpression = nullptr;
   if (Type == LocType::Assign) {
-    // Parse DIAssignID...
+    // Parse DIAssignID.
     if (parseMDNode(AssignID))
       return true;
     if (parseToken(lltok::comma, "Expected ',' here"))
       return true;
 
-    // Parse address ValueAsMetadata...
+    // Parse address ValueAsMetadata.
     if (parseMetadata(AddressLocation, &PFS))
       return true;
     if (parseToken(lltok::comma, "Expected ',' here"))
       return true;
 
-    // Parse address DIExpression...
+    // Parse address DIExpression.
     LocTy AddressExprLoc = Lex.getLoc();
     if (parseMetadata(AddressExpression, &PFS))
       return true;
@@ -6562,7 +6571,7 @@ bool LLParser::parseDebugProgramValue(DPValue *&DPV, PerFunctionState &PFS) {
       return true;
   }
 
-  /// Parse DILocation...
+  /// Parse DILocation.
   MDNode *DebugLoc;
   if (parseMDNode(DebugLoc))
     return true;
