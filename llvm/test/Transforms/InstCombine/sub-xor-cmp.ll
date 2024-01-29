@@ -27,7 +27,7 @@ define i64 @bar(i64 %a, i1 %b) {
   ret i64 %r
 }
 
-define  i64 @absdiff(i64 %0, i64 %1) {
+define i64 @absdiff(i64 %0, i64 %1) {
 ; CHECK-LABEL: define i64 @absdiff(
 ; CHECK-SAME: i64 [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP1]]
@@ -42,4 +42,74 @@ define  i64 @absdiff(i64 %0, i64 %1) {
   %6 = xor i64 %5, %4
   %7 = sub i64 %6, %4
   ret i64 %7
+}
+
+; Sext non boolean type.
+define i64 @f(i64 %a, i8 %b) {
+; CHECK-LABEL: define i64 @f(
+; CHECK-SAME: i64 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i64
+; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = sub i64 [[D]], [[C]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %c = sext i8 %b to i64
+  %d = xor i64 %a, %c
+  %r = sub i64 %d, %c
+  ret i64 %r
+}
+
+; Different boolean values.
+define i64 @g(i64 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: define i64 @g(
+; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[D:%.*]] = sext i1 [[B]] to i64
+; CHECK-NEXT:    [[E_NEG:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[R:%.*]] = add nsw i64 [[E_NEG]], [[D]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %d = sext i1 %b to i64
+  %e = sext i1 %c to i64
+  %f = xor i64 %a, %d
+  %r = sub i64 %d, %e
+  ret i64 %r
+}
+
+; (sext C) has multiple uses.
+define i64 @foobar(i64 %a, i1 %b, i64 %x) {
+; CHECK-LABEL: define i64 @foobar(
+; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = sext i1 [[B]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[A]]
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[B]], i64 [[TMP1]], i64 [[A]]
+; CHECK-NEXT:    [[F:%.*]] = mul i64 [[C]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[F]], [[E]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %c = sext i1 %b to i64
+  %d = xor i64 %a, %c
+  %e = sub i64 %d, %c
+  %f = mul i64 %x, %c
+  %r = add i64 %f, %e
+  ret i64 %r
+}
+
+; (xor X, (sext C)) has multiple uses.
+define i64 @bogus(i64 %a, i1 %b, i64 %x) {
+; CHECK-LABEL: define i64 @bogus(
+; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = sext i1 [[B]] to i64
+; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[A]]
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[B]], i64 [[TMP1]], i64 [[A]]
+; CHECK-NEXT:    [[F:%.*]] = mul i64 [[D]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[F]], [[E]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %c = sext i1 %b to i64
+  %d = xor i64 %a, %c
+  %e = sub i64 %d, %c
+  %f = mul i64 %x, %d
+  %r = add i64 %f, %e
+  ret i64 %r
 }
