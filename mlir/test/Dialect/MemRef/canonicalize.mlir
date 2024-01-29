@@ -1026,13 +1026,15 @@ func.func @fold_identity_transpose(%arg0: memref<1x2x3x4x5xf32>) -> memref<1x2x3
 
 // -----
 
+#transpose_map = affine_map<(d0, d1)[s0] -> (d0 + d1 * s0)>
+
 // CHECK-LABEL: func @cannot_fold_transpose_cast(
-//  CHECK-SAME:     %[[arg0:.*]]: memref<?x4xf32, strided<[?, ?], offset: ?>>
-func.func @cannot_fold_transpose_cast(%arg0: memref<?x4xf32, strided<[?, ?], offset: ?>>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
-    // CHECK: %[[CAST:.*]] = memref.cast %[[arg0]] : memref<?x4xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-    %cast = memref.cast %arg0 : memref<?x4xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-    // CHECK: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]] (d0, d1) -> (d1, d0) : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-    %transpose = memref.transpose %cast (d0, d1) -> (d1, d0) : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?x4xf32>
+func.func @cannot_fold_transpose_cast(%arg0: memref<?x4xf32>) -> memref<?x?xf32, #transpose_map> {
+    // CHECK: %[[CAST:.*]] = memref.cast %[[arg0]] : memref<?x4xf32> to memref<?x?xf32>
+    %cast = memref.cast %arg0 : memref<?x4xf32> to memref<?x?xf32>
+    // CHECK: %[[TRANSPOSE:.*]] = memref.transpose %[[CAST]] (d0, d1) -> (d1, d0) : memref<?x?xf32> to memref<?x?xf32, #{{.*}}>
+    %transpose = memref.transpose %cast (d0, d1) -> (d1, d0) : memref<?x?xf32> to memref<?x?xf32, #transpose_map>
     // CHECK: return %[[TRANSPOSE]]
-    return %transpose : memref<?x?xf32, strided<[?, ?], offset: ?>>
+    return %transpose : memref<?x?xf32, #transpose_map>
 }
