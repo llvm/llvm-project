@@ -23,12 +23,10 @@ add_libc_test(
     stdbit_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.stdbit_macros
-    libc.src.__support.CPP.limits
-    libc.src.stdbit.stdc_leading_zeros_uc
-    libc.src.stdbit.stdc_leading_zeros_ui
-    libc.src.stdbit.stdc_leading_zeros_ul
-    libc.src.stdbit.stdc_leading_zeros_ull
-    libc.src.stdbit.stdc_leading_zeros_us
+    libc.include.stdbit
+    # Intentionally do not depend on libc.src.stdbit.*. The include test is
+    # simply testing the macros provided by stdbit.h, not the implementation of
+    # the underlying functions which the type generic macros may dispatch to.
   COMPILE_OPTIONS
     # stdbit is full of type generic macros implemented via C11 _Generic.
     -Wno-c11-extensions
