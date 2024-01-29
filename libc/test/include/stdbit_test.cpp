@@ -25,7 +25,8 @@ unsigned long stdc_leading_zeros_ul(unsigned long) { return 0xAD; }
 unsigned long long stdc_leading_zeros_ull(unsigned long long) { return 0xAF; }
 
 TEST(LlvmLibcStdbitTest, TypeGenericMacro) {
-  EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned char>(0U)), static_cast<unsigned char>(0xAA));
+  EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned char>(0U)),
+            static_cast<unsigned char>(0xAA));
   EXPECT_EQ(stdc_leading_zeros(static_cast<unsigned short>(0U)),
             static_cast<unsigned short>(0xAB));
   EXPECT_EQ(stdc_leading_zeros(0U), static_cast<unsigned>(0xAC));
