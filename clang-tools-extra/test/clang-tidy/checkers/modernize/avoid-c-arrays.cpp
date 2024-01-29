@@ -89,3 +89,6 @@ struct Bar {
 
 const char name[] = "Some string";
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+
+void takeCharArray(const char name[]);
+// CHECK-MESSAGES: :[[@LINE-1]]:26: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
