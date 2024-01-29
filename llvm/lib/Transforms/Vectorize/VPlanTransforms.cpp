@@ -1107,21 +1107,6 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
 
-  VPValue *TripCount, *IncrementValue;
-  if (!DataAndControlFlowWithoutRuntimeCheck) {
-    // When the loop is guarded by a runtime overflow check for the loop
-    // induction variable increment by VF, we can increment the value before
-    // the get.active.lane mask and use the unmodified tripcount.
-    IncrementValue = CanonicalIVIncrement;
-    TripCount = TC;
-  } else {
-    // When avoiding a runtime check, the active.lane.mask inside the loop
-    // uses a modified trip count and the induction variable increment is
-    // done after the active.lane.mask intrinsic is called.
-    IncrementValue = CanonicalIVPHI;
-    TripCount = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
-                                     {TC}, DL);
-  }
   auto *EntryIncrement = Builder.createOverflowingOp(
       VPInstruction::CanonicalIVIncrementForPart, {StartV}, {false, false}, DL,
       "index.part.next");
@@ -1140,12 +1125,18 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
-  auto *InLoopIncrement =
-      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
-                                  {IncrementValue}, {false, false}, DL);
-  auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                   {InLoopIncrement, TripCount}, DL,
-                                   "active.lane.mask.next");
+
+  auto *InLoopIncrement = CanonicalIVIncrement;
+  // When the loop is guarded by a runtime overflow check for the loop induction
+  // variable increment by VF, we can increment the value before the
+  // get.active.lane mask and use the unmodified tripcount.
+  if (!DataAndControlFlowWithoutRuntimeCheck)
+    InLoopIncrement =
+        Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
+                                    {InLoopIncrement}, {false, false}, DL);
+  auto *ALM =
+      Builder.createNaryOp(VPInstruction::ActiveLaneMask, {InLoopIncrement, TC},
+                           DL, "active.lane.mask.next");
   LaneMaskPhi->addOperand(ALM);
 
   // Replace the original terminator with BranchOnCond. We have to invert the
