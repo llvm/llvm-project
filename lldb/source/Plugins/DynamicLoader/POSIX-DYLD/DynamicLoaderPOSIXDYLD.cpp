@@ -53,7 +53,8 @@ DynamicLoader *DynamicLoaderPOSIXDYLD::CreateInstance(Process *process,
         process->GetTarget().GetArchitecture().GetTriple();
     if (triple_ref.getOS() == llvm::Triple::FreeBSD ||
         triple_ref.getOS() == llvm::Triple::Linux ||
-        triple_ref.getOS() == llvm::Triple::NetBSD)
+        triple_ref.getOS() == llvm::Triple::NetBSD ||
+        triple_ref.getOS() == llvm::Triple::OpenBSD)
       create = true;
   }
 
@@ -437,6 +438,14 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
       m_initial_modules_added = true;
     }
     for (; I != E; ++I) {
+      // Don't load a duplicate copy of ld.so if we have already loaded it
+      // earlier in LoadInterpreterModule. If we instead loaded then unloaded it
+      // later, the section information for ld.so would be removed. That
+      // information is required for placing breakpoints on Arm/Thumb systems.
+      if ((m_interpreter_module.lock() != nullptr) &&
+          (I->base_addr == m_interpreter_base))
+        continue;
+
       ModuleSP module_sp =
           LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
       if (!module_sp.get())
@@ -449,15 +458,6 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
           m_interpreter_module = module_sp;
         } else if (module_sp == interpreter_sp) {
           // Module already loaded.
-          continue;
-        } else {
-          // If this is a duplicate instance of ld.so, unload it.  We may end
-          // up with it if we load it via a different path than before
-          // (symlink vs real path).
-          // TODO: remove this once we either fix library matching or avoid
-          // loading the interpreter when setting the rendezvous breakpoint.
-          UnloadSections(module_sp);
-          loaded_modules.Remove(module_sp);
           continue;
         }
       }

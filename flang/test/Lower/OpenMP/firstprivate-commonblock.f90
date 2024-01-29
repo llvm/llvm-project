@@ -15,12 +15,12 @@
 !CHECK: omp.parallel {
 !CHECK: %[[val_7:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFfirstprivate_commonEx"}
 !CHECK: %[[VAL_7_DECL:.*]]:2 = hlfir.declare %[[val_7]] {uniq_name = "_QFfirstprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK: %[[val_8:.*]] = fir.load %[[VAL_3_DECL]]#1 : !fir.ref<f32>
-!CHECK: fir.store %[[val_8]] to %[[VAL_7_DECL]]#1 : !fir.ref<f32>
+!CHECK: %[[val_8:.*]] = fir.load %[[VAL_3_DECL]]#0 : !fir.ref<f32>
+!CHECK: hlfir.assign %[[val_8]] to %[[VAL_7_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
 !CHECK: %[[val_9:.*]] = fir.alloca f32 {bindc_name = "y", pinned, uniq_name = "_QFfirstprivate_commonEy"}
 !CHECK: %[[VAL_9_DECL:.*]]:2 = hlfir.declare %[[val_9]] {uniq_name = "_QFfirstprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK: %[[val_10:.*]] = fir.load %[[VAL_6_DECL]]#1 : !fir.ref<f32>
-!CHECK: fir.store %[[val_10]] to %[[VAL_9_DECL]]#1 : !fir.ref<f32>
+!CHECK: %[[val_10:.*]] = fir.load %[[VAL_6_DECL]]#0 : !fir.ref<f32>
+!CHECK: hlfir.assign %[[val_10]] to %[[VAL_9_DECL]]#0 temporary_lhs : f32, !fir.ref<f32>
 !CHECK: omp.terminator
 !CHECK: }
 !CHECK: return

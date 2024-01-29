@@ -3,6 +3,9 @@
 ; RUN: opt -S -codegenprepare -mattr=+bmi < %s | FileCheck %s --check-prefix=FAST_TZ
 ; RUN: opt -S -codegenprepare -mattr=+lzcnt < %s | FileCheck %s --check-prefix=FAST_LZ
 
+; RUN: opt -S -debugify -codegenprepare < %s | FileCheck %s --check-prefix=DEBUGINFO
+; RUN: opt -S -debugify -codegenprepare --try-experimental-debuginfo-iterators < %s | FileCheck %s --check-prefix=DEBUGINFO
+
 target triple = "x86_64-unknown-unknown"
 target datalayout = "e-n32:64"
 
@@ -40,6 +43,19 @@ define i64 @cttz(i64 %A) {
 ; FAST_LZ-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
 ; FAST_LZ-NEXT:    ret i64 [[CTZ]]
 ;
+; DEBUGINFO-LABEL: @cttz(
+; DEBUGINFO-NEXT:  entry:
+; DEBUGINFO-NEXT:    [[A_FR:%.*]] = freeze i64 [[A:%.*]], !dbg [[DBG11:![0-9]+]]
+; DEBUGINFO-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0, !dbg [[DBG11]]
+; DEBUGINFO-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !dbg [[DBG11]]
+; DEBUGINFO:       cond.false:
+; DEBUGINFO-NEXT:    [[Z:%.*]] = call i64 @llvm.cttz.i64(i64 [[A_FR]], i1 true), !dbg [[DBG11]]
+; DEBUGINFO-NEXT:    br label [[COND_END]], !dbg [[DBG12:![0-9]+]]
+; DEBUGINFO:       cond.end:
+; DEBUGINFO-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ], !dbg [[DBG12]]
+; DEBUGINFO-NEXT:    tail call void @llvm.dbg.value(metadata i64 [[CTZ]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG11]]
+; DEBUGINFO-NEXT:    ret i64 [[CTZ]], !dbg [[DBG12]]
+;
 entry:
   %z = call i64 @llvm.cttz.i64(i64 %A, i1 false)
   ret i64 %z
@@ -74,6 +90,19 @@ define i64 @ctlz(i64 %A) {
 ; FAST_LZ-NEXT:  entry:
 ; FAST_LZ-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A:%.*]], i1 false)
 ; FAST_LZ-NEXT:    ret i64 [[Z]]
+;
+; DEBUGINFO-LABEL: @ctlz(
+; DEBUGINFO-NEXT:  entry:
+; DEBUGINFO-NEXT:    [[A_FR:%.*]] = freeze i64 [[A:%.*]], !dbg [[DBG16:![0-9]+]]
+; DEBUGINFO-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0, !dbg [[DBG16]]
+; DEBUGINFO-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !dbg [[DBG16]]
+; DEBUGINFO:       cond.false:
+; DEBUGINFO-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A_FR]], i1 true), !dbg [[DBG16]]
+; DEBUGINFO-NEXT:    br label [[COND_END]], !dbg [[DBG17:![0-9]+]]
+; DEBUGINFO:       cond.end:
+; DEBUGINFO-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ], !dbg [[DBG17]]
+; DEBUGINFO-NEXT:    tail call void @llvm.dbg.value(metadata i64 [[CTZ]], metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG16]]
+; DEBUGINFO-NEXT:    ret i64 [[CTZ]], !dbg [[DBG17]]
 ;
 entry:
   %z = call i64 @llvm.ctlz.i64(i64 %A, i1 false)

@@ -297,52 +297,67 @@ bool AArch64PointerAuth::checkAuthenticatedLR(
 
 bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   const auto *MFnI = MF.getInfo<AArch64FunctionInfo>();
-  if (!MFnI->shouldSignReturnAddress(true))
-    return false;
 
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
 
-  SmallVector<MachineBasicBlock::iterator> DeletedInstrs;
-  SmallVector<MachineBasicBlock::iterator> TailCallInstrs;
+  SmallVector<MachineBasicBlock::instr_iterator> PAuthPseudoInstrs;
+  SmallVector<MachineBasicBlock::instr_iterator> TailCallInstrs;
 
   bool Modified = false;
   bool HasAuthenticationInstrs = false;
 
   for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
-      auto It = MI.getIterator();
+    // Using instr_iterator to catch unsupported bundled TCRETURN* instructions
+    // instead of just skipping them.
+    for (auto &MI : MBB.instrs()) {
       switch (MI.getOpcode()) {
       default:
+        // Bundled TCRETURN* instructions (such as created by KCFI)
+        // are not supported yet, but no support is required if no
+        // PAUTH_EPILOGUE instructions exist in the same function.
+        // Skip the BUNDLE instruction itself (actual bundled instructions
+        // follow it in the instruction list).
+        if (MI.isBundle())
+          continue;
         if (AArch64InstrInfo::isTailCallReturnInst(MI))
-          TailCallInstrs.push_back(It);
+          TailCallInstrs.push_back(MI.getIterator());
         break;
       case AArch64::PAUTH_PROLOGUE:
-        signLR(MF, It);
-        DeletedInstrs.push_back(It);
-        Modified = true;
-        break;
       case AArch64::PAUTH_EPILOGUE:
-        authenticateLR(MF, It);
-        DeletedInstrs.push_back(It);
-        Modified = true;
-        HasAuthenticationInstrs = true;
+        assert(!MI.isBundled());
+        PAuthPseudoInstrs.push_back(MI.getIterator());
         break;
       }
     }
+  }
+
+  for (auto It : PAuthPseudoInstrs) {
+    switch (It->getOpcode()) {
+    case AArch64::PAUTH_PROLOGUE:
+      signLR(MF, It);
+      break;
+    case AArch64::PAUTH_EPILOGUE:
+      authenticateLR(MF, It);
+      HasAuthenticationInstrs = true;
+      break;
+    default:
+      llvm_unreachable("Unhandled opcode");
+    }
+    It->eraseFromParent();
+    Modified = true;
   }
 
   // FIXME Do we need to emit any PAuth-related epilogue code at all
   //       when SCS is enabled?
   if (HasAuthenticationInstrs &&
       !MFnI->needsShadowCallStackPrologueEpilogue(MF)) {
-    for (auto TailCall : TailCallInstrs)
+    for (auto TailCall : TailCallInstrs) {
+      assert(!TailCall->isBundled() && "Not yet supported");
       Modified |= checkAuthenticatedLR(TailCall);
+    }
   }
-
-  for (auto MI : DeletedInstrs)
-    MI->eraseFromParent();
 
   return Modified;
 }

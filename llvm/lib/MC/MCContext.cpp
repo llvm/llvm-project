@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCContext.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -272,7 +271,7 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
   // label, if used.
   bool IsTemporary = CanBeUnnamed;
   if (AllowTemporaryLabels && !IsTemporary)
-    IsTemporary = Name.startswith(MAI->getPrivateGlobalPrefix());
+    IsTemporary = Name.starts_with(MAI->getPrivateGlobalPrefix());
 
   SmallString<128> NewName = Name;
   bool AddSuffix = AlwaysAddSuffix;
@@ -383,8 +382,8 @@ MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
     return new (nullptr, *this) MCSymbolXCOFF(nullptr, IsTemporary);
 
   StringRef OriginalName = Name->first();
-  if (OriginalName.startswith("._Renamed..") ||
-      OriginalName.startswith("_Renamed.."))
+  if (OriginalName.starts_with("._Renamed..") ||
+      OriginalName.starts_with("_Renamed.."))
     reportError(SMLoc(), "invalid symbol name from source");
 
   if (MAI->isValidUnquotedName(OriginalName))
@@ -629,8 +628,8 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
 }
 
 bool MCContext::isELFImplicitMergeableSectionNamePrefix(StringRef SectionName) {
-  return SectionName.startswith(".rodata.str") ||
-         SectionName.startswith(".rodata.cst");
+  return SectionName.starts_with(".rodata.str") ||
+         SectionName.starts_with(".rodata.cst");
 }
 
 bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {

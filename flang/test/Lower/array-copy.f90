@@ -1,6 +1,6 @@
 ! Test array-value-copy
   
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 ! Copy not needed
 ! CHECK-LABEL: func @_QPtest1(

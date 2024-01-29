@@ -8,7 +8,9 @@
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -21,6 +23,52 @@
 using namespace llvm;
 using namespace clang;
 using namespace ast_matchers;
+
+#ifndef NDEBUG
+namespace {
+class StmtDebugPrinter
+    : public ConstStmtVisitor<StmtDebugPrinter, std::string> {
+public:
+  std::string VisitStmt(const Stmt *S) { return S->getStmtClassName(); }
+
+  std::string VisitBinaryOperator(const BinaryOperator *BO) {
+    return "BinaryOperator(" + BO->getOpcodeStr().str() + ")";
+  }
+
+  std::string VisitUnaryOperator(const UnaryOperator *UO) {
+    return "UnaryOperator(" + UO->getOpcodeStr(UO->getOpcode()).str() + ")";
+  }
+
+  std::string VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
+    return "ImplicitCastExpr(" + std::string(ICE->getCastKindName()) + ")";
+  }
+};
+
+// Returns a string of ancestor `Stmt`s of the given `DRE` in such a form:
+// "DRE ==> parent-of-DRE ==> grandparent-of-DRE ==> ...".
+static std::string getDREAncestorString(const DeclRefExpr *DRE,
+                                        ASTContext &Ctx) {
+  std::stringstream SS;
+  const Stmt *St = DRE;
+  StmtDebugPrinter StmtPriner;
+
+  do {
+    SS << StmtPriner.Visit(St);
+
+    DynTypedNodeList StParents = Ctx.getParents(*St);
+
+    if (StParents.size() > 1)
+      return "unavailable due to multiple parents";
+    if (StParents.size() == 0)
+      break;
+    St = StParents.begin()->get<Stmt>();
+    if (St)
+      SS << " ==> ";
+  } while (St);
+  return SS.str();
+}
+} // namespace
+#endif /* NDEBUG */
 
 namespace clang::ast_matchers {
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
@@ -980,6 +1028,46 @@ public:
   }
 };
 
+// Representing a pointer type expression of the form `Ptr += n` in an
+// Unspecified Untyped Context (UUC):
+class UUCAddAssignGadget : public FixableGadget {
+private:
+  static constexpr const char *const UUCAddAssignTag =
+      "PointerAddAssignUnderUUC";
+  static constexpr const char *const OffsetTag = "Offset";
+
+  const BinaryOperator *Node; // the `Ptr += n` node
+  const Expr *Offset = nullptr;
+
+public:
+  UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
+      : FixableGadget(Kind::UUCAddAssign),
+        Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
+        Offset(Result.Nodes.getNodeAs<Expr>(OffsetTag)) {
+    assert(Node != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UUCAddAssign;
+  }
+
+  static Matcher matcher() {
+    return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
+        binaryOperator(hasOperatorName("+="),
+                       hasLHS(declRefExpr(toSupportedVariable())),
+                       hasRHS(expr().bind(OffsetTag)))
+            .bind(UUCAddAssignTag)))));
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override { return Node; }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return {dyn_cast<DeclRefExpr>(Node->getLHS())};
+  }
+};
+
 // Representing a fixable expression of the form `*(ptr + 123)` or `*(123 +
 // ptr)`:
 class DerefSimplePtrArithFixableGadget : public FixableGadget {
@@ -1264,6 +1352,16 @@ PointerInitGadget::getFixits(const Strategy &S) const {
   return std::nullopt;
 }
 
+static bool isNonNegativeIntegerExpr(const Expr *Expr, const VarDecl *VD,
+                                     const ASTContext &Ctx) {
+  if (auto ConstVal = Expr->getIntegerConstantExpr(Ctx)) {
+    if (ConstVal->isNegative())
+      return false;
+  } else if (!Expr->getType()->isUnsignedIntegerType())
+    return false;
+  return true;
+}
+
 std::optional<FixItList>
 ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
   if (const auto *DRE =
@@ -1271,14 +1369,12 @@ ULCArraySubscriptGadget::getFixits(const Strategy &S) const {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       switch (S.lookup(VD)) {
       case Strategy::Kind::Span: {
+
         // If the index has a negative constant value, we give up as no valid
         // fix-it can be generated:
         const ASTContext &Ctx = // FIXME: we need ASTContext to be passed in!
             VD->getASTContext();
-        if (auto ConstVal = Node->getIdx()->getIntegerConstantExpr(Ctx)) {
-          if (ConstVal->isNegative())
-            return std::nullopt;
-        } else if (!Node->getIdx()->getType()->isUnsignedIntegerType())
+        if (!isNonNegativeIntegerExpr(Node->getIdx(), VD, Ctx))
           return std::nullopt;
         // no-op is a good fix-it, otherwise
         return FixItList{};
@@ -1357,10 +1453,8 @@ static std::optional<SourceLocation> getPastLoc(const NodeTy *Node,
                                                 const LangOptions &LangOpts) {
   SourceLocation Loc =
       Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
-
   if (Loc.isValid())
     return Loc;
-
   return std::nullopt;
 }
 
@@ -1440,7 +1534,7 @@ static bool hasUnsupportedSpecifiers(const VarDecl *VD,
 // returned by this function is the last location of the last token.
 static SourceRange getSourceRangeToTokenEnd(const Decl *D,
                                             const SourceManager &SM,
-                                            LangOptions LangOpts) {
+                                            const LangOptions &LangOpts) {
   SourceLocation Begin = D->getBeginLoc();
   SourceLocation
     End = // `D->getEndLoc` should always return the starting location of the
@@ -1718,6 +1812,47 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
       FixItHint::CreateReplacement(Node->getSourceRange(), SS.str())};
 }
 
+std::optional<FixItList>
+UUCAddAssignGadget::getFixits(const Strategy &S) const {
+  DeclUseList DREs = getClaimedVarUseSites();
+
+  if (DREs.size() != 1)
+    return std::nullopt; // In cases of `Ptr += n` where `Ptr` is not a DRE, we
+                         // give up
+  if (const VarDecl *VD = dyn_cast<VarDecl>(DREs.front()->getDecl())) {
+    if (S.lookup(VD) == Strategy::Kind::Span) {
+      FixItList Fixes;
+
+      const Stmt *AddAssignNode = getBaseStmt();
+      StringRef varName = VD->getName();
+      const ASTContext &Ctx = VD->getASTContext();
+
+      if (!isNonNegativeIntegerExpr(Offset, VD, Ctx))
+        return std::nullopt;
+
+      // To transform UUC(p += n) to UUC(p = p.subspan(..)):
+      bool NotParenExpr =
+          (Offset->IgnoreParens()->getBeginLoc() == Offset->getBeginLoc());
+      std::string SS = varName.str() + " = " + varName.str() + ".subspan";
+      if (NotParenExpr)
+        SS += "(";
+
+      std::optional<SourceLocation> AddAssignLocation = getEndCharLoc(
+          AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
+      if (!AddAssignLocation)
+        return std::nullopt;
+
+      Fixes.push_back(FixItHint::CreateReplacement(
+          SourceRange(AddAssignNode->getBeginLoc(), Node->getOperatorLoc()),
+          SS));
+      if (NotParenExpr)
+        Fixes.push_back(FixItHint::CreateInsertion(
+            Offset->getEndLoc().getLocWithOffset(1), ")"));
+      return Fixes;
+    }
+  }
+  return std::nullopt; // Not in the cases that we can handle for now, give up.
+}
 
 std::optional<FixItList> UPCPreIncrementGadget::getFixits(const Strategy &S) const {
   DeclUseList DREs = getClaimedVarUseSites();
@@ -2589,11 +2724,15 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 #ifndef NDEBUG
         auto AllUnclaimed = Tracker.getUnclaimedUses(it->first);
         for (auto UnclaimedDRE : AllUnclaimed) {
-          Handler.addDebugNoteForVar(
-              it->first, UnclaimedDRE->getBeginLoc(),
-                                     ("failed to produce fixit for '" + it->first->getNameAsString() +
-                                      "' : has an unclaimed use"));
-          }
+        std::string UnclaimedUseTrace =
+            getDREAncestorString(UnclaimedDRE, D->getASTContext());
+
+        Handler.addDebugNoteForVar(
+            it->first, UnclaimedDRE->getBeginLoc(),
+            ("failed to produce fixit for '" + it->first->getNameAsString() +
+             "' : has an unclaimed use\nThe unclaimed DRE trace: " +
+             UnclaimedUseTrace));
+        }
 #endif
         it = FixablesForAllVars.byVar.erase(it);
       } else if (it->first->isInitCapture()) {

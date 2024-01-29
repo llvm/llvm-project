@@ -19,6 +19,7 @@ add_flang_library(FIRBuilder
   Runtime/Command.cpp
   Runtime/Derived.cpp
   Runtime/EnvironmentDefaults.cpp
+  Runtime/Exceptions.cpp
   Runtime/Inquiry.cpp
   Runtime/Intrinsics.cpp
   Runtime/Numeric.cpp

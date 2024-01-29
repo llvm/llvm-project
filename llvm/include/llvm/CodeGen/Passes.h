@@ -65,6 +65,8 @@ namespace llvm {
   /// basic blocks and is enabled with -fbasic-block-sections.
   MachineFunctionPass *createBasicBlockSectionsPass();
 
+  MachineFunctionPass *createBasicBlockPathCloningPass();
+
   /// createMachineFunctionSplitterPass - This pass splits machine functions
   /// using profile information.
   MachineFunctionPass *createMachineFunctionSplitterPass();
@@ -321,10 +323,6 @@ namespace llvm {
   /// prior to output, and importantly after all CFG transformations (such as
   /// branch folding).
   extern char &GCMachineCodeAnalysisID;
-
-  /// Creates a pass to print GC metadata.
-  ///
-  FunctionPass *createGCInfoPrinter(raw_ostream &OS);
 
   /// MachineCSE - This pass performs global CSE on machine instructions.
   extern char &MachineCSEID;
@@ -583,9 +581,6 @@ namespace llvm {
   /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();
-
-  /// The pass insert tile config intrinsics for AMX fast register allocation.
-  FunctionPass *createX86PreAMXConfigPass();
 
   /// The pass transforms amx intrinsics to scalar operation if the function has
   /// optnone attribute or it is O0.

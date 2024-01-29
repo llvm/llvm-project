@@ -16,6 +16,7 @@
 #include <utility>
 
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test noexcept
 template <class T>
@@ -40,6 +41,17 @@ constexpr bool test() {
   // !has_value
   {
     const std::expected<void, int> e(std::unexpect, 5);
+    assert(!e.has_value());
+  }
+
+  // See comments of the corresponding test in
+  // "expected.expected/observers/has_value.pass.cpp".
+  {
+    const std::expected<void, TailClobberer<1>> e(std::unexpect);
+    // clang-cl does not support [[no_unique_address]] yet.
+#if !(defined(TEST_COMPILER_CLANG) && defined(_MSC_VER))
+    LIBCPP_STATIC_ASSERT(sizeof(TailClobberer<1>) == sizeof(e));
+#endif
     assert(!e.has_value());
   }
 

@@ -226,6 +226,10 @@ what to add to your calendar invite.
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
+   * - GlobalISel
+     - Every 2nd Tuesday of the month
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=ZDcyMjc0ZjZiZjNhMzFlYmE3NTNkMWM2MGM2NjM5ZWU3ZDE2MjM4MGFlZDc2ZjViY2UyYzMwNzVhZjk4MzQ4ZEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
 
 .. _office-hours:
 
@@ -321,7 +325,7 @@ don't find anyone present, chances are they happen to be off that day.
   * - Amara Emerson
     - GlobalISel questions.
     - Monthly, 4th Wednesday of the month at 9:30am PT, for 30 minutes.
-    - `GoogleMeet <https://meet.google.com/pdd-dibg-cwv`__
+    - `Google meet <https://meet.google.com/pdd-dibg-cwv>`__
     - English
 
 

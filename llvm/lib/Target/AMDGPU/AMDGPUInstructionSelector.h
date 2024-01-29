@@ -243,8 +243,9 @@ private:
   bool isDSOffsetLegal(Register Base, int64_t Offset) const;
   bool isDSOffset2Legal(Register Base, int64_t Offset0, int64_t Offset1,
                         unsigned Size) const;
-  bool isFlatScratchBaseLegal(
-      Register Base, uint64_t FlatVariant = SIInstrFlags::FlatScratch) const;
+  bool isFlatScratchBaseLegal(Register Addr) const;
+  bool isFlatScratchBaseLegalSV(Register Addr) const;
+  bool isFlatScratchBaseLegalSVImm(Register Addr) const;
 
   std::pair<Register, unsigned>
   selectDS1Addr1OffsetImpl(MachineOperand &Root) const;

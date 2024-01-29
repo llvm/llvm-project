@@ -125,9 +125,15 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 class SIReg <string n, bits<8> regIdx = 0, bit isAGPROrVGPR = 0,
              bit isHi = 0> : Register<n> {
   let Namespace = "AMDGPU";
+
+  // These are generic helper values we use to form actual register
+  // codes. They should not be assumed to match any particular register
+  // encodings on any particular subtargets.
   let HWEncoding{7-0} = regIdx;
   let HWEncoding{8} = isAGPROrVGPR;
   let HWEncoding{9} = isHi;
+
+  int Index = !cast<int>(regIdx);
 }
 
 // For register classes that use TSFlags.
@@ -164,6 +170,8 @@ multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
     let CoveredBySubRegs = !not(ArtificialHigh);
     let HWEncoding{7-0} = regIdx;
     let HWEncoding{8} = isAGPROrVGPR;
+
+    int Index = !cast<int>(regIdx);
   }
 }
 
@@ -922,7 +930,7 @@ defm "" : SRegClass<11, [v11i32, v11f32], SGPR_352Regs, TTMP_352Regs>;
 defm "" : SRegClass<12, [v12i32, v12f32], SGPR_384Regs, TTMP_384Regs>;
 
 let GlobalPriority = true in {
-defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64], SGPR_512Regs, TTMP_512Regs>;
+defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16], SGPR_512Regs, TTMP_512Regs>;
 defm "" : SRegClass<32, [v32i32, v32f32, v16i64, v16f64], SGPR_1024Regs>;
 }
 
@@ -976,7 +984,7 @@ defm VReg_352 : VRegClass<11, [v11i32, v11f32], (add VGPR_352)>;
 defm VReg_384 : VRegClass<12, [v12i32, v12f32], (add VGPR_384)>;
 
 let GlobalPriority = true in {
-defm VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64], (add VGPR_512)>;
+defm VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16], (add VGPR_512)>;
 defm VReg_1024 : VRegClass<32, [v32i32, v32f32, v16i64, v16f64], (add VGPR_1024)>;
 }
 

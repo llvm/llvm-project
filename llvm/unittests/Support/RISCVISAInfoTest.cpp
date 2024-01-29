@@ -629,6 +629,7 @@ TEST(getTargetFeatureForExtension, RetrieveTargetFeatureFromOneExt) {
 }
 
 TEST(RiscvExtensionsHelp, CheckExtensions) {
+  // clang-format off
   std::string ExpectedOutput =
 R"(All available -march extensions for RISC-V
 
@@ -703,16 +704,24 @@ R"(All available -march extensions for RISC-V
     zvl8192b            1.0
     zhinx               1.0
     zhinxmin            1.0
+    smaia               1.0
+    ssaia               1.0
     svinval             1.0
     svnapot             1.0
     svpbmt              1.0
     xcvalu              1.0
     xcvbi               1.0
     xcvbitmanip         1.0
+    xcvelw              1.0
     xcvmac              1.0
+    xcvmem              1.0
     xcvsimd             1.0
     xsfcie              1.0
     xsfvcp              1.0
+    xsfvfnrclipxfqf     1.0
+    xsfvfwmaccqqq       1.0
+    xsfvqmaccdod        1.0
+    xsfvqmaccqoq        1.0
     xtheadba            1.0
     xtheadbb            1.0
     xtheadbs            1.0
@@ -750,11 +759,10 @@ Experimental extensions
     zvksg               1.0
     zvksh               1.0
     zvkt                1.0
-    smaia               1.0
-    ssaia               1.0
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";
+  // clang-format on
 
   StringMap<StringRef> DummyMap;
   DummyMap["i"] = "This is a long dummy description";

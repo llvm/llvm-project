@@ -2644,6 +2644,45 @@ entry:
   ret void
 }
 
+define i32 @mul_pow2_plus_1(i32 %val) {
+; SI-LABEL: mul_pow2_plus_1:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mul_lo_u32 v0, v0, 9
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: mul_pow2_plus_1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mul_lo_u32 v0, v0, 9
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: mul_pow2_plus_1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshl_add_u32 v0, v0, 3, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: mul_pow2_plus_1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 3, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: mul_pow2_plus_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 3, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; EG-LABEL: mul_pow2_plus_1:
+; EG:       ; %bb.0:
+; EG-NEXT:    CF_END
+; EG-NEXT:    PAD
+  %mul = mul i32 %val, 9
+  ret i32 %mul
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }

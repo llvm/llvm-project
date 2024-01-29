@@ -96,8 +96,8 @@ Region::iterator getBlockIt(Region &region, unsigned index) {
 template <typename OpTy>
 class SCFToSPIRVPattern : public OpConversionPattern<OpTy> {
 public:
-  SCFToSPIRVPattern<OpTy>(MLIRContext *context, SPIRVTypeConverter &converter,
-                          ScfToSPIRVContextImpl *scfToSPIRVContext)
+  SCFToSPIRVPattern(MLIRContext *context, SPIRVTypeConverter &converter,
+                    ScfToSPIRVContextImpl *scfToSPIRVContext)
       : OpConversionPattern<OpTy>::OpConversionPattern(converter, context),
         scfToSPIRVContext(scfToSPIRVContext), typeConverter(converter) {}
 

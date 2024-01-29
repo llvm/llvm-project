@@ -591,3 +591,25 @@ func.func @fold_abs_abs(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   %1 = tosa.abs %0 : (tensor<?x1xf32>) -> tensor<?x1xf32>
   return %1 : tensor<?x1xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @fold_reduce_rank_zero
+func.func nested @fold_reduce_rank_zero() {
+  // CHECK-NOT: tosa.reduce_min
+  // CHECK-NOT: tosa.reverse
+  %0 = tensor.empty() : tensor<i32>
+  %1 = tosa.reduce_min %0 {axis = 0 : i32} : (tensor<i32>) -> tensor<i32>
+  %2 = tosa.reverse %0 {axis = 0 : i32} : (tensor<i32>) -> tensor<i32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @fold_tile_rank_zero
+func.func nested @fold_tile_rank_zero() -> tensor<i32> {
+  // CHECK-NOT: tosa.tile
+  %0 = tensor.empty() : tensor<i32>
+  %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<i32>) -> tensor<i32>
+  return %1 : tensor<i32>
+}

@@ -29,30 +29,31 @@ Overview
 Within LLVM, FatLTO is supported by choosing the ``FatLTODefaultPipeline``.
 This pipeline will:
 
-#) Clone the IR module.
-#) Run the pre-link (Thin)LTO pipeline using the cloned module.
+#) Run the pre-link UnifiedLTO pipeline on the current module.
 #) Embed the pre-link bitcode in a special ``.llvm.lto`` section.
-#) Optimize the unmodified copy of the module using the normal compilation pipeline.
+#) Finish optimizing the module using the post-link ThinLTO pipeline.
 #) Emit the object file, including the new ``.llvm.lto`` section.
 
 .. NOTE
 
-   At the time of writing, we conservatively run independent pipelines to
-   generate the bitcode section and the object code, which happen to be
-   identical to those used outside of FatLTO. This results in  compiled
-   artifacts that are identical to those produced by the default and (Thin)LTO
-   pipelines. However, this is not a guarantee, and we reserve the right to
-   change this at any time. Explicitly, users should not rely on the produced
-   bitcode or object code to mach their non-LTO counterparts precisely. They
-   will exhibit similar performance characteristics, but may not be bit-for-bit
-   the same.
+   Previously, we conservatively ran independent pipelines on separate copies
+   of the LLVM module to generate the bitcode section and the object code,
+   which happen to be identical to those used outside of FatLTO. While that
+   resulted in  compiled artifacts that were identical to those produced by the
+   default and (Thin)LTO pipelines, module cloning led to some cases of
+   miscompilation, and we have moved away from trying to keep bitcode
+   generation and optimization completely disjoint.
+
+   Bit-for-bit compatibility is not (and never was) a guarantee, and we reserve
+   the right to change this at any time. Explicitly, users should not rely on
+   the produced bitcode or object code to match their non-LTO counterparts
+   precisely. They will exhibit similar performance characteristics, but may
+   not be bit-for-bit the same.
 
 Internally, the ``.llvm.lto`` section is created by running the
-``EmbedBitcodePass`` at the start of the ``PerModuleDefaultPipeline``. This
-pass is responsible for cloning and optimizing the module with the appropriate
-LTO pipeline and emitting the ``.llvm.lto`` section. Afterwards, the
-``PerModuleDefaultPipeline`` runs normally and the compiler can emit the fat
-object file.
+``EmbedBitcodePass`` after the ``ThinLTOPreLinkDefaultPipeline``. This pass is
+responsible for emitting the ``.llvm.lto`` section. Afterwards, the
+``ThinLTODefaultPipeline`` runs and the compiler can emit the fat object file.
 
 Limitations
 ===========

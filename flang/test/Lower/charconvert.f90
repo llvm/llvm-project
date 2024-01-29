@@ -29,4 +29,4 @@ end subroutine
 ! CHECK:   %[[VAL_4:.*]] = arith.muli %[[VAL_2]]#1, %[[C4]] : index
 ! CHECK:   %[[VAL_5:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : index)
 ! CHECK:   fir.char_convert %[[VAL_3]]#1 for %[[VAL_2]]#1 to %[[VAL_5:.*]] : !fir.ref<!fir.char<4,?>>, index, !fir.ref<!fir.char<1,?>>
-! CHECK:   %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_2]]#1 {uniq_name = "ctor.temp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:   %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] typeparams %[[VAL_2]]#1 {uniq_name = ".temp.kindconvert"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)

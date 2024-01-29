@@ -1,4 +1,4 @@
-! RUN: bbc %s -emit-fir --canonicalize -o - | FileCheck %s
+! RUN: bbc %s -emit-fir -hlfir=false --canonicalize -o - | FileCheck %s
 
 ! CHECK-LABEL: stop_test
 subroutine stop_test()

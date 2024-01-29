@@ -169,21 +169,21 @@ void bufferScanfDirect(void)
 {
   int n;
   scanf("%d", &n);
-  Buffer[n] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[n] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfArithmetic1(int x) {
   int n;
   scanf("%d", &n);
   int m = (n - 3);
-  Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfArithmetic2(int x) {
   int n;
   scanf("%d", &n);
   int m = 100 - (n + 3) * x;
-  Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void bufferScanfAssignment(int x) {
@@ -192,7 +192,7 @@ void bufferScanfAssignment(int x) {
   int m;
   if (x > 0) {
     m = n;
-    Buffer[m] = 1; // expected-warning {{Out of bound memory access }}
+    Buffer[m] = 1; // expected-warning {{Potential out of bound access }}
   }
 }
 
@@ -203,7 +203,7 @@ void scanfArg(void) {
 
 void bufferGetchar(int x) {
   int m = getchar();
-  Buffer[m] = 1;  //expected-warning {{Out of bound memory access (index is tainted)}}
+  Buffer[m] = 1;  //expected-warning {{Potential out of bound access}}
 }
 
 extern const unsigned short int **__ctype_b_loc (void);
@@ -216,7 +216,7 @@ int isdigitImplFalsePositive(void) {
   // macros in ctypes.h.
   int c = getchar();
   return ((*__ctype_b_loc ())[(int) (c)] & (unsigned short int) _ISdigit);
-  //expected-warning@-1 {{Out of bound memory access (index is tainted)}}
+  //expected-warning@-1 {{Potential out of bound access}}
 }
 
 int isdigitSuppressed(void) {
@@ -1113,26 +1113,26 @@ void mySink(int, int, int);
 
 void testConfigurationSources1(void) {
   int x = mySource1();
-  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[x] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationSources2(void) {
   int x;
   mySource2(&x);
-  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[x] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationSources3(void) {
   int x, y;
   myScanf("%d %d", &x, &y);
-  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[y] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationPropagation(void) {
   int x = mySource1();
   int y;
   myPropagator(x, &y);
-  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+  Buffer[y] = 1; // expected-warning {{Potential out of bound access }}
 }
 
 void testConfigurationFilter(void) {

@@ -26,14 +26,14 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T
     path
     u8path(_InputIt __f, _InputIt __l) {
   static_assert(
@@ -46,7 +46,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
 #if defined(_LIBCPP_WIN32API)
   string __tmp(__f, __l);
   using _CVT = __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
-  _VSTD::wstring __w;
+  std::wstring __w;
   __w.reserve(__tmp.size());
   _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
   return path(__w);
@@ -57,7 +57,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
 
 #if defined(_LIBCPP_WIN32API)
 template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T
     path
     u8path(_InputIt __f, _NullSentinel) {
   static_assert(
@@ -72,7 +72,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
   for (; *__f != __sentinel; ++__f)
     __tmp.push_back(*__f);
   using _CVT = __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
-  _VSTD::wstring __w;
+  std::wstring __w;
   __w.reserve(__tmp.size());
   _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
   return path(__w);
@@ -80,7 +80,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
 #endif /* _LIBCPP_WIN32API */
 
 template <class _Source, __enable_if_t<__is_pathable<_Source>::value, int> = 0>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T
     path
     u8path(const _Source& __s) {
   static_assert(
@@ -92,7 +92,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
       "'char' or 'char8_t'");
 #if defined(_LIBCPP_WIN32API)
   using _Traits = __is_pathable<_Source>;
-  return u8path(_VSTD::__unwrap_iter(_Traits::__range_begin(__s)), _VSTD::__unwrap_iter(_Traits::__range_end(__s)));
+  return u8path(std::__unwrap_iter(_Traits::__range_begin(__s)), std::__unwrap_iter(_Traits::__range_end(__s)));
 #else
   return path(__s);
 #endif
@@ -102,6 +102,6 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_U8PATH_H

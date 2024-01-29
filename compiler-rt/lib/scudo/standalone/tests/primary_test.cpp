@@ -9,6 +9,7 @@
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
+#include "condition_variable.h"
 #include "primary32.h"
 #include "primary64.h"
 #include "size_class_map.h"
@@ -105,6 +106,34 @@ template <typename SizeClassMapT> struct TestConfig4 {
   };
 };
 
+// This is the only test config that enables the condition variable.
+template <typename SizeClassMapT> struct TestConfig5 {
+  static const bool MaySupportMemoryTagging = true;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+#if defined(__mips__)
+    // Unable to allocate greater size on QEMU-user.
+    static const scudo::uptr RegionSizeLog = 23U;
+#else
+    static const scudo::uptr RegionSizeLog = 24U;
+#endif
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const scudo::uptr GroupSizeLog = 18U;
+    typedef scudo::u32 CompactPtrT;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const bool UseConditionVariable = true;
+#if SCUDO_LINUX
+    using ConditionVariableT = scudo::ConditionVariableLinux;
+#else
+    using ConditionVariableT = scudo::ConditionVariableDummy;
+#endif
+  };
+};
+
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct Config : public BaseConfig<SizeClassMapT> {};
 
@@ -143,7 +172,8 @@ struct ScudoPrimaryTest : public Test {};
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig1)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)                            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \

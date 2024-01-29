@@ -400,14 +400,14 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
     return false;
   else {
     // If we've hit the next branch breakpoint, then clear it.
-    size_t num_owners = bp_site_sp->GetNumberOfOwners();
+    size_t num_constituents = bp_site_sp->GetNumberOfConstituents();
     bool explains_stop = true;
-    // If all the owners are internal, then we are probably just stepping over
-    // this range from multiple threads, or multiple frames, so we want to
+    // If all the constituents are internal, then we are probably just stepping
+    // over this range from multiple threads, or multiple frames, so we want to
     // continue.  If one is not internal, then we should not explain the stop,
     // and let the user breakpoint handle the stop.
-    for (size_t i = 0; i < num_owners; i++) {
-      if (!bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint().IsInternal()) {
+    for (size_t i = 0; i < num_constituents; i++) {
+      if (!bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint().IsInternal()) {
         explains_stop = false;
         break;
       }
@@ -415,8 +415,8 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
     LLDB_LOGF(log,
               "ThreadPlanStepRange::NextRangeBreakpointExplainsStop - Hit "
               "next range breakpoint which has %" PRIu64
-              " owners - explains stop: %u.",
-              (uint64_t)num_owners, explains_stop);
+              " constituents - explains stop: %u.",
+              (uint64_t)num_constituents, explains_stop);
     ClearNextBranchBreakpoint();
     return explains_stop;
   }

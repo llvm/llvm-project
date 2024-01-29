@@ -15,20 +15,13 @@
 
 #if __STDC_HOSTED__
 #include <time.h>
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-#include "src/__support/GPU/utils.h"
-static long clock() { return LIBC_NAMESPACE::gpu::fixed_frequency_clock(); }
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
-#define CLOCKS_PER_SEC 1000000000UL
-#else
-// The AMDGPU loader needs to initialize this at runtime by querying the driver.
-extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] LIBC_NAMESPACE_clock_freq;
-#define CLOCKS_PER_SEC LIBC_NAMESPACE_clock_freq
-#endif
-#else
-static long clock() { return 0; }
-#define CLOCKS_PER_SEC 1
+#define LIBC_TEST_USE_CLOCK
+#elif defined(TARGET_SUPPORTS_CLOCK)
+#include <time.h>
+
+#include "src/time/clock.h"
+extern "C" clock_t clock() noexcept { return LIBC_NAMESPACE::clock(); }
+#define LIBC_TEST_USE_CLOCK
 #endif
 
 namespace LIBC_NAMESPACE {
@@ -147,7 +140,7 @@ int Test::runTests(const char *TestFilter) {
       break;
     case RunContext::RunResult::Pass:
       tlog << GREEN << "[       OK ] " << RESET << TestName;
-#if __STDC_HOSTED__ || defined(LIBC_TARGET_ARCH_IS_GPU)
+#ifdef LIBC_TEST_USE_CLOCK
       tlog << " (took ";
       if (start_time > end_time) {
         tlog << "unknown - try rerunning)\n";

@@ -299,7 +299,7 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
     if (I == MBB.begin())
       RS.enterBasicBlock(MBB);
     else
-      RS.backward(std::prev(I));
+      RS.backward(I);
     // FIXME: The below just finds *a* unused register. Maybe code could be
     // optimized more if this looks for the register that isn't used for the
     // longest time around this place, to enable more scheduling freedom. Not

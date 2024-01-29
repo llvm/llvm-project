@@ -1167,14 +1167,13 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
     return TokError("platform name expected");
 
   unsigned Platform = StringSwitch<unsigned>(PlatformName)
-    .Case("macos", MachO::PLATFORM_MACOS)
-    .Case("ios", MachO::PLATFORM_IOS)
-    .Case("tvos", MachO::PLATFORM_TVOS)
-    .Case("watchos", MachO::PLATFORM_WATCHOS)
-    .Case("macCatalyst", MachO::PLATFORM_MACCATALYST)
-    .Case("driverkit", MachO::PLATFORM_DRIVERKIT)
-    .Default(0);
-  if (Platform == 0)
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  .Case(#build_name, MachO::PLATFORM_##platform)
+#include "llvm/BinaryFormat/MachO.def"
+                          .Default(MachO::PLATFORM_UNKNOWN);
+
+  if (Platform == MachO::PLATFORM_UNKNOWN)
     return Error(PlatformLoc, "unknown platform name");
 
   if (getLexer().isNot(AsmToken::Comma))

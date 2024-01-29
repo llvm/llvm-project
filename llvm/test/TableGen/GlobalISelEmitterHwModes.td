@@ -133,7 +133,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_LOAD,
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
-// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    // MIs[0] DstI[dst]
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s64,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPRRegClassID,
 // CHECK-NEXT:    // MIs[0] src1
@@ -151,7 +151,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_LOAD,
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
-// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    // MIs[0] DstI[dst]
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPRRegClassID,
 // CHECK-NEXT:    // MIs[0] src1
@@ -175,7 +175,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_LOAD,
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
-// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    // MIs[0] DstI[dst]
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_p0s64,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPRRegClassID,
 // CHECK-NEXT:    // MIs[0] src
@@ -193,7 +193,7 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_LOAD,
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(int64_t)AtomicOrdering::NotAtomic,
-// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    // MIs[0] DstI[dst]
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_p0s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPRRegClassID,
 // CHECK-NEXT:    // MIs[0] src

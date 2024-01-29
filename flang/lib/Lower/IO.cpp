@@ -101,20 +101,19 @@ static constexpr std::tuple<
     mkIOKey(InputAscii), mkIOKey(InputComplex32), mkIOKey(InputComplex64),
     mkIOKey(InputDerivedType), mkIOKey(InputDescriptor), mkIOKey(InputInteger),
     mkIOKey(InputLogical), mkIOKey(InputNamelist), mkIOKey(InputReal32),
-    mkIOKey(InputReal64), mkIOKey(InputUnformattedBlock),
-    mkIOKey(InquireCharacter), mkIOKey(InquireInteger64),
+    mkIOKey(InputReal64), mkIOKey(InquireCharacter), mkIOKey(InquireInteger64),
     mkIOKey(InquireLogical), mkIOKey(InquirePendingId), mkIOKey(OutputAscii),
     mkIOKey(OutputComplex32), mkIOKey(OutputComplex64),
     mkIOKey(OutputDerivedType), mkIOKey(OutputDescriptor),
     mkIOKey(OutputInteger8), mkIOKey(OutputInteger16), mkIOKey(OutputInteger32),
     mkIOKey(OutputInteger64), mkIOKey(OutputInteger128), mkIOKey(OutputLogical),
     mkIOKey(OutputNamelist), mkIOKey(OutputReal32), mkIOKey(OutputReal64),
-    mkIOKey(OutputUnformattedBlock), mkIOKey(SetAccess), mkIOKey(SetAction),
-    mkIOKey(SetAdvance), mkIOKey(SetAsynchronous), mkIOKey(SetBlank),
-    mkIOKey(SetCarriagecontrol), mkIOKey(SetConvert), mkIOKey(SetDecimal),
-    mkIOKey(SetDelim), mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm),
-    mkIOKey(SetPad), mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec),
-    mkIOKey(SetRecl), mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
+    mkIOKey(SetAccess), mkIOKey(SetAction), mkIOKey(SetAdvance),
+    mkIOKey(SetAsynchronous), mkIOKey(SetBlank), mkIOKey(SetCarriagecontrol),
+    mkIOKey(SetConvert), mkIOKey(SetDecimal), mkIOKey(SetDelim),
+    mkIOKey(SetEncoding), mkIOKey(SetFile), mkIOKey(SetForm), mkIOKey(SetPad),
+    mkIOKey(SetPos), mkIOKey(SetPosition), mkIOKey(SetRec), mkIOKey(SetRecl),
+    mkIOKey(SetRound), mkIOKey(SetSign), mkIOKey(SetStatus)>
     newIOTable;
 } // namespace Fortran::lower
 

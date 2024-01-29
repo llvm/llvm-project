@@ -456,6 +456,17 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     return (MCM->getChildNo() >= 8) ? 2 : 1;
   }
 
+  case Matcher::MoveSibling: {
+    const auto *MSM = cast<MoveSiblingMatcher>(N);
+
+    OS << "OPC_MoveSibling";
+    // Handle the specialized forms.
+    if (MSM->getSiblingNo() >= 8)
+      OS << ", ";
+    OS << MSM->getSiblingNo() << ",\n";
+    return (MSM->getSiblingNo() >= 8) ? 2 : 1;
+  }
+
   case Matcher::MoveParent:
     OS << "OPC_MoveParent,\n";
     return 1;
@@ -576,21 +587,37 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     return CurrentIdx - StartIdx + 1;
   }
 
- case Matcher::CheckType:
+  case Matcher::CheckType:
     if (cast<CheckTypeMatcher>(N)->getResNo() == 0) {
-      OS << "OPC_CheckType, "
-         << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
-      return 2;
+      MVT::SimpleValueType VT = cast<CheckTypeMatcher>(N)->getType();
+      switch (VT) {
+      case MVT::i32:
+      case MVT::i64:
+        OS << "OPC_CheckTypeI" << MVT(VT).getSizeInBits() << ",\n";
+        return 1;
+      default:
+        OS << "OPC_CheckType, " << getEnumName(VT) << ",\n";
+        return 2;
+      }
     }
-    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo()
-       << ", " << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
+    OS << "OPC_CheckTypeRes, " << cast<CheckTypeMatcher>(N)->getResNo() << ", "
+       << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
     return 3;
 
-  case Matcher::CheckChildType:
-    OS << "OPC_CheckChild"
-       << cast<CheckChildTypeMatcher>(N)->getChildNo() << "Type, "
-       << getEnumName(cast<CheckChildTypeMatcher>(N)->getType()) << ",\n";
-    return 2;
+  case Matcher::CheckChildType: {
+    MVT::SimpleValueType VT = cast<CheckChildTypeMatcher>(N)->getType();
+    switch (VT) {
+    case MVT::i32:
+    case MVT::i64:
+      OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+         << "TypeI" << MVT(VT).getSizeInBits() << ",\n";
+      return 1;
+    default:
+      OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+         << "Type, " << getEnumName(VT) << ",\n";
+      return 2;
+    }
+  }
 
   case Matcher::CheckInteger: {
     OS << "OPC_CheckInteger, ";
@@ -669,19 +696,42 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
 
   case Matcher::EmitInteger: {
     int64_t Val = cast<EmitIntegerMatcher>(N)->getValue();
-    OS << "OPC_EmitInteger, "
-       << getEnumName(cast<EmitIntegerMatcher>(N)->getVT()) << ", ";
-    unsigned Bytes = 2 + EmitSignedVBRValue(Val, OS);
+    MVT::SimpleValueType VT = cast<EmitIntegerMatcher>(N)->getVT();
+    unsigned OpBytes;
+    switch (VT) {
+    case MVT::i8:
+    case MVT::i16:
+    case MVT::i32:
+    case MVT::i64:
+      OpBytes = 1;
+      OS << "OPC_EmitInteger" << MVT(VT).getSizeInBits() << ", ";
+      break;
+    default:
+      OpBytes = 2;
+      OS << "OPC_EmitInteger, " << getEnumName(VT) << ", ";
+      break;
+    }
+    unsigned Bytes = OpBytes + EmitSignedVBRValue(Val, OS);
     OS << '\n';
     return Bytes;
   }
   case Matcher::EmitStringInteger: {
     const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
+    MVT::SimpleValueType VT = cast<EmitStringIntegerMatcher>(N)->getVT();
     // These should always fit into 7 bits.
-    OS << "OPC_EmitStringInteger, "
-       << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", " << Val
-       << ",\n";
-    return 3;
+    unsigned OpBytes;
+    switch (VT) {
+    case MVT::i32:
+      OpBytes = 1;
+      OS << "OPC_EmitStringInteger" << MVT(VT).getSizeInBits() << ", ";
+      break;
+    default:
+      OpBytes = 2;
+      OS << "OPC_EmitStringInteger, " << getEnumName(VT) << ", ";
+      break;
+    }
+    OS << Val << ",\n";
+    return OpBytes + 1;
   }
 
   case Matcher::EmitRegister: {
@@ -707,10 +757,15 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     }
   }
 
-  case Matcher::EmitConvertToTarget:
-    OS << "OPC_EmitConvertToTarget, "
-       << cast<EmitConvertToTargetMatcher>(N)->getSlot() << ",\n";
+  case Matcher::EmitConvertToTarget: {
+    unsigned Slot = cast<EmitConvertToTargetMatcher>(N)->getSlot();
+    if (Slot < 8) {
+      OS << "OPC_EmitConvertToTarget" << Slot << ",\n";
+      return 1;
+    }
+    OS << "OPC_EmitConvertToTarget, " << Slot << ",\n";
     return 2;
+  }
 
   case Matcher::EmitMergeInputChains: {
     const EmitMergeInputChainsMatcher *MN =
@@ -732,14 +787,20 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     const auto *C2RMatcher = cast<EmitCopyToRegMatcher>(N);
     int Bytes = 3;
     const CodeGenRegister *Reg = C2RMatcher->getDestPhysReg();
+    unsigned Slot = C2RMatcher->getSrcSlot();
     if (Reg->EnumValue > 255) {
       assert(isUInt<16>(Reg->EnumValue) && "not handled");
-      OS << "OPC_EmitCopyToReg2, " << C2RMatcher->getSrcSlot() << ", "
+      OS << "OPC_EmitCopyToRegTwoByte, " << Slot << ", "
          << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
       ++Bytes;
     } else {
-      OS << "OPC_EmitCopyToReg, " << C2RMatcher->getSrcSlot() << ", "
-         << getQualifiedName(Reg->TheDef) << ",\n";
+      if (Slot < 8) {
+        OS << "OPC_EmitCopyToReg" << Slot << ", "
+           << getQualifiedName(Reg->TheDef) << ",\n";
+        --Bytes;
+      } else
+        OS << "OPC_EmitCopyToReg, " << Slot << ", "
+           << getQualifiedName(Reg->TheDef) << ",\n";
     }
 
     return Bytes;
@@ -774,21 +835,50 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
       }
     }
     const EmitNodeMatcherCommon *EN = cast<EmitNodeMatcherCommon>(N);
-    OS << (isa<EmitNodeMatcher>(EN) ? "OPC_EmitNode" : "OPC_MorphNodeTo");
+    bool IsEmitNode = isa<EmitNodeMatcher>(EN);
+    OS << (IsEmitNode ? "OPC_EmitNode" : "OPC_MorphNodeTo");
     bool CompressVTs = EN->getNumVTs() < 3;
-    if (CompressVTs)
+    bool CompressNodeInfo = false;
+    if (CompressVTs) {
       OS << EN->getNumVTs();
+      if (!EN->hasChain() && !EN->hasInGlue() && !EN->hasOutGlue() &&
+          !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1) {
+        CompressNodeInfo = true;
+        OS << "None";
+      } else if (EN->hasChain() && !EN->hasInGlue() && !EN->hasOutGlue() &&
+                 !EN->hasMemRefs() && EN->getNumFixedArityOperands() == -1) {
+        CompressNodeInfo = true;
+        OS << "Chain";
+      } else if (!IsEmitNode && !EN->hasChain() && EN->hasInGlue() &&
+                 !EN->hasOutGlue() && !EN->hasMemRefs() &&
+                 EN->getNumFixedArityOperands() == -1) {
+        CompressNodeInfo = true;
+        OS << "GlueInput";
+      } else if (!IsEmitNode && !EN->hasChain() && !EN->hasInGlue() &&
+                 EN->hasOutGlue() && !EN->hasMemRefs() &&
+                 EN->getNumFixedArityOperands() == -1) {
+        CompressNodeInfo = true;
+        OS << "GlueOutput";
+      }
+    }
 
     const CodeGenInstruction &CGI = EN->getInstruction();
     OS << ", TARGET_VAL(" << CGI.Namespace << "::" << CGI.TheDef->getName()
-       << "), 0";
+       << ")";
 
-    if (EN->hasChain())   OS << "|OPFL_Chain";
-    if (EN->hasInGlue())  OS << "|OPFL_GlueInput";
-    if (EN->hasOutGlue()) OS << "|OPFL_GlueOutput";
-    if (EN->hasMemRefs()) OS << "|OPFL_MemRefs";
-    if (EN->getNumFixedArityOperands() != -1)
-      OS << "|OPFL_Variadic" << EN->getNumFixedArityOperands();
+    if (!CompressNodeInfo) {
+      OS << ", 0";
+      if (EN->hasChain())
+        OS << "|OPFL_Chain";
+      if (EN->hasInGlue())
+        OS << "|OPFL_GlueInput";
+      if (EN->hasOutGlue())
+        OS << "|OPFL_GlueOutput";
+      if (EN->hasMemRefs())
+        OS << "|OPFL_MemRefs";
+      if (EN->getNumFixedArityOperands() != -1)
+        OS << "|OPFL_Variadic" << EN->getNumFixedArityOperands();
+    }
     OS << ",\n";
 
     OS.indent(FullIndexWidth + Indent+4);
@@ -831,8 +921,8 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     } else
       OS << '\n';
 
-    return 5 + !CompressVTs + EN->getNumVTs() + NumOperandBytes +
-           NumCoveredBytes;
+    return 4 + !CompressVTs + !CompressNodeInfo + EN->getNumVTs() +
+           NumOperandBytes + NumCoveredBytes;
   }
   case Matcher::CompleteMatch: {
     const CompleteMatchMatcher *CM = cast<CompleteMatchMatcher>(N);
@@ -1037,45 +1127,82 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
 
 static StringRef getOpcodeString(Matcher::KindTy Kind) {
   switch (Kind) {
-  case Matcher::Scope: return "OPC_Scope"; break;
-  case Matcher::RecordNode: return "OPC_RecordNode"; break;
-  case Matcher::RecordChild: return "OPC_RecordChild"; break;
-  case Matcher::RecordMemRef: return "OPC_RecordMemRef"; break;
-  case Matcher::CaptureGlueInput: return "OPC_CaptureGlueInput"; break;
-  case Matcher::MoveChild: return "OPC_MoveChild"; break;
-  case Matcher::MoveParent: return "OPC_MoveParent"; break;
-  case Matcher::CheckSame: return "OPC_CheckSame"; break;
-  case Matcher::CheckChildSame: return "OPC_CheckChildSame"; break;
+  case Matcher::Scope:
+    return "OPC_Scope";
+  case Matcher::RecordNode:
+    return "OPC_RecordNode";
+  case Matcher::RecordChild:
+    return "OPC_RecordChild";
+  case Matcher::RecordMemRef:
+    return "OPC_RecordMemRef";
+  case Matcher::CaptureGlueInput:
+    return "OPC_CaptureGlueInput";
+  case Matcher::MoveChild:
+    return "OPC_MoveChild";
+  case Matcher::MoveSibling:
+    return "OPC_MoveSibling";
+  case Matcher::MoveParent:
+    return "OPC_MoveParent";
+  case Matcher::CheckSame:
+    return "OPC_CheckSame";
+  case Matcher::CheckChildSame:
+    return "OPC_CheckChildSame";
   case Matcher::CheckPatternPredicate:
-    return "OPC_CheckPatternPredicate"; break;
-  case Matcher::CheckPredicate: return "OPC_CheckPredicate"; break;
-  case Matcher::CheckOpcode: return "OPC_CheckOpcode"; break;
-  case Matcher::SwitchOpcode: return "OPC_SwitchOpcode"; break;
-  case Matcher::CheckType: return "OPC_CheckType"; break;
-  case Matcher::SwitchType: return "OPC_SwitchType"; break;
-  case Matcher::CheckChildType: return "OPC_CheckChildType"; break;
-  case Matcher::CheckInteger: return "OPC_CheckInteger"; break;
-  case Matcher::CheckChildInteger: return "OPC_CheckChildInteger"; break;
-  case Matcher::CheckCondCode: return "OPC_CheckCondCode"; break;
-  case Matcher::CheckChild2CondCode: return "OPC_CheckChild2CondCode"; break;
-  case Matcher::CheckValueType: return "OPC_CheckValueType"; break;
-  case Matcher::CheckComplexPat: return "OPC_CheckComplexPat"; break;
-  case Matcher::CheckAndImm: return "OPC_CheckAndImm"; break;
-  case Matcher::CheckOrImm: return "OPC_CheckOrImm"; break;
+    return "OPC_CheckPatternPredicate";
+  case Matcher::CheckPredicate:
+    return "OPC_CheckPredicate";
+  case Matcher::CheckOpcode:
+    return "OPC_CheckOpcode";
+  case Matcher::SwitchOpcode:
+    return "OPC_SwitchOpcode";
+  case Matcher::CheckType:
+    return "OPC_CheckType";
+  case Matcher::SwitchType:
+    return "OPC_SwitchType";
+  case Matcher::CheckChildType:
+    return "OPC_CheckChildType";
+  case Matcher::CheckInteger:
+    return "OPC_CheckInteger";
+  case Matcher::CheckChildInteger:
+    return "OPC_CheckChildInteger";
+  case Matcher::CheckCondCode:
+    return "OPC_CheckCondCode";
+  case Matcher::CheckChild2CondCode:
+    return "OPC_CheckChild2CondCode";
+  case Matcher::CheckValueType:
+    return "OPC_CheckValueType";
+  case Matcher::CheckComplexPat:
+    return "OPC_CheckComplexPat";
+  case Matcher::CheckAndImm:
+    return "OPC_CheckAndImm";
+  case Matcher::CheckOrImm:
+    return "OPC_CheckOrImm";
   case Matcher::CheckFoldableChainNode:
-    return "OPC_CheckFoldableChainNode"; break;
-  case Matcher::CheckImmAllOnesV: return "OPC_CheckImmAllOnesV"; break;
-  case Matcher::CheckImmAllZerosV: return "OPC_CheckImmAllZerosV"; break;
-  case Matcher::EmitInteger: return "OPC_EmitInteger"; break;
-  case Matcher::EmitStringInteger: return "OPC_EmitStringInteger"; break;
-  case Matcher::EmitRegister: return "OPC_EmitRegister"; break;
-  case Matcher::EmitConvertToTarget: return "OPC_EmitConvertToTarget"; break;
-  case Matcher::EmitMergeInputChains: return "OPC_EmitMergeInputChains"; break;
-  case Matcher::EmitCopyToReg: return "OPC_EmitCopyToReg"; break;
-  case Matcher::EmitNode: return "OPC_EmitNode"; break;
-  case Matcher::MorphNodeTo: return "OPC_MorphNodeTo"; break;
-  case Matcher::EmitNodeXForm: return "OPC_EmitNodeXForm"; break;
-  case Matcher::CompleteMatch: return "OPC_CompleteMatch"; break;
+    return "OPC_CheckFoldableChainNode";
+  case Matcher::CheckImmAllOnesV:
+    return "OPC_CheckImmAllOnesV";
+  case Matcher::CheckImmAllZerosV:
+    return "OPC_CheckImmAllZerosV";
+  case Matcher::EmitInteger:
+    return "OPC_EmitInteger";
+  case Matcher::EmitStringInteger:
+    return "OPC_EmitStringInteger";
+  case Matcher::EmitRegister:
+    return "OPC_EmitRegister";
+  case Matcher::EmitConvertToTarget:
+    return "OPC_EmitConvertToTarget";
+  case Matcher::EmitMergeInputChains:
+    return "OPC_EmitMergeInputChains";
+  case Matcher::EmitCopyToReg:
+    return "OPC_EmitCopyToReg";
+  case Matcher::EmitNode:
+    return "OPC_EmitNode";
+  case Matcher::MorphNodeTo:
+    return "OPC_MorphNodeTo";
+  case Matcher::EmitNodeXForm:
+    return "OPC_EmitNodeXForm";
+  case Matcher::CompleteMatch:
+    return "OPC_CompleteMatch";
   }
 
   llvm_unreachable("Unhandled opcode?");

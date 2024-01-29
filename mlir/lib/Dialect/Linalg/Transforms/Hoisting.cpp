@@ -43,15 +43,6 @@ using llvm::dbgs;
 using namespace mlir;
 using namespace mlir::linalg;
 
-void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
-  IRRewriter rewriter(func->getContext());
-  // TODO: walking in some reverse / inside-out order would be more efficient
-  // and would capture more cases.
-  func.walk([&](scf::ForOp forOp) {
-    hoistRedundantSubsetExtractInsert(rewriter, forOp);
-  });
-}
-
 static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
                                 LoopLikeOpInterface loop) {
   Value source = transferRead.getSource();

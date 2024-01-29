@@ -321,6 +321,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   enabled or not.  A version of LLVM built with ABI breaking checks
   is not ABI compatible with a version built without it.
 
+**LLVM_ADDITIONAL_BUILD_TYPES**:LIST
+  Adding a semicolon separated list of additional build types to this flag
+  allows for them to be specified as values in CMAKE_BUILD_TYPE without
+  encountering a fatal error during the configuration process.
+
 **LLVM_UNREACHABLE_OPTIMIZE**:BOOL
   This flag controls the behavior of `llvm_unreachable()` in release build
   (when assertions are disabled in general). When ON (default) then
@@ -384,7 +389,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   will limit code coverage summaries to just the listed directories. If unset,
   coverage reports will include all sources identified by the tooling.
 
- **LLVM_INDIVIDUAL_TEST_COVERAGE**: BOOL
+**LLVM_INDIVIDUAL_TEST_COVERAGE**:BOOL
   Enable individual test case coverage. When set to ON, code coverage data for
   each test case will be generated and stored in a separate directory under the
   config.test_exec_root path. This feature allows code coverage analysis of each
@@ -427,6 +432,9 @@ enabled sub-projects. Nearly all of these variable names begin with
   'install-xcode-toolchain'. This target will create a directory at
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
+
+**LLVM_<target>_LINKER_FLAGS**:STRING
+  Defines the set of linker flags that should be applied to a <target>.
 
 **LLVM_DEFAULT_TARGET_TRIPLE**:STRING
   LLVM target to use for code generation when no target is explicitly specified.
@@ -751,6 +759,19 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
+
+**LLVM_RAM_PER_COMPILE_JOB**:STRING
+  Calculates the amount of Ninja compile jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 
+  will be between one and amount of logical cores.
+
+**LLVM_RAM_PER_LINK_JOB**:STRING
+  Calculates the amount of Ninja link jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_LINK_JOBS. Link jobs will 
+  be between one and amount of logical cores. Link jobs will not run 
+  exclusively therefore you should add an offset of one or two compile jobs 
+  to be sure its not terminated in your memory restricted environment. On ELF
+  platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This

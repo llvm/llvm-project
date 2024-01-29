@@ -189,7 +189,6 @@ struct S11 {
 // CHECK-LABEL: define dso_local void @_Z4fS11v
 // CHECK:                        alloca %struct.S11, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S11, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]]
 // CHECK-NOT:     call void @llvm.dbg.declare(metadata ptr [[TMP0]]
 //
 void fS11() {
@@ -206,7 +205,6 @@ struct S12 {
 // CHECK:                        alloca %struct.S12, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S12, align 4
 // CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S12_A:![0-9]+]], metadata !DIExpression())
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]]
 // CHECK-NOT:     call void @llvm.dbg.declare(metadata ptr [[TMP0]]
 //
 void fS12() {
@@ -222,7 +220,6 @@ struct __attribute__((packed)) S13 {
 // CHECK-LABEL: define dso_local void @_Z4fS13v
 // CHECK:                        alloca %struct.S13, align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S13, align 1
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata {{.*}}, metadata !DIExpression())
 // CHECK-NOT:     call void @llvm.dbg.declare(metadata ptr [[TMP0]]
 //
 void fS13() {

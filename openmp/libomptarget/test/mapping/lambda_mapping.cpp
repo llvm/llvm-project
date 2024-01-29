@@ -1,7 +1,7 @@
-// On AMDGPU we don't have malloc support yet. We need optimizations
-// to avoid a thread state which requires malloc.
-//
-// XUN: %libomptarget-compilexx-run-and-check-generic
+// Unonptimized, we need 24000000 bytes heap
+// RUN: %libomptarget-compilexx-generic
+// RUN: env LIBOMPTARGET_HEAP_SIZE=24000000 \
+// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: %libomptarget-compileoptxx-run-and-check-generic
 
 #include <iostream>

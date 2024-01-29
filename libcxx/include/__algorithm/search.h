@@ -171,7 +171,7 @@ pair<_Iter1, _Iter1> __search_impl(_Iter1 __first1, _Sent1 __last1,
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _ForwardIterator1 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
                          _ForwardIterator2 __first2, _ForwardIterator2 __last2,
                          _BinaryPredicate __pred) {
@@ -182,7 +182,7 @@ _ForwardIterator1 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _ForwardIterator1 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
                          _ForwardIterator2 __first2, _ForwardIterator2 __last2) {
   return std::search(__first1, __last1, __first2, __last2, __equal_to());
@@ -190,7 +190,7 @@ _ForwardIterator1 search(_ForwardIterator1 __first1, _ForwardIterator1 __last1,
 
 #if _LIBCPP_STD_VER >= 17
 template <class _ForwardIterator, class _Searcher>
-_LIBCPP_NODISCARD_EXT _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 search(_ForwardIterator __f, _ForwardIterator __l, const _Searcher& __s) {
   return __s(__f, __l).first;
 }

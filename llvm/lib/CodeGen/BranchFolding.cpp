@@ -485,13 +485,7 @@ BranchFolder::MergePotentialsElt::operator<(const MergePotentialsElt &o) const {
     return true;
   if (getBlock()->getNumber() > o.getBlock()->getNumber())
     return false;
-  // _GLIBCXX_DEBUG checks strict weak ordering, which involves comparing
-  // an object with itself.
-#ifndef _GLIBCXX_DEBUG
-  llvm_unreachable("Predecessor appears twice");
-#else
   return false;
-#endif
 }
 
 /// CountTerminators - Count the number of terminators in the given

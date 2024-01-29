@@ -47,19 +47,19 @@ public:
     typedef void                pointer;
     typedef void                reference;
 
-    _LIBCPP_INLINE_VISIBILITY explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
-    _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator*() {return *this;}
-    _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator=(const _Tp& __element)
-        {::new ((void*)_VSTD::addressof(*__x_)) _Tp(__element); return *this;}
+    _LIBCPP_HIDE_FROM_ABI explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
+    _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator*() {return *this;}
+    _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(const _Tp& __element)
+        {::new ((void*)std::addressof(*__x_)) _Tp(__element); return *this;}
 #if _LIBCPP_STD_VER >= 14
-    _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator=(_Tp&& __element)
-        {::new ((void*)_VSTD::addressof(*__x_)) _Tp(_VSTD::move(__element)); return *this;}
+    _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(_Tp&& __element)
+        {::new ((void*)std::addressof(*__x_)) _Tp(std::move(__element)); return *this;}
 #endif
-    _LIBCPP_INLINE_VISIBILITY raw_storage_iterator& operator++() {++__x_; return *this;}
-    _LIBCPP_INLINE_VISIBILITY raw_storage_iterator  operator++(int)
+    _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator++() {++__x_; return *this;}
+    _LIBCPP_HIDE_FROM_ABI raw_storage_iterator  operator++(int)
         {raw_storage_iterator __t(*this); ++__x_; return __t;}
 #if _LIBCPP_STD_VER >= 14
-    _LIBCPP_INLINE_VISIBILITY _OutputIterator base() const { return __x_; }
+    _LIBCPP_HIDE_FROM_ABI _OutputIterator base() const { return __x_; }
 #endif
 };
 

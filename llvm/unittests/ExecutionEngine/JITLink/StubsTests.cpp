@@ -13,7 +13,6 @@
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Memory.h"
 
 #include "llvm/Testing/Support/Error.h"

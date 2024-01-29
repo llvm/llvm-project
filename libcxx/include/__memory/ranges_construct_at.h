@@ -46,7 +46,7 @@ struct __fn {
   )>
   _LIBCPP_HIDE_FROM_ABI
   constexpr _Tp* operator()(_Tp* __location, _Args&& ...__args) const {
-    return _VSTD::construct_at(__location, _VSTD::forward<_Args>(__args)...);
+    return std::construct_at(__location, std::forward<_Args>(__args)...);
   }
 };
 
@@ -64,7 +64,7 @@ struct __fn {
   template <destructible _Tp>
   _LIBCPP_HIDE_FROM_ABI
   constexpr void operator()(_Tp* __location) const noexcept {
-    _VSTD::destroy_at(__location);
+    std::destroy_at(__location);
   }
 };
 
@@ -83,7 +83,7 @@ struct __fn {
     requires destructible<iter_value_t<_InputIterator>>
   _LIBCPP_HIDE_FROM_ABI
   constexpr _InputIterator operator()(_InputIterator __first, _Sentinel __last) const noexcept {
-    return _VSTD::__destroy(_VSTD::move(__first), _VSTD::move(__last));
+    return std::__destroy(std::move(__first), std::move(__last));
   }
 
   template <__nothrow_input_range _InputRange>
@@ -109,7 +109,7 @@ struct __fn {
     requires destructible<iter_value_t<_InputIterator>>
   _LIBCPP_HIDE_FROM_ABI
   constexpr _InputIterator operator()(_InputIterator __first, iter_difference_t<_InputIterator> __n) const noexcept {
-    return _VSTD::destroy_n(_VSTD::move(__first), __n);
+    return std::destroy_n(std::move(__first), __n);
   }
 };
 

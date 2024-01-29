@@ -78,7 +78,7 @@ define i32 @test_02(i32 %start, ptr %p, ptr %q) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (9223372036854775806 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nuw>
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (9223372036854775806 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nuw>
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %zext = zext i32 %start to i64
@@ -139,7 +139,7 @@ define void @pointer_iv_nowrap_guard(ptr %startptr, ptr %endptr) local_unnamed_a
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8001 + (-1 * (ptrtoint ptr %startptr to i64)) + ((8004 + (ptrtoint ptr %startptr to i64)) umax (ptrtoint ptr %endptr to i64))) /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-8001 + (-1 * (ptrtoint ptr %startptr to i64)) + ((8004 + (ptrtoint ptr %startptr to i64)) umax (ptrtoint ptr %endptr to i64))) /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %init = getelementptr inbounds i32, ptr %startptr, i64 2000

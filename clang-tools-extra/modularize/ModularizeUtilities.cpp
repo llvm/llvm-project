@@ -322,7 +322,7 @@ std::error_code ModularizeUtilities::loadModuleMap(
 // Walks the modules and collects referenced headers into
 // HeaderFileNames.
 bool ModularizeUtilities::collectModuleMapHeaders(clang::ModuleMap *ModMap) {
-  SmallVector<std::pair<StringRef, const Module *>, 0> Vec;
+  SmallVector<std::pair<StringRef, const clang::Module *>, 0> Vec;
   for (auto &M : ModMap->modules())
     Vec.emplace_back(M.first(), M.second);
   llvm::sort(Vec, llvm::less_first());
@@ -349,14 +349,14 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   for (auto *Submodule : Mod.submodules())
     collectModuleHeaders(*Submodule);
 
-  if (std::optional<Module::Header> UmbrellaHeader =
+  if (std::optional<clang::Module::Header> UmbrellaHeader =
           Mod.getUmbrellaHeaderAsWritten()) {
     std::string HeaderPath = getCanonicalPath(UmbrellaHeader->Entry.getName());
     // Collect umbrella header.
     HeaderFileNames.push_back(HeaderPath);
 
     // FUTURE: When needed, umbrella header header collection goes here.
-  } else if (std::optional<Module::DirectoryName> UmbrellaDir =
+  } else if (std::optional<clang::Module::DirectoryName> UmbrellaDir =
                  Mod.getUmbrellaDirAsWritten()) {
     // If there normal headers, assume these are umbrellas and skip collection.
     if (Mod.Headers->size() == 0) {

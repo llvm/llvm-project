@@ -90,4 +90,26 @@ define amdgpu_kernel void @v_input_output_v16i16() {
   ret void
 }
 
+; GCN-LABEL: {{^}}v_input_output_v32f16
+; GCN: v_mov_b32 v[0:15], -1
+; GCN: ; use v[0:15]
+; INVALID: error: couldn't allocate output register for constraint 'v'
+; INVALID: error: couldn't allocate input reg for constraint 'v'
+define amdgpu_kernel void @v_input_output_v32f16() {
+  %v = tail call <32 x half> asm sideeffect "v_mov_b32 $0, -1", "=v"()
+  tail call void asm sideeffect "; use $0", "v"(<32 x half> %v)
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_input_output_v32i16
+; GCN: v_mov_b32 v[0:15], -1
+; GCN: ; use v[0:15]
+; INVALID: error: couldn't allocate output register for constraint 'v'
+; INVALID: error: couldn't allocate input reg for constraint 'v'
+define amdgpu_kernel void @v_input_output_v32i16() {
+  %v = tail call <32 x i16> asm sideeffect "v_mov_b32 $0, -1", "=v"()
+  tail call void asm sideeffect "; use $0", "v"(<32 x i16> %v)
+  ret void
+}
+
 attributes #0 = { nounwind }

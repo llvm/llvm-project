@@ -37,71 +37,72 @@
 
 #include "fp_extend.h"
 
+// The source type may use a usual IEEE-754 interchange format or Intel 80-bit
+// format. In particular, for the source type srcSigFracBits may be not equal to
+// srcSigBits. The destination type is assumed to be one of IEEE-754 standard
+// types.
 static __inline dst_t __extendXfYf2__(src_t a) {
   // Various constants whose values follow from the type parameters.
   // Any reasonable optimizer will fold and propagate all of these.
-  const int srcBits = sizeof(src_t) * CHAR_BIT;
-  const int srcExpBits = srcBits - srcSigBits - 1;
   const int srcInfExp = (1 << srcExpBits) - 1;
   const int srcExpBias = srcInfExp >> 1;
 
-  const src_rep_t srcMinNormal = SRC_REP_C(1) << srcSigBits;
-  const src_rep_t srcInfinity = (src_rep_t)srcInfExp << srcSigBits;
-  const src_rep_t srcSignMask = SRC_REP_C(1) << (srcSigBits + srcExpBits);
-  const src_rep_t srcAbsMask = srcSignMask - 1;
-  const src_rep_t srcQNaN = SRC_REP_C(1) << (srcSigBits - 1);
-  const src_rep_t srcNaNCode = srcQNaN - 1;
-
-  const int dstBits = sizeof(dst_t) * CHAR_BIT;
-  const int dstExpBits = dstBits - dstSigBits - 1;
   const int dstInfExp = (1 << dstExpBits) - 1;
   const int dstExpBias = dstInfExp >> 1;
 
-  const dst_rep_t dstMinNormal = DST_REP_C(1) << dstSigBits;
-
   // Break a into a sign and representation of the absolute value.
   const src_rep_t aRep = srcToRep(a);
-  const src_rep_t aAbs = aRep & srcAbsMask;
-  const src_rep_t sign = aRep & srcSignMask;
-  dst_rep_t absResult;
+  const src_rep_t srcSign = extract_sign_from_src(aRep);
+  const src_rep_t srcExp = extract_exp_from_src(aRep);
+  const src_rep_t srcSigFrac = extract_sig_frac_from_src(aRep);
 
-  // If sizeof(src_rep_t) < sizeof(int), the subtraction result is promoted
-  // to (signed) int.  To avoid that, explicitly cast to src_rep_t.
-  if ((src_rep_t)(aAbs - srcMinNormal) < srcInfinity - srcMinNormal) {
+  dst_rep_t dstSign = srcSign;
+  dst_rep_t dstExp;
+  dst_rep_t dstSigFrac;
+
+  if (srcExp >= 1 && srcExp < srcInfExp) {
     // a is a normal number.
-    // Extend to the destination type by shifting the significand and
-    // exponent into the proper position and rebiasing the exponent.
-    absResult = (dst_rep_t)aAbs << (dstSigBits - srcSigBits);
-    absResult += (dst_rep_t)(dstExpBias - srcExpBias) << dstSigBits;
+    dstExp = (dst_rep_t)srcExp + (dst_rep_t)(dstExpBias - srcExpBias);
+    dstSigFrac = (dst_rep_t)srcSigFrac << (dstSigFracBits - srcSigFracBits);
   }
 
-  else if (aAbs >= srcInfinity) {
+  else if (srcExp == srcInfExp) {
     // a is NaN or infinity.
-    // Conjure the result by beginning with infinity, then setting the qNaN
-    // bit (if needed) and right-aligning the rest of the trailing NaN
-    // payload field.
-    absResult = (dst_rep_t)dstInfExp << dstSigBits;
-    absResult |= (dst_rep_t)(aAbs & srcQNaN) << (dstSigBits - srcSigBits);
-    absResult |= (dst_rep_t)(aAbs & srcNaNCode) << (dstSigBits - srcSigBits);
+    dstExp = dstInfExp;
+    dstSigFrac = (dst_rep_t)srcSigFrac << (dstSigFracBits - srcSigFracBits);
   }
 
-  else if (aAbs) {
+  else if (srcSigFrac) {
     // a is denormal.
-    // renormalize the significand and clear the leading bit, then insert
-    // the correct adjusted exponent in the destination type.
-    const int scale = src_rep_t_clz(aAbs) - src_rep_t_clz(srcMinNormal);
-    absResult = (dst_rep_t)aAbs << (dstSigBits - srcSigBits + scale);
-    absResult ^= dstMinNormal;
-    const int resultExponent = dstExpBias - srcExpBias - scale + 1;
-    absResult |= (dst_rep_t)resultExponent << dstSigBits;
+    if (srcExpBits == dstExpBits) {
+      // The exponent fields are identical and this is a denormal number, so all
+      // the non-significand bits are zero. In particular, this branch is always
+      // taken when we extend a denormal F80 to F128.
+      dstExp = 0;
+      dstSigFrac = ((dst_rep_t)srcSigFrac) << (dstSigFracBits - srcSigFracBits);
+    } else {
+#ifndef src_rep_t_clz
+      // If src_rep_t_clz is not defined this branch must be unreachable.
+      __builtin_unreachable();
+#else
+      // Renormalize the significand and clear the leading bit.
+      // For F80 -> F128 this codepath is unused.
+      const int scale = clz_in_sig_frac(srcSigFrac) + 1;
+      dstExp = dstExpBias - srcExpBias - scale + 1;
+      dstSigFrac = (dst_rep_t)srcSigFrac
+                   << (dstSigFracBits - srcSigFracBits + scale);
+      const dst_rep_t dstMinNormal = DST_REP_C(1) << (dstBits - 1 - dstExpBits);
+      dstSigFrac ^= dstMinNormal;
+#endif
+    }
   }
 
   else {
     // a is zero.
-    absResult = 0;
+    dstExp = 0;
+    dstSigFrac = 0;
   }
 
-  // Apply the signbit to the absolute value.
-  const dst_rep_t result = absResult | (dst_rep_t)sign << (dstBits - srcBits);
+  const dst_rep_t result = construct_dst_rep(dstSign, dstExp, dstSigFrac);
   return dstFromRep(result);
 }

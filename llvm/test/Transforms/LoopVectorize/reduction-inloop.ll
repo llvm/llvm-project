@@ -1125,7 +1125,7 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i8> [[WIDE_LOAD]], <i8 31, i8 31, i8 31, i8 31>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i8> [[TMP2]], <i8 3, i8 3, i8 3, i8 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <4 x i8> [[TMP3]], <i8 31, i8 31, i8 31, i8 31>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg <4 x i8> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7]] = add i32 [[TMP6]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -1150,7 +1150,7 @@ define i32 @predicated_not_dominates_reduction(ptr nocapture noundef readonly %h
 ; CHECK-NEXT:    [[TMP11:%.*]] = udiv i8 [[TMP10]], 31
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i8 [[TMP11]], 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = udiv i8 [[TMP12]], 31
-; CHECK-NEXT:    [[DIV4:%.*]] = zext i8 [[TMP13]] to i32
+; CHECK-NEXT:    [[DIV4:%.*]] = zext nneg i8 [[TMP13]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[G_016]], [[DIV4]]
 ; CHECK-NEXT:    br label [[FOR_INC5]]
 ; CHECK:       for.inc5:
@@ -1210,7 +1210,7 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i8> [[WIDE_LOAD]], <i8 31, i8 31, i8 31, i8 31>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i8> [[TMP2]], <i8 3, i8 3, i8 3, i8 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <4 x i8> [[TMP3]], <i8 31, i8 31, i8 31, i8 31>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg <4 x i8> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[DOTNOT]], <4 x i32> zeroinitializer, <4 x i32> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[VEC_PHI]]
@@ -1240,7 +1240,7 @@ define i32 @predicated_not_dominates_reduction_twoadd(ptr nocapture noundef read
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw nsw i8 [[TMP15]], 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = udiv i8 [[TMP16]], 31
 ; CHECK-NEXT:    [[TMP18:%.*]] = shl nuw nsw i8 [[TMP17]], 1
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = zext i8 [[TMP18]] to i32
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = zext nneg i8 [[TMP18]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[G_016]], [[REASS_ADD]]
 ; CHECK-NEXT:    br label [[FOR_INC5]]
 ; CHECK:       for.inc5:
@@ -1293,9 +1293,9 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE6:%.*]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, [[VECTOR_PH]] ], [ [[TMP51:%.*]], [[PRED_LOAD_CONTINUE6]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B:%.*]], i64 0, i64 [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP0]] to i64
@@ -1359,7 +1359,7 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP47:%.*]] = or <4 x i1> [[TMP45]], [[TMP46]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = bitcast <4 x i1> [[TMP47]] to i4
 ; CHECK-NEXT:    [[TMP49:%.*]] = call i4 @llvm.ctpop.i4(i4 [[TMP48]]), !range [[RNG42:![0-9]+]]
-; CHECK-NEXT:    [[TMP50:%.*]] = zext i4 [[TMP49]] to i32
+; CHECK-NEXT:    [[TMP50:%.*]] = zext nneg i4 [[TMP49]] to i32
 ; CHECK-NEXT:    [[TMP51]] = add i32 [[VEC_PHI]], [[TMP50]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP52:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000

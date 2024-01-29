@@ -917,7 +917,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     std::unique_ptr<RegularExpression> regex_up;
     switch (command.GetArgumentCount()) {
     case 0:
@@ -929,14 +929,14 @@ protected:
         result.AppendError(
             "invalid argument - please provide a valid regular expression");
         result.SetStatus(lldb::eReturnStatusFailed);
-        return false;
+        return;
       }
       break;
     }
     default: {
       result.AppendError("please provide 0 or 1 arguments");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
     }
 
@@ -997,11 +997,10 @@ protected:
         }
       }
       result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
     result.AppendError("current process has no Objective-C runtime loaded");
     result.SetStatus(lldb::eReturnStatusFailed);
-    return false;
   }
 
   CommandOptions m_options;
@@ -1034,11 +1033,11 @@ public:
   ~CommandObjectMultiwordObjC_TaggedPointer_Info() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() == 0) {
       result.AppendError("this command requires arguments");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
 
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1048,7 +1047,7 @@ protected:
     if (!objc_runtime) {
       result.AppendError("current process has no Objective-C runtime loaded");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
 
     ObjCLanguageRuntime::TaggedPointerVendor *tagged_ptr_vendor =
@@ -1056,7 +1055,7 @@ protected:
     if (!tagged_ptr_vendor) {
       result.AppendError("current process has no tagged pointer support");
       result.SetStatus(lldb::eReturnStatusFailed);
-      return false;
+      return;
     }
 
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
@@ -1071,7 +1070,7 @@ protected:
         result.AppendErrorWithFormatv(
             "could not convert '{0}' to a valid address\n", arg_str);
         result.SetStatus(lldb::eReturnStatusFailed);
-        return false;
+        return;
       }
 
       if (!tagged_ptr_vendor->IsPossibleTaggedPointer(arg_addr)) {
@@ -1084,7 +1083,7 @@ protected:
         result.AppendErrorWithFormatv(
             "could not get class descriptor for {0:x16}\n", arg_addr);
         result.SetStatus(lldb::eReturnStatusFailed);
-        return false;
+        return;
       }
 
       uint64_t info_bits = 0;
@@ -1106,7 +1105,6 @@ protected:
     }
 
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 

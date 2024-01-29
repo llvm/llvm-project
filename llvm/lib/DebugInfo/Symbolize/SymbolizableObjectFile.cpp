@@ -351,6 +351,19 @@ std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
   return DebugInfoContext->getLocalsForAddress(ModuleOffset);
 }
 
+std::vector<object::SectionedAddress>
+SymbolizableObjectFile::findSymbol(StringRef Symbol) const {
+  std::vector<object::SectionedAddress> Result;
+  for (const SymbolDesc &Sym : Symbols) {
+    if (Sym.Name.equals(Symbol)) {
+      object::SectionedAddress A{Sym.Addr,
+                                 getModuleSectionIndexForAddress(Sym.Addr)};
+      Result.push_back(A);
+    }
+  }
+  return Result;
+}
+
 /// Search for the first occurence of specified Address in ObjectFile.
 uint64_t SymbolizableObjectFile::getModuleSectionIndexForAddress(
     uint64_t Address) const {

@@ -59,29 +59,36 @@ struct HeaderFileInfo {
   // TODO: Whether the file was imported is not a property of the file itself.
   // It's a preprocessor state, move it there.
   /// True if this is a \#import'd file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned isImport : 1;
 
   /// True if this is a \#pragma once file.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned isPragmaOnce : 1;
 
   /// Keep track of whether this is a system header, and if so,
   /// whether it is C++ clean or not.  This can be set by the include paths or
   /// by \#pragma gcc system_header.  This is an instance of
   /// SrcMgr::CharacteristicKind.
+  LLVM_PREFERRED_TYPE(SrcMgr::CharacteristicKind)
   unsigned DirInfo : 3;
 
   /// Whether this header file info was supplied by an external source,
   /// and has not changed since.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned External : 1;
 
   /// Whether this header is part of a module.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned isModuleHeader : 1;
 
   /// Whether this header is part of the module that we are building.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned isCompilingModuleHeader : 1;
 
   /// Whether this structure is considered to already have been
   /// "resolved", meaning that it was loaded from the external source.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Resolved : 1;
 
   /// Whether this is a header inside a framework that is currently
@@ -91,9 +98,11 @@ struct HeaderFileInfo {
   /// into the appropriate framework subdirectories, and therefore are
   /// provided via a header map. This bit indicates when this is one of
   /// those framework headers.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IndexHeaderMapHeader : 1;
 
   /// Whether this file has been looked up as a header.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;
 
   /// The ID number of the controlling macro.
@@ -238,16 +247,13 @@ class HeaderSearch {
   /// \#include search path information.  Requests for \#include "x" search the
   /// directory of the \#including file first, then each directory in SearchDirs
   /// consecutively. Requests for <x> search the current dir first, then each
-  /// directory in SearchDirs, starting at AngledDirIdx, consecutively.  If
-  /// NoCurDirSearch is true, then the check for the file in the current
-  /// directory is suppressed.
+  /// directory in SearchDirs, starting at AngledDirIdx, consecutively.
   std::vector<DirectoryLookup> SearchDirs;
   /// Whether the DirectoryLookup at the corresponding index in SearchDirs has
   /// been successfully used to lookup a file.
   std::vector<bool> SearchDirsUsage;
   unsigned AngledDirIdx = 0;
   unsigned SystemDirIdx = 0;
-  bool NoCurDirSearch = false;
 
   /// Maps HeaderMap keys to SearchDir indices. When HeaderMaps are used
   /// heavily, SearchDirs can start with thousands of HeaderMaps, so this Index
@@ -364,7 +370,7 @@ public:
 
   /// Interface for setting the file search paths.
   void SetSearchPaths(std::vector<DirectoryLookup> dirs, unsigned angledDirIdx,
-                      unsigned systemDirIdx, bool noCurDirSearch,
+                      unsigned systemDirIdx,
                       llvm::DenseMap<unsigned, unsigned> searchDirToHSEntry);
 
   /// Add an additional search path.

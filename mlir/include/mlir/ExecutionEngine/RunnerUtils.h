@@ -392,7 +392,6 @@ extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefF64(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefInd(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefC32(int64_t rank, void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefC64(int64_t rank, void *ptr);
-extern "C" MLIR_RUNNERUTILS_EXPORT void printCString(char *str);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_printMemref0dF32(StridedMemRefType<float, 0> *m);

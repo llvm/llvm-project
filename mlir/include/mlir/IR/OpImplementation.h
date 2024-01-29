@@ -226,6 +226,8 @@ public:
     printArrowTypeList(results);
   }
 
+  void printDimensionList(ArrayRef<int64_t> shape);
+
   /// Class used to automatically end a cyclic region on destruction.
   class CyclicPrintReset {
   public:
@@ -350,8 +352,7 @@ template <typename AsmPrinterT, typename T,
                                !std::is_convertible<T &, Attribute &>::value &&
                                !std::is_convertible<T &, ValueRange>::value &&
                                !std::is_convertible<T &, APFloat &>::value &&
-                               !llvm::is_one_of<T, bool, int8_t, uint8_t, float,
-                                                double>::value,
+                               !llvm::is_one_of<T, bool, float, double>::value,
                            T> * = nullptr>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
@@ -365,17 +366,6 @@ inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
 operator<<(AsmPrinterT &p, bool value) {
   return p << (value ? StringRef("true") : "false");
-}
-
-/// Specialization for 8-bit integers to ensure values are printed as integers
-// and not characters.
-template <
-    typename AsmPrinterT, typename T,
-    std::enable_if_t<llvm::is_one_of<T, int8_t, uint8_t>::value, T> * = nullptr>
-inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
-                        AsmPrinterT &>
-operator<<(AsmPrinterT &p, T value) {
-  return p << static_cast<int16_t>(value);
 }
 
 template <typename AsmPrinterT, typename ValueRangeT>
@@ -1774,6 +1764,17 @@ public:
                  const SetVector<AsmDialectResourceHandle> &referencedResources,
                  AsmResourceBuilder &builder) const {}
 };
+
+//===--------------------------------------------------------------------===//
+// Custom printers and parsers.
+//===--------------------------------------------------------------------===//
+
+// Handles custom<DimensionList>(...) in TableGen.
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions);
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions);
+
 } // namespace mlir
 
 //===--------------------------------------------------------------------===//

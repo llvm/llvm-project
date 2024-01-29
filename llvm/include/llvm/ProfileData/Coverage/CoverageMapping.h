@@ -1027,7 +1027,9 @@ enum CovMapVersion {
   // Compilation directory is stored separately and combined with relative
   // filenames to produce an absolute file path.
   Version6 = 5,
-  // The current version is Version6.
+  // Branch regions extended and Decision Regions added for MC/DC.
+  Version7 = 6,
+  // The current version is Version7.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 

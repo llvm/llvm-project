@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -714,8 +715,8 @@ int clangdMain(int argc, char *argv[]) {
   // Clang could run on the main thread. e.g., when the flag '-check' or '-sync'
   // is enabled.
   clang::noteBottomOfStack();
+  llvm::InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::sys::AddSignalHandler(
       [](void *) {
         ThreadCrashReporter::runCrashHandlers();

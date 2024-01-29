@@ -124,7 +124,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     MainFileDecls.push_back(D);
   }
   llvm::DenseSet<include_cleaner::Symbol> SeenSymbols;
-  const DirectoryEntry *ResourceDir =
+  OptionalDirectoryEntryRef ResourceDir =
       PP->getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   // FIXME: Find a way to have less code duplication between include-cleaner
   // analysis implementation and the below code.

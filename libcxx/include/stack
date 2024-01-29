@@ -143,12 +143,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Container = deque<_Tp> > class _LIBCPP_TEMPLATE_VIS stack;
 
 template <class _Tp, class _Container>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 operator==(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y);
 
 template <class _Tp, class _Container>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 bool
 operator< (const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y);
 
@@ -167,62 +167,62 @@ protected:
     container_type c;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     stack()
         _NOEXCEPT_(is_nothrow_default_constructible<container_type>::value)
         : c() {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     stack(const stack& __q) : c(__q.c) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     stack& operator=(const stack& __q) {c = __q.c; return *this;}
 
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     stack(stack&& __q)
         _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
-        : c(_VSTD::move(__q.c)) {}
+        : c(std::move(__q.c)) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     stack& operator=(stack&& __q)
         _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value)
-        {c = _VSTD::move(__q.c); return *this;}
+        {c = std::move(__q.c); return *this;}
 
-    _LIBCPP_INLINE_VISIBILITY
-    explicit stack(container_type&& __c) : c(_VSTD::move(__c)) {}
+    _LIBCPP_HIDE_FROM_ABI
+    explicit stack(container_type&& __c) : c(std::move(__c)) {}
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit stack(const container_type& __c) : c(__c) {}
 
     template <class _Alloc>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         explicit stack(const _Alloc& __a,
                        __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__a) {}
     template <class _Alloc>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         stack(const container_type& __c, const _Alloc& __a,
               __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__c, __a) {}
     template <class _Alloc>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         stack(const stack& __s, const _Alloc& __a,
               __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
             : c(__s.c, __a) {}
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Alloc>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         stack(container_type&& __c, const _Alloc& __a,
               __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
-            : c(_VSTD::move(__c), __a) {}
+            : c(std::move(__c), __a) {}
     template <class _Alloc>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         stack(stack&& __s, const _Alloc& __a,
               __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
-            : c(_VSTD::move(__s.c), __a) {}
+            : c(std::move(__s.c), __a) {}
 #endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER >= 23
@@ -251,20 +251,20 @@ public:
 
 #endif
 
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     bool empty()     const      {return c.empty();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_type size() const      {return c.size();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     reference top()             {return c.back();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const_reference top() const {return c.back();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void push(const value_type& __v) {c.push_back(__v);}
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    void push(value_type&& __v) {c.push_back(_VSTD::move(__v));}
+    _LIBCPP_HIDE_FROM_ABI
+    void push(value_type&& __v) {c.push_back(std::move(__v));}
 
 #if _LIBCPP_STD_VER >= 23
     template <_ContainerCompatibleRange<_Tp> _Range>
@@ -281,24 +281,24 @@ public:
 #endif
 
     template <class... _Args>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
 #if _LIBCPP_STD_VER >= 17
         decltype(auto) emplace(_Args&&... __args)
-        { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
+        { return c.emplace_back(std::forward<_Args>(__args)...);}
 #else
         void      emplace(_Args&&... __args)
-        {        c.emplace_back(_VSTD::forward<_Args>(__args)...);}
+        {        c.emplace_back(std::forward<_Args>(__args)...);}
 #endif
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void pop() {c.pop_back();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(stack& __s)
         _NOEXCEPT_(__is_nothrow_swappable<container_type>::value)
     {
-        using _VSTD::swap;
+        using std::swap;
         swap(c, __s.c);
     }
 
@@ -356,7 +356,7 @@ stack(from_range_t, _Range&&, _Alloc)
 #endif
 
 template <class _Tp, class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator==(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 {
@@ -364,7 +364,7 @@ operator==(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 }
 
 template <class _Tp, class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator< (const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 {
@@ -372,7 +372,7 @@ operator< (const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 }
 
 template <class _Tp, class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 {
@@ -380,7 +380,7 @@ operator!=(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 }
 
 template <class _Tp, class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator> (const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 {
@@ -388,7 +388,7 @@ operator> (const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 }
 
 template <class _Tp, class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator>=(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 {
@@ -396,7 +396,7 @@ operator>=(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 }
 
 template <class _Tp, class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator<=(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y)
 {
@@ -415,7 +415,7 @@ operator<=>(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y
 #endif
 
 template <class _Tp, class _Container, __enable_if_t<__is_swappable<_Container>::value, int> = 0>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))

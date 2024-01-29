@@ -881,8 +881,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       const llvm::APSInt *maxLengthInt = BVF.evalAPSInt(BO_Div, maxValInt,
                                                         fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
-      SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn,
-                                                maxLength, sizeTy);
+      SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
+                                                svalBuilder.getConditionType());
       state = state->assume(evalLength.castAs<DefinedOrUnknownSVal>(), true);
     }
     state = state->set<CStringLength>(MR, strLength);

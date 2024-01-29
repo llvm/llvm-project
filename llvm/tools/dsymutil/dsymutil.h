@@ -35,12 +35,14 @@ namespace dsymutil {
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 parseDebugMap(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
               StringRef InputFile, ArrayRef<std::string> Archs,
-              StringRef PrependPath, bool Verbose, bool InputIsYAML);
+              ArrayRef<std::string> DSYMSearchPaths, StringRef PrependPath,
+              StringRef VariantSuffix, bool Verbose, bool InputIsYAML);
 
 /// Dump the symbol table.
 bool dumpStab(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
               StringRef InputFile, ArrayRef<std::string> Archs,
-              StringRef PrependPath = "");
+              ArrayRef<std::string> DSYMSearchPaths, StringRef PrependPath = "",
+              StringRef VariantSuffix = "");
 
 } // end namespace dsymutil
 } // end namespace llvm

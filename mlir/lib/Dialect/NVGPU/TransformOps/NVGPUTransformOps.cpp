@@ -9,6 +9,7 @@
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -51,6 +52,21 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
   /// device-side async tokens cannot be materialized in nvvm. We just
   /// convert them to a dummy i32 type in order to easily drop them during
   /// conversion.
+  populateGpuMemorySpaceAttributeConversions(
+      llvmTypeConverter, [](gpu::AddressSpace space) -> unsigned {
+        switch (space) {
+        case gpu::AddressSpace::Global:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+        case gpu::AddressSpace::Workgroup:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+        case gpu::AddressSpace::Private:
+          return 0;
+        }
+        llvm_unreachable("unknown address space enum value");
+        return 0;
+      });
   llvmTypeConverter.addConversion(
       [&](nvgpu::DeviceAsyncTokenType type) -> Type {
         return llvmTypeConverter.convertType(
@@ -62,10 +78,28 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
   });
   llvmTypeConverter.addConversion(
       [&](nvgpu::WarpgroupAccumulatorType type) -> Type {
-        VectorType vtype = type.getFragmented();
+        Type elemType = type.getFragmented().getElementType();
+        int64_t sizeM = type.getFragmented().getDimSize(0);
+        int64_t sizeN = type.getFragmented().getDimSize(1);
+
+        unsigned numMembers;
+        if (elemType.isF32() || elemType.isInteger(32))
+          numMembers = sizeN / 2;
+        else if (elemType.isF16())
+          numMembers = sizeN / 4;
+        else
+          llvm_unreachable("unsupported type for warpgroup accumulator");
+
+        SmallVector<Type> innerStructBody;
+        for (unsigned i = 0; i < numMembers; i++)
+          innerStructBody.push_back(elemType);
+        auto innerStructType = LLVM::LLVMStructType::getLiteral(
+            type.getContext(), innerStructBody);
+
         SmallVector<Type> structBody;
-        for (unsigned i = 0; i < vtype.getDimSize(0); i++)
-          structBody.push_back(vtype.getElementType());
+        for (int i = 0; i < sizeM; i += kWgmmaSizeM)
+          structBody.push_back(innerStructType);
+
         auto convertedType =
             LLVM::LLVMStructType::getLiteral(type.getContext(), structBody);
         return llvmTypeConverter.convertType(convertedType);
@@ -81,8 +115,7 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
       });
   llvmTypeConverter.addConversion(
       [&](nvgpu::TensorMapDescriptorType type) -> Type {
-        return llvmTypeConverter.getPointerType(
-            type.getTensor().getElementType());
+        return LLVM::LLVMPointerType::get(type.getContext());
       });
   populateNVGPUToNVVMConversionPatterns(llvmTypeConverter, patterns);
 }
@@ -904,7 +937,7 @@ HopperBuilder::buildAndInitBarrierInSharedMemory(OpFoldResult numThreads) {
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   rewriter.create<nvgpu::MBarrierInitOp>(
       loc, barrier, getValueOrCreateConstantIndexOp(rewriter, loc, numThreads),
-      zero);
+      zero, Value());
   rewriter.create<gpu::BarrierOp>(loc);
   return cast<TypedValue<nvgpu::MBarrierGroupType>>(barrier);
 }
@@ -946,7 +979,8 @@ OpFoldResult HopperBuilder::buildTmaAsyncLoad(
   MLIRContext *ctx = rewriter.getContext();
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   Operation *loadOp = rewriter.create<nvgpu::TmaAsyncLoadOp>(
-      loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero);
+      loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero,
+      Value());
   loadOps.push_back(loadOp);
   auto mixedSizes = memref::getMixedSizes(rewriter, loc, sharedMemref);
   SmallVector<AffineExpr> symbols(mixedSizes.size());
@@ -971,7 +1005,8 @@ void HopperBuilder::buildBarrierArriveTx(
       affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, mixedSizes);
   Value sizeVal = getValueOrCreateConstantIndexOp(rewriter, loc, size);
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  rewriter.create<nvgpu::MBarrierArriveExpectTxOp>(loc, barrier, sizeVal, zero);
+  rewriter.create<nvgpu::MBarrierArriveExpectTxOp>(loc, barrier, sizeVal, zero,
+                                                   Value());
 }
 
 void HopperBuilder::buildTryWaitParity(

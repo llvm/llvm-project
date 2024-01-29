@@ -79,5 +79,5 @@ for.cond.cleanup:
 !20 = distinct !{!20, !21}
 !21 = !{!"llvm.loop.distribute.enable", i1 true}
 !22 = !{!"function_entry_count", i64 3}
-!23 = !{!"branch_weights", i32 99, i32 1}
+!23 = !{!"branch_weights", i32 2000, i32 1}
 !24 = !{!"branch_weights", i32 1, i32 99}

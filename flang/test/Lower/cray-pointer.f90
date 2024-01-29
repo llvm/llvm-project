@@ -1,5 +1,5 @@
-! RUN: bbc %s -emit-fir -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc %s -emit-fir -hlfir=false -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! Test Cray Pointers
 

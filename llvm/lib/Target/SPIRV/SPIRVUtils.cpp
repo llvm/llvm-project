@@ -326,13 +326,12 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
 }
 
 const Type *getTypedPtrEltType(const Type *Ty) {
-  auto PType = dyn_cast<PointerType>(Ty);
-  if (!PType || PType->isOpaque())
-    return Ty;
-  return PType->getNonOpaquePointerElementType();
+  // TODO: This function requires updating following the opaque pointer
+  // migration.
+  return Ty;
 }
 
-static bool hasBuiltinTypePrefix(StringRef Name) {
+bool hasBuiltinTypePrefix(StringRef Name) {
   if (Name.starts_with("opencl.") || Name.starts_with("spirv."))
     return true;
   return false;

@@ -12,8 +12,9 @@
 # CHECK-DAG: XPASS: ignore-fail :: xpass.txt
 
 #      CHECK: Testing Time:
-# CHECK-NEXT:   Expectedly Failed : 1
-# CHECK-NEXT:   Unresolved : 1
-# CHECK-NEXT:   Failed : 1
-# CHECK-NEXT:   Unexpectedly Passed: 1
+# CHECK: Total Discovered Tests:
+# CHECK-NEXT:   Expectedly Failed : 1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK-NEXT:   Unresolved : 1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK-NEXT:   Failed : 1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK-NEXT:   Unexpectedly Passed: 1 {{\([0-9]*\.[0-9]*%\)}}
 #  CHECK-NOT: {{.}}

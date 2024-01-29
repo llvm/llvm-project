@@ -1199,9 +1199,9 @@ define void @masked_gather_passthru(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ptrue p2.d, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x2]
 ; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    ld1d { z0.d }, p2/z, [x1]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x2]
 ; CHECK-NEXT:    punpklo p3.h, p1.b
 ; CHECK-NEXT:    ld1w { z0.d }, p3/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s

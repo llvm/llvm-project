@@ -32,7 +32,7 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 
 // CHECK: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_ANYEXT,
-// CHECK-NEXT: // MIs[0] dst
+// CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s16,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::A0RegClassID,
 // CHECK-NEXT: // MIs[0] src
@@ -52,7 +52,7 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/1, MyTarget::A0RegClassID,
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/1, /*Op*/2, MyTarget::A0bRegClassID,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_AddTempSubRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0, MyTarget::lo16,
 // CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT: GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, MyTarget::A0wRegClassID,

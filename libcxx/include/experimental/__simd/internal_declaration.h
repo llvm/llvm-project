@@ -10,10 +10,17 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_INTERNAL_DECLARATION_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_INTERNAL_DECLARATION_H
 
+#include <experimental/__config>
+
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
 inline namespace parallelism_v2 {
+namespace simd_abi {
+template <int>
+struct __vec_ext;
+struct __scalar;
+} // namespace simd_abi
 
 template <class _Tp, class _Abi>
 struct __simd_storage;

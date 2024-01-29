@@ -1215,13 +1215,9 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
     return false;
   }
 
-  // Create a pointer cast for the wide load.
-  auto CI = Builder.CreatePointerCast(InsertionPoint->getOperand(0),
-                                      ILTy->getPointerTo(),
-                                      "interleaved.wide.ptrcast");
-
   // Create the wide load and update the MemorySSA.
-  auto LI = Builder.CreateAlignedLoad(ILTy, CI, InsertionPoint->getAlign(),
+  auto Ptr = InsertionPoint->getPointerOperand();
+  auto LI = Builder.CreateAlignedLoad(ILTy, Ptr, InsertionPoint->getAlign(),
                                       "interleaved.wide.load");
   auto MSSAU = MemorySSAUpdater(&MSSA);
   MemoryUse *MSSALoad = cast<MemoryUse>(MSSAU.createMemoryAccessBefore(

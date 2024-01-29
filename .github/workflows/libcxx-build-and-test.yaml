@@ -1,0 +1,210 @@
+# This file defines pre-commit CI for libc++, libc++abi, and libunwind (on Github).
+#
+# We split the configurations in multiple stages with the intent of saving compute time
+# when a job fails early in the pipeline. This is why the jobs are marked as `continue-on-error: false`.
+# We try to run the CI configurations with the most signal in the first stage.
+#
+# Stages 1 & 2 are meant to be "smoke tests", and are meant to catch most build/test failures quickly and without using
+# too many resources.
+# Stage 3 is "everything else", and is meant to catch breakages on more niche or unique configurations.
+#
+# Therefore, we "fail-fast" for any failures during stages 1 & 2, meaning any job failing cancels all other running jobs,
+# under the assumption that if the "smoke tests" fail, then the other configurations will likely fail in the same way.
+# However, stage 3 does not fail fast, as it's more likely that any one job failing is a flake or a configuration-specific
+#
+name: Build and Test libc++
+on:
+  pull_request:
+    paths:
+      - 'libcxx/**'
+      - 'libcxxabi/**'
+      - 'libunwind/**'
+      - 'runtimes/**'
+      - 'cmake/**'
+      - '.github/workflows/libcxx-build-and-test.yaml'
+  schedule:
+    # Run nightly at 8 AM UTC (or roughly 3 AM eastern)
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read # Default everything to read-only
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+
+env:
+  CMAKE: "/opt/bin/cmake"
+  # LLVM POST-BRANCH bump version
+  # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
+  # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
+  LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
+  LLVM_PREVIOUS_VERSION: "17"
+  LLVM_OLDEST_VERSION: "16"
+  GCC_STABLE_VERSION: "13"
+  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-18"
+  CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
+
+
+jobs:
+  stage1:
+    if: github.repository_owner == 'llvm'
+    runs-on: libcxx-runners-8-set
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [
+          'generic-cxx03',
+          'generic-cxx26',
+          'generic-modules'
+        ]
+        cc: [  'clang-18' ]
+        cxx: [ 'clang++-18' ]
+        clang_tidy: [ 'ON' ]
+        include:
+          - config: 'generic-gcc'
+            cc: 'gcc-13'
+            cxx: 'g++-13'
+            clang_tidy: 'OFF'
+    steps:
+      - uses: actions/checkout@v4
+      - name: ${{ matrix.config }}.${{ matrix.cxx }}
+        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.config }}-${{ matrix.cxx }}-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*
+  stage2:
+    if: github.repository_owner == 'llvm'
+    runs-on: libcxx-runners-8-set
+    needs: [ stage1 ]
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [
+          'generic-cxx11',
+          'generic-cxx14',
+          'generic-cxx17',
+          'generic-cxx20',
+          'generic-cxx23'
+        ]
+        cc: [ 'clang-18' ]
+        cxx: [ 'clang++-18' ]
+        clang_tidy: [ 'ON' ]
+        include:
+          - config: 'generic-gcc-cxx11'
+            cc: 'gcc-13'
+            cxx: 'g++-13'
+            clang_tidy: 'OFF'
+          - config: 'generic-cxx23'
+            cc: 'clang-16'
+            cxx: 'clang++-16'
+            clang_tidy: 'OFF'
+          - config: 'generic-cxx23'
+            cc: 'clang-17'
+            cxx: 'clang++-17'
+            clang_tidy: 'OFF'
+    steps:
+      - uses: actions/checkout@v4
+      - name: ${{ matrix.config }}
+        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
+      - uses: actions/upload-artifact@v3
+        if: always()  # Upload artifacts even if the build or test suite fails
+        with:
+          name: ${{ matrix.config }}-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*
+  stage3:
+    if: github.repository_owner == 'llvm'
+    needs: [ stage1, stage2 ]
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        config: [
+          'generic-abi-unstable',
+          'generic-hardening-mode-debug',
+          'generic-hardening-mode-extensive',
+          'generic-hardening-mode-fast',
+          'generic-hardening-mode-fast-with-abi-breaks',
+          'generic-merged',
+          'generic-modules-lsv',
+          'generic-no-exceptions',
+          'generic-no-experimental',
+          'generic-no-filesystem',
+          'generic-no-localization',
+          'generic-no-random_device',
+          'generic-no-threads',
+          'generic-no-tzdb',
+          'generic-no-unicode',
+          'generic-no-wide-characters',
+          'generic-no-rtti',
+          'generic-static',
+          'generic-with_llvm_unwinder',
+          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
+          # or don't provide much value since the benchmark run results are too noise on the bots.
+          'benchmarks',
+          'bootstrapping-build'
+        ]
+        machine: [ 'libcxx-runners-8-set' ]
+        std_modules: [ 'OFF' ]
+        include:
+        - config: 'generic-cxx26'
+          machine: libcxx-runners-8-set
+          std_modules: 'ON'
+        - config: 'generic-asan'
+          machine: libcxx-runners-8-set
+          std_modules: 'OFF'
+        - config: 'generic-tsan'
+          machine: libcxx-runners-8-set
+          std_modules: 'OFF'
+        - config: 'generic-ubsan'
+          machine: libcxx-runners-8-set
+          std_modules: 'OFF'
+        # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
+        - config: 'generic-msan'
+          machine: libcxx-runners-32-set
+          std_modules: 'OFF'
+    runs-on: ${{ matrix.machine }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: ${{ matrix.config }}
+        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        env:
+          CC: clang-18
+          CXX: clang++-18
+          ENABLE_CLANG_TIDY: "OFF"
+          ENABLE_STD_MODULES: ${{ matrix.std_modules }}
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.config }}-results
+          path: |
+            **/test-results.xml
+            **/*.abilist
+            **/CMakeError.log
+            **/CMakeOutput.log
+            **/crash_diagnostics/*
+  

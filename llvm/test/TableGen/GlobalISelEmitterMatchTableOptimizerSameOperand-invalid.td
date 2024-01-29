@@ -33,7 +33,7 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:          // (select:{ *:[i32] } (setcc:{ *:[i32] } GPR32:{ *:[i32] }:$cond, 0:{ *:[i32] }, SETEQ:{ *:[Other] }), (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2), GPR32:{ *:[i32] }:$src2)  =>  (InstThreeOperands:{ *:[i32] } GPR32:{ *:[i32] }:$cond, GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
 // CHECK-NEXT:          GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::InstThreeOperands,
-// CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // cond
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src1
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src2
@@ -61,7 +61,7 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // CHECK-NEXT:          GIM_CheckIsSafeToFold, /*InsnID*/2,
 // CHECK-NEXT:          // (select:{ *:[i32] } (setcc:{ *:[i32] } GPR32:{ *:[i32] }:$cond, 0:{ *:[i32] }, SETNE:{ *:[Other] }), (sub:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2), GPR32:{ *:[i32] }:$src2)  =>  (InstThreeOperands:{ *:[i32] } GPR32:{ *:[i32] }:$cond, GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
 // CHECK-NEXT:          GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::InstThreeOperands,
-// CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // cond
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src1
 // CHECK-NEXT:          GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src2

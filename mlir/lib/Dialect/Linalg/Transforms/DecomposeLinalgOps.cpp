@@ -122,7 +122,7 @@ SmallVector<OpFoldResult> permuteValues(ArrayRef<OpFoldResult> values,
   SmallVector<OpFoldResult> permutedValues(values.size());
   for (const auto &position :
        llvm::enumerate(llvm::map_range(map.getResults(), [](AffineExpr expr) {
-         return expr.cast<AffineDimExpr>().getPosition();
+         return cast<AffineDimExpr>(expr).getPosition();
        })))
     permutedValues[position.value()] = values[position.index()];
   return permutedValues;

@@ -4,7 +4,8 @@
 
 from ._mlir_libs._mlir.ir import *
 from ._mlir_libs._mlir.ir import _GlobalDebug
-from ._mlir_libs._mlir import register_type_caster
+from ._mlir_libs._mlir import register_type_caster, register_value_caster
+from ._mlir_libs import get_dialect_registry
 
 
 # Convenience decorator for registering user-friendly Attribute builders.
@@ -277,7 +278,7 @@ try:
     def _i32ElementsAttr(x, context):
         return DenseElementsAttr.get(
             np.array(x, dtype=np.int32),
-            type=IntegerType.get_signed(32, context=context),
+            type=IntegerType.get_signless(32, context=context),
             context=context,
         )
 
@@ -285,7 +286,7 @@ try:
     def _i64ElementsAttr(x, context):
         return DenseElementsAttr.get(
             np.array(x, dtype=np.int64),
-            type=IntegerType.get_signed(64, context=context),
+            type=IntegerType.get_signless(64, context=context),
             context=context,
         )
 

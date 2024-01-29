@@ -46,7 +46,7 @@ class TargetSchedModel {
   unsigned computeInstrLatency(const MCSchedClassDesc &SCDesc) const;
 
 public:
-  TargetSchedModel() : SchedModel(MCSchedModel::GetDefaultSchedModel()) {}
+  TargetSchedModel() : SchedModel(MCSchedModel::Default) {}
 
   /// Initialize the machine model for instruction scheduling.
   ///

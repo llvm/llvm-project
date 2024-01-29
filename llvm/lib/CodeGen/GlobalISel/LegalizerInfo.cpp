@@ -77,13 +77,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
 }
 
 raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
-  OS << Opcode << ", Tys={";
+  OS << "Opcode=" << Opcode << ", Tys={";
   for (const auto &Type : Types) {
     OS << Type << ", ";
   }
-  OS << "}, Opcode=";
-
-  OS << Opcode << ", MMOs={";
+  OS << "}, MMOs={";
   for (const auto &MMODescr : MMODescrs) {
     OS << MMODescr.MemoryTy << ", ";
   }

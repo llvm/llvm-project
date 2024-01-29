@@ -28,6 +28,7 @@ driver_executable("dsymutil") {
     "DwarfLinkerForBinary.cpp",
     "MachODebugMapParser.cpp",
     "MachOUtils.cpp",
+    "RelocationMap.cpp",
     "Reproducer.cpp",
     "SymbolMap.cpp",
     "dsymutil.cpp",

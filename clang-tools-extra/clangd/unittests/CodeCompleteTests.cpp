@@ -3892,6 +3892,29 @@ TEST(CompletionTest, FunctionArgsExist) {
                              kind(CompletionItemKind::Function))));
 }
 
+TEST(CompletionTest, FunctionArgsExist_Issue1785) {
+  // This is a scenario where the implementation of our check for
+  // "is there a function argument list right after the cursor"
+  // gave a bogus result.
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  // The whitespace in this testcase is important!
+  std::string Code = R"cpp(
+void waldo(int);
+
+int main()
+{
+  wal^
+
+
+  // (    )
+}
+  )cpp";
+  EXPECT_THAT(
+      completions(Code, {}, Opts).Completions,
+      Contains(AllOf(labeled("waldo(int)"), snippetSuffix("(${1:int})"))));
+}
+
 TEST(CompletionTest, NoCrashDueToMacroOrdering) {
   EXPECT_THAT(completions(R"cpp(
     #define ECHO(X) X

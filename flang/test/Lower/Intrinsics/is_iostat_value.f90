@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
   ! CHECK-LABEL: func @_QQmain
   ! CHECK: %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}

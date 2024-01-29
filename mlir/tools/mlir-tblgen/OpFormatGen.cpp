@@ -1415,7 +1415,8 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
     genCustomDirectiveParser(customDir, body, useProperties, opCppClassName);
   } else if (isa<OperandsDirective>(element)) {
-    body << "  ::llvm::SMLoc allOperandLoc = parser.getCurrentLocation();\n"
+    body << "  [[maybe_unused]] ::llvm::SMLoc allOperandLoc ="
+         << " parser.getCurrentLocation();\n"
          << "  if (parser.parseOperandList(allOperands))\n"
          << "    return ::mlir::failure();\n";
 

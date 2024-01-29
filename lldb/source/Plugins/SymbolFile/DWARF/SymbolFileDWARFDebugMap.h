@@ -93,6 +93,8 @@ public:
 
   CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
+  std::vector<CompilerContext>
+  GetCompilerContextForUID(lldb::user_id_t uid) override;
   void ParseDeclsForContext(CompilerDeclContext decl_ctx) override;
 
   bool CompleteType(CompilerType &compiler_type) override;
@@ -134,7 +136,8 @@ public:
   void DumpClangAST(Stream &s) override;
 
   /// List separate oso files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                            bool errors_only) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

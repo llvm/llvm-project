@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s --check-prefixes="FIRDialect,OMPDialect"
-!RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | fir-opt --cfg-conversion | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="OMPDialect,LLVMDialect"
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s --check-prefixes="FIRDialect,OMPDialect"
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | fir-opt --cfg-conversion | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="OMPDialect,LLVMDialect"
 
 !===============================================================================
 ! Parallel sections construct
@@ -44,10 +44,10 @@ subroutine omp_parallel_sections_allocate(x, y)
   !LLVMDialect: %[[allocator_2:.*]] = llvm.mlir.constant(1 : i32) : i32
   !OMPDialect: omp.parallel allocate(
   !FIRDialect: %[[allocator_2]] : i32 -> %{{.*}} : !fir.ref<i32>) {
-  !LLVMDialect: %[[allocator_2]] : i32 -> %{{.*}} : !llvm.ptr<i32>) {
+  !LLVMDialect: %[[allocator_2]] : i32 -> %{{.*}} : !llvm.ptr) {
   !OMPDialect: omp.sections allocate(
   !FIRDialect: %[[allocator_1]] : i32 -> %{{.*}} : !fir.ref<i32>) {
-  !LLVMDialect: %[[allocator_1]] : i32 -> %{{.*}} : !llvm.ptr<i32>) {
+  !LLVMDialect: %[[allocator_1]] : i32 -> %{{.*}} : !llvm.ptr) {
   !$omp parallel sections allocate(omp_high_bw_mem_alloc: x)
     !OMPDialect: omp.section {
     !$omp section

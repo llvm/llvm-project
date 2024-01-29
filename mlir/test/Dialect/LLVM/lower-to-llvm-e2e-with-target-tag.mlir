@@ -2,7 +2,9 @@
 
 // RUN: mlir-opt %s -test-lower-to-llvm -cse | FileCheck %s
 
-// RUN: mlir-opt %s -test-transform-dialect-interpreter="transform-library-paths=%p/lower-to-llvm-transform-symbol-def.mlir debug-payload-root-tag=payload" \
+// RUN: mlir-opt %s \
+// RUN:   -transform-preload-library="transform-library-paths=%p/lower-to-llvm-transform-symbol-def.mlir" \
+// RUN:   -transform-interpreter="debug-payload-root-tag=payload" \
 // RUN:   -test-transform-dialect-erase-schedule -cse \
 // RUN: | FileCheck %s
 
@@ -56,9 +58,9 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
 module @named_inclusion_in_named attributes { transform.with_named_sequence } {
   transform.named_sequence private @lower_to_cpu(!transform.any_op {transform.consumed}) -> !transform.any_op
 
-  transform.sequence failures(propagate) {
-  ^bb1(%toplevel_module: !transform.any_op):
+  transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.consumed}) {
     %m2 = transform.include @lower_to_cpu failures(suppress) (%toplevel_module) 
       : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
   }
 }

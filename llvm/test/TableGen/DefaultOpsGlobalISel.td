@@ -35,7 +35,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK: GIM_CheckComplexPattern, /*MI*/0, /*Op*/1, /*Renderer*/0, GICP_gi_SelectSrcMods,
 // CHECK: GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/1, GICP_gi_SelectSrcMods,
 // CHECK: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FMAX,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // mods0
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/1, /*SubOperand*/1, // mods1
@@ -48,7 +48,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK: GIM_CheckComplexPattern, /*MI*/0, /*Op*/1, /*Renderer*/0, GICP_gi_SelectClampOMod,
 // CHECK: // (ffloor:{ *:[f32] } (SelectClampOMod:{ *:[f32] } f32:{ *:[f32] }:$src0, omod:{ *:[i32] }:$omod, i1:{ *:[i1] }:$clamp))  =>  (FLOMP:{ *:[f32] } f32:{ *:[f32] }:$src0, i1:{ *:[i1] }:$clamp, omod:{ *:[i32] }:$omod)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FLOMP,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/2, // clamp
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // omod
@@ -56,7 +56,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FCANONICALIZE,
 // CHECK: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FMAX,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // mods
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // mods
@@ -68,7 +68,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FCOS,
 // CHECK: // (fcos:{ *:[f32] } (SelectOMod:{ *:[f32] } f32:{ *:[f32] }:$src0, i32:{ *:[i32] }:$omod))  =>  (FLAMP:{ *:[f32] } FPR32:{ *:[f32] }:$src0, omod:{ *:[i32] }:$omod)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FLAMP,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // omod
 // CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*Imm*/0,
@@ -84,7 +84,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT: GIR_AddImm, /*InsnID*/1, /*Imm*/0,
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/1,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FEEPLE,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // clamp
@@ -95,7 +95,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FSIN,
 // CHECK: // (fsin:{ *:[f32] } (SelectClamp:{ *:[f32] } f32:{ *:[f32] }:$src0, i1:{ *:[i1] }:$clamp))  =>  (FFOO:{ *:[f32] } f32:{ *:[f32] }:$src0, i1:{ *:[i1] }:$clamp)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FFOO,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // clamp
 // CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
@@ -104,7 +104,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_FSQRT,
 // CHECK: // (fsqrt:{ *:[f32] } (SelectClamp:{ *:[f32] } f32:{ *:[f32] }:$src0, i1:{ *:[i1] }:$clamp))  =>  (FLAMP:{ *:[f32] } FPR32:{ *:[f32] }:$src0, 93:{ *:[i32] }, clamp:{ *:[i1] }:$clamp)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FLAMP,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/0, // src0
 // CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*Imm*/93,
 // CHECK-NEXT: GIR_ComplexSubOperandRenderer, /*InsnID*/0, /*RendererID*/0, /*SubOperand*/1, // clamp
@@ -113,7 +113,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC_ROUND,
 // CHECK: // (fround:{ *:[f32] } f32:{ *:[f32] }:$src0)  =>  (FBAR:{ *:[f32] } f32:{ *:[f32] }:$src0)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FBAR,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*Imm*/0,
 // CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,
@@ -121,7 +121,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC_TRUNC,
 // CHECK: // (ftrunc:{ *:[f32] } f32:{ *:[f32] }:$src0)  =>  (FFOO:{ *:[f32] } FPR32:{ *:[f32] }:$src0)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::FFOO,
-// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // CHECK-NEXT: GIR_AddImm, /*InsnID*/0, /*Imm*/0,
 // CHECK-NEXT: GIR_EraseFromParent, /*InsnID*/0,

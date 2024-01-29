@@ -217,6 +217,7 @@ struct TestSCFPipeliningPass
     if (annotatePipeline)
       options.annotateFn = annotate;
     if (noEpiloguePeeling) {
+      options.supportDynamicLoops = true;
       options.peelEpilogue = false;
       options.predicateFn = predicateOp;
     }

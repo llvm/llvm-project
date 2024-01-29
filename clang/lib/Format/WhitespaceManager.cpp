@@ -470,8 +470,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
            Previous >= 0 &&
            Changes[Previous].Tok->getType() == TT_PointerOrReference;
            --Previous) {
-        assert(
-            Changes[Previous].Tok->isOneOf(tok::star, tok::amp, tok::ampamp));
+        assert(Changes[Previous].Tok->isPointerOrReference());
         if (Changes[Previous].Tok->isNot(tok::star)) {
           if (ReferenceNotRightAligned)
             continue;
@@ -980,7 +979,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [](Change const &C) {
-        if (C.Tok->isOneOf(TT_FunctionDeclarationName, TT_FunctionTypeLParen))
+        if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
@@ -1048,6 +1047,9 @@ void WhitespaceManager::alignChainedConditionals() {
 }
 
 void WhitespaceManager::alignTrailingComments() {
+  if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never)
+    return;
+
   const int Size = Changes.size();
   int MinColumn = 0;
   int StartOfSequence = 0;
@@ -1118,16 +1120,48 @@ void WhitespaceManager::alignTrailingComments() {
       }
     }
 
-    // We don't want to align namespace end comments.
-    const bool DontAlignThisComment =
-        I > 0 && C.NewlinesBefore == 0 &&
-        Changes[I - 1].Tok->is(TT_NamespaceRBrace);
-    if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never ||
-        DontAlignThisComment) {
+    // We don't want to align comments which end a scope, which are here
+    // identified by most closing braces.
+    auto DontAlignThisComment = [](const auto *Tok) {
+      if (Tok->is(tok::semi)) {
+        Tok = Tok->getPreviousNonComment();
+        if (!Tok)
+          return false;
+      }
+      if (Tok->is(tok::r_paren)) {
+        // Back up past the parentheses and a `TT_DoWhile` that may precede.
+        Tok = Tok->MatchingParen;
+        if (!Tok)
+          return false;
+        Tok = Tok->getPreviousNonComment();
+        if (!Tok)
+          return false;
+        if (Tok->is(TT_DoWhile)) {
+          const auto *Prev = Tok->getPreviousNonComment();
+          if (!Prev) {
+            // A do-while-loop without braces.
+            return true;
+          }
+          Tok = Prev;
+        }
+      }
+
+      if (Tok->isNot(tok::r_brace))
+        return false;
+
+      while (Tok->Previous && Tok->Previous->is(tok::r_brace))
+        Tok = Tok->Previous;
+      return Tok->NewlinesBefore > 0;
+    };
+
+    if (I > 0 && C.NewlinesBefore == 0 &&
+        DontAlignThisComment(Changes[I - 1].Tok)) {
       alignTrailingComments(StartOfSequence, I, MinColumn);
-      MinColumn = ChangeMinColumn;
-      MaxColumn = ChangeMinColumn;
-      StartOfSequence = I;
+      // Reset to initial values, but skip this change for the next alignment
+      // pass.
+      MinColumn = 0;
+      MaxColumn = INT_MAX;
+      StartOfSequence = I + 1;
     } else if (BreakBeforeNext || Newlines > NewLineThreshold ||
                (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) ||
                // Break the comment sequence if the previous line did not end
@@ -1282,6 +1316,8 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
         auto Offset = std::distance(Cells.begin(), CellIter);
         for (const auto *Next = CellIter->NextColumnElement; Next;
              Next = Next->NextColumnElement) {
+          if (RowCount >= CellDescs.CellCounts.size())
+            break;
           auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
           auto *End = Start + Offset;
           ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
@@ -1345,7 +1381,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     auto Offset = std::distance(Cells.begin(), CellIter);
     for (const auto *Next = CellIter->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
-      if (RowCount > CellDescs.CellCounts.size())
+      if (RowCount >= CellDescs.CellCounts.size())
         break;
       auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
       auto *End = Start + Offset;
@@ -1431,7 +1467,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
           // Account for the added token lengths
           Changes[j].Spaces = InitialSpaces - InitialTokenLength;
         }
-      } else if (C.Tok->is(tok::comment)) {
+      } else if (C.Tok->is(tok::comment) && C.Tok->NewlinesBefore == 0) {
         // Trailing comments stay at a space past the last token
         C.Spaces = Changes[i - 1].Tok->is(tok::comma) ? 1 : 2;
       } else if (C.Tok->is(tok::l_brace)) {

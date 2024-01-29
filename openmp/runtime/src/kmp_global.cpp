@@ -282,6 +282,9 @@ kmp_affinity_t __kmp_hh_affinity =
 kmp_affinity_t *__kmp_affinities[] = {&__kmp_affinity, &__kmp_hh_affinity};
 
 char *__kmp_cpuinfo_file = NULL;
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+int __kmp_first_osid_with_ecore = -1;
+#endif
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 

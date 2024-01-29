@@ -28,7 +28,7 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -98,7 +98,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool status_known(file_status __s) noexcept { retur
 inline _LIBCPP_HIDE_FROM_ABI bool exists(file_status __s) noexcept { return status_known(__s) && __s.type() != file_type::not_found; }
 inline _LIBCPP_HIDE_FROM_ABI bool exists(const path& __p) { return exists(__status(__p)); }
 
-inline _LIBCPP_INLINE_VISIBILITY bool exists(const path& __p, error_code& __ec) noexcept {
+inline _LIBCPP_HIDE_FROM_ABI bool exists(const path& __p, error_code& __ec) noexcept {
   auto __s = __status(__p, &__ec);
   if (status_known(__s))
     __ec.clear();
@@ -145,7 +145,7 @@ inline _LIBCPP_HIDE_FROM_ABI void permissions(const path& __p, perms __prms, per
 inline _LIBCPP_HIDE_FROM_ABI void permissions(const path& __p, perms __prms, error_code& __ec) noexcept { __permissions(__p, __prms, perm_options::replace, &__ec); }
 inline _LIBCPP_HIDE_FROM_ABI void permissions(const path& __p, perms __prms, perm_options __opts, error_code& __ec) { __permissions(__p, __prms, __opts, &__ec); }
 
-inline _LIBCPP_INLINE_VISIBILITY path proximate(const path& __p, const path& __base, error_code& __ec) {
+inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, const path& __base, error_code& __ec) {
   path __tmp = __weakly_canonical(__p, &__ec);
   if (__ec)
     return {};
@@ -160,7 +160,7 @@ inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, const path& __base 
 inline _LIBCPP_HIDE_FROM_ABI path read_symlink(const path& __p) { return __read_symlink(__p); }
 inline _LIBCPP_HIDE_FROM_ABI path read_symlink(const path& __p, error_code& __ec) { return __read_symlink(__p, &__ec); }
 
-inline _LIBCPP_INLINE_VISIBILITY path relative(const path& __p, const path& __base, error_code& __ec) {
+inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, const path& __base, error_code& __ec) {
   path __tmp = __weakly_canonical(__p, &__ec);
   if (__ec)
     return path();
@@ -196,6 +196,6 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 #endif // _LIBCPP___FILESYSTEM_OPERATIONS_H

@@ -47,11 +47,11 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string(
     output_iterator<const _CharT&> auto __out_it,
     __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   if (!__specs.__has_precision())
-    return __formatter::__write_string_no_precision(__str, _VSTD::move(__out_it), __specs);
+    return __formatter::__write_string_no_precision(__str, std::move(__out_it), __specs);
 
   int __size = __formatter::__truncate(__str, __specs.__precision_);
 
-  return __formatter::__write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __size);
+  return __formatter::__write(__str.begin(), __str.end(), std::move(__out_it), __specs, __size);
 }
 
 #  endif // _LIBCPP_STD_VER >= 20
@@ -198,7 +198,7 @@ __format_escaped_char(_CharT __value,
   __str += _CharT('\'');
   __formatter::__escape(__str, basic_string_view{std::addressof(__value), 1}, __escape_quotation_mark::__apostrophe);
   __str += _CharT('\'');
-  return __formatter::__write(__str.data(), __str.data() + __str.size(), _VSTD::move(__out_it), __specs, __str.size());
+  return __formatter::__write(__str.data(), __str.data() + __str.size(), std::move(__out_it), __specs, __str.size());
 }
 
 template <class _CharT>
@@ -210,7 +210,7 @@ __format_escaped_string(basic_string_view<_CharT> __values,
   __str += _CharT('"');
   __formatter::__escape(__str, __values, __escape_quotation_mark::__double_quote);
   __str += _CharT('"');
-  return __formatter::__write_string(basic_string_view{__str}, _VSTD::move(__out_it), __specs);
+  return __formatter::__write_string(basic_string_view{__str}, std::move(__out_it), __specs);
 }
 
 #  endif // _LIBCPP_STD_VER >= 23

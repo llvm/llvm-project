@@ -138,19 +138,6 @@ constexpr bool test() {
     }
   }
 
-  { // check that the implicit conversion to bool works
-    {
-      StrictComparable<int> a[] = {1, 2, 2, 4};
-      auto ret = std::ranges::replace(std::begin(a), std::end(a), 1, 2);
-      assert(ret == std::end(a));
-    }
-    {
-      StrictComparable<int> a[] = {1, 2, 2, 4};
-      auto ret = std::ranges::replace(a, 1, 2);
-      assert(ret == std::end(a));
-    }
-  }
-
   { // check that T1 and T2 can be different types
     {
       StrictComparable<int> a[] = {1, 2, 2, 4};

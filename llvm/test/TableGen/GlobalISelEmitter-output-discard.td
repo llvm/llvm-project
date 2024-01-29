@@ -15,7 +15,7 @@ def ADD_CO : I<(outs GPR32:$dst, GPR8:$flag),
 // GISEL-NEXT: // (add:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1)  =>  (ADD_CO:{ *:[i32] }:{ *:[i8] } GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
 // GISEL-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s8,
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::ADD_CO,
-// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/RegState::Define|RegState::Dead,
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src0
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1

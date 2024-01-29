@@ -184,6 +184,7 @@ private:
   const std::uint8_t maxHeight_{maxMaxHeight};
   std::uint8_t height_{0};
   bool freeFormat_{false};
+  bool hitEnd_{false};
   const CharType *format_{nullptr};
   int formatLength_{0}; // in units of characters
   int offset_{0}; // next item is at format_[offset_]

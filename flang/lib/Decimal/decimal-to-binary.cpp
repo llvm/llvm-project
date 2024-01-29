@@ -257,13 +257,20 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
     flags |= Inexact;
   }
   if (fraction == 0 && guard <= oneHalf) {
-    return {Binary{}, static_cast<enum ConversionResultFlags>(flags)};
-  }
-  // The value is nonzero; normalize it.
-  while (fraction < topBit && expo > 1) {
-    --expo;
-    fraction = fraction * 2 + (guard >> (guardBits - 2));
-    guard = (((guard >> (guardBits - 2)) & 1) << (guardBits - 1)) | (guard & 1);
+    if ((!isNegative && rounding == RoundUp) ||
+        (isNegative && rounding == RoundDown)) {
+      // round to minimum nonzero value
+    } else {
+      return {Binary{}, static_cast<enum ConversionResultFlags>(flags)};
+    }
+  } else {
+    // The value is nonzero; normalize it.
+    while (fraction < topBit && expo > 1) {
+      --expo;
+      fraction = fraction * 2 + (guard >> (guardBits - 2));
+      guard =
+          (((guard >> (guardBits - 2)) & 1) << (guardBits - 1)) | (guard & 1);
+    }
   }
   // Apply rounding
   bool incr{false};
@@ -330,8 +337,13 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   exponent_ += digits_ * log10Radix;
   // Sanity checks for ridiculous exponents
   static constexpr int crazy{2 * Real::decimalRange + log10Radix};
-  if (exponent_ < -crazy) { // underflow to +/-0.
-    return {Real{SignBit()}, Inexact};
+  if (exponent_ < -crazy) {
+    if ((!isNegative_ && rounding_ == RoundUp) ||
+        (isNegative_ && rounding_ == RoundDown)) {
+      return {Real{Raw{1} | SignBit()}}; // return least nonzero value
+    } else { // underflow to +/-0.
+      return {Real{SignBit()}, Inexact};
+    }
   } else if (exponent_ > crazy) { // overflow to +/-Inf.
     return {Real{Infinity()}, Overflow};
   }

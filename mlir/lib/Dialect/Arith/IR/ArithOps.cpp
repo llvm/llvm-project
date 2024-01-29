@@ -2412,7 +2412,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
     APFloat identity = useOnlyFiniteValue
-                           ? APFloat::getSmallest(semantic, /*Negative=*/true)
+                           ? APFloat::getLargest(semantic, /*Negative=*/true)
                            : APFloat::getInf(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }

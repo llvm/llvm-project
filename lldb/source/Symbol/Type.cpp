@@ -64,49 +64,49 @@ bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
   return true;
 }
 
-void CompilerContext::Dump() const {
+void CompilerContext::Dump(Stream &s) const {
   switch (kind) {
   default:
-    printf("Invalid");
+    s << "Invalid";
     break;
   case CompilerContextKind::TranslationUnit:
-    printf("TranslationUnit");
+    s << "TranslationUnit";
     break;
   case CompilerContextKind::Module:
-    printf("Module");
+    s << "Module";
     break;
   case CompilerContextKind::Namespace:
-    printf("Namespace");
+    s << "Namespace";
     break;
   case CompilerContextKind::Class:
-    printf("Class");
+    s << "Class";
     break;
   case CompilerContextKind::Struct:
-    printf("Structure");
+    s << "Structure";
     break;
   case CompilerContextKind::Union:
-    printf("Union");
+    s << "Union";
     break;
   case CompilerContextKind::Function:
-    printf("Function");
+    s << "Function";
     break;
   case CompilerContextKind::Variable:
-    printf("Variable");
+    s << "Variable";
     break;
   case CompilerContextKind::Enum:
-    printf("Enumeration");
+    s << "Enumeration";
     break;
   case CompilerContextKind::Typedef:
-    printf("Typedef");
+    s << "Typedef";
     break;
   case CompilerContextKind::AnyModule:
-    printf("AnyModule");
+    s << "AnyModule";
     break;
   case CompilerContextKind::AnyType:
-    printf("AnyType");
+    s << "AnyType";
     break;
   }
-  printf("(\"%s\")\n", name.GetCString());
+  s << "(" << name << ")";
 }
 
 class TypeAppendVisitor {
@@ -746,6 +746,10 @@ void TypeAndOrName::SetName(ConstString type_name) {
 
 void TypeAndOrName::SetName(const char *type_name_cstr) {
   m_type_name.SetCString(type_name_cstr);
+}
+
+void TypeAndOrName::SetName(llvm::StringRef type_name) {
+  m_type_name.SetString(type_name);
 }
 
 void TypeAndOrName::SetTypeSP(lldb::TypeSP type_sp) {

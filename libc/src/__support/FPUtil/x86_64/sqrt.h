@@ -33,7 +33,7 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
   return result;
 }
 
-#ifdef LONG_DOUBLE_IS_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
 template <> LIBC_INLINE long double sqrt<long double>(long double x) {
   long double result;
   __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));

@@ -62,6 +62,52 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
     def : WriteRes<!cast<SchedWrite>(name # "_WorstCase"), resources>;
 }
 
+// Define a SchedAlias for the SchedWrite associated with (name, mx) whose
+// behavior is aliased to a Variant. The Variant has Latency predLad and
+// ReleaseAtCycles predCycles if the SchedPredicate Pred is true, otherwise has
+// Latency noPredLat and ReleaseAtCycles noPredCycles. The WorstCase SchedWrite
+// is created similiarly if IsWorstCase is true.
+multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
+                                 list<ProcResourceKind> resources,
+                                 int predLat, list<int> predAcquireCycles,
+                                 list<int> predReleaseCycles, int noPredLat,
+                                 list<int> noPredAcquireCycles,
+                                 list<int> noPredReleaseCycles,
+                                 string mx, bit IsWorstCase> {
+  defvar nameMX = name # "_" # mx;
+
+  // Define the different behaviors
+  def nameMX # "_Pred" : SchedWriteRes<resources>{
+    let Latency = predLat;
+    let AcquireAtCycles = predAcquireCycles;
+    let ReleaseAtCycles = predReleaseCycles;
+  }
+  def nameMX # "_NoPred" : SchedWriteRes<resources> {
+    let Latency = noPredLat;
+    let AcquireAtCycles = noPredAcquireCycles;
+    let ReleaseAtCycles = noPredReleaseCycles;
+  }
+
+  // Tie behavior to predicate
+  def NAME # nameMX # "_Variant" : SchedWriteVariant<[
+    SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
+    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
+  ]>;
+  def : SchedAlias<
+    !cast<SchedReadWrite>(nameMX),
+    !cast<SchedReadWrite>(NAME # nameMX # "_Variant")>;
+
+  if IsWorstCase then {
+    def NAME # name # "_WorstCase_Variant" : SchedWriteVariant<[
+      SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>,
+      SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX # "_NoPred")]>
+    ]>;
+    def : SchedAlias<
+      !cast<SchedReadWrite>(name # "_WorstCase"),
+      !cast<SchedReadWrite>(NAME # name # "_WorstCase_Variant")>;
+  }
+}
+
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
 // ReadAdvance for each (name, LMUL) pair and for each LMUL in each of the
 // SchedMxList variants above. Each multiclass is responsible for defining

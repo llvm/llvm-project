@@ -149,7 +149,7 @@ define i128 @test8(i128 %x) {
 define i77 @test9(i77 %x) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP_2:%.*]] = and i77 [[X:%.*]], 562949953421310
-; CHECK-NEXT:    [[TMP_4:%.*]] = or i77 [[TMP_2]], 1
+; CHECK-NEXT:    [[TMP_4:%.*]] = or disjoint i77 [[TMP_2]], 1
 ; CHECK-NEXT:    ret i77 [[TMP_4]]
 ;
   %tmp.2 = and i77 %x, 562949953421310

@@ -255,6 +255,8 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitAsmStmt(cast<AsmStmt>(S));
   case Stmt::AttributedStmtClass:
     return visitAttributedStmt(cast<AttributedStmt>(S));
+  case Stmt::CXXTryStmtClass:
+    return visitCXXTryStmt(cast<CXXTryStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -641,6 +643,12 @@ template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
   // Ignore all attributes.
   return this->visitStmt(S->getSubStmt());
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
+  // Ignore all handlers.
+  return this->visitStmt(S->getTryBlock());
 }
 
 namespace clang {

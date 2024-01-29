@@ -172,9 +172,13 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
   // __basic_format_arg_value.  First handle all types needing adjustment, the
   // final else requires no adjustment.
   if constexpr (__arg == __arg_t::__char_type)
-    // On some platforms initializing a wchar_t from a char is a narrowing
-    // conversion.
-    return basic_format_arg<_Context>{__arg, static_cast<typename _Context::char_type>(__value)};
+
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+    if constexpr (same_as<typename _Context::char_type, wchar_t> && same_as<_Dp, char>)
+      return basic_format_arg<_Context>{__arg, static_cast<wchar_t>(static_cast<unsigned char>(__value))};
+    else
+#  endif
+      return basic_format_arg<_Context>{__arg, __value};
   else if constexpr (__arg == __arg_t::__int)
     return basic_format_arg<_Context>{__arg, static_cast<int>(__value)};
   else if constexpr (__arg == __arg_t::__long_long)
@@ -202,8 +206,8 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
 }
 
 template <class _Context, class... _Args>
-_LIBCPP_HIDE_FROM_ABI void __create_packed_storage(uint64_t& __types, __basic_format_arg_value<_Context>* __values,
-                                                   _Args&&... __args) noexcept {
+_LIBCPP_HIDE_FROM_ABI void
+__create_packed_storage(uint64_t& __types, __basic_format_arg_value<_Context>* __values, _Args&... __args) noexcept {
   int __shift = 0;
   (
       [&] {
@@ -220,7 +224,7 @@ _LIBCPP_HIDE_FROM_ABI void __create_packed_storage(uint64_t& __types, __basic_fo
 }
 
 template <class _Context, class... _Args>
-_LIBCPP_HIDE_FROM_ABI void __store_basic_format_arg(basic_format_arg<_Context>* __data, _Args&&... __args) noexcept {
+_LIBCPP_HIDE_FROM_ABI void __store_basic_format_arg(basic_format_arg<_Context>* __data, _Args&... __args) noexcept {
   ([&] { *__data++ = __format::__create_format_arg<_Context>(__args); }(), ...);
 }
 

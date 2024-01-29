@@ -350,7 +350,7 @@ string
 __get_collation_name(const char* s)
 {
     const collationnames* i =
-            _VSTD::lower_bound(begin(collatenames), end(collatenames), s, use_strcmp());
+            std::lower_bound(begin(collatenames), end(collatenames), s, use_strcmp());
     string r;
     if (i != end(collatenames) && strcmp(s, i->elem_) == 0)
         r = char(i->char_);
@@ -361,7 +361,7 @@ regex_traits<char>::char_class_type
 __get_classname(const char* s, bool __icase)
 {
     const classnames* i =
-            _VSTD::lower_bound(begin(ClassNames), end(ClassNames), s, use_strcmp());
+            std::lower_bound(begin(ClassNames), end(ClassNames), s, use_strcmp());
     regex_traits<char>::char_class_type r = 0;
     if (i != end(ClassNames) && strcmp(s, i->elem_) == 0)
     {

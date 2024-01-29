@@ -29,9 +29,13 @@
 // Pipeline implementation.
 //===----------------------------------------------------------------------===//
 
-void mlir::sparse_tensor::buildSparseCompiler(
-    OpPassManager &pm, const SparseCompilerOptions &options) {
+void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
+                                          const SparsifierOptions &options) {
+  // Rewrite named linalg ops into generic ops.
+
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
+
+  // Sparsification and bufferization mini-pipeline.
   pm.addPass(createSparsificationAndBufferizationPass(
       getBufferizationOptionsForSparsification(
           options.testBufferizationAnalysisOnly),
@@ -39,10 +43,14 @@ void mlir::sparse_tensor::buildSparseCompiler(
       options.enableRuntimeLibrary, options.enableBufferInitialization,
       options.vectorLength,
       /*enableVLAVectorization=*/options.armSVE,
-      /*enableSIMDIndex32=*/options.force32BitVectorIndices));
+      /*enableSIMDIndex32=*/options.force32BitVectorIndices,
+      options.enableGPULibgen));
+
+  // Bail-early for test setup.
   if (options.testBufferizationAnalysisOnly)
     return;
 
+  // Storage specifier lowering and bufferization wrap-up.
   pm.addPass(createStorageSpecifierToLLVMPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addNestedPass<func::FuncOp>(
@@ -72,8 +80,10 @@ void mlir::sparse_tensor::buildSparseCompiler(
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
   pm.addPass(createConvertMathToLibmPass());
   pm.addPass(createConvertComplexToLibmPass());
+
   // Repeat convert-vector-to-llvm.
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
+
   pm.addPass(createConvertComplexToLLVMPass());
   pm.addPass(createConvertVectorToLLVMPass(options.lowerVectorToLLVMOptions()));
   pm.addPass(createConvertFuncToLLVMPass());
@@ -99,10 +109,10 @@ void mlir::sparse_tensor::buildSparseCompiler(
 //===----------------------------------------------------------------------===//
 
 void mlir::sparse_tensor::registerSparseTensorPipelines() {
-  PassPipelineRegistration<SparseCompilerOptions>(
-      "sparse-compiler",
+  PassPipelineRegistration<SparsifierOptions>(
+      "sparsifier",
       "The standard pipeline for taking sparsity-agnostic IR using the"
       " sparse-tensor type, and lowering it to LLVM IR with concrete"
       " representations and algorithms for sparse tensors.",
-      buildSparseCompiler);
+      buildSparsifier);
 }

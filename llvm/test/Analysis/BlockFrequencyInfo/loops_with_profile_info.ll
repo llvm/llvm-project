@@ -59,7 +59,7 @@ declare i32 @printf(i8*, ...)
 
 ; CHECK: Printing analysis {{.*}} for function 'main':
 ; CHECK-NEXT: block-frequency-info: main
-define i32 @main() {
+define i32 @main() !prof !6 {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4
@@ -93,7 +93,7 @@ for.cond4:                                        ; preds = %for.inc, %for.body3
   %cmp5 = icmp slt i32 %2, 100
   br i1 %cmp5, label %for.body6, label %for.end, !prof !3
 
-; CHECK: - for.body6: float = 500000.5, int = 4000004
+; CHECK: - for.body6: float = 1000000.0,{{.*}}count = 1000000
 for.body6:                                        ; preds = %for.cond4
   call void @bar()
   br label %for.inc
@@ -143,7 +143,7 @@ for.cond16:                                       ; preds = %for.inc19, %for.bod
   %cmp17 = icmp slt i32 %8, 10000
   br i1 %cmp17, label %for.body18, label %for.end21, !prof !4
 
-; CHECK: - for.body18: float = 499999.9, int = 3999998
+; CHECK: - for.body18: float = 999999.5,{{.*}}count = 1000000
 for.body18:                                       ; preds = %for.cond16
   call void @bar()
   br label %for.inc19
@@ -175,7 +175,7 @@ for.cond26:                                       ; preds = %for.inc29, %for.end
   %cmp27 = icmp slt i32 %12, 1000000
   br i1 %cmp27, label %for.body28, label %for.end31, !prof !5
 
-; CHECK: - for.body28: float = 499995.2, int = 3999961
+; CHECK: - for.body28: float = 1000224.3,{{.*}}count = 1000224
 for.body28:                                       ; preds = %for.cond26
   call void @bar()
   br label %for.inc29
@@ -197,8 +197,9 @@ for.end31:                                        ; preds = %for.cond26
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 3.7.0 (trunk 232635) (llvm/trunk 232636)"}
-!1 = !{!"branch_weights", i32 101, i32 2}
-!2 = !{!"branch_weights", i32 10001, i32 101}
-!3 = !{!"branch_weights", i32 1000001, i32 10001}
-!4 = !{!"branch_weights", i32 1000001, i32 101}
-!5 = !{!"branch_weights", i32 1000001, i32 2}
+!1 = !{!"branch_weights", i32 100, i32 1}
+!2 = !{!"branch_weights", i32 10000, i32 100}
+!3 = !{!"branch_weights", i32 1000000, i32 10000}
+!4 = !{!"branch_weights", i32 1000000, i32 100}
+!5 = !{!"branch_weights", i32 1000000, i32 1}
+!6 = !{!"function_entry_count", i32 1}

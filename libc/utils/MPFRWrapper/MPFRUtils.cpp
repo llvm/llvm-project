@@ -12,7 +12,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
-#include "src/__support/FPUtil/PlatformDefs.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "test/UnitTest/FPMatcher.h"
 
@@ -287,6 +286,12 @@ public:
     return result;
   }
 
+  MPFRNumber pow(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_pow(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber remquo(const MPFRNumber &divisor, int &quotient) {
     MPFRNumber remainder(*this);
     long q;
@@ -453,9 +458,9 @@ public:
     int thisExponent = fputil::FPBits<T>(thisAsT).get_exponent();
     int inputExponent = fputil::FPBits<T>(input).get_exponent();
     // Adjust the exponents for denormal numbers.
-    if (fputil::FPBits<T>(thisAsT).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(thisAsT).get_biased_exponent() == 0)
       ++thisExponent;
-    if (fputil::FPBits<T>(input).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(input).get_biased_exponent() == 0)
       ++inputExponent;
 
     if (thisAsT * input < 0 || thisExponent == inputExponent) {
@@ -478,9 +483,9 @@ public:
     int minExponent = fputil::FPBits<T>(min).get_exponent();
     int maxExponent = fputil::FPBits<T>(max).get_exponent();
     // Adjust the exponents for denormal numbers.
-    if (fputil::FPBits<T>(min).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(min).get_biased_exponent() == 0)
       ++minExponent;
-    if (fputil::FPBits<T>(max).get_unbiased_exponent() == 0)
+    if (fputil::FPBits<T>(max).get_biased_exponent() == 0)
       ++maxExponent;
 
     MPFRNumber minMPFR(min);
@@ -626,6 +631,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
     return inputX.fmod(inputY);
   case Operation::Hypot:
     return inputX.hypot(inputY);
+  case Operation::Pow:
+    return inputX.pow(inputY);
   default:
     __builtin_unreachable();
   }

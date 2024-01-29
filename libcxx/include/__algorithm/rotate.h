@@ -35,7 +35,7 @@ __rotate_left(_ForwardIterator __first, _ForwardIterator __last)
     value_type __tmp = _Ops::__iter_move(__first);
     _ForwardIterator __lm1 = std::__move<_AlgPolicy>(
         _Ops::next(__first), __last, __first).second;
-    *__lm1 = _VSTD::move(__tmp);
+    *__lm1 = std::move(__tmp);
     return __lm1;
 }
 
@@ -49,7 +49,7 @@ __rotate_right(_BidirectionalIterator __first, _BidirectionalIterator __last)
     _BidirectionalIterator __lm1 = _Ops::prev(__last);
     value_type __tmp = _Ops::__iter_move(__lm1);
     _BidirectionalIterator __fp1 = std::__move_backward<_AlgPolicy>(__first, __lm1, std::move(__last)).second;
-    *__first = _VSTD::move(__tmp);
+    *__first = std::move(__tmp);
     return __fp1;
 }
 
@@ -89,7 +89,7 @@ __rotate_forward(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIt
 }
 
 template<typename _Integral>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX17 _Integral
 __algo_gcd(_Integral __x, _Integral __y)
 {
@@ -117,7 +117,7 @@ __rotate_gcd(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Ran
         std::__swap_ranges<_AlgPolicy>(__first, __middle, __middle, __last);
         return __middle;
     }
-    const difference_type __g = _VSTD::__algo_gcd(__m1, __m2);
+    const difference_type __g = std::__algo_gcd(__m1, __m2);
     for (_RandomAccessIterator __p = __first + __g; __p != __first;)
     {
         value_type __t(_Ops::__iter_move(--__p));
@@ -133,16 +133,16 @@ __rotate_gcd(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Ran
             else
                 __p2 = __first + (__m1 - __d);
         } while (__p2 != __p);
-        *__p1 = _VSTD::move(__t);
+        *__p1 = std::move(__t);
     }
     return __first + __m2;
 }
 
 template <class _AlgPolicy, class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
 __rotate_impl(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last,
-         _VSTD::forward_iterator_tag)
+         std::forward_iterator_tag)
 {
     typedef typename iterator_traits<_ForwardIterator>::value_type value_type;
     if (is_trivially_move_assignable<value_type>::value)
@@ -154,7 +154,7 @@ __rotate_impl(_ForwardIterator __first, _ForwardIterator __middle, _ForwardItera
 }
 
 template <class _AlgPolicy, class _BidirectionalIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _BidirectionalIterator
 __rotate_impl(_BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last,
          bidirectional_iterator_tag)
@@ -171,7 +171,7 @@ __rotate_impl(_BidirectionalIterator __first, _BidirectionalIterator __middle, _
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator
 __rotate_impl(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
          random_access_iterator_tag)
@@ -208,7 +208,7 @@ __rotate(_Iterator __first, _Iterator __middle, _Sentinel __last) {
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last)
 {

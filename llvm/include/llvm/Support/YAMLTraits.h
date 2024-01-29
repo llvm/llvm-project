@@ -584,11 +584,11 @@ inline bool isNumeric(StringRef S) {
   // Section 10.3.2 Tag Resolution
   // YAML 1.2 Specification prohibits Base 8 and Base 16 numbers prefixed with
   // [-+], so S should be used instead of Tail.
-  if (S.startswith("0o"))
+  if (S.starts_with("0o"))
     return S.size() > 2 &&
            S.drop_front(2).find_first_not_of("01234567") == StringRef::npos;
 
-  if (S.startswith("0x"))
+  if (S.starts_with("0x"))
     return S.size() > 2 && S.drop_front(2).find_first_not_of(
                                "0123456789abcdefABCDEF") == StringRef::npos;
 
@@ -598,12 +598,12 @@ inline bool isNumeric(StringRef S) {
   // Handle cases when the number starts with '.' and hence needs at least one
   // digit after dot (as opposed by number which has digits before the dot), but
   // doesn't have one.
-  if (S.startswith(".") &&
+  if (S.starts_with(".") &&
       (S.equals(".") ||
        (S.size() > 1 && std::strchr("0123456789", S[1]) == nullptr)))
     return false;
 
-  if (S.startswith("E") || S.startswith("e"))
+  if (S.starts_with("E") || S.starts_with("e"))
     return false;
 
   enum ParseState {

@@ -14,7 +14,6 @@
 
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/CodeGen.h"

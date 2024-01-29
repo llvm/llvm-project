@@ -34,12 +34,6 @@ namespace {
 
 // Function definition of a RVV intrinsic.
 struct RVVIntrinsicDef {
-  /// Full function name with suffix, e.g. vadd_vv_i32m1.
-  std::string Name;
-
-  /// Overloaded function name, e.g. vadd.
-  std::string OverloadName;
-
   /// Mapping to which clang built-in function, e.g. __builtin_rvv_vadd.
   std::string BuiltinName;
 
@@ -116,6 +110,9 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     break;
   case ScalarTypeKind::UnsignedInteger:
     QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    break;
+  case ScalarTypeKind::BFloat:
+    QT = Context.BFloat16Ty;
     break;
   case ScalarTypeKind::Float:
     switch (Type->getElementBitwidth()) {
@@ -205,12 +202,17 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
   static const std::pair<const char *, RVVRequire> FeatureCheckList[] = {
       {"64bit", RVV_REQ_RV64},
       {"xsfvcp", RVV_REQ_Xsfvcp},
+      {"xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf},
+      {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
+      {"xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod},
+      {"xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq},
       {"experimental-zvbb", RVV_REQ_Zvbb},
       {"experimental-zvbc", RVV_REQ_Zvbc},
       {"experimental-zvkb", RVV_REQ_Zvkb},
       {"experimental-zvkg", RVV_REQ_Zvkg},
       {"experimental-zvkned", RVV_REQ_Zvkned},
       {"experimental-zvknha", RVV_REQ_Zvknha},
+      {"experimental-zvknhb", RVV_REQ_Zvknhb},
       {"experimental-zvksed", RVV_REQ_Zvksed},
       {"experimental-zvksh", RVV_REQ_Zvksh}};
 
@@ -385,7 +387,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 
   // Put into IntrinsicList.
   size_t Index = IntrinsicList.size();
-  IntrinsicList.push_back({Name, OverloadedName, BuiltinName, Signature});
+  IntrinsicList.push_back({BuiltinName, Signature});
 
   // Creating mapping to Intrinsics.
   Intrinsics.insert({Name, Index});

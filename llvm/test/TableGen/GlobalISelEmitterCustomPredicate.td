@@ -76,7 +76,7 @@ def and_or_pat : PatFrag<
 // CHECK: GIM_Try, /*On fail goto*//*Label 0*/ 99, // Rule ID 7 //
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_AND,
-// CHECK-NEXT: // MIs[0] dst
+// CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
 // CHECK-NEXT: // MIs[0] src2
@@ -106,7 +106,7 @@ def and_or_pat : PatFrag<
 // CHECK: GIM_Try, /*On fail goto*//*Label 1*/ 198, // Rule ID 3 //
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_AND,
-// CHECK-NEXT: // MIs[0] dst
+// CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
 // CHECK-NEXT: // MIs[0] Operand 1
@@ -151,7 +151,7 @@ def mul_pat : PatFrag<
 // CHECK: GIM_Try, /*On fail goto*//*Label 2*/ 293, // Rule ID 4 //
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_MUL,
-// CHECK-NEXT: // MIs[0] dst
+// CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
 // CHECK-NEXT: // MIs[0] Operand 1
@@ -180,7 +180,7 @@ def mul_pat : PatFrag<
 // CHECK: GIM_Try, /*On fail goto*//*Label 3*/ 388, // Rule ID 8 //
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_MUL,
-// CHECK-NEXT: // MIs[0] dst
+// CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
 // CHECK-NEXT: // MIs[0] src2
@@ -226,7 +226,7 @@ def sub3_pat : PatFrag<
 // CHECK: GIM_Try, /*On fail goto*//*Label 4*/ 475, // Rule ID 0 //
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SUB,
-// CHECK-NEXT: // MIs[0] dst
+// CHECK-NEXT: // MIs[0] DstI[dst]
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/Test::DRegsRegClassID,
 // CHECK-NEXT: // MIs[0] Operand 1

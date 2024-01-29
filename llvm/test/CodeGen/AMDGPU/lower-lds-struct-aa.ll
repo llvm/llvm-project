@@ -110,7 +110,7 @@ bb:
   ret void
 }
 
-; CHECK: !0 = !{i64 0, i64 1}
+; CHECK: !0 = !{i32 0, i32 1}
 ; CHECK: !1 = !{!2}
 ; CHECK: !2 = distinct !{!2, !3}
 ; CHECK: !3 = distinct !{!3}

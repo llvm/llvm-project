@@ -529,6 +529,11 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
+  // Exercise the fact that an operation created with createOrFold should be
+  // allowed to access its parent block.
+  assert(getOperation()->getBlock() &&
+         "expected that operation is not unlinked");
+
   if (adaptor.getOp() && !getProperties().attr) {
     // The folder adds "attr" if not present.
     getProperties().attr = dyn_cast_or_null<IntegerAttr>(adaptor.getOp());
@@ -1334,7 +1339,7 @@ TestVersionedOpA::readProperties(::mlir::DialectBytecodeReader &reader,
 
   // Check if we have a version. If not, assume we are parsing the current
   // version.
-  auto maybeVersion = reader.getDialectVersion("test");
+  auto maybeVersion = reader.getDialectVersion<test::TestDialect>();
   if (succeeded(maybeVersion)) {
     // If version is less than 2.0, there is no additional attribute to parse.
     // We can materialize missing properties post parsing before verification.
@@ -1353,6 +1358,17 @@ TestVersionedOpA::readProperties(::mlir::DialectBytecodeReader &reader,
 void TestVersionedOpA::writeProperties(::mlir::DialectBytecodeWriter &writer) {
   auto &prop = getProperties();
   writer.writeAttribute(prop.dims);
+
+  auto maybeVersion = writer.getDialectVersion<test::TestDialect>();
+  if (succeeded(maybeVersion)) {
+    // If version is less than 2.0, there is no additional attribute to write.
+    const auto *version =
+        reinterpret_cast<const TestDialectVersion *>(*maybeVersion);
+    if ((version->major_ < 2)) {
+      llvm::outs() << "downgrading op properties...\n";
+      return;
+    }
+  }
   writer.writeAttribute(prop.modifier);
 }
 
@@ -1364,7 +1380,7 @@ void TestVersionedOpA::writeProperties(::mlir::DialectBytecodeWriter &writer) {
 
   // Check if we have a version. If not, assume we are parsing the current
   // version.
-  auto maybeVersion = reader.getDialectVersion("test");
+  auto maybeVersion = reader.getDialectVersion<test::TestDialect>();
   bool needToParseAnotherInt = true;
   if (succeeded(maybeVersion)) {
     // If version is less than 2.0, there is no additional attribute to parse.

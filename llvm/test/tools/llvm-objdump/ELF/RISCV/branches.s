@@ -57,11 +57,11 @@ c.jal bar
 c.j bar
 
 # CHECK: auipc ra, 0
-# CHECK: jalr	ra, 16(ra){{$}}
+# CHECK: jalr	ra, 16(ra) <foo+0x58>
 call .Llocal
 
 # CHECK: auipc ra, 0
-# CHECK: jalr	ra, 16(ra){{$}}
+# CHECK: jalr	ra, 16(ra) <bar>
 call bar
 
 .Llocal:

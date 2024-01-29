@@ -704,11 +704,11 @@ define <2 x i16> @chain_hi_to_lo_private_other_dep(ptr addrspace(5) %ptr) {
 ; FLATSCR:       ; %bb.0: ; %bb
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_short_d16_hi v1, v0, off
-; FLATSCR-NEXT:    v_add_u32_e32 v2, 2, v0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    v_pk_sub_u16 v0, v1, -12 op_sel_hi:[1,0]
-; FLATSCR-NEXT:    scratch_load_short_d16 v0, v2, off
+; FLATSCR-NEXT:    v_pk_sub_u16 v1, v1, -12 op_sel_hi:[1,0]
+; FLATSCR-NEXT:    scratch_load_short_d16 v1, v0, off offset:2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    v_mov_b32_e32 v0, v1
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10_DEFAULT-LABEL: chain_hi_to_lo_private_other_dep:
@@ -726,22 +726,22 @@ define <2 x i16> @chain_hi_to_lo_private_other_dep(ptr addrspace(5) %ptr) {
 ; FLATSCR_GFX10:       ; %bb.0: ; %bb
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR_GFX10-NEXT:    scratch_load_short_d16_hi v1, v0, off
-; FLATSCR_GFX10-NEXT:    v_add_nc_u32_e32 v2, 2, v0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR_GFX10-NEXT:    v_pk_sub_u16 v0, v1, -12 op_sel_hi:[1,0]
-; FLATSCR_GFX10-NEXT:    scratch_load_short_d16 v0, v2, off
+; FLATSCR_GFX10-NEXT:    v_pk_sub_u16 v1, v1, -12 op_sel_hi:[1,0]
+; FLATSCR_GFX10-NEXT:    scratch_load_short_d16 v1, v0, off offset:2
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR_GFX10-NEXT:    v_mov_b32_e32 v0, v1
 ; FLATSCR_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: chain_hi_to_lo_private_other_dep:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_load_d16_hi_b16 v1, v0, off
-; GFX11-NEXT:    v_add_nc_u32_e32 v2, 2, v0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_pk_sub_u16 v0, v1, -12 op_sel_hi:[1,0]
-; GFX11-NEXT:    scratch_load_d16_b16 v0, v2, off
+; GFX11-NEXT:    v_pk_sub_u16 v1, v1, -12 op_sel_hi:[1,0]
+; GFX11-NEXT:    scratch_load_d16_b16 v1, v0, off offset:2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(5) %ptr, i64 1

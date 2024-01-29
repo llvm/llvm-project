@@ -58,13 +58,12 @@ void BreakpointResolverScripted::NotifyBreakpointSet() {
   CreateImplementationIfNeeded(GetBreakpoint());
 }
 
-BreakpointResolver *
-BreakpointResolverScripted::CreateFromStructuredData(
+BreakpointResolverSP BreakpointResolverScripted::CreateFromStructuredData(
     const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
     Status &error) {
   llvm::StringRef class_name;
   bool success;
-  
+
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::PythonClassName), class_name);
   if (!success) {
@@ -80,8 +79,8 @@ BreakpointResolverScripted::CreateFromStructuredData(
   if (options_dict.GetValueForKeyAsDictionary(GetKey(OptionNames::ScriptArgs),
                                               args_dict))
     args_data_impl.SetObjectSP(args_dict->shared_from_this());
-  return new BreakpointResolverScripted(bkpt, class_name, depth, 
-                                        args_data_impl);
+  return std::make_shared<BreakpointResolverScripted>(bkpt, class_name, depth,
+                                                      args_data_impl);
 }
 
 StructuredData::ObjectSP

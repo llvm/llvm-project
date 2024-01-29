@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -1634,7 +1633,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         // DICompositeType flag specifying whether template parameters are
         // required on declarations of this type.
         StringRef NameStr = Name->getString();
-        if (!NameStr.contains('<') || NameStr.startswith("_STN|"))
+        if (!NameStr.contains('<') || NameStr.starts_with("_STN|"))
           TemplateParams = getMDOrNull(Record[14]);
       }
     } else {

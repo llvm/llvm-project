@@ -55,12 +55,30 @@ public:
   virtual std::optional<int64_t>
   getSubprogramRelocAdjustment(const DWARFDie &DIE) = 0;
 
+  // Returns the library install name associated to the AddessesMap.
+  virtual std::optional<StringRef> getLibraryInstallName() = 0;
+
   /// Apply the valid relocations to the buffer \p Data, taking into
   /// account that Data is at \p BaseOffset in the .debug_info section.
   ///
   /// \returns true whether any reloc has been applied.
   virtual bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                                 bool IsLittleEndian) = 0;
+
+  /// Check if the linker needs to gather and save relocation info.
+  virtual bool needToSaveValidRelocs() = 0;
+
+  /// Update and save relocation values to be serialized
+  virtual void updateAndSaveValidRelocs(bool IsDWARF5,
+                                        uint64_t OriginalUnitOffset,
+                                        int64_t LinkedOffset,
+                                        uint64_t StartOffset,
+                                        uint64_t EndOffset) = 0;
+
+  /// Update the valid relocations that used OriginalUnitOffset as the compile
+  /// unit offset, and update their values to reflect OutputUnitOffset.
+  virtual void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
+                                               uint64_t OutputUnitOffset) = 0;
 
   /// Erases all data.
   virtual void clear() = 0;

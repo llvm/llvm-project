@@ -39,8 +39,8 @@ constexpr uint64_t clock_freq = 0;
 // We provide an externally visible symbol such that the runtime can set this to
 // the correct value. If it is not set we try to default to the known values.
 extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] LIBC_NAMESPACE_clock_freq;
-#define GPU_CLOCKS_PER_SEC static_cast<clock_t>(LIBC_NAMESPACE_clock_freq)
+    [[clang::address_space(4)]] __llvm_libc_clock_freq;
+#define GPU_CLOCKS_PER_SEC static_cast<clock_t>(__llvm_libc_clock_freq)
 
 #elif defined(LIBC_TARGET_ARCH_IS_NVPTX)
 // NPVTX uses a single 1 GHz fixed frequency clock for all target architectures.

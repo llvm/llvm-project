@@ -206,33 +206,19 @@ define <8 x float> @splat_idx_v8f32(<8 x float> %v, i64 %idx) {
 
 ; Test that we pull the vlse of the constant pool out of the loop.
 define dso_local void @splat_load_licm(float* %0) {
-; RV32-LABEL: splat_load_licm:
-; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 1024
-; RV32-NEXT:    lui a2, 263168
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a2
-; RV32-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    addi a1, a1, -4
-; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    bnez a1, .LBB12_1
-; RV32-NEXT:  # %bb.2:
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: splat_load_licm:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1024
-; RV64-NEXT:    lui a2, 263168
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a2
-; RV64-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    addiw a1, a1, -4
-; RV64-NEXT:    addi a0, a0, 16
-; RV64-NEXT:    bnez a1, .LBB12_1
-; RV64-NEXT:  # %bb.2:
-; RV64-NEXT:    ret
+; CHECK-LABEL: splat_load_licm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    add a1, a0, a1
+; CHECK-NEXT:    lui a2, 263168
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a2
+; CHECK-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    bne a0, a1, .LBB12_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    ret
   br label %2
 
 2:                                                ; preds = %2, %1
@@ -252,7 +238,7 @@ define <2 x half> @buildvec_v2f16(half %a, half %b) {
 ; CHECK-LABEL: buildvec_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x half> poison, half %a, i64 0
@@ -264,7 +250,7 @@ define <2 x float> @buildvec_v2f32(float %a, float %b) {
 ; CHECK-LABEL: buildvec_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x float> poison, float %a, i64 0
@@ -276,7 +262,7 @@ define <2 x double> @buildvec_v2f64(double %a, double %b) {
 ; CHECK-LABEL: buildvec_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x double> poison, double %a, i64 0
@@ -288,7 +274,7 @@ define <2 x double> @buildvec_v2f64_b(double %a, double %b) {
 ; CHECK-LABEL: buildvec_v2f64_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    ret
   %v1 = insertelement <2 x double> poison, double %b, i64 1
@@ -300,7 +286,7 @@ define <4 x float> @buildvec_v4f32(float %a, float %b, float %c, float %d) {
 ; CHECK-LABEL: buildvec_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
@@ -316,7 +302,7 @@ define <8 x float> @buildvec_v8f32(float %e0, float %e1, float %e2, float %e3, f
 ; CHECK-LABEL: buildvec_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfslide1down.vf v8, v8, fa0
+; CHECK-NEXT:    vfmv.v.f v8, fa0
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa1
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa2
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa3
@@ -1077,9 +1063,205 @@ define <32 x double> @buildvec_v32f64(double %e0, double %e1, double %e2, double
   ret <32 x double> %v31
 }
 
+define <32 x double> @buildvec_v32f64_exact_vlen(double %e0, double %e1, double %e2, double %e3, double %e4, double %e5, double %e6, double %e7, double %e8, double %e9, double %e10, double %e11, double %e12, double %e13, double %e14, double %e15, double %e16, double %e17, double %e18, double %e19, double %e20, double %e21, double %e22, double %e23, double %e24, double %e25, double %e26, double %e27, double %e28, double %e29, double %e30, double %e31) vscale_range(2,2) {
+; RV32-LABEL: buildvec_v32f64_exact_vlen:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    fsd fs0, 24(sp) # 8-byte Folded Spill
+; RV32-NEXT:    fsd fs1, 16(sp) # 8-byte Folded Spill
+; RV32-NEXT:    .cfi_offset fs0, -8
+; RV32-NEXT:    .cfi_offset fs1, -16
+; RV32-NEXT:    sw a6, 8(sp)
+; RV32-NEXT:    sw a7, 12(sp)
+; RV32-NEXT:    fld ft4, 8(sp)
+; RV32-NEXT:    sw a4, 8(sp)
+; RV32-NEXT:    sw a5, 12(sp)
+; RV32-NEXT:    fld ft5, 8(sp)
+; RV32-NEXT:    sw a2, 8(sp)
+; RV32-NEXT:    sw a3, 12(sp)
+; RV32-NEXT:    fld ft6, 8(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    fld ft7, 8(sp)
+; RV32-NEXT:    fld ft0, 184(sp)
+; RV32-NEXT:    fld ft1, 168(sp)
+; RV32-NEXT:    fld ft2, 152(sp)
+; RV32-NEXT:    fld ft3, 136(sp)
+; RV32-NEXT:    fld ft8, 120(sp)
+; RV32-NEXT:    fld ft9, 104(sp)
+; RV32-NEXT:    fld ft10, 72(sp)
+; RV32-NEXT:    fld ft11, 88(sp)
+; RV32-NEXT:    fld fs0, 56(sp)
+; RV32-NEXT:    fld fs1, 40(sp)
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vfmv.v.f v8, ft7
+; RV32-NEXT:    vfslide1down.vf v12, v8, ft6
+; RV32-NEXT:    vfmv.v.f v8, fa2
+; RV32-NEXT:    vfslide1down.vf v9, v8, fa3
+; RV32-NEXT:    vfmv.v.f v8, fa0
+; RV32-NEXT:    vfslide1down.vf v8, v8, fa1
+; RV32-NEXT:    vfmv.v.f v10, fa4
+; RV32-NEXT:    vfslide1down.vf v10, v10, fa5
+; RV32-NEXT:    vfmv.v.f v11, fa6
+; RV32-NEXT:    vfslide1down.vf v11, v11, fa7
+; RV32-NEXT:    addi a0, sp, 32
+; RV32-NEXT:    vlse64.v v14, (a0), zero
+; RV32-NEXT:    addi a0, sp, 48
+; RV32-NEXT:    vlse64.v v15, (a0), zero
+; RV32-NEXT:    vfmv.v.f v13, ft5
+; RV32-NEXT:    vfslide1down.vf v13, v13, ft4
+; RV32-NEXT:    vfslide1down.vf v14, v14, fs1
+; RV32-NEXT:    vfslide1down.vf v15, v15, fs0
+; RV32-NEXT:    addi a0, sp, 80
+; RV32-NEXT:    vlse64.v v16, (a0), zero
+; RV32-NEXT:    addi a0, sp, 64
+; RV32-NEXT:    vlse64.v v18, (a0), zero
+; RV32-NEXT:    addi a0, sp, 96
+; RV32-NEXT:    vlse64.v v19, (a0), zero
+; RV32-NEXT:    addi a0, sp, 112
+; RV32-NEXT:    vlse64.v v20, (a0), zero
+; RV32-NEXT:    vfslide1down.vf v17, v16, ft11
+; RV32-NEXT:    vfslide1down.vf v16, v18, ft10
+; RV32-NEXT:    vfslide1down.vf v18, v19, ft9
+; RV32-NEXT:    vfslide1down.vf v19, v20, ft8
+; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    vlse64.v v20, (a0), zero
+; RV32-NEXT:    addi a0, sp, 144
+; RV32-NEXT:    vlse64.v v21, (a0), zero
+; RV32-NEXT:    addi a0, sp, 160
+; RV32-NEXT:    vlse64.v v22, (a0), zero
+; RV32-NEXT:    addi a0, sp, 176
+; RV32-NEXT:    vlse64.v v23, (a0), zero
+; RV32-NEXT:    vfslide1down.vf v20, v20, ft3
+; RV32-NEXT:    vfslide1down.vf v21, v21, ft2
+; RV32-NEXT:    vfslide1down.vf v22, v22, ft1
+; RV32-NEXT:    vfslide1down.vf v23, v23, ft0
+; RV32-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
+; RV32-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_v32f64_exact_vlen:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NEXT:    fsd fs0, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    fsd fs1, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    fsd fs3, 0(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset fs0, -8
+; RV64-NEXT:    .cfi_offset fs1, -16
+; RV64-NEXT:    .cfi_offset fs2, -24
+; RV64-NEXT:    .cfi_offset fs3, -32
+; RV64-NEXT:    fmv.d.x ft4, a7
+; RV64-NEXT:    fmv.d.x ft5, a6
+; RV64-NEXT:    fmv.d.x ft6, a5
+; RV64-NEXT:    fmv.d.x ft7, a4
+; RV64-NEXT:    fmv.d.x ft8, a3
+; RV64-NEXT:    fmv.d.x ft9, a2
+; RV64-NEXT:    fmv.d.x ft10, a1
+; RV64-NEXT:    fmv.d.x ft11, a0
+; RV64-NEXT:    fld ft0, 152(sp)
+; RV64-NEXT:    fld ft1, 136(sp)
+; RV64-NEXT:    fld ft2, 120(sp)
+; RV64-NEXT:    fld ft3, 104(sp)
+; RV64-NEXT:    fld fs0, 88(sp)
+; RV64-NEXT:    fld fs1, 72(sp)
+; RV64-NEXT:    fld fs2, 40(sp)
+; RV64-NEXT:    fld fs3, 56(sp)
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vfmv.v.f v8, fa2
+; RV64-NEXT:    vfslide1down.vf v9, v8, fa3
+; RV64-NEXT:    vfmv.v.f v8, fa0
+; RV64-NEXT:    vfslide1down.vf v8, v8, fa1
+; RV64-NEXT:    vfmv.v.f v10, fa4
+; RV64-NEXT:    vfslide1down.vf v10, v10, fa5
+; RV64-NEXT:    vfmv.v.f v11, fa6
+; RV64-NEXT:    vfslide1down.vf v11, v11, fa7
+; RV64-NEXT:    vfmv.v.f v12, ft11
+; RV64-NEXT:    vfslide1down.vf v12, v12, ft10
+; RV64-NEXT:    vfmv.v.f v13, ft9
+; RV64-NEXT:    vfslide1down.vf v13, v13, ft8
+; RV64-NEXT:    vfmv.v.f v14, ft7
+; RV64-NEXT:    vfslide1down.vf v14, v14, ft6
+; RV64-NEXT:    vfmv.v.f v15, ft5
+; RV64-NEXT:    vfslide1down.vf v15, v15, ft4
+; RV64-NEXT:    addi a0, sp, 48
+; RV64-NEXT:    vlse64.v v16, (a0), zero
+; RV64-NEXT:    addi a0, sp, 32
+; RV64-NEXT:    vlse64.v v18, (a0), zero
+; RV64-NEXT:    addi a0, sp, 64
+; RV64-NEXT:    vlse64.v v19, (a0), zero
+; RV64-NEXT:    addi a0, sp, 80
+; RV64-NEXT:    vlse64.v v20, (a0), zero
+; RV64-NEXT:    vfslide1down.vf v17, v16, fs3
+; RV64-NEXT:    vfslide1down.vf v16, v18, fs2
+; RV64-NEXT:    vfslide1down.vf v18, v19, fs1
+; RV64-NEXT:    vfslide1down.vf v19, v20, fs0
+; RV64-NEXT:    addi a0, sp, 96
+; RV64-NEXT:    vlse64.v v20, (a0), zero
+; RV64-NEXT:    addi a0, sp, 112
+; RV64-NEXT:    vlse64.v v21, (a0), zero
+; RV64-NEXT:    addi a0, sp, 128
+; RV64-NEXT:    vlse64.v v22, (a0), zero
+; RV64-NEXT:    addi a0, sp, 144
+; RV64-NEXT:    vlse64.v v23, (a0), zero
+; RV64-NEXT:    vfslide1down.vf v20, v20, ft3
+; RV64-NEXT:    vfslide1down.vf v21, v21, ft2
+; RV64-NEXT:    vfslide1down.vf v22, v22, ft1
+; RV64-NEXT:    vfslide1down.vf v23, v23, ft0
+; RV64-NEXT:    fld fs0, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    fld fs1, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    fld fs3, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    ret
+  %v0 = insertelement <32 x double> poison, double %e0, i64 0
+  %v1 = insertelement <32 x double> %v0, double %e1, i64 1
+  %v2 = insertelement <32 x double> %v1, double %e2, i64 2
+  %v3 = insertelement <32 x double> %v2, double %e3, i64 3
+  %v4 = insertelement <32 x double> %v3, double %e4, i64 4
+  %v5 = insertelement <32 x double> %v4, double %e5, i64 5
+  %v6 = insertelement <32 x double> %v5, double %e6, i64 6
+  %v7 = insertelement <32 x double> %v6, double %e7, i64 7
+  %v8 = insertelement <32 x double> %v7, double %e8, i64 8
+  %v9 = insertelement <32 x double> %v8, double %e9, i64 9
+  %v10 = insertelement <32 x double> %v9, double %e10, i64 10
+  %v11 = insertelement <32 x double> %v10, double %e11, i64 11
+  %v12 = insertelement <32 x double> %v11, double %e12, i64 12
+  %v13 = insertelement <32 x double> %v12, double %e13, i64 13
+  %v14 = insertelement <32 x double> %v13, double %e14, i64 14
+  %v15 = insertelement <32 x double> %v14, double %e15, i64 15
+  %v16 = insertelement <32 x double> %v15, double %e16, i64 16
+  %v17 = insertelement <32 x double> %v16, double %e17, i64 17
+  %v18 = insertelement <32 x double> %v17, double %e18, i64 18
+  %v19 = insertelement <32 x double> %v18, double %e19, i64 19
+  %v20 = insertelement <32 x double> %v19, double %e20, i64 20
+  %v21 = insertelement <32 x double> %v20, double %e21, i64 21
+  %v22 = insertelement <32 x double> %v21, double %e22, i64 22
+  %v23 = insertelement <32 x double> %v22, double %e23, i64 23
+  %v24 = insertelement <32 x double> %v23, double %e24, i64 24
+  %v25 = insertelement <32 x double> %v24, double %e25, i64 25
+  %v26 = insertelement <32 x double> %v25, double %e26, i64 26
+  %v27 = insertelement <32 x double> %v26, double %e27, i64 27
+  %v28 = insertelement <32 x double> %v27, double %e28, i64 28
+  %v29 = insertelement <32 x double> %v28, double %e29, i64 29
+  %v30 = insertelement <32 x double> %v29, double %e30, i64 30
+  %v31 = insertelement <32 x double> %v30, double %e31, i64 31
+  ret <32 x double> %v31
+}
+
 ; FIXME: These constants have enough sign bits that we could use vmv.v.x/i and
 ; vsext, but we don't support this for FP yet.
 define <2 x float> @signbits() {
+; CHECK-LABEL: signbits:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, %hi(.LCPI25_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI25_0)
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    ret
 entry:
   ret <2 x float> <float 0x36A0000000000000, float 0.000000e+00>
 }
@@ -1108,8 +1290,8 @@ define <2 x half> @vid_addend1_v2f16() {
 define <2 x half> @vid_denominator2_v2f16() {
 ; CHECK-LABEL: vid_denominator2_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI27_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI27_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI28_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI28_0)
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -1151,8 +1333,8 @@ define <2 x float> @vid_addend1_v2f32() {
 define <2 x float> @vid_denominator2_v2f32() {
 ; CHECK-LABEL: vid_denominator2_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI31_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI31_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI32_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI32_0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -1194,8 +1376,8 @@ define <2 x double> @vid_addend1_v2f64() {
 define <2 x double> @vid_denominator2_v2f64() {
 ; CHECK-LABEL: vid_denominator2_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI35_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI35_0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI36_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI36_0)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -1212,3 +1394,6 @@ define <2 x double> @vid_step2_v2f64() {
 ; CHECK-NEXT:    ret
   ret <2 x double> <double 0.0, double 2.0>
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32: {{.*}}
+; RV64: {{.*}}

@@ -72,4 +72,36 @@ entry:
   ret void
 }
 
+; Make sure we do not violate constant bus restriction with 3 scalar inputs and simingly inlinable literal.
+
+define amdgpu_ps void @test_llvm_amdgcn_fdot2_bf16_bf16_sis(
+; SDAG-GFX11-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16_sis:
+; SDAG-GFX11:       ; %bb.0: ; %entry
+; SDAG-GFX11-NEXT:    v_mov_b32_e32 v2, s1
+; SDAG-GFX11-NEXT:    s_mov_b32 s1, 0x10001
+; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; SDAG-GFX11-NEXT:    v_dot2_bf16_bf16 v2, s0, s1, v2
+; SDAG-GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; SDAG-GFX11-NEXT:    s_nop 0
+; SDAG-GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; SDAG-GFX11-NEXT:    s_endpgm
+;
+; GISEL-GFX11-LABEL: test_llvm_amdgcn_fdot2_bf16_bf16_sis:
+; GISEL-GFX11:       ; %bb.0: ; %entry
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v2, 0x10001
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-GFX11-NEXT:    v_dot2_bf16_bf16 v2, s0, v2, s1
+; GISEL-GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GISEL-GFX11-NEXT:    s_nop 0
+; GISEL-GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GISEL-GFX11-NEXT:    s_endpgm
+    ptr addrspace(1) %r,
+    <2 x i16> inreg %a,
+    i16 inreg %c) {
+entry:
+  %r.val = call i16 @llvm.amdgcn.fdot2.bf16.bf16(<2 x i16> %a, <2 x i16> <i16 1, i16 1>, i16 %c)
+  store i16 %r.val, ptr addrspace(1) %r
+  ret void
+}
+
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1)

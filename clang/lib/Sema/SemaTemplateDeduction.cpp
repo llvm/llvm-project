@@ -2889,7 +2889,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
                                   CanonicalDeducedArgs};
 
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      Template, /*Final=*/false,
+      Template, Template->getDeclContext(), /*Final=*/false,
       /*InnerMost=*/NeedsReplacement ? nullptr : &DeducedTAL,
       /*RelativeToPrimary=*/true, /*Pattern=*/
       nullptr, /*ForConstraintInstantiation=*/true);
@@ -3367,7 +3367,14 @@ Sema::TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
     SmallVector<QualType, 4> ExceptionStorage;
     if (getLangOpts().CPlusPlus17 &&
         SubstExceptionSpec(Function->getLocation(), EPI.ExceptionSpec,
-                           ExceptionStorage, MLTAL))
+                           ExceptionStorage,
+                           getTemplateInstantiationArgs(
+                               FunctionTemplate, nullptr, /*Final=*/true,
+                               /*Innermost=*/SugaredExplicitArgumentList,
+                               /*RelativeToPrimary=*/false,
+                               /*Pattern=*/nullptr,
+                               /*ForConstraintInstantiation=*/false,
+                               /*SkipForSpecialization=*/true)))
       return TDK_SubstitutionFailure;
 
     *FunctionType = BuildFunctionType(ResultType, ParamTypes,
@@ -3546,6 +3553,48 @@ static unsigned getPackIndexForParam(Sema &S,
   llvm_unreachable("parameter index would not be produced from template");
 }
 
+// if `Specialization` is a `CXXConstructorDecl` or `CXXConversionDecl`,
+// we'll try to instantiate and update its explicit specifier after constraint
+// checking.
+static Sema::TemplateDeductionResult instantiateExplicitSpecifierDeferred(
+    Sema &S, FunctionDecl *Specialization,
+    const MultiLevelTemplateArgumentList &SubstArgs,
+    TemplateDeductionInfo &Info, FunctionTemplateDecl *FunctionTemplate,
+    ArrayRef<TemplateArgument> DeducedArgs) {
+  auto GetExplicitSpecifier = [](FunctionDecl *D) {
+    return isa<CXXConstructorDecl>(D)
+               ? cast<CXXConstructorDecl>(D)->getExplicitSpecifier()
+               : cast<CXXConversionDecl>(D)->getExplicitSpecifier();
+  };
+  auto SetExplicitSpecifier = [](FunctionDecl *D, ExplicitSpecifier ES) {
+    isa<CXXConstructorDecl>(D)
+        ? cast<CXXConstructorDecl>(D)->setExplicitSpecifier(ES)
+        : cast<CXXConversionDecl>(D)->setExplicitSpecifier(ES);
+  };
+
+  ExplicitSpecifier ES = GetExplicitSpecifier(Specialization);
+  Expr *ExplicitExpr = ES.getExpr();
+  if (!ExplicitExpr)
+    return Sema::TDK_Success;
+  if (!ExplicitExpr->isValueDependent())
+    return Sema::TDK_Success;
+
+  Sema::InstantiatingTemplate Inst(
+      S, Info.getLocation(), FunctionTemplate, DeducedArgs,
+      Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution, Info);
+  if (Inst.isInvalid())
+    return Sema::TDK_InstantiationDepth;
+  Sema::SFINAETrap Trap(S);
+  const ExplicitSpecifier InstantiatedES =
+      S.instantiateExplicitSpecifier(SubstArgs, ES);
+  if (InstantiatedES.isInvalid() || Trap.hasErrorOccurred()) {
+    Specialization->setInvalidDecl(true);
+    return Sema::TDK_SubstitutionFailure;
+  }
+  SetExplicitSpecifier(Specialization, InstantiatedES);
+  return Sema::TDK_Success;
+}
+
 /// Finish template argument deduction for a function template,
 /// checking the deduced template arguments for completeness and forming
 /// the function template specialization.
@@ -3672,6 +3721,17 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       Info.reset(Info.takeSugared(),
                  TemplateArgumentList::CreateCopy(Context, CanonicalBuilder));
       return TDK_ConstraintsNotSatisfied;
+    }
+  }
+
+  // We skipped the instantiation of the explicit-specifier during the
+  // substitution of `FD` before. So, we try to instantiate it back if
+  // `Specialization` is either a constructor or a conversion function.
+  if (isa<CXXConstructorDecl, CXXConversionDecl>(Specialization)) {
+    if (TDK_Success != instantiateExplicitSpecifierDeferred(
+                           *this, Specialization, SubstArgs, Info,
+                           FunctionTemplate, DeducedArgs)) {
+      return TDK_SubstitutionFailure;
     }
   }
 

@@ -15,6 +15,18 @@
 #include <cstdlib>
 #include <limits>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+// On Windows GetCurrentProcessId returns a DWORD aka uint32_t
+#include <processthreadsapi.h>
+inline pid_t getpid() { return GetCurrentProcessId(); }
+#else
+#include <unistd.h> //getpid()
+#endif
+
 namespace Fortran::runtime {
 std::int32_t RTNAME(ArgumentCount)() {
   int argc{executionEnvironment.argc};
@@ -24,6 +36,8 @@ std::int32_t RTNAME(ArgumentCount)() {
   }
   return 0;
 }
+
+pid_t RTNAME(GetPID)() { return getpid(); }
 
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {

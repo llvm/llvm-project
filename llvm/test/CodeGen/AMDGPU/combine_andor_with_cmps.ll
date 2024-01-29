@@ -2533,8 +2533,7 @@ define i1 @test124(i32 %arg1, i64 %arg2) {
 ; GCN-LABEL: test124:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b64 s[0:1], 0x3e8
-; GCN-NEXT:    v_cmp_gt_i64_e32 vcc_lo, s[0:1], v[1:2]
+; GCN-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0x3e8, v[1:2]
 ; GCN-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0

@@ -37,14 +37,14 @@ SUPPORTED PLATFORMS
 only), MIPS, and PowerPC (PowerPC64LE only) on Linux for benchmarking. Not all
 benchmarking functionality is guaranteed to work on every platform.
 :program:`llvm-exegesis` also has a separate analysis mode that is supported
-on every platform on which LLVM is.
+on every platform that LLVM is.
 
 SNIPPET ANNOTATIONS
 -------------------
 
 :program:`llvm-exegesis` supports benchmarking arbitrary snippets of assembly.
 However, benchmarking these snippets often requires some setup so that they
-can execute properly. :program:`llvm-exegesis` has two annotations and some
+can execute properly. :program:`llvm-exegesis` has four annotations and some
 additional utilities to help with setup so that snippets can be benchmarked
 properly.
 
@@ -69,10 +69,11 @@ properly.
   specifying memory definitions that can later be mapped into the execution
   process of a snippet with the `LLVM-EXEGESIS-MEM-MAP` annotation. Each
   value is named using the `<value name>` argument so that it can be referenced
-  later within a map annotation. The size is specified in bytes the the value
-  is taken in hexadecimal. If the size of the value is less than the specified
-  size, the value will be repeated until it fills the entire section of memory.
-  Using this annotation requires using the subprocess execution mode.
+  later within a map annotation. The size is specified in a decimal number of
+  bytes and the value is given in hexadecimal. If the size of the value is less
+  than the specified size, the value will be repeated until it fills the entire
+  section of memory. Using this annotation requires using the subprocess execution
+  mode.
 * `LLVM-EXEGESIS-MEM-MAP <value name> <address>` - This annotation allows for
   mapping previously defined memory definitions into the execution context of a
   process. The value name refers to a previously defined memory definition and

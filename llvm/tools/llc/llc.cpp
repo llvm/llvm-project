@@ -186,6 +186,13 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -203,7 +210,7 @@ struct RunPassOption {
       getRunPassNames().push_back(std::string(PassName));
   }
 };
-}
+} // namespace
 
 static RunPassOption RunPassOpt;
 
@@ -242,9 +249,9 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
     else {
       // If InputFilename ends in .bc or .ll, remove it.
       StringRef IFN = InputFilename;
-      if (IFN.endswith(".bc") || IFN.endswith(".ll"))
+      if (IFN.ends_with(".bc") || IFN.ends_with(".ll"))
         OutputFilename = std::string(IFN.drop_back(3));
-      else if (IFN.endswith(".mir"))
+      else if (IFN.ends_with(".mir"))
         OutputFilename = std::string(IFN.drop_back(4));
       else
         OutputFilename = std::string(IFN);
@@ -376,6 +383,17 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format, if it's built in.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (TryUseNewDbgInfoFormat) {
+    // If LLVM was built with support for this, turn the new debug-info format
+    // on.
+    UseNewDbgInfoFormat = true;
+  }
+#endif
+  (void)TryUseNewDbgInfoFormat;
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
@@ -566,7 +584,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return Target->createDataLayout().getStringRepresentation();
     };
     if (InputLanguage == "mir" ||
-        (InputLanguage == "" && StringRef(InputFilename).endswith(".mir"))) {
+        (InputLanguage == "" && StringRef(InputFilename).ends_with(".mir"))) {
       MIR = createMIRParserFromFile(InputFilename, Err, Context,
                                     setMIRFunctionAttributes);
       if (MIR)
@@ -614,7 +632,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   assert(M && "Should have exited if we didn't have a module!");
   if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = codegen::getFloatABIForCalls();
+    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out =

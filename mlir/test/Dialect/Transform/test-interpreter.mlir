@@ -116,6 +116,32 @@ transform.with_pdl_patterns {
 
 // -----
 
+func.func @test_get_nth_parent() {
+  "test.foo"() ({
+    // expected-remark @below{{2nd parent}}
+    "test.foo"() ({
+      "test.qux"() ({
+        // expected-remark @below{{1st parent}}
+        "test.foo"() ({
+          "test.bar"() : () -> ()
+        }) : () -> ()
+      }) : () -> ()
+    }) : () -> ()
+  }) : () -> ()
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %f = transform.structured.match ops{["test.bar"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %parent = get_parent_op %f {nth_parent = 1, op_name = "test.foo"} : (!transform.any_op) -> !transform.any_op
+  test_print_remark_at_operand %parent, "1st parent" : !transform.any_op
+  %parent2 = get_parent_op %f {nth_parent = 2, op_name = "test.foo"} : (!transform.any_op) -> !transform.any_op
+  test_print_remark_at_operand %parent2, "2nd parent" : !transform.any_op
+  transform.yield
+}
+
+// -----
+
 func.func @foo() {
   %0 = arith.constant 0 : i32
   return
@@ -355,7 +381,7 @@ transform.with_pdl_patterns {
   sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = transform.pdl_match @match_const in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.loop.get_parent_for %0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{only isolated-from-above ops can be alternative scopes}}
     alternatives %1 : !transform.any_op {
     ^bb2(%arg2: !transform.any_op):

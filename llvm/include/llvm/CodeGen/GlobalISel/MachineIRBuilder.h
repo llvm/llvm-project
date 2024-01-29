@@ -298,6 +298,9 @@ public:
   /// Getter for the State
   MachineIRBuilderState &getState() { return State; }
 
+  /// Setter for the State
+  void setState(const MachineIRBuilderState &NewState) { State = NewState; }
+
   /// Getter for the basic block we currently build.
   const MachineBasicBlock &getMBB() const {
     assert(State.MBB && "MachineBasicBlock is not set");
@@ -1191,7 +1194,7 @@ public:
                                 const SrcOp &Op0, const SrcOp &Op1,
                                 std::optional<unsigned> Flags = std::nullopt);
 
-  /// Build and insert a \p Res = G_IS_FPCLASS \p Pred, \p Src, \p Mask
+  /// Build and insert a \p Res = G_IS_FPCLASS \p Src, \p Mask
   MachineInstrBuilder buildIsFPClass(const DstOp &Res, const SrcOp &Src,
                                      unsigned Mask) {
     return buildInstr(TargetOpcode::G_IS_FPCLASS, {Res},
@@ -1525,6 +1528,11 @@ public:
 
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);
+
+  /// Build and insert G_PREFETCH \p Addr, \p RW, \p Locality, \p CacheType
+  MachineInstrBuilder buildPrefetch(const SrcOp &Addr, unsigned RW,
+                                    unsigned Locality, unsigned CacheType,
+                                    MachineMemOperand &MMO);
 
   /// Build and insert \p Dst = G_FREEZE \p Src
   MachineInstrBuilder buildFreeze(const DstOp &Dst, const SrcOp &Src) {
@@ -1882,10 +1890,12 @@ public:
     return buildInstr(TargetOpcode::G_FPTOSI, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Dst = G_FRINT \p Src0, \p Src1
-  MachineInstrBuilder buildFRint(const DstOp &Dst, const SrcOp &Src0,
-                                 std::optional<unsigned> Flags = std::nullopt) {
-    return buildInstr(TargetOpcode::G_FRINT, {Dst}, {Src0}, Flags);
+  /// Build and insert \p Dst = G_INTRINSIC_ROUNDEVEN \p Src0, \p Src1
+  MachineInstrBuilder
+  buildIntrinsicRoundeven(const DstOp &Dst, const SrcOp &Src0,
+                          std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_INTRINSIC_ROUNDEVEN, {Dst}, {Src0},
+                      Flags);
   }
 
   /// Build and insert \p Res = G_SMIN \p Op0, \p Op1

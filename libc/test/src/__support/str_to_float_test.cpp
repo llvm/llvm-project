@@ -93,45 +93,6 @@ public:
   }
 };
 
-TEST(LlvmLibcStrToFloatTest, LeadingZeroes) {
-  uint64_t test_num64 = 1;
-  uint32_t num_of_zeroes = 63;
-  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(0), 64u);
-  for (; num_of_zeroes < 64; test_num64 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
-              num_of_zeroes);
-  }
-
-  test_num64 = 3;
-  num_of_zeroes = 62;
-  for (; num_of_zeroes > 63; test_num64 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
-              num_of_zeroes);
-  }
-
-  EXPECT_EQ(
-      LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(0xffffffffffffffff),
-      0u);
-
-  test_num64 = 1;
-  num_of_zeroes = 63;
-  for (; num_of_zeroes > 63;
-       test_num64 = (test_num64 << 1) + 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint64_t>(test_num64),
-              num_of_zeroes);
-  }
-
-  uint64_t test_num32 = 1;
-  num_of_zeroes = 31;
-  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(0), 32u);
-  for (; num_of_zeroes < 32; test_num32 <<= 1, num_of_zeroes--) {
-    EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(test_num32),
-              num_of_zeroes);
-  }
-
-  EXPECT_EQ(LIBC_NAMESPACE::internal::leading_zeroes<uint32_t>(0xffffffff), 0u);
-}
-
 TEST_F(LlvmLibcStrToFloatTest, ClingerFastPathFloat64Simple) {
   clinger_fast_path_test<double>(123, 0, 0xEC00000000000, 1029);
   clinger_fast_path_test<double>(1234567890123456, 1, 0x5ee2a2eb5a5c0, 1076);
@@ -279,11 +240,11 @@ TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {
   EXPECT_EQ(double_result.error, 0);
 }
 
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat64AsLongDouble) {
   eisel_lemire_test<long double>(123, 0, 0x1EC00000000000, 1029);
 }
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat80Simple) {
   eisel_lemire_test<long double>(123, 0, 0xf600000000000000, 16389);
   eisel_lemire_test<long double>(12345678901234568192u, 0, 0xab54a98ceb1f0c00,

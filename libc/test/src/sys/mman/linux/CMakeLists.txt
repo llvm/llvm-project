@@ -11,7 +11,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 if (NOT LLVM_USE_SANITIZER)
@@ -28,7 +28,7 @@ if (NOT LLVM_USE_SANITIZER)
       libc.src.sys.mman.mmap
       libc.src.sys.mman.munmap
       libc.src.sys.mman.mprotect
-      libc.test.errno_setter_matcher
+      libc.test.UnitTest.ErrnoSetterMatcher
   )
 endif()
 
@@ -44,7 +44,7 @@ add_libc_unittest(
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.madvise
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 
@@ -60,5 +60,5 @@ add_libc_unittest(
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

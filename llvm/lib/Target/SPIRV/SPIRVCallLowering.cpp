@@ -194,23 +194,38 @@ getKernelArgTypeQual(const Function &KernelFunction, unsigned ArgIdx) {
   return {};
 }
 
-static Type *getArgType(const Function &F, unsigned ArgIdx) {
+static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
+                                  SPIRVGlobalRegistry *GR,
+                                  MachineIRBuilder &MIRBuilder) {
+  // Read argument's access qualifier from metadata or default.
+  SPIRV::AccessQualifier::AccessQualifier ArgAccessQual =
+      getArgAccessQual(F, ArgIdx);
+
   Type *OriginalArgType = getOriginalFunctionType(F)->getParamType(ArgIdx);
+
+  // In case of non-kernel SPIR-V function or already TargetExtType, use the
+  // original IR type.
   if (F.getCallingConv() != CallingConv::SPIR_KERNEL ||
       isSpecialOpaqueType(OriginalArgType))
-    return OriginalArgType;
+    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
   MDString *MDKernelArgType =
       getKernelArgAttribute(F, ArgIdx, "kernel_arg_type");
-  if (!MDKernelArgType || !MDKernelArgType->getString().endswith("_t"))
-    return OriginalArgType;
+  if (!MDKernelArgType || (MDKernelArgType->getString().ends_with("*") &&
+                           MDKernelArgType->getString().ends_with("_t")))
+    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
-  std::string KernelArgTypeStr = "opencl." + MDKernelArgType->getString().str();
-  Type *ExistingOpaqueType =
-      StructType::getTypeByName(F.getContext(), KernelArgTypeStr);
-  return ExistingOpaqueType
-             ? ExistingOpaqueType
-             : StructType::create(F.getContext(), KernelArgTypeStr);
+  if (MDKernelArgType->getString().ends_with("*"))
+    return GR->getOrCreateSPIRVTypeByName(
+        MDKernelArgType->getString(), MIRBuilder,
+        addressSpaceToStorageClass(OriginalArgType->getPointerAddressSpace()));
+
+  if (MDKernelArgType->getString().ends_with("_t"))
+    return GR->getOrCreateSPIRVTypeByName(
+        "opencl." + MDKernelArgType->getString().str(), MIRBuilder,
+        SPIRV::StorageClass::Function, ArgAccessQual);
+
+  llvm_unreachable("Unable to recognize argument type name.");
 }
 
 static bool isEntryPoint(const Function &F) {
@@ -262,10 +277,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       // TODO: handle the case of multiple registers.
       if (VRegs[i].size() > 1)
         return false;
-      SPIRV::AccessQualifier::AccessQualifier ArgAccessQual =
-          getArgAccessQual(F, i);
-      auto *SpirvTy = GR->assignTypeToVReg(getArgType(F, i), VRegs[i][0],
-                                           MIRBuilder, ArgAccessQual);
+      auto *SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder);
+      GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
       if (Arg.hasName())

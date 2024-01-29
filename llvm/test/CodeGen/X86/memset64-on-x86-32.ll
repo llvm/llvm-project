@@ -18,26 +18,17 @@ define void @bork(ptr nocapture align 4 %dst) nounwind {
 ; SLOW_32-LABEL: bork:
 ; SLOW_32:       # %bb.0:
 ; SLOW_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SLOW_32-NEXT:    movl $0, 4(%eax)
-; SLOW_32-NEXT:    movl $0, (%eax)
-; SLOW_32-NEXT:    movl $0, 12(%eax)
-; SLOW_32-NEXT:    movl $0, 8(%eax)
-; SLOW_32-NEXT:    movl $0, 20(%eax)
-; SLOW_32-NEXT:    movl $0, 16(%eax)
-; SLOW_32-NEXT:    movl $0, 28(%eax)
-; SLOW_32-NEXT:    movl $0, 24(%eax)
-; SLOW_32-NEXT:    movl $0, 36(%eax)
-; SLOW_32-NEXT:    movl $0, 32(%eax)
-; SLOW_32-NEXT:    movl $0, 44(%eax)
-; SLOW_32-NEXT:    movl $0, 40(%eax)
-; SLOW_32-NEXT:    movl $0, 52(%eax)
-; SLOW_32-NEXT:    movl $0, 48(%eax)
-; SLOW_32-NEXT:    movl $0, 60(%eax)
-; SLOW_32-NEXT:    movl $0, 56(%eax)
-; SLOW_32-NEXT:    movl $0, 68(%eax)
-; SLOW_32-NEXT:    movl $0, 64(%eax)
-; SLOW_32-NEXT:    movl $0, 76(%eax)
-; SLOW_32-NEXT:    movl $0, 72(%eax)
+; SLOW_32-NEXT:    xorps %xmm0, %xmm0
+; SLOW_32-NEXT:    movsd %xmm0, 72(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 64(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 56(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 48(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 40(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 32(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 24(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 16(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, 8(%eax)
+; SLOW_32-NEXT:    movsd %xmm0, (%eax)
 ; SLOW_32-NEXT:    retl
 ;
 ; SLOW_64-LABEL: bork:

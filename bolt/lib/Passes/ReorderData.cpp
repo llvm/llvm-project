@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 // TODO:
-// - make sure writeable data isn't put on same cache line unless temporally
+// - make sure writable data isn't put on same cache line unless temporally
 // local
 // - estimate temporal locality by looking at CFG?
 
@@ -328,7 +328,7 @@ ReorderData::sortedByCount(BinaryContext &BC,
 
 // TODO
 // add option for cache-line alignment (or just use cache-line when section
-// is writeable)?
+// is writable)?
 void ReorderData::setSectionOrder(BinaryContext &BC,
                                   BinarySection &OutputSection,
                                   DataOrder::iterator Begin,

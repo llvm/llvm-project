@@ -252,12 +252,11 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     return true;
   }
   case M68k::RET: {
-    // Adjust stack to erase error code
-    int64_t StackAdj = MBBI->getOperand(0).getImm();
-    MachineInstrBuilder MIB;
-
-    if (StackAdj == 0) {
-      MIB = BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
+    if (MBB.getParent()->getFunction().getCallingConv() ==
+        CallingConv::M68k_INTR) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTE));
+    } else if (int64_t StackAdj = MBBI->getOperand(0).getImm(); StackAdj == 0) {
+      BuildMI(MBB, MBBI, DL, TII->get(M68k::RTS));
     } else {
       // Copy return address from stack to a free address(A0 or A1) register
       // TODO check if pseudo expand uses free address register

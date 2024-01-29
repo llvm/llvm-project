@@ -170,10 +170,11 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    if (isEmptyRecord(getContext(), Ty, true, true))
-      return true;
     const RecordDecl *RD = RTy->getDecl();
-    // Unions aren't eligible unless they're empty (which is caught above).
+    if (isEmptyRecord(getContext(), Ty, true, true) &&
+        (!RD->isUnion() || !isa<CXXRecordDecl>(RD)))
+      return true;
+    // Unions aren't eligible unless they're empty in C (which is caught above).
     if (RD->isUnion())
       return false;
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
@@ -308,11 +309,13 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
                                            CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Ignore empty structs/unions.
-  if (isEmptyRecord(getContext(), Ty, true))
-    return ABIArgInfo::getIgnore();
-
   uint64_t Size = getContext().getTypeSize(Ty);
+
+  // Ignore empty struct or union whose size is zero, e.g. `struct { }` in C or
+  // `struct { int a[0]; }` in C++. In C++, `struct { }` is empty but it's size
+  // is 1 byte and g++ doesn't ignore it; clang++ matches this behaviour.
+  if (isEmptyRecord(getContext(), Ty, true) && Size == 0)
+    return ABIArgInfo::getIgnore();
 
   // Pass floating point values via FARs if possible.
   if (IsFixed && Ty->isFloatingType() && !Ty->isComplexType() &&
@@ -320,6 +323,13 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     FARsLeft--;
     return ABIArgInfo::getDirect();
   }
+
+  // Pass 128-bit/256-bit vector values via vector registers directly.
+  if (Ty->isVectorType() && (((getContext().getTypeSize(Ty) == 128) &&
+                              (getTarget().hasFeature("lsx"))) ||
+                             ((getContext().getTypeSize(Ty) == 256) &&
+                              getTarget().hasFeature("lasx"))))
+    return ABIArgInfo::getDirect();
 
   // Complex types for the *f or *d ABI must be passed directly rather than
   // using CoerceAndExpand.

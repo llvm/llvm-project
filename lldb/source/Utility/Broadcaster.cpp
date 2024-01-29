@@ -280,13 +280,13 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
     // Make sure to do this before adding the event to the primary or it might
     // start handling the event before we're done adding all the pending
     // listeners.
+    // Also, don't redo the check for unique here, since otherwise that could
+    // be racy, and if we send the event to the primary listener then we SHOULD 
+    // send it to the secondary listeners or they will get out of sync with the
+    // primary listener.
     if (!hijacking_listener_sp) {
-      for (auto &pair : GetListeners(event_type, false)) {
-        if (unique && pair.first->PeekAtNextEventForBroadcasterWithType(
-                          &m_broadcaster, event_type))
-          continue;
+      for (auto &pair : GetListeners(event_type, false))
         event_sp->AddPendingListener(pair.first);
-      }
     }
     primary_listener_sp->AddEvent(event_sp);
   } else {

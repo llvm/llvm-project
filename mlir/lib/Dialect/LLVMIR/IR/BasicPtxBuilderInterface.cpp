@@ -123,6 +123,14 @@ LLVM::InlineAsmOp PtxBuilder::build() {
 
   std::string ptxInstruction = interfaceOp.getPtx();
 
+  // Add the predicate to the asm string.
+  if (interfaceOp.getPredicate().has_value() &&
+      interfaceOp.getPredicate().value()) {
+    std::string predicateStr = "@%";
+    predicateStr += std::to_string((ptxOperands.size() - 1));
+    ptxInstruction = predicateStr + " " + ptxInstruction;
+  }
+
   // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
   // Replace all % with $
   std::replace(ptxInstruction.begin(), ptxInstruction.end(), '%', '$');

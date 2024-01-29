@@ -39,6 +39,10 @@ static constexpr unsigned kDimLowerBoundPos = 0;
 static constexpr unsigned kDimExtentPos = 1;
 static constexpr unsigned kDimStridePos = 2;
 
+namespace mlir {
+class DataLayout;
+}
+
 namespace fir {
 
 /// FIR type converter
@@ -46,7 +50,7 @@ namespace fir {
 class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
   LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
-                    bool forceUnifiedTBAATree);
+                    bool forceUnifiedTBAATree, const mlir::DataLayout &);
 
   // i32 is used here because LLVM wants i32 constants when indexing into struct
   // types. Indexing into other aggregate types is more flexible.
@@ -74,7 +78,7 @@ public:
 
   /// Convert fir.box type to the corresponding llvm struct type instead of a
   /// pointer to this struct type.
-  mlir::Type convertBoxTypeAsStruct(BaseBoxType box) const;
+  mlir::Type convertBoxTypeAsStruct(BaseBoxType box, int = unknownRank()) const;
 
   // fir.boxproc<any>  -->  llvm<"{ any*, i8* }">
   mlir::Type convertBoxProcType(BoxProcType boxproc) const;
@@ -97,29 +101,7 @@ public:
   }
 
   template <typename A> mlir::Type convertPointerLike(A &ty) const {
-    mlir::Type eleTy = ty.getEleTy();
-    // A sequence type is a special case. A sequence of runtime size on its
-    // interior dimensions lowers to a memory reference. In that case, we
-    // degenerate the array and do not want a the type to become `T**` but
-    // merely `T*`.
-    if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
-      if (seqTy.hasDynamicExtents() ||
-          characterWithDynamicLen(seqTy.getEleTy())) {
-        if (seqTy.getConstantRows() > 0)
-          return convertType(seqTy);
-        eleTy = seqTy.getEleTy();
-      }
-    }
-    // fir.ref<fir.box> is a special case because fir.box type is already
-    // a pointer to a Fortran descriptor at the LLVM IR level. This implies
-    // that a fir.ref<fir.box>, that is the address of fir.box is actually
-    // the same as a fir.box at the LLVM level.
-    // The distinction is kept in fir to denote when a descriptor is expected
-    // to be mutable (fir.ref<fir.box>) and when it is not (fir.box).
-    if (eleTy.isa<fir::BaseBoxType>())
-      return convertType(eleTy);
-
-    return mlir::LLVM::LLVMPointerType::get(convertType(eleTy));
+    return mlir::LLVM::LLVMPointerType::get(ty.getContext());
   }
 
   // convert a front-end kind value to either a std or LLVM IR dialect type

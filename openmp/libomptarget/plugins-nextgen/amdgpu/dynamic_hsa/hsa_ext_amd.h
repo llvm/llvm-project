@@ -14,6 +14,15 @@
 
 #include "hsa.h"
 
+/* Using this header means we do not know what version library will be linked.
+   Until such point as a CMake level override is requested, default to the
+   minimum. */
+/*
+ * - 1.0 - initial version
+ */
+#define HSA_AMD_INTERFACE_VERSION_MAJOR 1
+#define HSA_AMD_INTERFACE_VERSION_MINOR 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif

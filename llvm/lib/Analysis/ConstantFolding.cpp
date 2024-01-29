@@ -273,21 +273,11 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     for (unsigned j = 0; j != Ratio; ++j) {
       // Shift the piece of the value into the right place, depending on
       // endianness.
-      Constant *Elt = ConstantExpr::getLShr(Src,
-                                  ConstantInt::get(Src->getType(), ShiftAmt));
+      APInt Elt = Src->getValue().lshr(ShiftAmt);
       ShiftAmt += isLittleEndian ? DstBitSize : -DstBitSize;
 
-      // Truncate the element to an integer with the same pointer size and
-      // convert the element back to a pointer using a inttoptr.
-      if (DstEltTy->isPointerTy()) {
-        IntegerType *DstIntTy = Type::getIntNTy(C->getContext(), DstBitSize);
-        Constant *CE = ConstantExpr::getTrunc(Elt, DstIntTy);
-        Result.push_back(ConstantExpr::getIntToPtr(CE, DstEltTy));
-        continue;
-      }
-
       // Truncate and remember this piece.
-      Result.push_back(ConstantExpr::getTrunc(Elt, DstEltTy));
+      Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
     }
   }
 
@@ -1217,10 +1207,11 @@ Constant *llvm::ConstantFoldCompareInstOperands(
         Type *IntPtrTy = DL.getIntPtrType(CE0->getType());
         // Convert the integer value to the right size to ensure we get the
         // proper extension or truncation.
-        Constant *C = ConstantExpr::getIntegerCast(CE0->getOperand(0),
-                                                   IntPtrTy, false);
-        Constant *Null = Constant::getNullValue(C->getType());
-        return ConstantFoldCompareInstOperands(Predicate, C, Null, DL, TLI);
+        if (Constant *C = ConstantFoldIntegerCast(CE0->getOperand(0), IntPtrTy,
+                                                  /*IsSigned*/ false, DL)) {
+          Constant *Null = Constant::getNullValue(C->getType());
+          return ConstantFoldCompareInstOperands(Predicate, C, Null, DL, TLI);
+        }
       }
 
       // Only do this transformation if the int is intptrty in size, otherwise
@@ -1242,11 +1233,12 @@ Constant *llvm::ConstantFoldCompareInstOperands(
 
           // Convert the integer value to the right size to ensure we get the
           // proper extension or truncation.
-          Constant *C0 = ConstantExpr::getIntegerCast(CE0->getOperand(0),
-                                                      IntPtrTy, false);
-          Constant *C1 = ConstantExpr::getIntegerCast(CE1->getOperand(0),
-                                                      IntPtrTy, false);
-          return ConstantFoldCompareInstOperands(Predicate, C0, C1, DL, TLI);
+          Constant *C0 = ConstantFoldIntegerCast(CE0->getOperand(0), IntPtrTy,
+                                                 /*IsSigned*/ false, DL);
+          Constant *C1 = ConstantFoldIntegerCast(CE1->getOperand(0), IntPtrTy,
+                                                 /*IsSigned*/ false, DL);
+          if (C0 && C1)
+            return ConstantFoldCompareInstOperands(Predicate, C0, C1, DL, TLI);
         }
 
         // Only do this transformation if the int is intptrty in size, otherwise
@@ -1401,9 +1393,9 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
       // the width of a pointer, so it can't be done in ConstantExpr::getCast.
       if (CE->getOpcode() == Instruction::IntToPtr) {
         // zext/trunc the inttoptr to pointer size.
-        FoldedValue = ConstantExpr::getIntegerCast(
-            CE->getOperand(0), DL.getIntPtrType(CE->getType()),
-            /*IsSigned=*/false);
+        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0),
+                                              DL.getIntPtrType(CE->getType()),
+                                              /*IsSigned=*/false, DL);
       } else if (auto *GEP = dyn_cast<GEPOperator>(CE)) {
         // If we have GEP, we can perform the following folds:
         // (ptrtoint (gep null, x)) -> x
@@ -1431,8 +1423,8 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
       }
       if (FoldedValue) {
         // Do a zext or trunc to get to the ptrtoint dest size.
-        return ConstantExpr::getIntegerCast(FoldedValue, DestTy,
-                                            /*IsSigned=*/false);
+        return ConstantFoldIntegerCast(FoldedValue, DestTy, /*IsSigned=*/false,
+                                       DL);
       }
     }
     break;
@@ -1473,6 +1465,18 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   if (ConstantExpr::isDesirableCastOp(Opcode))
     return ConstantExpr::getCast(Opcode, C, DestTy);
   return ConstantFoldCastInstruction(Opcode, C, DestTy);
+}
+
+Constant *llvm::ConstantFoldIntegerCast(Constant *C, Type *DestTy,
+                                        bool IsSigned, const DataLayout &DL) {
+  Type *SrcTy = C->getType();
+  if (SrcTy == DestTy)
+    return C;
+  if (SrcTy->getScalarSizeInBits() > DestTy->getScalarSizeInBits())
+    return ConstantFoldCastOperand(Instruction::Trunc, C, DestTy, DL);
+  if (IsSigned)
+    return ConstantFoldCastOperand(Instruction::SExt, C, DestTy, DL);
+  return ConstantFoldCastOperand(Instruction::ZExt, C, DestTy, DL);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1529,6 +1533,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_s_wqm:
+  case Intrinsic::amdgcn_s_quadmask:
+  case Intrinsic::amdgcn_s_bitreplicate:
   case Intrinsic::arm_mve_vctp8:
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
@@ -2418,6 +2425,39 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
       return ConstantFP::get(Ty->getContext(), Val);
     }
+
+    case Intrinsic::amdgcn_s_wqm: {
+      uint64_t Val = Op->getZExtValue();
+      Val |= (Val & 0x5555555555555555ULL) << 1 |
+             ((Val >> 1) & 0x5555555555555555ULL);
+      Val |= (Val & 0x3333333333333333ULL) << 2 |
+             ((Val >> 2) & 0x3333333333333333ULL);
+      return ConstantInt::get(Ty, Val);
+    }
+
+    case Intrinsic::amdgcn_s_quadmask: {
+      uint64_t Val = Op->getZExtValue();
+      uint64_t QuadMask = 0;
+      for (unsigned I = 0; I < Op->getBitWidth() / 4; ++I, Val >>= 4) {
+        if (!(Val & 0xF))
+          continue;
+
+        QuadMask |= (1ULL << I);
+      }
+      return ConstantInt::get(Ty, QuadMask);
+    }
+
+    case Intrinsic::amdgcn_s_bitreplicate: {
+      uint64_t Val = Op->getZExtValue();
+      Val = (Val & 0x000000000000FFFFULL) | (Val & 0x00000000FFFF0000ULL) << 16;
+      Val = (Val & 0x000000FF000000FFULL) | (Val & 0x0000FF000000FF00ULL) << 8;
+      Val = (Val & 0x000F000F000F000FULL) | (Val & 0x00F000F000F000F0ULL) << 4;
+      Val = (Val & 0x0303030303030303ULL) | (Val & 0x0C0C0C0C0C0C0C0CULL) << 2;
+      Val = (Val & 0x1111111111111111ULL) | (Val & 0x2222222222222222ULL) << 1;
+      Val = Val | Val << 1;
+      return ConstantInt::get(Ty, Val);
+    }
+
     default:
       return nullptr;
     }

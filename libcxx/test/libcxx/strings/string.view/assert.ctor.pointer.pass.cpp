@@ -8,7 +8,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14
-// REQUIRES: libcpp-hardening-mode={{safe|debug}}
+// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
 // XFAIL: availability-verbose_abort-missing
 
 // Construct a string_view from a null pointer

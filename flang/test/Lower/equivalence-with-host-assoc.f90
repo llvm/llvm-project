@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -o - %s | FileCheck %s --check-prefixes=FIR
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s --check-prefixes=FIR
 ! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --check-prefixes=HLFIR
 
 subroutine test1()

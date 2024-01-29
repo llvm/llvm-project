@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_BITSET
 #define _LIBCPP_BITSET
 
+// clang-format off
+
 /*
     bitset synopsis
 
@@ -122,6 +124,8 @@ template <size_t N> struct hash<std::bitset<N>>;
 
 */
 
+// clang-format on
+
 #include <__algorithm/count.h>
 #include <__algorithm/fill.h>
 #include <__algorithm/find.h>
@@ -188,52 +192,52 @@ protected:
     typedef __bit_iterator<__bitset, false>            iterator;
     typedef __bit_iterator<__bitset, true>             const_iterator;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR __bitset() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit _LIBCPP_CONSTEXPR __bitset(unsigned long long __v) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT
         {return reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR const_reference __make_ref(size_t __pos) const _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __make_ref(size_t __pos) const _NOEXCEPT
         {return const_reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 iterator __make_iter(size_t __pos) _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 iterator __make_iter(size_t __pos) _NOEXCEPT
         {return iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 const_iterator __make_iter(size_t __pos) const _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 const_iterator __make_iter(size_t __pos) const _NOEXCEPT
         {return const_iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     void operator&=(const __bitset& __v) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     void operator|=(const __bitset& __v) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     void operator^=(const __bitset& __v) _NOEXCEPT;
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void flip() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const
         {return to_ulong(integral_constant<bool, _Size < sizeof(unsigned long) * CHAR_BIT>());}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const
         {return to_ullong(integral_constant<bool, _Size < sizeof(unsigned long long) * CHAR_BIT>());}
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool any() const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_t __hash_code() const _NOEXCEPT;
 private:
 #ifdef _LIBCPP_CXX03_LANG
     void __init(unsigned long long __v, false_type) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void __init(unsigned long long __v, true_type) _NOEXCEPT;
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long to_ulong(false_type) const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long to_ulong(true_type) const;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long long to_ullong(false_type) const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long long to_ullong(true_type) const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long long to_ullong(true_type, false_type) const;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long long to_ullong(true_type, true_type) const;
@@ -248,7 +252,7 @@ __bitset<_N_words, _Size>::__bitset() _NOEXCEPT
 #endif
 {
 #ifdef _LIBCPP_CXX03_LANG
-    _VSTD::fill_n(__first_, _N_words, __storage_type(0));
+    std::fill_n(__first_, _N_words, __storage_type(0));
 #endif
 }
 
@@ -266,13 +270,13 @@ __bitset<_N_words, _Size>::__init(unsigned long long __v, false_type) _NOEXCEPT
         else
             __t[__i] = static_cast<__storage_type>(__v);
 
-    _VSTD::copy(__t, __t + sizeof(__t)/sizeof(__t[0]), __first_);
-    _VSTD::fill(__first_ + sizeof(__t)/sizeof(__t[0]), __first_ + sizeof(__first_)/sizeof(__first_[0]),
+    std::copy(__t, __t + sizeof(__t)/sizeof(__t[0]), __first_);
+    std::fill(__first_ + sizeof(__t)/sizeof(__t[0]), __first_ + sizeof(__first_)/sizeof(__first_[0]),
                __storage_type(0));
 }
 
 template <size_t _N_words, size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 __bitset<_N_words, _Size>::__init(unsigned long long __v, true_type) _NOEXCEPT
 {
@@ -280,7 +284,7 @@ __bitset<_N_words, _Size>::__init(unsigned long long __v, true_type) _NOEXCEPT
     if (_Size < __bits_per_word)
         __first_[0] &= ( 1ULL << _Size ) - 1;
 
-    _VSTD::fill(__first_ + 1, __first_ + sizeof(__first_)/sizeof(__first_[0]), __storage_type(0));
+    std::fill(__first_ + 1, __first_ + sizeof(__first_)/sizeof(__first_[0]), __storage_type(0));
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -357,7 +361,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long
 __bitset<_N_words, _Size>::to_ulong(false_type) const
 {
     const_iterator __e = __make_iter(_Size);
-    const_iterator __i = _VSTD::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
+    const_iterator __i = std::find(__make_iter(sizeof(unsigned long) * CHAR_BIT), __e, true);
     if (__i != __e)
         __throw_overflow_error("bitset to_ulong overflow error");
 
@@ -377,7 +381,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long
 __bitset<_N_words, _Size>::to_ullong(false_type) const
 {
     const_iterator __e = __make_iter(_Size);
-    const_iterator __i = _VSTD::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
+    const_iterator __i = std::find(__make_iter(sizeof(unsigned long long) * CHAR_BIT), __e, true);
     if (__i != __e)
         __throw_overflow_error("bitset to_ullong overflow error");
 
@@ -487,41 +491,41 @@ protected:
     typedef __bit_iterator<__bitset, false>            iterator;
     typedef __bit_iterator<__bitset, true>             const_iterator;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR __bitset() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit _LIBCPP_CONSTEXPR __bitset(unsigned long long __v) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT
         {return reference(&__first_, __storage_type(1) << __pos);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR const_reference __make_ref(size_t __pos) const _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __make_ref(size_t __pos) const _NOEXCEPT
         {return const_reference(&__first_, __storage_type(1) << __pos);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 iterator __make_iter(size_t __pos) _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 iterator __make_iter(size_t __pos) _NOEXCEPT
         {return iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 const_iterator __make_iter(size_t __pos) const _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 const_iterator __make_iter(size_t __pos) const _NOEXCEPT
         {return const_iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     void operator&=(const __bitset& __v) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     void operator|=(const __bitset& __v) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     void operator^=(const __bitset& __v) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     void flip() _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long to_ulong() const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long long to_ullong() const;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool all() const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool any() const _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_t __hash_code() const _NOEXCEPT;
 };
 
@@ -644,33 +648,33 @@ protected:
     typedef __bit_iterator<__bitset, false>            iterator;
     typedef __bit_iterator<__bitset, true>             const_iterator;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR __bitset() _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit _LIBCPP_CONSTEXPR __bitset(unsigned long long) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t) _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t) _NOEXCEPT
         {return reference(nullptr, 1);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR const_reference __make_ref(size_t) const _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __make_ref(size_t) const _NOEXCEPT
         {return const_reference(nullptr, 1);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 iterator __make_iter(size_t) _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 iterator __make_iter(size_t) _NOEXCEPT
         {return iterator(nullptr, 0);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 const_iterator __make_iter(size_t) const _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 const_iterator __make_iter(size_t) const _NOEXCEPT
         {return const_iterator(nullptr, 0);}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator&=(const __bitset&) _NOEXCEPT {}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator|=(const __bitset&) _NOEXCEPT {}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator^=(const __bitset&) _NOEXCEPT {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator&=(const __bitset&) _NOEXCEPT {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator|=(const __bitset&) _NOEXCEPT {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator^=(const __bitset&) _NOEXCEPT {}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 void flip() _NOEXCEPT {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void flip() _NOEXCEPT {}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {return 0;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const {return 0;}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const {return 0;}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const {return 0;}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT {return true;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 bool any() const _NOEXCEPT {return false;}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT {return true;}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool any() const _NOEXCEPT {return false;}
 
-    _LIBCPP_INLINE_VISIBILITY size_t __hash_code() const _NOEXCEPT {return 0;}
+    _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const _NOEXCEPT {return 0;}
 };
 
 inline
@@ -701,8 +705,8 @@ public:
     typedef typename base::const_reference const_reference;
 
     // 23.3.5.1 constructors:
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR bitset() _NOEXCEPT {}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset() _NOEXCEPT {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
         bitset(unsigned long long __v) _NOEXCEPT : base(__v) {}
     template <class _CharT, class = __enable_if_t<_IsCharLikeType<_CharT>::value> >
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
@@ -749,27 +753,27 @@ public:
     }
 
     // 23.3.5.2 bitset operations:
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& operator&=(const bitset& __rhs) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& operator|=(const bitset& __rhs) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& operator^=(const bitset& __rhs) _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& operator<<=(size_t __pos) _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& operator>>=(size_t __pos) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& set() _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& set(size_t __pos, bool __val = true);
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& reset() _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& reset(size_t __pos);
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset  operator~() const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& flip() _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset& flip(size_t __pos);
@@ -781,44 +785,44 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference operator[](size_t __p) const {return base::__make_ref(__p);}
 #endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference operator[](size_t __p)       {return base::__make_ref(__p);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long to_ulong() const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     unsigned long long to_ullong() const;
     template <class _CharT, class _Traits, class _Allocator>
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
         basic_string<_CharT, _Traits, _Allocator> to_string(_CharT __zero = _CharT('0'),
                                                             _CharT __one = _CharT('1')) const;
     template <class _CharT, class _Traits>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
         basic_string<_CharT, _Traits, allocator<_CharT> > to_string(_CharT __zero = _CharT('0'),
                                                                     _CharT __one = _CharT('1')) const;
     template <class _CharT>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
         basic_string<_CharT, char_traits<_CharT>, allocator<_CharT> > to_string(_CharT __zero = _CharT('0'),
                                                                                 _CharT __one = _CharT('1')) const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     basic_string<char, char_traits<char>, allocator<char> > to_string(char __zero = '0',
                                                                       char __one = '1') const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     size_t count() const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR size_t size() const _NOEXCEPT {return _Size;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR size_t size() const _NOEXCEPT {return _Size;}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool operator==(const bitset& __rhs) const _NOEXCEPT;
 #if _LIBCPP_STD_VER <= 17
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool operator!=(const bitset& __rhs) const _NOEXCEPT;
 #endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool test(size_t __pos) const;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool all() const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bool any() const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 bool none() const _NOEXCEPT {return !any();}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool none() const _NOEXCEPT {return !any();}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset operator<<(size_t __pos) const _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
     bitset operator>>(size_t __pos) const _NOEXCEPT;
 
 private:
@@ -839,7 +843,7 @@ private:
         std::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_t __hash_code() const _NOEXCEPT {return base::__hash_code();}
 
     friend struct hash<bitset>;
@@ -880,9 +884,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::operator<<=(size_t __pos) _NOEXCEPT
 {
-    __pos = _VSTD::min(__pos, _Size);
-    _VSTD::copy_backward(base::__make_iter(0), base::__make_iter(_Size - __pos), base::__make_iter(_Size));
-    _VSTD::fill_n(base::__make_iter(0), __pos, false);
+    __pos = std::min(__pos, _Size);
+    std::copy_backward(base::__make_iter(0), base::__make_iter(_Size - __pos), base::__make_iter(_Size));
+    std::fill_n(base::__make_iter(0), __pos, false);
     return *this;
 }
 
@@ -891,9 +895,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::operator>>=(size_t __pos) _NOEXCEPT
 {
-    __pos = _VSTD::min(__pos, _Size);
-    _VSTD::copy(base::__make_iter(__pos), base::__make_iter(_Size), base::__make_iter(0));
-    _VSTD::fill_n(base::__make_iter(_Size - __pos), __pos, false);
+    __pos = std::min(__pos, _Size);
+    std::copy(base::__make_iter(__pos), base::__make_iter(_Size), base::__make_iter(0));
+    std::fill_n(base::__make_iter(_Size - __pos), __pos, false);
     return *this;
 }
 
@@ -903,7 +907,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::set() _NOEXCEPT
 {
-    _VSTD::fill_n(base::__make_iter(0), _Size, true);
+    std::fill_n(base::__make_iter(0), _Size, true);
     return *this;
 }
 
@@ -925,7 +929,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>&
 bitset<_Size>::reset() _NOEXCEPT
 {
-    _VSTD::fill_n(base::__make_iter(0), _Size, false);
+    std::fill_n(base::__make_iter(0), _Size, false);
     return *this;
 }
 
@@ -1052,7 +1056,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bool
 bitset<_Size>::operator==(const bitset& __rhs) const _NOEXCEPT
 {
-    return _VSTD::equal(base::__make_iter(0), base::__make_iter(_Size), __rhs.__make_iter(0));
+    return std::equal(base::__make_iter(0), base::__make_iter(_Size), __rhs.__make_iter(0));
 }
 
 #if _LIBCPP_STD_VER <= 17
@@ -1120,7 +1124,7 @@ bitset<_Size>::operator>>(size_t __pos) const _NOEXCEPT
 }
 
 template <size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>
 operator&(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT
 {
@@ -1130,7 +1134,7 @@ operator&(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT
 }
 
 template <size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>
 operator|(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT
 {
@@ -1140,7 +1144,7 @@ operator|(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT
 }
 
 template <size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
 bitset<_Size>
 operator^(const bitset<_Size>& __x, const bitset<_Size>& __y) _NOEXCEPT
 {
@@ -1153,7 +1157,7 @@ template <size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS hash<bitset<_Size> >
     : public __unary_function<bitset<_Size>, size_t>
 {
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_t operator()(const bitset<_Size>& __bs) const _NOEXCEPT
         {return __bs.__hash_code();}
 };

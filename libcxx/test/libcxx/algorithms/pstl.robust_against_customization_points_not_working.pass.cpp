@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
-// Having a customization point outside the module doesn't work, so this test is inherintly module-hostile.
+// Having a customization point outside the module doesn't work, so this test is inherently module-hostile.
 // UNSUPPORTED: clang-modules-build
 
 // Make sure that the customization points get called properly when overloaded
@@ -172,6 +172,15 @@ optional<__empty> __pstl_fill_n(TestBackend, ForwardIterator, Size, Func) {
   return __empty{};
 }
 
+bool pstl_move_called = false;
+
+template <class, class ForwardIterator, class Size, class Func>
+ForwardIterator __pstl_move(TestBackend, ForwardIterator, Size, Func) {
+  assert(!pstl_move_called);
+  pstl_move_called = true;
+  return 0;
+}
+
 bool pstl_is_partitioned_called = false;
 
 template <class, class ForwardIterator, class Func>
@@ -217,6 +226,16 @@ __pstl_replace_copy_if(TestBackend, ForwardIterator, ForwardIterator, ForwardOut
   assert(!pstl_replace_copy_if_called);
   pstl_replace_copy_if_called = true;
   return __empty{};
+}
+
+bool pstl_rotate_copy_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator>
+optional<ForwardOutIterator>
+__pstl_rotate_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardIterator, ForwardOutIterator res) {
+  assert(!pstl_rotate_copy_called);
+  pstl_rotate_copy_called = true;
+  return res;
 }
 
 bool pstl_unary_transform_called = false;
@@ -352,7 +371,9 @@ int main(int, char**) {
   (void)std::generate_n(TestPolicy{}, std::begin(a), std::size(a), pred);
   assert(std::pstl_generate_n_called);
   (void)std::is_partitioned(TestPolicy{}, std::begin(a), std::end(a), pred);
-  assert(std::pstl_generate_n_called);
+  assert(std::pstl_is_partitioned_called);
+  (void)std::move(TestPolicy{}, std::begin(a), std::end(a), std::begin(a));
+  assert(std::pstl_move_called);
   (void)std::replace(TestPolicy{}, std::begin(a), std::end(a), 0, 0);
   assert(std::pstl_replace_called);
   (void)std::replace_if(TestPolicy{}, std::begin(a), std::end(a), pred, 0);
@@ -369,6 +390,8 @@ int main(int, char**) {
   assert(std::pstl_reduce_with_init_called);
   (void)std::reduce(TestPolicy{}, std::begin(a), std::end(a));
   assert(std::pstl_reduce_without_init_called);
+  (void)std::rotate_copy(TestPolicy{}, std::begin(a), std::begin(a), std::end(a), std::begin(a));
+  assert(std::pstl_rotate_copy_called);
   (void)std::sort(TestPolicy{}, std::begin(a), std::end(a));
   assert(std::pstl_sort_called);
   (void)std::stable_sort(TestPolicy{}, std::begin(a), std::end(a));

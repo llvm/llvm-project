@@ -247,16 +247,16 @@ TEST(Decl, ModuleAndInternalLinkage) {
   const auto *f = selectFirst<FunctionDecl>(
       "f", match(functionDecl(hasName("f")).bind("f"), Ctx));
 
-  EXPECT_EQ(a->getFormalLinkage(), InternalLinkage);
-  EXPECT_EQ(f->getFormalLinkage(), InternalLinkage);
+  EXPECT_EQ(a->getFormalLinkage(), Linkage::Internal);
+  EXPECT_EQ(f->getFormalLinkage(), Linkage::Internal);
 
   const auto *b =
       selectFirst<VarDecl>("b", match(varDecl(hasName("b")).bind("b"), Ctx));
   const auto *g = selectFirst<FunctionDecl>(
       "g", match(functionDecl(hasName("g")).bind("g"), Ctx));
 
-  EXPECT_EQ(b->getFormalLinkage(), ModuleLinkage);
-  EXPECT_EQ(g->getFormalLinkage(), ModuleLinkage);
+  EXPECT_EQ(b->getFormalLinkage(), Linkage::Module);
+  EXPECT_EQ(g->getFormalLinkage(), Linkage::Module);
 }
 
 TEST(Decl, GetNonTransparentDeclContext) {

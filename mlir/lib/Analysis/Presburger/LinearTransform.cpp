@@ -8,6 +8,10 @@
 
 #include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/MPInt.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Support/LLVM.h"
+#include <utility>
 
 using namespace mlir;
 using namespace presburger;

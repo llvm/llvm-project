@@ -42,25 +42,25 @@ func.func private @_QPbar2(!fir.ref<f32>)
 // CHECK-NOUNDER: fir.global common @__BLNK__(dense<0> : vector<4xi8>) : !fir.array<4xi8>
 // CHECK-NOUNDER: func private @bar(!fir.ref<i32>)
 
-// LLVMIR-UNDER: %{{.*}} = llvm.mlir.addressof @a_ : !llvm.ptr<array<4 x i8>>
-// LLVMIR-UNDER: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr<array<4 x i8>>
-// LLVMIR-UNDER: llvm.call @bar_(%{{.*}}) : (!llvm.ptr<i32>) -> ()
-// LLVMIR-UNDER: llvm.call @bar2_(%{{.*}}) : (!llvm.ptr<f32>) -> ()
+// LLVMIR-UNDER: %{{.*}} = llvm.mlir.addressof @a_ : !llvm.ptr
+// LLVMIR-UNDER: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr
+// LLVMIR-UNDER: llvm.call @bar_(%{{.*}}) : (!llvm.ptr) -> ()
+// LLVMIR-UNDER: llvm.call @bar2_(%{{.*}}) : (!llvm.ptr) -> ()
 
 // LLVMIR-UNDER: llvm.mlir.global common @a_(dense<0> : vector<4xi8>) {{.*}} : !llvm.array<4 x i8>
 // LLVMIR-UNDER: llvm.mlir.global common @__BLNK__(dense<0> : vector<4xi8>) {{.*}}  : !llvm.array<4 x i8>
-// LLVMIR-UNDER: llvm.func @bar_(!llvm.ptr<i32>) attributes {sym_visibility = "private"}
-// LLVMIR-UNDER: llvm.func @bar2_(!llvm.ptr<f32>) attributes {sym_visibility = "private"}
+// LLVMIR-UNDER: llvm.func @bar_(!llvm.ptr) attributes {fir.internal_name = "_QPbar", sym_visibility = "private"}
+// LLVMIR-UNDER: llvm.func @bar2_(!llvm.ptr) attributes {fir.internal_name = "_QPbar2", sym_visibility = "private"}
 
-// LLVMIR-NOUNDER: %{{.*}} = llvm.mlir.addressof @a : !llvm.ptr<array<4 x i8>>
-// LLVMIR-NOUNDER: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr<array<4 x i8>>
-// LLVMIR-NOUNDER: llvm.call @bar(%{{.*}}) : (!llvm.ptr<i32>) -> ()
-// LLVMIR-NOUNDER: llvm.call @bar2(%{{.*}}) : (!llvm.ptr<f32>) -> ()
+// LLVMIR-NOUNDER: %{{.*}} = llvm.mlir.addressof @a : !llvm.ptr
+// LLVMIR-NOUNDER: %{{.*}} = llvm.mlir.addressof @__BLNK__ : !llvm.ptr
+// LLVMIR-NOUNDER: llvm.call @bar(%{{.*}}) : (!llvm.ptr) -> ()
+// LLVMIR-NOUNDER: llvm.call @bar2(%{{.*}}) : (!llvm.ptr) -> ()
 
 // LLVMIR-NOUNDER: llvm.mlir.global common @a(dense<0> : vector<4xi8>) {{.*}} : !llvm.array<4 x i8>
 // LLVMIR-NOUNDER: llvm.mlir.global common @__BLNK__(dense<0> : vector<4xi8>) {{.*}}  : !llvm.array<4 x i8>
-// LLVMIR-NOUNDER: llvm.func @bar(!llvm.ptr<i32>) attributes {sym_visibility = "private"}
-// LLVMIR-NOUNDER: llvm.func @bar2(!llvm.ptr<f32>) attributes {sym_visibility = "private"}
+// LLVMIR-NOUNDER: llvm.func @bar(!llvm.ptr) attributes {fir.internal_name = "_QPbar", sym_visibility = "private"}
+// LLVMIR-NOUNDER: llvm.func @bar2(!llvm.ptr) attributes {fir.internal_name = "_QPbar2", sym_visibility = "private"}
 
 // ----- 
 
@@ -96,5 +96,5 @@ func.func @_QPwriteindex_omp_outline_0() attributes {omp.outline_parent_name = "
    return
 }
 
-// CHECK-UNDER: attributes {omp.outline_parent_name = "writeindex_"}
-// CHECK-NOUNDER: attributes {omp.outline_parent_name = "writeindex"}
+// CHECK-UNDER: attributes {fir.internal_name = "_QPwriteindex_omp_outline_0", omp.outline_parent_name = "writeindex_"}
+// CHECK-NOUNDER: attributes {fir.internal_name = "_QPwriteindex_omp_outline_0", omp.outline_parent_name = "writeindex"}

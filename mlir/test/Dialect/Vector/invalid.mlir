@@ -332,6 +332,28 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 
 // -----
 
+#map1 = affine_map<(d0, d1, d2) -> (d0, 0, 0)>
+func.func @main(%m:  memref<1xi32>, %2: vector<1x32xi1>) -> vector<1x32xi32> {
+  %0 = arith.constant 1 : index
+  %1 = arith.constant 1 : i32
+  // expected-error@+1 {{expected the same rank for the vector and the results of the permutation map}}
+  %3 = vector.transfer_read %m[%0], %1, %2 { permutation_map = #map1 } : memref<1xi32>, vector<1x32xi32>
+  return %3 : vector<1x32xi32>
+}
+
+// -----
+
+#map1 = affine_map<(d0, d1, d2) -> (d0, 0, 0)>
+func.func @test_vector.transfer_write(%m:  memref<1xi32>, %2: vector<1x32xi32>) -> vector<1x32xi32> {
+  %0 = arith.constant 1 : index
+  %1 = arith.constant 1 : i32
+  // expected-error@+1 {{expected the same rank for the vector and the results of the permutation map}}
+  %3 = vector.transfer_write %2, %m[%0], %1 { permutation_map = #map1 } : vector<1x32xi32>, memref<1xi32>
+  return %3 : vector<1x32xi32>
+}
+
+// -----
+
 func.func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
@@ -1016,6 +1038,22 @@ func.func private @print_needs_vector(%arg0: tensor<8xf32>) {
 
 // -----
 
+func.func @cannot_print_string_with_punctuation_set() {
+  // expected-error@+1 {{`source` or `punctuation` are not set when printing strings}}
+  vector.print str "Whoops!" punctuation <comma>
+  return
+}
+
+// -----
+
+func.func @cannot_print_string_with_source_set(%vec: vector<[4]xf32>) {
+  // expected-error@+1 {{`source` or `punctuation` are not set when printing strings}}
+  vector.print %vec: vector<[4]xf32> str "Yay!"
+  return
+}
+
+// -----
+
 func.func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -1169,7 +1207,7 @@ func.func @reduce_unsupported_attr(%arg0: vector<16xf32>) -> i32 {
 // -----
 
 func.func @reduce_unsupported_third_argument(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  // expected-error@+1 {{'vector.reduction' unsupported number of operands}}
+  // expected-error@+1 {{expected ':'}}
   %0 = vector.reduction <add>, %arg0, %arg1, %arg1 : vector<16xf32> into f32
 }
 

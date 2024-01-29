@@ -1353,7 +1353,7 @@ void JITDylib::addToLinkOrder(const JITDylibSearchOrder &NewLinks) {
   ES.runSessionLocked([&]() {
     for (auto &KV : NewLinks) {
       // Skip elements of NewLinks that are already in the link order.
-      if (llvm::find(LinkOrder, KV) != LinkOrder.end())
+      if (llvm::is_contained(LinkOrder, KV))
         continue;
 
       LinkOrder.push_back(std::move(KV));

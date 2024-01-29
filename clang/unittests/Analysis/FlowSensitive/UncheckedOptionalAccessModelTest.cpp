@@ -1319,8 +1319,8 @@ protected:
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         AnalysisInputs<UncheckedOptionalAccessModel>(
             SourceCode, std::move(FuncMatcher),
-            [](ASTContext &Ctx, Environment &) {
-              return UncheckedOptionalAccessModel(Ctx);
+            [](ASTContext &Ctx, Environment &Env) {
+              return UncheckedOptionalAccessModel(Ctx, Env);
             })
             .withPostVisitCFG(
                 [&Diagnostics,
@@ -2127,6 +2127,24 @@ TEST_P(UncheckedOptionalAccessTest, OptionalSwap) {
       opt1.value();
 
       opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+    
+    struct S {
+      $ns::$optional<float> x;
+    } s;
+    S getOptional() {
+      return s;
+    }
+
+    void target() {
+      getOptional().x = 0;
     }
   )");
 }
