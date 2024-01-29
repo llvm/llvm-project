@@ -366,8 +366,7 @@ TEST(ParseArchString, RejectsDuplicateExtensionNames) {
 TEST(ParseArchString,
      RejectsExperimentalExtensionsIfNotEnableExperimentalExtension) {
   EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv64iztso", false).takeError()),
+      toString(RISCVISAInfo::parseArchString("rv64iztso", false).takeError()),
       "requires '-menable-experimental-extensions' for experimental extension "
       "'ztso'");
 }
@@ -378,8 +377,7 @@ TEST(ParseArchString,
   // updating (and unfortunately, it will still pass). The failure of
   // RejectsExperimentalExtensionsIfNotEnableExperimentalExtension will
   // hopefully serve as a reminder to update.
-  auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv64iztso", true, false);
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64iztso", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
@@ -394,8 +392,7 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RequiresExplicitVersionNumberForExperimentalExtensionByDefault) {
   EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv64iztso", true).takeError()),
+      toString(RISCVISAInfo::parseArchString("rv64iztso", true).takeError()),
       "experimental extension requires explicit version number `ztso`");
 }
 
@@ -411,8 +408,7 @@ TEST(ParseArchString,
 
 TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
   EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv64iztso9p9", true).takeError()),
+      toString(RISCVISAInfo::parseArchString("rv64iztso9p9", true).takeError()),
       "unsupported version number 9.9 for experimental extension 'ztso' "
       "(this compiler supports 0.1)");
 }
@@ -494,8 +490,8 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+m", "+experimental-ztso"));
 
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_ztso_xventanacondops", true, false);
+  auto MaybeISAInfo2 =
+      RISCVISAInfo::parseArchString("rv32e_ztso_xventanacondops", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
               ElementsAre("+e", "+experimental-ztso", "+xventanacondops"));
