@@ -1041,9 +1041,6 @@ Bug Fixes to C++ Support
   in different visibility.
   Fixes (`#67893 <https://github.com/llvm/llvm-project/issues/67893>`_)
 
-- Fix a false-positive ODR violation for different definitions for `std::align_val_t`.
-  Fixes (`#76638 <https://github.com/llvm/llvm-project/issues/76638>`_)
-
 - Remove recorded `#pragma once` state for headers included in named modules.
   Fixes (`#77995 <https://github.com/llvm/llvm-project/issues/77995>`_)
 
