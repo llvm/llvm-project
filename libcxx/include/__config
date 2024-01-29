@@ -1015,6 +1015,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_IN_CXX23
 #  endif
 
+#  if _LIBCPP_STD_VER >= 26
+#    define _LIBCPP_DEPRECATED_IN_CXX26 _LIBCPP_DEPRECATED
+#  else
+#    define _LIBCPP_DEPRECATED_IN_CXX26
+#  endif
+
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #  else
