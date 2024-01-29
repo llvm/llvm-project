@@ -406,7 +406,6 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // Now, we compute the generating function at this vertex.
     // We collect the inequalities corresponding to each vertex to compute
     // the tangent cone at that vertex.
-    SmallVector<MPInt> ineq(numVars + 1);
 
     // We only need the coefficients of the variables (NOT the parameters)
     // as the generating function only depends on these.
@@ -414,6 +413,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // constant terms zero.
     ConeH tangentCone = defineHRep(numVars);
     for (unsigned j = 0, e = subset.getNumRows(); j < e; ++j) {
+      SmallVector<MPInt> ineq(numVars + 1);
       for (unsigned k = 0; k < numVars; ++k)
         ineq[k] = subset(j, k);
       tangentCone.addInequality(ineq);
