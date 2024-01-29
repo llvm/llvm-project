@@ -41,7 +41,7 @@ void ProgressEventData::Dump(Stream *s) const {
     s->PutCString(", type = update");
   // If m_total is UINT64_MAX, there is no progress to report, just "start"
   // and "end". If it isn't we will show the completed and total amounts.
-  if (m_total != UINT64_MAX)
+  if (m_total != 1)
     s->Printf(", progress = %" PRIu64 " of %" PRIu64, m_completed, m_total);
 }
 

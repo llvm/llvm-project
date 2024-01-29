@@ -23,7 +23,6 @@ Progress::Progress(std::string title, std::string details,
                    lldb_private::Debugger *debugger)
     : m_title(title), m_details(details), m_id(++g_id), m_completed(0),
       m_total(1) {
-  assert(total == std::nullopt || total > 0);
   if (total)
     m_total = *total;
 
