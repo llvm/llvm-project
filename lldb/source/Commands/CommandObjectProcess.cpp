@@ -1765,9 +1765,9 @@ protected:
 
         // If there were no actions, we're just listing, don't add the dummy:
         if (!no_actions)
-         target.AddDummySignal(arg.ref(), set_lazy_bool(pass_action),
-                               set_lazy_bool(notify_action),
-                               set_lazy_bool(stop_action));
+          target.AddDummySignal(arg.ref(), set_lazy_bool(pass_action),
+                                set_lazy_bool(notify_action),
+                                set_lazy_bool(stop_action));
       }
     } else {
       // No signal specified, if any command options were specified, update ALL
