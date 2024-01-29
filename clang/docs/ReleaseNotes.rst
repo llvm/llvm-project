@@ -143,6 +143,9 @@ Bug Fixes to C++ Support
 - Fixed deducing auto& from const int in template parameters of partial
   specializations.
   (`#77189 <https://github.com/llvm/llvm-project/issues/77189>`_)
+- Fix for crash when using a erroneous type in a return statement.
+  Fixes (`#63244 <https://github.com/llvm/llvm-project/issues/63244>`_)
+  and (`#79745 <https://github.com/llvm/llvm-project/issues/79745>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -241,6 +244,8 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+
+- Exposed `CXRewriter` API as `class Rewriter`.
 
 Additional Information
 ======================
