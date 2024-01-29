@@ -43,7 +43,7 @@ function test_real8_yx(y,x)
   test_real8 = atand(y,x)
 end function
 
-! CHECK-LABEL: @_QPtest_real8
+! CHECK-LABEL: @_QPtest_real8_yx
 ! CHECK: %[[terminationCheck:.*]] = arith.andi %[[YEq0:.*]], %[[XEq0:.*]] : i1
 ! CHECK: fir.if %[[terminationCheck]]
 ! CHECK: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f64
