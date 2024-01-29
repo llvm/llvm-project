@@ -27,12 +27,39 @@
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include <optional>
 #include <tuple>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+
+static void consumeInlineNamespace(llvm::StringRef &name) {
+  // Delete past an inline namespace, if any: __[a-zA-Z0-9_]+::
+  auto scratch = name;
+  if (scratch.consume_front("__") && std::isalnum(scratch[0])) {
+    scratch = scratch.drop_while([](char c) { return std::isalnum(c); });
+    if (scratch.consume_front("::")) {
+      // Successfully consumed a namespace.
+      name = scratch;
+    }
+  }
+}
+
+bool lldb_private::formatters::isOldCompressedPairLayout(
+    ValueObject &pair_obj) {
+  return isStdTemplate(pair_obj.GetTypeName(), "__compressed_pair");
+}
+
+bool lldb_private::formatters::isStdTemplate(ConstString type_name,
+                                             llvm::StringRef type) {
+  llvm::StringRef name = type_name.GetStringRef();
+  // The type name may be prefixed with `std::__<inline-namespace>::`.
+  if (name.consume_front("std::"))
+    consumeInlineNamespace(name);
+  return name.consume_front(type) && name.starts_with("<");
+}
 
 lldb::ValueObjectSP lldb_private::formatters::GetChildMemberWithName(
     ValueObject &obj, llvm::ArrayRef<ConstString> alternative_names) {
@@ -53,7 +80,7 @@ lldb_private::formatters::GetFirstValueOfLibCXXCompressedPair(
   if (first_child)
     value = first_child->GetChildMemberWithName("__value_");
   if (!value) {
-    // pre-r300140 member name
+    // pre-c88580c member name
     value = pair.GetChildMemberWithName("__first_");
   }
   return value;
@@ -70,7 +97,7 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     }
   }
   if (!value) {
-    // pre-r300140 member name
+    // pre-c88580c member name
     value = pair.GetChildMemberWithName("__second_");
   }
   return value;
@@ -176,7 +203,9 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  ptr_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
+  if (isOldCompressedPairLayout(*ptr_sp))
+    ptr_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
+
   if (!ptr_sp)
     return false;
 
@@ -363,13 +392,22 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
 
   // Retrieve the actual pointer and the deleter, and clone them to give them
   // user-friendly names.
-  ValueObjectSP value_pointer_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
-  if (value_pointer_sp)
-    m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
+  if (isOldCompressedPairLayout(*ptr_sp)) {
+    if (ValueObjectSP value_pointer_sp =
+            GetFirstValueOfLibCXXCompressedPair(*ptr_sp))
+      m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
 
-  ValueObjectSP deleter_sp = GetSecondValueOfLibCXXCompressedPair(*ptr_sp);
-  if (deleter_sp)
-    m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+    if (ValueObjectSP deleter_sp =
+            GetSecondValueOfLibCXXCompressedPair(*ptr_sp))
+      m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+  } else {
+    m_value_ptr_sp = ptr_sp->Clone(ConstString("pointer"));
+
+    if (ValueObjectSP deleter_sp =
+            valobj_sp->GetChildMemberWithName("__deleter_"))
+      if (deleter_sp->GetNumChildrenIgnoringErrors() > 0)
+        m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
+  }
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -407,24 +445,27 @@ namespace {
 enum class StringLayout { CSD, DSC };
 }
 
+static ValueObjectSP ExtractLibCxxStringData(ValueObject &valobj) {
+  if (auto rep_sp = valobj.GetChildMemberWithName("__rep_"))
+    return rep_sp;
+
+  ValueObjectSP valobj_r_sp = valobj.GetChildMemberWithName("__r_");
+  if (!valobj_r_sp || !valobj_r_sp->GetError().Success())
+    return nullptr;
+
+  if (!isOldCompressedPairLayout(*valobj_r_sp))
+    return nullptr;
+
+  return GetFirstValueOfLibCXXCompressedPair(*valobj_r_sp);
+}
+
 /// Determine the size in bytes of \p valobj (a libc++ std::string object) and
 /// extract its data payload. Return the size + payload pair.
 // TODO: Support big-endian architectures.
 static std::optional<std::pair<uint64_t, ValueObjectSP>>
 ExtractLibcxxStringInfo(ValueObject &valobj) {
-  ValueObjectSP valobj_r_sp = valobj.GetChildMemberWithName("__r_");
-  if (!valobj_r_sp || !valobj_r_sp->GetError().Success())
-    return {};
-
-  // __r_ is a compressed_pair of the actual data and the allocator. The data we
-  // want is in the first base class.
-  ValueObjectSP valobj_r_base_sp = valobj_r_sp->GetChildAtIndex(0);
-  if (!valobj_r_base_sp)
-    return {};
-
-  ValueObjectSP valobj_rep_sp =
-      valobj_r_base_sp->GetChildMemberWithName("__value_");
-  if (!valobj_rep_sp)
+  ValueObjectSP valobj_rep_sp = ExtractLibCxxStringData(valobj);
+  if (!valobj_rep_sp || !valobj_rep_sp->GetError().Success())
     return {};
 
   ValueObjectSP l = valobj_rep_sp->GetChildMemberWithName("__l");

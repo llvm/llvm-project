@@ -62,7 +62,7 @@ class GenericListDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable numbers_list --raw",
             matching=False,
-            substrs=["size=0", "{}"],
+            substrs=["size=0"]
         )
 
         if stdlib_type == USE_LIBSTDCPP:
