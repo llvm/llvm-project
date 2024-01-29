@@ -178,6 +178,26 @@ private:
       V->print(*OS, MST, false);
   }
 
+  void Write(DPValue::LocationType Type) {
+    switch (Type) {
+    case DPValue::LocationType::Value:
+      *OS << "value";
+      break;
+    case DPValue::LocationType::Declare:
+      *OS << "declare";
+      break;
+    case DPValue::LocationType::Assign:
+      *OS << "assign";
+      break;
+    case DPValue::LocationType::End:
+      *OS << "end";
+      break;
+    case DPValue::LocationType::Any:
+      *OS << "any";
+      break;
+    };
+  }
+
   void Write(const Metadata *MD) {
     if (!MD)
       return;
@@ -522,6 +542,7 @@ private:
 
   void visitTemplateParams(const MDNode &N, const Metadata &RawParams);
 
+  void visit(DPValue &DPV);
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
   void visit(Instruction &I);
@@ -650,6 +671,8 @@ private:
   } while (false)
 
 void Verifier::visit(Instruction &I) {
+  for (auto &DPV : I.getDbgValueRange())
+    visit(DPV);
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
     Check(I.getOperand(i) != nullptr, "Operand is null", &I);
   InstVisitor<Verifier>::visit(I);
@@ -6146,6 +6169,80 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
   // Just return null; broken scope chains are checked elsewhere.
   assert(!isa<DILocalScope>(LocalScope) && "Unknown type of local scope");
   return nullptr;
+}
+
+void Verifier::visit(DPValue &DPV) {
+  CheckDI(DPV.getType() == DPValue::LocationType::Value ||
+              DPV.getType() == DPValue::LocationType::Declare ||
+              DPV.getType() == DPValue::LocationType::Assign,
+          "invalid #dbg record type", &DPV, DPV.getType());
+  StringRef Kind;
+  switch (DPV.getType()) {
+  case DPValue::LocationType::Value:
+    Kind = "value";
+    break;
+  case DPValue::LocationType::Declare:
+    Kind = "declare";
+    break;
+  case DPValue::LocationType::Assign:
+    Kind = "assign";
+    break;
+  default:
+    llvm_unreachable("Tried to print a DPValue with an invalid LocationType!");
+  };
+  auto *MD = DPV.getRawLocation();
+  CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
+              (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
+          "invalid #dbg_" + Kind + " address/value", &DPV, MD);
+  CheckDI(isa<DILocalVariable>(DPV.getRawVariable()),
+          "invalid #dbg_" + Kind + " variable", &DPV, DPV.getRawVariable());
+  CheckDI(DPV.getExpression(), "missing #dbg_" + Kind + " expression", &DPV,
+          DPV.getExpression());
+
+  if (DPV.isDbgAssign()) {
+    CheckDI(isa<DIAssignID>(DPV.getRawAssignID()),
+            "invalid #dbg_assign DIAssignID", &DPV, DPV.getRawAssignID());
+    const auto *RawAddr = DPV.getRawAddress();
+    CheckDI(
+        isa<ValueAsMetadata>(RawAddr) ||
+            (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
+        "invalid #dbg_assign address", &DPV, DPV.getRawAddress());
+    CheckDI(DPV.getAddressExpression(),
+            "missing #dbg_assign address expression", &DPV,
+            DPV.getAddressExpression());
+    // All of the linked instructions should be in the same function as DPV.
+    for (Instruction *I : at::getAssignmentInsts(&DPV))
+      CheckDI(DPV.getFunction() == I->getFunction(),
+              "inst not in same function as #dbg_assign", I, &DPV);
+  }
+
+  if (MDNode *N = DPV.getDebugLoc().getAsMDNode()) {
+    CheckDI(isa<DILocation>(N), "invalid #dbg_" + Kind + " location", &DPV, N);
+    visitDILocation(*cast<DILocation>(N));
+  }
+
+  BasicBlock *BB = DPV.getParent();
+  Function *F = BB ? BB->getParent() : nullptr;
+
+  // The scopes for variables and !dbg attachments must agree.
+  DILocalVariable *Var = DPV.getVariable();
+  DILocation *Loc = DPV.getDebugLoc();
+  CheckDI(Loc, "missing #dbg_" + Kind + " DILocation", &DPV, BB, F);
+
+  DISubprogram *VarSP = getSubprogram(Var->getRawScope());
+  DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
+  if (!VarSP || !LocSP)
+    return; // Broken scope chains are checked elsewhere.
+
+  CheckDI(VarSP == LocSP,
+          "mismatched subprogram between #dbg_" + Kind +
+              " variable and DILocation",
+          &DPV, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
+          Loc->getScope()->getSubprogram());
+
+  // This check is redundant with one in visitLocalVariable().
+  CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
+          Var->getRawType());
 }
 
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
