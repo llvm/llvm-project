@@ -26,11 +26,15 @@ struct View : std::ranges::view_base {
 };
 
 struct Fn {
-  int operator()(auto&&...) const;
+  int operator()(auto&&...) const { return 5; }
 };
 
 struct MakeTuple {
   constexpr auto operator()(auto&&... args) const { return std::tuple(std::forward<decltype(args)>(args)...); }
+};
+
+struct GetFirst {
+  constexpr decltype(auto) operator()(auto&& first, auto&&...) const { return std::forward<decltype(first)>(first); }
 };
 
 struct NoConstBeginView : std::ranges::view_base {
@@ -49,7 +53,6 @@ struct NonConstOnlyFn {
   int operator()(int&) const;
   int operator()(const int&) const = delete;
 };
-
 
 template <class T>
 struct BufferView : std::ranges::view_base {

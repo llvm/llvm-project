@@ -14,7 +14,6 @@
 
 #include <cassert>
 #include <type_traits>
-#include <utility>
 
 constexpr int buff[] = {1, 2, 3};
 

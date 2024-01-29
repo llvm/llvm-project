@@ -14,7 +14,6 @@
 //            regular_invocable<const F&, range_reference_t<const Views>...>;
 
 #include <ranges>
-#include <tuple>
 
 #include "types.h"
 
