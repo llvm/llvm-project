@@ -189,6 +189,69 @@ private:
     OS.close();
   }
 
+  void dumpDeviceMemoryDiff(StringRef Filename) {
+    ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
+        WritableMemoryBuffer::getNewUninitMemBuffer(MemorySize);
+    if (!DeviceMemoryMB)
+      report_fatal_error("Error creating MemoryBuffer for device memory");
+
+    auto Err = Device->dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
+                                    MemoryStart, MemorySize, nullptr);
+    if (Err)
+      report_fatal_error("Error retrieving data for target pointer");
+
+    // Get the pre-record memory filename.
+    SmallString<128> InputFilename = {Filename.split('.').first, ".memory"};
+
+    // Read the pre-record memorydump.
+    auto InputFileBuffer = MemoryBuffer::getFileOrSTDIN(InputFilename);
+    if (std::error_code EC = InputFileBuffer.getError())
+      report_fatal_error("Error reading pre-record device memory");
+
+    StringRef InputBufferContents = (*InputFileBuffer)->getBuffer();
+    if (InputBufferContents.size() != MemorySize)
+      report_fatal_error("Error: Pre-record device memory size mismatch");
+
+    std::error_code EC;
+    raw_fd_ostream OS(Filename, EC);
+    if (EC)
+      report_fatal_error("Error dumping memory to file " + Filename + " :" +
+                         EC.message());
+
+    // Get current memory contents.
+    StringRef DeviceMemoryContents(DeviceMemoryMB.get()->getBuffer().data(),
+                                   DeviceMemoryMB.get()->getBuffer().size());
+
+    // Loop over all memory locations.
+    // If mismatch is found, create a new diff line.
+    // Diff format: location, size, differences.
+    for (size_t I = 0; I < MemorySize; ++I) {
+      // If buffers are same, continue
+      if (InputBufferContents[I] == DeviceMemoryContents[I])
+        continue;
+
+      // Mark the start offset
+      OS << I << " ";
+
+      SmallVector<uint8_t, 128> Modified;
+      Modified.push_back(DeviceMemoryContents[I]);
+
+      for (I += 1; I < MemorySize; ++I) {
+        // If no more mismatch is found, break out of the loop.
+        if (InputBufferContents[I] == DeviceMemoryContents[I])
+          break;
+        // If mismatch continues - push diff to Modified.
+        Modified.push_back(DeviceMemoryContents[I]);
+      }
+      // Mark the length of the mismatching sequence.
+      OS << Modified.size() << " ";
+      for (const auto &Value : Modified)
+        OS << Value << " ";
+      OS << "\n";
+    }
+    OS.close();
+  }
+
 public:
   bool isRecording() const { return Status == RRStatusTy::RRRecording; }
   bool isReplaying() const { return Status == RRStatusTy::RRReplaying; }
@@ -313,7 +376,7 @@ public:
   void saveKernelOutputInfo(const char *Name) {
     SmallString<128> OutputFilename = {
         Name, (isRecording() ? ".original.output" : ".replay.output")};
-    dumpDeviceMemory(OutputFilename);
+    dumpDeviceMemoryDiff(OutputFilename);
   }
 
   void *alloc(uint64_t Size) {
