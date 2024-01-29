@@ -100,8 +100,7 @@ define i64 @bogus(i64 %a, i1 %b, i64 %x) {
 ; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = sext i1 [[B]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = xor i64 [[C]], [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[A]]
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[B]], i64 [[TMP1]], i64 [[A]]
+; CHECK-NEXT:    [[E:%.*]] = sub i64 [[D]], [[C]]
 ; CHECK-NEXT:    [[F:%.*]] = mul i64 [[D]], [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = add i64 [[F]], [[E]]
 ; CHECK-NEXT:    ret i64 [[R]]

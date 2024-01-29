@@ -2453,7 +2453,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // (sub (sext C), (xor X, (sext C))) => (select C, X, (neg X))
     Value *C, *X;
     auto m_SubXorCmp = [&C, &X](Value *LHS, Value *RHS) {
-      return match(LHS, m_c_Xor(m_Value(X), m_Specific(RHS))) &&
+      return LHS->hasOneUse() &&
+             match(LHS, m_c_Xor(m_Value(X), m_Specific(RHS))) &&
              match(RHS, m_SExt(m_Value(C))) &&
              (C->getType()->getScalarSizeInBits() == 1);
     };
