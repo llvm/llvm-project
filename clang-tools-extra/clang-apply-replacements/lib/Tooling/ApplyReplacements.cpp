@@ -272,3 +272,4 @@ bool deleteReplacementFiles(const TUReplacementFiles &Files,
 
 } // end namespace replace
 } // end namespace clang
+// 
