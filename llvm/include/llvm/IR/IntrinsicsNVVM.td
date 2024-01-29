@@ -4510,6 +4510,8 @@ def int_nvvm_read_ptx_sreg_lanemask_gt :
 def int_nvvm_read_ptx_sreg_clock : PTXReadNCSRegIntrinsic_r32<"clock">;
 def int_nvvm_read_ptx_sreg_clock64 : PTXReadNCSRegIntrinsic_r64<"clock64">;
 
+def int_nvvm_read_ptx_sreg_globaltimer : PTXReadNCSRegIntrinsic_r64<"globaltimer">;
+
 def int_nvvm_read_ptx_sreg_pm0 : PTXReadNCSRegIntrinsic_r32<"pm0">;
 def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic_r32<"pm1">;
 def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic_r32<"pm2">;

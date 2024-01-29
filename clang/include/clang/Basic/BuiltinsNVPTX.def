@@ -148,6 +148,7 @@ BUILTIN(__nvvm_read_ptx_sreg_lanemask_gt, "i", "nc")
 
 BUILTIN(__nvvm_read_ptx_sreg_clock, "i", "n")
 BUILTIN(__nvvm_read_ptx_sreg_clock64, "LLi", "n")
+BUILTIN(__nvvm_read_ptx_sreg_globaltimer, "LLi", "n")
 
 BUILTIN(__nvvm_read_ptx_sreg_pm0, "i", "n")
 BUILTIN(__nvvm_read_ptx_sreg_pm1, "i", "n")

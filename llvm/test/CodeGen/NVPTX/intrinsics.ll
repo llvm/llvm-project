@@ -140,6 +140,17 @@ define void @test_exit() {
   ret void
 }
 
+; CHECK-LABEL: test_globaltimer
+define i64 @test_globaltimer() {
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %a = tail call i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
+; CHECK: mov.u64         %r{{.*}}, %globaltimer;
+  %b = tail call i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
+  %ret = add i64 %a, %b
+; CHECK: ret
+  ret i64 %ret
+}
+
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare float @llvm.nvvm.sqrt.f(float)
@@ -154,3 +165,4 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.clock()
 declare i64 @llvm.nvvm.read.ptx.sreg.clock64()
 declare void @llvm.nvvm.exit()
+declare i64 @llvm.nvvm.read.ptx.sreg.globaltimer()
