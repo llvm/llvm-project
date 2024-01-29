@@ -3,11 +3,18 @@
 @aa = global [256 x [256 x float]] zeroinitializer, align 4
 @a = global [32000 x float] zeroinitializer, align 4
 
-;; for (int j = 0; j < 256; j++)
-;;   for (int i = j+1; i < 256; i++)
+;; Given that SCEV of &a[j] is {@a,+,4}<Loop j>, a[j] will be treated as scalar
+;; when vectorizing Loop i. If the accessing size of a[j] <= Dist(a[j], a[i]),
+;; there is no overlapped and can be vectorized.
+;;
+;; In this case, accessing size of a[j] is 4 byte(float) and Dist(a[j], a[i])
+;; is {4,+,4} which bring the minimum distance as 4.
+;;
+;; for (int j = 0; j < 256; j++)    // Loop j
+;;   for (int i = j+1; i < 256; i++)// Loop i
 ;;     a[i] -= aa[j][i] * a[j];
 
-; CHECK-NOT: vector.body:
+; CHECK: vector.body:
 
 define signext i32 @s115() {
 entry:
