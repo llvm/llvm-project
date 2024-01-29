@@ -177,11 +177,6 @@ TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
   }
 }
 
-bool TypeSystemSwiftTypeRef::IsKnownSpecialImportedType(llvm::StringRef name) {
-  return name == "NSNotificationName" ||
-         swift::ClangImporter::isKnownCFTypeName(name);
-}
-
 /// Create a mangled name for a type node.
 static swift::Demangle::ManglingErrorOr<std::string>
 GetMangledName(swift::Demangle::Demangler &dem,
