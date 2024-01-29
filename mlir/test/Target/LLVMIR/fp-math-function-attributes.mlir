@@ -56,7 +56,7 @@ llvm.func @no_nans_fp_math_func_false() attributes {no_nans_fp_math = false}  {
 
 // CHECK-LABEL: define void @approx_func_fp_math_func_true()
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
-llvm.func @approx_func_fp_math_func() attributes {approx_func_fp_math = true}  {
+llvm.func @approx_func_fp_math_func_true() attributes {approx_func_fp_math = true}  {
   llvm.return
 }
 // CHECK: attributes #[[ATTRS]] = { "approx-func-fp-math"="true" }
