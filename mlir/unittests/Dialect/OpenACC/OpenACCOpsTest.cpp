@@ -253,15 +253,17 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
   op->getWaitOperandsMutable().assign(val1->getResult());
   op->setWaitOperandsDeviceTypeAttr(b.getArrayAttr({dtypeNone}));
   op->setWaitOperandsSegments(b.getDenseI32ArrayAttr({1}));
+  op->setHasWaitDevnumAttr(b.getBoolArrayAttr({false}));
   EXPECT_EQ(op->getWaitValues().front(), val1->getResult());
   for (auto d : dtypesWithoutNone)
-    EXPECT_EQ(op->getWaitValues(d).begin(), op->getWaitValues(d).end());
+    EXPECT_TRUE(op->getWaitValues(d).empty());
 
   op->getWaitOperandsMutable().clear();
   op->removeWaitOperandsDeviceTypeAttr();
   op->removeWaitOperandsSegmentsAttr();
+  op->removeHasWaitDevnumAttr();
   for (auto d : dtypes)
-    EXPECT_EQ(op->getWaitValues(d).begin(), op->getWaitValues(d).end());
+    EXPECT_TRUE(op->getWaitValues(d).empty());
 
   op->getWaitOperandsMutable().append(val1->getResult());
   op->getWaitOperandsMutable().append(val2->getResult());
@@ -269,6 +271,7 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
       b.getArrayAttr({DeviceTypeAttr::get(&context, DeviceType::Host),
                       DeviceTypeAttr::get(&context, DeviceType::Star)}));
   op->setWaitOperandsSegments(b.getDenseI32ArrayAttr({1, 1}));
+  op->setHasWaitDevnumAttr(b.getBoolArrayAttr({false, false}));
   EXPECT_EQ(op->getWaitValues(DeviceType::None).begin(),
             op->getWaitValues(DeviceType::None).end());
   EXPECT_EQ(op->getWaitValues(DeviceType::Host).front(), val1->getResult());
@@ -277,8 +280,9 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
   op->getWaitOperandsMutable().clear();
   op->removeWaitOperandsDeviceTypeAttr();
   op->removeWaitOperandsSegmentsAttr();
+  op->removeHasWaitDevnumAttr();
   for (auto d : dtypes)
-    EXPECT_EQ(op->getWaitValues(d).begin(), op->getWaitValues(d).end());
+    EXPECT_TRUE(op->getWaitValues(d).empty());
 
   op->getWaitOperandsMutable().append(val1->getResult());
   op->getWaitOperandsMutable().append(val2->getResult());
@@ -287,6 +291,7 @@ void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
       b.getArrayAttr({DeviceTypeAttr::get(&context, DeviceType::Default),
                       DeviceTypeAttr::get(&context, DeviceType::Multicore)}));
   op->setWaitOperandsSegments(b.getDenseI32ArrayAttr({2, 1}));
+  op->setHasWaitDevnumAttr(b.getBoolArrayAttr({false, false}));
   EXPECT_EQ(op->getWaitValues(DeviceType::None).begin(),
             op->getWaitValues(DeviceType::None).end());
   EXPECT_EQ(op->getWaitValues(DeviceType::Default).front(), val1->getResult());
