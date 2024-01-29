@@ -1353,6 +1353,63 @@ static bool equivalentAddressValues(Value *A, Value *B) {
   return false;
 }
 
+static bool isStoreSiteRemovable(StoreInst *SI, InstCombinerImpl &IC) {
+  if (canSimplifyNullStoreOrGEP(*SI) ||
+      !isa<Instruction>(SI->getPointerOperand()))
+    return false;
+
+  SmallVector<Instruction *, 4> Worklist;
+  Worklist.push_back(cast<Instruction>(SI->getPointerOperand()));
+  AllocaInst *AI = nullptr;
+  do {
+    Instruction *PI = Worklist.pop_back_val();
+    switch (PI->getOpcode()) {
+    default:
+      break;
+    case Instruction::AddrSpaceCast:
+    case Instruction::BitCast:
+    case Instruction::GetElementPtr:
+      if (auto TI = dyn_cast<Instruction>(PI->getOperand(0)))
+        Worklist.push_back(TI);
+      break;
+    case Instruction::Alloca: {
+      AI = cast<AllocaInst>(PI);
+      break;
+    }
+    }
+    for (User *U : PI->users()) {
+      Instruction *I = cast<Instruction>(U);
+      switch (I->getOpcode()) {
+      default:
+        return false;
+      case Instruction::AddrSpaceCast:
+      case Instruction::BitCast:
+      case Instruction::GetElementPtr:
+        continue;
+      case Instruction::Store: {
+        StoreInst *SI = cast<StoreInst>(I);
+        if (SI->isVolatile() || SI->getPointerOperand() != PI)
+          return false;
+        if (auto TI = dyn_cast<Instruction>(SI->getPointerOperand());
+            TI && SI->getPointerOperand() != PI)
+          Worklist.push_back(TI);
+        continue;
+      }
+      case Instruction::Alloca: {
+        AI = cast<AllocaInst>(I);
+        break;
+      }
+      }
+    }
+  } while (!Worklist.empty());
+
+  SmallVector<WeakTrackingVH, 64> temp;
+  if (AI && IC.isAllocSiteRemovable(AI, temp, IC.getTargetLibraryInfo()))
+    return true;
+
+  return false;
+}
+
 Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   Value *Val = SI.getOperand(0);
   Value *Ptr = SI.getOperand(1);
@@ -1380,6 +1437,9 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // Don't hack volatile/ordered stores.
   // FIXME: Some bits are legal for ordered atomic stores; needs refactoring.
   if (!SI.isUnordered()) return nullptr;
+
+  if (isStoreSiteRemovable(&SI, *this))
+    return eraseInstFromFunction(SI);
 
   // If the RHS is an alloca with a single use, zapify the store, making the
   // alloca dead.
