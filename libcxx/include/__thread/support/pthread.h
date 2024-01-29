@@ -116,11 +116,12 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_broadcast(__libcpp_condvar_t* 
   return pthread_cond_broadcast(__cv);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+__libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m) {
   return pthread_cond_wait(__cv, __m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI int
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
 __libcpp_condvar_timedwait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m, __libcpp_timespec_t* __ts) {
   return pthread_cond_timedwait(__cv, __m, __ts);
 }

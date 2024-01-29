@@ -52,8 +52,8 @@ using __libcpp_condvar_t = ...;
 
 int __libcpp_condvar_signal(__libcpp_condvar_t*);
 int __libcpp_condvar_broadcast(__libcpp_condvar_t*);
-int __libcpp_condvar_wait(__libcpp_condvar_t*, __libcpp_mutex_t*);
-int __libcpp_condvar_timedwait(__libcpp_condvar_t*, __libcpp_mutex_t*, __libcpp_timespec_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_condvar_wait(__libcpp_condvar_t*, __libcpp_mutex_t*);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_condvar_timedwait(__libcpp_condvar_t*, __libcpp_mutex_t*, __libcpp_timespec_t*);
 int __libcpp_condvar_destroy(__libcpp_condvar_t*);
 
 //
