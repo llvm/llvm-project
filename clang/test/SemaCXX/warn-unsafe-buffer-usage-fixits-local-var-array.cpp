@@ -22,6 +22,17 @@ void comments_in_declaration(unsigned idx) {
   buffer_w[idx] = 0;
 }
 
+void initializer(unsigned idx) {
+  int buffer[3] = {0};
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::array<int, 3> buffer"
+
+  int buffer2[3] = {0, 1, 2};
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:17}:"std::array<int, 3> buffer2"
+
+  buffer[idx] = 0;
+  buffer2[idx] = 0;
+}
+
 void auto_size(unsigned idx) {
   int buffer[] = {0, 1, 2};
 // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]
@@ -66,7 +77,15 @@ void local_array_const_ptr(unsigned idx, int*& a) {
 // FIXME: implement support
 
   a = buffer[idx];
+}
 
+void local_array_const_ptr_via_typedef(unsigned idx, int*& a) {
+  typedef int * const my_const_ptr;
+  my_const_ptr buffer[10] = {a};
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:.*-[[@LINE-1]]:.*}
+// FIXME: implement support
+
+  a = buffer[idx];
 }
 
 void local_array_const_ptr_to_const(unsigned idx, const int*& a) {
