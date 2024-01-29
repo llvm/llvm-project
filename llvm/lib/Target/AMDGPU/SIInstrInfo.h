@@ -41,6 +41,10 @@ class ScheduleHazardRecognizer;
 static const MachineMemOperand::Flags MONoClobber =
     MachineMemOperand::MOTargetFlag1;
 
+/// Mark the MMO of a load as the last use.
+static const MachineMemOperand::Flags MOLastUse =
+    MachineMemOperand::MOTargetFlag2;
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -389,7 +393,7 @@ public:
 
   void removeModOperands(MachineInstr &MI) const;
 
-  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+  bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
@@ -798,6 +802,14 @@ public:
     return isMFMA(MI) || isWMMA(MI);
   }
 
+  static bool isSWMMAC(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsSWMMAC;
+  }
+
+  bool isSWMMAC(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsSWMMAC;
+  }
+
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
@@ -910,6 +922,16 @@ public:
       return AMDGPU::S_WAITCNT;
     case AMDGPU::S_WAITCNT_VSCNT_soft:
       return AMDGPU::S_WAITCNT_VSCNT;
+    case AMDGPU::S_WAIT_LOADCNT_soft:
+      return AMDGPU::S_WAIT_LOADCNT;
+    case AMDGPU::S_WAIT_STORECNT_soft:
+      return AMDGPU::S_WAIT_STORECNT;
+    case AMDGPU::S_WAIT_SAMPLECNT_soft:
+      return AMDGPU::S_WAIT_SAMPLECNT;
+    case AMDGPU::S_WAIT_BVHCNT_soft:
+      return AMDGPU::S_WAIT_BVHCNT;
+    case AMDGPU::S_WAIT_DSCNT_soft:
+      return AMDGPU::S_WAIT_DSCNT;
     default:
       return Opcode;
     }

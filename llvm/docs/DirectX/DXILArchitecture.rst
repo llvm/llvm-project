@@ -19,7 +19,7 @@ metadata.
 
 LLVM's implementation philosophy for DXIL support is to treat DXIL as
 merely a representation format as much as possible. When reading DXIL,
-we should translate everyting to generic LLVM constructs when
+we should translate everything to generic LLVM constructs when
 possible. Similarly, we should introduce DXIL-specific constructs as
 late as possible in the process of lowering to the format.
 

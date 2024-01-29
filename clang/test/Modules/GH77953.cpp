@@ -4,7 +4,7 @@
 // RUN: split-file %s %t
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/a.cppm -o %t/a.pcm
-// RUN: %clang_cc1 -std=c++20 -fmodule-file=a=%t/a.pcm %t/b.cppm
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=a=%t/a.pcm %t/b.cpp -fsyntax-only -verify
 
 //--- a.cppm
 export module a;
@@ -22,7 +22,7 @@ struct a {
 
 template struct a<>;
 
-//--- b.cppm
+//--- b.cpp
+// expected-no-diagnostics
 import a;
-
 template struct a<int>;

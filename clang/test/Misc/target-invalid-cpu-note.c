@@ -5,11 +5,11 @@
 
 // RUN: not %clang_cc1 -triple arm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AARCH64
 // AARCH64: error: unknown target CPU 'not-a-cpu'
-// AARCH64-NEXT: note: valid target CPU values are: cortex-a34, cortex-a35, cortex-a53, cortex-a55, cortex-a510, cortex-a520, cortex-a57, cortex-a65, cortex-a65ae, cortex-a72, cortex-a73, cortex-a75, cortex-a76, cortex-a76ae, cortex-a77, cortex-a78, cortex-a78c, cortex-a710, cortex-a715, cortex-a720, cortex-r82, cortex-x1, cortex-x1c, cortex-x2, cortex-x3, cortex-x4, neoverse-e1, neoverse-n1, neoverse-n2, neoverse-512tvb, neoverse-v1, neoverse-v2, cyclone, apple-a7, apple-a8, apple-a9, apple-a10, apple-a11, apple-a12, apple-a13, apple-a14, apple-a15, apple-a16, apple-a17, apple-m1, apple-m2, apple-m3, apple-s4, apple-s5, exynos-m3, exynos-m4, exynos-m5, falkor, saphira, kryo, thunderx2t99, thunderx3t110, thunderx, thunderxt88, thunderxt81, thunderxt83, tsv110, a64fx, carmel, ampere1, ampere1a, grace{{$}}
+// AARCH64-NEXT: note: valid target CPU values are: cortex-a34, cortex-a35, cortex-a53, cortex-a55, cortex-a510, cortex-a520, cortex-a57, cortex-a65, cortex-a65ae, cortex-a72, cortex-a73, cortex-a75, cortex-a76, cortex-a76ae, cortex-a77, cortex-a78, cortex-a78c, cortex-a710, cortex-a715, cortex-a720, cortex-r82, cortex-x1, cortex-x1c, cortex-x2, cortex-x3, cortex-x4, neoverse-e1, neoverse-n1, neoverse-n2, neoverse-512tvb, neoverse-v1, neoverse-v2, cyclone, apple-a7, apple-a8, apple-a9, apple-a10, apple-a11, apple-a12, apple-a13, apple-a14, apple-a15, apple-a16, apple-a17, apple-m1, apple-m2, apple-m3, apple-s4, apple-s5, exynos-m3, exynos-m4, exynos-m5, falkor, saphira, kryo, thunderx2t99, thunderx3t110, thunderx, thunderxt88, thunderxt81, thunderxt83, tsv110, a64fx, carmel, ampere1, ampere1a, cobalt-100, grace{{$}}
 
 // RUN: not %clang_cc1 -triple arm64--- -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE_AARCH64
 // TUNE_AARCH64: error: unknown target CPU 'not-a-cpu'
-// TUNE_AARCH64-NEXT: note: valid target CPU values are: cortex-a34, cortex-a35, cortex-a53, cortex-a55, cortex-a510, cortex-a520, cortex-a57, cortex-a65, cortex-a65ae, cortex-a72, cortex-a73, cortex-a75, cortex-a76, cortex-a76ae, cortex-a77, cortex-a78, cortex-a78c, cortex-a710, cortex-a715, cortex-a720, cortex-r82, cortex-x1, cortex-x1c, cortex-x2, cortex-x3, cortex-x4, neoverse-e1, neoverse-n1, neoverse-n2, neoverse-512tvb, neoverse-v1, neoverse-v2, cyclone, apple-a7, apple-a8, apple-a9, apple-a10, apple-a11, apple-a12, apple-a13, apple-a14, apple-a15, apple-a16, apple-a17, apple-m1, apple-m2, apple-m3, apple-s4, apple-s5, exynos-m3, exynos-m4, exynos-m5, falkor, saphira, kryo, thunderx2t99, thunderx3t110, thunderx, thunderxt88, thunderxt81, thunderxt83, tsv110, a64fx, carmel, ampere1, ampere1a, grace{{$}}
+// TUNE_AARCH64-NEXT: note: valid target CPU values are: cortex-a34, cortex-a35, cortex-a53, cortex-a55, cortex-a510, cortex-a520, cortex-a57, cortex-a65, cortex-a65ae, cortex-a72, cortex-a73, cortex-a75, cortex-a76, cortex-a76ae, cortex-a77, cortex-a78, cortex-a78c, cortex-a710, cortex-a715, cortex-a720, cortex-r82, cortex-x1, cortex-x1c, cortex-x2, cortex-x3, cortex-x4, neoverse-e1, neoverse-n1, neoverse-n2, neoverse-512tvb, neoverse-v1, neoverse-v2, cyclone, apple-a7, apple-a8, apple-a9, apple-a10, apple-a11, apple-a12, apple-a13, apple-a14, apple-a15, apple-a16, apple-a17, apple-m1, apple-m2, apple-m3, apple-s4, apple-s5, exynos-m3, exynos-m4, exynos-m5, falkor, saphira, kryo, thunderx2t99, thunderx3t110, thunderx, thunderxt88, thunderxt81, thunderxt83, tsv110, a64fx, carmel, ampere1, ampere1a, cobalt-100, grace{{$}}
 
 // RUN: not %clang_cc1 -triple i386--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix X86
 // X86: error: unknown target CPU 'not-a-cpu'
@@ -85,7 +85,7 @@
 
 // RUN: not %clang_cc1 -triple riscv64 -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix RISCV64
 // RISCV64: error: unknown target CPU 'not-a-cpu'
-// RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, veyron-v1, xiangshan-nanhu{{$}}
+// RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, veyron-v1, xiangshan-nanhu{{$}}
 
 // RUN: not %clang_cc1 -triple riscv32 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV32
 // TUNE-RISCV32: error: unknown target CPU 'not-a-cpu'
@@ -93,4 +93,4 @@
 
 // RUN: not %clang_cc1 -triple riscv64 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV64
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
-// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, veyron-v1, xiangshan-nanhu, generic, rocket, sifive-7-series{{$}}
+// TUNE-RISCV64-NEXT: note: valid target CPU values are: generic-rv64, rocket-rv64, sifive-p450, sifive-p670, sifive-s21, sifive-s51, sifive-s54, sifive-s76, sifive-u54, sifive-u74, sifive-x280, veyron-v1, xiangshan-nanhu, generic, rocket, sifive-7-series{{$}}
