@@ -313,6 +313,15 @@ private:
 
   void UndoBumpHitCount();
 
+  /// Updates the thread ID internally.
+  ///
+  /// This method was created to handle actually mutating the thread ID
+  /// internally because SetThreadID broadcasts an event in addition to mutating
+  /// state. If the BreakpointLocation is in the middle of being created,
+  /// broadcasting an event will crash LLDB.
+  ///
+  /// \param[in] thread_id
+  ///   The new thread ID.
   void SetThreadIDInternal(lldb::tid_t thread_id);
 
   // Constructors and Destructors
