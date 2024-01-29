@@ -317,8 +317,8 @@ private:
   ///
   /// This method was created to handle actually mutating the thread ID
   /// internally because SetThreadID broadcasts an event in addition to mutating
-  /// state. If the BreakpointLocation is in the middle of being created,
-  /// broadcasting an event will crash LLDB.
+  /// state. The constructor calls this instead of SetThreadID to avoid the
+  /// broadcast.
   ///
   /// \param[in] thread_id
   ///   The new thread ID.
