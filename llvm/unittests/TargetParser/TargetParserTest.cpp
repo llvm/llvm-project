@@ -45,7 +45,7 @@ const char *ARMArch[] = {
     "armv8m.main",  "iwmmxt",      "iwmmxt2",        "xscale",      "armv8.1-m.main",
     "armv9-a",      "armv9",       "armv9a",         "armv9.1-a",   "armv9.1a",
     "armv9.2-a",    "armv9.2a",    "armv9.3-a",      "armv9.3a",    "armv9.4-a",
-    "armv9.4a",
+    "armv9.4a",     "armv9.5-a",   "armv9.5a",
 };
 
 std::string FormatExtensionFlags(int64_t Flags) {
@@ -606,6 +606,9 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv9.4-a", "generic", "v9.4a",
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(
+      testARMArch("armv9.5-a", "generic", "v9.5a",
+                          ARMBuildAttrs::CPUArch::v9_A));
+  EXPECT_TRUE(
       testARMArch("armv8-r", "cortex-r52", "v8r",
                           ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(
@@ -940,6 +943,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV9_2A:
     case ARM::ArchKind::ARMV9_3A:
     case ARM::ArchKind::ARMV9_4A:
+    case ARM::ArchKind::ARMV9_5A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -1647,7 +1651,7 @@ INSTANTIATE_TEST_SUITE_P(
             "8.2-A")));
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 67;
+static constexpr unsigned NumAArch64CPUArchs = 68;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

@@ -193,9 +193,16 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     if (AddiImmOp.getTargetFlags() != RISCVII::MO_None)
       return false;
     Register AddiReg = OffsetTail.getOperand(1).getReg();
-    if (!AddiReg.isVirtual())
-      return false;
     int64_t OffLo = AddiImmOp.getImm();
+
+    // Handle rs1 of ADDI is X0.
+    if (AddiReg == RISCV::X0) {
+      LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
+      foldOffset(Hi, Lo, TailAdd, OffLo);
+      OffsetTail.eraseFromParent();
+      return true;
+    }
+
     MachineInstr &OffsetLui = *MRI->getVRegDef(AddiReg);
     MachineOperand &LuiImmOp = OffsetLui.getOperand(1);
     if (OffsetLui.getOpcode() != RISCV::LUI ||
@@ -206,7 +213,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     Offset += OffLo;
     // RV32 ignores the upper 32 bits. ADDIW sign extends the result.
     if (!ST->is64Bit() || OffsetTail.getOpcode() == RISCV::ADDIW)
-       Offset = SignExtend64<32>(Offset);
+      Offset = SignExtend64<32>(Offset);
     // We can only fold simm32 offsets.
     if (!isInt<32>(Offset))
       return false;

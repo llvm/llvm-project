@@ -8,6 +8,11 @@ constexpr _Complex double z1 = {1.0, 2.0};
 static_assert(__real(z1) == 1.0, "");
 static_assert(__imag(z1) == 2.0, "");
 
+static_assert(&__imag z1 == &__real z1 + 1, "");
+static_assert((*(&__imag z1)) == __imag z1, "");
+static_assert((*(&__real z1)) == __real z1, "");
+
+
 constexpr double setter() {
   _Complex float d = {1.0, 2.0};
 

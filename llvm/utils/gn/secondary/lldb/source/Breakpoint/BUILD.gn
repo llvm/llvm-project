@@ -37,6 +37,5 @@ static_library("Breakpoint") {
     "WatchpointList.cpp",
     "WatchpointOptions.cpp",
     "WatchpointResource.cpp",
-    "WatchpointResourceList.cpp",
   ]
 }

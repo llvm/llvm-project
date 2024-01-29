@@ -412,13 +412,13 @@ void Environment::initialize() {
           QualType ThisPointeeType =
               SurroundingMethodDecl->getFunctionObjectParameterType();
           setThisPointeeStorageLocation(
-              cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+              cast<RecordStorageLocation>(createObject(ThisPointeeType)));
         }
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {
       QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
       setThisPointeeStorageLocation(
-          cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+          cast<RecordStorageLocation>(createObject(ThisPointeeType)));
     }
   }
 }

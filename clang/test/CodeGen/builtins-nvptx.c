@@ -5,16 +5,16 @@
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 -target-feature +ptx62 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 \
+// RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 -target-feature +ptx62 \
 // RUN:   -DERROR_CHECK -fcuda-is-device -S -o /dev/null -x cuda -verify %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
 // RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
@@ -162,6 +162,14 @@ __device__ void sync() {
 // CHECK: call void @llvm.nvvm.bar.sync(i32 0)
 
   __nvvm_bar_sync(0);
+
+}
+
+__device__ void activemask() {
+
+// CHECK: call i32 @llvm.nvvm.activemask()
+
+  __nvvm_activemask();
 
 }
 

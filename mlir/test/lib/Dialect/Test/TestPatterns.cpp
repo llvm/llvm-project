@@ -193,9 +193,7 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
       return failure();
     if (!toBeHoisted->hasAttr("eligible"))
       return failure();
-    // Hoisting means removing an op from the enclosing op. I.e., the enclosing
-    // op is modified.
-    rewriter.modifyOpInPlace(op, [&]() { toBeHoisted->moveBefore(op); });
+    rewriter.moveOpBefore(toBeHoisted, op);
     return success();
   }
 };

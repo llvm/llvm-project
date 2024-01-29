@@ -3216,10 +3216,13 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
       Alloc->setLocalOwningModule(TheGlobalModuleFragment);
     }
 
-    Alloc->addAttr(VisibilityAttr::CreateImplicit(
-        Context, LangOpts.GlobalAllocationFunctionVisibilityHidden
-                     ? VisibilityAttr::Hidden
-                     : VisibilityAttr::Default));
+    if (LangOpts.hasGlobalAllocationFunctionVisibility())
+      Alloc->addAttr(VisibilityAttr::CreateImplicit(
+          Context, LangOpts.hasHiddenGlobalAllocationFunctionVisibility()
+                       ? VisibilityAttr::Hidden
+                   : LangOpts.hasProtectedGlobalAllocationFunctionVisibility()
+                       ? VisibilityAttr::Protected
+                       : VisibilityAttr::Default));
 
     llvm::SmallVector<ParmVarDecl *, 3> ParamDecls;
     for (QualType T : Params) {
@@ -8096,20 +8099,36 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
                                            SourceLocation TildeLoc,
                                            const DeclSpec& DS) {
   QualType ObjectType;
+  QualType T;
+  TypeLocBuilder TLB;
   if (CheckArrow(*this, ObjectType, Base, OpKind, OpLoc))
     return ExprError();
 
-  if (DS.getTypeSpecType() == DeclSpec::TST_decltype_auto) {
+  switch (DS.getTypeSpecType()) {
+  case DeclSpec::TST_decltype_auto: {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
   }
-
-  QualType T = BuildDecltypeType(DS.getRepAsExpr(), /*AsUnevaluated=*/false);
-
-  TypeLocBuilder TLB;
-  DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
-  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
-  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+  case DeclSpec::TST_decltype: {
+    T = BuildDecltypeType(DS.getRepAsExpr(), /*AsUnevaluated=*/false);
+    DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+    DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+    DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+    break;
+  }
+  case DeclSpec::TST_typename_pack_indexing: {
+    T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+                              DS.getBeginLoc(), DS.getEllipsisLoc());
+    TLB.pushTrivial(getASTContext(),
+                    cast<PackIndexingType>(T.getTypePtr())->getPattern(),
+                    DS.getBeginLoc());
+    PackIndexingTypeLoc PITL = TLB.push<PackIndexingTypeLoc>(T);
+    PITL.setEllipsisLoc(DS.getEllipsisLoc());
+    break;
+  }
+  default:
+    llvm_unreachable("Unsupported type in pseudo destructor");
+  }
   TypeSourceInfo *DestructedTypeInfo = TLB.getTypeSourceInfo(Context, T);
   PseudoDestructorTypeStorage Destructed(DestructedTypeInfo);
 

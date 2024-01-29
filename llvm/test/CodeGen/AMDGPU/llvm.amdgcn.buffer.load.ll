@@ -440,7 +440,7 @@ main_body:
   ret float %val
 }
 
-; Make sure a frame index folding doessn't crash on a MUBUF not used
+; Make sure a frame index folding doesn't crash on a MUBUF not used
 ; for stack access.
 
 ; CHECK-LABEL: {{^}}no_fold_fi_imm_soffset:

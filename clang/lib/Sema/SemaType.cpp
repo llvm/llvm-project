@@ -1667,6 +1667,19 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
+  case DeclSpec::TST_typename_pack_indexing: {
+    Expr *E = DS.getPackIndexingExpr();
+    assert(E && "Didn't get an expression for pack indexing");
+    QualType Pattern = S.GetTypeFromParser(DS.getRepAsType());
+    Result = S.BuildPackIndexingType(Pattern, E, DS.getBeginLoc(),
+                                     DS.getEllipsisLoc());
+    if (Result.isNull()) {
+      declarator.setInvalidType(true);
+      Result = Context.IntTy;
+    }
+    break;
+  }
+
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
     Result = S.GetTypeFromParser(DS.getRepAsType());
@@ -6312,6 +6325,10 @@ namespace {
       TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
       TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     }
+    void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+      assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
+      TL.setEllipsisLoc(DS.getEllipsisLoc());
+    }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
       TL.setKWLoc(DS.getTypeSpecTypeLoc());
@@ -7938,6 +7955,9 @@ static bool handleArmStateAttribute(Sema &S,
     if (StateName == "za") {
       Shift = FunctionType::SME_ZAShift;
       ExistingState = FunctionType::getArmZAState(EPI.AArch64SMEAttributes);
+    } else if (StateName == "zt0") {
+      Shift = FunctionType::SME_ZT0Shift;
+      ExistingState = FunctionType::getArmZT0State(EPI.AArch64SMEAttributes);
     } else {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
       Attr.setInvalid();
@@ -8643,21 +8663,30 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
 
   ASTContext::BuiltinVectorTypeInfo Info =
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
-  unsigned EltSize = S.Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
 
+  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  unsigned ExpectedSize = VScale->first * MinElts;
+  QualType EltType = CurType->getRVVEltType(S.Context);
+  unsigned EltSize = S.Context.getTypeSize(EltType);
+  unsigned NumElts;
+  if (Info.ElementType == S.Context.BoolTy) {
+    NumElts = VecSize / S.Context.getCharWidth();
+    VecKind = VectorKind::RVVFixedLengthMask;
+  } else {
+    ExpectedSize *= EltSize;
+    NumElts = VecSize / EltSize;
+  }
+
   // The attribute vector size must match -mrvv-vector-bits.
-  unsigned ExpectedSize = VScale->first * MinElts * EltSize;
-  if (VecSize != ExpectedSize) {
+  if (ExpectedSize % 8 != 0 || VecSize != ExpectedSize) {
     S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
         << VecSize << ExpectedSize;
     Attr.setInvalid();
     return;
   }
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
-  VecSize /= EltSize;
-  CurType = S.Context.getVectorType(Info.ElementType, VecSize, VecKind);
+  CurType = S.Context.getVectorType(EltType, NumElts, VecKind);
 }
 
 /// Handle OpenCL Access Qualifier Attribute.
@@ -9715,6 +9744,9 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   if (auto *ImplCastExpr = dyn_cast<ImplicitCastExpr>(E))
     IDExpr = ImplCastExpr->getSubExpr();
 
+  if (auto *PackExpr = dyn_cast<PackIndexingExpr>(E))
+    IDExpr = PackExpr->getSelectedExpr();
+
   // C++11 [dcl.type.simple]p4:
   //   The type denoted by decltype(e) is defined as follows:
 
@@ -9784,6 +9816,54 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
     Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
   }
   return Context.getDecltypeType(E, getDecltypeForExpr(E));
+}
+
+QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                     SourceLocation Loc,
+                                     SourceLocation EllipsisLoc) {
+  if (!IndexExpr)
+    return QualType();
+
+  // Diagnose unexpanded packs but continue to improve recovery.
+  if (!Pattern->containsUnexpandedParameterPack())
+    Diag(Loc, diag::err_expected_name_of_pack) << Pattern;
+
+  QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
+
+  if (!Type.isNull())
+    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::warn_cxx23_pack_indexing
+                                        : diag::ext_pack_indexing);
+  return Type;
+}
+
+QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                     SourceLocation Loc,
+                                     SourceLocation EllipsisLoc,
+                                     bool FullySubstituted,
+                                     ArrayRef<QualType> Expansions) {
+
+  std::optional<int64_t> Index;
+  if (FullySubstituted && !IndexExpr->isValueDependent() &&
+      !IndexExpr->isTypeDependent()) {
+    llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
+    ExprResult Res = CheckConvertedConstantExpression(
+        IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
+    if (!Res.isUsable())
+      return QualType();
+    Index = Value.getExtValue();
+    IndexExpr = Res.get();
+  }
+
+  if (FullySubstituted && Index) {
+    if (*Index < 0 || *Index >= int64_t(Expansions.size())) {
+      Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
+          << *Index << Pattern << Expansions.size();
+      return QualType();
+    }
+  }
+
+  return Context.getPackIndexingType(Pattern, IndexExpr, FullySubstituted,
+                                     Expansions, Index.value_or(-1));
 }
 
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
