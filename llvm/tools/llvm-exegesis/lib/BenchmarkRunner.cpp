@@ -63,8 +63,8 @@ BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
 BenchmarkRunner::~BenchmarkRunner() = default;
 
 void BenchmarkRunner::FunctionExecutor::accumulateCounterValues(
-    const llvm::SmallVectorImpl<int64_t> &NewValues,
-    llvm::SmallVectorImpl<int64_t> *Result) {
+    const SmallVectorImpl<int64_t> &NewValues,
+    SmallVectorImpl<int64_t> *Result) {
   const size_t NumValues = std::max(NewValues.size(), Result->size());
   if (NumValues > Result->size())
     Result->resize(NumValues, 0);
@@ -72,13 +72,13 @@ void BenchmarkRunner::FunctionExecutor::accumulateCounterValues(
     (*Result)[I] += NewValues[I];
 }
 
-Expected<llvm::SmallVector<int64_t, 4>>
+Expected<SmallVector<int64_t, 4>>
 BenchmarkRunner::FunctionExecutor::runAndSample(
     const char *Counters, ArrayRef<const char *> ValidationCounters,
     SmallVectorImpl<int64_t> &ValidationCounterValues) const {
   // We sum counts when there are several counters for a single ProcRes
   // (e.g. P23 on SandyBridge).
-  llvm::SmallVector<int64_t, 4> CounterValues;
+  SmallVector<int64_t, 4> CounterValues;
   SmallVector<StringRef, 2> CounterNames;
   StringRef(Counters).split(CounterNames, '+');
   for (auto &CounterName : CounterNames) {
@@ -114,9 +114,8 @@ private:
                                 BenchmarkRunner::ScratchSpace *Scratch)
       : State(State), Function(std::move(Function)), Scratch(Scratch) {}
 
-  static void
-  accumulateCounterValues(const llvm::SmallVector<int64_t, 4> &NewValues,
-                          llvm::SmallVector<int64_t, 4> *Result) {
+  static void accumulateCounterValues(const SmallVector<int64_t, 4> &NewValues,
+                                      SmallVector<int64_t, 4> *Result) {
     const size_t NumValues = std::max(NewValues.size(), Result->size());
     if (NumValues > Result->size())
       Result->resize(NumValues, 0);
@@ -124,7 +123,7 @@ private:
       (*Result)[I] += NewValues[I];
   }
 
-  Expected<llvm::SmallVector<int64_t, 4>> runWithCounter(
+  Expected<SmallVector<int64_t, 4>> runWithCounter(
       StringRef CounterName, ArrayRef<const char *> ValidationCounters,
       SmallVectorImpl<int64_t> &ValidationCounterValues) const override {
     const ExegesisTarget &ET = State.getExegesisTarget();
@@ -314,7 +313,7 @@ private:
       close(PipeFiles[1]);
       // Unregister handlers, signal handling is now handled through ptrace in
       // the host process
-      llvm::sys::unregisterHandlers();
+      sys::unregisterHandlers();
       prepareAndRunBenchmark(PipeFiles[0], Key);
       // The child process terminates in the above function, so we should never
       // get to this point.
@@ -484,7 +483,7 @@ private:
     exit(0);
   }
 
-  Expected<llvm::SmallVector<int64_t, 4>> runWithCounter(
+  Expected<SmallVector<int64_t, 4>> runWithCounter(
       StringRef CounterName, ArrayRef<const char *> ValidationCounters,
       SmallVectorImpl<int64_t> &ValidationCounterValues) const override {
     SmallVector<int64_t, 4> Value(1, 0);
