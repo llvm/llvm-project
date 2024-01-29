@@ -502,6 +502,23 @@ bool MipsAsmPrinter::isBlockOnlyReachableByFallthrough(const MachineBasicBlock*
   if (Pred->empty())
     return true;
 
+  // Check the terminators in the previous block.
+  for (const auto &MI : Pred->terminators()) {
+    // If it is not a simple branch, we are in a table somewhere.
+    if (!MI.isBranch() || MI.isIndirectBranch())
+      return false;
+
+    // If we are the operands of one of the branches, this is not a fall
+    // through. Note that targets with delay slots will usually bundle
+    // terminators with the delay slot instruction.
+    for (ConstMIBundleOperands OP(MI); OP.isValid(); ++OP) {
+      if (OP->isJTI())
+        return false;
+      if (OP->isMBB() && OP->getMBB() == MBB)
+        return false;
+    }
+  }
+
   // Otherwise, check the last instruction.
   // Check if the last terminator is an unconditional branch.
   MachineBasicBlock::const_iterator I = Pred->end();
