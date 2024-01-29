@@ -1303,7 +1303,9 @@ private:
   /// Set the original identifier names if available. Used in debugging with
   /// `--retain-identifier-names`/`shouldRetainIdentifierNames` in ParserConfig
   void setRetainedIdentifierNames(Operation &op,
-                                  SmallVector<int, 2> &resultGroups);
+                                  SmallVector<int, 2> &resultGroups,
+                                  bool hasRegion = false);
+  void setRetainedIdentifierNames(Region &region);
 
   /// This is the value ID for each SSA value. If this returns NameSentinel,
   /// then the valueID has an entry in valueNames.
@@ -1492,6 +1494,9 @@ void SSANameState::numberValuesInRegion(Region &region) {
     setValueName(arg, name);
   };
 
+  // Use manually specified region arg names if available
+  setRetainedIdentifierNames(region);
+
   if (!printerFlags.shouldPrintGenericOpForm()) {
     if (Operation *op = region.getParentOp()) {
       if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op))
@@ -1603,62 +1608,73 @@ void SSANameState::numberValuesInOp(Operation &op) {
   }
 }
 
-void SSANameState::setRetainedIdentifierNames(
-    Operation &op, SmallVector<int, 2> &resultGroups) {
-  // Get the original names for the results if available
-  if (ArrayAttr resultNamesAttr =
-          op.getAttrOfType<ArrayAttr>("mlir.resultNames")) {
-    auto resultNames = resultNamesAttr.getValue();
-    auto results = op.getResults();
-    // Conservative in the case that the #results has changed
-    for (size_t i = 0; i < results.size() && i < resultNames.size(); ++i) {
-      auto resultName = resultNames[i].cast<StringAttr>().strref();
-      if (!resultName.empty()) {
-        if (!usedNames.count(resultName))
-          setValueName(results[i], resultName, /*allowNumeric=*/true);
-        // If a result has a name, it is the start of a result group.
-        if (i > 0)
-          resultGroups.push_back(i);
-      }
-    }
-    op.removeDiscardableAttr("mlir.resultNames");
-  }
+void SSANameState::setRetainedIdentifierNames(Operation &op,
+                                              SmallVector<int, 2> &resultGroups,
+                                              bool hasRegion) {
 
-  // Get the original name for the op args if available
-  if (ArrayAttr opArgNamesAttr =
-          op.getAttrOfType<ArrayAttr>("mlir.opArgNames")) {
-    auto opArgNames = opArgNamesAttr.getValue();
-    auto opArgs = op.getOperands();
-    // Conservative in the case that the #operands has changed
-    for (size_t i = 0; i < opArgs.size() && i < opArgNames.size(); ++i) {
-      auto opArgName = opArgNames[i].cast<StringAttr>().strref();
-      if (!usedNames.count(opArgName))
-        setValueName(opArgs[i], opArgName, /*allowNumeric=*/true);
-    }
-    op.removeDiscardableAttr("mlir.opArgNames");
-  }
+  // Lambda which fetches the list of relevant attributes (e.g.,
+  // mlir.resultNames) and associates them with the relevant values
+  auto handleNamedAttributes =
+      [this](Operation &op, const Twine &attrName, auto getValuesFunc,
+             std::optional<std::function<void(int)>> customAction =
+                 std::nullopt) {
+        if (ArrayAttr namesAttr = op.getAttrOfType<ArrayAttr>(attrName.str())) {
+          auto names = namesAttr.getValue();
+          auto values = getValuesFunc();
+          // Conservative in case the number of values has changed
+          for (size_t i = 0; i < values.size() && i < names.size(); ++i) {
+            auto name = names[i].cast<StringAttr>().strref();
+            if (!name.empty()) {
+              if (!this->usedNames.count(name))
+                this->setValueName(values[i], name, true);
+              if (customAction.has_value())
+                customAction.value()(i);
+            }
+          }
+          op.removeDiscardableAttr(attrName.str());
+        }
+      };
 
-  // Get the original name for the block if available
-  if (StringAttr blockNameAttr =
-          op.getAttrOfType<StringAttr>("mlir.blockName")) {
-    blockNames[op.getBlock()] = {-1, blockNameAttr.strref()};
-    op.removeDiscardableAttr("mlir.blockName");
-  }
-
-  // Get the original name for the block args if available
-  if (ArrayAttr blockArgNamesAttr =
-          op.getAttrOfType<ArrayAttr>("mlir.blockArgNames")) {
-    auto blockArgNames = blockArgNamesAttr.getValue();
-    auto blockArgs = op.getBlock()->getArguments();
-    // Conservative in the case that the #args has changed
-    for (size_t i = 0; i < blockArgs.size() && i < blockArgNames.size(); ++i) {
-      auto blockArgName = blockArgNames[i].cast<StringAttr>().strref();
-      if (!usedNames.count(blockArgName))
-        setValueName(blockArgs[i], blockArgName, /*allowNumeric=*/true);
+  if (hasRegion) {
+    // Get the original name(s) for the region arg(s) if available (e.g., for
+    // FuncOp args).  Requires hasRegion flag to ensure scoping is correct
+    if (hasRegion && op.getNumRegions() > 0 &&
+        op.getRegion(0).getNumArguments() > 0) {
+      handleNamedAttributes(op, "mlir.regionArgNames",
+                            [&]() { return op.getRegion(0).getArguments(); });
     }
-    op.removeDiscardableAttr("mlir.blockArgNames");
+  } else {
+    // Get the original names for the results if available
+    handleNamedAttributes(
+        op, "mlir.resultNames", [&]() { return op.getResults(); },
+        [&resultGroups](int i) { /*handles result groups*/
+                                 if (i > 0)
+                                   resultGroups.push_back(i);
+        });
+
+    // Get the original name for the op args if available
+    handleNamedAttributes(op, "mlir.opArgNames",
+                          [&]() { return op.getOperands(); });
+
+    // Get the original name for the block if available
+    if (StringAttr blockNameAttr =
+            op.getAttrOfType<StringAttr>("mlir.blockName")) {
+      blockNames[op.getBlock()] = {-1, blockNameAttr.strref()};
+      op.removeDiscardableAttr("mlir.blockName");
+    }
+
+    // Get the original name(s) for the block arg(s) if available
+    handleNamedAttributes(op, "mlir.blockArgNames",
+                          [&]() { return op.getBlock()->getArguments(); });
   }
   return;
+}
+
+void SSANameState::setRetainedIdentifierNames(Region &region) {
+  if (Operation *op = region.getParentOp()) {
+    SmallVector<int, 2> resultGroups;
+    setRetainedIdentifierNames(*op, resultGroups, true);
+  }
 }
 
 void SSANameState::getResultIDAndNumber(

@@ -611,8 +611,9 @@ public:
   /// an object of type 'OperationName'. Otherwise, failure is returned.
   FailureOr<OperationName> parseCustomOperationName();
 
-  /// Store the SSA names for the current operation as attrs for debug purposes.
-  void storeSSANames(Operation *&op, ArrayRef<ResultRecord> resultIDs);
+  /// Store the identifier names for the current operation as attrs for debug
+  /// purposes.
+  void storeIdentifierNames(Operation *&op, ArrayRef<ResultRecord> resultIDs);
   DenseMap<Value, StringRef> argNames;
 
   //===--------------------------------------------------------------------===//
@@ -1273,8 +1274,8 @@ OperationParser::parseSuccessors(SmallVectorImpl<Block *> &destinations) {
 }
 
 /// Store the SSA names for the current operation as attrs for debug purposes.
-void OperationParser::storeSSANames(Operation *&op,
-                                    ArrayRef<ResultRecord> resultIDs) {
+void OperationParser::storeIdentifierNames(Operation *&op,
+                                           ArrayRef<ResultRecord> resultIDs) {
 
   // Store the name(s) of the result(s) of this operation.
   if (op->getNumResults() > 0) {
@@ -1321,6 +1322,18 @@ void OperationParser::storeSSANames(Operation *&op,
                     builder.getStrArrayAttr(blockArgNames));
       }
     }
+  }
+
+  // Store names of region arguments (e.g., for FuncOps)
+  if (op->getNumRegions() > 0 && op->getRegion(0).getNumArguments() > 0) {
+    llvm::SmallVector<llvm::StringRef, 1> regionArgNames;
+    for (BlockArgument arg : op->getRegion(0).getArguments()) {
+      auto it = argNames.find(arg);
+      if (it != argNames.end()) {
+        regionArgNames.push_back(it->second.drop_front(1));
+      }
+    }
+    op->setAttr("mlir.regionArgNames", builder.getStrArrayAttr(regionArgNames));
   }
 }
 
@@ -2093,9 +2106,9 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   // Otherwise, create the operation and try to parse a location for it.
   Operation *op = opBuilder.create(opState);
 
-  // If enabled, store the SSA name(s) for the operation
+  // If enabled, store the original identifier name(s) for the operation
   if (state.config.shouldRetainIdentifierNames())
-    storeSSANames(op, resultIDs);
+    storeIdentifierNames(op, resultIDs);
 
   if (parseTrailingLocationSpecifier(op))
     return nullptr;
@@ -2245,6 +2258,9 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
       // Add a definition of this arg to the assembly state if provided.
       if (state.asmState)
         state.asmState->addDefinition(arg, argInfo.location);
+
+      if (state.config.shouldRetainIdentifierNames())
+        argNames.insert({arg, argInfo.name});
 
       // Record the definition for this argument.
       if (addDefinition(argInfo, arg))

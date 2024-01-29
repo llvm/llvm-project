@@ -5,8 +5,8 @@
 // Test SSA results (with single return values)
 //===----------------------------------------------------------------------===//
 
-// CHECK: func.func @add_one(%my_input: f64, %arg1: f64) -> f64 {
-func.func @add_one(%my_input: f64, %arg1: f64) -> f64 {
+// CHECK: func.func @add_one(%my_input: f64) -> f64 {
+func.func @add_one(%my_input: f64) -> f64 {
   // CHECK: %my_constant = arith.constant 1.000000e+00 : f64
   %my_constant = arith.constant 1.000000e+00 : f64
   // CHECK: %my_output = arith.addf %my_input, %my_constant : f64
@@ -71,7 +71,7 @@ func.func @select_min_max(%a: f64, %b: f64) -> (f64, f64) {
 
 // -----
 
-////===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // Test multiple return values, with a grouped value tuple
 //===----------------------------------------------------------------------===//
 
@@ -87,6 +87,27 @@ func.func @select_max(%a: f64, %b: f64, %c: f64, %d: f64) -> (f64, f64, f64, f64
   }
   // CHECK: return %max, %others#0, %others#1, %alt : f64, f64, f64, f64
   return %max, %others#0, %others#1, %alt : f64, f64, f64, f64
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Test identifiers which may clash with OpAsmOpInterface names (e.g., cst, %1, etc)
+//===----------------------------------------------------------------------===//
+
+// CHECK: func.func @clash(%arg1: f64, %arg0: f64, %arg2: f64) -> f64 {
+func.func @clash(%arg1: f64, %arg0: f64, %arg2: f64) -> f64 {
+  %my_constant = arith.constant 1.000000e+00 : f64
+  // CHECK: %cst = arith.constant 2.000000e+00 : f64
+  %cst = arith.constant 2.000000e+00 : f64
+  // CHECK: %cst_1 = arith.constant 3.000000e+00 : f64
+  %cst_1 = arith.constant 3.000000e+00 : f64
+  // CHECK: %1 = arith.addf %arg1, %cst : f64
+  %1 = arith.addf %arg1, %cst : f64
+  // CHECK: %0 = arith.addf %arg1, %cst_1 : f64
+  %0 = arith.addf %arg1, %cst_1 : f64
+  // CHECK: return %1 : f64
+  return %1 : f64
 }
 
 // -----
