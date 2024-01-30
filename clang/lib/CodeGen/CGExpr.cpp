@@ -5873,17 +5873,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
       StaticOperator = true;
   }
 
+  auto arguments = E->arguments();
   if (StaticOperator) {
     // If we're calling a static operator, we need to emit the object argument
     // and ignore it.
     EmitIgnoredExpr(E->getArg(0));
-
-    EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType),
-                 drop_begin(E->arguments(), 1), E->getDirectCallee(),
-                 /*ParamsToSkip=*/0, Order);
-  } else
-    EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), E->arguments(),
-                 E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
+    arguments = drop_begin(arguments, 1);
+  }
+  EmitCallArgs(Args, dyn_cast<FunctionProtoType>(FnType), arguments,
+               E->getDirectCallee(), /*ParamsToSkip=*/0, Order);
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*ChainCall=*/Chain);
