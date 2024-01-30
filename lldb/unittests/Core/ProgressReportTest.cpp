@@ -21,45 +21,44 @@ using namespace lldb;
 using namespace lldb_private;
 
 class ProgressReportTest : public ::testing::Test {
-    SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
+  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
 
-    // The debugger's initialization function can't be called with no arguments
-    // so calling it using SubsystemRAII will cause the test build to fail as
-    // SubsystemRAII will call Initialize with no arguments. As such we set it up
-    // here the usual way.
-    void SetUp() override { Debugger::Initialize(nullptr); }
-    void TearDown() override { Debugger::Terminate(); }
+  // The debugger's initialization function can't be called with no arguments
+  // so calling it using SubsystemRAII will cause the test build to fail as
+  // SubsystemRAII will call Initialize with no arguments. As such we set it up
+  // here the usual way.
+  void SetUp() override { Debugger::Initialize(nullptr); }
+  void TearDown() override { Debugger::Terminate(); }
 };
 
 TEST_F(ProgressReportTest, TestReportCreation) {
   std::chrono::milliseconds timeout(100);
-  const unsigned long long NO_TOTAL = 1;
 
-  // Set up the debugger, make sure that was done properly
+  // Set up the debugger, make sure that was done properly.
   ArchSpec arch("x86_64-apple-macosx-");
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
 
-  // Get the debugger's broadcaster
+  // Get the debugger's broadcaster.
   Broadcaster &broadcaster = debugger_sp->GetBroadcaster();
 
   // Create a listener, make sure it can receive events and that it's
-  // listening to the correct broadcast bit
+  // listening to the correct broadcast bit.
   ListenerSP listener_sp = Listener::MakeListener("progress-listener");
 
   listener_sp->StartListeningForEvents(&broadcaster,
                                        Debugger::eBroadcastBitProgress);
   EXPECT_TRUE(
-    broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitProgress));
+      broadcaster.EventTypeHasListeners(Debugger::eBroadcastBitProgress));
 
   EventSP event_sp;
   const ProgressEventData *data;
 
-  // Scope this for RAII on the progress objects
+  // Scope this for RAII on the progress objects.
   // Create progress reports and check that their respective events for having
-  // started are broadcasted
+  // started and ended are broadcasted.
   {
     Progress progress1("Progress report 1", "Starting report 1");
     Progress progress2("Progress report 2", "Starting report 2");
@@ -76,7 +75,7 @@ TEST_F(ProgressReportTest, TestReportCreation) {
   ASSERT_EQ(data->GetDetails(), "Starting report 1");
   ASSERT_FALSE(data->IsFinite());
   ASSERT_FALSE(data->GetCompleted());
-  ASSERT_EQ(data->GetTotal(), NO_TOTAL);
+  ASSERT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
   ASSERT_EQ(data->GetMessage(), "Progress report 1: Starting report 1");
 
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
@@ -85,7 +84,7 @@ TEST_F(ProgressReportTest, TestReportCreation) {
   ASSERT_EQ(data->GetDetails(), "Starting report 2");
   ASSERT_FALSE(data->IsFinite());
   ASSERT_FALSE(data->GetCompleted());
-  ASSERT_EQ(data->GetTotal(), NO_TOTAL);
+  ASSERT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
   ASSERT_EQ(data->GetMessage(), "Progress report 2: Starting report 2");
 
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
@@ -93,12 +92,12 @@ TEST_F(ProgressReportTest, TestReportCreation) {
   ASSERT_EQ(data->GetDetails(), "Starting report 3");
   ASSERT_FALSE(data->IsFinite());
   ASSERT_FALSE(data->GetCompleted());
-  ASSERT_EQ(data->GetTotal(), NO_TOTAL);
+  ASSERT_EQ(data->GetTotal(), Progress::kNonDeterministicTotal);
   ASSERT_EQ(data->GetMessage(), "Progress report 3: Starting report 3");
 
   // Progress report objects should be destroyed at this point so
   // get each report from the queue and check that they've been
-  // destroyed in reverse order
+  // destroyed in reverse order.
   EXPECT_TRUE(listener_sp->GetEvent(event_sp, timeout));
   data = ProgressEventData::GetEventDataFromEvent(event_sp.get());
 
