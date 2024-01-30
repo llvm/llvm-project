@@ -95,7 +95,7 @@ class LinuxKernelRewriter final : public MetadataRewriter {
         return 1;
       if (IP > Other.IP)
         return 0;
-      return ORC == NullORC;
+      return ORC == NullORC && Other.ORC != NullORC;
     }
   };
 
