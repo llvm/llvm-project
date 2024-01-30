@@ -597,12 +597,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
           |`nowait` $nowait
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
-          |`reduction` `(`
-              custom<ReductionVarList>(
-                $reduction_vars, type($reduction_vars), $reductions
-              ) `)`
-    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $inclusive) attr-dict
+    ) custom<WsLoop>($region, $lowerBound, $upperBound, $step,
+                                  type($step), $reduction_vars, type($reduction_vars), $reductions,
+                                  $inclusive) attr-dict
   }];
   let hasVerifier = 1;
 }

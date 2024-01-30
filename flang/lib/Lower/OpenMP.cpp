@@ -2366,6 +2366,12 @@ static void createBodyOfOp(Op &op, OpWithBodyGenInfo &info) {
     return undef.getDefiningOp();
   };
 
+  llvm::SmallVector<mlir::Type> blockArgTypes;
+  llvm::SmallVector<mlir::Location> blockArgLocs;
+  blockArgTypes.reserve(loopArgs.size() + reductionArgs.size());
+  blockArgLocs.reserve(blockArgTypes.size());
+  mlir::Block *entryBlock;
+
   // If an argument for the region is provided then create the block with that
   // argument. Also update the symbol's address with the mlir argument value.
   // e.g. For loops the argument is the induction variable. And all further
@@ -3429,6 +3435,7 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> linearVars, linearStepVars;
   llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSymbols;
   mlir::omp::ClauseOrderKindAttr orderClauseOperand;
   mlir::omp::ClauseScheduleKindAttr scheduleValClauseOperand;
   mlir::UnitAttr nowaitClauseOperand, scheduleSimdClauseOperand;
@@ -3440,7 +3447,8 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   cp.processCollapse(loc, eval, lowerBound, upperBound, step, iv,
                      loopVarTypeSize);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
-  cp.processReduction(loc, reductionVars, reductionDeclSymbols);
+  cp.processReduction(loc, reductionVars, reductionDeclSymbols,
+                      &reductionSymbols);
   cp.processTODO<Fortran::parser::OmpClause::Linear,
                  Fortran::parser::OmpClause::Order>(loc, ompDirective);
 
@@ -3487,6 +3495,11 @@ static void createWsLoop(Fortran::lower::AbstractConverter &converter,
   auto ivCallback = [&](mlir::Operation *op) {
     return genLoopVars(op, converter, loc, iv);
   };
+
+  //llvm::SmallVector<mlir::Type> reductionTypes;
+  //reductionTypes.reserve(reductionVars.size());
+  //llvm::transform(reductionVars, std::back_inserter(reductionTypes),
+  //                [](mlir::Value v) { return v.getType(); });
 
   createBodyOfOp<mlir::omp::WsLoopOp>(
       wsLoopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
@@ -3594,12 +3607,11 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     // 2.9.3.1 SIMD construct
     createSimdLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
                    currentLocation);
+    genOpenMPReduction(converter, loopOpClauseList);
   } else {
     createWsLoop(converter, semaCtx, eval, ompDirective, loopOpClauseList,
                  endClauseList, currentLocation);
   }
-
-  genOpenMPReduction(converter, semaCtx, loopOpClauseList);
 }
 
 static void
