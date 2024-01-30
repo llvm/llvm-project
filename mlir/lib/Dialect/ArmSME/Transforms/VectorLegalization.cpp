@@ -351,10 +351,10 @@ struct VectorLegalizationPass
            SmallVectorImpl<Type> &types) -> std::optional<LogicalResult> {
           if (!isMultipleOfSMETileVectorType(vectorType))
             return std::nullopt;
-          auto smeTileTileCount = getNumberOfSMETilesForVectorType(vectorType);
+          auto smeTileCount = getNumberOfSMETilesForVectorType(vectorType);
           auto smeTileType =
               getSMETileTypeForElement(vectorType.getElementType());
-          types = SmallVector<Type>(smeTileTileCount, smeTileType);
+          types = SmallVector<Type>(smeTileCount, smeTileType);
           return success();
         });
 
