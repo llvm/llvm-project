@@ -86,7 +86,7 @@ TEST(LlvmLibcMlockTest, Overflow) {
   EXPECT_THAT(LIBC_NAMESPACE::mlock(holder.addr, negative_size),
               Fails(expected_errno));
   EXPECT_THAT(LIBC_NAMESPACE::munlock(holder.addr, negative_size),
-              Fails(expected_errno));
+              Fails(EINVAL));
 }
 
 #ifdef SYS_mlock2
