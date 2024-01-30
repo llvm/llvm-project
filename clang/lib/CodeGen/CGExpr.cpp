@@ -5849,8 +5849,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // FIXME: Revisit this based on C++ committee response to unimplementability.
   EvaluationOrder Order = EvaluationOrder::Default;
   bool StaticOperator = false;
-  auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
-  if (OCE) {
+  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (OCE->isAssignmentOp())
       Order = EvaluationOrder::ForceRightToLeft;
     else {
