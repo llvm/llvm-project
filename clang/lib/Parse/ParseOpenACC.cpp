@@ -110,6 +110,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("dtype", OpenACCClauseKind::DType)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("firstprivate", OpenACCClauseKind::FirstPrivate)
+      .Case("gang", OpenACCClauseKind::Gang)
       .Case("host", OpenACCClauseKind::Host)
       .Case("if", OpenACCClauseKind::If)
       .Case("if_present", OpenACCClauseKind::IfPresent)
@@ -124,6 +125,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("reduction", OpenACCClauseKind::Reduction)
       .Case("self", OpenACCClauseKind::Self)
       .Case("seq", OpenACCClauseKind::Seq)
+      .Case("tile", OpenACCClauseKind::Tile)
       .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
       .Case("vector_length", OpenACCClauseKind::VectorLength)
@@ -164,9 +166,14 @@ enum class OpenACCSpecialTokenKind {
   Force,
   Num,
   Length,
+  Dim,
+  Static,
 };
 
 bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
+  if (Tok.is(tok::kw_static) && Kind == OpenACCSpecialTokenKind::Static)
+    return true;
+
   if (!Tok.is(tok::identifier))
     return false;
 
@@ -185,6 +192,10 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("num");
   case OpenACCSpecialTokenKind::Length:
     return Tok.getIdentifierInfo()->isStr("length");
+  case OpenACCSpecialTokenKind::Dim:
+    return Tok.getIdentifierInfo()->isStr("dim");
+  case OpenACCSpecialTokenKind::Static:
+    return Tok.getIdentifierInfo()->isStr("static");
   }
   llvm_unreachable("Unknown 'Kind' Passed");
 }
@@ -463,6 +474,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
+  case OpenACCClauseKind::Gang:
     return ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
@@ -494,6 +506,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:
   case OpenACCClauseKind::DType:
+  case OpenACCClauseKind::Tile:
     return ClauseParensKind::Required;
 
   case OpenACCClauseKind::Auto:
@@ -614,6 +627,100 @@ bool Parser::ParseOpenACCDeviceTypeList() {
       return false;
     }
     ConsumeToken();
+  }
+  return false;
+}
+
+/// OpenACC 3.3 Section 2.9:
+/// size-expr is one of:
+//    *
+//    int-expr
+// Note that this is specified under 'gang-arg-list', but also applies to 'tile'
+// via reference.
+bool Parser::ParseOpenACCSizeExpr() {
+  // FIXME: Ensure these are constant expressions.
+
+  // The size-expr ends up being ambiguous when only looking at the current
+  // token, as it could be a deref of a variable/expression.
+  if (getCurToken().is(tok::star) &&
+      NextToken().isOneOf(tok::comma, tok::r_paren,
+                          tok::annot_pragma_openacc_end)) {
+    ConsumeToken();
+    return false;
+  }
+
+  return getActions()
+      .CorrectDelayedTyposInExpr(ParseAssignmentExpression())
+      .isInvalid();
+}
+
+bool Parser::ParseOpenACCSizeExprList() {
+  if (ParseOpenACCSizeExpr()) {
+    SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return false;
+  }
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    if (ParseOpenACCSizeExpr()) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
+      return false;
+    }
+  }
+  return false;
+}
+
+/// OpenACC 3.3 Section 2.9:
+///
+/// where gang-arg is one of:
+/// [num:]int-expr
+/// dim:int-expr
+/// static:size-expr
+bool Parser::ParseOpenACCGangArg() {
+
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Static, getCurToken()) &&
+      NextToken().is(tok::colon)) {
+    // 'static' just takes a size-expr, which is an int-expr or an asterisk.
+    ConsumeToken();
+    ConsumeToken();
+    return ParseOpenACCSizeExpr();
+  }
+
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Dim, getCurToken()) &&
+      NextToken().is(tok::colon)) {
+    ConsumeToken();
+    ConsumeToken();
+    return ParseOpenACCIntExpr().isInvalid();
+  }
+
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Num, getCurToken()) &&
+      NextToken().is(tok::colon)) {
+    ConsumeToken();
+    ConsumeToken();
+    // Fallthrough to the 'int-expr' handling for when 'num' is omitted.
+  }
+  // This is just the 'num' case where 'num' is optional.
+  return ParseOpenACCIntExpr().isInvalid();
+}
+
+bool Parser::ParseOpenACCGangArgList() {
+  if (ParseOpenACCGangArg()) {
+    SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return false;
+  }
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    if (ParseOpenACCGangArg()) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
+      return false;
+    }
   }
   return false;
 }
@@ -757,6 +864,10 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         return true;
       }
       break;
+    case OpenACCClauseKind::Tile:
+      if (ParseOpenACCSizeExprList())
+        return true;
+      break;
     default:
       llvm_unreachable("Not a required parens type?");
     }
@@ -792,6 +903,10 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
           return true;
         break;
       }
+      case OpenACCClauseKind::Gang:
+        if (ParseOpenACCGangArgList())
+          return true;
+        break;
       default:
         llvm_unreachable("Not an optional parens type?");
       }

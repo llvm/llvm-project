@@ -34,9 +34,8 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
     Func = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
   APValue DummyResult;
-  if (!Run(Parent, Func, DummyResult)) {
+  if (!Run(Parent, Func, DummyResult))
     return false;
-  }
 
   return Func->isConstexpr();
 }

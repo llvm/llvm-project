@@ -67,6 +67,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # stdbit.h entrypoints
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.atoi

@@ -1470,6 +1470,30 @@ static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
   }
 }
 
+// PRESENT (F'2023 16.9.163)
+static void CheckPresent(evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (arguments.size() == 1) {
+    if (const auto &arg{arguments[0]}; arg) {
+      const Symbol *symbol{nullptr};
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (const auto *proc{
+                std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
+          symbol = proc->GetSymbol();
+        } else {
+          symbol = evaluate::UnwrapWholeSymbolDataRef(*expr);
+        }
+      } else {
+        symbol = arg->GetAssumedTypeDummy();
+      }
+      if (!symbol || !symbol->attrs().test(semantics::Attr::OPTIONAL)) {
+        messages.Say(arg ? arg->sourceLocation() : messages.at(),
+            "Argument of PRESENT() must be the name of a whole OPTIONAL dummy argument"_err_en_US);
+      }
+    }
+  }
+}
+
 // REDUCE (F'2023 16.9.173)
 static void CheckReduce(
     evaluate::ActualArguments &arguments, evaluate::FoldingContext &context) {
@@ -1680,6 +1704,8 @@ static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
     CheckAssociated(arguments, context, scope);
   } else if (intrinsic.name == "move_alloc") {
     CheckMove_Alloc(arguments, context.foldingContext().messages());
+  } else if (intrinsic.name == "present") {
+    CheckPresent(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "reduce") {
     CheckReduce(arguments, context.foldingContext());
   } else if (intrinsic.name == "transfer") {

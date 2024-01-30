@@ -1788,10 +1788,7 @@ static QualType getReferenceInitTemporaryType(const Expr *Init,
     }
 
     // Skip sub-object accesses into rvalues.
-    SmallVector<const Expr *, 2> CommaLHSs;
-    SmallVector<SubobjectAdjustment, 2> Adjustments;
-    const Expr *SkippedInit =
-        Init->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+    const Expr *SkippedInit = Init->skipRValueSubobjectAdjustments();
     if (SkippedInit != Init) {
       Init = SkippedInit;
       continue;

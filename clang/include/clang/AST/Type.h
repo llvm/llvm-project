@@ -4934,6 +4934,73 @@ public:
                       Expr *E);
 };
 
+class PackIndexingType final
+    : public Type,
+      public llvm::FoldingSetNode,
+      private llvm::TrailingObjects<PackIndexingType, QualType> {
+  friend TrailingObjects;
+
+  const ASTContext &Context;
+  QualType Pattern;
+  Expr *IndexExpr;
+
+  unsigned Size;
+
+protected:
+  friend class ASTContext; // ASTContext creates these.
+  PackIndexingType(const ASTContext &Context, QualType Canonical,
+                   QualType Pattern, Expr *IndexExpr,
+                   ArrayRef<QualType> Expansions = {});
+
+public:
+  Expr *getIndexExpr() const { return IndexExpr; }
+  QualType getPattern() const { return Pattern; }
+
+  bool isSugared() const { return hasSelectedType(); }
+
+  QualType desugar() const {
+    if (hasSelectedType())
+      return getSelectedType();
+    return QualType(this, 0);
+  }
+
+  QualType getSelectedType() const {
+    assert(hasSelectedType() && "Type is dependant");
+    return *(getExpansionsPtr() + *getSelectedIndex());
+  }
+
+  std::optional<unsigned> getSelectedIndex() const;
+
+  bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
+
+  ArrayRef<QualType> getExpansions() const {
+    return {getExpansionsPtr(), Size};
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == PackIndexing;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    if (hasSelectedType())
+      getSelectedType().Profile(ID);
+    else
+      Profile(ID, Context, getPattern(), getIndexExpr());
+  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+                      QualType Pattern, Expr *E);
+
+private:
+  const QualType *getExpansionsPtr() const {
+    return getTrailingObjects<QualType>();
+  }
+
+  static TypeDependence computeDependence(QualType Pattern, Expr *IndexExpr,
+                                          ArrayRef<QualType> Expansions = {});
+
+  unsigned numTrailingObjects(OverloadToken<QualType>) const { return Size; }
+};
+
 /// A unary type transform, which is a type constructed from another.
 class UnaryTransformType : public Type {
 public:

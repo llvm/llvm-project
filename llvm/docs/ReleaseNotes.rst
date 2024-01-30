@@ -92,6 +92,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Support for the Zicond extension is no longer experimental.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
