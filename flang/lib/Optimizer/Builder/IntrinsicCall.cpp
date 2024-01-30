@@ -2158,9 +2158,13 @@ fir::ExtendedValue
 IntrinsicLibrary::genAssociated(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  if (fir::isBoxProcAddressType(fir::getBase(args[0]).getType())) {
+  mlir::Type ptrTy = fir::getBase(args[0]).getType();
+  if (ptrTy &&
+      (fir::isBoxProcAddressType(ptrTy) || ptrTy.isa<fir::BoxProcType>())) {
     mlir::Value pointerBoxProc =
-        builder.create<fir::LoadOp>(loc, fir::getBase(args[0]));
+        fir::isBoxProcAddressType(ptrTy)
+            ? builder.create<fir::LoadOp>(loc, fir::getBase(args[0]))
+            : fir::getBase(args[0]);
     mlir::Value pointerTarget =
         builder.create<fir::BoxAddrOp>(loc, pointerBoxProc);
     if (isStaticallyAbsent(args[1]))
