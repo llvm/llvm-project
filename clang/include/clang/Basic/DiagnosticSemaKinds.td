@@ -3170,6 +3170,9 @@ def warn_attribute_arm_sm_incompat_builtin : Warning<
 def warn_attribute_arm_za_builtin_no_za_state : Warning<
   "builtin call is not valid when calling from a function without active ZA state">,
   InGroup<DiagGroup<"undefined-arm-za">>;
+def warn_attribute_arm_zt0_builtin_no_zt0_state : Warning<
+  "builtin call is not valid when calling from a function without active ZT0 state">,
+  InGroup<DiagGroup<"undefined-arm-zt0">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
@@ -3706,10 +3709,14 @@ def err_sme_call_in_non_sme_target : Error<
   "call to a streaming function requires 'sme'">;
 def err_sme_za_call_no_za_state : Error<
   "call to a shared ZA function requires the caller to have ZA state">;
+def err_sme_zt0_call_no_zt0_state : Error<
+  "call to a shared ZT0 function requires the caller to have ZT0 state">;
 def err_sme_definition_using_sm_in_non_sme_target : Error<
   "function executed in streaming-SVE mode requires 'sme'">;
 def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
+def err_sme_definition_using_zt0_in_non_sme2_target : Error<
+  "function using ZT0 state requires 'sme2'">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_unknown_arm_state : Error<
@@ -5154,8 +5161,6 @@ def err_non_type_template_arg_subobject : Error<
   "non-type template argument refers to subobject '%0'">;
 def err_non_type_template_arg_addr_label_diff : Error<
   "template argument / label address difference / what did you expect?">;
-def err_non_type_template_arg_unsupported : Error<
-  "non-type template argument of type %0 is not yet supported">;
 def err_template_arg_not_convertible : Error<
   "non-type template argument of type %0 cannot be converted to a value "
   "of type %1">;
@@ -5207,9 +5212,6 @@ def err_template_arg_not_object_or_func : Error<
   "non-type template argument does not refer to an object or function">;
 def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
-def err_template_arg_member_ptr_base_derived_not_supported : Error<
-  "non-type template argument of pointer-to-member type %1 that refers "
-  "to member %q0 of a different class is not supported yet">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
 def ext_template_arg_extra_parens : ExtWarn<
@@ -5719,8 +5721,17 @@ def err_function_parameter_pack_without_parameter_packs : Error<
 def err_ellipsis_in_declarator_not_parameter : Error<
   "only function and template parameters can be parameter packs">;
 
-def err_sizeof_pack_no_pack_name : Error<
+def err_expected_name_of_pack : Error<
   "%0 does not refer to the name of a parameter pack">;
+
+def err_pack_index_out_of_bound : Error<
+  "invalid index %0 for pack %1 of size %2">;
+
+def ext_pack_indexing : ExtWarn<
+  "pack indexing is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_pack_indexing : Warning<
+  "pack indexing is incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
 
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;
@@ -12109,6 +12120,9 @@ def note_unsafe_buffer_variable_fixit_together : Note<
   "%select{|, and change %2 to safe types to make function %4 bounds-safe}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
+def warn_unsafe_buffer_usage_in_container : Warning<
+  "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
+  InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

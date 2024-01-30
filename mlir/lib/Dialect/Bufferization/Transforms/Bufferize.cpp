@@ -371,7 +371,11 @@ protected:
     toMemrefOps.erase(op);
   }
 
-  void notifyOperationInserted(Operation *op) override {
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+    // We only care about newly created ops.
+    if (previous.isSet())
+      return;
+
     erasedOps.erase(op);
 
     // Gather statistics about allocs.

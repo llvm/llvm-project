@@ -1957,7 +1957,7 @@ static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
   else if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init))
     return !CCE->isListInitialization() &&
            CCE->getConstructor()->isDefaultConstructor();
-  else if (Style == CXXNewInitializationStyle::List) {
+  else if (Style == CXXNewInitializationStyle::Braces) {
     assert(isa<InitListExpr>(Init) &&
            "Shouldn't create list CXXConstructExprs for arrays.");
     return true;
@@ -2011,9 +2011,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   CXXNewInitializationStyle InitStyle;
   if (DirectInitRange.isValid()) {
     assert(Initializer && "Have parens but no initializer.");
-    InitStyle = CXXNewInitializationStyle::Call;
+    InitStyle = CXXNewInitializationStyle::Parens;
   } else if (Initializer && isa<InitListExpr>(Initializer))
-    InitStyle = CXXNewInitializationStyle::List;
+    InitStyle = CXXNewInitializationStyle::Braces;
   else {
     assert((!Initializer || isa<ImplicitValueInitExpr>(Initializer) ||
             isa<CXXConstructExpr>(Initializer)) &&
@@ -2023,7 +2023,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   MultiExprArg Exprs(&Initializer, Initializer ? 1 : 0);
   if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer)) {
-    assert(InitStyle == CXXNewInitializationStyle::Call &&
+    assert(InitStyle == CXXNewInitializationStyle::Parens &&
            "paren init for non-call init");
     Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
   }
@@ -2037,15 +2037,14 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     //       initialized (8.5); if no initialization is performed,
     //       the object has indeterminate value
     case CXXNewInitializationStyle::None:
-    case CXXNewInitializationStyle::Implicit:
       return InitializationKind::CreateDefault(TypeRange.getBegin());
     //     - Otherwise, the new-initializer is interpreted according to the
     //       initialization rules of 8.5 for direct-initialization.
-    case CXXNewInitializationStyle::Call:
+    case CXXNewInitializationStyle::Parens:
       return InitializationKind::CreateDirect(TypeRange.getBegin(),
                                               DirectInitRange.getBegin(),
                                               DirectInitRange.getEnd());
-    case CXXNewInitializationStyle::List:
+    case CXXNewInitializationStyle::Braces:
       return InitializationKind::CreateDirectList(TypeRange.getBegin(),
                                                   Initializer->getBeginLoc(),
                                                   Initializer->getEndLoc());
@@ -2072,14 +2071,13 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       return ExprError();
   } else if (Deduced && !Deduced->isDeduced()) {
     MultiExprArg Inits = Exprs;
-    bool Braced = (InitStyle == CXXNewInitializationStyle::List);
+    bool Braced = (InitStyle == CXXNewInitializationStyle::Braces);
     if (Braced) {
       auto *ILE = cast<InitListExpr>(Exprs[0]);
       Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
-    if (InitStyle == CXXNewInitializationStyle::None ||
-        InitStyle == CXXNewInitializationStyle::Implicit || Inits.empty())
+    if (InitStyle == CXXNewInitializationStyle::None || Inits.empty())
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);
     if (Inits.size() > 1) {
@@ -2447,14 +2445,6 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       FullInit = Binder->getSubExpr();
 
     Initializer = FullInit.get();
-    // We don't know that we're generating an implicit initializer until now, so
-    // we have to update the initialization style as well.
-    //
-    // FIXME: it would be nice to determine the correct initialization style
-    // earlier so InitStyle doesn't need adjusting.
-    if (InitStyle == CXXNewInitializationStyle::None && Initializer) {
-      InitStyle = CXXNewInitializationStyle::Implicit;
-    }
 
     // FIXME: If we have a KnownArraySize, check that the array bound of the
     // initializer is no greater than that constant value.
@@ -3226,10 +3216,13 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
       Alloc->setLocalOwningModule(TheGlobalModuleFragment);
     }
 
-    Alloc->addAttr(VisibilityAttr::CreateImplicit(
-        Context, LangOpts.GlobalAllocationFunctionVisibilityHidden
-                     ? VisibilityAttr::Hidden
-                     : VisibilityAttr::Default));
+    if (LangOpts.hasGlobalAllocationFunctionVisibility())
+      Alloc->addAttr(VisibilityAttr::CreateImplicit(
+          Context, LangOpts.hasHiddenGlobalAllocationFunctionVisibility()
+                       ? VisibilityAttr::Hidden
+                   : LangOpts.hasProtectedGlobalAllocationFunctionVisibility()
+                       ? VisibilityAttr::Protected
+                       : VisibilityAttr::Default));
 
     llvm::SmallVector<ParmVarDecl *, 3> ParamDecls;
     for (QualType T : Params) {
@@ -8106,20 +8099,36 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
                                            SourceLocation TildeLoc,
                                            const DeclSpec& DS) {
   QualType ObjectType;
+  QualType T;
+  TypeLocBuilder TLB;
   if (CheckArrow(*this, ObjectType, Base, OpKind, OpLoc))
     return ExprError();
 
-  if (DS.getTypeSpecType() == DeclSpec::TST_decltype_auto) {
+  switch (DS.getTypeSpecType()) {
+  case DeclSpec::TST_decltype_auto: {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_decltype_auto_invalid);
     return true;
   }
-
-  QualType T = BuildDecltypeType(DS.getRepAsExpr(), /*AsUnevaluated=*/false);
-
-  TypeLocBuilder TLB;
-  DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
-  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
-  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+  case DeclSpec::TST_decltype: {
+    T = BuildDecltypeType(DS.getRepAsExpr(), /*AsUnevaluated=*/false);
+    DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+    DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+    DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+    break;
+  }
+  case DeclSpec::TST_typename_pack_indexing: {
+    T = ActOnPackIndexingType(DS.getRepAsType().get(), DS.getPackIndexingExpr(),
+                              DS.getBeginLoc(), DS.getEllipsisLoc());
+    TLB.pushTrivial(getASTContext(),
+                    cast<PackIndexingType>(T.getTypePtr())->getPattern(),
+                    DS.getBeginLoc());
+    PackIndexingTypeLoc PITL = TLB.push<PackIndexingTypeLoc>(T);
+    PITL.setEllipsisLoc(DS.getEllipsisLoc());
+    break;
+  }
+  default:
+    llvm_unreachable("Unsupported type in pseudo destructor");
+  }
   TypeSourceInfo *DestructedTypeInfo = TLB.getTypeSourceInfo(Context, T);
   PseudoDestructorTypeStorage Destructed(DestructedTypeInfo);
 
@@ -8213,21 +8222,6 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     E = result.get();
   }
 
-  // C99 6.3.2.1:
-  //   [Except in specific positions,] an lvalue that does not have
-  //   array type is converted to the value stored in the
-  //   designated object (and is no longer an lvalue).
-  if (E->isPRValue()) {
-    // In C, function designators (i.e. expressions of function type)
-    // are r-values, but we still want to do function-to-pointer decay
-    // on them.  This is both technically correct and convenient for
-    // some clients.
-    if (!getLangOpts().CPlusPlus && E->getType()->isFunctionType())
-      return DefaultFunctionArrayConversion(E);
-
-    return E;
-  }
-
   if (getLangOpts().CPlusPlus) {
     // The C++11 standard defines the notion of a discarded-value expression;
     // normally, we don't need to do anything to handle it, but if it is a
@@ -8248,11 +8242,32 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     //   If the expression is a prvalue after this optional conversion, the
     //   temporary materialization conversion is applied.
     //
-    // We skip this step: IR generation is able to synthesize the storage for
-    // itself in the aggregate case, and adding the extra node to the AST is
-    // just clutter.
-    // FIXME: We don't emit lifetime markers for the temporaries due to this.
-    // FIXME: Do any other AST consumers care about this?
+    // We do not materialize temporaries by default in order to avoid creating
+    // unnecessary temporary objects. If we skip this step, IR generation is
+    // able to synthesize the storage for itself in the aggregate case, and
+    // adding the extra node to the AST is just clutter.
+    if (isInMaterializeTemporaryObjectContext() && getLangOpts().CPlusPlus17 &&
+        E->isPRValue() && !E->getType()->isVoidType()) {
+      ExprResult Res = TemporaryMaterializationConversion(E);
+      if (Res.isInvalid())
+        return E;
+      E = Res.get();
+    }
+    return E;
+  }
+
+  // C99 6.3.2.1:
+  //   [Except in specific positions,] an lvalue that does not have
+  //   array type is converted to the value stored in the
+  //   designated object (and is no longer an lvalue).
+  if (E->isPRValue()) {
+    // In C, function designators (i.e. expressions of function type)
+    // are r-values, but we still want to do function-to-pointer decay
+    // on them.  This is both technically correct and convenient for
+    // some clients.
+    if (!getLangOpts().CPlusPlus && E->getType()->isFunctionType())
+      return DefaultFunctionArrayConversion(E);
+
     return E;
   }
 

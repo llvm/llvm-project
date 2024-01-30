@@ -703,6 +703,9 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   case VectorKind::RVVFixedLengthData:
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
     break;
+  case VectorKind::RVVFixedLengthMask:
+    JOS.attribute("vectorKind", "fixed-length rvv mask vector");
+    break;
   }
 }
 
@@ -1356,12 +1359,11 @@ void JSONNodeDumper::VisitCXXNewExpr(const CXXNewExpr *NE) {
   attributeOnlyIfTrue("isPlacement", NE->getNumPlacementArgs() != 0);
   switch (NE->getInitializationStyle()) {
   case CXXNewInitializationStyle::None:
-  case CXXNewInitializationStyle::Implicit:
     break;
-  case CXXNewInitializationStyle::Call:
+  case CXXNewInitializationStyle::Parens:
     JOS.attribute("initStyle", "call");
     break;
-  case CXXNewInitializationStyle::List:
+  case CXXNewInitializationStyle::Braces:
     JOS.attribute("initStyle", "list");
     break;
   }

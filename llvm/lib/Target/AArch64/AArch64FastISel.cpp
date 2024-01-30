@@ -35,9 +35,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -3172,8 +3172,16 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (CM == CodeModel::Large && !Subtarget->isTargetMachO())
     return false;
 
+  // ELF -fno-plt compiled intrinsic calls do not have the nonlazybind
+  // attribute. Check "RtLibUseGOT" instead.
+  if (MF->getFunction().getParent()->getRtLibUseGOT())
+    return false;
+
   // Let SDISel handle vararg functions.
   if (IsVarArg)
+    return false;
+
+  if (Subtarget->isWindowsArm64EC())
     return false;
 
   for (auto Flag : CLI.OutFlags)
@@ -3200,13 +3208,6 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   Address Addr;
   if (Callee && !computeCallAddress(Callee, Addr))
-    return false;
-
-  // MO_GOT is not handled. -fno-plt compiled intrinsic calls do not have the
-  // nonlazybind attribute. Check "RtLibUseGOT" instead.
-  if ((Subtarget->classifyGlobalFunctionReference(Addr.getGlobalValue(), TM) !=
-       AArch64II::MO_NO_FLAG) ||
-      MF->getFunction().getParent()->getRtLibUseGOT())
     return false;
 
   // The weak function target may be zero; in that case we must use indirect

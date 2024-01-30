@@ -15,10 +15,10 @@ define void @call_bad_ato(ptr %ps) {
 ; CHECK-NEXT:    [[IR:%.*]] = call ptr @atoi(ptr nonnull @a)
 ; CHECK-NEXT:    store ptr [[IR]], ptr [[PS:%.*]], align 8
 ; CHECK-NEXT:    [[LR:%.*]] = call ptr @atol(ptr nonnull @a)
-; CHECK-NEXT:    [[PS1:%.*]] = getelementptr ptr, ptr [[PS]], i64 1
+; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store ptr [[LR]], ptr [[PS1]], align 8
 ; CHECK-NEXT:    [[LLR:%.*]] = call ptr @atol(ptr nonnull @a)
-; CHECK-NEXT:    [[PS2:%.*]] = getelementptr ptr, ptr [[PS]], i64 2
+; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store ptr [[LLR]], ptr [[PS2]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -114,12 +114,12 @@ define void @call_bad_strto(ptr %psi32, ptr %psi64) {
 ; CHECK-NEXT:    [[LR:%.*]] = call i32 @strtol(ptr nonnull @a, ptr null)
 ; CHECK-NEXT:    store i32 [[LR]], ptr [[PSI32:%.*]], align 4
 ; CHECK-NEXT:    [[ULR:%.*]] = call i32 @strtoul(ptr nonnull @a, ptr null)
-; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i32, ptr [[PSI32]], i64 1
+; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PSI32]], i64 4
 ; CHECK-NEXT:    store i32 [[ULR]], ptr [[PS1]], align 4
 ; CHECK-NEXT:    [[LLR:%.*]] = call i64 @strtoll(ptr nonnull @a, ptr null)
 ; CHECK-NEXT:    store i64 [[LLR]], ptr [[PSI64:%.*]], align 4
 ; CHECK-NEXT:    [[ULLR:%.*]] = call i64 @strtoull(ptr nonnull @a, ptr null)
-; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i64, ptr [[PSI64]], i64 3
+; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PSI64]], i64 24
 ; CHECK-NEXT:    store i64 [[ULLR]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
 ;

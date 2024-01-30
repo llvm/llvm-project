@@ -1582,6 +1582,11 @@ bool CursorVisitor::VisitTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
       return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
     return false;
 
+  case TemplateArgument::StructuralValue:
+    if (Expr *E = TAL.getSourceStructuralValueExpression())
+      return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
+    return false;
+
   case TemplateArgument::NullPtr:
     if (Expr *E = TAL.getSourceNullPtrExpression())
       return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
@@ -1884,6 +1889,12 @@ bool CursorVisitor::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
     return Visit(MakeCXCursor(E, StmtParent, TU));
 
   return false;
+}
+
+bool CursorVisitor::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
+  if (Visit(TL.getPatternLoc()))
+    return true;
+  return Visit(MakeCXCursor(TL.getIndexExpr(), StmtParent, TU));
 }
 
 bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
@@ -5713,6 +5724,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("PackExpansionExpr");
   case CXCursor_SizeOfPackExpr:
     return cxstring::createRef("SizeOfPackExpr");
+  case CXCursor_PackIndexingExpr:
+    return cxstring::createRef("PackIndexingExpr");
   case CXCursor_LambdaExpr:
     return cxstring::createRef("LambdaExpr");
   case CXCursor_UnexposedExpr:

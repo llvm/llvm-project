@@ -222,7 +222,9 @@ deque typeinfo
 deque version
 exception cstddef
 exception cstdlib
+exception new
 exception type_traits
+exception typeinfo
 exception version
 execution cstddef
 execution version
@@ -543,7 +545,6 @@ mutex typeinfo
 mutex version
 new cstddef
 new cstdlib
-new exception
 new type_traits
 new version
 numbers concepts
@@ -650,7 +651,6 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
-ranges new
 ranges optional
 ranges span
 ranges tuple
@@ -883,7 +883,6 @@ typeindex version
 typeinfo cstddef
 typeinfo cstdint
 typeinfo cstdlib
-typeinfo exception
 typeinfo type_traits
 unordered_map algorithm
 unordered_map bit

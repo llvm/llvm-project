@@ -153,6 +153,8 @@ deque tuple
 deque version
 exception cstddef
 exception cstdlib
+exception new
+exception typeinfo
 exception version
 execution cstddef
 execution version

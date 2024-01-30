@@ -1275,6 +1275,23 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
         (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
   }
 
+  // Print three values of neg/opsel for wmma instructions (prints 0 when there
+  // is no src_modifier operand instead of not printing anything).
+  if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsSWMMAC ||
+      MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsWMMA) {
+    NumOps = 0;
+    int DefaultValue = Mod == SISrcMods::OP_SEL_1;
+    for (int OpName :
+         {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
+          AMDGPU::OpName::src2_modifiers}) {
+      int Idx = AMDGPU::getNamedOperandIdx(Opc, OpName);
+      if (Idx != -1)
+        Ops[NumOps++] = MI->getOperand(Idx).getImm();
+      else
+        Ops[NumOps++] = DefaultValue;
+    }
+  }
+
   const bool HasDstSel =
     NumOps > 0 &&
     Mod == SISrcMods::OP_SEL_0 &&
@@ -1305,6 +1322,16 @@ void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
                                    const MCSubtargetInfo &STI,
                                    raw_ostream &O) {
   unsigned Opc = MI->getOpcode();
+  if (isCvt_F32_Fp8_Bf8_e64(Opc)) {
+    auto SrcMod =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+    unsigned Mod = MI->getOperand(SrcMod).getImm();
+    unsigned Index0 = !!(Mod & SISrcMods::OP_SEL_0);
+    unsigned Index1 = !!(Mod & SISrcMods::OP_SEL_1);
+    if (Index0 || Index1)
+      O << " op_sel:[" << Index0 << ',' << Index1 << ']';
+    return;
+  }
   if (isPermlane16(Opc)) {
     auto FIN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
     auto BCN = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers);
@@ -1334,6 +1361,26 @@ void AMDGPUInstPrinter::printNegHi(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI,
                                    raw_ostream &O) {
   printPackedModifier(MI, " neg_hi:[", SISrcMods::NEG_HI, O);
+}
+
+void AMDGPUInstPrinter::printIndexKey8bit(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
+  if (Imm == 0)
+    return;
+
+  O << " index_key:" << Imm;
+}
+
+void AMDGPUInstPrinter::printIndexKey16bit(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
+  if (Imm == 0)
+    return;
+
+  O << " index_key:" << Imm;
 }
 
 void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,

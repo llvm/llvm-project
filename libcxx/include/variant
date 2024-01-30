@@ -808,14 +808,15 @@ protected:
   _LIBCPP_HIDE_FROM_ABI static void __generic_construct(__ctor& __lhs, _Rhs&& __rhs) {
     __lhs.__destroy();
     if (!__rhs.valueless_by_exception()) {
+      auto __rhs_index = __rhs.index();
       __visitation::__base::__visit_alt_at(
-          __rhs.index(),
+          __rhs_index,
           [](auto& __lhs_alt, auto&& __rhs_alt) {
             __construct_alt(__lhs_alt, std::forward<decltype(__rhs_alt)>(__rhs_alt).__value);
           },
           __lhs,
           std::forward<_Rhs>(__rhs));
-      __lhs.__index = __rhs.index();
+      __lhs.__index = __rhs_index;
     }
   }
 };

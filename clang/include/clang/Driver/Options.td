@@ -3459,6 +3459,10 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
+def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Force behvaior as if the user specified pragma omp requires unified_shared_memory.">,
+  MarshallingInfoFlag<LangOpts<"OpenMPForceUSM">>;
 def fopenmp_target_jit : Flag<["-"], "fopenmp-target-jit">, Group<f_Group>,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Emit code that can be JIT compiled for OpenMP offloading. Implies -foffload-lto=full">;
@@ -3910,9 +3914,16 @@ def fvisibility_ms_compat : Flag<["-"], "fvisibility-ms-compat">, Group<f_Group>
   HelpText<"Give global types 'default' visibility and global functions and "
            "variables 'hidden' visibility by default">;
 def fvisibility_global_new_delete_hidden : Flag<["-"], "fvisibility-global-new-delete-hidden">, Group<f_Group>,
-  HelpText<"Give global C++ operator new and delete declarations hidden visibility">,
+  HelpText<"Give global C++ operator new and delete declarations hidden visibility">;
+class MarshallingInfoVisibilityGlobalNewDelete<KeyPathAndMacro kpm, code default>
+  : MarshallingInfoEnum<kpm, default>,
+    Values<"force-default,force-protected,force-hidden,source">,
+    NormalizedValuesScope<"LangOptions::VisibilityForcedKinds">,
+    NormalizedValues<["ForceDefault", "ForceProtected", "ForceHidden", "Source"]> {}
+def fvisibility_global_new_delete_EQ : Joined<["-"], "fvisibility-global-new-delete=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"GlobalAllocationFunctionVisibilityHidden">>;
+  HelpText<"The visibility for global C++ operator new and delete declarations. If 'source' is specified the visibility is not adjusted">,
+  MarshallingInfoVisibilityGlobalNewDelete<LangOpts<"GlobalAllocationFunctionVisibility">, "ForceDefault">;
 def mdefault_visibility_export_mapping_EQ : Joined<["-"], "mdefault-visibility-export-mapping=">,
   Values<"none,explicit,all">,
   NormalizedValuesScope<"LangOptions::DefaultVisiblityExportMapping">,
@@ -4408,6 +4419,8 @@ def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   HelpText<"Specify bit size of immediate TLS offsets (AArch64 ELF only): "
            "12 (for 4KB) | 24 (for 16MB, default) | 32 (for 4GB) | 48 (for 256TB, needs -mcmodel=large)">,
   MarshallingInfoInt<CodeGenOpts<"TLSSize">>;
+def mtls_dialect_EQ : Joined<["-"], "mtls-dialect=">, Group<m_Group>,
+  Flags<[TargetSpecific]>, HelpText<"Which thread-local storage dialect to use for dynamic accesses of TLS variables">;
 def mimplicit_it_EQ : Joined<["-"], "mimplicit-it=">, Group<m_Group>;
 def mdefault_build_attributes : Joined<["-"], "mdefault-build-attributes">, Group<m_Group>;
 def mno_default_build_attributes : Joined<["-"], "mno-default-build-attributes">, Group<m_Group>;
@@ -4606,6 +4619,10 @@ def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64/LoongArch/RISC-V only)">;
 def mno_unaligned_access : Flag<["-"], "mno-unaligned-access">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch32/AArch64/LoongArch/RISC-V only)">;
+def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
+  HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
+def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
+  HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 } // let Flags = [TargetSpecific]
 def mstrict_align : Flag<["-"], "mstrict-align">, Alias<mno_unaligned_access>,
   Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
@@ -4770,12 +4787,12 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>, Group<m_Group>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
+  HelpText<"Specify code object ABI version. Defaults to 5. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5">,
   NormalizedValuesScope<"llvm::CodeObjectVersionKind">,
   NormalizedValues<["COV_None", "COV_4", "COV_5"]>,
-  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
+  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_5">;
 
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",
@@ -6053,11 +6070,11 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
-// Features egpr, push2pop2 and ppx are validated with llvm-test-suite && cpu2017 on Intel SDE.
+// Features egpr, push2pop2, ppx and ndd are validated with llvm-test-suite && cpu2017 on Intel SDE.
 // For stability, we turn on these features only for -mapxf. After a feature pass the validation,
 // we will add it to -mapxf.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx", "ndd"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd"]>;
 } // let Flags = [TargetSpecific]
 
 // VE feature flags
@@ -7054,6 +7071,9 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
   NormalizedValuesScope<"CodeGenOptions::AssignmentTrackingOpts">,
   Values<"disabled,enabled,forced">, NormalizedValues<["Disabled","Enabled","Forced"]>,
   MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Enabled">;
+
+def enable_tlsdesc : Flag<["-"], "enable-tlsdesc">,
+  MarshallingInfoFlag<CodeGenOpts<"EnableTLSDESC">>;
 
 } // let Visibility = [CC1Option]
 
@@ -8472,3 +8492,6 @@ def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   HelpText<"Embed PDB in shader container (ignored)">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
+def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
+  HelpText<"Specify the target environment">,
+  Values<"vulkan1.2, vulkan1.3">;

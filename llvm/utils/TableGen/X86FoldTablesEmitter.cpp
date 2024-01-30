@@ -14,6 +14,7 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/X86FoldTablesUtils.h"
 #include "llvm/TableGen/Record.h"
@@ -80,6 +81,7 @@ class X86FoldTablesEmitter {
     bool FoldStore = false;
     enum BcastType {
       BCAST_NONE,
+      BCAST_W,
       BCAST_D,
       BCAST_Q,
       BCAST_SS,
@@ -113,6 +115,9 @@ class X86FoldTablesEmitter {
         Attrs += "TB_ALIGN_" + std::to_string(Alignment.value()) + "|";
       switch (BroadcastKind) {
       case BCAST_NONE:
+        break;
+      case BCAST_W:
+        Attrs += "TB_BCAST_W|";
         break;
       case BCAST_D:
         Attrs += "TB_BCAST_D|";
@@ -529,45 +534,22 @@ void X86FoldTablesEmitter::addBroadcastEntry(
   assert(Table.find(RegInst) == Table.end() && "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
 
-  Record *RegRec = RegInst->TheDef;
-  StringRef RegInstName = RegRec->getName();
-  StringRef MemInstName = MemInst->TheDef->getName();
-  Record *Domain = RegRec->getValueAsDef("ExeDomain");
-  bool IsSSEPackedInt = Domain->getName() == "SSEPackedInt";
-  if ((RegInstName.contains("DZ") || RegInstName.contains("DWZ") ||
-       RegInstName.contains("Dr") || RegInstName.contains("I32")) &&
-      IsSSEPackedInt) {
-    assert((MemInstName.contains("DZ") || RegInstName.contains("DWZ") ||
-            MemInstName.contains("Dr") || MemInstName.contains("I32")) &&
-           "Unmatched names for broadcast");
-    Result.BroadcastKind = X86FoldTableEntry::BCAST_D;
-  } else if ((RegInstName.contains("QZ") || RegInstName.contains("QBZ") ||
-              RegInstName.contains("Qr") || RegInstName.contains("I64")) &&
-             IsSSEPackedInt) {
-    assert((MemInstName.contains("QZ") || MemInstName.contains("QBZ") ||
-            MemInstName.contains("Qr") || MemInstName.contains("I64")) &&
-           "Unmatched names for broadcast");
-    Result.BroadcastKind = X86FoldTableEntry::BCAST_Q;
-  } else if ((RegInstName.contains("PS") || RegInstName.contains("F32") ||
-              RegInstName.contains("CPH")) &&
-             !RegInstName.contains("PH2PS")) {
-    assert((MemInstName.contains("PS") || MemInstName.contains("F32") ||
-            MemInstName.contains("CPH")) &&
-           "Unmatched names for broadcast");
-    Result.BroadcastKind = X86FoldTableEntry::BCAST_SS;
-  } else if ((RegInstName.contains("PD") || RegInstName.contains("F64")) &&
-             !RegInstName.contains("PH2PD")) {
-    assert((MemInstName.contains("PD") || MemInstName.contains("F64")) &&
-           "Unmatched names for broadcast");
-    Result.BroadcastKind = X86FoldTableEntry::BCAST_SD;
-  } else if (RegInstName.contains("PH")) {
-    assert(MemInstName.contains("PH") && "Unmatched names for broadcast");
-    Result.BroadcastKind = X86FoldTableEntry::BCAST_SH;
-  } else {
-    errs() << RegInstName << ", " << MemInstName << "\n";
-    llvm_unreachable("Name is not canoicalized for broadcast or "
-                     "ExeDomain is incorrect");
+  DagInit *In = MemInst->TheDef->getValueAsDag("InOperandList");
+  for (unsigned I = 0, E = In->getNumArgs(); I != E; ++I) {
+    Result.BroadcastKind =
+        StringSwitch<X86FoldTableEntry::BcastType>(In->getArg(I)->getAsString())
+            .Case("i16mem", X86FoldTableEntry::BCAST_W)
+            .Case("i32mem", X86FoldTableEntry::BCAST_D)
+            .Case("i64mem", X86FoldTableEntry::BCAST_Q)
+            .Case("f16mem", X86FoldTableEntry::BCAST_SH)
+            .Case("f32mem", X86FoldTableEntry::BCAST_SS)
+            .Case("f64mem", X86FoldTableEntry::BCAST_SD)
+            .Default(X86FoldTableEntry::BCAST_NONE);
+    if (Result.BroadcastKind != X86FoldTableEntry::BCAST_NONE)
+      break;
   }
+  assert(Result.BroadcastKind != X86FoldTableEntry::BCAST_NONE &&
+         "Unknown memory operand for broadcast");
 
   Table[RegInst] = Result;
 }

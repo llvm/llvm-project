@@ -7,15 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// UNSUPPORTED: libcpp-has-no-std-modules
 // UNSUPPORTED: clang-modules-build
+// UNSUPPORTED: gcc
 
-// picolibc does not provide the required timespec_get function, and the
-// "using-if-exists" mechanism apparently did not work here.
-// XFAIL: LIBCXX-PICOLIBC-FIXME
+// XFAIL: has-no-cxx-module-support
 
 // A minimal test to validate import works.
+
+// MODULE_DEPENDENCIES: std.compat
 
 import std.compat;
 

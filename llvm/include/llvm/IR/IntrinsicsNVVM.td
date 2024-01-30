@@ -557,6 +557,10 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable]>;
 
+  def int_nvvm_nanosleep : ClangBuiltin<"__nvvm_nanosleep">,
+      DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+                            [IntrConvergent, IntrNoMem, IntrHasSideEffects]>;
+
 //
 // Min Max
 //
@@ -4506,6 +4510,8 @@ def int_nvvm_read_ptx_sreg_lanemask_gt :
 def int_nvvm_read_ptx_sreg_clock : PTXReadNCSRegIntrinsic_r32<"clock">;
 def int_nvvm_read_ptx_sreg_clock64 : PTXReadNCSRegIntrinsic_r64<"clock64">;
 
+def int_nvvm_read_ptx_sreg_globaltimer : PTXReadNCSRegIntrinsic_r64<"globaltimer">;
+
 def int_nvvm_read_ptx_sreg_pm0 : PTXReadNCSRegIntrinsic_r32<"pm0">;
 def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic_r32<"pm1">;
 def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic_r32<"pm2">;
@@ -4598,6 +4604,14 @@ def int_nvvm_vote_ballot_sync :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.ballot.sync">,
   ClangBuiltin<"__nvvm_vote_ballot_sync">;
+
+//
+// ACTIVEMASK
+//
+def int_nvvm_activemask :
+  Intrinsic<[llvm_i32_ty], [],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback, IntrHasSideEffects], "llvm.nvvm.activemask">,
+  ClangBuiltin<"__nvvm_activemask">;
 
 //
 // MATCH.SYNC
@@ -4800,5 +4814,9 @@ def int_nvvm_setmaxnreg_dec_sync_aligned_u32
   : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
               [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
               "llvm.nvvm.setmaxnreg.dec.sync.aligned.u32">;
+
+// Exit
+def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
+    Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
 
 } // let TargetPrefix = "nvvm"

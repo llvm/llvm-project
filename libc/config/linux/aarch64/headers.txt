@@ -6,9 +6,11 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.limits
     libc.include.math
     libc.include.pthread
     libc.include.signal
+    libc.include.stdbit
     libc.include.stdio
     libc.include.stdlib
     libc.include.string

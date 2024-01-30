@@ -1661,7 +1661,8 @@ void UnwrappedLineParser::parseStructuralElement(
     // In Verilog labels can be any expression, so we don't do them here.
     // JS doesn't have macros, and within classes colons indicate fields, not
     // labels.
-    if (!Style.isJavaScript() && !Style.isVerilog() &&
+    // TableGen doesn't have labels.
+    if (!Style.isJavaScript() && !Style.isVerilog() && !Style.isTableGen() &&
         Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
       Line->Tokens.begin()->Tok->MustBreakBefore = true;
@@ -1789,6 +1790,12 @@ void UnwrappedLineParser::parseStructuralElement(
         parseBlock();
         addUnwrappedLine();
         return;
+      }
+      if (Style.isTableGen()) {
+        // Do nothing special. In this case the l_brace becomes FunctionLBrace.
+        // This is same as def and so on.
+        nextToken();
+        break;
       }
       [[fallthrough]];
     case tok::kw_struct:
@@ -2028,6 +2035,16 @@ void UnwrappedLineParser::parseStructuralElement(
         // initialisers are indented the same way.
         if (Style.isCSharp())
           FormatTok->setBlockKind(BK_BracedInit);
+        // TableGen's defset statement has syntax of the form,
+        // `defset <type> <name> = { <statement>... }`
+        if (Style.isTableGen() &&
+            Line->Tokens.begin()->Tok->is(Keywords.kw_defset)) {
+          FormatTok->setFinalizedType(TT_FunctionLBrace);
+          parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
+                     /*MunchSemi=*/false);
+          addUnwrappedLine();
+          break;
+        }
         nextToken();
         parseBracedList();
       } else if (Style.Language == FormatStyle::LK_Proto &&
@@ -2739,6 +2756,14 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
         nextToken();
     } else if (FormatTok->isOneOf(Keywords.kw_final, Keywords.kw_property,
                                   Keywords.kw_sequence)) {
+      nextToken();
+    }
+  }
+
+  // TableGen's if statement has the form of `if <cond> then { ... }`.
+  if (Style.isTableGen()) {
+    while (!eof() && FormatTok->isNot(Keywords.kw_then)) {
+      // Simply skip until then. This range only contains a value.
       nextToken();
     }
   }

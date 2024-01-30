@@ -294,6 +294,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx12-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
+      Features["fp8-conversion-insts"] = true;
       break;
     case GK_GFX1151:
     case GK_GFX1150:

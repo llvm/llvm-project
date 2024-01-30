@@ -568,11 +568,11 @@ clinger_fast_path(ExpandedFloat<T> init_num,
                              ClingerConsts<T>::POWERS_OF_TEN_ARRAY[exp10]);
 
     // If the results are equal, then we don't need to use the rounding mode.
-    if (T(result) != -T(negative_result)) {
+    if (result.get_val() != -negative_result.get_val()) {
       FPBits lower_result;
       FPBits higher_result;
 
-      if (T(result) < -T(negative_result)) {
+      if (result.get_val() < -negative_result.get_val()) {
         lower_result = result;
         higher_result = negative_result;
       } else {
@@ -1167,7 +1167,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           index = left_paren;
         }
       }
-      result = FPBits(result.build_quiet_nan(nan_mantissa, result.sign()));
+      result = FPBits(result.build_quiet_nan(result.sign(), nan_mantissa));
     }
   } else if (tolower(src[index]) == 'i') { // INF
     if (tolower(src[index + 1]) == inf_string[1] &&
@@ -1194,7 +1194,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   // special 80 bit long doubles. Otherwise it should be inlined out.
   set_implicit_bit<T>(result);
 
-  return {T(result), index, error};
+  return {result.get_val(), index, error};
 }
 
 template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
@@ -1215,8 +1215,8 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
     nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
   }
 
-  result = FPBits(result.build_quiet_nan(nan_mantissa));
-  return {T(result), 0, error};
+  result = FPBits::build_quiet_nan(fputil::Sign::POS, nan_mantissa);
+  return {result.get_val(), 0, error};
 }
 
 } // namespace internal
