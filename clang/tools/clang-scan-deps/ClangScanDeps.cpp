@@ -156,6 +156,7 @@ static void ParseArgs(int argc, char **argv) {
             .Case("none", ScanningOptimizations::None)
             .Case("header-search", ScanningOptimizations::HeaderSearch)
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("vfs", ScanningOptimizations::VFS)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
