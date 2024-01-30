@@ -736,6 +736,22 @@ LogicalResult ScopeOp::verify() { return success(); }
 // TryOp
 //===----------------------------------------------------------------------===//
 
+void TryOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Type &, Location)> scopeBuilder) {
+  assert(scopeBuilder && "the builder callback for 'then' must be present");
+
+  OpBuilder::InsertionGuard guard(builder);
+  Region *scopeRegion = result.addRegion();
+  builder.createBlock(scopeRegion);
+
+  mlir::Type yieldTy;
+  scopeBuilder(builder, yieldTy, result.location);
+
+  if (yieldTy)
+    result.addTypes(TypeRange{yieldTy});
+}
+
 void TryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.

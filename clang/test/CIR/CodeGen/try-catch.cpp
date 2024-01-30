@@ -13,7 +13,7 @@ unsigned long long tc() {
     // CHECK: %[[msg:.*]] = cir.alloca !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>, ["msg"]
     // CHECK: %[[idx:.*]] = cir.alloca !s32i, cir.ptr <!s32i>, ["idx"]
 
-    // CHECK: %[[try_eh:.*]] = cir.scope {
+    // CHECK: %[[try_eh:.*]] = cir.try {
     // CHECK: %[[eh_info:.*]] = cir.alloca !cir.ptr<!cir.eh.info>, cir.ptr <!cir.ptr<!cir.eh.info>>, ["__exception_ptr"]
     // CHECK: %[[local_a:.*]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init]
     int a = 4;
