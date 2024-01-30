@@ -259,6 +259,7 @@ class Mesh_CollectiveCommunicationOpBase<
 }
 
 def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
+    Pure,
     SameOperandsAndResultElementType,
     SameOperandsAndResultRank
   ]> {
@@ -312,6 +313,7 @@ def Mesh_AllGatherOp : Mesh_CollectiveCommunicationOpBase<"all_gather", [
 }
 
 def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
+    Pure,
     SameOperandsAndResultShape]> {
   let summary = "All-reduce over a device mesh.";
   let description = [{
@@ -344,6 +346,7 @@ def Mesh_AllReduceOp : Mesh_CollectiveCommunicationOpBase<"all_reduce", [
 }
 
 def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
+    Pure,
     SameOperandsAndResultElementType,
     SameOperandsAndResultRank]> {
   let summary = "All-to-all over a device mesh.";
@@ -398,6 +401,7 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
 }
 
 def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
+    Pure,
     AllShapesMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {
@@ -453,6 +457,7 @@ def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
 }
 
 def Mesh_GatherOp : Mesh_CollectiveCommunicationOpBase<"gather", [
+    Pure,
     AllRanksMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {
@@ -540,6 +545,7 @@ def Mesh_RecvOp : Mesh_CollectiveCommunicationOpBase<"recv", [
 }
 
 def Mesh_ReduceOp : Mesh_CollectiveCommunicationOpBase<"reduce", [
+    Pure,
     AllShapesMatch<["input", "result"]>
   ]> {
   let summary = "Reduce over a device mesh.";
@@ -581,6 +587,7 @@ def Mesh_ReduceOp : Mesh_CollectiveCommunicationOpBase<"reduce", [
 }
 
 def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", [
+    Pure,
     SameOperandsAndResultRank]> {
   let summary = "Reduce-scatter over a device mesh.";
   let description = [{
@@ -642,6 +649,7 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
 }
 
 def Mesh_ScatterOp : Mesh_CollectiveCommunicationOpBase<"scatter", [
+    Pure,
     AllRanksMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {
@@ -734,6 +742,7 @@ def Mesh_SendOp : Mesh_CollectiveCommunicationOpBase<"send", [
 }
 
 def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
+    Pure,
     SameOperandsAndResultElementType,
     SameOperandsAndResultShape
   ]> {
