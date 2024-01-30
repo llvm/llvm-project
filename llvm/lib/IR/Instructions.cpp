@@ -3213,12 +3213,6 @@ unsigned CastInst::isEliminableCastPair(
       if (SrcTy->isIntegerTy())
         return secondOp;
       return 0;
-    case 6:
-      // No-op cast in first op implies secondOp as long as the SrcTy
-      // is a floating point.
-      if (SrcTy->isFloatingPointTy())
-        return secondOp;
-      return 0;
     case 7: {
       // Disable inttoptr/ptrtoint optimization if enabled.
       if (DisableI2pP2iOpt)
