@@ -426,9 +426,11 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
         DefaultDest->removePredecessor(BB);
         SI->setDefaultDest(NewUnreachableBB);
 
+        if (SuccessorsCount[DefaultDest] == 1)
+          DTU.applyUpdatesPermissive(
+              {{DominatorTree::Delete, BB, DefaultDest}});
         DTU.applyUpdatesPermissive(
-            {{DominatorTree::Delete, BB, DefaultDest},
-             {DominatorTree::Insert, BB, NewUnreachableBB}});
+            {{DominatorTree::Insert, BB, NewUnreachableBB}});
 
         ++NumDeadCases;
         Changed = true;
