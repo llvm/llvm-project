@@ -337,14 +337,7 @@ void HipBinBase::constructRoccmPath() {
   if (!rocm_path_name.empty())
     variables_.roccmPathEnv_ = rocm_path_name;
   else if (envVariables_.roccmPathEnv_.empty()) {
-    const string& hipPath = getHipPath();
-    fs::path roccm_path(hipPath);
-    fs::path rocm_agent_enumerator_file(roccm_path);
-    rocm_agent_enumerator_file /= "bin/rocm_agent_enumerator";
-    if (!fs::exists(rocm_agent_enumerator_file)) {
-      roccm_path = "/opt/rocm";
-    }
-    variables_.roccmPathEnv_ = roccm_path.string();
+    variables_.roccmPathEnv_ = getHipPath();
   } else {
     variables_.roccmPathEnv_ = envVariables_.roccmPathEnv_;}
 }
