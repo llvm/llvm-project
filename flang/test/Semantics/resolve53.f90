@@ -3,7 +3,7 @@
 ! Specific procedures of generic interfaces must be distinguishable.
 
 module m1
-  !PORTABILITY: Generic 'g' should not have specific procedures 's2' and 's4' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 's2' and 's4' as their interfaces are not distinguishable
   interface g
     procedure s1
     procedure s2
@@ -25,7 +25,7 @@ contains
 end
 
 module m2
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm2s1' and 'm2s2' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'm2s1' and 'm2s2' as their interfaces are not distinguishable
   interface g
     subroutine m2s1(x)
     end subroutine
@@ -36,7 +36,7 @@ module m2
 end
 
 module m3
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm3f1' and 'm3f2' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'm3f1' and 'm3f2' as their interfaces are not distinguishable
   interface g
     integer function m3f1()
     end function
@@ -79,7 +79,7 @@ end
 
 module m6
   use m5
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm5s1' and 'm6s4' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'm5s1' and 'm6s4' as their interfaces are not distinguishable
   interface g
     subroutine m6s4(x)
     end subroutine
@@ -88,9 +88,9 @@ end
 
 module m7
   use m5
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm5s1' and 'm7s5' as their interfaces are not distinguishable by the incomplete rules in the standard
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm5s2' and 'm7s5' as their interfaces are not distinguishable by the incomplete rules in the standard
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm5s3' and 'm7s5' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'm5s1' and 'm7s5' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm5s2' and 'm7s5' as their interfaces are not distinguishable
+  !ERROR: Generic 'g' may not have specific procedures 'm5s3' and 'm7s5' as their interfaces are not distinguishable
   interface g
     subroutine m7s5(x)
       real x(..)
@@ -100,7 +100,7 @@ end
 
 ! Two procedures that differ only by attributes are not distinguishable
 module m8
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm8s1' and 'm8s2' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'm8s1' and 'm8s2' as their interfaces are not distinguishable
   interface g
     pure subroutine m8s1(x)
       real, intent(in) :: x
@@ -112,7 +112,7 @@ module m8
 end
 
 module m9
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm9s1' and 'm9s2' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'm9s1' and 'm9s2' as their interfaces are not distinguishable
   interface g
     subroutine m9s1(x)
       real :: x(10)
@@ -124,7 +124,7 @@ module m9
 end
 
 module m10
-  !PORTABILITY: Generic 'g' should not have specific procedures 'm10s1' and 'm10s2' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'm10s1' and 'm10s2' as their interfaces are not distinguishable
   interface g
     subroutine m10s1(x)
       real :: x(10)
@@ -144,7 +144,7 @@ program m11
       real, allocatable :: x
     end subroutine
   end interface
-  !PORTABILITY: Generic 'g2' should not have specific procedures 'm11s3' and 'm11s4' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g2' may not have specific procedures 'm11s3' and 'm11s4' as their interfaces are not distinguishable
   interface g2
     subroutine m11s3(x)
       real, pointer, intent(in) :: x
@@ -156,11 +156,11 @@ program m11
 end
 
 module m12
-  !PORTABILITY: Generic 'g1' should not have specific procedures 's1' and 's2' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g1' may not have specific procedures 's1' and 's2' as their interfaces are not distinguishable
   generic :: g1 => s1, s2  ! rank-1 and assumed-rank
-  !PORTABILITY: Generic 'g2' should not have specific procedures 's2' and 's3' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g2' may not have specific procedures 's2' and 's3' as their interfaces are not distinguishable
   generic :: g2 => s2, s3  ! scalar and assumed-rank
-  !PORTABILITY: Generic 'g3' should not have specific procedures 's1' and 's4' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g3' may not have specific procedures 's1' and 's4' as their interfaces are not distinguishable
   generic :: g3 => s1, s4  ! different shape, same rank
 contains
   subroutine s1(x)
@@ -209,7 +209,7 @@ module m14
     module procedure f1
     module procedure f2
   end interface
-  !PORTABILITY: Generic 'OPERATOR(+)' should not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'OPERATOR(+)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
   interface operator(+)
     module procedure f1
     module procedure f3
@@ -218,7 +218,7 @@ module m14
     module procedure f1
     module procedure f2
   end interface
-  !PORTABILITY: Generic 'OPERATOR(.bar.)' should not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'OPERATOR(.bar.)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
   interface operator(.bar.)
     module procedure f1
     module procedure f3
@@ -260,12 +260,12 @@ module m15
     procedure s1
     procedure s2
   end interface
-  !PORTABILITY: Generic 'g2' should not have specific procedures 's1' and 's3' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g2' may not have specific procedures 's1' and 's3' as their interfaces are not distinguishable
   interface g2
     procedure s1
     procedure s3
   end interface
-  !PORTABILITY: Generic 'g3' should not have specific procedures 's4' and 's5' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g3' may not have specific procedures 's4' and 's5' as their interfaces are not distinguishable
   interface g3
     procedure s4
     procedure s5
@@ -285,17 +285,17 @@ module m15
     procedure s8
     procedure s9
   end interface
-  !PORTABILITY: Generic 'g7' should not have specific procedures 's6' and 's7' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g7' may not have specific procedures 's6' and 's7' as their interfaces are not distinguishable
   interface g7
     procedure s6
     procedure s7
   end interface
-  !PORTABILITY: Generic 'g8' should not have specific procedures 's6' and 's8' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g8' may not have specific procedures 's6' and 's8' as their interfaces are not distinguishable
   interface g8
     procedure s6
     procedure s8
   end interface
-  !PORTABILITY: Generic 'g9' should not have specific procedures 's7' and 's8' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g9' may not have specific procedures 's7' and 's8' as their interfaces are not distinguishable
   interface g9
     procedure s7
     procedure s8
@@ -339,7 +339,7 @@ module m16
     procedure, nopass :: s2
     procedure, nopass :: s3
     generic :: g1 => s1, s2
-    !PORTABILITY: Generic 'g2' should not have specific procedures 's1' and 's3' as their interfaces are not distinguishable by the incomplete rules in the standard
+    !ERROR: Generic 'g2' may not have specific procedures 's1' and 's3' as their interfaces are not distinguishable
     generic :: g2 => s1, s3
   end type
 contains
@@ -368,7 +368,7 @@ module m17
     procedure s1
     procedure s2
   end interface
-  !PORTABILITY: Generic 'g2' should not have specific procedures 's3' and 's4' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g2' may not have specific procedures 's3' and 's4' as their interfaces are not distinguishable
   interface g2
     procedure s3
     procedure s4
@@ -377,17 +377,17 @@ module m17
     procedure s1
     procedure s4
   end interface
-  !PORTABILITY: Generic 'g4' should not have specific procedures 's2' and 's3' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g4' may not have specific procedures 's2' and 's3' as their interfaces are not distinguishable
   interface g4
     procedure s2
     procedure s3
   end interface
-  !PORTABILITY: Generic 'g5' should not have specific procedures 's2' and 's5' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g5' may not have specific procedures 's2' and 's5' as their interfaces are not distinguishable
   interface g5
     procedure s2
     procedure s5
   end interface
-  !PORTABILITY: Generic 'g6' should not have specific procedures 's2' and 's6' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g6' may not have specific procedures 's2' and 's6' as their interfaces are not distinguishable
   interface g6
     procedure s2
     procedure s6
@@ -439,7 +439,7 @@ module m19
     module procedure f1
     module procedure f2
   end interface
-  !PORTABILITY: Generic 'OPERATOR(.bar.)' should not have specific procedures 'f2' and 'f3' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'OPERATOR(.bar.)' may not have specific procedures 'f2' and 'f3' as their interfaces are not distinguishable
   interface operator(.bar.)
     module procedure f2
     module procedure f3
@@ -507,7 +507,7 @@ end module
 
 ! Example reduced from pFUnit
 module m22
-  !PORTABILITY: Generic 'generic' should not have specific procedures 'sub1' and 'sub2' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !PORTABILITY: Generic 'generic' should not have specific procedures 'sub1' and 'sub2' as their interfaces are not distinguishable by the rules in the standard
   interface generic
     procedure sub1, sub2
   end interface
