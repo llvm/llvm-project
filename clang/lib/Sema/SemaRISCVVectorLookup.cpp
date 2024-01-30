@@ -282,6 +282,9 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
         }
       }
 
+      if (BaseType == BasicType::BFloat16 && !TI.hasFeature("zvfbfmin"))
+        continue;
+
       // Expanded with different LMUL.
       for (int Log2LMUL = -3; Log2LMUL <= 3; Log2LMUL++) {
         if (!(Record.Log2LMULMask & (1 << (Log2LMUL + 3))))
