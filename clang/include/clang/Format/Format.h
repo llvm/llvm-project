@@ -4157,15 +4157,6 @@ struct FormatStyle {
 
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
-    /// Never put a space before opening parentheses.
-    /// \code
-    ///    void f() {
-    ///      if(true) {
-    ///        f();
-    ///      }
-    ///    }
-    /// \endcode
-    SBPO_None,
     /// This is **deprecated** and replaced by ``Custom`` below, with all
     /// ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to
     /// ``false``.

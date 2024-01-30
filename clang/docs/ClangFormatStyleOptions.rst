@@ -5276,17 +5276,6 @@ the configuration (without a prefix: ``Auto``).
 
   Possible values:
 
-  * ``SBPO_None`` (in configuration: ``None``)
-    Never put a space before opening parentheses.
-
-    .. code-block:: c++
-
-       void f() {
-         if(true) {
-           f();
-         }
-       }
-
   * ``SBPO_Never`` (in configuration: ``Never``)
     This is **deprecated** and replaced by ``Custom`` below, with all
     ``SpaceBeforeParensOptions`` but ``AfterPlacementOperator`` set to

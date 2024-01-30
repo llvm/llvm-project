@@ -588,10 +588,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpaceAroundPointerQualifiers, FormatStyle::SAPQ_Both);
 
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
-  CHECK_PARSE("SpaceBeforeParens: None", SpaceBeforeParens,
-              FormatStyle::SBPO_None);
   CHECK_PARSE("SpaceBeforeParens: Never", SpaceBeforeParens,
-              FormatStyle::SBPO_Custom);
+              FormatStyle::SBPO_Never);
   CHECK_PARSE("SpaceBeforeParens: Always", SpaceBeforeParens,
               FormatStyle::SBPO_Always);
   CHECK_PARSE("SpaceBeforeParens: ControlStatements", SpaceBeforeParens,
@@ -604,10 +602,10 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SpaceBeforeParens: Custom", SpaceBeforeParens,
               FormatStyle::SBPO_Custom);
   // For backward compatibility:
+  CHECK_PARSE("SpaceAfterControlStatementKeyword: false", SpaceBeforeParens,
+              FormatStyle::SBPO_Never);
   CHECK_PARSE("SpaceAfterControlStatementKeyword: true", SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatements);
-  CHECK_PARSE("SpaceAfterControlStatementKeyword: false", SpaceBeforeParens,
-              FormatStyle::SBPO_Custom);
   CHECK_PARSE("SpaceBeforeParens: ControlStatementsExceptForEachMacros",
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
