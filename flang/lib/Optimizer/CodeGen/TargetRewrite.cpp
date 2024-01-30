@@ -90,6 +90,12 @@ public:
     if (!forcedTargetTriple.empty())
       fir::setTargetTriple(mod, forcedTargetTriple);
 
+    if (!forcedTargetCPU.empty())
+      fir::setTargetCPU(mod, forcedTargetCPU);
+
+    if (!forcedTargetFeatures.empty())
+      fir::setTargetFeatures(mod, forcedTargetFeatures);
+
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
@@ -102,9 +108,9 @@ public:
       return;
     }
 
-    auto specifics =
-        fir::CodeGenSpecifics::get(mod.getContext(), fir::getTargetTriple(mod),
-                                   fir::getKindMapping(mod), *dl);
+    auto specifics = fir::CodeGenSpecifics::get(
+        mod.getContext(), fir::getTargetTriple(mod), fir::getKindMapping(mod),
+        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl);
 
     setMembers(specifics.get(), &rewriter, &*dl);
 
@@ -666,8 +672,21 @@ public:
   /// As the type signature is being changed, this must also update the
   /// function itself to use any new arguments, etc.
   mlir::LogicalResult convertTypes(mlir::ModuleOp mod) {
-    for (auto fn : mod.getOps<mlir::func::FuncOp>())
+    mlir::MLIRContext *ctx = mod->getContext();
+    auto targetCPU = specifics->getTargetCPU();
+    mlir::StringAttr targetCPUAttr =
+        targetCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, targetCPU);
+    auto targetFeaturesAttr = specifics->getTargetFeatures();
+
+    for (auto fn : mod.getOps<mlir::func::FuncOp>()) {
+      if (targetCPUAttr)
+        fn->setAttr("target_cpu", targetCPUAttr);
+
+      if (targetFeaturesAttr)
+        fn->setAttr("target_features", targetFeaturesAttr);
+
       convertSignature(fn);
+    }
     return mlir::success();
   }
 

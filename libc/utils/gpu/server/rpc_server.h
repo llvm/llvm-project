@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 /// The maximum number of ports that can be opened for any server.
-const uint64_t RPC_MAXIMUM_PORT_COUNT = 512;
+const uint64_t RPC_MAXIMUM_PORT_COUNT = 4096;
 
 /// The symbol name associated with the client for use with the LLVM C library
 /// implementation.
