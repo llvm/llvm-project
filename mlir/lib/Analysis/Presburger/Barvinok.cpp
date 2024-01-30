@@ -155,6 +155,7 @@ mlir::presburger::detail::computeUnimodularConeGeneratingFunction(
 /// where x_i are variables,
 /// m_i are parameters and
 /// a_i, b_i, c are rational coefficients.
+///
 /// The solution expresses each x_i as an affine function of the m_i, and is
 /// therefore represented as a matrix of size d x (p+1).
 /// If there is no solution, we return null.
@@ -211,9 +212,11 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   // x_i + b_1' m_1 + ... + b_p' m_p + c' = 0
   // i.e. each variable appears exactly once in the system, and has coefficient
   // one.
+  //
   // Thus we have
   // x_i = - b_1' m_1 - ... - b_p' m_p - c
   // and so we return the negation of the last p + 1 columns of the matrix.
+  //
   // We copy these columns and return them.
   ParamPoint vertex =
       equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
@@ -224,6 +227,7 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 
 /// This is an implementation of the Clauss-Loechner algorithm for chamber
 /// decomposition.
+///
 /// We maintain a list of pairwise disjoint chambers and the generating
 /// functions corresponding to each one. We iterate over the list of regions,
 /// each time adding the current region's generating function to the chambers
@@ -246,18 +250,21 @@ mlir::presburger::detail::computeChamberDecomposition(
        GeneratingFunction(numSymbols, {}, {}, {})}};
 
   // We iterate over the region list.
+  //
   // For each activity region R_j (corresponding to a vertex v_j, whose
   // generating function is gf_j), we examine all the current chambers R_i.
+  //
   // If R_j has a full-dimensional intersection with an existing chamber R_i,
   // then that chamber is replaced by two new ones:
   // 1. the intersection R_i \cap R_j (if it is full-dimensional), where the
   // generating function is gf_i + gf_j.
   // 2. the difference R_i - R_j (if it is full-dimensional), where v_j is
   // inactive and the generating function is gf_i.
-
+  //
   // At each step, we define a new chamber list after considering vertex v_j,
   // and its generating function, replacing and appending chambers as
   // discussed above.
+  //
   // The loop has the invariant that the union over all the chambers gives the
   // universe at every step (modulo lower-dimensional spaces).
   for (const auto &[region, generatingFunction] :
@@ -367,14 +374,18 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // The region (in parameter space) where this vertex is active is given
     // by substituting the vertex into the *remaining* inequalities of the
     // polytope (those which were not collected into `subset`), i.e., into the
-    // matrix [A2 | B2 | c2].
+    // inequalities [A2 | B2 | c2].
+    //
     // Thus, the coefficients of the parameters after substitution become
     // (A2 • X + B2)
     // and the constant terms become
     // (A2 • y + c2).
+    //
     // The region is therefore given by
     // (A2 • X + B2) p + (A2 • y + c2) ≥ 0
-    // This is equivalent to A2 • [X | y] + [B2 | c2]
+    //
+    // This is equivalent to A2 • [X | y] + [B2 | c2].
+    //
     // Thus we premultiply [X | y] with each row of A2
     // and add each row of [B2 | c2].
     FracMatrix activeRegion(numIneqs - numVars, numSymbols + 1);
@@ -405,6 +416,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     }
     // We assume that the tangent cone is unimodular, so there is no need
     // to decompose it.
+    //
     // In the general case, the unimodular decomposition may have several
     // cones.
     GeneratingFunction vertexGf(numSymbols, {}, {}, {});
@@ -415,7 +427,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
                  computeUnimodularConeGeneratingFunction(*vertex, sign, cone);
     }
     // We store the vertex we computed with the generating function of its
-    // tangent cones.
+    // tangent cone.
     regionsAndGeneratingFunctions.emplace_back(PresburgerSet(activeRegionRel),
                                                vertexGf);
   } while (std::next_permutation(indicator.begin(), indicator.end()));
@@ -425,6 +437,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
   // property that no two of them have a full-dimensional intersection, i.e.,
   // they may share "facets" or "edges", but their intersection can only have
   // up to numVars - 1 dimensions.
+  //
   // In each chamber, we sum up the generating functions of the active vertices
   // to find the generating function of the polytope.
   return computeChamberDecomposition(numSymbols, regionsAndGeneratingFunctions);

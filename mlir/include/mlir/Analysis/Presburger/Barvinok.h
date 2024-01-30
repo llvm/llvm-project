@@ -99,6 +99,7 @@ std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 /// generating functions active in each region, produce a pairwise disjoint
 /// list of regions (chambers) and identify the generating function of the
 /// polytope in each chamber.
+///
 /// The returned list partitions the universe into parts depending on which
 /// subset of GFs is active there, and gives the sum of active GFs for each
 /// part. Lower-dimensional partitions are ignored.

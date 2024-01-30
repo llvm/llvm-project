@@ -29,6 +29,8 @@ Matrix<T>::Matrix(unsigned rows, unsigned columns, unsigned reservedRows,
   data.reserve(std::max(nRows, reservedRows) * nReservedColumns);
 }
 
+/// We cannot use the default implementation of operator== as it compares
+/// fields like `reservedColumns` etc., which are not part of the data.
 template <typename T>
 bool Matrix<T>::operator==(const Matrix<T> &m) const {
   if (nRows != m.getNumRows())
@@ -36,13 +38,9 @@ bool Matrix<T>::operator==(const Matrix<T> &m) const {
   if (nColumns != m.getNumColumns())
     return false;
 
-  for (unsigned i = 0; i < nRows; i++) {
-    for (unsigned j = 0; j < nColumns; j++) {
-      if (at(i, j) == m.at(i, j))
-        continue;
+  for (unsigned i = 0; i < nRows; i++)
+    if (getRow(i) != m.getRow(i))
       return false;
-    }
-  }
 
   return true;
 }
