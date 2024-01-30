@@ -267,7 +267,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     llvm_unreachable("Unknown EVEX compression");
   }
   MI.setAsmPrinterFlag(AsmComment);
-  if (IsND)
+  if (IsND || IsMovberr)
     MI.tieOperands(0, 1);
 
   return true;
