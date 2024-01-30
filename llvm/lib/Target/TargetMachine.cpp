@@ -85,7 +85,11 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       getCodeModel() == CodeModel::Large) {
     if (!GV->getValueType()->isSized())
       return true;
-    if (GV->isDeclaration() && GV->getName() == "__ehdr_start")
+    // Linker defined start/stop symbols can point to arbitrary points in the
+    // binary, so treat them as large.
+    if (GV->isDeclaration() && (GV->getName() == "__ehdr_start" ||
+                                GV->getName().starts_with("__start_") ||
+                                GV->getName().starts_with("__stop_")))
       return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
     uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
