@@ -80,3 +80,22 @@ add_libc_unittest(
     libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_unittest(
+  mlock_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    mlock_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
