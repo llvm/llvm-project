@@ -363,6 +363,12 @@ def FeatureGFX12_10Insts : SubtargetFeature<"gfx12-10-insts",
   "Additional instructions for GFX1210+"
 >;
 
+def FeatureGFX13Insts : SubtargetFeature<"gfx13-insts",
+  "GFX13Insts",
+  "true",
+  "Additional instructions for GFX13+"
+>;
+
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -1202,6 +1208,26 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   ]
 >;
 
+def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
+  "gfx13",
+  [FeatureFP64, FeatureMIMG_R128,
+   FeatureFlatAddressSpace, Feature16BitInsts,
+   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
+   FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureGFX11Insts, FeatureGFX12Insts, FeatureGFX13Insts, FeatureVOP3P, FeatureVOPD,
+   FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
+   FeatureAddNoCarryInsts, FeatureFmaMixInsts,
+   FeatureNoSdstCMPX, FeatureVscnt,
+   FeatureVOP3Literal, FeatureDPP8,
+   FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
+   FeatureA16, FeatureFastDenormalF32, FeatureG16,
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
+  ]
+>;
+
 //===----------------------------------------------------------------------===//
 
 class FeatureSet<list<SubtargetFeature> Features_> {
@@ -1635,6 +1661,46 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePrngInst,
    FeatureSupportsSRAMECC]>;
 
+def FeatureISAVersion13 : FeatureSet<
+  [FeatureGFX13,
+   FeatureLocalMemorySize393216,
+   FeatureCuMode,
+   Feature1024AddressableVGPRs,
+   Feature64BitLiterals,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureFmacF64Inst,
+   FeatureDPALU_DPP,
+   FeaturePackedFP32Ops,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesRegister,
+   FeatureArchitectedFlatScratch,
+   FeatureArchitectedSGPRs,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureFlatAtomicFaddF32Inst,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans,
+   FeatureHasRestrictedSOffset,
+   FeatureVGPRSingleUseHintInsts,
+   FeatureScalarDwordx3Loads,
+   FeatureDPPSrc1SGPR,
+   FeatureBitOp3Insts,
+   FeatureTanhInsts,
+   FeatureBF16TransInsts,
+   FeatureBF16ConversionInsts,
+   FeatureBF16PackedInsts,
+   FeaturePrngInst,
+   FeatureSupportsSRAMECC]>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
@@ -1918,7 +1984,7 @@ def isGFX11Plus :
 
 def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts)>;
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX13Insts))>;
 
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
@@ -1930,7 +1996,7 @@ def isGFX12Not12_10 :
 
 def isGFX12_10Only :
   Predicate<"Subtarget->hasGFX12_10Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(all_of FeatureGFX12_10Insts, (not FeatureGFX13Insts))>;
 
 def isGFX12_10Plus :
   Predicate<"Subtarget->hasGFX12_10Insts()">,
@@ -1939,6 +2005,10 @@ def isGFX12_10Plus :
 def isGFX940orGFX12_10 :
   Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX12_10Insts()">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX12_10Insts)>;
+
+def isGFX13Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
+  AssemblerPredicate<(all_of FeatureGFX13Insts)>;
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;

@@ -2328,13 +2328,21 @@ bool isGFX12(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
 }
 
-bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
+bool isGFX12Plus(const MCSubtargetInfo &STI) {
+  return isGFX12(STI) || isGFX13Plus(STI);
+}
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isGFX12_10(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12_10Insts];
 }
+
+bool isGFX13(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX13];
+}
+
+bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX12_10(STI))

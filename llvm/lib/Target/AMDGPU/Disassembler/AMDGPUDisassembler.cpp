@@ -740,6 +740,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Res)
       break;
 
+    Res = tryDecodeInst(DecoderTableGFX1364, MI, QW, Address, CS);
+    if (Res)
+      break;
+
     Res = tryDecodeInst(DecoderTableWMMAGFX1164, MI, QW, Address, CS);
     if (Res)
       break;

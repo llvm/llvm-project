@@ -305,5 +305,5 @@ def : ProcessorModel<"gfx1210", GFX12SpeedModel,
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"gfx1300", GFX12SpeedModel,
-  FeatureISAVersion12_10.Features
+  FeatureISAVersion13.Features
 >;
