@@ -82,10 +82,8 @@ private:
   uint32_t getBlockId(const BasicBlock *BB) const;
   uint32_t getCallsiteId(const Instruction *Call) const;
   void findInvokeNormalDests(DenseSet<BasicBlock *> &InvokeNormalDests);
-  void computeCFGHash(const DenseSet<BasicBlock *> &InvokeNormalDests,
-                      const DenseSet<BasicBlock *> &KnownColdBlocks);
-  void computeProbeIdForBlocks(const DenseSet<BasicBlock *> &InvokeNormalDests,
-                               const DenseSet<BasicBlock *> &KnownColdBlocks);
+  void computeCFGHash(const DenseSet<BasicBlock *> &BlocksToIgnore);
+  void computeProbeIdForBlocks(const DenseSet<BasicBlock *> &BlocksToIgnore);
   void computeProbeIdForCallsites();
 
   Function *F;

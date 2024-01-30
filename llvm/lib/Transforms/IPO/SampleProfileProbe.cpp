@@ -174,14 +174,23 @@ SampleProfileProber::SampleProfileProber(Function &Func,
   CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
 
-  DenseSet<BasicBlock *> InvokeNormalDests;
-  findInvokeNormalDests(InvokeNormalDests);
-  DenseSet<BasicBlock *> KnownColdBlocks;
-  computeEHOnlyBlocks(*F, KnownColdBlocks);
+  DenseSet<BasicBlock *> BlocksToIgnore;
+  // Ignore the cold EH blocks. This will reduce IR size as
+  // well as the binary size while retaining the profile quality.
+  computeEHOnlyBlocks(*F, BlocksToIgnore);
+  // While optimizing nounwind attribute, the frondend may generate unstable IR,
+  // e.g. some versions are optimized with the call-to-invoke conversion, while
+  // other versions do not. This discrepancy in probe ID could cause profile
+  // mismatching issues. To make the probe ID consistent, we can ignore all the
+  // EH flows. Specifically, we can ignore the normal dest block which
+  // originating from the same block as the call/invoke block and the unwind
+  // dest block(computed in computeEHOnlyBlocks), which is a cold block. It
+  // doesn't affect the profile quality.
+  findInvokeNormalDests(BlocksToIgnore);
 
-  computeProbeIdForBlocks(InvokeNormalDests, KnownColdBlocks);
+  computeProbeIdForBlocks(BlocksToIgnore);
   computeProbeIdForCallsites();
-  computeCFGHash(InvokeNormalDests, KnownColdBlocks);
+  computeCFGHash(BlocksToIgnore);
 }
 
 void SampleProfileProber::findInvokeNormalDests(
@@ -198,16 +207,18 @@ void SampleProfileProber::findInvokeNormalDests(
 // preceded by the number of indirect calls.
 // This is derived from FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash().
 void SampleProfileProber::computeCFGHash(
-    const DenseSet<BasicBlock *> &InvokeNormalDests,
-    const DenseSet<BasicBlock *> &KnownColdBlocks) {
+    const DenseSet<BasicBlock *> &BlocksToIgnore) {
   std::vector<uint8_t> Indexes;
   JamCRC JC;
   for (auto &BB : *F) {
-    // Skip the EH flow blocks.
-    if (InvokeNormalDests.contains(&BB) || KnownColdBlocks.contains(&BB))
+    if (BlocksToIgnore.contains(&BB))
       continue;
-
-    // Find the original successors by skipping the EH flow succs.
+    // To keep the CFG Hash consistent before and after the call-to-invoke
+    // conversion, we need to compute the hash using the original call BB's
+    // successors for the invoke BB. As the current invoke BB's
+    // successors(normal dest and unwind dest) are ignored, we keep searching to
+    // find the leaf normal dest, the leaf's successors are the original call's
+    // successors.
     auto *BBPtr = &BB;
     auto *TI = BBPtr->getTerminator();
     while (auto *II = dyn_cast<InvokeInst>(TI)) {
@@ -217,6 +228,8 @@ void SampleProfileProber::computeCFGHash(
 
     for (BasicBlock *Succ : successors(BBPtr)) {
       auto Index = getBlockId(Succ);
+      assert(Index &&
+             "Ignored block(zero ID) should not be used for hash computation");
       for (int J = 0; J < 4; J++)
         Indexes.push_back((uint8_t)(Index >> (J * 8)));
     }
@@ -237,12 +250,9 @@ void SampleProfileProber::computeCFGHash(
 }
 
 void SampleProfileProber::computeProbeIdForBlocks(
-    const DenseSet<BasicBlock *> &InvokeNormalDests,
-    const DenseSet<BasicBlock *> &KnownColdBlocks) {
-  // Insert pseudo probe to non-cold blocks only. This will reduce IR size as
-  // well as the binary size while retaining the profile quality.
+    const DenseSet<BasicBlock *> &BlocksToIgnore) {
   for (auto &BB : *F) {
-    if (InvokeNormalDests.contains(&BB) || KnownColdBlocks.contains(&BB))
+    if (BlocksToIgnore.contains(&BB))
       continue;
     BlockProbeIds[&BB] = ++LastProbeId;
   }
