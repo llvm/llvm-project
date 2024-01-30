@@ -312,18 +312,6 @@ public:
   }
 };
 
-namespace detail {
-// A constexpr version of llvm::bit_ceil.
-// TODO: Replace this with std::bit_ceil once C++20 is available.
-static constexpr size_t RoundUpToPowerOfTwo(size_t X) {
-  size_t C = 1;
-  size_t CMax = C << (std::numeric_limits<size_t>::digits - 1);
-  while (C < X && C < CMax)
-    C <<= 1;
-  return C;
-}
-} // namespace detail
-
 /// A templated base class for \c SmallPtrSet which provides the
 /// typesafe interface that is common across all small sizes.
 ///
@@ -443,6 +431,16 @@ class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
   static_assert(SmallSize <= 32, "SmallSize should be small");
 
   using BaseT = SmallPtrSetImpl<PtrType>;
+
+  // A constexpr version of llvm::bit_ceil.
+  // TODO: Replace this with std::bit_ceil once C++20 is available.
+  static constexpr size_t RoundUpToPowerOfTwo(size_t X) {
+    size_t C = 1;
+    size_t CMax = C << (std::numeric_limits<size_t>::digits - 1);
+    while (C < X && C < CMax)
+      C <<= 1;
+    return C;
+  }
 
   // Make sure that SmallSize is a power of two, round up if not.
   static constexpr size_t SmallSizePowTwo =
