@@ -22,14 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
-
-enum Linkage {
- Invalid = 0,
- External = 1,
- Internal = 2,
-};
-
-
 /// The identity of a type_info object depends on the canonical unqualified
 /// type only.
 TypeInfoLValue::TypeInfoLValue(const Type *T)
