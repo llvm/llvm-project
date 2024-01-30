@@ -412,7 +412,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
     }
 
     BasicBlock *DefaultDest = SI->getDefaultDest();
-    if (!isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
+    if (ReachableCaseCount > 1 &&
+        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
       ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
                                                     /*UndefAllowed*/ false);
       // The default dest is unreachable if all cases are covered.
@@ -422,17 +423,12 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
                                BB->getParent(), DefaultDest);
         new UnreachableInst(BB->getContext(), NewUnreachableBB);
 
-        bool RemoveOldBB = --SuccessorsCount[DefaultDest] == 0;
-
-        if (RemoveOldBB)
-          DefaultDest->removePredecessor(BB);
+        DefaultDest->removePredecessor(BB);
         SI->setDefaultDest(NewUnreachableBB);
 
-        if (RemoveOldBB)
-          DTU.applyUpdatesPermissive(
-              {{DominatorTree::Delete, BB, DefaultDest}});
         DTU.applyUpdatesPermissive(
-            {{DominatorTree::Insert, BB, NewUnreachableBB}});
+            {{DominatorTree::Delete, BB, DefaultDest},
+             {DominatorTree::Insert, BB, NewUnreachableBB}});
 
         ++NumDeadCases;
         Changed = true;
@@ -1257,7 +1253,12 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
-    assert(DT->verify());
+#if defined(EXPENSIVE_CHECKS)
+    assert(DT->verify(DominatorTree::VerificationLevel::Full));
+#else
+    assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+#endif // EXPENSIVE_CHECKS
+
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }
