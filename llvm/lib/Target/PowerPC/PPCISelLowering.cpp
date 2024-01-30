@@ -3366,6 +3366,15 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   bool Is64Bit = Subtarget.isPPC64();
   bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+  if (Subtarget.hasAIXFuncUseTLSLD()) {
+    LLVM_DEBUG(dbgs() << DAG.getMachineFunction().getName()
+                      << " function use TLS-LD\n");
+    Model = TLSModel::LocalDynamic;
+  } else if (Subtarget.hasAIXFuncUseTLSIE()) {
+    LLVM_DEBUG(dbgs() << DAG.getMachineFunction().getName()
+                      << " function use TLS-IE\n");
+    Model = TLSModel::InitialExec;
+  }
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
   if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {

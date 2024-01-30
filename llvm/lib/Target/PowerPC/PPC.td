@@ -329,6 +329,14 @@ def FeatureAIXLocalExecTLS :
                    "Produce a TOC-free local-exec TLS sequence for this function "
                    "for 64-bit AIX">;
 
+def FeatureAIXFuncUseTLSLocalDynamic :
+  SubtargetFeature<"aix-func-use-tls-local-dynamic", "HasAIXFuncUseTLSLD", "true",
+                   "Use TLS local-dynamic model for this function for AIX">;
+
+def FeatureAIXFuncUseTLSInitialExec :
+  SubtargetFeature<"aix-func-use-tls-initial-exec", "HasAIXFuncUseTLSIE", "true",
+                   "Use TLS initial-exec model for this function for AIX">;
+
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",

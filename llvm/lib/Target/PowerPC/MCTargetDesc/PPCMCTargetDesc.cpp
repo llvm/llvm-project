@@ -231,6 +231,27 @@ public:
       MCSymbolXCOFF *TCSym =
           cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
+
+      // On AIX, we allow set TLS variable model per function (local-dynamic or
+      // initial-exec). Handle the artificial renaming of variables.
+      if ((Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
+           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE) &&
+          TCSym->getName().starts_with("_Renamed..5f24__TLSLD.")) {
+        if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD) {
+          OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
+             << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
+          StringRef Lhs, Rhs;
+          std::tie(Lhs, Rhs) = TCSym->getSymbolTableName().rsplit("$TLSLD.");
+          Streamer.emitXCOFFRenameDirective(TCSym, Rhs);
+        } else {
+          StringRef Lhs, Rhs;
+          std::tie(Lhs, Rhs) = TCSym->getName().rsplit("Renamed..5f24__TLSLD.");
+          OS << "\t.tc " << Rhs << "," << XSym->getName() << "@"
+             << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
+        }
+        return;
+      }
+
       // On AIX, we have TLS variable offsets (symbol@({gd|ie|le|ld}) depending
       // on the TLS access method (or model). For the general-dynamic access
       // method, we also have region handle (symbol@m) for each variable. For

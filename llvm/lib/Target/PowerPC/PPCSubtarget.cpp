@@ -128,6 +128,22 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     report_fatal_error(
       "The aix-small-local-exec-tls attribute is only supported on AIX in "
       "64-bit mode.\n", false);
+
+  if (HasAIXFuncUseTLSLD && !TargetTriple.isOSAIX())
+    report_fatal_error("The aix-func-use-tls-local-dynamic attribute is only "
+                       "supported on AIX.\n",
+                       false);
+
+  if (HasAIXFuncUseTLSIE && !TargetTriple.isOSAIX())
+    report_fatal_error("The aix-func-use-tls-initial-exec attribute is only "
+                       "supported on AIX.\n",
+                       false);
+
+  if (HasAIXFuncUseTLSLD && HasAIXFuncUseTLSIE)
+    report_fatal_error(
+        "The aix-func-use-tls-local-dynamic attribute and the "
+        "aix-func-use-tls-initial-exec attribute are mutually exclusive.\n",
+        false);
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }

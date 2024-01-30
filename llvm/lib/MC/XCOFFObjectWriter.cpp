@@ -945,8 +945,18 @@ void XCOFFObjectWriter::writeSymbolEntryForDwarfSection(
 void XCOFFObjectWriter::writeSymbolEntryForControlSection(
     const XCOFFSection &CSectionRef, int16_t SectionIndex,
     XCOFF::StorageClass StorageClass) {
-  writeSymbolEntry(CSectionRef.getSymbolTableName(), CSectionRef.Address,
-                   SectionIndex, CSectionRef.getVisibilityType(), StorageClass);
+  // On AIX, we allow set TLS variable model per function (local-dynamic or
+  // initial-exec). Handle the artificial renaming of variables.
+  if (CSectionRef.getSymbolTableName().starts_with("_$TLSLD.")) {
+    StringRef Lhs, Rhs;
+    std::tie(Lhs, Rhs) = CSectionRef.getSymbolTableName().rsplit("$TLSLD.");
+    writeSymbolEntry(Rhs, CSectionRef.Address, SectionIndex,
+                     CSectionRef.getVisibilityType(), StorageClass);
+  } else {
+    writeSymbolEntry(CSectionRef.getSymbolTableName(), CSectionRef.Address,
+                     SectionIndex, CSectionRef.getVisibilityType(),
+                     StorageClass);
+  }
 
   writeSymbolAuxCsectEntry(CSectionRef.Size, getEncodedType(CSectionRef.MCSec),
                            CSectionRef.MCSec->getMappingClass());

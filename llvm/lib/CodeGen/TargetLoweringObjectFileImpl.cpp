@@ -2653,7 +2653,22 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
-    const MCSymbol *Sym, const TargetMachine &TM) const {
+    const MCSymbol *Sym, const TargetMachine &TM,
+    const MCSymbolRefExpr::VariantKind VK) const {
+  // On AIX, we allow set TLS variable model per function (local-dynamic or
+  // initial-exec). In order to allow existence of both models in the same
+  // object, need to rename all local-dynamic accesses by prefix "_$TLSLD.".
+  SmallString<128> NameSV;
+  auto RenameForAIXTLSLD = [&](StringRef Name) {
+    if (Name.starts_with("_$TLSLD."))
+      return Name;
+    else {
+      NameSV = StringRef("_$TLSLD.");
+      NameSV.append(cast<MCSymbolXCOFF>(Sym)->getSymbolTableName());
+      return NameSV.str();
+    }
+  };
+
   // Use TE storage-mapping class when large code model is enabled so that
   // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
   // EH info is never referenced directly using instructions so it can be
@@ -2661,7 +2676,10 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
   // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC, otherwise
   // the AIX assembler will complain.
   return getContext().getXCOFFSection(
-      cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
+      (VK != MCSymbolRefExpr::VK_PPC_AIX_TLSLD
+           ? cast<MCSymbolXCOFF>(Sym)->getSymbolTableName()
+           : RenameForAIXTLSLD(cast<MCSymbolXCOFF>(Sym)->getSymbolTableName())),
+      SectionKind::getData(),
       XCOFF::CsectProperties(
           ((TM.getCodeModel() == CodeModel::Large &&
             cast<MCSymbolXCOFF>(Sym)->getSymbolTableName() != "_$TLSML") ||
