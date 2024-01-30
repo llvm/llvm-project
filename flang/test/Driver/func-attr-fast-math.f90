@@ -1,8 +1,6 @@
-! REQUIRES: x86-registered-target
-
-! RUN: %flang --target=x86_64 -O1 -emit-llvm -S -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-NOFASTMATH
-! RUN: %flang --target=x86_64 -Ofast -emit-llvm -S -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-OFAST
-! RUN: %flang --target=x86_64 -O1 -ffast-math -emit-llvm -S -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-FFAST-MATH
+! RUN: %flang -O1 -emit-llvm -S -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-NOFASTMATH
+! RUN: %flang -Ofast -emit-llvm -S -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-OFAST
+! RUN: %flang -O1 -ffast-math -emit-llvm -S -o - %s 2>&1| FileCheck %s --check-prefix=CHECK-FFAST-MATH
 
 subroutine func
 end subroutine func
