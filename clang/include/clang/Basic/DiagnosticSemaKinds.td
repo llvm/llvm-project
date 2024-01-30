@@ -7220,8 +7220,7 @@ def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
 def ext_standalone_specifier : ExtWarn<"'%0' is not permitted on a declaration "
   "of a type">, InGroup<MissingDeclarations>;
 def err_standalone_class_nested_name_specifier : Error<
-  "forward declaration of %select{class|struct|interface|union|enum|enum class|enum struct}0 cannot "
-  "have a nested name specifier">;
+  "forward declaration of %0 cannot have a nested name specifier">;
 def err_typecheck_sclass_func : Error<"illegal storage class on function">;
 def err_static_block_func : Error<
   "function declared in block scope cannot have 'static' storage class">;
