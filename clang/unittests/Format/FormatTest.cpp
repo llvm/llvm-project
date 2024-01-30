@@ -7841,7 +7841,6 @@ TEST_F(FormatTest, AllowAllConstructorInitializersOnNextLine) {
 TEST_F(FormatTest, AllowAllArgumentsOnNextLine) {
   FormatStyle Style = getLLVMStyleWithColumns(60);
   Style.BinPackArguments = false;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   for (int i = 0; i < 4; ++i) {
     // Test all combinations of parameters that should not have an effect.
     Style.AllowAllParametersOfDeclarationOnNextLine = i & 1;
@@ -7899,7 +7898,6 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
                     "void functionDecl(int A, int B, int C);";
   Style.AllowAllArgumentsOnNextLine = false;
   Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "    paramC);\n"
                          "void functionDecl(int A, int B,\n"
@@ -8380,11 +8378,10 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "    bbbb bbbb);");
-  verifyFormat("void\n"
-               "SomeLoooooooooooongFunction(std::unique_ptr<"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>\n"
-               "                                aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "                            int bbbbbbbbbbbbb);");
+  verifyFormat("void SomeLoooooooooooongFunction(\n"
+               "    std::unique_ptr<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>\n"
+               "        aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb);");
 
   // Treat overloaded operators like other functions.
   verifyFormat("SomeLoooooooooooooooooooooooooogType\n"
@@ -8449,15 +8446,11 @@ TEST_F(FormatTest, TrailingReturnType) {
   verifyFormat("auto SomeFunction(A aaaaaaaaaaaaaaaaaaaaa) const\n"
                "    -> decltype(f(aaaaaaaaaaaaaaaaaaaaa)) {}");
   verifyFormat("auto doSomething(Aaaaaa *aaaaaa) -> decltype(aaaaaa->f()) {}");
-
-  FormatStyle Style = getLLVMStyle();
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   verifyFormat("template <typename T>\n"
                "auto aaaaaaaaaaaaaaaaaaaaaa(T t)\n"
-               "    -> decltype(eaaaaaaaaaaaaaaa<T>(t.a).aaaaaaaa());",
-               Style);
+               "    -> decltype(eaaaaaaaaaaaaaaa<T>(t.a).aaaaaaaa());");
 
-  Style = getLLVMStyleWithColumns(60);
+  FormatStyle Style = getLLVMStyleWithColumns(60);
   verifyFormat("#define MAKE_DEF(NAME)                                     \\\n"
                "  auto NAME() -> int { return 42; }",
                Style);
@@ -8724,7 +8717,6 @@ TEST_F(FormatTest, BreaksDesireably) {
 
 TEST_F(FormatTest, FormatsDeclarationsOnePerLine) {
   FormatStyle NoBinPacking = getGoogleStyle();
-  NoBinPacking.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   NoBinPacking.BinPackParameters = false;
   NoBinPacking.BinPackArguments = true;
   verifyFormat("void f() {\n"
@@ -8749,13 +8741,10 @@ TEST_F(FormatTest, FormatsDeclarationsOnePerLine) {
       "void fffffffffff(aaaaaaaaaaaaaaaaaaaaaaaaaaa<aaaaaaaaaaaaaaaaaaaaaaa,\n"
       "                                             aaaaaaaaaa> aaaaaaaaaa);",
       NoBinPacking);
-  FormatStyle BinPacking = getLLVMStyle();
-  BinPacking.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   verifyFormat(
       "void fffffffffff(\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaa<aaaaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaa>\n"
-      "        aaaaaaaaaa);",
-      BinPacking);
+      "        aaaaaaaaaa);");
 }
 
 TEST_F(FormatTest, FormatsOneParameterPerLineIfNecessary) {
@@ -12065,7 +12054,6 @@ TEST_F(FormatTest, AttributesAfterMacro) {
 
 TEST_F(FormatTest, AttributePenaltyBreaking) {
   FormatStyle Style = getLLVMStyle();
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   verifyFormat("void ABCDEFGH::ABCDEFGHIJKLMN(\n"
                "    [[maybe_unused]] const shared_ptr<ALongTypeName> &C d) {}",
                Style);
@@ -12443,17 +12431,13 @@ TEST_F(FormatTest, BreaksLongDeclarations) {
   verifyFormat("typedef size_t (*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)(\n"
                "    const aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "        *aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
-  verifyFormat("void\n"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa(vector<"
-               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>\n"
-               "                                  aaaaaaaaaaaaaaaaaaaaaaaa);");
-  verifyFormat(
-      "void\n"
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa(vector<"
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa<\n"
-      "                                  "
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>>\n"
-      "                                  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    vector<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>\n"
+               "        aaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+               "    vector<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa<\n"
+               "        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>>\n"
+               "        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
   verifyFormat("template <typename T> // Templates on own line.\n"
                "static int            // Some comment.\n"
@@ -14382,7 +14366,6 @@ TEST_F(FormatTest, SplitEmptyFunction) {
 TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
   FormatStyle Style = getLLVMStyleWithColumns(40);
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
   Style.BraceWrapping.SplitEmptyFunction = true;
@@ -21590,7 +21573,6 @@ TEST_F(FormatTest, OptimizeBreakPenaltyVsExcess) {
 TEST_F(FormatTest, BreakPenaltyAfterLParen) {
   FormatStyle Style = getLLVMStyle();
   Style.ColumnLimit = 8;
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
   Style.PenaltyExcessCharacter = 15;
   verifyFormat("int foo(\n"
                "    int aaaaaaaaaaaaaaaaaaaaaaaa);",
@@ -27012,7 +26994,6 @@ TEST_F(FormatTest, RemoveParentheses) {
 
 TEST_F(FormatTest, AllowBreakBeforeNoexceptSpecifier) {
   auto Style = getLLVMStyleWithColumns(35);
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_None;
 
   EXPECT_EQ(Style.AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
   verifyFormat("void foo(int arg1,\n"

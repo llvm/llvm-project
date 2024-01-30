@@ -522,8 +522,7 @@ TEST_F(FormatTestSelective, ReformatRegionAdjustsIndent) {
 
   Style.ColumnLimit = 11;
   EXPECT_EQ("  int a;\n"
-            "  void\n"
-            "  ffffff() {\n"
+            "  void ffffff() {\n"
             "  }",
             format("  int a;\n"
                    "void ffffff() {}",
