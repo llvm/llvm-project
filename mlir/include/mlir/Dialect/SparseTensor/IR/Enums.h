@@ -310,7 +310,6 @@ constexpr bool isLooseCompressedLT(LevelType lt) {
          static_cast<uint64_t>(LevelType::LooseCompressed);
 }
 
-
 /// Check if the `LevelType` needs positions array.
 constexpr bool isWithPosLT(LevelType lt) {
   return isCompressedLT(lt) || isLooseCompressedLT(lt);
