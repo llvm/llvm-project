@@ -359,13 +359,13 @@ public:
   LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::ZERO()));
   }
-  LIBC_INLINE static constexpr RetT build_nan(Sign sign = Sign::POS,
-                                              StorageType v = 0) {
+  LIBC_INLINE static constexpr RetT signaling_nan(Sign sign = Sign::POS,
+                                                  StorageType v = 0) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
                        (v ? Sig(v) : (Sig::MSB() >> 1))));
   }
-  LIBC_INLINE static constexpr RetT build_quiet_nan(Sign sign = Sign::POS,
-                                                    StorageType v = 0) {
+  LIBC_INLINE static constexpr RetT quiet_nan(Sign sign = Sign::POS,
+                                              StorageType v = 0) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::MSB() | Sig(v)));
   }
 
@@ -448,13 +448,13 @@ public:
   LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::MSB()));
   }
-  LIBC_INLINE static constexpr RetT build_nan(Sign sign = Sign::POS,
-                                              StorageType v = 0) {
+  LIBC_INLINE static constexpr RetT signaling_nan(Sign sign = Sign::POS,
+                                                  StorageType v = 0) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
                        Sig::MSB() | (v ? Sig(v) : (Sig::MSB() >> 2))));
   }
-  LIBC_INLINE static constexpr RetT build_quiet_nan(Sign sign = Sign::POS,
-                                                    StorageType v = 0) {
+  LIBC_INLINE static constexpr RetT quiet_nan(Sign sign = Sign::POS,
+                                              StorageType v = 0) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
                        Sig::MSB() | (Sig::MSB() >> 1) | Sig(v)));
   }
@@ -551,10 +551,16 @@ protected:
   using UP::SIG_LEN;
 
 public:
+  // Constants.
   using UP::EXP_BIAS;
   using UP::EXP_MASK;
   using UP::FRACTION_MASK;
   using UP::SIGN_MASK;
+  LIBC_INLINE_VAR static constexpr int MAX_BIASED_EXPONENT =
+      (1 << UP::EXP_LEN) - 1;
+
+  LIBC_INLINE constexpr FPRep() = default;
+  LIBC_INLINE constexpr explicit FPRep(StorageType x) : UP(x) {}
 
   // Comparison
   LIBC_INLINE constexpr friend bool operator==(FPRep a, FPRep b) {
@@ -574,14 +580,14 @@ public:
   LIBC_INLINE static constexpr RetT zero(Sign sign = Sign::POS) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ZEROES(), Sig::ZERO()));
   }
-  using UP::build_nan;
-  using UP::build_quiet_nan;
   using UP::inf;
   using UP::max_normal;
   using UP::max_subnormal;
   using UP::min_normal;
   using UP::min_subnormal;
   using UP::one;
+  using UP::quiet_nan;
+  using UP::signaling_nan;
 
   // Modifiers
   LIBC_INLINE constexpr RetT abs() const {
@@ -649,6 +655,47 @@ public:
     bits = merge(bits, mantVal, FRACTION_MASK);
   }
 
+  // Unsafe function to create a floating point representation.
+  // It simply packs the sign, biased exponent and mantissa values without
+  // checking bound nor normalization.
+  // FIXME: Use an uint32_t for 'biased_exp'.
+  LIBC_INLINE static constexpr RetT
+  create_value(Sign sign, StorageType biased_exp, StorageType mantissa) {
+    static_assert(fp_type != FPType::X86_Binary80,
+                  "This function is not tested for X86 Extended Precision");
+    return RetT(encode(sign, BiasedExp(static_cast<uint32_t>(biased_exp)),
+                       Sig(mantissa)));
+  }
+
+  // The function converts integer number and unbiased exponent to proper float
+  // T type:
+  //   Result = number * 2^(ep+1 - exponent_bias)
+  // Be careful!
+  //   1) "ep" is the raw exponent value.
+  //   2) The function adds +1 to ep for seamless normalized to denormalized
+  //      transition.
+  //   3) The function does not check exponent high limit.
+  //   4) "number" zero value is not processed correctly.
+  //   5) Number is unsigned, so the result can be only positive.
+  LIBC_INLINE static constexpr RetT make_value(StorageType number, int ep) {
+    static_assert(fp_type != FPType::X86_Binary80,
+                  "This function is not tested for X86 Extended Precision");
+    FPRep result;
+    // offset: +1 for sign, but -1 for implicit first bit
+    int lz = cpp::countl_zero(number) - UP::EXP_LEN;
+    number <<= lz;
+    ep -= lz;
+
+    if (LIBC_LIKELY(ep >= 0)) {
+      // Implicit number bit will be removed by mask
+      result.set_mantissa(number);
+      result.set_biased_exponent(ep + 1);
+    } else {
+      result.set_mantissa(number >> -ep);
+    }
+    return RetT(result.uintval());
+  }
+
 private:
   // Merge bits from 'a' and 'b' values according to 'mask'.
   // Use 'a' bits when corresponding 'mask' bits are zeroes and 'b' bits when
@@ -693,21 +740,14 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }
 
-// A generic class to manipulate floating point formats.
+// A generic class to manipulate C++ floating point formats.
 // It derives most of its functionality to FPRep above.
 template <typename T>
 struct FPBits final : public internal::FPRep<get_fp_type<T>(), FPBits<T>> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
   using UP = internal::FPRep<get_fp_type<T>(), FPBits<T>>;
-  using Rep = UP;
   using StorageType = typename UP::StorageType;
-
-  using UP::bits;
-
-  // Constants.
-  LIBC_INLINE_VAR static constexpr int MAX_BIASED_EXPONENT =
-      (1 << UP::EXP_LEN) - 1;
 
   // Constructors.
   LIBC_INLINE constexpr FPBits() = default;
@@ -715,57 +755,18 @@ struct FPBits final : public internal::FPRep<get_fp_type<T>(), FPBits<T>> {
   template <typename XType> LIBC_INLINE constexpr explicit FPBits(XType x) {
     using Unqual = typename cpp::remove_cv_t<XType>;
     if constexpr (cpp::is_same_v<Unqual, T>) {
-      bits = cpp::bit_cast<StorageType>(x);
+      UP::bits = cpp::bit_cast<StorageType>(x);
     } else if constexpr (cpp::is_same_v<Unqual, StorageType>) {
-      bits = x;
+      UP::bits = x;
     } else {
       // We don't want accidental type promotions/conversions, so we require
       // exact type match.
       static_assert(cpp::always_false<XType>);
     }
   }
+
   // Floating-point conversions.
-  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
-
-  // TODO: Use an uint32_t for 'biased_exp'.
-  LIBC_INLINE static constexpr FPBits<T>
-  create_value(Sign sign, StorageType biased_exp, StorageType mantissa) {
-    static_assert(get_fp_type<T>() != FPType::X86_Binary80,
-                  "This function is not tested for X86 Extended Precision");
-    return FPBits(UP::encode(
-        sign, typename UP::BiasedExponent(static_cast<uint32_t>(biased_exp)),
-        typename UP::Significand(mantissa)));
-  }
-
-  // The function convert integer number and unbiased exponent to proper float
-  // T type:
-  //   Result = number * 2^(ep+1 - exponent_bias)
-  // Be careful!
-  //   1) "ep" is raw exponent value.
-  //   2) The function add to +1 to ep for seamless normalized to denormalized
-  //      transition.
-  //   3) The function did not check exponent high limit.
-  //   4) "number" zero value is not processed correctly.
-  //   5) Number is unsigned, so the result can be only positive.
-  LIBC_INLINE static constexpr FPBits<T> make_value(StorageType number,
-                                                    int ep) {
-    static_assert(get_fp_type<T>() != FPType::X86_Binary80,
-                  "This function is not tested for X86 Extended Precision");
-    FPBits<T> result;
-    // offset: +1 for sign, but -1 for implicit first bit
-    int lz = cpp::countl_zero(number) - UP::EXP_LEN;
-    number <<= lz;
-    ep -= lz;
-
-    if (LIBC_LIKELY(ep >= 0)) {
-      // Implicit number bit will be removed by mask
-      result.set_mantissa(number);
-      result.set_biased_exponent(ep + 1);
-    } else {
-      result.set_mantissa(number >> -ep);
-    }
-    return result;
-  }
+  LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(UP::bits); }
 };
 
 } // namespace fputil

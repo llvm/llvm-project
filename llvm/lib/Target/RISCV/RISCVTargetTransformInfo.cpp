@@ -947,13 +947,42 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
-  InstructionCost BaseCost = 2;
-
-  if (CostKind == TTI::TCK_CodeSize)
-    return (LT.first - 1) + BaseCost;
-
-  unsigned VL = getEstimatedVLFor(Ty);
-  return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
+  unsigned SplitOp;
+  SmallVector<unsigned, 3> Opcodes;
+  switch (IID) {
+  default:
+    llvm_unreachable("Unsupported intrinsic");
+  case Intrinsic::smax:
+    SplitOp = RISCV::VMAX_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAX_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::smin:
+    SplitOp = RISCV::VMIN_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMIN_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::umax:
+    SplitOp = RISCV::VMAXU_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::umin:
+    SplitOp = RISCV::VMINU_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMINU_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::maxnum:
+    SplitOp = RISCV::VFMAX_VV;
+    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
+    break;
+  case Intrinsic::minnum:
+    SplitOp = RISCV::VFMIN_VV;
+    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
+    break;
+  }
+  // Add a cost for data larger than LMUL8
+  InstructionCost SplitCost =
+      (LT.first > 1) ? (LT.first - 1) *
+                           getRISCVInstructionCost(SplitOp, LT.second, CostKind)
+                     : 0;
+  return SplitCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
 }
 
 InstructionCost

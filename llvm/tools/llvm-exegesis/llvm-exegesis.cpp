@@ -438,7 +438,7 @@ static void runBenchmarkConfigurations(
         // Errors from executing the snippets are fine.
         // All other errors are a framework issue and should fail.
         if (!Err.isA<SnippetExecutionFailure>()) {
-          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+          errs() << "llvm-exegesis error: " << toString(std::move(Err));
           exit(1);
         }
         BenchmarkResult.Error = toString(std::move(Err));
@@ -457,8 +457,7 @@ static void runBenchmarkConfigurations(
     if (RepetitionMode == Benchmark::RepetitionModeE::AggregateMin) {
       for (const Benchmark &OtherResult :
            ArrayRef<Benchmark>(AllResults).drop_front()) {
-        llvm::append_range(Result.AssembledSnippet,
-                           OtherResult.AssembledSnippet);
+        append_range(Result.AssembledSnippet, OtherResult.AssembledSnippet);
         // Aggregate measurements, but only if all measurements succeeded.
         if (Result.Measurements.empty())
           continue;
@@ -667,14 +666,14 @@ static void analysisMain() {
   }
   auto TripleAndCpu = *TriplesAndCpus.begin();
   if (AnalysisOverrideBenchmarksTripleAndCpu) {
-    llvm::errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
-                 << ") with provided tripled (" << TripleName
-                 << ") and CPU name (" << MCPU << ")\n";
+    errs() << "overridding file CPU name (" << TripleAndCpu.CpuName
+           << ") with provided tripled (" << TripleName << ") and CPU name ("
+           << MCPU << ")\n";
     TripleAndCpu.LLVMTriple = TripleName;
     TripleAndCpu.CpuName = MCPU;
   }
-  llvm::errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
-               << TripleAndCpu.CpuName << "'\n";
+  errs() << "using Triple '" << TripleAndCpu.LLVMTriple << "' and CPU '"
+         << TripleAndCpu.CpuName << "'\n";
 
   // Read benchmarks.
   const LLVMState State = ExitOnErr(
@@ -725,9 +724,8 @@ int main(int Argc, char **Argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&llvm::exegesis::Options,
-                            &llvm::exegesis::BenchmarkOptions,
-                            &llvm::exegesis::AnalysisOptions});
+  cl::HideUnrelatedOptions({&exegesis::Options, &exegesis::BenchmarkOptions,
+                            &exegesis::AnalysisOptions});
 
   cl::ParseCommandLineOptions(Argc, Argv,
                               "llvm host machine instruction characteristics "

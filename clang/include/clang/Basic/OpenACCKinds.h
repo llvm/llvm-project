@@ -243,6 +243,8 @@ enum class OpenACCClauseKind {
   Async,
   /// 'tile' clause, allowed on 'loop' and Combined constructs.
   Tile,
+  /// 'gang' clause, allowed on 'loop' and Combined constructs.
+  Gang,
 
   /// Represents an invalid clause, for the purposes of parsing.
   Invalid,
@@ -370,6 +372,9 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
 
   case OpenACCClauseKind::Tile:
     return Out << "tile";
+
+  case OpenACCClauseKind::Gang:
+    return Out << "gang";
 
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";

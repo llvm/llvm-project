@@ -62,8 +62,16 @@ C++ Language Changes
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Clang won't perform ODR checks for decls in the global module fragment any
+  more to ease the implementation and improve the user's using experience.
+  This follows the MSVC's behavior.
+  (`#79240 <https://github.com/llvm/llvm-project/issues/79240>`_).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
+  materialize temporary object which is a prvalue in discarded-value expression.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -111,6 +119,8 @@ Improvements to Clang's time-trace
 
 Bug Fixes in This Version
 -------------------------
+- Clang now accepts elaborated-type-specifiers that explicitly specialize
+  a member class template for an implicit instantiation of a class template.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -130,6 +140,15 @@ Bug Fixes to C++ Support
 - Fixed a bug where variables referenced by requires-clauses inside
   nested generic lambdas were not properly injected into the constraint scope.
   (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+- Fixed a crash where substituting into a requires-expression that refers to function
+  parameters during the equivalence determination of two constraint expressions.
+  (`#74447 <https://github.com/llvm/llvm-project/issues/74447>`_)
+- Fixed deducing auto& from const int in template parameters of partial
+  specializations.
+  (`#77189 <https://github.com/llvm/llvm-project/issues/77189>`_)
+- Fix for crash when using a erroneous type in a return statement.
+  Fixes (`#63244 <https://github.com/llvm/llvm-project/issues/63244>`_)
+  and (`#79745 <https://github.com/llvm/llvm-project/issues/79745>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -223,6 +242,8 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+
+- Exposed `CXRewriter` API as `class Rewriter`.
 
 Additional Information
 ======================

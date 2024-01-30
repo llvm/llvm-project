@@ -49,8 +49,8 @@ const X86FoldTableEntry *lookupUnfoldTable(unsigned MemOp);
 
 // Look up the broadcast folding table entry for this instruction from
 // the regular memory instruction.
-const X86FoldTableEntry *lookupBroadcastFoldTable(unsigned MemOp,
-                                                  unsigned BroadcastBits);
+const X86FoldTableEntry *lookupBroadcastFoldTableBySize(unsigned MemOp,
+                                                        unsigned BroadcastBits);
 
 } // namespace llvm
 
