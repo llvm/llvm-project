@@ -146,7 +146,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_wait
     libc.src.sys.epoll.epoll_pwait
-    libc.src.sys.epoll.epoll_pwait2
+    # Need to check if pwait2 is available before providing.
+    # libc.src.sys.epoll.epoll_pwait2
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
