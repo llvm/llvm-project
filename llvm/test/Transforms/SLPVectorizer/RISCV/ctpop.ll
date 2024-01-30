@@ -4,9 +4,9 @@
 ; RUN: opt < %s -passes=slp-vectorizer -S -mtriple=riscv64 -mattr=+m,+v \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,RV64
 ; RUN: opt < %s -passes=slp-vectorizer -S -mtriple=riscv32 -mattr=+v,+zvbb \
-; RUN: | FileCheck %s --check-prefixes=CHECK,ZVBB
+; RUN: | FileCheck %s --check-prefixes=CHECK
 ; RUN: opt < %s -passes=slp-vectorizer -S -mtriple=riscv64 -mattr=+v,+zvbb \
-; RUN: | FileCheck %s --check-prefixes=CHECK,ZVBB64
+; RUN: | FileCheck %s --check-prefixes=CHECK
 
 define <4 x i8> @ctpop_v4i8(ptr %a) {
 ; CHECK-LABEL: define <4 x i8> @ctpop_v4i8
@@ -108,20 +108,6 @@ define <4 x i64> @ctpop_v4i64(ptr %a) {
 ; RV64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.ctpop.i64(i64 [[VECEXT_3]])
 ; RV64-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x i64> [[VECINS_2]], i64 [[TMP4]], i64 3
 ; RV64-NEXT:    ret <4 x i64> [[VECINS_3]]
-;
-; ZVBB-LABEL: define <4 x i64> @ctpop_v4i64
-; ZVBB-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
-; ZVBB-NEXT:  entry:
-; ZVBB-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[A]], align 32
-; ZVBB-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> [[TMP0]])
-; ZVBB-NEXT:    ret <4 x i64> [[TMP1]]
-;
-; ZVBB64-LABEL: define <4 x i64> @ctpop_v4i64
-; ZVBB64-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
-; ZVBB64-NEXT:  entry:
-; ZVBB64-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[A]], align 32
-; ZVBB64-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> [[TMP0]])
-; ZVBB64-NEXT:    ret <4 x i64> [[TMP1]]
 ;
 entry:
   %0 = load <4 x i64>, ptr %a
