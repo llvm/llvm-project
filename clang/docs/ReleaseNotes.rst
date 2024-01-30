@@ -128,6 +128,9 @@ Bug Fixes to C++ Support
 - Fixed a bug where variables referenced by requires-clauses inside
   nested generic lambdas were not properly injected into the constraint scope.
   (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
+- Addressed an issue where constraints involving injected class types are perceived
+  distinct from its specialization types.
+  (`#56482 <https://github.com/llvm/llvm-project/issues/56482>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
