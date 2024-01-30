@@ -367,12 +367,13 @@ public:
     Value zero = rewriter.create<LLVM::ConstantOp>(
         op.getLoc(), llvmIndexType, rewriter.getIntegerAttr(indexType, 0));
     indices.insert(indices.begin(), zero);
-    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
-        op, dstType,
-        typeConverter.convertType(
-            cast<spirv::PointerType>(op.getBasePtr().getType())
-                .getPointeeType()),
-        adaptor.getBasePtr(), indices);
+
+    auto elementType = typeConverter.convertType(
+        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
+    if (!elementType)
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, elementType,
+                                             adaptor.getBasePtr(), indices);
     return success();
   }
 };
