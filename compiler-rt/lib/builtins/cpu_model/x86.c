@@ -772,8 +772,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 #define hasFeature(F) ((Features[F / 32] >> (F % 32)) & 1)
 #define setFeature(F) Features[F / 32] |= 1U << (F % 32)
 
-  if ((EDX >> 8) & 1)
-    setFeature(FEATURE_CMPXCHG8B);
   if ((EDX >> 15) & 1)
     setFeature(FEATURE_CMOV);
   if ((EDX >> 23) & 1)
