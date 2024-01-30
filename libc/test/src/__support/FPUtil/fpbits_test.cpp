@@ -11,11 +11,11 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::FPBits;
+using LIBC_NAMESPACE::fputil::FPType;
 using LIBC_NAMESPACE::fputil::Sign;
+using LIBC_NAMESPACE::fputil::internal::FPRep;
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary16) {
-  using LIBC_NAMESPACE::fputil::FPType;
-  using LIBC_NAMESPACE::fputil::internal::FPRep;
   using Rep = FPRep<FPType::IEEE754_Binary16>;
   using u16 = typename Rep::StorageType;
 
@@ -31,8 +31,6 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary16) {
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary32) {
-  using LIBC_NAMESPACE::fputil::FPType;
-  using LIBC_NAMESPACE::fputil::internal::FPRep;
   using Rep = FPRep<FPType::IEEE754_Binary32>;
   using u32 = typename Rep::StorageType;
 
@@ -51,8 +49,6 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary32) {
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary64) {
-  using LIBC_NAMESPACE::fputil::FPType;
-  using LIBC_NAMESPACE::fputil::internal::FPRep;
   using Rep = FPRep<FPType::IEEE754_Binary64>;
   using u64 = typename Rep::StorageType;
 
@@ -94,8 +90,6 @@ static constexpr UInt128 u128(uint64_t hi, uint64_t lo) {
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
-  using LIBC_NAMESPACE::fputil::FPType;
-  using LIBC_NAMESPACE::fputil::internal::FPRep;
   using Rep = FPRep<FPType::IEEE754_Binary128>;
 
   EXPECT_EQ(
@@ -137,8 +131,6 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
-  using LIBC_NAMESPACE::fputil::FPType;
-  using LIBC_NAMESPACE::fputil::internal::FPRep;
   using Rep = FPRep<FPType::X86_Binary80>;
 
   EXPECT_EQ(
@@ -180,8 +172,6 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80_IsNan) {
-  using LIBC_NAMESPACE::fputil::FPType;
-  using LIBC_NAMESPACE::fputil::internal::FPRep;
   using Rep = FPRep<FPType::X86_Binary80>;
 
   const auto is_nan = [](uint64_t hi, uint64_t lo) {
@@ -227,6 +217,92 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80_IsNan) {
   EXPECT_FALSE(is_nan(
       0b0'111111111111110, // Normalized
       0b1000000000000000000000000000000000000000000000000000000000000000));
+}
+
+enum class FP {
+  ZERO,
+  MIN_SUBNORMAL,
+  MAX_SUBNORMAL,
+  MIN_NORMAL,
+  ONE,
+  MAX_NORMAL,
+  INF,
+  BUILD_NAN,
+  BUILD_QUIET_NAN
+};
+
+using FPTypes = LIBC_NAMESPACE::testing::TypeList<
+    FPRep<FPType::IEEE754_Binary16>, FPRep<FPType::IEEE754_Binary32>,
+    FPRep<FPType::IEEE754_Binary64>, FPRep<FPType::IEEE754_Binary128>,
+    FPRep<FPType::X86_Binary80>>;
+
+// Tests all properties for all types of float.
+TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
+  static constexpr auto make_storage = [](Sign sign, FP fp) {
+    switch (fp) {
+    case FP::ZERO:
+      return T::zero(sign);
+    case FP::MIN_SUBNORMAL:
+      return T::min_subnormal(sign);
+    case FP::MAX_SUBNORMAL:
+      return T::max_subnormal(sign);
+    case FP::MIN_NORMAL:
+      return T::min_normal(sign);
+    case FP::ONE:
+      return T::one(sign);
+    case FP::MAX_NORMAL:
+      return T::max_normal(sign);
+    case FP::INF:
+      return T::inf(sign);
+    case FP::BUILD_NAN:
+      return T::build_nan(sign);
+    case FP::BUILD_QUIET_NAN:
+      return T::build_quiet_nan(sign);
+    }
+  };
+  static constexpr auto make = [](Sign sign, FP fp) -> T {
+    return T(make_storage(sign, fp));
+  };
+  constexpr FP fp_values[] = {
+      FP::ZERO,       FP::MIN_SUBNORMAL, FP::MAX_SUBNORMAL,
+      FP::MIN_NORMAL, FP::ONE,           FP::MAX_NORMAL,
+      FP::INF,        FP::BUILD_NAN,     FP::BUILD_QUIET_NAN};
+  constexpr Sign signs[] = {Sign::POS, Sign::NEG};
+  for (Sign sign : signs) {
+    for (FP fp : fp_values) {
+      const T value = make(sign, fp);
+      // is_zero
+      ASSERT_EQ(value.is_zero(), fp == FP::ZERO);
+      // is_inf_or_nan
+      ASSERT_EQ(value.is_inf_or_nan(), fp == FP::INF || fp == FP::BUILD_NAN ||
+                                           fp == FP::BUILD_QUIET_NAN);
+      // is_finite
+      ASSERT_EQ(value.is_finite(), fp != FP::INF && fp != FP::BUILD_NAN &&
+                                       fp != FP::BUILD_QUIET_NAN);
+      // is_inf
+      ASSERT_EQ(value.is_inf(), fp == FP::INF);
+      // is_nan
+      ASSERT_EQ(value.is_nan(),
+                fp == FP::BUILD_NAN || fp == FP::BUILD_QUIET_NAN);
+      // is_normal
+      ASSERT_EQ(value.is_normal(),
+                fp == FP::MIN_NORMAL || fp == FP::ONE || fp == FP::MAX_NORMAL);
+      // is_quiet_nan
+      ASSERT_EQ(value.is_quiet_nan(), fp == FP::BUILD_QUIET_NAN);
+      // is_signaling_nan
+      ASSERT_EQ(value.is_signaling_nan(), fp == FP::BUILD_NAN);
+      // is_subnormal
+      ASSERT_EQ(value.is_subnormal(), fp == FP::ZERO ||
+                                          fp == FP::MIN_SUBNORMAL ||
+                                          fp == FP::MAX_SUBNORMAL);
+      // is_pos
+      ASSERT_EQ(value.is_pos(), sign == Sign::POS);
+      ASSERT_EQ(value.sign().is_pos(), sign == Sign::POS);
+      // is_neg
+      ASSERT_EQ(value.is_neg(), sign == Sign::NEG);
+      ASSERT_EQ(value.sign().is_neg(), sign == Sign::NEG);
+    }
+  }
 }
 
 TEST(LlvmLibcFPBitsTest, FloatType) {
