@@ -1164,6 +1164,11 @@ Arm and AArch64 Support
   * Cortex-A720 (cortex-a720).
   * Cortex-X4 (cortex-x4).
 
+- Alpha support has been added for SVE2.1 intrinsics.
+
+- Support has been added for `-fstack-clash-protection` and `-mstack-probe-size`
+  command line options.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
