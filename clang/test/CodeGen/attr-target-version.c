@@ -364,36 +364,36 @@ int hoo(void) {
 // CHECK-NEXT:    ret ptr @fmv_inline._Mdpb2Mjscvt
 // CHECK:       resolver_else22:
 // CHECK-NEXT:    [[TMP48:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP49:%.*]] = and i64 [[TMP48]], 16400
-// CHECK-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[TMP49]], 16400
+// CHECK-NEXT:    [[TMP49:%.*]] = and i64 [[TMP48]], 8
+// CHECK-NEXT:    [[TMP50:%.*]] = icmp eq i64 [[TMP49]], 8
 // CHECK-NEXT:    [[TMP51:%.*]] = and i1 true, [[TMP50]]
 // CHECK-NEXT:    br i1 [[TMP51]], label [[RESOLVER_RETURN23:%.*]], label [[RESOLVER_ELSE24:%.*]]
 // CHECK:       resolver_return23:
-// CHECK-NEXT:    ret ptr @fmv_inline._MdotprodMaes
+// CHECK-NEXT:    ret ptr @fmv_inline._MsimdMfp16fml
 // CHECK:       resolver_else24:
 // CHECK-NEXT:    [[TMP52:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP53:%.*]] = and i64 [[TMP52]], 8
-// CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[TMP53]], 8
+// CHECK-NEXT:    [[TMP53:%.*]] = and i64 [[TMP52]], 16400
+// CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[TMP53]], 16400
 // CHECK-NEXT:    [[TMP55:%.*]] = and i1 true, [[TMP54]]
 // CHECK-NEXT:    br i1 [[TMP55]], label [[RESOLVER_RETURN25:%.*]], label [[RESOLVER_ELSE26:%.*]]
 // CHECK:       resolver_return25:
-// CHECK-NEXT:    ret ptr @fmv_inline._Mfp16fmlMsimd
+// CHECK-NEXT:    ret ptr @fmv_inline._MdotprodMaes
 // CHECK:       resolver_else26:
 // CHECK-NEXT:    [[TMP56:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP57:%.*]] = and i64 [[TMP56]], 32
-// CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[TMP57]], 32
+// CHECK-NEXT:    [[TMP57:%.*]] = and i64 [[TMP56]], 192
+// CHECK-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[TMP57]], 192
 // CHECK-NEXT:    [[TMP59:%.*]] = and i1 true, [[TMP58]]
 // CHECK-NEXT:    br i1 [[TMP59]], label [[RESOLVER_RETURN27:%.*]], label [[RESOLVER_ELSE28:%.*]]
 // CHECK:       resolver_return27:
-// CHECK-NEXT:    ret ptr @fmv_inline._Msm4Mfp
+// CHECK-NEXT:    ret ptr @fmv_inline._MlseMrdm
 // CHECK:       resolver_else28:
 // CHECK-NEXT:    [[TMP60:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP61:%.*]] = and i64 [[TMP60]], 192
-// CHECK-NEXT:    [[TMP62:%.*]] = icmp eq i64 [[TMP61]], 192
+// CHECK-NEXT:    [[TMP61:%.*]] = and i64 [[TMP60]], 32
+// CHECK-NEXT:    [[TMP62:%.*]] = icmp eq i64 [[TMP61]], 32
 // CHECK-NEXT:    [[TMP63:%.*]] = and i1 true, [[TMP62]]
 // CHECK-NEXT:    br i1 [[TMP63]], label [[RESOLVER_RETURN29:%.*]], label [[RESOLVER_ELSE30:%.*]]
 // CHECK:       resolver_return29:
-// CHECK-NEXT:    ret ptr @fmv_inline._MrdmMlse
+// CHECK-NEXT:    ret ptr @fmv_inline._MfpMsm4
 // CHECK:       resolver_else30:
 // CHECK-NEXT:    ret ptr @fmv_inline.default
 //
@@ -659,21 +659,21 @@ int hoo(void) {
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv_inline._Mfp16fmlMsimd
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MsimdMfp16fml
 // CHECK-SAME: () #[[ATTR7]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 14
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv_inline._Msm4Mfp
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MfpMsm4
 // CHECK-SAME: () #[[ATTR24:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 15
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MrdmMlse
+// CHECK-LABEL: define {{[^@]+}}@fmv_inline._MlseMrdm
 // CHECK-SAME: () #[[ATTR25:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 16
