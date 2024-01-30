@@ -1622,20 +1622,34 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     // Don't check that all operands are vector because scalars are used in
     // place of 1 element vectors.
-    int SrcNumElts = Src0Ty.isVector() ? Src0Ty.getNumElements() : 1;
-    int DstNumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
+    ElementCount SrcNumElts = Src0Ty.isVector() ? Src0Ty.getElementCount()
+                                                : ElementCount::getFixed(1);
+    ElementCount DstNumElts =
+        DstTy.isVector() ? DstTy.getElementCount() : ElementCount::getFixed(1);
 
     ArrayRef<int> MaskIdxes = MaskOp.getShuffleMask();
 
-    if (static_cast<int>(MaskIdxes.size()) != DstNumElts)
+    // For scalable vectors, there is an entry in the Mask for each
+    // KnownMinValue.
+    if (MaskIdxes.size() != DstNumElts.getKnownMinValue())
       report("Wrong result type for shufflemask", MI);
 
-    for (int Idx : MaskIdxes) {
-      if (Idx < 0)
-        continue;
-
-      if (Idx >= 2 * SrcNumElts)
-        report("Out of bounds shuffle index", MI);
+    if (Src0Ty.isScalableVector()) {
+      if (!llvm::all_of(MaskIdxes,
+                        [&MaskIdxes](int M) { return M == MaskIdxes[0]; }))
+        report("Elements of a scalable G_SHUFFLE_VECTOR mask must match", MI);
+      if (MaskIdxes[0] != 0 && MaskIdxes[0] != -1)
+        report("Elements of a scalable G_SHUFFLE_VECTOR mask be zero or undef",
+               MI);
+    } else {
+      // Idxes for fixed vectors must be in bounds or undef, which is
+      // represented as -1.
+      for (int Idx : MaskIdxes) {
+        if (Idx < 0)
+          continue;
+        if ((unsigned)Idx >= 2 * SrcNumElts.getFixedValue())
+          report("Out of bounds shuffle index", MI);
+      }
     }
 
     break;
