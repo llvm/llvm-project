@@ -574,8 +574,8 @@ static bool tryToSplitMiddle(Instruction *DeadI,
   // | ------------- Dead ------------- |
   //         | --- Killing --- |
 
-  if (KillingStart < DeadStart ||
-      uint64_t(KillingStart + KillingSize) > uint64_t(DeadStart + DeadSize))
+  if (KillingStart <= DeadStart ||
+      uint64_t(KillingStart + KillingSize) >= uint64_t(DeadStart + DeadSize))
     return false;
 
   auto *DeadIntrinsic = cast<AnyMemIntrinsic>(DeadI);
@@ -593,6 +593,14 @@ static bool tryToSplitMiddle(Instruction *DeadI,
   // will be inlined so this isn't a good idea.
   if ((FrontSize > Threshold && RearSize > Threshold) || DeadSize < Threshold)
     return false;
+
+  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(DeadI)) {
+    // When shortening an atomic memory intrinsic the size of Front and Rear
+    // must be a multiple of the element size.
+    const uint32_t ElementSize = AMI->getElementSizeInBytes();
+    if (FrontSize % ElementSize != 0 || RearSize % ElementSize != 0)
+      return false;
+  }
 
   Value *DeadWriteLength = DeadIntrinsic->getLength();
   Value *DeadDest = DeadIntrinsic->getRawDest();
@@ -2066,13 +2074,13 @@ struct DSEState {
       uint64_t DeadSize = Loc.Size.getValue();
       GetPointerBaseWithConstantOffset(Ptr, DeadStart, DL);
       OverlapIntervalsTy &IntervalMap = OI.second;
+      Changed |= tryToSplitMiddle(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
+      if (IntervalMap.empty())
+        continue;
       Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize);
       if (IntervalMap.empty())
         continue;
       Changed |= tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize);
-      if (IntervalMap.empty())
-        continue;
-      Changed |= tryToSplitMiddle(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
     }
     return Changed;
   }

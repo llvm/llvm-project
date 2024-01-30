@@ -70,5 +70,23 @@ entry:
   ret void
 }
 
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
+define void @dontwrite28to32memset_atomic(ptr nocapture %X) {
+; CHECK-LABEL: define void @dontwrite28to32memset_atomic(
+; CHECK-SAME: ptr nocapture [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 976
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 dereferenceable(24) [[TMP0]], i8 5, i64 24, i32 4)
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 dereferenceable(12) [[X]], i8 5, i64 12, i32 4)
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 12
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 [[ARRAYIDX]], i8 3, i64 978, i32 4)
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 %X, i8 5, i64 1000, i32 4)
+  %arrayidx = getelementptr inbounds i8, ptr %X, i64 12
+  call void @llvm.memset.element.unordered.atomic.p0.i64(ptr align 16 %arrayidx, i8 3, i64 978, i32 4)
+  ret void
+}
 
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.element.unordered.atomic.p0.i64(ptr, i8, i64, i32)
