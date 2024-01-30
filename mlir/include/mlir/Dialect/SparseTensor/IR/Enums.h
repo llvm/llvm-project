@@ -233,7 +233,7 @@ constexpr bool isValidNOutOfMLT(LevelType lt, uint64_t n, uint64_t m) {
 }
 
 /// Returns string representation of the given dimension level type.
-std::string toMLIRString(LevelType lt) {
+constexpr const char *toMLIRString(LevelType lt) {
   switch (lt) {
   case LevelType::Undef:
     return "undef";
@@ -264,12 +264,8 @@ std::string toMLIRString(LevelType lt) {
   case LevelType::LooseCompressedNuNo:
     return "loose_compressed(nonunique, nonordered)";
   default:
-    // If NOutOfM bit is set, print the [n, m] sizes.
     if (isNOutOfMLT(lt)) {
-      unsigned n = getN(lt);
-      unsigned m = getM(lt);
-      return std::string("block[") + std::to_string(n) + ", " +
-             std::to_string(m) + "]";
+      return "block";
     }
   }
   return "";

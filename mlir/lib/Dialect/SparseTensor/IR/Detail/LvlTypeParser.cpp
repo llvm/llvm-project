@@ -63,7 +63,6 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
     }
     properties |= static_cast<uint64_t>(LevelFormat::NOutOfM);
     properties |= nToBits(blockSizes[0]) | mToBits(blockSizes[1]);
-    llvm::errs() << "properties1: " << properties << "\n";
   } else if (base.compare("loose_compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::LooseCompressed);
   } else if (base.compare("singleton") == 0) {
