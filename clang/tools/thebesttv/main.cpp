@@ -136,7 +136,9 @@ int main(int argc, const char **argv) {
     for (auto &AST : ASTs) {
         ASTContext &Context = AST->getASTContext();
         auto *TUD = Context.getTranslationUnitDecl();
-        TUD->dump();
+        if (TUD->isUnavailable())
+            continue;
+        // TUD->dump();
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
     }
 
