@@ -106,7 +106,12 @@ WatchpointAlgorithms::PowerOf2Watchpoints(addr_t user_addr, size_t user_size,
   // Increasing the aligned_size repeatedly instead of splitting the
   // watchpoint can result in us watching large regions of memory
   // unintentionally when we could use small two watchpoints.  e.g.
-  //    user_addr 0x
+  //    user_addr 0x3ff8 user_size 32
+  // can be watched with four 8-byte watchpoints or if it's done with one
+  // MASK watchpoint, it would need to be a 32KB watchpoint (a 16KB
+  // watchpoint at 0x0 only covers 0x0000-0x4000).  A user request
+  // at the end of a power-of-2 region can lead to these undesirably
+  // large watchpoints and many false positive hits to ignore.
   if (max_byte_size >= (aligned_size << 1)) {
     aligned_size <<= 1;
     aligned_start = user_addr & ~(aligned_size - 1);
