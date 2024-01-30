@@ -11025,13 +11025,11 @@ static SDValue shuffleWithSingleLoad(SDValue Op, SelectionDAG &DAG) {
   SDValue V3 = Op.getOperand(3);
   if (V0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       V1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      V2.getOpcode() != ISD::LOAD ||
-      !(V3.isUndef() || V3.getOpcode() == ISD::EXTRACT_VECTOR_ELT))
+      V2.getOpcode() != ISD::LOAD || !(V3.isUndef() || V3.getOpcode() == ISD::EXTRACT_VECTOR_ELT))
     return SDValue();
 
   if (V0.getOperand(0) != V1.getOperand(0) ||
-      V0.getConstantOperandVal(1) != 0 || V1.getConstantOperandVal(1) != 1 ||
-      !(V3.isUndef() || V3.getConstantOperandVal(1) == 3))
+      V0.getConstantOperandVal(1) != 0 || V1.getConstantOperandVal(1) != 1 || !(V3.isUndef() || V3.getConstantOperandVal(1) == 3))
     return SDValue();
 
   SDLoc dl(Op);
