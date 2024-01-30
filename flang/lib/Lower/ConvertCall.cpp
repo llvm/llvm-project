@@ -1379,6 +1379,9 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
       caller, callSiteType, callContext.resultType,
       callContext.isElementalProcWithArrayArgs());
+  // For procedure pointer function result, just return the call.
+  if (callContext.resultType && callContext.resultType->isa<fir::BoxProcType>())
+    return hlfir::EntityWithAttributes(fir::getBase(result));
 
   /// Clean-up associations and copy-in.
   for (auto cleanUp : callCleanUps)

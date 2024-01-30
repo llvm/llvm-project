@@ -301,7 +301,7 @@ OPTIONS
   enabled can help determine the effects of the frontend and can be used to
   improve latency and throughput estimates.
 
-.. option:: --repetition-mode=[duplicate|loop|min]
+.. option:: --repetition-mode=[duplicate|loop|min|middle-half-duplicate|middle-half-loop]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
  basic block with `num-repetitions` instructions (repeating the snippet
@@ -314,7 +314,11 @@ OPTIONS
  that cache decoded instructions, but consumes a register for counting
  iterations. If performing an analysis over many opcodes, it may be best to
  instead use the `min` mode, which will run each other mode,
- and produce the minimal measured result.
+ and produce the minimal measured result. The middle half repetition modes
+ will either duplicate or run the snippet in a loop depending upon the specific
+ mode. The middle half repetition modes will run two benchmarks, one twice the
+ length of the first one, and then subtract the difference between them to get
+ values without overhead.
 
 .. option:: --num-repetitions=<Number of repetitions>
 

@@ -105,9 +105,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 
 /// Returns the bit-mask of active threads in the current warp.
 [[clang::convergent]] LIBC_INLINE uint64_t get_lane_mask() {
-  uint32_t mask;
-  LIBC_INLINE_ASM("activemask.b32 %0;" : "=r"(mask));
-  return mask;
+  return __nvvm_activemask();
 }
 
 /// Copies the value from the first active thread in the warp to the rest.
@@ -141,23 +139,20 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 
 /// Returns the current value of the GPU's processor clock.
 LIBC_INLINE uint64_t processor_clock() {
-  uint64_t timestamp;
-  LIBC_INLINE_ASM("mov.u64  %0, %%clock64;" : "=l"(timestamp));
-  return timestamp;
+  return __nvvm_read_ptx_sreg_clock64();
 }
 
 /// Returns a global fixed-frequency timer at nanosecond frequency.
 LIBC_INLINE uint64_t fixed_frequency_clock() {
-  uint64_t nsecs;
-  LIBC_INLINE_ASM("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
-  return nsecs;
+  return __nvvm_read_ptx_sreg_globaltimer();
 }
 
 /// Terminates execution of the calling thread.
-[[noreturn]] LIBC_INLINE void end_program() {
-  LIBC_INLINE_ASM("exit;" ::: "memory");
-  __builtin_unreachable();
-}
+[[noreturn]] LIBC_INLINE void end_program() { __nvvm_exit(); }
+
+/// Returns a unique identifier for the process cluster the current warp is
+/// executing on. Here we use the identifier for the symmetric multiprocessor.
+LIBC_INLINE uint32_t get_cluster_id() { return __nvvm_read_ptx_sreg_smid(); }
 
 } // namespace gpu
 } // namespace LIBC_NAMESPACE

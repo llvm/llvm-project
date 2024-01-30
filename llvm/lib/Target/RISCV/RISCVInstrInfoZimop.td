@@ -34,6 +34,14 @@ class RVInstRMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3, RISCVOpcode opcod
   let Inst{25} = imm4{0};
 }
 
+def riscv_mopr  : SDNode<"RISCVISD::MOPR",
+                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>]>>;
+def riscv_moprr : SDNode<"RISCVISD::MOPRR",
+                         SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>]>>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3,
              RISCVOpcode opcode, string opcodestr>
@@ -57,3 +65,17 @@ foreach i = 0...7 in {
   def MOPRR#i : RVMoprr<0b1001, i, 0b100, OPC_SYSTEM, "mop.rr."#i>,
                 Sched<[]>;
 }
+
+let Predicates = [HasStdExtZimop] in {
+// Zimop instructions
+foreach i = 0...31 in {
+  def : Pat<(XLenVT (riscv_mopr GPR:$rs1, (XLenVT i))),
+            (!cast<Instruction>("MOPR"#i) GPR:$rs1)>;
+}
+
+foreach i = 0...7 in {
+  def : Pat<(XLenVT (riscv_moprr GPR:$rs1, GPR:$rs2, (XLenVT i))),
+            (!cast<Instruction>("MOPRR"#i) GPR:$rs1, GPR:$rs2)>;
+}
+
+} // Predicates = [HasStdExtZimop]

@@ -685,8 +685,10 @@ private:
                             Register SrcReg2, int64_t ImmMask, int64_t ImmValue,
                             const MachineInstr &OI, bool *IsSwapped,
                             int64_t *ImmDelta) const;
-};
 
+  unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+  void UndoCommuteForFold(MachineInstr &MI, unsigned Idx1, unsigned Idx2) const;
+};
 } // namespace llvm
 
 #endif
