@@ -18,12 +18,14 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Target/LLVM/Offload.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -2068,6 +2070,25 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   return success();
 }
 
+static bool
+getAndRegisterTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
+                                    LLVM::ModuleTranslation &moduleTranslation,
+                                    omp::TargetOp targetOp,
+                                    llvm::StringRef parentName = "") {
+  omp::TargetRegionEntryInfoAttr infoAttr =
+      targetOp.getTargetRegionEntryInfoAttr();
+  if (!infoAttr)
+    return false;
+  targetInfo =
+      llvm::TargetRegionEntryInfo(parentName, infoAttr.getDeviceID(),
+                                  infoAttr.getFileID(), infoAttr.getLine());
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  if (ompBuilder->Config.isTargetDevice() && ompBuilder->Config.isGPU())
+    ompBuilder->OffloadInfoManager.initializeTargetRegionEntryInfo(targetInfo,
+                                                                   0);
+  return true;
+}
+
 static bool getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
                                      omp::TargetOp targetOp,
                                      llvm::StringRef parentName = "") {
@@ -2367,7 +2388,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::TargetRegionEntryInfo entryInfo;
 
-  if (!getTargetEntryUniqueInfo(entryInfo, targetOp, parentName))
+  if (!(getAndRegisterTargetEntryUniqueInfo(entryInfo, moduleTranslation,
+                                            targetOp, parentName) ||
+        getTargetEntryUniqueInfo(entryInfo, targetOp, parentName)))
     return failure();
 
   int32_t defaultValTeams = -1;
@@ -2430,15 +2453,49 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       kernelInput.push_back(mapData.OriginalValue[i]);
   }
 
+  llvm::OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion entryRegionInfo;
+  // Determine whether the entry is going to be handled by
+  // `OffloadEntriesInfoManager` or by this method. If `entryArraySection` is
+  // null then it's handled by `OffloadEntriesInfoManager`
+  omp::TargetRegionEntryInfoAttr regionInfoAttr =
+      targetOp.getTargetRegionEntryInfoAttr();
+  FlatSymbolRefAttr entryArraySection =
+      regionInfoAttr ? regionInfoAttr.getSection() : FlatSymbolRefAttr();
+
+  // Create the target region
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
       ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
-      defaultValThreads, kernelInput, genMapInfoCB, bodyCB, argAccessorCB));
+      defaultValThreads, kernelInput, genMapInfoCB, bodyCB, argAccessorCB,
+      entryArraySection ? &entryRegionInfo : nullptr));
 
   // Remap access operations to declare target reference pointers for the
   // device, essentially generating extra loadop's as necessary
   if (moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice())
     handleDeclareTargetMapVar(mapData, moduleTranslation, builder);
 
+  // Return early if the target op it's being emitted for a device or if the
+  // entry is handled by `OffloadEntriesInfoManager`
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  if (ompBuilder->Config.isTargetDevice() || !entryArraySection)
+    return bodyGenStatus;
+
+  assert(entryRegionInfo.isValid() && "invalid target entry region");
+
+  auto regionAddrGV =
+      dyn_cast_or_null<llvm::GlobalValue>(entryRegionInfo.getAddress());
+  assert(regionAddrGV && "missing reggion address");
+
+  // Emit the offload entry.
+  llvm::Module &llvmModule = *moduleTranslation.getLLVMModule();
+  LLVM::OffloadHandler offloadHandler(llvmModule);
+  std::pair<llvm::Constant *, llvm::GlobalVariable *> entryInit =
+      llvm::offloading::getOffloadingEntryInitializer(
+          llvmModule, entryRegionInfo.getID(), regionAddrGV->getName(), 0,
+          entryRegionInfo.getFlags(), 0);
+
+  if (failed(offloadHandler.insertOffloadEntry(entryArraySection.getValue(),
+                                               entryInit.first)))
+    targetOp.emitError("failed to insert the entry");
   return bodyGenStatus;
 }
 
