@@ -128,9 +128,8 @@ public:
 };
 
 template <>
-struct OperandTraits<OverflowingBinaryOperator> :
-  public FixedNumOperandTraits<OverflowingBinaryOperator, 2> {
-};
+struct OperandTraits<OverflowingBinaryOperator>
+    : public FixedNumOperandTraits<OverflowingBinaryOperator, 2> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(OverflowingBinaryOperator, Value)
 
@@ -179,9 +178,8 @@ public:
 };
 
 template <>
-struct OperandTraits<PossiblyExactOperator> :
-  public FixedNumOperandTraits<PossiblyExactOperator, 2> {
-};
+struct OperandTraits<PossiblyExactOperator>
+    : public FixedNumOperandTraits<PossiblyExactOperator, 2> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PossiblyExactOperator, Value)
 
@@ -530,9 +528,8 @@ public:
 };
 
 template <>
-struct OperandTraits<GEPOperator> :
-  public VariadicOperandTraits<GEPOperator, 1> {
-};
+struct OperandTraits<GEPOperator>
+    : public VariadicOperandTraits<GEPOperator, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GEPOperator, Value)
 
@@ -568,9 +565,8 @@ public:
 };
 
 template <>
-struct OperandTraits<PtrToIntOperator> :
-  public FixedNumOperandTraits<PtrToIntOperator, 1> {
-};
+struct OperandTraits<PtrToIntOperator>
+    : public FixedNumOperandTraits<PtrToIntOperator, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToIntOperator, Value)
 
@@ -593,9 +589,8 @@ public:
 };
 
 template <>
-struct OperandTraits<BitCastOperator> :
-  public FixedNumOperandTraits<BitCastOperator, 1> {
-};
+struct OperandTraits<BitCastOperator>
+    : public FixedNumOperandTraits<BitCastOperator, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BitCastOperator, Value)
 
@@ -622,9 +617,8 @@ public:
 };
 
 template <>
-struct OperandTraits<AddrSpaceCastOperator> :
-  public FixedNumOperandTraits<AddrSpaceCastOperator, 1> {
-};
+struct OperandTraits<AddrSpaceCastOperator>
+    : public FixedNumOperandTraits<AddrSpaceCastOperator, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(AddrSpaceCastOperator, Value)
 
