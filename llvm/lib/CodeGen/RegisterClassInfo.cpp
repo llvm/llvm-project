@@ -80,10 +80,10 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
     LastCalleeSavedRegs.clear();
     // Build a CSRAlias map. Every CSR alias saves the last
     // overlapping CSR.
-    CalleeSavedAliases.assign(TRI->getNumRegs(), 0);
+    CalleeSavedAliases.assign(TRI->getNumRegUnits(), 0);
     for (const MCPhysReg *I = CSR; *I; ++I) {
-      for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
-        CalleeSavedAliases[*AI] = *I;
+      for (MCRegUnitIterator UI(*I, TRI); UI.isValid(); ++UI)
+        CalleeSavedAliases[*UI] = *I;
       LastCalleeSavedRegs.push_back(*I);
     }
 
@@ -150,7 +150,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     uint8_t Cost = RegCosts[PhysReg];
     MinCost = std::min(MinCost, Cost);
 
-    if (CalleeSavedAliases[PhysReg] &&
+    if (getLastCalleeSavedAlias(PhysReg) &&
         !STI.ignoreCSRForAllocationOrder(*MF, PhysReg))
       // PhysReg aliases a CSR, save it for later.
       CSRAlias.push_back(PhysReg);
