@@ -38,8 +38,7 @@ private:
 public:
   OutputCategoryAggregator(bool includeDetail = false)
       : IncludeDetail(includeDetail) {}
-  void EnableDetail() { IncludeDetail = true; }
-  void DisableDetail() { IncludeDetail = false; }
+  void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
   size_t GetNumCategories() const { return Aggregation.size(); }
   void Report(StringRef s, std::function<void()> detailCallback);
   void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);

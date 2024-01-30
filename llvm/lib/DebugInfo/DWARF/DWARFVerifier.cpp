@@ -167,36 +167,31 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   if (!ValidLength || !ValidVersion || !ValidAddrSize || !ValidAbbrevOffset ||
       !ValidType) {
     Success = false;
-    bool headerShown = false;
+    bool HeaderShown = false;
+    auto ShowHeaderOnce = [&]() {
+      if (!HeaderShown) {
+        error() << format("Units[%d] - start offset: 0x%08" PRIx64 " \n",
+                          UnitIndex, OffsetStart);
+        HeaderShown = true;
+      }
+    };
     if (!ValidLength)
       ErrorCategory.Report(
           "Unit Header Length: Unit too large for .debug_info provided", [&]() {
-            if (!headerShown) {
-              error() << format("Units[%d] - start offset: 0x%08" PRIx64 " \n",
-                                UnitIndex, OffsetStart);
-              headerShown = true;
-            }
+            ShowHeaderOnce();
             note() << "The length for this unit is too "
                       "large for the .debug_info provided.\n";
           });
     if (!ValidVersion)
       ErrorCategory.Report(
           "Unit Header Length: 16 bit unit header version is not valid", [&]() {
-            if (!headerShown) {
-              error() << format("Units[%d] - start offset: 0x%08" PRIx64 " \n",
-                                UnitIndex, OffsetStart);
-              headerShown = true;
-            }
+            ShowHeaderOnce();
             note() << "The 16 bit unit header version is not valid.\n";
           });
     if (!ValidType)
       ErrorCategory.Report(
           "Unit Header Length: Unit type encoding is not valid", [&]() {
-            if (!headerShown) {
-              error() << format("Units[%d] - start offset: 0x%08" PRIx64 " \n",
-                                UnitIndex, OffsetStart);
-              headerShown = true;
-            }
+            ShowHeaderOnce();
             note() << "The unit type encoding is not valid.\n";
           });
     if (!ValidAbbrevOffset)
@@ -204,24 +199,16 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
           "Unit Header Length: Offset into the .debug_abbrev section is not "
           "valid",
           [&]() {
-            if (!headerShown) {
-              error() << format("Units[%d] - start offset: 0x%08" PRIx64 " \n",
-                                UnitIndex, OffsetStart);
-              headerShown = true;
-            }
+            ShowHeaderOnce();
             note() << "The offset into the .debug_abbrev section is "
                       "not valid.\n";
           });
     if (!ValidAddrSize)
-      ErrorCategory.Report(
-          "Unit Header Length: Address size is unsupported", [&]() {
-            if (!headerShown) {
-              error() << format("Units[%d] - start offset: 0x%08" PRIx64 " \n",
-                                UnitIndex, OffsetStart);
-              headerShown = true;
-            }
-            note() << "The address size is unsupported.\n";
-          });
+      ErrorCategory.Report("Unit Header Length: Address size is unsupported",
+                           [&]() {
+                             ShowHeaderOnce();
+                             note() << "The address size is unsupported.\n";
+                           });
   }
   *Offset = OffsetStart + Length + (isUnitDWARF64 ? 12 : 4);
   return Success;
@@ -1095,9 +1082,7 @@ DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
                              DIDumpOptions DumpOpts)
     : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
       IsMachOObject(false) {
-  if (DumpOpts.Verbose || !DumpOpts.ShowAggregateErrors) {
-    ErrorCategory.EnableDetail();
-  }
+  ErrorCategory.ShowDetail(DumpOpts.Verbose || !DumpOpts.ShowAggregateErrors);
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
     IsObjectFile = F->isRelocatableObject();
     IsMachOObject = F->isMachO();

@@ -124,6 +124,14 @@ public:
 namespace {
 using namespace cl;
 
+enum ErrorDetailLevel {
+  OnlyDetailsNoSummary,
+  NoDetailsOnlySummary,
+  NoDetailsOrSummary,
+  BothDetailsAndSummary,
+  Unspecified
+};
+
 OptionCategory DwarfDumpCategory("Specific Options");
 static list<std::string>
     InputFilenames(Positional, desc("<input object files or .dSYM bundles>"),
@@ -276,13 +284,16 @@ static cl::opt<bool>
                 cat(DwarfDumpCategory));
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
-static opt<bool> OnlyAggregateErrors(
-    "only-aggregate-errors",
-    desc("Only display the aggregate errors when verifying."),
-    cat(DwarfDumpCategory));
-static opt<bool> NoAggregateErrors(
-    "no-aggregate-errors",
-    desc("Do not display the aggregate errors when verifying."),
+static opt<ErrorDetailLevel> ErrorDetails(
+    "error-display", init(Unspecified),
+    values(clEnumValN(NoDetailsOrSummary, "quiet",
+                      "Only display whether errors occurred."),
+           clEnumValN(NoDetailsOnlySummary, "summary",
+                      "Display only a summary of the errors found."),
+           clEnumValN(OnlyDetailsNoSummary, "details",
+                      "Display each error in detail but no summary."),
+           clEnumValN(BothDetailsAndSummary, "full",
+                      "Display each error as well as a summary. [default]")),
     cat(DwarfDumpCategory));
 static opt<bool> Quiet("quiet", desc("Use with -verify to not emit to STDOUT."),
                        cat(DwarfDumpCategory));
@@ -334,8 +345,10 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
-    DumpOpts.Verbose = !OnlyAggregateErrors;
-    DumpOpts.ShowAggregateErrors = !NoAggregateErrors;
+    DumpOpts.Verbose = ErrorDetails != NoDetailsOnlySummary &&
+                       ErrorDetails != NoDetailsOrSummary;
+    DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
+                                   ErrorDetails != NoDetailsOnlySummary;
     return DumpOpts.noImplicitRecursion();
   }
   return DumpOpts;
@@ -821,15 +834,8 @@ int main(int argc, char **argv) {
                           "-verbose is currently not supported";
     return 1;
   }
-  if (Verify && NoAggregateErrors && OnlyAggregateErrors) {
-    WithColor::error() << "incompatible arguments: specifying both "
-                          " -no-aggregate-errors, and -only-aggregate-errors "
-                          "is not supported";
-    return 1;
-  }
-  if (!Verify && (NoAggregateErrors || OnlyAggregateErrors))
-    WithColor::warning() << "-no-aggregate-errors and -only-aggregate-errors "
-                            "have no effect without -verify";
+  if (!Verify && ErrorDetails != Unspecified)
+    WithColor::warning() << "-error-detail has no affect without -verify";
 
   std::error_code EC;
   ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);
