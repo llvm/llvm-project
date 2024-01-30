@@ -183,6 +183,9 @@ private:
   /// Process metadata in special sections after CFG is built for functions.
   void processMetadataPostCFG();
 
+  /// Make changes to metadata before the binary is emitted.
+  void finalizeMetadataPreEmit();
+
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
 
