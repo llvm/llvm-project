@@ -1,3 +1,4 @@
+#include "CallGraph.h"
 #include "FunctionInfo.h"
 #include "VarFinder.h"
 #include "utils.h"
@@ -156,7 +157,18 @@ int main(int argc, const char **argv) {
     llvm::errs() << "\n--- Building ATS from files ---\n";
     ClangTool Tool(*cb, allFiles);
 
+    // 生成所有函数的调用图
+    Tool.run(newFrontendActionFactory<GenWholeProgramCallGraphAction>().get());
+
     printCloc(allFiles);
+
+    for (const auto &[caller, callees] :
+         GenWholeProgramCallGraphVisitor::callGraph) {
+        llvm::errs() << "\n" << caller << "\n";
+        for (const auto &callee : callees) {
+            llvm::errs() << "  " << callee << "\n";
+        }
+    }
 
     return 0;
 

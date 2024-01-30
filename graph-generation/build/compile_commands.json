@@ -1,20 +1,11 @@
 [
   {
     "arguments": [
-      "/usr/bin/gcc",
+      "/usr/bin/g++",
       "-c",
-      "../test4.cpp"
+      "../test6.cpp"
     ],
     "directory": "/home/thebesttv/vul/llvm-project/graph-generation/build",
-    "file": "/home/thebesttv/vul/llvm-project/graph-generation/test4.cpp"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-c",
-      "../test5.cpp"
-    ],
-    "directory": "/home/thebesttv/vul/llvm-project/graph-generation/build",
-    "file": "/home/thebesttv/vul/llvm-project/graph-generation/test5.cpp"
+    "file": "/home/thebesttv/vul/llvm-project/graph-generation/test6.cpp"
   }
 ]

@@ -36,4 +36,11 @@ extern fs::path BUILD_PATH;
 
 void requireTrue(bool condition, std::string message = "");
 
+/**
+ * 获取函数完整签名。主要用于 call graph 构造
+ *
+ * 包括 namespace、函数名、参数类型
+ */
+std::string getFullSignature(const FunctionDecl *D);
+
 #endif
