@@ -1,8 +1,12 @@
 #include "FunctionInfo.h"
 #include "VarFinder.h"
 #include "utils.h"
+#include <fstream>
+#include <iostream>
+#include <unistd.h>
 
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/Support/Program.h"
 
 class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
   private:
@@ -145,6 +149,36 @@ int main(int argc, const char **argv) {
                          << fi->column << "\n";
         }
     }
+
+    // save all files to "compile_files.txt" under build path
+    fs::path resultFiles = fs::path(BUILD_PATH) / "compile_files.txt";
+    std::ofstream ofs(resultFiles);
+    if (!ofs.is_open()) {
+        llvm::errs() << "Error: cannot open file " << resultFiles << "\n";
+        exit(1);
+    }
+    for (auto &file : allFiles)
+        ofs << file << "\n";
+    ofs.close();
+
+    // run cloc on all files
+    if (ErrorOr<std::string> P = sys::findProgramByName("cloc")) {
+        std::string programPath = *P;
+        std::vector<StringRef> args;
+        args.push_back("cloc");
+        args.push_back("--list-file");
+        args.push_back(resultFiles.c_str()); // don't use .string() here
+        std::string errorMsg;
+        if (sys::ExecuteAndWait(programPath, args, std::nullopt, {}, 0, 0,
+                                &errorMsg)) {
+            llvm::errs() << "Error: " << errorMsg << "\n";
+        }
+    }
+
+    while (true) {
+        sleep(1);
+    }
+    return 0;
 
     llvm::errs() << "\n--- FindVarVisitor ---\n";
     std::string root_dir = "/home/thebesttv/vul/llvm-project/graph-generation/";
