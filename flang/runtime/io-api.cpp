@@ -1402,8 +1402,15 @@ void IONAME(GetIoMsg)(Cookie cookie, char *msg, std::size_t length) {
 }
 
 AsynchronousId IONAME(GetAsynchronousId)(Cookie cookie) {
-  // Flang runtime implements asynchronous IO synchronously.
-  // All IO transfers are always complete.
+  IoStatementState &io{*cookie};
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  if (auto *ext{io.get_if<ExternalIoStatementBase>()}) {
+    return ext->asynchronousID();
+  } else if (!io.get_if<NoopStatementState>() &&
+      !io.get_if<ErroneousIoStatementState>()) {
+    handler.Crash(
+        "GetAsynchronousId() called when not in an external I/O statement");
+  }
   return 0;
 }
 
