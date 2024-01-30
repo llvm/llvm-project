@@ -52,10 +52,12 @@ struct PageHolder {
 };
 
 static bool get_capacity(unsigned int cap) {
-  struct __user_cap_header_struct header;
+  __user_cap_header_struct header;
   header.pid = 0;
   header.version = _LINUX_CAPABILITY_VERSION_3;
-  struct __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
+  __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
+  // TODO: use capget wrapper once implemented.
+  // https://github.com/llvm/llvm-project/issues/80037
   long res = LIBC_NAMESPACE::syscall_impl(
       SYS_capget, LIBC_NAMESPACE::cpp::bit_cast<long>(&header),
       LIBC_NAMESPACE::cpp::bit_cast<long>(&data));
@@ -67,7 +69,7 @@ static bool get_capacity(unsigned int cap) {
 }
 
 static bool is_permitted_size(size_t size) {
-  struct rlimit rlimits;
+  rlimit rlimits;
   LIBC_NAMESPACE::getrlimit(RLIMIT_MEMLOCK, &rlimits);
   return size <= static_cast<size_t>(rlimits.rlim_cur) ||
          get_capacity(CAP_IPC_LOCK);
@@ -82,7 +84,7 @@ TEST(LlvmLibcMlockTest, Overflow) {
   PageHolder holder;
   EXPECT_TRUE(holder.is_valid());
   size_t negative_size = -holder.size;
-  auto expected_errno = is_permitted_size(negative_size) ? EINVAL : ENOMEM;
+  int expected_errno = is_permitted_size(negative_size) ? EINVAL : ENOMEM;
   EXPECT_THAT(LIBC_NAMESPACE::mlock(holder.addr, negative_size),
               Fails(expected_errno));
   EXPECT_THAT(LIBC_NAMESPACE::munlock(holder.addr, negative_size),
