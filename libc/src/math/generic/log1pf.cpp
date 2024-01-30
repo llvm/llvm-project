@@ -47,7 +47,7 @@ LIBC_INLINE float log(double x) {
     if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return fputil::FPBits<float>::build_quiet_nan().get_val();
+      return fputil::FPBits<float>::quiet_nan().get_val();
     }
     return static_cast<float>(x);
   }
