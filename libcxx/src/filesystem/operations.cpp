@@ -815,8 +815,9 @@ uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
 
   // If opening `p` failed because it wasn't a directory, remove it as
   // a normal file instead. Note that `openat()` can return either ENOTDIR
-  // or ELOOP depending on the exact reason of the failure.
-  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels) {
+  // or ELOOP depending on the exact reason of the failure. On FreeBSD it
+  // may return EMLINK instead of ELOOP, contradicting POSIX.
+  if (ec == errc::not_a_directory || ec == errc::too_many_symbolic_link_levels || ec == errc::too_many_links) {
     ec.clear();
     if (::unlinkat(parent_directory, p.c_str(), /* flags = */ 0) == -1) {
       ec = detail::capture_errno();
