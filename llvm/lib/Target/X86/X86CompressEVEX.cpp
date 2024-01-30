@@ -228,9 +228,9 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
   // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
   bool IsMovberr =
       MI.getOpcode() == X86::MOVBE32rr || MI.getOpcode() == X86::MOVBE64rr;
-  bool IsND = X86II::hasNewDataDest(TSFlags) || IsMovberr;
-  if (TSFlags & X86II::EVEX_B || IsMovberr)
-    if (!IsND || !isRedundantNewDataDest(MI, ST))
+  bool IsND = X86II::hasNewDataDest(TSFlags);
+  if ((TSFlags & X86II::EVEX_B) || IsMovberr)
+    if (!IsND && !IsMovberr || !isRedundantNewDataDest(MI, ST))
       return false;
 
   ArrayRef<X86CompressEVEXTableEntry> Table = ArrayRef(X86CompressEVEXTable);
