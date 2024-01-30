@@ -2992,12 +2992,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     // char *realpath(const char *restrict file_name,
     //                char *restrict resolved_name);
-    // FIXME: Improve for errno modeling.
     addToFunctionSummaryMap(
         "realpath",
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy},
                   RetType{CharPtrTy}),
-        Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
+        Summary(NoEvalCall)
+            .Case({NotNull(Ret)}, ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({IsNull(Ret)}, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .ArgConstraint(NotNull(ArgNo(0))));
 
     QualType CharPtrConstPtr = getPointerTy(getConstTy(CharPtrTy));
 
