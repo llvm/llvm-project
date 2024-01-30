@@ -133,7 +133,8 @@ protected:
     }
   }
 
-  void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
     RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
     // Invalidate the finger print of the op that owns the block into which the
     // op was inserted into.
