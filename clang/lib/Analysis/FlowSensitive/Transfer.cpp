@@ -536,12 +536,13 @@ public:
 
       copyRecord(*LocSrc, *LocDst, Env);
       Env.setStorageLocation(*S, *LocDst);
-    } else {
-      // CXXOperatorCallExpr can be prvalues, in which case we must create a
-      // record for them in order for `Environment::getResultObjectLocation()`
-      // to be able to return a value.
-      VisitCallExpr(S);
+      return;
     }
+
+    // CXXOperatorCallExpr can be prvalues. Call `VisitCallExpr`() to create
+    // a `RecordValue` for them so that `Environment::getResultObjectLocation()`
+    // can return a value.
+    VisitCallExpr(S);
   }
 
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
