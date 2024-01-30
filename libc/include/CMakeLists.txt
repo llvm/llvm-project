@@ -224,6 +224,15 @@ else()
 endif()
 
 add_gen_header(
+  stdbit
+  DEF_FILE stdbit.h.def
+  GEN_HDR stdbit.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdbit_macros
+)
+
+add_gen_header(
   stdio
   DEF_FILE stdio.h.def
   GEN_HDR stdio.h

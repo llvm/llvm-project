@@ -78,7 +78,32 @@ public:
   CreateScriptCommandObject(const char *class_name) override;
 
   StructuredData::ObjectSP
+  CreateScriptedThreadPlan(const char *class_name,
+                           const StructuredDataImpl &args_data,
+                           std::string &error_str,
+                           lldb::ThreadPlanSP thread_plan) override;
+
+  StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) override;
+
+  bool ScriptedThreadPlanExplainsStop(StructuredData::ObjectSP implementor_sp,
+                                      Event *event,
+                                      bool &script_error) override;
+
+  bool ScriptedThreadPlanShouldStop(StructuredData::ObjectSP implementor_sp,
+                                    Event *event, bool &script_error) override;
+
+  bool ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp,
+                                 bool &script_error) override;
+
+  lldb::StateType
+  ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
+                                bool &script_error) override;
+
+  bool
+  ScriptedThreadPlanGetStopDescription(StructuredData::ObjectSP implementor_sp,
+                                lldb_private::Stream *s,
+                                bool &script_error) override;
 
   StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
@@ -110,9 +135,6 @@ public:
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
-
-  lldb::ScriptedThreadPlanInterfaceSP
-  CreateScriptedThreadPlanInterface() override;
 
   lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() override;
 
