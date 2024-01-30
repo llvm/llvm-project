@@ -16,8 +16,8 @@
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munlockall.h"
-
 #include "src/sys/mman/munmap.h"
+#include "src/sys/resource/getrlimit.h"
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/LibcTest.h"
@@ -25,7 +25,9 @@
 
 #include <asm-generic/errno-base.h>
 #include <asm-generic/mman.h>
+#include <linux/capability.h>
 #include <sys/mman.h>
+#include <sys/resource.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -49,6 +51,28 @@ struct PageHolder {
   bool is_valid() { return addr != MAP_FAILED; }
 };
 
+static bool get_capacity(unsigned int cap) {
+  struct __user_cap_header_struct header;
+  header.pid = 0;
+  header.version = _LINUX_CAPABILITY_VERSION_3;
+  struct __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
+  long res = LIBC_NAMESPACE::syscall_impl(
+      SYS_capget, LIBC_NAMESPACE::cpp::bit_cast<long>(&header),
+      LIBC_NAMESPACE::cpp::bit_cast<long>(&data));
+  if (res < 0)
+    return false;
+  auto idx = CAP_TO_INDEX(cap);
+  auto shift = CAP_TO_MASK(cap);
+  return (data[idx].effective & shift) != 0;
+}
+
+static bool is_permitted_size(size_t size) {
+  struct rlimit rlimits;
+  LIBC_NAMESPACE::getrlimit(RLIMIT_MEMLOCK, &rlimits);
+  return size <= static_cast<size_t>(rlimits.rlim_cur) ||
+         get_capacity(CAP_IPC_LOCK);
+}
+
 TEST(LlvmLibcMlockTest, UnMappedMemory) {
   EXPECT_THAT(LIBC_NAMESPACE::mlock(nullptr, 1024), Fails(ENOMEM));
   EXPECT_THAT(LIBC_NAMESPACE::munlock(nullptr, 1024), Fails(ENOMEM));
@@ -57,9 +81,12 @@ TEST(LlvmLibcMlockTest, UnMappedMemory) {
 TEST(LlvmLibcMlockTest, Overflow) {
   PageHolder holder;
   EXPECT_TRUE(holder.is_valid());
-  EXPECT_THAT(LIBC_NAMESPACE::mlock(holder.addr, -holder.size), Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::munlock(holder.addr, -holder.size),
-              Fails(EINVAL));
+  size_t negative_size = -holder.size;
+  auto expected_errno = is_permitted_size(negative_size) ? EINVAL : ENOMEM;
+  EXPECT_THAT(LIBC_NAMESPACE::mlock(holder.addr, negative_size),
+              Fails(expected_errno));
+  EXPECT_THAT(LIBC_NAMESPACE::munlock(holder.addr, negative_size),
+              Fails(expected_errno));
 }
 
 #ifdef SYS_mlock2

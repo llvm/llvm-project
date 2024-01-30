@@ -102,6 +102,8 @@ add_libc_unittest(
     libc.src.sys.mman.munlock
     libc.src.sys.mman.mlockall
     libc.src.sys.mman.munlockall
+    libc.src.sys.resource.getrlimit
+    libc.src.__support.OSUtil.osutil
     libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoSetterMatcher
 )
