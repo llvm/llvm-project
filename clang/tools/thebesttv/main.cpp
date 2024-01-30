@@ -126,7 +126,7 @@ int main(int argc, const char **argv) {
     for (auto &file : allFiles)
         llvm::errs() << "  " << file << "\n";
 
-    // build AST for all files
+    llvm::errs() << "\n--- Building ATS from files ---\n";
     ClangTool Tool(*cb, allFiles);
     std::vector<std::unique_ptr<ASTUnit>> ASTs;
     Tool.buildASTs(ASTs);
