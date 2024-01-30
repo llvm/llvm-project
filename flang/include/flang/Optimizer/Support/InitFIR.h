@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
+#include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -74,6 +75,7 @@ inline void loadDialects(mlir::MLIRContext &context) {
 /// Register the standard passes we use. This comes from registerAllPasses(),
 /// but is a smaller set since we aren't using many of the passes found there.
 inline void registerMLIRPassesForFortranTools() {
+  mlir::acc::registerOpenACCPasses();
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
   mlir::affine::registerAffineLoopFusionPass();
