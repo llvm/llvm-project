@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_MAPMEMREFSTORAGECLASS
@@ -243,66 +244,17 @@ spirv::getMemorySpaceToStorageClassTarget(MLIRContext &context) {
   return target;
 }
 
-//===----------------------------------------------------------------------===//
-// Conversion Pattern
-//===----------------------------------------------------------------------===//
+void spirv::convertMemRefTypesAndAttrs(
+    Operation *op, MemorySpaceToStorageClassConverter &typeConverter) {
+  AttrTypeReplacer replacer;
+  replacer.addReplacement([&typeConverter](BaseMemRefType origType)
+                              -> std::optional<BaseMemRefType> {
+    return typeConverter.convertType<BaseMemRefType>(origType);
+  });
 
-namespace {
-/// Converts any op that has operands/results/attributes with numeric MemRef
-/// memory spaces.
-struct MapMemRefStoragePattern final : ConversionPattern {
-  MapMemRefStoragePattern(MLIRContext *context, TypeConverter &converter)
-      : ConversionPattern(converter, MatchAnyOpTypeTag(), 1, context) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    llvm::SmallVector<NamedAttribute> newAttrs;
-    newAttrs.reserve(op->getAttrs().size());
-    for (NamedAttribute attr : op->getAttrs()) {
-      if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
-        Type newAttr = getTypeConverter()->convertType(typeAttr.getValue());
-        if (!newAttr) {
-          return rewriter.notifyMatchFailure(
-              op, "type attribute conversion failed");
-        }
-        newAttrs.emplace_back(attr.getName(), TypeAttr::get(newAttr));
-      } else {
-        newAttrs.push_back(attr);
-      }
-    }
-
-    llvm::SmallVector<Type, 4> newResults;
-    if (failed(
-            getTypeConverter()->convertTypes(op->getResultTypes(), newResults)))
-      return rewriter.notifyMatchFailure(op, "result type conversion failed");
-
-    OperationState state(op->getLoc(), op->getName().getStringRef(), operands,
-                         newResults, newAttrs, op->getSuccessors());
-
-    for (Region &region : op->getRegions()) {
-      Region *newRegion = state.addRegion();
-      rewriter.inlineRegionBefore(region, *newRegion, newRegion->begin());
-      TypeConverter::SignatureConversion result(newRegion->getNumArguments());
-      if (failed(getTypeConverter()->convertSignatureArgs(
-              newRegion->getArgumentTypes(), result))) {
-        return rewriter.notifyMatchFailure(
-            op, "signature argument type conversion failed");
-      }
-      rewriter.applySignatureConversion(newRegion, result);
-    }
-
-    Operation *newOp = rewriter.create(state);
-    rewriter.replaceOp(op, newOp->getResults());
-    return success();
-  }
-};
-} // namespace
-
-void spirv::populateMemorySpaceToStorageClassPatterns(
-    spirv::MemorySpaceToStorageClassConverter &typeConverter,
-    RewritePatternSet &patterns) {
-  patterns.add<MapMemRefStoragePattern>(patterns.getContext(), typeConverter);
+  replacer.recursivelyReplaceElementsIn(op, /*replaceAttrs=*/true,
+                                        /*replaceLocs=*/false,
+                                        /*replaceTypes=*/true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -335,23 +287,25 @@ public:
     MLIRContext *context = &getContext();
     Operation *op = getOperation();
 
+    spirv::MemorySpaceToStorageClassMap spaceToStorage = memorySpaceMap;
     if (spirv::TargetEnvAttr attr = spirv::lookupTargetEnv(op)) {
       spirv::TargetEnv targetEnv(attr);
       if (targetEnv.allows(spirv::Capability::Kernel)) {
-        memorySpaceMap = spirv::mapMemorySpaceToOpenCLStorageClass;
+        spaceToStorage = spirv::mapMemorySpaceToOpenCLStorageClass;
       } else if (targetEnv.allows(spirv::Capability::Shader)) {
-        memorySpaceMap = spirv::mapMemorySpaceToVulkanStorageClass;
+        spaceToStorage = spirv::mapMemorySpaceToVulkanStorageClass;
       }
     }
 
-    std::unique_ptr<ConversionTarget> target =
-        spirv::getMemorySpaceToStorageClassTarget(*context);
-    spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
+    spirv::MemorySpaceToStorageClassConverter converter(spaceToStorage);
+    // Perform the replacement.
+    spirv::convertMemRefTypesAndAttrs(op, converter);
 
-    RewritePatternSet patterns(context);
-    spirv::populateMemorySpaceToStorageClassPatterns(converter, patterns);
-
-    if (failed(applyFullConversion(op, *target, std::move(patterns))))
+    // Only perform the conversion to check that there are no illegal ops
+    // remaining. Do not attempt to convert anything.
+    if (failed(applyFullConversion(
+            op, *spirv::getMemorySpaceToStorageClassTarget(*context),
+            RewritePatternSet{context})))
       return signalPassFailure();
   }
 

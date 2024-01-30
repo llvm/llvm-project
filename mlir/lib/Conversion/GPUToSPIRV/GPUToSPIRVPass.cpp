@@ -23,6 +23,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTGPUTOSPIRV
@@ -90,19 +91,19 @@ void GPUToSPIRVPass::runOnOperation() {
 
     // Map MemRef memory space to SPIR-V storage class first if requested.
     if (mapMemorySpace) {
-      std::unique_ptr<ConversionTarget> target =
-          spirv::getMemorySpaceToStorageClassTarget(*context);
       spirv::MemorySpaceToStorageClassMap memorySpaceMap =
           targetEnvSupportsKernelCapability(
               dyn_cast<gpu::GPUModuleOp>(gpuModule))
               ? spirv::mapMemorySpaceToOpenCLStorageClass
               : spirv::mapMemorySpaceToVulkanStorageClass;
       spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
+      spirv::convertMemRefTypesAndAttrs(gpuModule, converter);
 
-      RewritePatternSet patterns(context);
-      spirv::populateMemorySpaceToStorageClassPatterns(converter, patterns);
-
-      if (failed(applyFullConversion(gpuModule, *target, std::move(patterns))))
+      // Run the conversion on an empty pattern set to diagnose any illegal ops
+      // left.
+      if (failed(applyFullConversion(
+              gpuModule, *spirv::getMemorySpaceToStorageClassTarget(*context),
+              RewritePatternSet{context})))
         return signalPassFailure();
     }
 
