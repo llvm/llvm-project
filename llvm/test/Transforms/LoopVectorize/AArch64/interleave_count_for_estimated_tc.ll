@@ -129,9 +129,9 @@ for.end:
 ; This has the same profile-guided estimated trip count as loop_with_profile_tc_64 but since the 
 ; resulting interleaved group in this case may access memory out-of-bounds, it requires a scalar 
 ; epilogue iteration for correctness, making at most 63 iterations available for interleaving.
-; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar 
+; When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar 
 ; remainder than IC 2
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 1)
 define void @loop_with_profile_tc_64_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q, i64 %n) {
 entry:
   br label %for.body
@@ -211,9 +211,9 @@ for.end:
 ; the resulting interleaved group in this case may access memory out-of-bounds, it requires 
 ; a scalar epilogue iteration for correctness, making at most 127 iterations available for 
 ; interleaving.
-; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 2 to leave a smaller scalar 
+; When the auto-vectorizer chooses VF 16, it should choose IC 2 to leave a smaller scalar 
 ; remainder than IC 4
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 4)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
 define void @loop_with_profile_tc_128_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q, i64 %n) {
 ; CHECK-IR-LABEL: define void @loop_with_profile_tc_128_scalar_epilogue_reqd(
 ; CHECK-IR-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]], i64 [[N:%.*]]) {
@@ -221,7 +221,7 @@ define void @loop_with_profile_tc_128_scalar_epilogue_reqd(ptr noalias %p, ptr n
 ; CHECK-IR-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[N]], 8
 ; CHECK-IR-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]], !prof [[PROF6]]
 ; CHECK-IR:       vector.main.loop.iter.check:
-; CHECK-IR-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ule i64 [[N]], 64
+; CHECK-IR-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ule i64 [[N]], 32
 ; CHECK-IR-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]], !prof [[PROF6]]
 ;
 entry:
