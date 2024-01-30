@@ -25,6 +25,12 @@ ARM64-SAME: -machine:arm64
 ARM64-SAME: -alternatename:__image_base__=__ImageBase
 ARM64-SAME: foo.o
 
+RUN: ld.lld -### foo.o -m arm64ecpe 2>&1 | FileCheck -check-prefix=ARM64EC %s
+ARM64EC:      -out:a.exe
+ARM64EC-SAME: -machine:arm64ec
+ARM64EC-SAME: -alternatename:__image_base__=__ImageBase
+ARM64EC-SAME: foo.o
+
 RUN: ld.lld -### foo.o -m i386pep -shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --shared 2>&1 | FileCheck -check-prefix=SHARED %s
 RUN: ld.lld -### foo.o -m i386pep --dll 2>&1 | FileCheck -check-prefix=SHARED %s
