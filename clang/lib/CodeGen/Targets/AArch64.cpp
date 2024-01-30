@@ -824,13 +824,12 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 class SMEAttributes {
 public:
   bool IsStreaming = false;
-  bool IsStreamingBody = false;
   bool IsStreamingCompatible = false;
   bool HasNewZA = false;
 
   SMEAttributes(const FunctionDecl *F) {
     if (F->hasAttr<ArmLocallyStreamingAttr>())
-      IsStreamingBody = true;
+      IsStreaming = true;
     if (auto *NewAttr = F->getAttr<ArmNewAttr>()) {
       if (NewAttr->isNewZA())
         HasNewZA = true;
@@ -843,48 +842,6 @@ public:
         IsStreamingCompatible = true;
     }
   }
-
-  bool hasStreamingBody() const { return IsStreamingBody; }
-  bool hasStreamingInterface() const { return IsStreaming; }
-  bool hasStreamingCompatibleInterface() const { return IsStreamingCompatible; }
-  bool hasStreamingInterfaceOrBody() const {
-    return hasStreamingBody() || hasStreamingInterface();
-  }
-  bool hasNonStreamingInterface() const {
-    return !hasStreamingInterface() && !hasStreamingCompatibleInterface();
-  }
-  bool hasNonStreamingInterfaceAndBody() const {
-    return hasNonStreamingInterface() && !hasStreamingBody();
-  }
-
-  bool requiresSMChange(const SMEAttributes Callee,
-                        bool BodyOverridesInterface = false) {
-    // If the transition is not through a call (e.g. when considering inlining)
-    // and Callee has a streaming body, then we can ignore the interface of
-    // Callee.
-    if (BodyOverridesInterface && Callee.hasStreamingBody()) {
-      return !hasStreamingInterfaceOrBody();
-    }
-
-    if (Callee.hasStreamingCompatibleInterface())
-      return false;
-
-    if (hasStreamingCompatibleInterface())
-      return true;
-
-    // Both non-streaming
-    if (hasNonStreamingInterfaceAndBody() && Callee.hasNonStreamingInterface())
-      return false;
-
-    // Both streaming
-    if (hasStreamingInterfaceOrBody() && Callee.hasStreamingInterface())
-      return false;
-
-    return Callee.hasStreamingInterface();
-  }
-
-  bool hasNewZABody() { return HasNewZA; }
-  bool requiresLazySave() const { return HasNewZA; }
 };
 
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(
@@ -896,14 +853,16 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
   SMEAttributes CalleeAttrs(Callee);
   SMEAttributes CallerAttrs(Caller);
 
-  if (CallerAttrs.requiresSMChange(CalleeAttrs, true))
+  if (!CalleeAttrs.IsStreamingCompatible &&
+      (CallerAttrs.IsStreaming != CalleeAttrs.IsStreaming ||
+       CallerAttrs.IsStreamingCompatible))
     CGM.getDiags().Report(CallLoc,
                           diag::err_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
-  if (CalleeAttrs.hasNewZABody())
+  if (CalleeAttrs.HasNewZA)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
         << Callee->getDeclName();
-  if (CallerAttrs.requiresLazySave())
+  if (CallerAttrs.HasNewZA)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_lazy_save)
         << Callee->getDeclName() << Caller->getDeclName();
 }
