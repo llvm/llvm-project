@@ -2053,16 +2053,18 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
 def CallOp : CIR_CallOp<"call"> {
   let summary = "call operation";
   let description = [{
-    The `call` operation represents a direct call to a function that is within
-    the same symbol scope as the call. The operands and result types of the
-    call must match the specified function type. The callee is encoded as a
-    symbol reference attribute named "callee".
+    Direct and indirect calls.
 
-    To walk the operands for this operation, use `getNumArgOperands()`,
-    `getArgOperand()`, `getArgOperands()`, `arg_operand_begin()` and
-    `arg_operand_begin()`. Avoid using `getNumOperands()`, `getOperand()`,
-    `operand_begin()`, etc, direclty - might be misleading given on indirect
-    calls the callee is encoded in the first operation operand.
+    For direct calls, the `call` operation represents a direct call to a
+    function that is within the same symbol scope as the call. The operands
+    and result types of the call must match the specified function type.
+    The callee is encoded as a aymbol reference attribute named "callee".
+
+    For indirect calls, the first `mlir::Operation` operand is the call target.
+
+    Given the way indirect calls are encoded, avoid using `mlir::Operation`
+    methods to walk the operands for this operation, instead use the methods
+    provided by `CIRCallOpInterface`.
     ``
 
     Example:
@@ -2111,51 +2113,59 @@ def CallOp : CIR_CallOp<"call"> {
 def TryCallOp : CIR_CallOp<"try_call"> {
   let summary = "try call operation";
   let description = [{
-    Very similar to `cir.call` but passes down an exception object
-    in case anything is thrown by the callee.
+    Similar to `cir.call`, direct and indirect properties are the same. The
+    difference relies in an exception object address operand. It's encoded
+    as the first operands or second (for indirect calls).
 
-    To walk the operands for this operation, use `getNumArgOperands()`,
-    `getArgOperand()`, `getArgOperands()`, `arg_operand_begin()` and
-    `arg_operand_begin()`. Avoid using `getNumOperands()`, `getOperand()`,
-    `operand_begin()`, etc, direclty - might be misleading given the
-    exception object address is also part of the raw operation's operands.
-    ``
+    Similarly to `cir.call`, avoid using `mlir::Operation` methods to walk the
+    operands for this operation, instead use the methods provided by
+    `CIRCallOpInterface`.
 
     Example:
 
     ```mlir
-    %0 = cir.alloca !cir.eh.info, cir.ptr <!cir.eh.info> ...
-    %r = cir.try_call %exception(%0) @division(%1, %2), %0
+    cir.try {
+      %0 = cir.alloca !cir.ptr<!cir.eh.info>, cir.ptr <!cir.ptr<!cir.eh.info>>
+      ...
+      %r = cir.try_call %exception(%0) @division(%1, %2)
+    } ...
     ```
   }];
 
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
-                       ExceptionInfoPtr:$exceptionInfo,
+                       ExceptionInfoPtrPtr:$exceptionInfo,
                        Variadic<CIR_AnyType>:$callOps,
                        OptionalAttr<ASTCallExprInterface>:$ast);
   let results = (outs Variadic<CIR_AnyType>);
 
   let builders = [
-    OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
+    OpBuilder<(ins "FuncOp":$callee, "mlir::Value":$exception,
+                   CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(ValueRange{exception});
       $_state.addOperands(operands);
       $_state.addAttribute("callee", SymbolRefAttr::get(callee));
       if (!callee.getFunctionType().isVoid())
         $_state.addTypes(callee.getFunctionType().getReturnType());
     }]>,
-    OpBuilder<(ins "Value":$ind_target,
+    OpBuilder<(ins "Value":$ind_target, "mlir::Value":$exception,
                "FuncType":$fn_type,
                CArg<"ValueRange", "{}">:$operands), [{
       $_state.addOperands(ValueRange{ind_target});
+      $_state.addOperands(ValueRange{exception});
       $_state.addOperands(operands);
       if (!fn_type.isVoid())
         $_state.addTypes(fn_type.getReturnType());
     }]>,
-    OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Type":$resType,
-              CArg<"ValueRange", "{}">:$operands), [{
+    OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Value":$exception,
+                   "mlir::Type":$resType, CArg<"ValueRange", "{}">:$operands),
+    [{
+      $_state.addOperands(ValueRange{exception});
       $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       $_state.addTypes(resType);
     }]>];
+
+    let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

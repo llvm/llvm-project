@@ -2030,13 +2030,14 @@ void printCallCommon(
     Operation *op, mlir::FlatSymbolRefAttr flatSym, ::mlir::OpAsmPrinter &state,
     llvm::function_ref<void()> customOpHandler = []() {}) {
   state << ' ';
-  auto ops = op->getOperands();
+
+  auto callLikeOp = mlir::cast<mlir::cir::CIRCallOpInterface>(op);
+  auto ops = callLikeOp.getArgOperands();
 
   if (flatSym) { // Direct calls
     state.printAttributeWithoutType(flatSym);
   } else { // Indirect calls
-    state << ops.front();
-    ops = ops.drop_front();
+    state << op->getOperand(0);
   }
   state << "(";
   state << ops;
@@ -2077,7 +2078,8 @@ mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_begin() {
   // FIXME(cir): for this and all the other calculations in the other methods:
   // we currently have no basic block arguments on cir.try_call, but if it gets
   // to that, this needs further adjustment.
-  return arg_begin++;
+  arg_begin++;
+  return arg_begin;
 }
 mlir::Operation::operand_iterator cir::TryCallOp::arg_operand_end() {
   return operand_end();
@@ -2088,7 +2090,8 @@ Value cir::TryCallOp::getArgOperand(unsigned i) {
   if (!getCallee())
     i++;
   // First operand is the exception pointer, skip it.
-  return getOperand(i + 1);
+  i++;
+  return getOperand(i);
 }
 /// Return the number of operands, , accounts for indirect call.
 unsigned cir::TryCallOp::getNumArgOperands() {
@@ -2103,6 +2106,13 @@ unsigned cir::TryCallOp::getNumArgOperands() {
 LogicalResult
 cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return verifyCallCommInSymbolUses(*this, symbolTable);
+}
+
+LogicalResult cir::TryCallOp::verify() {
+  auto tryScope = (*this)->getParentOfType<mlir::cir::TryOp>();
+  if (!tryScope)
+    return emitOpError() << "expected to be within a 'cir.try' region";
+  return mlir::success();
 }
 
 ::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
@@ -2131,10 +2141,13 @@ cir::TryCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
         if (parser.parseRParen().failed())
           return parser.emitError(parser.getCurrentLocation(), "expected ')'");
 
-        auto exceptionPtrTy = cir::PointerType::get(
-            parser.getBuilder().getContext(),
-            parser.getBuilder().getType<::mlir::cir::ExceptionInfoType>());
-        if (parser.resolveOperands(exceptionOperands, exceptionPtrTy,
+        auto &builder = parser.getBuilder();
+        auto exceptionPtrPtrTy = cir::PointerType::get(
+            builder.getContext(),
+            cir::PointerType::get(
+                builder.getContext(),
+                builder.getType<::mlir::cir::ExceptionInfoType>()));
+        if (parser.resolveOperands(exceptionOperands, exceptionPtrPtrTy,
                                    exceptionOperandsLoc, result.operands))
           return ::mlir::failure();
 

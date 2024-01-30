@@ -623,11 +623,23 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     mlir::cir::CIRCallOpInterface callLikeOp;
     if (indirectFuncTy) {
-      callLikeOp = builder.create<mlir::cir::CallOp>(
-          callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs);
+      if (InvokeDest) {
+        callLikeOp = builder.create<mlir::cir::TryCallOp>(
+            callLoc, currExceptionInfo.exceptionAddr, indirectFuncVal,
+            indirectFuncTy, CIRCallArgs);
+      } else {
+        callLikeOp = builder.create<mlir::cir::CallOp>(
+            callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs);
+      }
     } else {
-      callLikeOp =
-          builder.create<mlir::cir::CallOp>(callLoc, directFuncOp, CIRCallArgs);
+      if (InvokeDest) {
+        callLikeOp = builder.create<mlir::cir::TryCallOp>(
+            callLoc, directFuncOp, currExceptionInfo.exceptionAddr,
+            CIRCallArgs);
+      } else {
+        callLikeOp = builder.create<mlir::cir::CallOp>(callLoc, directFuncOp,
+                                                       CIRCallArgs);
+      }
     }
 
     if (E)
