@@ -836,7 +836,7 @@ void ObjCStubsSection::initialize() {
   for (ConcatInputSection *isec : inputSections) {
     if (isec->shouldOmitFromOutput())
       continue;
-    if (isec->getName() != "__objc_selrefs")
+    if (isec->getName() != section_names::objcSelrefs)
       continue;
     // We expect a single relocation per selref entry to __objc_methname that
     // might be aggregated.
@@ -846,7 +846,7 @@ void ObjCStubsSection::initialize() {
       if (const auto *d = dyn_cast<Defined>(sym)) {
         auto *cisec = cast<CStringInputSection>(d->isec);
         auto methname = cisec->getStringRefAtOffset(d->value);
-        methnameToselref[methname] = isec;
+        methnameToSelref[CachedHashStringRef(methname)] = isec;
       }
     }
   }
@@ -854,13 +854,30 @@ void ObjCStubsSection::initialize() {
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
-  // We will create a selref entry for each unique methname.
-  if (!methnameToselref.count(methname) &&
-      !methnameToidxOffsetPair.count(methname)) {
+  // We create a selref entry for each unique methname.
+  if (!methnameToSelref.count(CachedHashStringRef(methname))) {
     auto methnameOffset =
         in.objcMethnameSection->getStringOffset(methname).outSecOff;
-    auto selIndex = methnameToidxOffsetPair.size();
-    methnameToidxOffsetPair[methname] = {selIndex, methnameOffset};
+
+    size_t wordSize = target->wordSize;
+    uint8_t *selrefData = bAlloc().Allocate<uint8_t>(wordSize);
+    write64le(selrefData, methnameOffset);
+    auto *objcSelref = makeSyntheticInputSection(
+        segment_names::data, section_names::objcSelrefs,
+        S_LITERAL_POINTERS | S_ATTR_NO_DEAD_STRIP,
+        ArrayRef<uint8_t>{selrefData, wordSize},
+        /*align=*/wordSize);
+    objcSelref->live = true;
+    objcSelref->relocs.push_back(
+        {/*type=*/target->unsignedRelocType,
+         /*pcrel=*/false, /*length=*/3,
+         /*offset=*/0,
+         /*addend=*/static_cast<int64_t>(methnameOffset),
+         /*referent=*/in.objcMethnameSection->isec});
+    objcSelref->parent = ConcatOutputSection::getOrCreateForInput(objcSelref);
+    inputSections.push_back(objcSelref);
+    objcSelref->isFinal = true;
+    methnameToSelref[CachedHashStringRef(methname)] = objcSelref;
   }
 
   auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
@@ -895,35 +912,6 @@ void ObjCStubsSection::setUp() {
     if (!isa<Defined>(objcMsgSend))
       in.stubs->addEntry(objcMsgSend);
   }
-
-  size_t size = methnameToidxOffsetPair.size() * target->wordSize;
-  uint8_t *selrefsData = bAlloc().Allocate<uint8_t>(size);
-  for (const auto &[methname, idxOffsetPair] : methnameToidxOffsetPair) {
-    const auto &[idx, offset] = idxOffsetPair;
-    write64le(&selrefsData[idx * target->wordSize], offset);
-  }
-
-  in.objcSelrefs =
-      makeSyntheticInputSection(segment_names::data, section_names::objcSelrefs,
-                                S_LITERAL_POINTERS | S_ATTR_NO_DEAD_STRIP,
-                                ArrayRef<uint8_t>{selrefsData, size},
-                                /*align=*/target->wordSize);
-  in.objcSelrefs->live = true;
-
-  for (const auto &[methname, idxOffsetPair] : methnameToidxOffsetPair) {
-    const auto &[idx, offset] = idxOffsetPair;
-    in.objcSelrefs->relocs.push_back(
-        {/*type=*/target->unsignedRelocType,
-         /*pcrel=*/false, /*length=*/3,
-         /*offset=*/static_cast<uint32_t>(idx * target->wordSize),
-         /*addend=*/offset * in.objcMethnameSection->align,
-         /*referent=*/in.objcMethnameSection->isec});
-  }
-
-  in.objcSelrefs->parent =
-      ConcatOutputSection::getOrCreateForInput(in.objcSelrefs);
-  inputSections.push_back(in.objcSelrefs);
-  in.objcSelrefs->isFinal = true;
 }
 
 uint64_t ObjCStubsSection::getSize() const {
@@ -934,29 +922,16 @@ uint64_t ObjCStubsSection::getSize() const {
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
-  assert(in.objcSelrefs->live);
-  assert(in.objcSelrefs->isFinal);
-
   uint64_t stubOffset = 0;
   for (size_t i = 0, n = symbols.size(); i < n; ++i) {
     Defined *sym = symbols[i];
-    uint64_t selBaseAddr;
-    uint64_t selIndex;
 
     auto methname = getMethname(sym);
-    auto j = methnameToselref.find(methname);
-    if (j != methnameToselref.end()) {
-      selBaseAddr = j->second->getVA(0);
-      selIndex = 0;
-    } else {
-      auto k = methnameToidxOffsetPair.find(methname);
-      assert(k != methnameToidxOffsetPair.end());
-      selBaseAddr = in.objcSelrefs->getVA();
-      selIndex = k->second.first;
-    }
+    auto j = methnameToSelref.find(CachedHashStringRef(methname));
+    assert(j != methnameToSelref.end());
+    auto selrefAddr = j->second->getVA(0);
     target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                 stubOffset, selBaseAddr, selIndex,
-                                 objcMsgSend);
+                                 stubOffset, selrefAddr, 0, objcMsgSend);
   }
 }
 

@@ -338,12 +338,7 @@ public:
 
 private:
   std::vector<Defined *> symbols;
-  // Existing mapping from methname to selref (0 index is assumed).
-  llvm::StringMap<InputSection *> methnameToselref;
-  // Newly created mapping from methname to the pair of index (selref) and
-  // offset (methname).
-  llvm::MapVector<StringRef, std::pair<uint32_t, uint32_t>>
-      methnameToidxOffsetPair;
+  llvm::DenseMap<llvm::CachedHashStringRef, InputSection *> methnameToSelref;
   Symbol *objcMsgSend = nullptr;
 };
 
@@ -800,7 +795,6 @@ struct InStruct {
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
   ObjCStubsSection *objcStubs = nullptr;
-  ConcatInputSection *objcSelrefs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;
