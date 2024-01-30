@@ -359,8 +359,8 @@ public:
   LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::ZERO()));
   }
-  LIBC_INLINE static constexpr RetT build_nan(Sign sign = Sign::POS,
-                                              StorageType v = 0) {
+  LIBC_INLINE static constexpr RetT build_signaling_nan(Sign sign = Sign::POS,
+                                                        StorageType v = 0) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
                        (v ? Sig(v) : (Sig::MSB() >> 1))));
   }
@@ -448,8 +448,8 @@ public:
   LIBC_INLINE static constexpr RetT inf(Sign sign = Sign::POS) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(), Sig::MSB()));
   }
-  LIBC_INLINE static constexpr RetT build_nan(Sign sign = Sign::POS,
-                                              StorageType v = 0) {
+  LIBC_INLINE static constexpr RetT build_signaling_nan(Sign sign = Sign::POS,
+                                                        StorageType v = 0) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ONES(),
                        Sig::MSB() | (v ? Sig(v) : (Sig::MSB() >> 2))));
   }
@@ -577,8 +577,8 @@ public:
   LIBC_INLINE static constexpr RetT zero(Sign sign = Sign::POS) {
     return RetT(encode(sign, BiasedExp::BITS_ALL_ZEROES(), Sig::ZERO()));
   }
-  using UP::build_nan;
   using UP::build_quiet_nan;
+  using UP::build_signaling_nan;
   using UP::inf;
   using UP::max_normal;
   using UP::max_subnormal;
