@@ -760,7 +760,6 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(op, "Not a supported aligned case");
   unsigned srcElemBitwidth = srcType.getElementTypeBitWidth();
   unsigned dstElemBitwidth = dstType.getElementTypeBitWidth();
-  unsigned byteBitwidth = 8;
 
   // Only {s}i4 -> (size_of({{s}i/f}) >= 8) are supported for now.
   if (srcElemBitwidth != 4 || dstElemBitwidth < 8 ||
