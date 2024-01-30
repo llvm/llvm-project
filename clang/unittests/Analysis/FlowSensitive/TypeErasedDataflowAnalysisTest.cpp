@@ -672,26 +672,23 @@ public:
                                                : ComparisonResult::Different;
   }
 
-  bool merge(QualType Type, const Value &Val1, const Environment &Env1,
-             const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) override {
-    // Nothing to say about a value that is not a pointer.
+  void join(QualType Type, const Value &Val1, const Environment &Env1,
+            const Value &Val2, const Environment &Env2, Value &JoinedVal,
+            Environment &JoinedEnv) override {
+    // Nothing to say about a value that is not a pointer...
     if (!Type->isPointerType())
-      return false;
+      return;
 
+    // ... or, a pointer without the `is_null` property.
     auto *IsNull1 = cast_or_null<BoolValue>(Val1.getProperty("is_null"));
-    if (IsNull1 == nullptr)
-      return false;
-
     auto *IsNull2 = cast_or_null<BoolValue>(Val2.getProperty("is_null"));
-    if (IsNull2 == nullptr)
-      return false;
+    if (IsNull1 == nullptr || IsNull2 == nullptr)
+      return;
 
     if (IsNull1 == IsNull2)
-      MergedVal.setProperty("is_null", *IsNull1);
+      JoinedVal.setProperty("is_null", *IsNull1);
     else
-      MergedVal.setProperty("is_null", MergedEnv.makeTopBoolValue());
-    return true;
+      JoinedVal.setProperty("is_null", JoinedEnv.makeTopBoolValue());
   }
 };
 
@@ -1176,7 +1173,7 @@ TEST_F(FlowConditionTest, Join) {
 // Note: currently, arbitrary function calls are uninterpreted, so the test
 // exercises this case. If and when we change that, this test will not add to
 // coverage (although it may still test a valuable case).
-TEST_F(FlowConditionTest, OpaqueFlowConditionMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFlowConditionJoinsToOpaqueBool) {
   std::string Code = R"(
     bool foo();
 
@@ -1211,7 +1208,7 @@ TEST_F(FlowConditionTest, OpaqueFlowConditionMergesToOpaqueBool) {
 // the first instance), so the test exercises this case. If and when we change
 // that, this test will not add to coverage (although it may still test a
 // valuable case).
-TEST_F(FlowConditionTest, OpaqueFieldFlowConditionMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFieldFlowConditionJoinsToOpaqueBool) {
   std::string Code = R"(
     struct Rec {
       Rec* Next;
@@ -1249,7 +1246,7 @@ TEST_F(FlowConditionTest, OpaqueFieldFlowConditionMergesToOpaqueBool) {
 // condition is not meaningfully interpreted. Adds to above by nesting the
 // interestnig case inside a normal branch. This protects against degenerate
 // solutions which only test for empty flow conditions, for example.
-TEST_F(FlowConditionTest, OpaqueFlowConditionInsideBranchMergesToOpaqueBool) {
+TEST_F(FlowConditionTest, OpaqueFlowConditionInsideBranchJoinsToOpaqueBool) {
   std::string Code = R"(
     bool foo();
 
