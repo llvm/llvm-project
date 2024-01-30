@@ -16133,7 +16133,10 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 /// Check conversion of given expression to boolean.
 /// Input argument E is a logical expression.
 static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
-  if (S.getLangOpts().Bool)
+  // While C23 does have bool as a keyword, we still need to run the bool-like
+  // conversion checks as bools are still not used as the return type from
+  // "boolean" operators or as the input type for conditional operators.
+  if (S.getLangOpts().Bool && !S.getLangOpts().C23)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isAtomicType())
     return;
