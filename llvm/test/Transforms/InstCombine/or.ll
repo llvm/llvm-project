@@ -1781,8 +1781,8 @@ if.else:
 ; Tests from PR76554
 define i32 @test_or_and_xor_constant(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_or_and_xor_constant(
-; CHECK-NEXT:    [[A1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = and i32 [[A1]], -2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = and i32 [[TMP1]], -2147483648
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %a = and i32 %x, -2147483648
@@ -1886,5 +1886,18 @@ define i32 @test_or_and_xor_multiuse2(i32 %a, i32 %b, i32 %c) {
   %and = and i32 %xor, %c
   call void @use(i32 %and)
   %or = or i32 %and, %a
+  ret i32 %or
+}
+
+define i32 @test_or_add_xor(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @test_or_add_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[XOR]], [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ADD]], [[A]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %xor = xor i32 %a, %b
+  %add = add i32 %xor, %c
+  %or = or i32 %add, %a
   ret i32 %or
 }

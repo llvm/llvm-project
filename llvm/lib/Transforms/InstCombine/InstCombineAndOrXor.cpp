@@ -2188,23 +2188,6 @@ static Value *simplifyAndOrWithOpReplaced(Value *X, Value *Y, bool IsAnd,
   if (isa<Constant>(X) || X == Y)
     return nullptr;
 
-  auto RecursivelyReplaceUses = [&](Instruction::BinaryOps Opcode, Value *Op0,
-                                    Value *Op1) -> Value * {
-    if (Depth == 2)
-      return nullptr;
-
-    // TODO: Relax the one-use constraint to clean up existing hard-coded
-    // simplifications.
-    if (!X->hasOneUse())
-      return nullptr;
-    Value *NewOp0 = simplifyAndOrWithOpReplaced(Op0, Y, IsAnd, IC, Depth + 1);
-    Value *NewOp1 = simplifyAndOrWithOpReplaced(Op1, Y, IsAnd, IC, Depth + 1);
-    if (!NewOp0 && !NewOp1)
-      return nullptr;
-    return IC.Builder.CreateBinOp(Opcode, NewOp0 ? NewOp0 : Op0,
-                                  NewOp1 ? NewOp1 : Op1);
-  };
-
   Value *RHS;
   if (match(X, m_c_And(m_Specific(Y), m_Value(RHS)))) {
     return IsAnd ? RHS : Constant::getNullValue(X->getType());
@@ -2222,11 +2205,20 @@ static Value *simplifyAndOrWithOpReplaced(Value *X, Value *Y, bool IsAnd,
       return RHS;
   }
 
-  // FIXME: Is it correct to decompose xor if Y may be undef?
+  // Replace uses of Y in X recursively.
   Value *Op0, *Op1;
-  if (match(X, m_BitwiseLogic(m_Value(Op0), m_Value(Op1))))
-    return RecursivelyReplaceUses(cast<BinaryOperator>(X)->getOpcode(), Op0,
-                                  Op1);
+  if (Depth < 2 && match(X, m_BitwiseLogic(m_Value(Op0), m_Value(Op1)))) {
+    // TODO: Relax the one-use constraint to clean up existing hard-coded
+    // simplifications.
+    if (!X->hasOneUse())
+      return nullptr;
+    Value *NewOp0 = simplifyAndOrWithOpReplaced(Op0, Y, IsAnd, IC, Depth + 1);
+    Value *NewOp1 = simplifyAndOrWithOpReplaced(Op1, Y, IsAnd, IC, Depth + 1);
+    if (!NewOp0 && !NewOp1)
+      return nullptr;
+    return IC.Builder.CreateBinOp(cast<BinaryOperator>(X)->getOpcode(),
+                                  NewOp0 ? NewOp0 : Op0, NewOp1 ? NewOp1 : Op1);
+  }
   return nullptr;
 }
 
@@ -2753,7 +2745,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return Res;
 
   if (Value *V = simplifyAndOrWithOpReplaced(Op0, Op1, /*IsAnd*/ true, *this))
-    return BinaryOperator::CreateAnd(Op1, V);
+    return BinaryOperator::CreateAnd(V, Op1);
   if (Value *V = simplifyAndOrWithOpReplaced(Op1, Op0, /*IsAnd*/ true, *this))
     return BinaryOperator::CreateAnd(Op0, V);
 
@@ -3957,7 +3949,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return Res;
 
   if (Value *V = simplifyAndOrWithOpReplaced(Op0, Op1, /*IsAnd*/ false, *this))
-    return BinaryOperator::CreateOr(Op1, V);
+    return BinaryOperator::CreateOr(V, Op1);
   if (Value *V = simplifyAndOrWithOpReplaced(Op1, Op0, /*IsAnd*/ false, *this))
     return BinaryOperator::CreateOr(Op0, V);
 

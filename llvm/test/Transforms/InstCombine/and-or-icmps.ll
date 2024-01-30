@@ -370,7 +370,7 @@ define void @simplify_before_foldAndOfICmps(ptr %p) {
 ; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[C10:%.*]] = icmp ugt i16 [[L7]], [[B11]]
 ; CHECK-NEXT:    [[C7:%.*]] = icmp slt i16 [[L7]], 0
-; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C10]], [[C7]]
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C7]], [[C10]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C10]], true
 ; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C3]] to i64
