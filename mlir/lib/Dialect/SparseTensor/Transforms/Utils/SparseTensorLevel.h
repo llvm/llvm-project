@@ -80,24 +80,37 @@ class SparseIterator {
   SparseIterator &operator=(const SparseIterator &) = delete;
 
 protected:
-  SparseIterator(IterKind kind, unsigned tid, unsigned lvl,
-                 MutableArrayRef<Value> itVals)
-      : kind(kind), tid(tid), lvl(lvl), crd(nullptr), itVals(itVals){};
+  SparseIterator(IterKind kind, unsigned tid, unsigned lvl, unsigned itValsCnt,
+                 SmallVectorImpl<Value> &storage)
+      : kind(kind), tid(tid), lvl(lvl), crd(nullptr), itValsCnt(itValsCnt),
+        itValsStorageRef(storage){};
 
   SparseIterator(IterKind kind, const SparseIterator &wrap)
       : kind(kind), tid(wrap.tid), lvl(wrap.lvl), crd(nullptr),
-        itVals(wrap.itVals){};
+        itValsCnt(wrap.itValsCnt), itValsStorageRef(wrap.itValsStorageRef) {
+    assert(wrap.itValsCnt == itValsStorageRef.size());
+  };
+
+  SparseIterator(IterKind kind, const SparseIterator &wrap, unsigned extraVal)
+      : kind(kind), tid(wrap.tid), lvl(wrap.lvl), crd(nullptr),
+        itValsCnt(wrap.itValsCnt + extraVal),
+        itValsStorageRef(wrap.itValsStorageRef) {
+    itValsStorageRef.append(extraVal, nullptr);
+    assert(itValsCnt == itValsStorageRef.size());
+  };
 
 public:
   virtual ~SparseIterator() = default;
 
   Value getCrd() const { return crd; }
-  ValueRange getItVals() const { return itVals; };
+  ValueRange getItVals() const {
+    return ValueRange(itValsStorageRef).take_front(itValsCnt);
+  };
 
   // Sets the iterate to the specified position.
   void seek(ValueRange vals) {
-    assert(vals.size() == itVals.size());
-    std::copy(vals.begin(), vals.end(), itVals.begin());
+    assert(vals.size() == itValsCnt);
+    std::copy(vals.begin(), vals.end(), itValsStorageRef.begin());
     // Now that the iterator is re-positioned, the coordinate becomes invalid.
     crd = nullptr;
   }
@@ -119,8 +132,8 @@ public:
   virtual Value upperBound(OpBuilder &b, Location l) const = 0;
 
   // Serializes and deserializes the current status to/from a set of values. The
-  // ValueRange should contain values that specifies the current postion and
-  // loop bound.
+  // ValueRange should contain values that are sufficient to recover the current
+  // iterating postion (i.e., itVals) as well as loop bound.
   //
   // Not every type of iterator supports the operations, e.g., non-empty
   // subsection iterator does not because the the number of non-empty
@@ -136,6 +149,25 @@ public:
   // Core functions.
   //
 
+  // Initializes the iterator according to the parent iterator's state.
+  void genInit(OpBuilder &b, Location l, const SparseIterator *p);
+
+  // Forwards the iterator to the next element.
+  ValueRange forward(OpBuilder &b, Location l);
+
+  // Actual Implementation provided by derived class.
+  virtual void genInitImpl(OpBuilder &, Location, const SparseIterator *) = 0;
+  virtual ValueRange forwardImpl(OpBuilder &b, Location l) = 0;
+
+  // Returns a boolean value that equals `!it.end()`
+  virtual Value genNotEnd(OpBuilder &b, Location l) = 0;
+
+  // Dereferences the iterator, loads the coordinate at the current position.
+  //
+  // The method assumes that the iterator is not currently exhausted (i.e.,
+  // it != it.end()).
+  virtual Value deref(OpBuilder &b, Location l) = 0;
+
   // Gets the current position and the optional *position high* (for non-unique
   // iterators), the value is essentially the number of sparse coordinate that
   // the iterator is current visiting. It should be able to uniquely identify
@@ -148,9 +180,6 @@ public:
     llvm_unreachable("unsupported");
   };
 
-  // Initializes the iterator according to the parent iterator's state.
-  virtual void genInit(OpBuilder &, Location, const SparseIterator *) = 0;
-
   // Returns a pair of values for *upper*, *lower* bound respectively.
   virtual std::pair<Value, Value> genForCond(OpBuilder &b, Location l) {
     assert(randomAccessible());
@@ -158,21 +187,12 @@ public:
     return {getCrd(), upperBound(b, l)};
   }
 
-  // Returns a boolean value that equals `!it.end()`
-  virtual Value genNotEnd(OpBuilder &b, Location l) = 0;
+  // Generates a bool value for scf::ConditionOp.
   std::pair<Value, ValueRange> genWhileCond(OpBuilder &b, Location l,
                                             ValueRange vs) {
     ValueRange rem = linkNewScope(vs);
     return std::make_pair(genNotEnd(b, l), rem);
   }
-
-  // Dereference the iterator, loads the coordinate at the current position.
-  //
-  // The method assumes that the iterator is not currently exhausted (i.e.,
-  // it != it.end()).
-  virtual Value deref(OpBuilder &b, Location l) = 0;
-
-  virtual ValueRange forward(OpBuilder &b, Location l) = 0;
 
   // Generate a conditional it.next() in the following form
   //
@@ -198,13 +218,16 @@ public:
   ValueRange linkNewScope(ValueRange pos) {
     assert(!randomAccessible() && "random accessible iterators are traversed "
                                   "by coordinate, call locate() instead.");
-    seek(pos.take_front(itVals.size()));
-    return pos.drop_front(itVals.size());
+    seek(pos.take_front(itValsCnt));
+    return pos.drop_front(itValsCnt);
   };
 
 protected:
   void updateCrd(Value crd) { this->crd = crd; }
-  void relinkItVals(MutableArrayRef<Value> itVals) { this->itVals = itVals; }
+  MutableArrayRef<Value> getMutItVals() {
+    MutableArrayRef<Value> ref = itValsStorageRef;
+    return ref.take_front(itValsCnt);
+  }
 
 public:
   const IterKind kind;     // For LLVM-style RTTI.
@@ -219,7 +242,11 @@ private:
   // For trivial iterators, it is the position; for dedup iterators, it consists
   // of the positon and the segment high, for non-empty subsection iterator, it
   // is the metadata that specifies the subsection.
-  MutableArrayRef<Value> itVals;
+  // Note that the wrapped iterator shares the same storage to maintain itVals
+  // with it wrapper, which means the wrapped iterator might only own a subset
+  // of all the values stored in itValStorage.
+  const unsigned itValsCnt;
+  SmallVectorImpl<Value> &itValsStorageRef;
 };
 
 /// Helper function to create a TensorLevel object from given `tensor`.
