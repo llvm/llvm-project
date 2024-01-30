@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/AArch64SMEAttributes.h"
+#include "AArch64SMEAttributes.h"
 #include "llvm/IR/InstrTypes.h"
 #include <cassert>
 

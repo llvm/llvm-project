@@ -14,6 +14,7 @@
 
 #include "AArch64.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -22,7 +23,6 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/AArch64SMEAttributes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 

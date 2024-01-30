@@ -31,7 +31,6 @@ set(LLVM_LINK_COMPONENTS
   Target
   TargetParser
   TransformUtils
-  AArch64Utils
   )
 
 # Workaround for MSVC ARM64 performance regression:
