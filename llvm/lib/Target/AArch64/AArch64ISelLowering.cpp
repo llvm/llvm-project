@@ -21255,6 +21255,15 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
 //    orr wX, wY, wX, lsl #16
 //    fmov s0, wX
 //
+// Note that an alternative sequence with even fewer (although usually more
+// complex/expensive) instructions would be:
+//   ld1r.4h { v0 }, [x0], #2
+//   ld1.b { v0 }[2], [x0]
+//
+// Generating this sequence unfortunately results in noticeably worse codegen
+// for code that extends the loaded v3i8, due to legalization breaking vector
+// shuffle detection in a way that is very difficult to work around.
+// TODO: Revisit once v3i8 legalization has been improved in general.
 static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   EVT MemVT = LD->getMemoryVT();
   if (MemVT != EVT::getVectorVT(*DAG.getContext(), MVT::i8, 3) ||
