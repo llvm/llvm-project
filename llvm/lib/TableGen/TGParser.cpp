@@ -1104,10 +1104,10 @@ RecTy *TGParser::ParseType() {
     Lex.Lex();
     return DagRecTy::get(Records);
   case tgtok::Id: {
-    const std::string TypeName = Lex.getCurStrVal();
-    if (TypeAliases.count(TypeName)) {
+    auto I = TypeAliases.find(Lex.getCurStrVal());
+    if (I != TypeAliases.end()) {
       Lex.Lex();
-      return TypeAliases[TypeName];
+      return I->second;
     }
     if (Record *R = ParseClassID())
       return RecordRecTy::get(R);
