@@ -11012,48 +11012,6 @@ SDValue ReconstructShuffleWithRuntimeMask(SDValue Op, SelectionDAG &DAG) {
       MaskSourceVec);
 }
 
-// Check if Op is a BUILD_VECTOR with 2 extracts and a load that is cheaper to
-// insert into a vector and use a shuffle. This improves lowering for loads of
-// <3 x i8>.
-static SDValue shuffleWithSingleLoad(SDValue Op, SelectionDAG &DAG) {
-  if (Op.getNumOperands() != 4 || Op.getValueType() != MVT::v4i16)
-    return SDValue();
-
-  SDValue V0 = Op.getOperand(0);
-  SDValue V1 = Op.getOperand(1);
-  SDValue V2 = Op.getOperand(2);
-  SDValue V3 = Op.getOperand(3);
-  if (V0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      V1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      V2.getOpcode() != ISD::LOAD || !(V3.isUndef() || V3.getOpcode() == ISD::EXTRACT_VECTOR_ELT))
-    return SDValue();
-
-  if (V0.getOperand(0) != V1.getOperand(0) ||
-      V0.getConstantOperandVal(1) != 0 || V1.getConstantOperandVal(1) != 1 || !(V3.isUndef() || V3.getConstantOperandVal(1) == 3))
-    return SDValue();
-
-  SDLoc dl(Op);
-  auto *L = cast<LoadSDNode>(Op.getOperand(2));
-  auto Vec = V0.getOperand(0);
-
-  Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, Vec.getValueType(), Vec,
-                    SDValue(L, 0), DAG.getConstant(2, dl, MVT::i64));
-  Vec = DAG.getNode(ISD::BITCAST, dl, MVT::v4i16, Vec);
-
-  SDValue ShuffleOps[] = {DAG.getUNDEF(MVT::v4i16), DAG.getUNDEF(MVT::v4i16)};
-  ShuffleOps[0] = Vec;
-
-  SmallVector<int, 8> Mask(4, -1);
-  Mask[0] = 0;
-  Mask[1] = 1;
-  Mask[2] = 2;
-  if (!V3.isUndef())
-    Mask[3] = 3;
-  SDValue Shuffle =
-      DAG.getVectorShuffle(MVT::v4i16, dl, ShuffleOps[0], ShuffleOps[1], Mask);
-  return Shuffle;
-}
-
 // Gather data to see if the operation can be modelled as a
 // shuffle in combination with VEXTs.
 SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
@@ -11064,10 +11022,6 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   EVT VT = Op.getValueType();
   assert(!VT.isScalableVector() &&
          "Scalable vectors cannot be used with ISD::BUILD_VECTOR");
-
-  if (SDValue S = shuffleWithSingleLoad(Op, DAG))
-    return S;
-
   unsigned NumElts = VT.getVectorNumElements();
 
   struct ShuffleSourceInfo {
@@ -11094,7 +11048,6 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
 
   // First gather all vectors used as an immediate source for this BUILD_VECTOR
   // node.
-  //
   SmallVector<ShuffleSourceInfo, 2> Sources;
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
@@ -21316,23 +21269,24 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   assert(LD->getOffset().isUndef() && "undef offset expected");
 
   // Load 2 x i8, then 1 x i8.
-  SDValue L16 = DAG.getLoad(MVT::i16, DL, Chain, BasePtr,
-                            MF.getMachineMemOperand(MMO, 0, 2));
+  SDValue L16 = DAG.getLoad(MVT::i16, DL, Chain, BasePtr, MMO);
   TypeSize Offset2 = TypeSize::getFixed(2);
   SDValue L8 = DAG.getLoad(MVT::i8, DL, Chain,
                            DAG.getMemBasePlusOffset(BasePtr, Offset2, DL),
                            MF.getMachineMemOperand(MMO, 2, 1));
 
-  SDValue Ins16 = DAG.getNode(ISD::SPLAT_VECTOR, DL, MVT::v4i16, L16);
-
-  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Ins16);
-
+  // Extend to i32.
+  SDValue Ext16 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L16);
   SDValue Ext8 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L8);
-  SDValue Trunc8 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Ext8);
 
-  SDValue Ins8 = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i8, Cast,
-                             Trunc8, DAG.getConstant(2, DL, MVT::i64));
-  SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MemVT, Ins8,
+  // Pack 2 x i8 and 1 x i8 in an i32 and convert to v4i8.
+  SDValue Shr = DAG.getNode(ISD::SHL, DL, MVT::i32, Ext8,
+                            DAG.getConstant(16, DL, MVT::i32));
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i32, Ext16, Shr);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v4i8, Or);
+
+  // Extract v3i8 again.
+  SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MemVT, Cast,
                                 DAG.getConstant(0, DL, MVT::i64));
   SDValue TokenFactor = DAG.getNode(
       ISD::TokenFactor, DL, MVT::Other,
