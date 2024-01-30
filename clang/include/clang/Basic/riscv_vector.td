@@ -669,10 +669,104 @@ let HasBuiltinAlias = false,
     HasVL = false,
     HasMasked = false,
     MaskedPolicyScheme = NonePolicy,
-    Log2LMUL = [0],
-    ManualCodegen = [{IntrinsicTypes = {ResultType};}] in // Set XLEN type
-{
+    Log2LMUL = [0] in {
+
+  let ManualCodegen = [{
+    {
+      // Set XLEN type
+      IntrinsicTypes = {ResultType};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *VSetVL = Builder.CreateCall(F, Ops, "vl");
+
+      const TargetInfo &TI = getContext().getTargetInfo();
+      auto VScale = TI.getVScaleRange(getContext().getLangOpts());
+
+      if (VScale && VScale->first && VScale->first == VScale->second) {
+        // Assumptions:
+        //   Let:
+        //     fixed_vl = __riscv_v_fixed_vlen / 8;
+        //   We have:
+        //     (avl > fixed_vl || vl == avl)
+        //     and
+        //     (avl < fixed_vl * 2 || vl == fixed_vl)
+        Value *FixedVL = llvm::ConstantInt::get(ResultType, VScale->first * 8);
+        Value *FixedVLx2 =
+            llvm::ConstantInt::get(ResultType, VScale->first * 8 * 2);
+        Value *Cond0 = Builder.CreateICmpULE(
+            Ops[0], ConstantInt::get(ResultType, VScale->first * 8));
+
+        BasicBlock *AssumptionBlock =
+            createBasicBlock("assumption", this->CurFn);
+        BasicBlock *AssumptionEndBlock =
+            createBasicBlock("assumption_end", this->CurFn);
+        Builder.CreateCondBr(Cond0, AssumptionBlock, AssumptionEndBlock);
+
+        Builder.SetInsertPoint(AssumptionBlock);
+        Builder.CreateAssumption(Builder.CreateICmpEQ(VSetVL, Ops[0]));
+        Builder.CreateBr(AssumptionEndBlock);
+
+        Builder.SetInsertPoint(AssumptionEndBlock);
+        Value *Assumption0 = Builder.CreateICmpULT(Ops[0], FixedVLx2);
+        Value *Assumption1 = Builder.CreateICmpEQ(VSetVL, FixedVL);
+        Builder.CreateAssumption(Builder.CreateSelect(
+            Assumption0, ConstantInt::getTrue(getLLVMContext()), Assumption1));
+      } else {
+        // Assumptions:
+        //   Let:
+        //     min_vl = __riscv_v_min_vlen / 8
+        //   We have:
+        //     (avl > min_vl || vl == avl)
+        Value *Cond0 = Builder.CreateICmpULE(
+            Ops[0], ConstantInt::get(ResultType, VScale->first * 8));
+
+        BasicBlock *AssumptionBlock = createBasicBlock("assumption", this->CurFn);
+        BasicBlock *AssumptionEndBlock = createBasicBlock("assumption_end", this->CurFn);
+        Builder.CreateCondBr(Cond0, AssumptionBlock, AssumptionEndBlock);
+
+        Builder.SetInsertPoint(AssumptionBlock);
+        Value *Assumption = Builder.CreateICmpEQ(VSetVL, Ops[0]);
+        Builder.CreateAssumption(Assumption);
+        Builder.CreateBr(AssumptionEndBlock);
+
+        Builder.SetInsertPoint(AssumptionEndBlock);
+      }
+      return VSetVL;
+    }
+    }] in
   def vsetvli : RVVBuiltin<"", "zzKzKz", "i">;
+
+  let ManualCodegen = [{
+    {
+      // Set XLEN type
+      IntrinsicTypes = {ResultType};
+      llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+      llvm::Value *VSetVL = Builder.CreateCall(F, Ops, "vl");
+
+      const TargetInfo &TI = getContext().getTargetInfo();
+      auto VScale = TI.getVScaleRange(getContext().getLangOpts());
+
+      Value *Assumption;
+      if (VScale && VScale->first && VScale->first == VScale->second)
+        // Assumptions:
+        //   Let:
+        //     fixed_vl = __riscv_v_fixed_vlen / 8;
+        //   We have:
+        //     vlmax == fixed_vl
+        Assumption = Builder.CreateICmpEQ(
+            VSetVL, llvm::ConstantInt::get(ResultType, VScale->first * 8));
+      else
+        // Assumptions:
+        //   Let:
+        //     min_vl = __riscv_v_min_vlen / 8
+        //   We have:
+        //     vlmax >= min_vl
+        Assumption = Builder.CreateICmpUGE(
+            VSetVL, ConstantInt::get(ResultType, VScale->first * 8));
+
+      Builder.CreateAssumption(Assumption);
+      return VSetVL;
+    }
+    }] in
   def vsetvlimax : RVVBuiltin<"", "zKzKz", "i">;
 }
 

@@ -6,8 +6,14 @@
 
 // CHECK-RV64V-LABEL: @test(
 // CHECK-RV64V-NEXT:  entry:
-// CHECK-RV64V-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 0, i64 0)
-// CHECK-RV64V-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP0]] to i32
+// CHECK-RV64V-NEXT:    [[VL:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 0, i64 0)
+// CHECK-RV64V-NEXT:    br i1 true, label [[ASSUMPTION:%.*]], label [[ASSUMPTION_END:%.*]]
+// CHECK-RV64V:       assumption:
+// CHECK-RV64V-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[VL]], 1
+// CHECK-RV64V-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+// CHECK-RV64V-NEXT:    br label [[ASSUMPTION_END]]
+// CHECK-RV64V:       assumption_end:
+// CHECK-RV64V-NEXT:    [[CONV:%.*]] = trunc i64 [[VL]] to i32
 // CHECK-RV64V-NEXT:    ret i32 [[CONV]]
 //
 
