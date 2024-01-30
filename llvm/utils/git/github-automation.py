@@ -272,7 +272,9 @@ class PRBuildbotInformation:
         if not self.should_comment():
             return
 
-        # This text is using Markdown formatting.
+        # This text is using Markdown formatting. Some of the lines are longer
+        # than others so that the final text is some reasonable looking paragraphs
+        # after the long URLs are rendered.
         comment = f"""\
 {PRBuildbotInformation.COMMENT_TAG}
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
