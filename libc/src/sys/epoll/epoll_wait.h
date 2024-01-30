@@ -16,8 +16,7 @@
 
 namespace LIBC_NAMESPACE {
 
-int epoll_wait(int epfd, struct epoll_event *events, int maxevents,
-               int timeout);
+int epoll_wait(int epfd, epoll_event *events, int maxevents, int timeout);
 
 } // namespace LIBC_NAMESPACE
 

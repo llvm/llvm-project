@@ -11,9 +11,9 @@
 
 #include <llvm-libc-types/struct_epoll_data.h>
 
-struct epoll_event {
+typedef struct epoll_event{
   __UINT32_TYPE__ events;
   epoll_data_t data;
-};
+} epoll_event;
 
 #endif // __LLVM_LIBC_TYPES_EPOLL_EVENT_H__
