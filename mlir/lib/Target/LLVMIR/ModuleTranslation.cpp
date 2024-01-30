@@ -37,6 +37,7 @@
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1213,6 +1214,23 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
+
+  if (auto unsafeFpMath = func.getUnsafeFpMath())
+    llvmFunc->addFnAttr("unsafe-fp-math", llvm::toStringRef(*unsafeFpMath));
+
+  if (auto noInfsFpMath = func.getNoInfsFpMath())
+    llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
+
+  if (auto noNansFpMath = func.getNoNansFpMath())
+    llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
+
+  if (auto approxFuncFpMath = func.getApproxFuncFpMath())
+    llvmFunc->addFnAttr("approx-func-fp-math",
+                        llvm::toStringRef(*approxFuncFpMath));
+
+  if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
+    llvmFunc->addFnAttr("no-signed-zeros-fp-math",
+                        llvm::toStringRef(*noSignedZerosFpMath));
 
   // Add function attribute frame-pointer, if found.
   if (FramePointerKindAttr attr = func.getFramePointerAttr())
