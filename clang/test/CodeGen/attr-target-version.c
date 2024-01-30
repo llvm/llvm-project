@@ -362,7 +362,7 @@ int hoo(void) {
 // CHECK-NEXT:    ret ptr @fmv_inline.default
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@fmv_d.resolver() {
+// CHECK-LABEL: define {{[^@]+}}@fmv_d.resolver() comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
