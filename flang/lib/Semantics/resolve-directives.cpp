@@ -1273,7 +1273,7 @@ void AccAttributeVisitor::CheckAssociatedLoop(
     // Go through all nested loops to ensure index variable exists.
     if (const parser::Name * ivName{GetLoopIndex(*loop)}) {
       if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
-        if (auto &control = loop->GetLoopControl()) {
+        if (auto &control{loop->GetLoopControl()}) {
           if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
             if (auto lowerExpr = semantics::AnalyzeExpr(context_, b->lower)) {
               semantics::UnorderedSymbolSet lowerSyms =
