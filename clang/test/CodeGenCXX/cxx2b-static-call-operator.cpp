@@ -19,14 +19,9 @@ void CallsTheLambda() {
 
 // CHECK:      define {{.*}}CallsTheLambda{{.*}}
 // CHECK-NEXT: entry:
-// CHECK:        {{.*}}call {{.*}}GetALambda{{.*}}()
-// CHECK-NEXT:   {{.*}} = call noundef i32 {{.*}}(i32 noundef 1, i32 noundef 2)
+// CHECK-NEXT:   %call = call noundef i32 {{.*}}(i32 noundef 1, i32 noundef 2)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
-
-Functor GetAFunctor() {
-  return {};
-}
 
 void call_static_call_operator() {
   Functor f;
@@ -34,7 +29,6 @@ void call_static_call_operator() {
   f.operator()(201, 202);
   Functor{}(301, 302);
   Functor::operator()(401, 402);
-  GetAFunctor()(501, 502);
 }
 
 // CHECK:      define {{.*}}call_static_call_operator{{.*}}
@@ -43,8 +37,6 @@ void call_static_call_operator() {
 // CHECK-NEXT:   {{.*}} = call noundef i32 {{.*}}Functor{{.*}}(i32 noundef 201, i32 noundef 202)
 // CHECK-NEXT:   {{.*}} = call noundef i32 {{.*}}Functor{{.*}}(i32 noundef 301, i32 noundef 302)
 // CHECK-NEXT:   {{.*}} = call noundef i32 {{.*}}Functor{{.*}}(i32 noundef 401, i32 noundef 402)
-// CHECK:        {{.*}}call {{.*}}GetAFunctor{{.*}}()
-// CHECK-NEXT:   {{.*}} = call noundef i32 {{.*}}Functor{{.*}}(i32 noundef 501, i32 noundef 502)
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
 
@@ -114,16 +106,12 @@ void test_dep_functors() {
 
 // CHECK:      define {{.*}}test_dep_functors{{.*}}
 // CHECK-NEXT: entry:
-// CHECK:        {{.*}} = call noundef i32 {{.*}}DepFunctor{{.*}}(float noundef 1.000000e+00)
-// CHECK:        {{.*}} = call noundef i32 {{.*}}DepFunctor{{.*}}(i1 noundef zeroext true)
-// CHECK:        {{.*}}call {{.*}}dep_lambda1{{.*}}()
-// CHECK:        {{.*}} = call noundef i32 {{.*}}dep_lambda1{{.*}}(float noundef 1.000000e+00)
-// CHECK:        {{.*}}call {{.*}}dep_lambda1{{.*}}()
-// CHECK:        {{.*}} = call noundef i32 {{.*}}dep_lambda1{{.*}}(i1 noundef zeroext true)
-// CHECK:        {{.*}}call {{.*}}dep_lambda2{{.*}}()
-// CHECK:        {{.*}} = call noundef i32 {{.*}}dep_lambda2{{.*}}(float noundef 1.000000e+00)
-// CHECK:        {{.*}}call {{.*}}dep_lambda2{{.*}}()
-// CHECK:        {{.*}} = call noundef i32 {{.*}}dep_lambda2{{.*}}(i1 noundef zeroext true)
+// CHECK:        %call = call noundef i32 {{.*}}DepFunctor{{.*}}(float noundef 1.000000e+00)
+// CHECK:        %call1 = call noundef i32 {{.*}}DepFunctor{{.*}}(i1 noundef zeroext true)
+// CHECK:        %call2 = call noundef i32 {{.*}}dep_lambda1{{.*}}(float noundef 1.000000e+00)
+// CHECK:        %call3 = call noundef i32 {{.*}}dep_lambda1{{.*}}(i1 noundef zeroext true)
+// CHECK:        %call4 = call noundef i32 {{.*}}dep_lambda2{{.*}}(float noundef 1.000000e+00)
+// CHECK:        %call5 = call noundef i32 {{.*}}dep_lambda2{{.*}}(i1 noundef zeroext true)
 // CHECK:        ret void
 // CHECK-NEXT: }
 
