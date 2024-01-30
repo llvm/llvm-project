@@ -7,6 +7,8 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs -run-pass=none -o - %s | FileCheck %s
 
+# REQUIRES: amdgpu-registered-target
+
 ---
 
 name: writelane_m0
