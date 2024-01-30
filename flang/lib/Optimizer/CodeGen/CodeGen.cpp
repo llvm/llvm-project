@@ -3879,6 +3879,12 @@ public:
       fir::support::setMLIRDataLayout(mod, dl);
     }
 
+    if (!forcedTargetCPU.empty())
+      fir::setTargetCPU(mod, forcedTargetCPU);
+
+    if (!forcedTargetFeatures.empty())
+      fir::setTargetFeatures(mod, forcedTargetFeatures);
+
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
     // Some conversions of Math operations cannot be done

@@ -614,10 +614,6 @@ module std_private_std_mbstate_t     [system] {
   header "__std_mbstate_t.h"
   export *
 }
-module std_private_threading_support [system] {
-  header "__threading_support"
-  export *
-}
 module std_private_tree              [system] {
   header "__tree"
   export *
@@ -1773,6 +1769,14 @@ module std_private_thread_jthread              [system] {
   export *
 }
 module std_private_thread_poll_with_backoff    [system] { header "__thread/poll_with_backoff.h" }
+module std_private_thread_support              [system] {
+  header "__thread/support.h"
+  export *
+}
+module std_private_thread_support_c11          [system] { textual header "__thread/support/c11.h" }
+module std_private_thread_support_external     [system] { textual header "__thread/support/external.h" }
+module std_private_thread_support_pthread      [system] { textual header "__thread/support/pthread.h" }
+module std_private_thread_support_windows      [system] { textual header "__thread/support/windows.h" }
 module std_private_thread_this_thread          [system] { header "__thread/this_thread.h" }
 module std_private_thread_thread               [system] {
   header "__thread/thread.h"
