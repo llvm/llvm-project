@@ -230,7 +230,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
       MI.getOpcode() == X86::MOVBE32rr || MI.getOpcode() == X86::MOVBE64rr;
   bool IsND = X86II::hasNewDataDest(TSFlags);
   if ((TSFlags & X86II::EVEX_B) || IsMovberr)
-    if (!IsND && !IsMovberr || !isRedundantNewDataDest(MI, ST))
+    if ((!IsND && !IsMovberr) || !isRedundantNewDataDest(MI, ST))
       return false;
 
   ArrayRef<X86CompressEVEXTableEntry> Table = ArrayRef(X86CompressEVEXTable);
