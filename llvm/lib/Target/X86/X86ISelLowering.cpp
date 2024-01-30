@@ -25841,9 +25841,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       assert(IntrData->Opc0 == X86ISD::VRNDSCALE && "Unexpected opcode");
       // Clear the upper bits of the rounding immediate so that the legacy
       // intrinsic can't trigger the scaling behavior of VRNDSCALE.
-      auto Round = cast<ConstantSDNode>(Op.getOperand(2));
-      SDValue RoundingMode =
-          DAG.getTargetConstant(Round->getZExtValue() & 0xf, dl, MVT::i32);
+      uint64_t Round = Op.getConstantOperandVal(2);
+      SDValue RoundingMode = DAG.getTargetConstant(Round & 0xf, dl, MVT::i32);
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
                          Op.getOperand(1), RoundingMode);
     }
@@ -25851,9 +25850,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       assert(IntrData->Opc0 == X86ISD::VRNDSCALES && "Unexpected opcode");
       // Clear the upper bits of the rounding immediate so that the legacy
       // intrinsic can't trigger the scaling behavior of VRNDSCALE.
-      auto Round = cast<ConstantSDNode>(Op.getOperand(3));
-      SDValue RoundingMode =
-          DAG.getTargetConstant(Round->getZExtValue() & 0xf, dl, MVT::i32);
+      uint64_t Round = Op.getConstantOperandVal(3);
+      SDValue RoundingMode = DAG.getTargetConstant(Round & 0xf, dl, MVT::i32);
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
                          Op.getOperand(1), Op.getOperand(2), RoundingMode);
     }
