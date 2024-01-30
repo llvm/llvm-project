@@ -10098,6 +10098,23 @@ static bool isVector(QualType QT, QualType ElementType) {
   return false;
 }
 
+bool Sema::IsPointerToPointer(QualType LHSType, QualType RHSType) {
+  if (const PointerType *LHSPointer = dyn_cast<PointerType>(LHSType)) {
+    // Check if LHS is a single pointer, not a pointer to a pointer.
+    if (!isa<PointerType>(LHSPointer->getPointeeType())) {
+      if (isa<PointerType>(RHSType)) {
+        if (const PointerType *RHSPtr = dyn_cast<PointerType>(RHSType)) {
+          // If RHSType is a pointer to a pointer type, return True
+          if (isa<PointerType>(RHSPtr->getPointeeType())) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 /// CheckAssignmentConstraints (C99 6.5.16) - This routine currently
 /// has code to accommodate several GCC extensions when type checking
 /// pointers. Here are some objectionable examples that GCC considers warnings:

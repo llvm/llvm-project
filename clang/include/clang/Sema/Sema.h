@@ -12932,6 +12932,8 @@ public:
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);
 
+  bool IsPointerToPointer(QualType LHSType, QualType RHSType);
+
   bool CheckExceptionSpecCompatibility(Expr *From, QualType ToType);
 
   ExprResult PerformImplicitConversion(Expr *From, QualType ToType,
