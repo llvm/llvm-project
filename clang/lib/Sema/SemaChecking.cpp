@@ -7982,8 +7982,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       // the streaming and non-streaming vector lengths may be different.
       ArmStreamingType CalleeFnType = getArmStreamingFnType(FD);
       ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
-      if (FD->hasAttr<ArmLocallyStreamingAttr>() &&
-          CallerFnType != ArmStreaming) {
+      if (FD->hasAttr<ArmLocallyStreamingAttr>()) {
         if (AnyScalableArgs)
           Diag(Loc, diag::warn_sme_locally_streaming_has_vl_args);
         if (FD->getReturnType()->isSizelessVectorType())
