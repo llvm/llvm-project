@@ -862,9 +862,6 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
   if (CalleeAttrs.HasNewZA)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
         << Callee->getDeclName();
-  if (CallerAttrs.HasNewZA)
-    CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_lazy_save)
-        << Callee->getDeclName() << Caller->getDeclName();
 }
 
 std::unique_ptr<TargetCodeGenInfo>
