@@ -30,73 +30,42 @@
 #include "test_macros.h"
 #include "allocators.h"
 
-int main(int, char**)
-{
-    static_assert((std::is_base_of<
-        A1<int>,
-        std::scoped_allocator_adaptor<A1<int>>
-        >::value), "");
+int main(int, char**) {
+  static_assert(std::is_base_of<A1<int>, std::scoped_allocator_adaptor<A1<int>> >::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A1<int>>::outer_allocator_type,
-        A1<int>>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A1<int>>::outer_allocator_type, A1<int>>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A1<int>>::size_type,
-        std::make_unsigned<std::ptrdiff_t>::type>::value), "");
+  static_assert(
+      std::is_same<std::scoped_allocator_adaptor<A1<int>>::size_type, std::make_unsigned<std::ptrdiff_t>::type>::value,
+      "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A1<int>>::difference_type,
-        std::ptrdiff_t>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A1<int>>::difference_type, std::ptrdiff_t>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A1<int>>::pointer,
-        int*>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A1<int>>::pointer, int*>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A1<int>>::const_pointer,
-        const int*>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A1<int>>::const_pointer, const int*>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A1<int>>::void_pointer,
-        void*>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A1<int>>::void_pointer, void*>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A1<int>>::const_void_pointer,
-        const void*>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A1<int>>::const_void_pointer, const void*>::value, "");
 
-    static_assert((std::is_base_of<
-        A2<int>,
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>
-        >::value), "");
+  static_assert(std::is_base_of<A2<int>, std::scoped_allocator_adaptor<A2<int>, A1<int>> >::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>::outer_allocator_type,
-        A2<int>>::value), "");
+  static_assert(
+      std::is_same<std::scoped_allocator_adaptor<A2<int>, A1<int>>::outer_allocator_type, A2<int>>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>::size_type,
-        unsigned>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A2<int>, A1<int>>::size_type, unsigned>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>::difference_type,
-        int>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A2<int>, A1<int>>::difference_type, int>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>::pointer,
-        int*>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A2<int>, A1<int>>::pointer, int*>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>::const_pointer,
-        const int*>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A2<int>, A1<int>>::const_pointer, const int*>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>::void_pointer,
-        void*>::value), "");
+  static_assert(std::is_same<std::scoped_allocator_adaptor<A2<int>, A1<int>>::void_pointer, void*>::value, "");
 
-    static_assert((std::is_same<
-        std::scoped_allocator_adaptor<A2<int>, A1<int>>::const_void_pointer,
-        const void*>::value), "");
+  static_assert(
+      std::is_same<std::scoped_allocator_adaptor<A2<int>, A1<int>>::const_void_pointer, const void*>::value, "");
 
   return 0;
 }
