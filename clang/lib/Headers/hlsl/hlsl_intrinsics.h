@@ -582,6 +582,38 @@ _HLSL_BUILTIN_ALIAS(__builtin_sqrt)
 double sqrt(double In);
 
 //===----------------------------------------------------------------------===//
+// tan builtins
+//===----------------------------------------------------------------------===//
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+half tan(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+half2 tan(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+half3 tan(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+half4 tan(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+float tan(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+float2 tan(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+float3 tan(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+float4 tan(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+double tan(double);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+double2 tan(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+double3 tan(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
+double4 tan(double4);
+
+//===----------------------------------------------------------------------===//
 // trunc builtins
 //===----------------------------------------------------------------------===//
 #ifdef __HLSL_ENABLE_16_BIT

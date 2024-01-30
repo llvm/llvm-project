@@ -118,6 +118,13 @@ void test_builtin_elementwise_sqrt() {
   static_assert(!is_const<decltype(__builtin_elementwise_sqrt(b))>::value);
 }
 
+void test_builtin_elementwise_tan() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_tan(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_tan(b))>::value);
+}
+
 void test_builtin_elementwise_log() {
   const float a = 42.0;
   float b = 42.3;
