@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++20 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 // CHECK-LABEL: define void @_Z2f0v()
 // CHECK: call void @llvm.trap(), !dbg ![[LOC17:.*]]
