@@ -2452,6 +2452,10 @@ private:
   uint32_t CurrentBitsIndex = ~0;
 };
 
+inline bool isFromExplicitGMF(const Decl *D) {
+  return D->getOwningModule() && D->getOwningModule()->isExplicitGlobalModule();
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_SERIALIZATION_ASTREADER_H

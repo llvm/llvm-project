@@ -93,12 +93,12 @@ subroutine acc_kernels_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      acc.kernels {
+! CHECK:      acc.kernels wait {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {waitOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc kernels loop wait(1)
   DO i = 1, n

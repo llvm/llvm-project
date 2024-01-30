@@ -4098,16 +4098,6 @@ AArch64InstrInfo::getLdStOffsetOp(const MachineInstr &MI) {
   return MI.getOperand(Idx);
 }
 
-const MachineOperand &
-AArch64InstrInfo::getLdStAmountOp(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case AArch64::LDRBBroX:
-    return MI.getOperand(4);
-  }
-}
-
 static const TargetRegisterClass *getRegClass(const MachineInstr &MI,
                                               Register Reg) {
   if (MI.getParent() == nullptr)
