@@ -367,10 +367,17 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // store it.
     vertices.push_back(*vertex);
 
+    // If a vertex is formed by the intersection of more than d facets, we
+    // assume that any d-subset of these facets can be solved to obtain its
+    // expression. This assumption is valid because, if the vertex has two
+    // distinct parametric expressions, then a nontrivial equality among the
+    // parameters holds, which is a contradiction as we know the parameter
+    // space to be full-dimensional.
+
     // Let the current vertex be [X | y], where
     // X represents the coefficients of the parameters and
     // y represents the constant term.
-
+    //
     // The region (in parameter space) where this vertex is active is given
     // by substituting the vertex into the *remaining* inequalities of the
     // polytope (those which were not collected into `subset`), i.e., into the
@@ -402,7 +409,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // Now, we compute the generating function at this vertex.
     // We collect the inequalities corresponding to each vertex to compute
     // the tangent cone at that vertex.
-
+    //
     // We only need the coefficients of the variables (NOT the parameters)
     // as the generating function only depends on these.
     // We translate the cones to be pointed at the origin by making the
