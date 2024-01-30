@@ -319,18 +319,14 @@ define <3 x i32> @load_v3i32(ptr %src) {
 define <3 x i32> @load_v3i8_zext_to_3xi32(ptr %src) {
 ; CHECK-LABEL: load_v3i8_zext_to_3xi32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    ldrb w8, [x0, #2]
+; CHECK-NEXT:    ldrh w9, [x0]
 ; CHECK-NEXT:    movi.2d v1, #0x0000ff000000ff
-; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    add x8, x0, #2
-; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ld1.b { v0 }[4], [x8]
+; CHECK-NEXT:    orr w8, w9, w8, lsl #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: load_v3i8_zext_to_3xi32:
@@ -359,18 +355,14 @@ define <3 x i32> @load_v3i8_zext_to_3xi32(ptr %src) {
 define <3 x i32> @load_v3i8_sext_to_3xi32(ptr %src) {
 ; CHECK-LABEL: load_v3i8_sext_to_3xi32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    strh w8, [sp, #12]
-; CHECK-NEXT:    add x8, x0, #2
-; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ld1.b { v0 }[4], [x8]
+; CHECK-NEXT:    ldrb w8, [x0, #2]
+; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:    orr w8, w9, w8, lsl #16
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    shl.4s v0, v0, #24
 ; CHECK-NEXT:    sshr.4s v0, v0, #24
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: load_v3i8_sext_to_3xi32:
@@ -843,24 +835,21 @@ define void @shift_trunc_volatile_store(ptr %src, ptr %dst) {
 define void @load_v3i8_zext_to_3xi32_add_trunc_store(ptr %src) {
 ; CHECK-LABEL: load_v3i8_zext_to_3xi32_add_trunc_store:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:    ldrb w9, [x0, #2]
+; CHECK-NEXT:    ldrh w10, [x0]
 ; CHECK-NEXT:  Lloh4:
 ; CHECK-NEXT:    adrp x8, lCPI22_0@PAGE
 ; CHECK-NEXT:  Lloh5:
 ; CHECK-NEXT:    ldr q1, [x8, lCPI22_0@PAGEOFF]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    add x9, x0, #2
-; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ld1.b { v0 }[4], [x9]
+; CHECK-NEXT:    add x8, x0, #2
+; CHECK-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    uaddw.4s v0, v1, v0
-; CHECK-NEXT:    st1.b { v0 }[4], [x8]
-; CHECK-NEXT:    st1.b { v0 }[8], [x9]
+; CHECK-NEXT:    st1.b { v0 }[8], [x8]
+; CHECK-NEXT:    add x8, x0, #1
 ; CHECK-NEXT:    st1.b { v0 }[0], [x0]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    st1.b { v0 }[4], [x8]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh5
 ;
@@ -899,24 +888,21 @@ define void @load_v3i8_zext_to_3xi32_add_trunc_store(ptr %src) {
 define void @load_v3i8_sext_to_3xi32_add_trunc_store(ptr %src) {
 ; CHECK-LABEL: load_v3i8_sext_to_3xi32_add_trunc_store:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w9, [x0]
+; CHECK-NEXT:    ldrb w9, [x0, #2]
+; CHECK-NEXT:    ldrh w10, [x0]
 ; CHECK-NEXT:  Lloh6:
 ; CHECK-NEXT:    adrp x8, lCPI23_0@PAGE
 ; CHECK-NEXT:  Lloh7:
 ; CHECK-NEXT:    ldr q1, [x8, lCPI23_0@PAGEOFF]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    add x9, x0, #2
-; CHECK-NEXT:    ldr s0, [sp, #12]
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ld1.b { v0 }[4], [x9]
+; CHECK-NEXT:    add x8, x0, #2
+; CHECK-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    uaddw.4s v0, v1, v0
-; CHECK-NEXT:    st1.b { v0 }[4], [x8]
-; CHECK-NEXT:    st1.b { v0 }[8], [x9]
+; CHECK-NEXT:    st1.b { v0 }[8], [x8]
+; CHECK-NEXT:    add x8, x0, #1
 ; CHECK-NEXT:    st1.b { v0 }[0], [x0]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    st1.b { v0 }[4], [x8]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh7
 ;

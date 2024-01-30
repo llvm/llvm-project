@@ -21289,9 +21289,9 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   SDValue Ext8 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L8);
 
   // Pack 2 x i8 and 1 x i8 in an i32 and convert to v4i8.
-  SDValue Shr = DAG.getNode(ISD::SHL, DL, MVT::i32, Ext8,
+  SDValue Shl = DAG.getNode(ISD::SHL, DL, MVT::i32, Ext8,
                             DAG.getConstant(16, DL, MVT::i32));
-  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i32, Ext16, Shr);
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i32, Ext16, Shl);
   SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v4i8, Or);
 
   // Extract v3i8 again.
