@@ -799,10 +799,10 @@ def Arith_ShLIOp : Arith_IntBinaryOpWithOverflowFlags<"shli"> {
     Example:
 
     ```mlir
-    %1 = arith.constant 5 : i8                 // %1 is 0b00000101
+    %1 = arith.constant 5 : i8  // %1 is 0b00000101
     %2 = arith.constant 3 : i8
-    %a = arith.shli %1, %2 overflow<nsw, nuw> : i8  
-    %3 = arith.shli %1, %2 : (i8, i8) -> i8    // %3 is 0b00101000
+    %3 = arith.shli %1, %2 : i8 // %3 is 0b00101000
+    %4 = arith.shli %1, %2 overflow<nsw, nuw> : i8  
     ```
   }];
   let hasFolder = 1;
