@@ -3164,7 +3164,7 @@ unsigned CastInst::isEliminableCastPair(
     { 99,99,99, 2, 2,99,99, 8, 2,99,99, 4, 0}, // FPExt          |
     {  1, 0, 0,99,99, 0, 0,99,99,99, 7, 3, 0}, // PtrToInt       |
     { 99,99,99,99,99,99,99,99,99,11,99,15, 0}, // IntToPtr       |
-    {  5, 5, 5, 6, 6, 5, 5, 6, 6,16, 5, 1,14}, // BitCast        |
+    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16, 5, 1,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
   };
 
@@ -3214,13 +3214,6 @@ unsigned CastInst::isEliminableCastPair(
         return secondOp;
       return 0;
     case 6:
-      // In cast pairs bfloat and half float shouldn't be treated as equivalent
-      // if the first operation is a bitcast i.e. if we have
-      // bitcast bfloat to half + fpext half to double we shouldn't reduce to
-      // fpext bfloat to double as this isn't equal to fpext half to double.
-      // This has been generalised for all float pairs that have the same width.
-      if(SrcTy->isFloatingPointTy() && MidTy->isFloatingPointTy())
-        return 0;
       // No-op cast in first op implies secondOp as long as the SrcTy
       // is a floating point.
       if (SrcTy->isFloatingPointTy())
