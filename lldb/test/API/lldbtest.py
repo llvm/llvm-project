@@ -86,20 +86,45 @@ class LLDBTest(TestFormat):
         if timeoutInfo:
             return lit.Test.TIMEOUT, output
 
-        # Parse the dotest output from stderr.
-        result_regex = r"\((\d+) passes, (\d+) failures, (\d+) errors, (\d+) skipped, (\d+) expected failures, (\d+) unexpected successes\)"
-        results = re.search(result_regex, err)
+        # Parse the dotest output from stderr. First get the # of total tests, in order to infer the # of passes.
+        # Example: "Ran 5 tests in 0.042s"
+        num_ran_regex = r"^Ran (\d+) tests? in "
+        num_ran_results = re.search(num_ran_regex, err, re.MULTILINE)
+
+        # If parsing fails mark this test as unresolved.
+        if not num_ran_results:
+            return lit.Test.UNRESOLVED, output
+        num_ran = int(num_ran_results.group(1))
+
+        # Then look for a detailed summary, which is OK or FAILED followed by optional details.
+        # Example: "OK (skipped=1, expected failures=1)"
+        # Example: "FAILED (failures=3)"
+        # Example: "OK"
+        result_regex = r"^(?:OK|FAILED)(?: \((.*)\))?$"
+        results = re.search(result_regex, err, re.MULTILINE)
 
         # If parsing fails mark this test as unresolved.
         if not results:
             return lit.Test.UNRESOLVED, output
 
-        passes = int(results.group(1))
-        failures = int(results.group(2))
-        errors = int(results.group(3))
-        skipped = int(results.group(4))
-        expected_failures = int(results.group(5))
-        unexpected_successes = int(results.group(6))
+        details = results.group(1)
+        parsed_details = {}
+        if details:
+            for detail in details.split(", "):
+                detail_parts = detail.split("=")
+                if len(detail_parts) != 2:
+                    return lit.Test.UNRESOLVED, output
+                parsed_details[detail_parts[0]] = int(detail_parts[1])
+
+        failures = parsed_details.get("failures", 0)
+        errors = parsed_details.get("errors", 0)
+        skipped = parsed_details.get("skipped", 0)
+        expected_failures = parsed_details.get("expected failures", 0)
+        unexpected_successes = parsed_details.get("unexpected successes", 0)
+        non_pass = (
+            failures + errors + skipped + expected_failures + unexpected_successes
+        )
+        passes = num_ran - non_pass
 
         if exitCode:
             # Mark this test as FAIL if at least one test failed.
