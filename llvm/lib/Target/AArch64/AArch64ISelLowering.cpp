@@ -18230,13 +18230,9 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     SDValue N10 = N1->getOperand(0);
     SDValue N11 = N1->getOperand(1);
 
-    EVT N00VT = N00.getValueType();
-    EVT N10VT = N10.getValueType();
-
-    EVT PairVT = N00VT.getDoubleNumVectorElementsVT(*DAG.getContext());
     SDValue Concat0 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N00, N10);
     SDValue Concat1 = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, N01, N11);
-    return DAG.getNode(N0Opc, dl, PairVT, Concat0, Concat1);
+    return DAG.getNode(N0Opc, dl, VT, Concat0, Concat1);
   }
 
   auto IsRSHRN = [](SDValue Shr) {
