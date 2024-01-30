@@ -547,7 +547,7 @@ public:
     /// are equal. This is helpful is hot code paths that do not need the length
     /// of the name.
     bool sameNameAs(StringRef Target) const {
-      // Note: this is not the name, but the rest of debug_names starting from
+      // Note: this is not the name, but the rest of debug_str starting from
       // name. This handles corrupt data (non-null terminated) without
       // overrunning the buffer.
       auto Data = StrData.getData().substr(StringOffset);
