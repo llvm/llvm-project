@@ -115,43 +115,7 @@ void findPathBetween(const fif &functionsInFile, //
     llvm::errs() << "\n";
 }
 
-int main(int argc, const char **argv) {
-    BUILD_PATH = fs::canonical(fs::absolute(argv[1]));
-    std::unique_ptr<CompilationDatabase> cb =
-        getCompilationDatabase(BUILD_PATH);
-
-    // print all files in compilation database
-    const auto &allFiles = cb->getAllFiles();
-    llvm::errs() << "All files (" << allFiles.size() << "):\n";
-    for (auto &file : allFiles)
-        llvm::errs() << "  " << file << "\n";
-
-    llvm::errs() << "\n--- Building ATS from files ---\n";
-    ClangTool Tool(*cb, allFiles);
-    std::vector<std::unique_ptr<ASTUnit>> ASTs;
-    Tool.buildASTs(ASTs);
-
-    llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
-    fif functionsInFile;
-    for (auto &AST : ASTs) {
-        ASTContext &Context = AST->getASTContext();
-        auto *TUD = Context.getTranslationUnitDecl();
-        if (TUD->isUnavailable())
-            continue;
-        // TUD->dump();
-        FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
-    }
-
-    llvm::errs() << "\n--- All functions from all files ---\n";
-    // traverse functionInFile
-    for (const auto &[file, functions] : functionsInFile) {
-        llvm::errs() << "File: " << file << "\n";
-        for (const auto *fi : functions) {
-            llvm::errs() << "  Fun: " << fi->name << "() at " << fi->line << ":"
-                         << fi->column << "\n";
-        }
-    }
-
+void printCloc(const std::vector<std::string> &allFiles) {
     // save all files to "compile_files.txt" under build path
     fs::path resultFiles = fs::path(BUILD_PATH) / "compile_files.txt";
     std::ofstream ofs(resultFiles);
@@ -176,11 +140,49 @@ int main(int argc, const char **argv) {
             llvm::errs() << "Error: " << errorMsg << "\n";
         }
     }
+}
 
-    while (true) {
-        sleep(1);
-    }
+int main(int argc, const char **argv) {
+    BUILD_PATH = fs::canonical(fs::absolute(argv[1]));
+    std::unique_ptr<CompilationDatabase> cb =
+        getCompilationDatabase(BUILD_PATH);
+
+    // print all files in compilation database
+    const auto &allFiles = cb->getAllFiles();
+    llvm::errs() << "All files (" << allFiles.size() << "):\n";
+    for (auto &file : allFiles)
+        llvm::errs() << "  " << file << "\n";
+
+    llvm::errs() << "\n--- Building ATS from files ---\n";
+    ClangTool Tool(*cb, allFiles);
+
+    printCloc(allFiles);
+
     return 0;
+
+    std::vector<std::unique_ptr<ASTUnit>> ASTs;
+    Tool.buildASTs(ASTs);
+
+    llvm::errs() << "\n--- TranslationUnitDecl Dump ---\n";
+    fif functionsInFile;
+    for (auto &AST : ASTs) {
+        ASTContext &Context = AST->getASTContext();
+        auto *TUD = Context.getTranslationUnitDecl();
+        if (TUD->isUnavailable())
+            continue;
+        // TUD->dump();
+        FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
+    }
+
+    llvm::errs() << "\n--- All functions from all files ---\n";
+    // traverse functionInFile
+    for (const auto &[file, functions] : functionsInFile) {
+        llvm::errs() << "File: " << file << "\n";
+        for (const auto *fi : functions) {
+            llvm::errs() << "  Fun: " << fi->name << "() at " << fi->line << ":"
+                         << fi->column << "\n";
+        }
+    }
 
     llvm::errs() << "\n--- FindVarVisitor ---\n";
     std::string root_dir = "/home/thebesttv/vul/llvm-project/graph-generation/";
