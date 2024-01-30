@@ -242,7 +242,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     return false;
   }
 
-  if (!IsND) {
+  if (!IsND && !IsMovberr) {
     if (usesExtendedRegister(MI) || !checkPredicate(I->NewOpc, &ST) ||
         !performCustomAdjustments(MI, I->NewOpc))
       return false;
