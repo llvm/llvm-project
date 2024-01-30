@@ -266,38 +266,67 @@ static Type *getPtrOrVecOfPtrsWithNewAS(Type *Ty, unsigned NewAddrSpace) {
   return Ty->getWithNewType(NPT);
 }
 
-// Check whether that's no-op pointer bicast using a pair of
-// `ptrtoint`/`inttoptr` due to the missing no-op pointer bitcast over
-// different address spaces.
-static bool isNoopPtrIntCastPair(const Operator *I2P, const DataLayout &DL,
-                                 const TargetTransformInfo *TTI) {
+// Return valid PtrToInt Operator if it's a no-op pointer bitcast using a pair
+// of `ptrtoint`/`inttoptr` or a pointer bitcast using
+// `ptrtoint`-`zext`-`inttoptr` over different address spaces.
+static Operator *getNoopOrExtPtrIntCastPair(const Operator *I2P,
+                                            const DataLayout &DL,
+                                            const TargetTransformInfo *TTI) {
   assert(I2P->getOpcode() == Instruction::IntToPtr);
-  auto *P2I = dyn_cast<Operator>(I2P->getOperand(0));
-  if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
-    return false;
-  // Check it's really safe to treat that pair of `ptrtoint`/`inttoptr` as a
-  // no-op cast. Besides checking both of them are no-op casts, as the
-  // reinterpreted pointer may be used in other pointer arithmetic, we also
-  // need to double-check that through the target-specific hook. That ensures
-  // the underlying target also agrees that's a no-op address space cast and
-  // pointer bits are preserved.
-  // The current IR spec doesn't have clear rules on address space casts,
-  // especially a clear definition for pointer bits in non-default address
-  // spaces. It would be undefined if that pointer is dereferenced after an
-  // invalid reinterpret cast. Also, due to the unclearness for the meaning of
-  // bits in non-default address spaces in the current spec, the pointer
-  // arithmetic may also be undefined after invalid pointer reinterpret cast.
-  // However, as we confirm through the target hooks that it's a no-op
-  // addrspacecast, it doesn't matter since the bits should be the same.
-  unsigned P2IOp0AS = P2I->getOperand(0)->getType()->getPointerAddressSpace();
+  auto *Op = dyn_cast<Operator>(I2P->getOperand(0));
+  if (!Op)
+    return nullptr;
+  bool validAddrSpaceCast = false;
+  Operator *P2I = nullptr;
   unsigned I2PAS = I2P->getType()->getPointerAddressSpace();
-  return CastInst::isNoopCast(Instruction::CastOps(I2P->getOpcode()),
-                              I2P->getOperand(0)->getType(), I2P->getType(),
-                              DL) &&
-         CastInst::isNoopCast(Instruction::CastOps(P2I->getOpcode()),
-                              P2I->getOperand(0)->getType(), P2I->getType(),
-                              DL) &&
-         (P2IOp0AS == I2PAS || TTI->isNoopAddrSpaceCast(P2IOp0AS, I2PAS));
+  switch (Op->getOpcode()) {
+  case Instruction::PtrToInt: {
+    // Check it's really safe to treat that pair of `ptrtoint`/`inttoptr` as a
+    // no-op cast. We need to double-check that through the target-specific
+    // hook. That ensures the underlying target also agrees that's a no-op
+    // address space cast and pointer bits are preserved. The current IR spec
+    // doesn't have clear rules on address space casts, especially a clear
+    // definition for pointer bits in non-default address spaces. It would be
+    // undefined if that pointer is dereferenced after an invalid reinterpret
+    // cast. Also, due to the unclearness for the meaning of bits in non-default
+    // address spaces in the current spec, the pointer arithmetic may also be
+    // undefined after invalid pointer reinterpret cast. However, as we confirm
+    // through the target hooks that it's a no-op addrspacecast, it doesn't
+    // matter since the bits should be the same.
+    P2I = Op;
+    unsigned P2IOp0AS = P2I->getOperand(0)->getType()->getPointerAddressSpace();
+    validAddrSpaceCast =
+        (P2IOp0AS == I2PAS || TTI->isNoopAddrSpaceCast(P2IOp0AS, I2PAS));
+    break;
+  }
+  case Instruction::ZExt: {
+    // check src address pointer and dst address pointer should be different
+    // address space and different size
+    P2I = dyn_cast<Operator>(Op->getOperand(0));
+    if (P2I && P2I->getOpcode() == Instruction::PtrToInt) {
+      unsigned P2IOp0AS =
+          P2I->getOperand(0)->getType()->getPointerAddressSpace();
+      unsigned P2IOp0SizeInBits =
+          DL.getPointerTypeSizeInBits(P2I->getOperand(0)->getType());
+      unsigned I2PSizeInBits = DL.getPointerTypeSizeInBits(I2P->getType());
+      validAddrSpaceCast =
+          (P2IOp0AS != I2PAS && P2IOp0SizeInBits < I2PSizeInBits);
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  // We also need to check both `inttoptr` and `ptrtoint` are no-op casts, as
+  // the reinterpreted pointer may be used in other pointer arithmetic.
+  if (validAddrSpaceCast &&
+      CastInst::isNoopCast(Instruction::CastOps(I2P->getOpcode()),
+                           I2P->getOperand(0)->getType(), I2P->getType(), DL) &&
+      CastInst::isNoopCast(Instruction::CastOps(P2I->getOpcode()),
+                           P2I->getOperand(0)->getType(), P2I->getType(), DL)) {
+    return P2I;
+  }
+  return nullptr;
 }
 
 // Returns true if V is an address expression.
@@ -324,7 +353,7 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
     return II && II->getIntrinsicID() == Intrinsic::ptrmask;
   }
   case Instruction::IntToPtr:
-    return isNoopPtrIntCastPair(Op, DL, TTI);
+    return getNoopOrExtPtrIntCastPair(Op, DL, TTI) != nullptr;
   default:
     // That value is an address expression if it has an assumed address space.
     return TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace;
@@ -356,8 +385,8 @@ getPointerOperands(const Value &V, const DataLayout &DL,
     return {II.getArgOperand(0)};
   }
   case Instruction::IntToPtr: {
-    assert(isNoopPtrIntCastPair(&Op, DL, TTI));
-    auto *P2I = cast<Operator>(Op.getOperand(0));
+    Operator *P2I = getNoopOrExtPtrIntCastPair(&Op, DL, TTI);
+    assert(P2I != nullptr);
     return {P2I->getOperand(0)};
   }
   default:
@@ -521,8 +550,9 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
       PushPtrOperand(ASC->getPointerOperand());
     } else if (auto *I2P = dyn_cast<IntToPtrInst>(&I)) {
-      if (isNoopPtrIntCastPair(cast<Operator>(I2P), *DL, TTI))
-        PushPtrOperand(cast<Operator>(I2P->getOperand(0))->getOperand(0));
+      Operator *P2I = getNoopOrExtPtrIntCastPair(cast<Operator>(I2P), *DL, TTI);
+      if (P2I)
+        PushPtrOperand(cast<Operator>(P2I)->getOperand(0));
     } else if (auto *RI = dyn_cast<ReturnInst>(&I)) {
       if (auto *RV = RI->getReturnValue();
           RV && RV->getType()->isPtrOrPtrVectorTy())
@@ -683,8 +713,9 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     return SelectInst::Create(I->getOperand(0), NewPointerOperands[1],
                               NewPointerOperands[2], "", nullptr, I);
   case Instruction::IntToPtr: {
-    assert(isNoopPtrIntCastPair(cast<Operator>(I), *DL, TTI));
-    Value *Src = cast<Operator>(I->getOperand(0))->getOperand(0);
+    Operator *P2I = getNoopOrExtPtrIntCastPair(cast<Operator>(I), *DL, TTI);
+    assert(P2I != nullptr);
+    Value *Src = cast<Operator>(P2I)->getOperand(0);
     if (Src->getType() == NewPtrType)
       return Src;
 
@@ -726,7 +757,7 @@ static Value *cloneConstantExprWithNewAddressSpace(
   }
 
   if (CE->getOpcode() == Instruction::IntToPtr) {
-    assert(isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI));
+    assert(getNoopOrExtPtrIntCastPair(cast<Operator>(CE), *DL, TTI));
     Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
     assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
     return ConstantExpr::getBitCast(Src, TargetType);
