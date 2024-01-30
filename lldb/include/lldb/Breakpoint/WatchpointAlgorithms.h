@@ -21,12 +21,76 @@ namespace lldb_private {
 class WatchpointAlgorithms {
 
 public:
+  /// Convert a user's watchpoint request into an array of memory
+  /// regions that can be watched by one hardware watchpoint register
+  /// on the current target.
+  ///
+  /// \param[in] addr
+  ///     The start address specified by the user.
+  ///
+  /// \param[in] size
+  ///     The number of bytes the user wants to watch.
+  ///
+  /// \param[in] read
+  ///     True if we are watching for read accesses.
+  ///
+  /// \param[in] write
+  ///     True if we are watching for write accesses.
+  ///     \a read and \a write may both be true.
+  ///     There is no "modify" style for WatchpointResources -
+  ///     WatchpointResources are akin to the hardware watchpoint
+  ///     registers which are either in terms of read or write.
+  ///     "modify" distinction is done at the Watchpoint layer, where
+  ///     we check the actual range of bytes the user requested.
+  ///
+  /// \param[in] supported_features
+  ///     The bit flags in this parameter are set depending on which
+  ///     WatchpointHardwareFeature enum values the current target supports.
+  ///     The eWatchpointHardwareFeatureUnknown bit may be set if we
+  ///     don't have specific information about what the remote stub
+  ///     can support, and a reasonablec default will be used.
+  ///
+  /// \param[in] arch
+  ///     The ArchSpec of the current Target.
+  ///
+  /// \return
+  ///     A vector of WatchpointResourceSP's, one per hardware watchpoint
+  ///     register needed.  We may return more WatchpointResources than the
+  ///     target can watch at once; if all resources cannot be set, the
+  ///     watchpoint cannot be set.
   static std::vector<lldb::WatchpointResourceSP> AtomizeWatchpointRequest(
       lldb::addr_t addr, size_t size, bool read, bool write,
       lldb::WatchpointHardwareFeature supported_features, ArchSpec &arch);
 
-  // Should be protected, but giving access to the algorithms in the unit
-  // tests is not easy, so it's public.
+public:
+  // These methods should be protected, but giving access to the algorithms
+  // in the unittests is not straightforward, so they're marked public.
+  // Do not call directly elsewhere.
+
+  /// Convert a user's watchpoint request into an array of addr+size that
+  /// can be watched with power-of-2 style hardware watchpoints.
+  ///
+  /// This is the default algorithm if we have no further information;
+  /// most watchpoint implementations can be assumed to be able to watch up
+  /// to pointer-size regions of memory in power-of-2 sizes and alingments.
+  ///
+  /// \param[in] user_addr
+  ///     The user's start address.
+  ///
+  /// \param[in] user_size
+  ///     The user's specified byte length.
+  ///
+  /// \param[in] min_byte_size
+  ///     The minimum byte size supported on this target.
+  ///     In most cases, this will be 1.  AArch64 MASK watchpoints can
+  ///     watch a minimum of 8 bytes (although Byte Address Select watchpoints
+  ///     can watch 1 to pointer-size bytes in a pointer-size aligned granule).
+  ///
+  /// \param[in] max_byte_size
+  ///     The maximum byte size supported for one watchpoint on this target.
+  ///
+  /// \param[in] address_byte_size
+  ///     The address byte size on this target.
   static std::vector<std::pair<lldb::addr_t, size_t>>
   PowerOf2Watchpoints(lldb::addr_t user_addr, size_t user_size,
                       size_t min_byte_size, size_t max_byte_size,

@@ -151,7 +151,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     addr_t user_addr = test.user.addr;
     size_t user_size = test.user.size;
     size_t min_byte_size = 1;
-    size_t max_byte_size = UINT32_MAX;
+    size_t max_byte_size = INT32_MAX;
     size_t address_byte_size = 8;
     auto result = WatchpointAlgorithms::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);

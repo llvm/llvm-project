@@ -29,7 +29,7 @@ WatchpointAlgorithms::AtomizeWatchpointRequest(
     entries =
         PowerOf2Watchpoints(addr, size,
                             /* min_byte_size */ 1,
-                            /* max_byte_size */ 2147483648,
+                            /* max_byte_size */ INT32_MAX,
                             /* address_byte_size */ arch.GetAddressByteSize());
   } else {
     // As a fallback, assume we can watch any power-of-2
