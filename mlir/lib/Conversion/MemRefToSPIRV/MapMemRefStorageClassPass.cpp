@@ -23,7 +23,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 
@@ -188,10 +188,10 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
   });
 
   addConversion([this](FunctionType type) {
-    auto inputs = llvm::to_vector(llvm::map_range(
-        type.getInputs(), [this](Type ty) { return convertType(ty); }));
-    auto results = llvm::to_vector(llvm::map_range(
-        type.getResults(), [this](Type ty) { return convertType(ty); }));
+    auto inputs = llvm::map_to_vector(
+        type.getInputs(), [this](Type ty) { return convertType(ty); });
+    auto results = llvm::map_to_vector(
+        type.getResults(), [this](Type ty) { return convertType(ty); });
     return FunctionType::get(type.getContext(), inputs, results);
   });
 }
@@ -313,9 +313,8 @@ namespace {
 class MapMemRefStorageClassPass final
     : public impl::MapMemRefStorageClassBase<MapMemRefStorageClassPass> {
 public:
-  explicit MapMemRefStorageClassPass() {
-    memorySpaceMap = spirv::mapMemorySpaceToVulkanStorageClass;
-  }
+  MapMemRefStorageClassPass() = default;
+
   explicit MapMemRefStorageClassPass(
       const spirv::MemorySpaceToStorageClassMap &memorySpaceMap)
       : memorySpaceMap(memorySpaceMap) {}
@@ -357,7 +356,8 @@ public:
   }
 
 private:
-  spirv::MemorySpaceToStorageClassMap memorySpaceMap;
+  spirv::MemorySpaceToStorageClassMap memorySpaceMap =
+      spirv::mapMemorySpaceToVulkanStorageClass;
 };
 } // namespace
 
