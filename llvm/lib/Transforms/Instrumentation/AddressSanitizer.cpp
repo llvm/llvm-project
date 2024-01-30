@@ -1255,12 +1255,13 @@ void AddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   InstrumentationIRBuilder IRB(MI);
   if (isa<MemTransferInst>(MI)) {
     IRB.CreateCall(isa<MemMoveInst>(MI) ? AsanMemmove : AsanMemcpy,
-                   {MI->getOperand(0), MI->getOperand(1),
+                   {IRB.CreateAddrSpaceCast(MI->getOperand(0), PtrTy),
+                    IRB.CreateAddrSpaceCast(MI->getOperand(1), PtrTy),
                     IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   } else if (isa<MemSetInst>(MI)) {
     IRB.CreateCall(
         AsanMemset,
-        {MI->getOperand(0),
+        {IRB.CreateAddrSpaceCast(MI->getOperand(0), PtrTy),
          IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
          IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
   }
