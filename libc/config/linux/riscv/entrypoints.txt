@@ -150,6 +150,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
     libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
