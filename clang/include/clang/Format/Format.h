@@ -940,6 +940,21 @@ struct FormatStyle {
     ///   LongName::AnotherLongName();
     /// \endcode
     RTBS_AllowShortType,
+    /// Break after return type automatically.
+    /// ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+    /// This mode will never break after short return types, unlike
+    /// ``RTBS_None`` which will only sometimes choose not to break after short
+    /// return types.
+    /// \code
+    ///   class A {
+    ///     int f() { return 0; };
+    ///   };
+    ///   int f();
+    ///   int f() { return 1; }
+    ///   int LongName::
+    ///       AnotherLongName();
+    /// \endcode
+    RTBS_ExceptShortType,
     /// Always break after the return type.
     /// \code
     ///   class A {

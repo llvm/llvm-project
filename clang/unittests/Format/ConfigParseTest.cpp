@@ -699,6 +699,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::RTBS_None);
   CHECK_PARSE("AlwaysBreakAfterReturnType: AllowShortType",
               AlwaysBreakAfterReturnType, FormatStyle::RTBS_AllowShortType);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: ExceptShortType",
+              AlwaysBreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
   CHECK_PARSE("AlwaysBreakAfterReturnType: All", AlwaysBreakAfterReturnType,
               FormatStyle::RTBS_All);
   CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevel",

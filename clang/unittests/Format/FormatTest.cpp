@@ -9874,8 +9874,8 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("class A {\n"
                "  int f() { return 1; }\n"
                "  int g();\n"
-               "  long foooooooooooooooooooooooooooo::\n"
-               "      baaaaaaaaaaaaaaaaaaaar();\n"
+               "  long\n"
+               "  foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaar();\n"
                "};\n"
                "int f() { return 1; }\n"
                "int g();\n"
@@ -9895,6 +9895,20 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "int g();\n"
                "int\n"
                "foooooooooooooooooooooooooooo::baaaaaaaaaaaaaaaaaaaaar();",
+               Style);
+
+  // It now must never break after a short return type.
+  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_ExceptShortType;
+  verifyFormat("class A {\n"
+               "  int f() { return 1; }\n"
+               "  int g();\n"
+               "  long foooooooooooooooooooooooooooo::\n"
+               "      baaaaaaaaaaaaaaaaaaaar();\n"
+               "};\n"
+               "int f() { return 1; }\n"
+               "int g();\n"
+               "int foooooooooooooooooooooooooooo::\n"
+               "    baaaaaaaaaaaaaaaaaaaaar();",
                Style);
 
   // All declarations and definitions should have the return type moved to its
@@ -14384,9 +14398,9 @@ TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
                "        bbbbbbbbbbbbbbbbbbb()\n"
                "  {\n"
                "  }\n"
-               "  void m(\n"
-               "      int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "      int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
+               "  void\n"
+               "  m(int aaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbbbbbbbbbbbbb)\n"
                "  {\n"
                "  }\n"
                "};",

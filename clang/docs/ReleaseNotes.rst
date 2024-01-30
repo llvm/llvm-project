@@ -185,6 +185,7 @@ AST Matchers
 clang-format
 ------------
 - Add ``AllowShortType`` option for ``AlwaysBreakAfterReturnType``.
+- Add ``ExceptShortType`` option for ``AlwaysBreakAfterReturnType``.
 
 libclang
 --------
