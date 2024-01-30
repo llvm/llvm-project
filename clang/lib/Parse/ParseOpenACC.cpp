@@ -129,6 +129,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
       .Case("vector_length", OpenACCClauseKind::VectorLength)
+      .Case("wait", OpenACCClauseKind::Wait)
       .Case("worker", OpenACCClauseKind::Worker)
       .Default(OpenACCClauseKind::Invalid);
 }
@@ -475,6 +476,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::Gang:
+  case OpenACCClauseKind::Wait:
     return ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
@@ -907,6 +909,12 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         if (ParseOpenACCGangArgList())
           return true;
         break;
+      case OpenACCClauseKind::Wait:
+        if (ParseOpenACCWaitArgument()) {
+          Parens.skipToEnd();
+          return false;
+        }
+        break;
       default:
         llvm_unreachable("Not an optional parens type?");
       }
@@ -940,8 +948,7 @@ bool Parser::ParseOpenACCWaitArgument() {
     // Consume colon.
     ConsumeToken();
 
-    ExprResult IntExpr =
-        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    ExprResult IntExpr = ParseOpenACCIntExpr();
     if (IntExpr.isInvalid())
       return true;
 
@@ -962,14 +969,6 @@ bool Parser::ParseOpenACCWaitArgument() {
   // the term 'async-argument' means a nonnegative scalar integer expression, or
   // one of the special values 'acc_async_noval' or 'acc_async_sync', as defined
   // in the C header file and the Fortran opacc module.
-  //
-  // We are parsing this simply as list of assignment expressions (to avoid
-  // comma being troublesome), and will ensure it is an integral type.  The
-  // 'special' types are defined as macros, so we can't really check those
-  // (other than perhaps as values at one point?), but the standard does say it
-  // is implementation-defined to use any other negative value.
-  //
-  //
   bool FirstArg = true;
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     if (!FirstArg) {
@@ -978,8 +977,7 @@ bool Parser::ParseOpenACCWaitArgument() {
     }
     FirstArg = false;
 
-    ExprResult CurArg =
-        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    ExprResult CurArg = ParseOpenACCAsyncArgument();
 
     if (CurArg.isInvalid())
       return true;
