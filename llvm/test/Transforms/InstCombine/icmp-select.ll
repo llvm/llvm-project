@@ -7,9 +7,8 @@ declare i8 @llvm.umin.i8(i8, i8)
 
 define i32 @test_icmp_select_lte(i32 %x) {
 ; CHECK-LABEL: @test_icmp_select_lte(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 1234
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[X]], 31
-; CHECK-NEXT:    [[RE:%.*]] = select i1 [[CMP]], i32 [[LSHR]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[X:%.*]], 1233
+; CHECK-NEXT:    [[RE:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[RE]]
 ;
   %cmp = icmp slt i32 %x, 1234
@@ -20,9 +19,8 @@ define i32 @test_icmp_select_lte(i32 %x) {
 
 define i16 @test_icmp_select_sgt(i16 %x) {
 ; CHECK-LABEL: @test_icmp_select_sgt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[X:%.*]], 123
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[X]], 15
-; CHECK-NEXT:    [[RE:%.*]] = select i1 [[CMP]], i16 [[LSHR]], i16 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X:%.*]], 124
+; CHECK-NEXT:    [[RE:%.*]] = zext i1 [[CMP]] to i16
 ; CHECK-NEXT:    ret i16 [[RE]]
 ;
   %cmp = icmp sgt i16 %x, 123
@@ -33,9 +31,8 @@ define i16 @test_icmp_select_sgt(i16 %x) {
 
 define i8 @test_icmp_select_ugt(i8 %x) {
 ; CHECK-LABEL: @test_icmp_select_ugt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X]], 7
-; CHECK-NEXT:    [[RE:%.*]] = select i1 [[CMP]], i8 [[LSHR]], i8 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], 11
+; CHECK-NEXT:    [[RE:%.*]] = zext i1 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[RE]]
 ;
   %cmp = icmp ugt i8 %x, 10
@@ -46,9 +43,8 @@ define i8 @test_icmp_select_ugt(i8 %x) {
 
 define <2 x i32> @test_icmp_select_sge_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @test_icmp_select_sge_vector(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 511, i32 511>
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[X]], <i32 31, i32 31>
-; CHECK-NEXT:    [[RE:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[LSHR]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 512, i32 512>
+; CHECK-NEXT:    [[RE:%.*]] = zext <2 x i1> [[CMP]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[RE]]
 ;
   %cmp = icmp sge <2 x i32> %x, <i32 512, i32 512>
