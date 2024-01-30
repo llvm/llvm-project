@@ -2730,6 +2730,7 @@ static bool isX86CCSigned(unsigned X86CC) {
 
 static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   switch (SetCCOpcode) {
+  // clang-format off
   default: llvm_unreachable("Invalid integer condition!");
   case ISD::SETEQ:  return X86::COND_E;
   case ISD::SETGT:  return X86::COND_G;
@@ -2741,6 +2742,7 @@ static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   case ISD::SETUGT: return X86::COND_A;
   case ISD::SETULE: return X86::COND_BE;
   case ISD::SETUGE: return X86::COND_AE;
+  // clang-format on
   }
 }
 
@@ -2801,6 +2803,7 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
   //  1 | 0 | 0 | X == Y
   //  1 | 1 | 1 | unordered
   switch (SetCCOpcode) {
+  // clang-format off
   default: llvm_unreachable("Condcode should be pre-legalized away");
   case ISD::SETUEQ:
   case ISD::SETEQ:   return X86::COND_E;
@@ -2822,6 +2825,7 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
   case ISD::SETO:    return X86::COND_NP;
   case ISD::SETOEQ:
   case ISD::SETUNE:  return X86::COND_INVALID;
+  // clang-format on
   }
 }
 
@@ -7997,11 +8001,13 @@ static bool isHopBuildVector(const BuildVectorSDNode *BV, SelectionDAG &DAG,
       if (HOpcode == ISD::DELETED_NODE) {
         GenericOpcode = Op.getOpcode();
         switch (GenericOpcode) {
+        // clang-format off
         case ISD::ADD: HOpcode = X86ISD::HADD; break;
         case ISD::SUB: HOpcode = X86ISD::HSUB; break;
         case ISD::FADD: HOpcode = X86ISD::FHADD; break;
         case ISD::FSUB: HOpcode = X86ISD::FHSUB; break;
         default: return false;
+        // clang-format on
         }
       }
 
@@ -21575,12 +21581,14 @@ static SDValue lowerAddSubToHorizontalOp(SDValue Op, SelectionDAG &DAG,
   // TODO: Allow commuted (f)sub by negating the result of (F)HSUB?
   unsigned HOpcode;
   switch (Op.getOpcode()) {
-    case ISD::ADD: HOpcode = X86ISD::HADD; break;
-    case ISD::SUB: HOpcode = X86ISD::HSUB; break;
-    case ISD::FADD: HOpcode = X86ISD::FHADD; break;
-    case ISD::FSUB: HOpcode = X86ISD::FHSUB; break;
-    default:
-      llvm_unreachable("Trying to lower unsupported opcode to horizontal op");
+  // clang-format off
+  case ISD::ADD: HOpcode = X86ISD::HADD; break;
+  case ISD::SUB: HOpcode = X86ISD::HSUB; break;
+  case ISD::FADD: HOpcode = X86ISD::FHADD; break;
+  case ISD::FSUB: HOpcode = X86ISD::FHSUB; break;
+  default:
+    llvm_unreachable("Trying to lower unsupported opcode to horizontal op");
+  // clang-format on
   }
   unsigned LExtIndex = LHS.getConstantOperandVal(1);
   unsigned RExtIndex = RHS.getConstantOperandVal(1);
@@ -22482,12 +22490,14 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
 
     // Otherwise use a regular EFLAGS-setting instruction.
     switch (ArithOp.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("unexpected operator!");
     case ISD::ADD: Opcode = X86ISD::ADD; break;
     case ISD::SUB: Opcode = X86ISD::SUB; break;
     case ISD::XOR: Opcode = X86ISD::XOR; break;
     case ISD::AND: Opcode = X86ISD::AND; break;
     case ISD::OR:  Opcode = X86ISD::OR;  break;
+    // clang-format on
     }
 
     NumOperands = 2;
@@ -22876,6 +22886,7 @@ static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   //  6 - NLE
   //  7 - ORD
   switch (SetCCOpcode) {
+  // clang-format off
   default: llvm_unreachable("Unexpected SETCC condition");
   case ISD::SETOEQ:
   case ISD::SETEQ:  SSECC = 0; break;
@@ -22897,6 +22908,7 @@ static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   case ISD::SETO:   SSECC = 7; break;
   case ISD::SETUEQ: SSECC = 8; break;
   case ISD::SETONE: SSECC = 12; break;
+  // clang-format on
   }
   if (Swap)
     std::swap(Op0, Op1);
@@ -23237,6 +23249,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     // Translate compare code to XOP PCOM compare mode.
     unsigned CmpMode = 0;
     switch (Cond) {
+    // clang-format off
     default: llvm_unreachable("Unexpected SETCC condition");
     case ISD::SETULT:
     case ISD::SETLT: CmpMode = 0x00; break;
@@ -23248,6 +23261,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     case ISD::SETGE: CmpMode = 0x03; break;
     case ISD::SETEQ: CmpMode = 0x04; break;
     case ISD::SETNE: CmpMode = 0x05; break;
+    // clang-format on
     }
 
     // Are we comparing unsigned or signed integers?
@@ -23351,11 +23365,13 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     bool Invert = false;
     unsigned Opc;
     switch (Cond) {
+    // clang-format off
     default: llvm_unreachable("Unexpected condition code");
     case ISD::SETUGT: Invert = true; [[fallthrough]];
     case ISD::SETULE: Opc = ISD::UMIN; break;
     case ISD::SETULT: Invert = true; [[fallthrough]];
     case ISD::SETUGE: Opc = ISD::UMAX; break;
+    // clang-format on
     }
 
     SDValue Result = DAG.getNode(Opc, dl, VT, Op0, Op1);
@@ -27492,12 +27508,14 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
     uint64_t RM = CVal->getZExtValue();
     int FieldVal;
     switch (static_cast<RoundingMode>(RM)) {
+    // clang-format off
     case RoundingMode::NearestTiesToEven: FieldVal = X86::rmToNearest; break;
     case RoundingMode::TowardNegative:    FieldVal = X86::rmDownward; break;
     case RoundingMode::TowardPositive:    FieldVal = X86::rmUpward; break;
     case RoundingMode::TowardZero:        FieldVal = X86::rmTowardZero; break;
     default:
       llvm_unreachable("rounding mode is not supported by X86 hardware");
+    // clang-format on
     }
     RMBits = DAG.getConstant(FieldVal, DL, MVT::i16);
   } else {
@@ -28713,11 +28731,13 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   RTLIB::Libcall LC;
   bool isSigned;
   switch (Op->getOpcode()) {
+  // clang-format off
   default: llvm_unreachable("Unexpected request for libcall!");
   case ISD::SDIV:      isSigned = true;  LC = RTLIB::SDIV_I128;    break;
   case ISD::UDIV:      isSigned = false; LC = RTLIB::UDIV_I128;    break;
   case ISD::SREM:      isSigned = true;  LC = RTLIB::SREM_I128;    break;
   case ISD::UREM:      isSigned = false; LC = RTLIB::UREM_I128;    break;
+  // clang-format on
   }
 
   SDLoc dl(Op);
@@ -31846,6 +31866,7 @@ bool X86TargetLowering::isInlineAsmTargetBranch(
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  // clang-format off
   default: llvm_unreachable("Should not custom lower this!");
   case ISD::ATOMIC_FENCE:       return LowerATOMIC_FENCE(Op, Subtarget, DAG);
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
@@ -31997,6 +32018,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADDRSPACECAST:      return LowerADDRSPACECAST(Op, DAG);
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
+  // clang-format on
   }
 }
 
@@ -36128,6 +36150,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // Get the X86 opcode to use.
     unsigned Opc;
     switch (MI.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("illegal opcode!");
     case X86::FP32_TO_INT16_IN_MEM: Opc = X86::IST_Fp16m32; break;
     case X86::FP32_TO_INT32_IN_MEM: Opc = X86::IST_Fp32m32; break;
@@ -36138,6 +36161,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::FP80_TO_INT16_IN_MEM: Opc = X86::IST_Fp16m80; break;
     case X86::FP80_TO_INT32_IN_MEM: Opc = X86::IST_Fp32m80; break;
     case X86::FP80_TO_INT64_IN_MEM: Opc = X86::IST_Fp64m80; break;
+    // clang-format on
     }
 
     X86AddressMode AM = getAddressFromInstr(&MI, 0);
@@ -36346,6 +36370,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPFP16PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("illegal opcode!");
     case X86::PTDPBSSD: Opc = X86::TDPBSSD; break;
     case X86::PTDPBSUD: Opc = X86::TDPBSUD; break;
@@ -36353,6 +36378,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
+    // clang-format on
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
@@ -36413,9 +36439,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     const MIMetadata MIMD(MI);
     unsigned Opc;
     switch (MI.getOpcode()) {
+    // clang-format off
     default: llvm_unreachable("Unexpected instruction!");
     case X86::PTCMMIMFP16PS:     Opc = X86::TCMMIMFP16PS;     break;
     case X86::PTCMMRLFP16PS:     Opc = X86::TCMMRLFP16PS;     break;
+    // clang-format on
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
     MIB.addReg(TMMImmToTMMReg(MI.getOperand(0).getImm()), RegState::Define);
@@ -42424,10 +42452,12 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
 // Helper to flip between AND/OR/XOR opcodes and their X86ISD FP equivalents.
 static unsigned getAltBitOpcode(unsigned Opcode) {
   switch(Opcode) {
+  // clang-format off
   case ISD::AND: return X86ISD::FAND;
   case ISD::OR: return X86ISD::FOR;
   case ISD::XOR: return X86ISD::FXOR;
   case X86ISD::ANDNP: return X86ISD::FANDN;
+  // clang-format on
   }
   llvm_unreachable("Unknown bitwise opcode");
 }
@@ -43115,10 +43145,12 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   // transferring the SSE operand to integer register and back.
   unsigned FPOpcode;
   switch (N0.getOpcode()) {
-    case ISD::AND: FPOpcode = X86ISD::FAND; break;
-    case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
-    case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
-    default: return SDValue();
+  // clang-format off
+  case ISD::AND: FPOpcode = X86ISD::FAND; break;
+  case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
+  case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
+  default: return SDValue();
+  // clang-format on
   }
 
   // Check if we have a bitcast from another integer type as well.
@@ -45181,11 +45213,13 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
           Cond1 == InnerSetCC.getOperand(1)) {
         ISD::CondCode NewCC;
         switch (CC == ISD::SETEQ ? InnerCC : CC) {
+        // clang-format off
         case ISD::SETGT:  NewCC = ISD::SETGE; break;
         case ISD::SETLT:  NewCC = ISD::SETLE; break;
         case ISD::SETUGT: NewCC = ISD::SETUGE; break;
         case ISD::SETULT: NewCC = ISD::SETULE; break;
         default: NewCC = ISD::SETCC_INVALID; break;
+        // clang-format on
         }
         if (NewCC != ISD::SETCC_INVALID) {
           Cond = DAG.getSetCC(DL, CondVT, Cond0, Cond1, NewCC);
@@ -48018,10 +48052,12 @@ static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
 static unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
   unsigned FPOpcode;
   switch (Opcode) {
+  // clang-format off
   default: llvm_unreachable("Unexpected input node for FP logic conversion");
   case ISD::AND: FPOpcode = X86ISD::FAND; break;
   case ISD::OR:  FPOpcode = X86ISD::FOR;  break;
   case ISD::XOR: FPOpcode = X86ISD::FXOR; break;
+  // clang-format on
   }
   return FPOpcode;
 }
@@ -49593,6 +49629,7 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   switch (VT.getSimpleVT().SimpleTy) {
+  // clang-format off
   default: return SDValue();
   case MVT::v16i8:
   case MVT::v8i16:
@@ -49602,6 +49639,7 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   case MVT::v16i16:
   case MVT::v8i32:
   case MVT::v4i64: if (!Subtarget.hasAVX2()) return SDValue(); break;
+    // clang-format on
   }
 
   // There must be a shift right algebraic before the xor, and the xor must be a
@@ -51546,6 +51584,7 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
                                 bool NegRes) {
   if (NegMul) {
     switch (Opcode) {
+    // clang-format off
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:              Opcode = X86ISD::FNMADD;        break;
     case ISD::STRICT_FMA:       Opcode = X86ISD::STRICT_FNMADD; break;
@@ -51559,11 +51598,13 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
     case X86ISD::FNMSUB:        Opcode = X86ISD::FMSUB;         break;
     case X86ISD::STRICT_FNMSUB: Opcode = X86ISD::STRICT_FMSUB;  break;
     case X86ISD::FNMSUB_RND:    Opcode = X86ISD::FMSUB_RND;     break;
+    // clang-format on
     }
   }
 
   if (NegAcc) {
     switch (Opcode) {
+    // clang-format off
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:              Opcode = X86ISD::FMSUB;         break;
     case ISD::STRICT_FMA:       Opcode = X86ISD::STRICT_FMSUB;  break;
@@ -51581,12 +51622,14 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
     case X86ISD::FMADDSUB_RND:  Opcode = X86ISD::FMSUBADD_RND;  break;
     case X86ISD::FMSUBADD:      Opcode = X86ISD::FMADDSUB;      break;
     case X86ISD::FMSUBADD_RND:  Opcode = X86ISD::FMADDSUB_RND;  break;
+    // clang-format on
     }
   }
 
   if (NegRes) {
     switch (Opcode) {
     // For accuracy reason, we never combine fneg and fma under strict FP.
+    // clang-format off
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:             Opcode = X86ISD::FNMSUB;       break;
     case X86ISD::FMADD_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
@@ -51596,6 +51639,7 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
     case X86ISD::FNMADD_RND:   Opcode = X86ISD::FMSUB_RND;    break;
     case X86ISD::FNMSUB:       Opcode = ISD::FMA;             break;
     case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FMADD_RND;    break;
+    // clang-format on
     }
   }
 
@@ -51724,11 +51768,13 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
   unsigned IntOpcode;
   switch (N->getOpcode()) {
+  // clang-format off
   default: llvm_unreachable("Unexpected FP logic op");
   case X86ISD::FOR:   IntOpcode = ISD::OR; break;
   case X86ISD::FXOR:  IntOpcode = ISD::XOR; break;
   case X86ISD::FAND:  IntOpcode = ISD::AND; break;
   case X86ISD::FANDN: IntOpcode = X86ISD::ANDNP; break;
+  // clang-format on
   }
   SDValue IntOp = DAG.getNode(IntOpcode, dl, IntVT, Op0, Op1);
   return DAG.getBitcast(VT, IntOp);
@@ -53788,6 +53834,7 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
     }
 
     switch (CC) {
+    // clang-format off
     default: break;
     case X86::COND_A: case X86::COND_AE:
     case X86::COND_B: case X86::COND_BE:
@@ -53795,6 +53842,7 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
     case X86::COND_G: case X86::COND_GE:
     case X86::COND_L: case X86::COND_LE:
       return true;
+    // clang-format on
     }
   }
 
@@ -56188,6 +56236,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
+  // clang-format off
   default: break;
   case ISD::SCALAR_TO_VECTOR:
     return combineScalarToVector(N, DAG);
@@ -56365,6 +56414,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SUBV_BROADCAST_LOAD: return combineBROADCAST_LOAD(N, DAG, DCI);
   case X86ISD::MOVDQ2Q:     return combineMOVDQ2Q(N, DAG);
   case X86ISD::PDEP:        return combinePDEP(N, DAG, DCI);
+  // clang-format on
   }
 
   return SDValue();
