@@ -17,8 +17,9 @@
 //   scoped_allocator_adaptor(OuterA2&& outerAlloc,
 //                            const InnerAllocs& ...innerAllocs);
 
-#include <scoped_allocator>
 #include <cassert>
+#include <memory_resource>
+#include <scoped_allocator>
 
 #include "test_macros.h"
 #include "allocators.h"
@@ -110,6 +111,17 @@ int main(int, char**) {
     static_assert(
         !std::is_convertible< std::scoped_allocator_adaptor<A1<int>>, std::scoped_allocator_adaptor<A2<int>>>::value,
         "");
+  }
+  {
+    // https://github.com/llvm/llvm-project/issues/78754
+    using PA = std::pmr::polymorphic_allocator<int>;
+    std::pmr::monotonic_buffer_resource mr1;
+    std::pmr::monotonic_buffer_resource mr2;
+
+    using A = std::scoped_allocator_adaptor<PA, PA>;
+    A a(&mr1, &mr2);
+    assert(a.outer_allocator().resource() == &mr1);
+    assert(a.inner_allocator().resource() == &mr2);
   }
 
   return 0;
