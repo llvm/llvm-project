@@ -156,7 +156,7 @@ static Error getAllDBDirs(StringRef Path,
 /// \returns Given a sub-directory named 'v<version>.<x>', it outputs the
 /// 'v<version>.<x+1>' name.
 static void getNextDBDirName(StringRef DBDir, llvm::raw_ostream &OS) {
-  assert(DBDir.startswith(DBDirPrefix));
+  assert(DBDir.starts_with(DBDirPrefix));
   uint64_t Count;
   bool Failed = DBDir.substr(DBDirPrefix.size()).getAsInteger(10, Count);
   assert(!Failed);
