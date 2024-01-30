@@ -16542,22 +16542,75 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
   Intrinsic::ID ID = Intrinsic::not_intrinsic;
 
+#include "llvm/TargetParser/PPCTargetParser.def"
+  auto GetOpRes = [&](Value *FieldValue, unsigned Mask, unsigned Op,
+                      unsigned Op_Value) -> Value * {
+    Value *Value1 = FieldValue;
+    if (Mask)
+      Value1 = Builder.CreateAnd(Value1, Mask);
+    assert((Op == OP_EQ) && "Only support equal comparision");
+    return Builder.CreateICmp(ICmpInst::ICMP_EQ, FieldValue,
+                              ConstantInt::get(Int32Ty, Op_Value));
+  };
+
+  auto ConvBuiltinCpu = [&](unsigned SupportOP, unsigned FieldIdx,
+                            unsigned Op_Mask, unsigned Op,
+                            unsigned Op_Value) -> Value * {
+    if (SupportOP == AIX_BUILTIN_PPC_FALSE)
+      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+
+    if (SupportOP == AIX_BUILTIN_PPC_TRUE)
+      return llvm::ConstantInt::getTrue(ConvertType(E->getType()));
+
+    assert(SupportOP <= COMP_OP && "Invalid value for SupportOP.");
+    llvm::Type *STy = llvm::StructType::get(PPC_SYSTEMCONFIG_TYPE);
+
+    llvm::Constant *SysConf =
+        CGM.CreateRuntimeVariable(STy, "_system_configuration");
+
+    // Grab the appropriate field from _system_configuration.
+    llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
+                           ConstantInt::get(Int32Ty, FieldIdx)};
+
+    llvm::Value *FieldValue = Builder.CreateGEP(STy, SysConf, Idxs);
+    FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
+                                           CharUnits::fromQuantity(4));
+
+    return GetOpRes(FieldValue, Op_Mask, Op, Op_Value);
+  };
+
   switch (BuiltinID) {
   default: return nullptr;
 
   case Builtin::BI__builtin_cpu_is: {
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
-    unsigned NumCPUID = StringSwitch<unsigned>(CPUStr)
+    llvm::Triple Triple = getTarget().getTriple();
+    if (Triple.isOSLinux()) {
+      unsigned NumCPUID = StringSwitch<unsigned>(CPUStr)
 #define PPC_LNX_CPU(Name, NumericID) .Case(Name, NumericID)
 #include "llvm/TargetParser/PPCTargetParser.def"
-                            .Default(-1U);
+                              .Default(-1U);
     assert(NumCPUID < -1U && "Invalid CPU name. Missed by SemaChecking?");
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
     Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_is");
     return Builder.CreateICmpEQ(TheCall,
                                 llvm::ConstantInt::get(Int32Ty, NumCPUID));
+    } else if (Triple.isOSAIX()) {
+      unsigned IsCpuSupport, FieldIdx, CpuIdMask, CpuIdOp, CpuIdValue;
+      typedef std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned>
+          CPUType;
+      std::tie(IsCpuSupport, FieldIdx, CpuIdMask, CpuIdOp, CpuIdValue) =
+          static_cast<CPUType>(StringSwitch<CPUType>(CPUStr)
+#define PPC_AIX_CPU(NAME, SUPPORT, MASK, INDEX, OP, VALUE)                     \
+  .Case(NAME, {SUPPORT, MASK, INDEX, OP, VALUE})
+#include "llvm/TargetParser/PPCTargetParser.def"
+          );
+      return ConvBuiltinCpu(IsCpuSupport, FieldIdx, CpuIdMask, CpuIdOp,
+                            CpuIdValue);
+    }
+    LLVM_FALLTHROUGH;
   }
   case Builtin::BI__builtin_cpu_supports: {
     unsigned FeatureWord;
