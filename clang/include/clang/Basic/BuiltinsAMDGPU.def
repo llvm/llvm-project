@@ -525,6 +525,9 @@ TARGET_BUILTIN(__builtin_amdgcn_global_load_monitor_b128, "V4iV4i*1", "nc", "gfx
 TARGET_BUILTIN(__builtin_amdgcn_flat_load_monitor_b32, "ii*0", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_load_monitor_b64, "V2iV2i*0", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_flat_load_monitor_b128, "V4iV4i*0", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_load_b32, "ii*1", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_load_b64, "V2iV2i*1", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cluster_load_b128, "V4iV4i*1", "nc", "gfx12-10-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_s_setprio_inc_wg, "vIs", "n", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_monitor_sleep,  "vIs", "n", "gfx12-10-insts")

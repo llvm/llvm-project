@@ -1029,6 +1029,9 @@ def FLAT_LOAD_MONITOR_B128   : FLAT_Load_Pseudo <"flat_load_monitor_b128", VReg_
 defm GLOBAL_LOAD_MONITOR_B32  : FLAT_Global_Load_Pseudo <"global_load_monitor_b32",  VGPR_32>;
 defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b64",  VReg_64>;
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
+defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
+defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
+defm CLUSTER_LOAD_B128        : FLAT_Global_Load_Pseudo <"cluster_load_b128", VReg_128>;
 }
 
 let SubtargetPredicate = isGFX12Plus in {
@@ -1696,6 +1699,9 @@ let OtherPredicates = [isGFX12_10Plus] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B32,  int_amdgcn_global_load_monitor_b32,  i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B64,  int_amdgcn_global_load_monitor_b64,  v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_MONITOR_B128, int_amdgcn_global_load_monitor_b128, v4i32>;
+  defm : GlobalFLATLoadPats <CLUSTER_LOAD_B32,  int_amdgcn_cluster_load_b32,  i32>;
+  defm : GlobalFLATLoadPats <CLUSTER_LOAD_B64,  int_amdgcn_cluster_load_b64,  v2i32>;
+  defm : GlobalFLATLoadPats <CLUSTER_LOAD_B128, int_amdgcn_cluster_load_b128, v4i32>;
 }
 
 let OtherPredicates = [isGFX10Plus] in {
@@ -3005,6 +3011,9 @@ defm FLAT_LOAD_MONITOR_B128    : VFLAT_Real_Base_gfx1210<0x072>;
 defm GLOBAL_LOAD_MONITOR_B32   : VGLOBAL_Real_AllAddr_gfx1210<0x070>;
 defm GLOBAL_LOAD_MONITOR_B64   : VGLOBAL_Real_AllAddr_gfx1210<0x071>;
 defm GLOBAL_LOAD_MONITOR_B128  : VGLOBAL_Real_AllAddr_gfx1210<0x072>;
+defm CLUSTER_LOAD_B32          : VGLOBAL_Real_AllAddr_gfx1210<0x067>;
+defm CLUSTER_LOAD_B64          : VGLOBAL_Real_AllAddr_gfx1210<0x068>;
+defm CLUSTER_LOAD_B128         : VGLOBAL_Real_AllAddr_gfx1210<0x069>;
 
 let WaveSizePredicate = isWave32 in {
   defm GLOBAL_LOAD_B128_TR_B16 : VGLOBAL_Real_AllAddr_gfx1210<0x057, "GLOBAL_LOAD_TR_B128_w32", "global_load_b128_tr_b16", true>;
