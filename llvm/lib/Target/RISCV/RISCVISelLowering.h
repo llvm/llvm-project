@@ -142,6 +142,9 @@ enum NodeType : unsigned {
   SM4KS, SM4ED,
   SM3P0, SM3P1,
 
+  // May-Be-Operations
+  MOPR, MOPRR,
+
   // Vector Extension
   FIRST_VL_VECTOR_OP,
   // VMV_V_V_VL matches the semantics of vmv.v.v but includes an extra operand

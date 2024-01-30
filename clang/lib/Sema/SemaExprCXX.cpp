@@ -8222,21 +8222,6 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     E = result.get();
   }
 
-  // C99 6.3.2.1:
-  //   [Except in specific positions,] an lvalue that does not have
-  //   array type is converted to the value stored in the
-  //   designated object (and is no longer an lvalue).
-  if (E->isPRValue()) {
-    // In C, function designators (i.e. expressions of function type)
-    // are r-values, but we still want to do function-to-pointer decay
-    // on them.  This is both technically correct and convenient for
-    // some clients.
-    if (!getLangOpts().CPlusPlus && E->getType()->isFunctionType())
-      return DefaultFunctionArrayConversion(E);
-
-    return E;
-  }
-
   if (getLangOpts().CPlusPlus) {
     // The C++11 standard defines the notion of a discarded-value expression;
     // normally, we don't need to do anything to handle it, but if it is a
@@ -8257,11 +8242,32 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     //   If the expression is a prvalue after this optional conversion, the
     //   temporary materialization conversion is applied.
     //
-    // We skip this step: IR generation is able to synthesize the storage for
-    // itself in the aggregate case, and adding the extra node to the AST is
-    // just clutter.
-    // FIXME: We don't emit lifetime markers for the temporaries due to this.
-    // FIXME: Do any other AST consumers care about this?
+    // We do not materialize temporaries by default in order to avoid creating
+    // unnecessary temporary objects. If we skip this step, IR generation is
+    // able to synthesize the storage for itself in the aggregate case, and
+    // adding the extra node to the AST is just clutter.
+    if (isInMaterializeTemporaryObjectContext() && getLangOpts().CPlusPlus17 &&
+        E->isPRValue() && !E->getType()->isVoidType()) {
+      ExprResult Res = TemporaryMaterializationConversion(E);
+      if (Res.isInvalid())
+        return E;
+      E = Res.get();
+    }
+    return E;
+  }
+
+  // C99 6.3.2.1:
+  //   [Except in specific positions,] an lvalue that does not have
+  //   array type is converted to the value stored in the
+  //   designated object (and is no longer an lvalue).
+  if (E->isPRValue()) {
+    // In C, function designators (i.e. expressions of function type)
+    // are r-values, but we still want to do function-to-pointer decay
+    // on them.  This is both technically correct and convenient for
+    // some clients.
+    if (!getLangOpts().CPlusPlus && E->getType()->isFunctionType())
+      return DefaultFunctionArrayConversion(E);
+
     return E;
   }
 
