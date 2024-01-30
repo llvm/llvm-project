@@ -483,10 +483,12 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       auto rounded = rewriter.create<math::RoundEvenOp>(loc, args[0]);
 
       const auto &fltSemantics = cast<FloatType>(srcTy).getFloatSemantics();
-      // The range of integer values is wider than floating-point integral
-      // values so we only need to clamp infinites values.
+      // Check whether neither int min nor int max can be represented in the
+      // input floating-point type due to too short exponent range.
       if (static_cast<int>(dstTy.getIntOrFloatBitWidth()) - 1 >
           APFloat::semanticsMaxExponent(fltSemantics)) {
+        // Use cmp + select to replace infinites by int min / int max. Other
+        // integral values can be represented in the integer space.
         auto conv = rewriter.create<arith::FPToSIOp>(loc, dstTy, rounded);
         auto posInf = rewriter.create<arith::ConstantOp>(
             loc, rewriter.getFloatAttr(getElementTypeOrSelf(srcTy),
@@ -519,13 +521,13 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                    APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 
-      // The input floating-point type has enough mantissa bits to represent
-      // the max int value (n-1 bits set for a n-bit integer) so just clamp the
-      // input in the floating-point domain and convert to int. Note: the min
-      // value can be represented in the mantissa because, being a power of 2,
-      // it consists of a single leading bit.
+      // Check whether the mantissa has enough bits to represent int max.
       if (cast<FloatType>(srcTy).getFPMantissaWidth() >=
           dstTy.getIntOrFloatBitWidth() - 1) {
+        // Int min can also be represented since it is a power of two and thus
+        // consists of a single leading bit. Therefore we can clamp the input
+        // in the floating-point domain.
+
         auto intMaxFP = rewriter.create<arith::ConstantOp>(
             loc, rewriter.getFloatAttr(
                      getElementTypeOrSelf(srcTy),
@@ -537,9 +539,10 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
         return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
       }
 
-      // Otherwise, we can rely on int max + 1 being representable because
-      // it's just int min with a positive sign. So clamp the min value and
-      // compare against that to select the max int value if needed.
+      // Due to earlier check we know exponant range is big enough to represent
+      // int min. We can therefore rely on int max + 1 being representable as
+      // well because it's just int min with a positive sign. So clamp the min
+      // value and compare against that to select the max int value if needed.
       auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
