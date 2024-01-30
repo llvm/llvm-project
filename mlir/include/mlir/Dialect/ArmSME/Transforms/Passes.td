@@ -153,7 +153,7 @@ def OuterProductFusion
     https://mlir.llvm.org/docs/Dialects/ArmSME/#arm_smesmopa_4way-arm_smesmopa_4wayop
   }];
   let constructor = "mlir::arm_sme::createOuterProductFusionPass()";
-  let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect", "arm_sve::ArmSVEDialect", "LLVM::LLVMDialect"];
+  let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect", "LLVM::LLVMDialect"];
 }
 
 #endif // MLIR_DIALECT_ARMSME_TRANSFORMS_PASSES_TD

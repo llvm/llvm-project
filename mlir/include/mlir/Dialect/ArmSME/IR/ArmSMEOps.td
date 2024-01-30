@@ -828,12 +828,12 @@ class OuterProductWideningBase<string mnemonic,
       "both `lhsMask` and `rhsMask` should be provided or neither",
       CPred<"bool(getLhsMask()) == bool(getRhsMask())">
     >,
-    OptionalTypesMatchWith<"result and acc have the same type",
+    OptionalTypesMatchWith<"`result` and `acc` have the same type",
                            "result", "acc", "::llvm::cast<Type>($_self)">,
-    // this trait ensures the input type match the correct output type for ops
+    // This trait ensures the input types match the correct output type for ops
     // that takes multiple inputs and outputs (i.e., 4-way).
     PredOpTrait<
-      "tile element size equals lhs element size * " # numOuterProducts,
+      "tile element size equals input element size * " # numOuterProducts,
       CPred<"getTileType().getElementTypeBitWidth() == "
             "(getLhsType().getElementTypeBitWidth() * " # numOuterProducts # ")">
     >,

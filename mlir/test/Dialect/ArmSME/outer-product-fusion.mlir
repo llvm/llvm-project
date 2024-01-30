@@ -29,6 +29,38 @@ func.func @outerproduct_add_widening_2way_f16f16f32(
 
 // -----
 
+/// Verify chain of 4 outer products are fused into 2 2-way widening outer
+/// products.
+
+// CHECK-LABEL: @outerproduct_x2_add_widening_2way_f16f16f32
+// CHECK-COUNT-2: arm_sme.fmopa_2way
+func.func @outerproduct_x2_add_widening_2way_f16f16f32(
+    %a0 : vector<[4]xf16>, %b0 : vector<[4]xf16>,
+    %a1 : vector<[4]xf16>, %b1 : vector<[4]xf16>,
+    %a2 : vector<[4]xf16>, %b2 : vector<[4]xf16>,
+    %a3 : vector<[4]xf16>, %b3 : vector<[4]xf16>) -> vector<[4]x[4]xf32> {
+  %a0_ext = arith.extf %a0 : vector<[4]xf16> to vector<[4]xf32>
+  %b0_ext = arith.extf %b0 : vector<[4]xf16> to vector<[4]xf32>
+
+  %a1_ext = arith.extf %a1 : vector<[4]xf16> to vector<[4]xf32>
+  %b1_ext = arith.extf %b1 : vector<[4]xf16> to vector<[4]xf32>
+
+  %a2_ext = arith.extf %a2 : vector<[4]xf16> to vector<[4]xf32>
+  %b2_ext = arith.extf %b2 : vector<[4]xf16> to vector<[4]xf32>
+
+  %a3_ext = arith.extf %a3 : vector<[4]xf16> to vector<[4]xf32>
+  %b3_ext = arith.extf %b3 : vector<[4]xf16> to vector<[4]xf32>
+
+  %0 = arm_sme.outerproduct %a0_ext, %b0_ext : vector<[4]xf32>, vector<[4]xf32>
+  %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xf32>, vector<[4]xf32>
+  %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) : vector<[4]xf32>, vector<[4]xf32>
+  %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) : vector<[4]xf32>, vector<[4]xf32>
+
+  return %3 : vector<[4]x[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @outerproduct_sub_widening_2way_f16f16f32
 // CHECK: arm_sme.fmops_2way %{{.*}}, %{{.*}} acc(%{{.*}}) masks(%{{.*}}, %{{.*}}) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
 func.func @outerproduct_sub_widening_2way_f16f16f32(

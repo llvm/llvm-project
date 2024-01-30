@@ -14,7 +14,6 @@
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
-#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
@@ -116,31 +115,26 @@ public:
 
     auto loc = op.getLoc();
 
-    auto packInputs = [&](VectorType type, Value lhs, Value rhs) {
-      return rewriter.create<LLVM::experimental_vector_interleave2>(loc, type,
-                                                                    lhs, rhs);
+    auto packInputs = [&](Value lhs, Value rhs) {
+      auto inputType = cast<VectorType>(lhs.getType());
+      VectorType inputTypeX2 =
+          VectorType::Builder(inputType).setDim(0, inputType.getShape()[0] * 2);
+      return rewriter.create<LLVM::experimental_vector_interleave2>(
+          loc, inputTypeX2, lhs, rhs);
     };
 
-    auto extOp = op.getLhs().getDefiningOp();
-    VectorType extSourceVectorType =
-        cast<VectorType>(extOp->getOperand(0).getType());
-    VectorType widenedVectorType =
-        VectorType::Builder(extSourceVectorType)
-            .setDim(0, extSourceVectorType.getShape()[0] * 2);
-    auto lhs = packInputs(widenedVectorType,
-                          op1.getLhs().getDefiningOp()->getOperand(0),
+    auto lhs = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
                           op2.getLhs().getDefiningOp()->getOperand(0));
-    auto rhs = packInputs(widenedVectorType,
-                          op1.getRhs().getDefiningOp()->getOperand(0),
+    auto rhs = packInputs(op1.getRhs().getDefiningOp()->getOperand(0),
                           op2.getRhs().getDefiningOp()->getOperand(0));
 
     Value lhsMask, rhsMask;
     if (op1.getLhsMask() || op2.getLhsMask()) {
-      VectorType maskType = VectorType::Builder(widenedVectorType)
-                                .setElementType(rewriter.getI1Type());
-      lhsMask = packInputs(maskType, op1.getLhsMask(), op2.getLhsMask());
-      rhsMask = packInputs(maskType, op1.getRhsMask(), op2.getRhsMask());
+      lhsMask = packInputs(op1.getLhsMask(), op2.getLhsMask());
+      rhsMask = packInputs(op1.getRhsMask(), op2.getRhsMask());
     }
+
+    auto extOp = op.getLhs().getDefiningOp();
 
     arm_sme::CombiningKind kind = op.getKind();
     if (kind == arm_sme::CombiningKind::Add) {
@@ -252,11 +246,11 @@ private:
 
     if (!lhsDefOp || !rhsDefOp)
       return rewriter.notifyMatchFailure(
-          op, "defining op of outerproduct operands must be 'arith.extf' or "
-              "'arith.extsi' or 'arith.extui'");
+          op, "defining op of outerproduct operands must be one of: "
+              "'arith.extf' or 'arith.extsi' or 'arith.extui'");
 
-    auto lhsInType = cast<VectorType>(lhsDefOp->getOperand(0).getType());
-    auto rhsInType = cast<VectorType>(rhsDefOp->getOperand(0).getType());
+    auto lhsInType = cast<VectorType>(lhsDefOp.getIn().getType());
+    auto rhsInType = cast<VectorType>(rhsDefOp.getIn().getType());
 
     if (lhsInType != inputType || rhsInType != inputType)
       return rewriter.notifyMatchFailure(op.getLoc(), [&](Diagnostic &diag) {
