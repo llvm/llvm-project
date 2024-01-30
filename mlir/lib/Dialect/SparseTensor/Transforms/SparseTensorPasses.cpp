@@ -95,13 +95,15 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
+    debugSparseIteration = options.debugSparseIteration;
     enableRuntimeLibrary = options.enableRuntimeLibrary;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization, enableRuntimeLibrary);
+    SparsificationOptions options(parallelization, debugSparseIteration,
+                                  enableRuntimeLibrary);
     // Apply sparsification and cleanup rewriting.
     RewritePatternSet patterns(ctx);
     populateSparsificationPatterns(patterns, options);

@@ -10,13 +10,16 @@
 #define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_UTILS_SPARSETENSORLEVEL_H_
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 
 namespace mlir {
 namespace sparse_tensor {
 
-/// The base class for all types of sparse tensor levels. It provides interfaces
-/// to query the loop range (see `peekRangeAt`) and look up the coordinates (see
-/// `peekCrdAt`).
+class ConcreteIterator;
+
+/// The base class for all types of sparse tensor levels. It provides
+/// interfaces to query the loop range (see `peekRangeAt`) and look up the
+/// coordinates (see `peekCrdAt`).
 class SparseTensorLevel {
   SparseTensorLevel(SparseTensorLevel &&) = delete;
   SparseTensorLevel(const SparseTensorLevel &) = delete;
@@ -26,6 +29,10 @@ class SparseTensorLevel {
 public:
   virtual ~SparseTensorLevel() = default;
 
+  std::string toString() const {
+    return std::string(toMLIRString(lt)) + "[" + std::to_string(tid) + "," +
+           std::to_string(lvl) + "]";
+  }
   virtual Value peekCrdAt(OpBuilder &b, Location l, Value iv) const = 0;
 
   /// Peeks the lower and upper bound to *fully* traverse the level with
@@ -46,7 +53,17 @@ public:
 
   Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
-  Value size() const { return lvlSize; }
+  Value getSize() const { return lvlVals.front(); }
+  Value getCrdBuf() const {
+    assert(lvlVals.size() > 1);
+    return lvlVals[1];
+  }
+  Value getPosBuf() const {
+    assert(lvlVals.size() > 2);
+    return lvlVals[2];
+  }
+  ValueRange getLvlVals() const { return lvlVals; }
+  ValueRange getLvlBufs() const { return ValueRange(lvlVals).drop_front(); }
 
   //
   // Level properties
@@ -55,12 +72,24 @@ public:
 
 protected:
   SparseTensorLevel(unsigned tid, unsigned lvl, LevelType lt, Value lvlSize)
-      : tid(tid), lvl(lvl), lt(lt), lvlSize(lvlSize){};
+      : tid(tid), lvl(lvl), lt(lt), lvlVals() {
+    lvlVals.push_back(lvlSize);
+  };
+
+  SparseTensorLevel(unsigned tid, unsigned lvl, LevelType lt, Value lvlSize,
+                    ValueRange lvlBufs)
+      : tid(tid), lvl(lvl), lt(lt), lvlVals() {
+    lvlVals.push_back(lvlSize);
+    lvlVals.append(lvlBufs.begin(), lvlBufs.end());
+  };
 
 public:
   const unsigned tid, lvl;
   const LevelType lt;
-  const Value lvlSize;
+  // The first value in the vector is always lvlsize; for sparse levels, the
+  // second value is always the coordinate buffer; for sparse level with
+  // position buffers, the third value is always the position buffer.
+  SmallVector<Value, 3> lvlVals;
 };
 
 enum class IterKind : uint8_t {
@@ -80,37 +109,47 @@ class SparseIterator {
   SparseIterator &operator=(const SparseIterator &) = delete;
 
 protected:
-  SparseIterator(IterKind kind, unsigned tid, unsigned lvl, unsigned itValsCnt,
-                 SmallVectorImpl<Value> &storage)
-      : kind(kind), tid(tid), lvl(lvl), crd(nullptr), itValsCnt(itValsCnt),
-        itValsStorageRef(storage){};
+  SparseIterator(IterKind kind, unsigned tid, unsigned lvl,
+                 unsigned cursorValsCnt,
+                 SmallVectorImpl<Value> &cursorValStorage)
+      : kind(kind), tid(tid), lvl(lvl), crd(nullptr),
+        cursorValsCnt(cursorValsCnt), cursorValsStorageRef(cursorValStorage){};
 
-  SparseIterator(IterKind kind, const SparseIterator &wrap)
-      : kind(kind), tid(wrap.tid), lvl(wrap.lvl), crd(nullptr),
-        itValsCnt(wrap.itValsCnt), itValsStorageRef(wrap.itValsStorageRef) {
-    assert(wrap.itValsCnt == itValsStorageRef.size());
-  };
+  SparseIterator(IterKind kind, unsigned cursorValsCnt,
+                 SmallVectorImpl<Value> &cursorValStorage,
+                 const SparseIterator &delegate)
+      : SparseIterator(kind, delegate.tid, delegate.lvl, cursorValsCnt,
+                       cursorValStorage){};
 
-  SparseIterator(IterKind kind, const SparseIterator &wrap, unsigned extraVal)
-      : kind(kind), tid(wrap.tid), lvl(wrap.lvl), crd(nullptr),
-        itValsCnt(wrap.itValsCnt + extraVal),
-        itValsStorageRef(wrap.itValsStorageRef) {
-    itValsStorageRef.append(extraVal, nullptr);
-    assert(itValsCnt == itValsStorageRef.size());
+  SparseIterator(IterKind kind, const SparseIterator &wrap,
+                 unsigned extraCursorCnt = 0)
+      : SparseIterator(kind, wrap.tid, wrap.lvl,
+                       extraCursorCnt + wrap.cursorValsCnt,
+                       wrap.cursorValsStorageRef) {
+    assert(wrap.cursorValsCnt == wrap.cursorValsStorageRef.size());
+    cursorValsStorageRef.append(extraCursorCnt, nullptr);
+    assert(cursorValsStorageRef.size() == wrap.cursorValsCnt + extraCursorCnt);
   };
 
 public:
   virtual ~SparseIterator() = default;
 
+  static void setDebugSparseIteration(DebugSparseIteration strategy) {
+    SparseIterator::emitStrategy = strategy;
+  }
+
+  virtual std::string getDebugInterfacePrefix() const = 0;
+  virtual SmallVector<Type> getCursorValTypes(OpBuilder &b) const = 0;
+
   Value getCrd() const { return crd; }
-  ValueRange getItVals() const {
-    return ValueRange(itValsStorageRef).take_front(itValsCnt);
+  ValueRange getCursor() const {
+    return ValueRange(cursorValsStorageRef).take_front(cursorValsCnt);
   };
 
   // Sets the iterate to the specified position.
   void seek(ValueRange vals) {
-    assert(vals.size() == itValsCnt);
-    std::copy(vals.begin(), vals.end(), itValsStorageRef.begin());
+    assert(vals.size() == cursorValsCnt);
+    std::copy(vals.begin(), vals.end(), cursorValsStorageRef.begin());
     // Now that the iterator is re-positioned, the coordinate becomes invalid.
     crd = nullptr;
   }
@@ -120,20 +159,21 @@ public:
   //
 
   // Whether the iterator support random access (i.e., support look up by
-  // *coordinate*). A random access iterator must also traverses a dense space.
+  // *coordinate*). A random access iterator must also traverses a dense
+  // space.
   virtual bool randomAccessible() const = 0;
 
   // Whether the iterator can simply traversed by a for loop.
   virtual bool iteratableByFor() const { return false; };
 
-  // Get the upper bound of the sparse space that the iterator might visited. A
-  // sparse space is a subset of a dense space [0, bound), this function returns
-  // *bound*.
+  // Get the upper bound of the sparse space that the iterator might visited.
+  // A sparse space is a subset of a dense space [0, bound), this function
+  // returns *bound*.
   virtual Value upperBound(OpBuilder &b, Location l) const = 0;
 
-  // Serializes and deserializes the current status to/from a set of values. The
-  // ValueRange should contain values that are sufficient to recover the current
-  // iterating postion (i.e., itVals) as well as loop bound.
+  // Serializes and deserializes the current status to/from a set of values.
+  // The ValueRange should contain values that are sufficient to recover the
+  // current iterating postion (i.e., itVals) as well as loop bound.
   //
   // Not every type of iterator supports the operations, e.g., non-empty
   // subsection iterator does not because the the number of non-empty
@@ -155,23 +195,31 @@ public:
   // Forwards the iterator to the next element.
   ValueRange forward(OpBuilder &b, Location l);
 
-  // Actual Implementation provided by derived class.
-  virtual void genInitImpl(OpBuilder &, Location, const SparseIterator *) = 0;
-  virtual ValueRange forwardImpl(OpBuilder &b, Location l) = 0;
+  // be done on an iterator that supports randm access.
+  void locate(OpBuilder &b, Location l, Value crd);
 
   // Returns a boolean value that equals `!it.end()`
-  virtual Value genNotEnd(OpBuilder &b, Location l) = 0;
+  Value genNotEnd(OpBuilder &b, Location l);
 
   // Dereferences the iterator, loads the coordinate at the current position.
   //
   // The method assumes that the iterator is not currently exhausted (i.e.,
   // it != it.end()).
-  virtual Value deref(OpBuilder &b, Location l) = 0;
+  Value deref(OpBuilder &b, Location l);
 
-  // Gets the current position and the optional *position high* (for non-unique
-  // iterators), the value is essentially the number of sparse coordinate that
-  // the iterator is current visiting. It should be able to uniquely identify
-  // the sparse range for the next level. See SparseTensorLevel::peekRangeAt();
+  // Actual Implementation provided by derived class.
+  virtual void genInitImpl(OpBuilder &, Location, const SparseIterator *) = 0;
+  virtual ValueRange forwardImpl(OpBuilder &b, Location l) = 0;
+  virtual void locateImpl(OpBuilder &b, Location l, Value crd) {
+    llvm_unreachable("Unsupported");
+  }
+  virtual Value genNotEndImpl(OpBuilder &b, Location l) = 0;
+  virtual Value derefImpl(OpBuilder &b, Location l) = 0;
+  // Gets the current position and the optional *position high* (for
+  // non-unique iterators), the value is essentially the number of sparse
+  // coordinate that the iterator is current visiting. It should be able to
+  // uniquely identify the sparse range for the next level. See
+  // SparseTensorLevel::peekRangeAt();
   //
   // Not every type of iterator supports the operation, e.g., non-empty
   // subsection iterator does not because it represent a range of coordinates
@@ -202,32 +250,28 @@ public:
   //    yield it
   //
   // The function is virtual to allow alternative implementation. For example,
-  // if it.next() is trivial to compute, we can use a select operation instead.
-  // E.g.,
+  // if it.next() is trivial to compute, we can use a select operation
+  // instead. E.g.,
   //
   //  it = select cond ? it+1 : it
   virtual ValueRange forwardIf(OpBuilder &b, Location l, Value cond);
-
-  // Locate the iterator to the position specified by *crd*, this can only
-  // be done on an iterator that supports randm access.
-  virtual void locate(OpBuilder &b, Location l, Value crd) {
-    llvm_unreachable("Unsupported");
-  }
 
   // Update the SSA value for the iterator after entering a new scope.
   ValueRange linkNewScope(ValueRange pos) {
     assert(!randomAccessible() && "random accessible iterators are traversed "
                                   "by coordinate, call locate() instead.");
-    seek(pos.take_front(itValsCnt));
-    return pos.drop_front(itValsCnt);
+    seek(pos.take_front(cursorValsCnt));
+    return pos.drop_front(cursorValsCnt);
   };
 
 protected:
   void updateCrd(Value crd) { this->crd = crd; }
-  MutableArrayRef<Value> getMutItVals() {
-    MutableArrayRef<Value> ref = itValsStorageRef;
-    return ref.take_front(itValsCnt);
+  MutableArrayRef<Value> getMutCursorVals() {
+    MutableArrayRef<Value> ref = cursorValsStorageRef;
+    return ref.take_front(cursorValsCnt);
   }
+
+  static DebugSparseIteration emitStrategy;
 
 public:
   const IterKind kind;     // For LLVM-style RTTI.
@@ -239,14 +283,14 @@ private:
   // A range of value that together defines the current state of the
   // iterator. Only loop variants should be included.
   //
-  // For trivial iterators, it is the position; for dedup iterators, it consists
-  // of the positon and the segment high, for non-empty subsection iterator, it
-  // is the metadata that specifies the subsection.
-  // Note that the wrapped iterator shares the same storage to maintain itVals
-  // with it wrapper, which means the wrapped iterator might only own a subset
-  // of all the values stored in itValStorage.
-  const unsigned itValsCnt;
-  SmallVectorImpl<Value> &itValsStorageRef;
+  // For trivial iterators, it is the position; for dedup iterators, it
+  // consists of the positon and the segment high, for non-empty subsection
+  // iterator, it is the metadata that specifies the subsection. Note that the
+  // wrapped iterator shares the same storage to maintain itVals with it
+  // wrapper, which means the wrapped iterator might only own a subset of all
+  // the values stored in itValStorage.
+  const unsigned cursorValsCnt;
+  SmallVectorImpl<Value> &cursorValsStorageRef;
 };
 
 /// Helper function to create a TensorLevel object from given `tensor`.
