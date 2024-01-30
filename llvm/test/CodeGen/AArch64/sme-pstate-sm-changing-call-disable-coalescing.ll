@@ -760,6 +760,46 @@ define void @dont_coalesce_arg_v8f16(<8 x half> %arg, ptr %ptr) #0 {
   ret void
 }
 
+define void @dont_coalesce_arg_v8bf16(<8 x bfloat> %arg, ptr %ptr) #0 {
+; CHECK-LABEL: dont_coalesce_arg_v8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    bl use_v8bf16
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    ldr z0, [x8] // 16-byte Folded Reload
+; CHECK-NEXT:    st1h { z0.h }, p0, [x19]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %vec = call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> poison, <8 x bfloat> %arg, i64 0)
+  call void @use_v8bf16(<8 x bfloat> %arg)
+  store <vscale x 8 x bfloat> %vec, ptr %ptr
+  ret void
+}
+
 define void @dont_coalesce_arg_v4f32(<4 x float> %arg, ptr %ptr) #0 {
 ; CHECK-LABEL: dont_coalesce_arg_v4f32:
 ; CHECK:       // %bb.0:
@@ -837,6 +877,52 @@ define void @dont_coalesce_arg_v2f64(<2 x double> %arg, ptr %ptr) #0 {
   %vec = call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> poison, <2 x double> %arg, i64 0)
   call void @use_v2f64(<2 x double> %arg)
   store <vscale x 2 x double> %vec, ptr %ptr
+  ret void
+}
+
+;
+; <8 x i1> type will need type promotion.
+;
+define void @dont_coalesce_arg_v8i1(<8 x i1> %arg, ptr %ptr) #0 {
+; CHECK-LABEL: dont_coalesce_arg_v8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    and z1.b, z1.b, #0x1
+; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, #0
+; CHECK-NEXT:    str p0, [x8, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    bl use_v8i1
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    add x8, sp, #16
+; CHECK-NEXT:    ldr p0, [x8, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    str p0, [x19]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #96 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %vec = call <vscale x 16 x i1> @llvm.vector.insert.nxv8i1.v8i1(<vscale x 16 x i1> poison, <8 x i1> %arg, i64 0)
+  call void @use_v8i1(<8 x i1> %arg)
+  store <vscale x 16 x i1> %vec, ptr %ptr
   ret void
 }
 
@@ -1524,6 +1610,7 @@ declare void @use_v1f16(<1 x half>)
 declare void @use_v1f32(<1 x float>)
 declare void @use_v1f64(<1 x double>)
 declare void @use_v8f16(<8 x half>)
+declare void @use_v8bf16(<8 x bfloat>)
 declare void @use_v4f32(<4 x float>)
 declare void @use_v2f64(<2 x double>)
 
@@ -1539,7 +1626,9 @@ declare void @use_v16i8(<16 x i8>)
 declare void @use_v8i16(<8 x i16>)
 declare void @use_v4i32(<4 x i32>)
 declare void @use_v2i64(<2 x i64>)
+declare void @use_v8i1(<8 x i1>)
 
+declare <vscale x 16 x i1> @llvm.vector.insert.nxv8i1.v8i1(<vscale x 16 x i1>, <8 x i1>, i64)
 declare <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8>, <16 x i8>, i64)
 declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16>, <8 x i16>, i64)
 declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32>, <4 x i32>, i64)

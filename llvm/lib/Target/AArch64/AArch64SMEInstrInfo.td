@@ -193,17 +193,17 @@ def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
           (MRS 0xde85)>;
 
 multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {
-  def NAME : Pseudo<(outs rc:$dst), (ins rc:$idx), []>, Sched<[]> {
-    let Constraints = "$dst = $idx";
+  def NAME : Pseudo<(outs rc:$dst), (ins rc:$src), []>, Sched<[]> {
+    let Constraints = "$dst = $src";
   }
   foreach vt = vts in {
-    def : Pat<(vt (AArch64CoalescerBarrier (vt rc:$idx))),
-              (!cast<Instruction>(NAME) rc:$idx)>;
+    def : Pat<(vt (AArch64CoalescerBarrier (vt rc:$src))),
+              (!cast<Instruction>(NAME) rc:$src)>;
   }
 }
 
 multiclass CoalescerBarriers {
-  defm _FPR16  : CoalescerBarrierPseudo<FPR16, [f16]>;
+  defm _FPR16  : CoalescerBarrierPseudo<FPR16, [bf16, f16]>;
   defm _FPR32  : CoalescerBarrierPseudo<FPR32, [f32]>;
   defm _FPR64  : CoalescerBarrierPseudo<FPR64, [f64, v8i8, v4i16, v2i32, v1i64, v4f16, v2f32, v1f64, v4bf16]>;
   defm _FPR128 : CoalescerBarrierPseudo<FPR128, [f128, v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64, v8bf16]>;
