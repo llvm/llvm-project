@@ -4325,8 +4325,8 @@
 
 // Begin HIP host tests -----------
 
-// RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only \
-// RUN:     --offload-arch=gfx803 -target x86_64-unknown-linux \
+// RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only -nogpulib \
+// RUN:     -nogpuinc --offload-arch=gfx803 -target x86_64-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_HIP_HOST
 // CHECK_HIP_HOST: #define __AMDGCN_WAVEFRONT_SIZE__ 64
 // CHECK_HIP_HOST: #define __AMDGPU__ 1
