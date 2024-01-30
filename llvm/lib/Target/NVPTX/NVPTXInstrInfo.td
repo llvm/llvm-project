@@ -2258,6 +2258,19 @@ def: Pat<(setlt (sext_inreg (trunc Int32Regs:$a), i8), (sext_inreg (trunc Int32R
 def: Pat<(setle (sext_inreg (trunc Int32Regs:$a), i8), (sext_inreg (trunc Int32Regs:$b), i8)),
          (SETP_s32rr Int32Regs:$a, Int32Regs:$b, CmpLE)>;
 
+def: Pat<(setugt (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpHI)>;
+def: Pat<(setuge (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpHS)>;
+def: Pat<(setult (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLO)>;
+def: Pat<(setule (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpLS)>;
+def: Pat<(seteq (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpEQ)>;
+def: Pat<(setne (i16 (and (trunc Int32Regs:$a), 255)), (i16 (and (trunc Int32Regs:$b), 255))),
+         (SETP_u32rr Int32Regs:$a, Int32Regs:$b, CmpNE)>;
+
 // i1 compare -> i32
 def : Pat<(i32 (setne Int1Regs:$a, Int1Regs:$b)),
           (SELP_u32ii -1, 0, (XORb1rr Int1Regs:$a, Int1Regs:$b))>;
