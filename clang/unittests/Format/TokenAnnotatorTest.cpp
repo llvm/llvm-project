@@ -2215,16 +2215,24 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_TRUE(Tokens[0]->IsMultiline);
   EXPECT_EQ(Tokens[0]->LastLineColumnWidth, sizeof("   the string. }]") - 1);
 
+  // Numeric literals.
+  Tokens = Annotate("1234");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("-1");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("+1234");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("0b0110");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("0x1abC");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+
   // Identifier tokens. In TableGen, identifiers can begin with a number.
   // In ambiguous cases, the lexer tries to lex it as a number.
   // Even if the try fails, it does not fall back to identifier lexing and
   // regard as an error.
   // The ambiguity is not documented. The result of those tests are based on the
   // implementation of llvm::TGLexer::LexToken.
-  Tokens = Annotate("1234");
-  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
-  Tokens = Annotate("0x1abC");
-  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
   // This is invalid syntax of number, but not an identifier.
   Tokens = Annotate("0x1234x");
   EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
@@ -2249,6 +2257,14 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_ElseLBrace);
   Tokens = Annotate("defset Foo Def2 = {}");
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+
+  // Bang Operators.
+  Tokens = Annotate("!foreach");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenBangOperator);
+  Tokens = Annotate("!if");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenBangOperator);
+  Tokens = Annotate("!cond");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
