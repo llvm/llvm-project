@@ -847,13 +847,13 @@ static RValue buildNewDeleteCall(CIRGenFunction &CGF,
                                  const FunctionDecl *CalleeDecl,
                                  const FunctionProtoType *CalleeType,
                                  const CallArgList &Args) {
-  mlir::cir::CallOp CallOrInvoke{};
+  mlir::cir::CIRCallOpInterface CallOrTryCall;
   auto CalleePtr = CGF.CGM.GetAddrOfFunction(CalleeDecl);
   CIRGenCallee Callee =
       CIRGenCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
   RValue RV = CGF.buildCall(CGF.CGM.getTypes().arrangeFreeFunctionCall(
                                 Args, CalleeType, /*ChainCall=*/false),
-                            Callee, ReturnValueSlot(), Args, &CallOrInvoke);
+                            Callee, ReturnValueSlot(), Args, &CallOrTryCall);
 
   /// C++1y [expr.new]p10:
   ///   [In a new-expression,] an implementation is allowed to omit a call
