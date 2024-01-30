@@ -789,3 +789,28 @@ cir.func @const_type_mismatch() -> () {
     %2 = cir.const(#cir.int<0> : !s8i) : !u8i
     cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @div(%x : !s32i, %y : !s32i) -> !s32i {
+    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    cir.return %3 : !s32i
+  }
+
+  cir.func @foo(%x : !s32i, %y : !s32i) -> !cir.ptr<!cir.eh.info> {
+    %11 = cir.scope {
+      %10 = cir.scope {
+        %0 = cir.alloca !cir.ptr<!cir.eh.info>, cir.ptr <!cir.ptr<!cir.eh.info>>, ["exception_info"] {alignment = 16 : i64}
+        %d = cir.try_call exception(%0) @div(%x, %y) : (!s32i, !s32i) -> !s32i
+        // expected-error@-1 {{'cir.try_call' op expected to be within a 'cir.try' region}}
+        %1 = cir.load %0 : cir.ptr <!cir.ptr<!cir.eh.info>>, !cir.ptr<!cir.eh.info>
+        cir.yield %1 : !cir.ptr<!cir.eh.info>
+      } : !cir.ptr<!cir.eh.info>
+      cir.yield %10 : !cir.ptr<!cir.eh.info>
+    } : !cir.ptr<!cir.eh.info>
+    cir.return %11 : !cir.ptr<!cir.eh.info>
+  }
+}

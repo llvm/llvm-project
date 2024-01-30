@@ -287,6 +287,24 @@ def ExceptionInfoPtr : Type<
       "mlir::cir::ExceptionInfoType::get($_builder.getContext()))"> {
 }
 
+// Pooint to pointers to exception info
+def ExceptionInfoPtrPtr : Type<
+    And<[
+      CPred<"$_self.isa<::mlir::cir::PointerType>()">,
+      And<[
+        CPred<"$_self.cast<::mlir::cir::PointerType>()"
+              ".getPointee().isa<::mlir::cir::PointerType>()">,
+        CPred<"$_self.cast<::mlir::cir::PointerType>()"
+              ".getPointee().cast<::mlir::cir::PointerType>()"
+              ".getPointee().isa<::mlir::cir::ExceptionInfoType>()">,
+      ]>
+    ]>, "!cir.eh_info**">,
+    BuildableType<
+      "mlir::cir::PointerType::get($_builder.getContext(),"
+      "mlir::cir::PointerType::get($_builder.getContext(),"
+      "mlir::cir::ExceptionInfoType::get($_builder.getContext())))"> {
+}
+
 //===----------------------------------------------------------------------===//
 // StructType (defined in cpp files)
 //===----------------------------------------------------------------------===//
