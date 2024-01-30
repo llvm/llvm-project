@@ -716,13 +716,14 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
         ForwardPointerTypes[PType] = getOpTypeForwardPointer(SC, MIRBuilder);
       return ForwardPointerTypes[PType];
     }
-    Register Reg(0);
     // If we have forward pointer associated with this type, use its register
     // operand to create OpTypePointer.
-    if (ForwardPointerTypes.contains(PType))
-      Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
+    if (ForwardPointerTypes.contains(PType)) {
+      Register Reg = getSPIRVTypeID(ForwardPointerTypes[PType]);
+      return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
+    }
 
-    return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
+    return getOrCreateSPIRVPointerType(SpvElementType, MIRBuilder, SC);
   }
   llvm_unreachable("Unable to convert LLVM type to SPIRVType");
 }
