@@ -26,7 +26,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary16) {
   EXPECT_EQ(u16(0b0'00001'0000000000), u16(Rep::min_normal()));
   EXPECT_EQ(u16(0b0'11110'1111111111), u16(Rep::max_normal()));
   EXPECT_EQ(u16(0b0'11111'0000000000), u16(Rep::inf()));
-  EXPECT_EQ(u16(0b0'11111'0100000000), u16(Rep::build_signaling_nan()));
+  EXPECT_EQ(u16(0b0'11111'0100000000), u16(Rep::signaling_nan()));
   EXPECT_EQ(u16(0b0'11111'1000000000), u16(Rep::build_quiet_nan()));
 }
 
@@ -44,7 +44,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary32) {
   EXPECT_EQ(u32(0b0'11111110'11111111111111111111111), u32(Rep::max_normal()));
   EXPECT_EQ(u32(0b0'11111111'00000000000000000000000), u32(Rep::inf()));
   EXPECT_EQ(u32(0b0'11111111'01000000000000000000000),
-            u32(Rep::build_signaling_nan()));
+            u32(Rep::signaling_nan()));
   EXPECT_EQ(u32(0b0'11111111'10000000000000000000000),
             u32(Rep::build_quiet_nan()));
 }
@@ -76,7 +76,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary64) {
       u64(Rep::inf()));
   EXPECT_EQ(
       u64(0b0'11111111111'0100000000000000000000000000000000000000000000000000),
-      u64(Rep::build_signaling_nan()));
+      u64(Rep::signaling_nan()));
   EXPECT_EQ(
       u64(0b0'11111111111'1000000000000000000000000000000000000000000000000000),
       u64(Rep::build_quiet_nan()));
@@ -124,7 +124,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
   EXPECT_EQ(
       u128(0b0'111111111111111'010000000000000000000000000000000000000000000000,
            0b0000000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_signaling_nan()));
+      UInt128(Rep::signaling_nan()));
   EXPECT_EQ(
       u128(0b0'111111111111111'100000000000000000000000000000000000000000000000,
            0b0000000000000000000000000000000000000000000000000000000000000000),
@@ -165,7 +165,7 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
   EXPECT_EQ(
       u128(0b0'111111111111111,
            0b1010000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_signaling_nan()));
+      UInt128(Rep::signaling_nan()));
   EXPECT_EQ(
       u128(0b0'111111111111111,
            0b1100000000000000000000000000000000000000000000000000000000000000),
@@ -256,7 +256,7 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
     case FP::INF:
       return T::inf(sign);
     case FP::SIGNALING_NAN:
-      return T::build_signaling_nan(sign);
+      return T::signaling_nan(sign);
     case FP::QUIET_NAN:
       return T::build_quiet_nan(sign);
     }
@@ -314,7 +314,7 @@ TEST(LlvmLibcFPBitsTest, FloatType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits::build_signaling_nan()).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits::signaling_nan()).c_str(),
                "(NaN)");
 
   FloatBits zero(0.0f);
@@ -376,7 +376,7 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::build_signaling_nan()).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::signaling_nan()).c_str(),
                "(NaN)");
 
   DoubleBits zero(0.0);
@@ -442,9 +442,8 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(
-      LIBC_NAMESPACE::str(LongDoubleBits::build_signaling_nan()).c_str(),
-      "(NaN)");
+  EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::signaling_nan()).c_str(),
+               "(NaN)");
 
   LongDoubleBits zero(0.0l);
   EXPECT_TRUE(zero.is_pos());
@@ -523,9 +522,8 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(
-      LIBC_NAMESPACE::str(LongDoubleBits::build_signaling_nan()).c_str(),
-      "(NaN)");
+  EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::signaling_nan()).c_str(),
+               "(NaN)");
 
   LongDoubleBits zero(0.0l);
   EXPECT_TRUE(zero.is_pos());
@@ -598,7 +596,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::build_signaling_nan()).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::signaling_nan()).c_str(),
                "(NaN)");
 
   Float128Bits zero = Float128Bits::zero(Sign::POS);
