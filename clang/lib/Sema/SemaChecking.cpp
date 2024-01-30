@@ -5588,6 +5588,14 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   // Check if rnum is in [0, 10]
   case RISCV::BI__builtin_riscv_aes64ks1i:
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, 10);
+  // Check if n of mop.r.[n] is in [0, 31]
+  case RISCV::BI__builtin_riscv_mopr_32:
+  case RISCV::BI__builtin_riscv_mopr_64:
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
+  // Check if n of mop.rr.[n] is in [0, 7]
+  case RISCV::BI__builtin_riscv_moprr_32:
+  case RISCV::BI__builtin_riscv_moprr_64:
+    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
   // Check if value range for vxrm is in [0, 3]
   case RISCVVector::BI__builtin_rvv_vaaddu_vv:
   case RISCVVector::BI__builtin_rvv_vaaddu_vx:

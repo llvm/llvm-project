@@ -89,5 +89,12 @@ TARGET_BUILTIN(__builtin_riscv_sm3p1, "UiUi", "nc", "zksh")
 TARGET_BUILTIN(__builtin_riscv_ntl_load, "v.", "t", "zihintntl")
 TARGET_BUILTIN(__builtin_riscv_ntl_store, "v.", "t", "zihintntl")
 
+// Zimop extension
+TARGET_BUILTIN(__builtin_riscv_mopr_32, "UiUiUi", "nc", "experimental-zimop")
+TARGET_BUILTIN(__builtin_riscv_mopr_64, "UWiUWiUWi", "nc",
+                                        "experimental-zimop,64bit")
+TARGET_BUILTIN(__builtin_riscv_moprr_32, "UiUiUiUi", "nc", "experimental-zimop")
+TARGET_BUILTIN(__builtin_riscv_moprr_64, "UWiUWiUWiUWi", "nc",
+                                         "experimental-zimop,64bit")
 #undef BUILTIN
 #undef TARGET_BUILTIN
