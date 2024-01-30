@@ -83,7 +83,7 @@ define i32 @test_unreachable_default_shared_edge(i32 noundef %num) {
 ; CHECK:       default.unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.bb4:
-; CHECK-NEXT:    [[CALL5:%.*]] = call i32 @call2()
+; CHECK-NEXT:    [[CALL5:%.*]] = call i32 @call4(i32 [[SUB]])
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL5]], [[SW_BB4]] ], [ [[CALL3]], [[SW_BB2]] ], [ [[CALL]], [[SW_BB]] ]
@@ -108,7 +108,8 @@ sw.bb2:
   br label %cleanup
 
 sw.bb4:
-  %call5 = call i32 @call2()
+  %val = phi i32 [ %sub, %entry ], [ %sub, %entry ]
+  %call5 = call i32 @call4(i32 %val)
   br label %cleanup
 
 cleanup:
@@ -297,3 +298,4 @@ declare i32 @call0()
 declare i32 @call1()
 declare i32 @call2()
 declare i32 @call3()
+declare i32 @call4(i32)
