@@ -88,7 +88,7 @@ protected:
   SparseIterator(IterKind kind, const SparseIterator &wrap)
       : kind(kind), tid(wrap.tid), lvl(wrap.lvl), crd(nullptr),
         itValsCnt(wrap.itValsCnt), itValsStorageRef(wrap.itValsStorageRef) {
-    assert(wrap.itValsCnt == itValsStorage.size());
+    assert(wrap.itValsCnt == itValsStorageRef.size());
   };
 
   SparseIterator(IterKind kind, const SparseIterator &wrap, unsigned extraVal)
@@ -96,7 +96,7 @@ protected:
         itValsCnt(wrap.itValsCnt + extraVal),
         itValsStorageRef(wrap.itValsStorageRef) {
     itValsStorageRef.append(extraVal, nullptr);
-    assert(itValsCnt == itValsStorage.size());
+    assert(itValsCnt == itValsStorageRef.size());
   };
 
 public:
@@ -243,15 +243,10 @@ private:
   // of the positon and the segment high, for non-empty subsection iterator, it
   // is the metadata that specifies the subsection.
   // Note that the wrapped iterator shares the same storage to maintain itVals
-  // with it wrapper, which means the wrapped iterator might only owns a subset
+  // with it wrapper, which means the wrapped iterator might only own a subset
   // of all the values stored in itValStorage.
   const unsigned itValsCnt;
   SmallVectorImpl<Value> &itValsStorageRef;
-  // All other (loop invariant) values used by the iterator. Although these
-  // values are not updated between loop iterations, they still need to be
-  // passed as function parameters to reconstruct the iterator in a new function
-  // scope.
-  // SmallVectorImpl<Value> &metaValsStorageRef;
 };
 
 /// Helper function to create a TensorLevel object from given `tensor`.
