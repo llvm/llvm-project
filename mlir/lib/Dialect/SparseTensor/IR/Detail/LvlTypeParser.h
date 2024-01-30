@@ -22,8 +22,8 @@ public:
 
 private:
   ParseResult parseProperty(AsmParser &parser, uint64_t *properties) const;
-  ParseResult parseBlockSize(AsmParser &parser,
-                             SmallVector<unsigned> *blockSizes) const;
+  ParseResult parseBlockSizes(AsmParser &parser,
+                              SmallVector<unsigned> *blockSizes) const;
 };
 
 } // namespace ir_detail

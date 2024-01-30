@@ -123,7 +123,7 @@ public:
   /// Safely checks if the level uses singleton storage.
   bool isSingletonLvl(uint64_t l) const { return isSingletonLT(getLvlType(l)); }
 
-  /// Safely checks if the level uses 2 out of 4 storage.
+  /// Safely checks if the level uses n out of m storage.
   bool isNOutOfMLvl(uint64_t l) const { return isNOutOfMLT(getLvlType(l)); }
 
   /// Safely checks if the level is ordered.
@@ -792,7 +792,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     } else if (isSingletonLvl(l)) {
       assert(0 && "general singleton not supported yet");
     } else if (isNOutOfMLvl(l)) {
-      assert(0 && "2Out4 not supported yet");
+      assert(0 && "n ouf of m not supported yet");
     } else {
       assert(isDenseLvl(l));
     }

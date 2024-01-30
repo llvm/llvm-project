@@ -145,7 +145,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     - **compressed** : only nonzeros along this level are stored
     - **loose_compressed** : as compressed, but allows for free space between regions
     - **singleton** : a variant of the compressed format, where coordinates have no siblings
-    - **block[2, 4]** : the compression uses a 2:4 encoding per 1x4 block
+    - **block[n, m]** : the compression uses a n:m encoding per 1xm block
 
     For a compressed level, each position interval is represented in a compact
     way with a lowerbound `pos(i)` and an upperbound `pos(i+1) - 1`, which implies

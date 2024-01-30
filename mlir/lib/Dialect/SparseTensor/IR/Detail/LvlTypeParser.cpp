@@ -40,7 +40,7 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   if (base.compare("block") == 0) {
     ParseResult res = parser.parseCommaSeparatedList(
         mlir::OpAsmParser::Delimiter::OptionalSquare,
-        [&]() -> ParseResult { return parseBlockSize(parser, &blockSizes); },
+        [&]() -> ParseResult { return parseBlockSizes(parser, &blockSizes); },
         " in block n out of m");
     FAILURE_IF_FAILED(res)
   }
@@ -95,8 +95,8 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
 }
 
 ParseResult
-LvlTypeParser::parseBlockSize(AsmParser &parser,
-                              SmallVector<unsigned> *blockSizes) const {
+LvlTypeParser::parseBlockSizes(AsmParser &parser,
+                               SmallVector<unsigned> *blockSizes) const {
   int intVal;
   auto loc = parser.getCurrentLocation();
   OptionalParseResult intValParseResult = parser.parseOptionalInteger(intVal);

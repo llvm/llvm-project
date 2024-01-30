@@ -254,3 +254,21 @@ func.func private @NV_24(%arg0: tensor<?x?x?xf64, #NV_24>) {
 func.func private @NV_24(%arg0: tensor<?x?x?xf64, #NV_24>) {
   return
 }
+
+// -----
+
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 8 : dense,
+    j            : dense,
+    k mod 8      : block[5, 8]
+  )
+}>
+
+// CHECK-DAG: #[[$NOutOfM:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d2 floordiv 8 : dense, d1 : dense, d2 mod 8 : block[5, 8]) }>
+// CHECK-LABEL: func private @NOutOfM(
+// CHECK-SAME: tensor<?x?x?xf64, #[[$NOutOfM]]>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
