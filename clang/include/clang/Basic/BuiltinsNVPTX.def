@@ -159,7 +159,7 @@ BUILTIN(__nvvm_read_ptx_sreg_pm3, "i", "n")
 
 BUILTIN(__nvvm_prmt, "UiUiUiUi", "")
 BUILTIN(__nvvm_exit, "v", "r")
-TARGET_BUILTIN(__nvvm_nanosleep, "vi", "n", AND(SM_70, PTX63))
+TARGET_BUILTIN(__nvvm_nanosleep, "vUi", "n", AND(SM_70, PTX63))
 
 // Min Max
 
@@ -638,7 +638,7 @@ TARGET_BUILTIN(__nvvm_vote_uni_sync, "bUib", "", PTX60)
 TARGET_BUILTIN(__nvvm_vote_ballot_sync, "UiUib", "", PTX60)
 
 // Mask
-TARGET_BUILTIN(__nvvm_activemask, "i", "n", PTX62)
+TARGET_BUILTIN(__nvvm_activemask, "Ui", "n", PTX62)
 
 // Match
 TARGET_BUILTIN(__nvvm_match_any_sync_i32, "UiUiUi", "", AND(SM_70,PTX60))

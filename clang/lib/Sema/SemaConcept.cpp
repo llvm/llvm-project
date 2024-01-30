@@ -797,6 +797,15 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   if (Inst.isInvalid())
     return nullptr;
 
+  // Set up a dummy 'instantiation' scope in the case of reference to function
+  // parameters that the surrounding function hasn't been instantiated yet. Note
+  // this may happen while we're comparing two templates' constraint
+  // equivalence.
+  LocalInstantiationScope ScopeForParameters(S);
+  if (auto *FD = llvm::dyn_cast<FunctionDecl>(DeclInfo.getDecl()))
+    for (auto *PVD : FD->parameters())
+      ScopeForParameters.InstantiatedLocal(PVD, PVD);
+
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
   if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext()))
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
