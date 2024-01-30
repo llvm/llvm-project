@@ -102,7 +102,7 @@ std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 ///
 /// The returned list partitions the universe into parts depending on which
 /// subset of GFs is active there, and gives the sum of active GFs for each
-/// part. Lower-dimensional partitions are ignored.
+/// part.
 std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 computeChamberDecomposition(
     unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
