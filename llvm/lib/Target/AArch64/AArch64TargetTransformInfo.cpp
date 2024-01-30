@@ -2972,6 +2972,14 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::FREM:
+    if (!Ty->isVectorTy()) {
+      Function *F =
+          CxtI == nullptr ? nullptr : CxtI->getModule()->getFunction("fmod");
+      return getCallInstrCost(F, Ty, {Ty, Ty}, CostKind);
+    }
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                         Op2Info);
   }
 }
 
