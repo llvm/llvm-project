@@ -63,8 +63,8 @@ static bool get_capacity(unsigned int cap) {
       LIBC_NAMESPACE::cpp::bit_cast<long>(&data));
   if (res < 0)
     return false;
-  auto idx = CAP_TO_INDEX(cap);
-  auto shift = CAP_TO_MASK(cap);
+  unsigned idx = CAP_TO_INDEX(cap);
+  unsigned shift = CAP_TO_MASK(cap);
   return (data[idx].effective & shift) != 0;
 }
 
