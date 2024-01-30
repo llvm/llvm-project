@@ -4,7 +4,6 @@
 @dst = global [512 x i8] zeroinitializer, align 1
 @src = global [512 x i8] zeroinitializer, align 1
 
-
 define void @sc_memcpy(i64 noundef %n) "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: sc_memcpy:
 ; CHECK:       // %bb.0: // %entry

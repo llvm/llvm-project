@@ -84,28 +84,26 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
+  SDValue Symbol;
   Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
   Entry.Node = Dst;
   Args.push_back(Entry);
+  EVT Ty = TLI->getPointerTy(DAG.getDataLayout());
 
-  enum { SME_MEMCPY = 0, SME_MEMMOVE, SME_MEMSET } SMELibcall;
   switch (LC) {
   case RTLIB::MEMCPY:
-    SMELibcall = SME_MEMCPY;
+    Symbol = DAG.getExternalSymbol("__arm_sc_memcpy", Ty);
     Entry.Node = Src;
     Args.push_back(Entry);
     break;
   case RTLIB::MEMMOVE:
-    SMELibcall = SME_MEMMOVE;
+    Symbol = DAG.getExternalSymbol("__arm_sc_memmove", Ty);
     Entry.Node = Src;
     Args.push_back(Entry);
     break;
   case RTLIB::MEMSET:
-    SMELibcall = SME_MEMSET;
-    if (Src.getValueType().bitsGT(MVT::i32))
-      Src = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Src);
-    else if (Src.getValueType().bitsLT(MVT::i32))
-      Src = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Src);
+    Symbol = DAG.getExternalSymbol("__arm_sc_memset", Ty);
+    Src = DAG.getZExtOrTrunc(Src, DL, MVT::i32);
     Entry.Node = Src;
     Entry.Ty = Type::getInt32Ty(*DAG.getContext());
     Entry.IsSExt = false;
@@ -116,18 +114,12 @@ SDValue AArch64SelectionDAGInfo::EmitSpecializedLibcall(
   }
   Entry.Node = Size;
   Args.push_back(Entry);
-  char const *FunctionNames[3] = {"__arm_sc_memcpy", "__arm_sc_memmove",
-                                  "__arm_sc_memset"};
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL)
       .setChain(Chain)
-      .setLibCallee(
-          TLI->getLibcallCallingConv(RTLIB::MEMCPY),
-          Type::getVoidTy(*DAG.getContext()),
-          DAG.getExternalSymbol(FunctionNames[SMELibcall],
-                                TLI->getPointerTy(DAG.getDataLayout())),
-          std::move(Args))
+      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMCPY),
+                    Type::getVoidTy(*DAG.getContext()), Symbol, std::move(Args))
       .setDiscardResult();
   std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
