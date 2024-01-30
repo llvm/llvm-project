@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m1
   type :: t1
     sequence
@@ -74,7 +74,7 @@ program test
   interface distinguishable3
     procedure :: s1a, s1b
   end interface
-  !PORTABILITY: Generic 'indistinguishable' should not have specific procedures 's2b' and 's2a' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'indistinguishable' may not have specific procedures 's2b' and 's2a' as their interfaces are not distinguishable
   interface indistinguishable
     procedure :: s2a, s2b
   end interface
