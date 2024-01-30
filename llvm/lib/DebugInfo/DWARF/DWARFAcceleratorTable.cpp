@@ -940,6 +940,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
     uint32_t HashAtIndex = CurrentIndex->getHashArrayEntry(Index);
     if (HashAtIndex % Hdr.BucketCount != Bucket)
       return std::nullopt; // End of bucket
+    // Only compare names if the hashes match.
     if (HashAtIndex != Hash)
       continue;
 
