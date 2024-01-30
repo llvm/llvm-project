@@ -332,8 +332,10 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
 
   // We iterate over all subsets of inequalities with cardinality numVars,
   // using permutations of numVars 1's and (numIneqs - numVars) 0's.
+  //
   // For a given permutation, we consider a subset which contains
   // the i'th inequality if the i'th bit in the bitset is 1.
+  //
   // We start with the permutation that takes the last numVars inequalities.
   SmallVector<int> indicator(numIneqs);
   for (unsigned i = numIneqs - numVars; i < numIneqs; ++i)
@@ -344,6 +346,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // and the remaining ones.
     auto [subset, remainder] = poly.getInequalities().splitByBitset(indicator);
     // All other inequalities are stored in a2 and b2c2.
+    //
     // These are column-wise splits of the inequalities;
     // a2 stores the coefficients of the variables, and
     // b2c2 stores the coefficients of the parameters and the constant term.

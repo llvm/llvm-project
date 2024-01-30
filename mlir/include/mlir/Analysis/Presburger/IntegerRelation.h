@@ -891,6 +891,9 @@ public:
       addInequality(inequalities.getRow(i));
   }
 
+  /// Constructs a relation with the specified number of dimensions and symbols
+  /// and adds the given inequalities, after normalizing row-wise to integer
+  /// values.
   explicit IntegerPolyhedron(const PresburgerSpace &space,
                              FracMatrix inequalities)
       : IntegerPolyhedron(space) {

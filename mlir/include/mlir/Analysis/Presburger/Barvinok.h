@@ -53,10 +53,14 @@ inline PolyhedronH defineHRep(int numVars, int numSymbols = 0) {
   // We don't distinguish between domain and range variables, so
   // we set the number of domain variables as 0 and the number of
   // range variables as the number of actual variables.
-  // numSymbols is the number of parameters; it is
+  //
+  // numSymbols is the number of parameters.
+  //
   // There are no local (existentially quantified) variables.
+  //
   // The number of symbols is the number of parameters. By default, we consider
   // nonparametric polyhedra.
+  //
   // Once the cone is defined, we use `addInequality()` to set inequalities.
   return PolyhedronH(PresburgerSpace::getSetSpace(/*numDims=*/numVars,
                                                   /*numSymbols=*/numSymbols,
@@ -92,6 +96,7 @@ GeneratingFunction computeUnimodularConeGeneratingFunction(ParamPoint vertex,
 /// Find the solution of a set of equations that express affine constraints
 /// between a set of variables and a set of parameters. The solution expresses
 /// each variable as an affine function of the parameters.
+///
 /// If there is no solution, return null.
 std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 
@@ -109,6 +114,7 @@ computeChamberDecomposition(
                              regionsAndGeneratingFunctions);
 
 /// Compute the generating function corresponding to a polytope.
+///
 /// All tangent cones of the polytope must be unimodular.
 std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 computePolytopeGeneratingFunction(const PolyhedronH &poly);

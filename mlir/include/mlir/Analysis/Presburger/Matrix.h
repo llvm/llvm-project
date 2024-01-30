@@ -201,6 +201,7 @@ public:
 
   /// Split the rows of a matrix into two matrices according to which bits are
   /// 1 and which are 0 in a given bitset.
+  ///
   /// The first matrix returned has the rows corresponding to 1 and the second
   /// corresponding to 2.
   std::pair<Matrix<T>, Matrix<T>> splitByBitset(ArrayRef<int> indicator);
