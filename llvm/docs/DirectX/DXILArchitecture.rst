@@ -50,7 +50,16 @@ compatible with LLVM 3.7 bitcode, and that modern LLVM is capable of
 bitcode upgrade process isn't sufficient though, since that leaves a
 number of DXIL specific constructs around. Thus, we have the
 `DXILUpgrade` pass to transform DXIL operations to LLVM operations and
-smooth over differences in metadata representation.
+smooth over differences in metadata representation. We call this pass
+"upgrade" to reflect that it follows LLVM's standard bitcode upgrade
+process and simply finishes the job for DXIL constructs - while
+"reader" or "lifting" might also be reasonable names, they could be a
+bit misleading.
+
+The `DXILUpgrade` pass itself is fairly lightweight. It mostly relies
+on the utilities described in "Common Code" above in order to share
+logic with both the DirectX backend and with Clang's codegen of HLSL
+support as much as possible.
 
 The DirectX Backend
 ===================
@@ -66,10 +75,11 @@ DXIL represents those constructs, followed by a limited bitcode
 Before emitting DXIL, the DirectX backend needs to modify the LLVM IR
 such that external operations, types, and metadata is represented in
 the way that DXIL expects. For example, `DXILOpLowering` translates
-intrinsics into `dx.op` calls. It's encouraged to implement parts of
-the DXIL lowering as these kinds of IR to IR passes when possible, as
-that means that they can be easily tested with `opt` and `FileCheck`
-without the need for external tooling.
+intrinsics into `dx.op` calls. These passes are essentially the
+inverse of the `DXILUpgrade` pass. It's best to do this downgrading
+process as IR to IR passes when possible, as that means that they can
+be easily tested with `opt` and `FileCheck` without the need for
+external tooling.
 
 The second part of DXIL emission is more or less an LLVM bitcode
 downgrader. We need to emit bitcode that matches the LLVM 3.7
@@ -97,6 +107,6 @@ available if the `LLVM_INCLUDE_DXIL_TESTS` cmake option is set. Note
 that we do not currently have the equivalent testing set up for the
 DXIL reading path.
 
-In the future, we will also want to round trip using the DXIL writing
-and reading paths in order to ensure self consistency and to get test
-coverage when `dxil-dis` isn't available.
+As soon as we are able, we will also want to round trip using the DXIL
+writing and reading paths in order to ensure self consistency and to
+get test coverage when `dxil-dis` isn't available.
