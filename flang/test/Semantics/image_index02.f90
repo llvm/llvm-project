@@ -25,16 +25,16 @@ program image_index_test
   !ERROR: 'sub=' argument has unacceptable rank 2
   n = image_index(scalar_coarray, multi_rank_array)
 
-  !ERROR: The size of the 'sub=' argument for intrinsic 'image_index' must be equal to the corank of the 'coarray=' argument
+  !ERROR: The size of 'SUB=' (1) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (3)
   n = image_index(coarray_corank3, subscripts_corank1, league(1))
 
-  !ERROR: The size of the 'sub=' argument for intrinsic 'image_index' must be equal to the corank of the 'coarray=' argument
+  !ERROR: The size of 'SUB=' (1) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (3)
   n = image_index(coarray_corank3, const_subscripts_corank1, league(1))
 
-  !ERROR: The size of the 'sub=' argument for intrinsic 'image_index' must be equal to the corank of the 'coarray=' argument
+  !ERROR: The size of 'SUB=' (1) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (3)
   n = image_index(coarray_corank3, [1], league(1))
 
-  !ERROR: The size of the 'sub=' argument for intrinsic 'image_index' must be equal to the corank of the 'coarray=' argument
+  !ERROR: The size of 'SUB=' (6) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (3)
   n = image_index(coarray_corank3, [1,2,3,4,5,6])
 
   !ERROR: missing mandatory 'coarray=' argument

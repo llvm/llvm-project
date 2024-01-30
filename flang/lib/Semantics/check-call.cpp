@@ -1437,13 +1437,17 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
 static void CheckImage_Index(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
   if (arguments[1] && arguments[0]) {
-    if (auto subArrShape{evaluate::GetShape(arguments[1]->UnwrapExpr())}) {
+    if (const auto subArrShape{
+            evaluate::GetShape(arguments[1]->UnwrapExpr())}) {
       if (const auto *coarrayArgSymbol{UnwrapWholeSymbolOrComponentDataRef(
               arguments[0]->UnwrapExpr())}) {
-        if (evaluate::ToInt64(*subArrShape->front()) !=
-            coarrayArgSymbol->Corank()) {
-          messages.Say(arguments[1]->sourceLocation(),
-              "The size of the 'sub=' argument for intrinsic 'image_index' must be equal to the corank of the 'coarray=' argument"_err_en_US);
+        const auto coarrayArgCorank = coarrayArgSymbol->Corank();
+        if (const auto subArrSize = evaluate::ToInt64(*subArrShape->front())) {
+          if (subArrSize != coarrayArgCorank) {
+            messages.Say(arguments[1]->sourceLocation(),
+                "The size of 'SUB=' (%jd) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (%d)"_err_en_US,
+                static_cast<std::int64_t>(*subArrSize), coarrayArgCorank);
+          }
         }
       }
     }
