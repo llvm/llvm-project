@@ -137,12 +137,12 @@ entry:
 ; [ ] N  -> SC
 ; [x] N  -> N + B
 ; [ ] N  -> SC + B
-define i32 @normal_caller_locally_streaming_callee_inline() {     ; FIXME: This is a bug, it shouldn't inline!
-; CHECK-LABEL: define i32 @normal_caller_locally_streaming_callee_inline
+define i32 @normal_caller_locally_streaming_callee_dont_inline() {
+; CHECK-LABEL: define i32 @normal_caller_locally_streaming_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    ret i32 [[RES_I]]
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @locally_streaming_callee()
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %res = call i32 @locally_streaming_callee()
@@ -154,12 +154,12 @@ entry:
 ; [ ] N  -> SC
 ; [ ] N  -> N + B
 ; [x] N  -> SC + B
-define i32 @normal_caller_streaming_compatible_locally_streaming_callee_inline() {  ; FIXME: This is a bug, it shouldn't inline
-; CHECK-LABEL: define i32 @normal_caller_streaming_compatible_locally_streaming_callee_inline
+define i32 @normal_caller_streaming_compatible_locally_streaming_callee_dont_inline() {
+; CHECK-LABEL: define i32 @normal_caller_streaming_compatible_locally_streaming_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    ret i32 [[RES_I]]
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @streaming_compatible_locally_streaming_callee()
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %res = call i32 @streaming_compatible_locally_streaming_callee()
@@ -409,12 +409,12 @@ entry:
 ; [ ] SC -> SC
 ; [ ] SC -> N + B
 ; [x] SC -> SC + B
-define i32 @streaming_compatible_caller_streaming_compatible_locally_streaming_callee_inline() "aarch64_pstate_sm_compatible" { ; FIXME: This is a bug!
-; CHECK-LABEL: define i32 @streaming_compatible_caller_streaming_compatible_locally_streaming_callee_inline
+define i32 @streaming_compatible_caller_streaming_compatible_locally_streaming_callee_dont_inline() "aarch64_pstate_sm_compatible" {
+; CHECK-LABEL: define i32 @streaming_compatible_caller_streaming_compatible_locally_streaming_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    ret i32 [[RES_I]]
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @streaming_compatible_locally_streaming_callee()
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %res = call i32 @streaming_compatible_locally_streaming_callee()
