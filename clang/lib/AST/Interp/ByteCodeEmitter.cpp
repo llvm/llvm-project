@@ -210,9 +210,11 @@ static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
   }
 }
 
-template <>
-void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
-          bool &Success) {
+/// Emits a serializable value. These usually (potentially) contain
+/// heap-allocated memory and aren't trivially copyable.
+template <typename T>
+static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
+                           bool &Success) {
   size_t Size = Val.bytesToSerialize();
 
   if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
@@ -227,42 +229,24 @@ void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
   Code.resize(ValPos + Size);
 
   Val.serialize(Code.data() + ValPos);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
 }
 
 template <>
 void emit(Program &P, std::vector<std::byte> &Code,
           const IntegralAP<false> &Val, bool &Success) {
-  size_t Size = Val.bytesToSerialize();
-
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
-    Success = false;
-    return;
-  }
-
-  // Access must be aligned!
-  size_t ValPos = align(Code.size());
-  Size = align(Size);
-  assert(aligned(ValPos + Size));
-  Code.resize(ValPos + Size);
-  Val.serialize(Code.data() + ValPos);
+  emitSerialized(Code, Val, Success);
 }
 
 template <>
 void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
           bool &Success) {
-  size_t Size = Val.bytesToSerialize();
-
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
-    Success = false;
-    return;
-  }
-
-  // Access must be aligned!
-  size_t ValPos = align(Code.size());
-  Size = align(Size);
-  assert(aligned(ValPos + Size));
-  Code.resize(ValPos + Size);
-  Val.serialize(Code.data() + ValPos);
+  emitSerialized(Code, Val, Success);
 }
 
 template <typename... Tys>

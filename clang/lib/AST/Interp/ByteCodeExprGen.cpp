@@ -2215,7 +2215,7 @@ bool ByteCodeExprGen<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
                                          const Expr *E) {
   if (Ty == PT_IntAPS)
     return this->emitConstIntAPS(Value, E);
-  else if (Ty == PT_IntAP)
+  if (Ty == PT_IntAP)
     return this->emitConstIntAP(Value, E);
 
   if (Value.isSigned())
