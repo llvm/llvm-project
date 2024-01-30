@@ -1380,6 +1380,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_monitor_b32:
   case Intrinsic::amdgcn_global_load_monitor_b64:
   case Intrinsic::amdgcn_global_load_monitor_b128:
+  case Intrinsic::amdgcn_cluster_load_b32:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b128:
   case Intrinsic::amdgcn_ds_load_tr_b6:
   case Intrinsic::amdgcn_ds_load_tr_b4:
   case Intrinsic::amdgcn_ds_load_tr:
@@ -1482,44 +1485,56 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
                                             SmallVectorImpl<Value*> &Ops,
                                             Type *&AccessTy) const {
+  Value *Ptr = nullptr;
   switch (II->getIntrinsicID()) {
-  case Intrinsic::amdgcn_flat_load_monitor_b32:
-  case Intrinsic::amdgcn_flat_load_monitor_b64:
-  case Intrinsic::amdgcn_flat_load_monitor_b128:
-  case Intrinsic::amdgcn_global_load_monitor_b32:
-  case Intrinsic::amdgcn_global_load_monitor_b64:
-  case Intrinsic::amdgcn_global_load_monitor_b128:
-  case Intrinsic::amdgcn_ds_load_tr_b6:
-  case Intrinsic::amdgcn_ds_load_tr_b4:
-  case Intrinsic::amdgcn_ds_load_tr:
-  case Intrinsic::amdgcn_global_load_tr_b6:
-  case Intrinsic::amdgcn_global_load_tr_b4:
-  case Intrinsic::amdgcn_global_load_tr:
-  case Intrinsic::amdgcn_ds_ordered_add:
-  case Intrinsic::amdgcn_ds_ordered_swap:
+  case Intrinsic::amdgcn_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_cluster_load_b128:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_fadd:
-  case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax:
-  case Intrinsic::amdgcn_global_atomic_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_load_tr:
+  case Intrinsic::amdgcn_ds_load_tr_b4:
+  case Intrinsic::amdgcn_ds_load_tr_b6:
+  case Intrinsic::amdgcn_ds_ordered_add:
+  case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_flat_atomic_fadd:
-  case Intrinsic::amdgcn_flat_atomic_fmin:
-  case Intrinsic::amdgcn_flat_atomic_fmax:
-  case Intrinsic::amdgcn_flat_atomic_fmin_num:
-  case Intrinsic::amdgcn_flat_atomic_fmax_num:
-  case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_atomic_cond_sub_u32:
-  case Intrinsic::amdgcn_global_atomic_csub: {
-    Value *Ptr = II->getArgOperand(0);
-    AccessTy = II->getType();
-    Ops.push_back(Ptr);
-    return true;
-  }
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmax_num:
+  case Intrinsic::amdgcn_flat_atomic_fmin:
+  case Intrinsic::amdgcn_flat_atomic_fmin_num:
+  case Intrinsic::amdgcn_flat_load_monitor_b128:
+  case Intrinsic::amdgcn_flat_load_monitor_b32:
+  case Intrinsic::amdgcn_flat_load_monitor_b64:
+  case Intrinsic::amdgcn_global_atomic_csub:
+  case Intrinsic::amdgcn_global_atomic_fadd:
+  case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_global_atomic_fmax:
+  case Intrinsic::amdgcn_global_atomic_fmax_num:
+  case Intrinsic::amdgcn_global_atomic_fmin:
+  case Intrinsic::amdgcn_global_atomic_fmin_num:
+  case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
+  case Intrinsic::amdgcn_global_load_monitor_b128:
+  case Intrinsic::amdgcn_global_load_monitor_b32:
+  case Intrinsic::amdgcn_global_load_monitor_b64:
+  case Intrinsic::amdgcn_global_load_tr:
+  case Intrinsic::amdgcn_global_load_tr_b4:
+  case Intrinsic::amdgcn_global_load_tr_b6:
+    Ptr = II->getArgOperand(0);
+    break;
+  case Intrinsic::amdgcn_global_load_lds:
+    Ptr = II->getArgOperand(1);
+    break;
   default:
     return false;
   }
+  AccessTy = II->getType();
+  Ops.push_back(Ptr);
+  return true;
 }
 
 bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
@@ -7828,10 +7843,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (!BaseOpcode->Sampler) {
     Unorm = True;
   } else {
-    auto UnormConst =
-        cast<ConstantSDNode>(Op.getOperand(ArgOffset + Intr->UnormIndex));
+    uint64_t UnormConst =
+        Op.getConstantOperandVal(ArgOffset + Intr->UnormIndex);
 
-    Unorm = UnormConst->getZExtValue() ? True : False;
+    Unorm = UnormConst ? True : False;
   }
 
   SDValue TFE;

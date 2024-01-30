@@ -350,9 +350,11 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   // Set unused op_sel_hi bits to 1 for VOP3P and MAI instructions.
   // Note that accvgpr_read/write are MAI, have src0, but do not use op_sel.
-  if ((Desc.TSFlags & SIInstrFlags::VOP3P) ||
-      Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
-      Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) {
+  if (((Desc.TSFlags & SIInstrFlags::VOP3P) ||
+       Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
+       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) &&
+      // Matrix B format operand reuses op_sel_hi.
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
@@ -419,8 +421,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     else if (Op.isExpr()) {
       if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
         Imm = C->getValue();
-
-    } else if (!Op.isExpr()) // Exprs will be replaced with a fixup value.
+    } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
     if (*Enc == 254) {

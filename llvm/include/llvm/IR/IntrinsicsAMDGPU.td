@@ -2895,6 +2895,9 @@ def int_amdgcn_flat_load_monitor_b128   : AMDGPULoadIntrinsic<flat_ptr_ty>;
 def int_amdgcn_global_load_monitor_b32  : AMDGPULoadIntrinsic<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b64  : AMDGPULoadIntrinsic<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_cluster_load_b32         : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_cluster_load_b64         : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_cluster_load_b128        : AMDGPULoadIntrinsic<global_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :
