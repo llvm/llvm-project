@@ -27,7 +27,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary16) {
   EXPECT_EQ(u16(0b0'11110'1111111111), u16(Rep::max_normal()));
   EXPECT_EQ(u16(0b0'11111'0000000000), u16(Rep::inf()));
   EXPECT_EQ(u16(0b0'11111'0100000000), u16(Rep::signaling_nan()));
-  EXPECT_EQ(u16(0b0'11111'1000000000), u16(Rep::build_quiet_nan()));
+  EXPECT_EQ(u16(0b0'11111'1000000000), u16(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary32) {
@@ -45,8 +45,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary32) {
   EXPECT_EQ(u32(0b0'11111111'00000000000000000000000), u32(Rep::inf()));
   EXPECT_EQ(u32(0b0'11111111'01000000000000000000000),
             u32(Rep::signaling_nan()));
-  EXPECT_EQ(u32(0b0'11111111'10000000000000000000000),
-            u32(Rep::build_quiet_nan()));
+  EXPECT_EQ(u32(0b0'11111111'10000000000000000000000), u32(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary64) {
@@ -79,7 +78,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary64) {
       u64(Rep::signaling_nan()));
   EXPECT_EQ(
       u64(0b0'11111111111'1000000000000000000000000000000000000000000000000000),
-      u64(Rep::build_quiet_nan()));
+      u64(Rep::quiet_nan()));
 }
 
 static constexpr UInt128 u128(uint64_t hi, uint64_t lo) {
@@ -128,7 +127,7 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
   EXPECT_EQ(
       u128(0b0'111111111111111'100000000000000000000000000000000000000000000000,
            0b0000000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_quiet_nan()));
+      UInt128(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
@@ -169,7 +168,7 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
   EXPECT_EQ(
       u128(0b0'111111111111111,
            0b1100000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_quiet_nan()));
+      UInt128(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80_IsNan) {
@@ -258,7 +257,7 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
     case FP::SIGNALING_NAN:
       return T::signaling_nan(sign);
     case FP::QUIET_NAN:
-      return T::build_quiet_nan(sign);
+      return T::quiet_nan(sign);
     }
   };
   static constexpr auto make = [](Sign sign, FP fp) -> T {
@@ -365,7 +364,7 @@ TEST(LlvmLibcFPBitsTest, FloatType) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBF900000 = (S: 1, E: 0x007F, M: 0x00100000)");
 
-  FloatBits quiet_nan = FloatBits::build_quiet_nan();
+  FloatBits quiet_nan = FloatBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
@@ -427,7 +426,7 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBFF2000000000000 = (S: 1, E: 0x03FF, M: 0x0002000000000000)");
 
-  DoubleBits quiet_nan = DoubleBits::build_quiet_nan();
+  DoubleBits quiet_nan = DoubleBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
@@ -508,7 +507,7 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
       "0x000000000000BFFF9000000000000000 = "
       "(S: 1, E: 0x3FFF, I: 1, M: 0x00000000000000001000000000000000)");
 
-  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan();
+  LongDoubleBits quiet_nan = LongDoubleBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #else
@@ -582,7 +581,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan();
+  LongDoubleBits quiet_nan = LongDoubleBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 #endif
 }
@@ -656,7 +655,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  Float128Bits quiet_nan = Float128Bits::build_quiet_nan();
+  Float128Bits quiet_nan = Float128Bits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #endif // LIBC_COMPILER_HAS_FLOAT128
