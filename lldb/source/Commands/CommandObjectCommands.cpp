@@ -1570,8 +1570,8 @@ private:
           }
           size_t num_elem = array->GetSize();
           size_t enum_ctr = 0;
-          m_enum_storage[counter] = std::vector<EnumValueStorer>(num_elem);
-          std::vector<EnumValueStorer> &curr_elem = m_enum_storage[counter];
+          m_enum_storage[counter] = std::vector<EnumValueStorage>(num_elem);
+          std::vector<EnumValueStorage> &curr_elem = m_enum_storage[counter];
           
           // This is the Array::ForEach function for adding enum elements:
           // Since there are only two fields to specify the enum, use a simple
@@ -1606,7 +1606,7 @@ private:
             }
             llvm::StringRef usage_stref = obj_sp->GetStringValue();
             std::string usage_cstr_str = usage_stref.str().c_str();
-            curr_elem[enum_ctr] = EnumValueStorer(value_cstr_str, 
+            curr_elem[enum_ctr] = EnumValueStorage(value_cstr_str, 
                 usage_cstr_str, enum_ctr);
             
             enum_ctr++;
@@ -1632,24 +1632,24 @@ private:
     }
     
   private:
-    struct EnumValueStorer {
-      EnumValueStorer() {
+    struct EnumValueStorage {
+      EnumValueStorage() {
         element.string_value = "value not set";
         element.usage = "usage not set";
         element.value = 0;
       }
       
-      EnumValueStorer(std::string &in_str_val, std::string &in_usage, 
-          size_t in_value) : value(in_str_val), usage(in_usage) {
+      EnumValueStorage(std::string in_str_val, std::string in_usage, 
+          size_t in_value) : value(std::move(in_str_val)), usage(std::move(in_usage)) {
         SetElement(in_value);
       }
       
-      EnumValueStorer(const EnumValueStorer &in) : value(in.value), 
+      EnumValueStorage(const EnumValueStorage &in) : value(in.value), 
           usage(in.usage) {
         SetElement(in.element.value);
       }
       
-      EnumValueStorer &operator=(const EnumValueStorer &in) {
+      EnumValueStorage &operator=(const EnumValueStorage &in) {
         value = in.value;
         usage = in.usage;
         SetElement(in.element.value);
@@ -1678,7 +1678,7 @@ private:
     // all that common so it's not worth the effort to dedup them.  
     size_t m_num_options = 0;
     std::unique_ptr<OptionDefinition> m_options_definition_up;
-    std::vector<std::vector<EnumValueStorer>> m_enum_storage;
+    std::vector<std::vector<EnumValueStorage>> m_enum_storage;
     std::vector<std::vector<OptionEnumValueElement>> m_enum_vector;
     std::vector<std::string> m_usage_container;
     CommandInterpreter &m_interpreter;
