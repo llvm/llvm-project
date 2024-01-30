@@ -1591,26 +1591,6 @@ public:
 
   Options *GetOptions() override { return &m_options; }
 
-  std::optional<bool> VerifyCommandOptionValue(const std::string &option) {
-    if (option.empty())
-      return std::nullopt;
-
-    bool success = false;
-    bool tmp_value = OptionArgParser::ToBoolean(option, false, &success);
-    if (success)
-      return tmp_value;
-
-    int parsed_value = -1;
-    if (llvm::to_integer(option, parsed_value)) {
-      if (parsed_value != 0 && parsed_value != 1)
-        return std::nullopt;
-
-      return parsed_value == 0 ? false : true;
-    }
-
-    return std::nullopt;
-  }
-
   void PrintSignalHeader(Stream &str) {
     str.Printf("NAME         PASS   STOP   NOTIFY\n");
     str.Printf("===========  =====  =====  ======\n");
@@ -1666,27 +1646,48 @@ protected:
     // the user's options.
     ProcessSP process_sp = target.GetProcessSP();
 
-    std::optional<bool> stop_action = VerifyCommandOptionValue(m_options.stop);
-    std::optional<bool> pass_action = VerifyCommandOptionValue(m_options.pass);
-    std::optional<bool> notify_action =
-        VerifyCommandOptionValue(m_options.notify);
+    std::optional<bool> stop_action = {};
+    std::optional<bool> pass_action = {};
+    std::optional<bool> notify_action = {};
 
-    if (!m_options.stop.empty() && !stop_action.has_value()) {
-      result.AppendError("Invalid argument for command option --stop; must be "
-                         "true or false.\n");
-      return;
+    if (!m_options.stop.empty()) {
+      bool success = false;
+      bool value = OptionArgParser::ToBoolean(m_options.stop, false, &success);
+      if (!success) {
+        result.AppendError(
+            "Invalid argument for command option --stop; must be "
+            "true or false.\n");
+        return;
+      }
+
+      stop_action = value;
     }
 
-    if (!m_options.pass.empty() && !pass_action.has_value()) {
-      result.AppendError("Invalid argument for command option --pass; must be "
-                         "true or false.\n");
-      return;
+    if (!m_options.pass.empty()) {
+      bool success = false;
+      bool value = OptionArgParser::ToBoolean(m_options.pass, false, &success);
+      if (!success) {
+        result.AppendError(
+            "Invalid argument for command option --pass; must be "
+            "true or false.\n");
+        return;
+      }
+      pass_action = value;
+    }
+
+    if (!m_options.notify.empty()) {
+      bool success = false;
+      bool value =
+          OptionArgParser::ToBoolean(m_options.notify, false, &success);
+      if (!success) {
+        result.AppendError("Invalid argument for command option --notify; must "
+                           "be true or false.\n");
+        return;
+      }
+      notify_action = value;
     }
 
     if (!m_options.notify.empty() && !notify_action.has_value()) {
-      result.AppendError("Invalid argument for command option --notify; must "
-                         "be true or false.\n");
-      return;
     }
 
     bool no_actions = (!stop_action.has_value() && !pass_action.has_value() &&
@@ -1728,8 +1729,6 @@ protected:
         if (signals_sp) {
           int32_t signo = signals_sp->GetSignalNumberFromName(arg.c_str());
           if (signo != LLDB_INVALID_SIGNAL_NUMBER) {
-            // Casting the actions as bools here should be okay, because
-            // VerifyCommandOptionValue guarantees the value is either 0 or 1.
             if (stop_action.has_value())
               signals_sp->SetShouldStop(signo, *stop_action);
             if (pass_action.has_value()) {
