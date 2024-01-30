@@ -628,7 +628,7 @@ public:
               if (mlirLogicalResultIsFailure(mlirMemRefTypeGetStridesAndOffset(
                       self, strides.data(), &offset)))
                 throw std::runtime_error(
-                    "failed to extract strides and offset from memref");
+                    "Failed to extract strides and offset from memref.");
               return {strides, offset};
             },
             "The strides and offset of the MemRef type.")
