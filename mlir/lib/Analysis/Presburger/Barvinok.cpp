@@ -366,8 +366,8 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
 
     // The region (in parameter space) where this vertex is active is given
     // by substituting the vertex into the *remaining* inequalities of the
-    // polytope (those which were not collected into `subset`), i.e.,
-    // remaining = [A2 | B2 | c2].
+    // polytope (those which were not collected into `subset`), i.e., into the
+    // matrix [A2 | B2 | c2].
     // Thus, the coefficients of the parameters after substitution become
     // (A2 • X + B2)
     // and the constant terms become
