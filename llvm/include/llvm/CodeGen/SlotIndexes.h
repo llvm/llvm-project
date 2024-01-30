@@ -53,7 +53,7 @@ class raw_ostream;
     static constexpr unsigned PoisonVal = 1;
 #endif
 
-    PointerIntPair<MachineInstr *, PoisonBits, unsigned> mi;
+    PointerIntPair<MachineInstr *, PoisonBits> mi;
     unsigned index;
 
   public:
