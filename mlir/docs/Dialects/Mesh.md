@@ -47,6 +47,24 @@ For Example on a 3D mesh an operation with `mesh_axes = [0, 2]` would specify
 an in-group device with `(i, j)`. Then for each group with index `g` on the
 second axis, the in-group device would be `(i, g, j)`.
 
+### Purity
+Collectives that involve the whole device group to perform a single operation
+are pure. The exceptions are `send` and `recv`.
+
+There is an assumption that the execution is SPMD.
+Not only that each process runs the same program, but that at the point of
+execution of a collective operation, all processes are in a coherent state.
+All compiler transformations must be consistent.
+Collective operations in the IR that may correspond to the same runtime
+collective operation must be transformed in a consistent manner.
+For example if a collective operation is optimized out, than it must also
+not appear in any path of execution on any process.
+
+Having the operations as `Pure` implies that if an interpreter is to execute
+the IR containing the `mesh` collectives, all processes would execute the same
+line when they reach a pure collective operation.
+This requirement stems from the need to be compatible with general optimization
+passes like dead code and common sub-expression elimination.
 
 ## Operations
 
