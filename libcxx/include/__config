@@ -344,12 +344,16 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 // List all checks
 
-// VALID_INPUT_RANGE: Description of reason to use the check.
-// VALID_ELEMENT_ACCESS: Description of reason to use the check.
-// COMPATIBLE_ALLOCATOR: Description of reason to use the check.
-// PEDANTIC: Description of reason to use the check.
-// INTERNAL: Description of reason to use the check.
-// UNCATEGORIZED: Description of reason to use the check.
+// _HD_VALID_INPUT_RANGE:    Description of reason to use the check.
+// _HD_VALID_ELEMENT_ACCESS: Description of reason to use the check.
+// _HD_VALID_PRECONDITIONS:  Description of reason to use the check.
+// _HD_NON_NULL:             Description of reason to use the check.
+// _HD_OVERLAPPING_RANGES:   Description of reason to use the check.
+// _HD_COMPATIBLE_ALLOCATOR: Description of reason to use the check.
+// _HD_PEDANTIC:             Description of reason to use the check.
+// _HD_SEMANTIC_REQUIREMENT: Description of reason to use the check.
+// _HD_INTERNAL:             Description of reason to use the check.
+// _HD_UNCATEGORIZED:        Description of reason to use the check.
 
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 
@@ -371,15 +375,18 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
-#    define VALID_INPUT_RANGE 1
-#    define VALID_PRECONDITIONS 1
-#    define VALID_ELEMENT_ACCESS 1
-#    define NON_NULL 0
-#    define OVERLAPPING_RANGES 0
-#    define COMPATIBLE_ALLOCATOR 0
-#    define PEDANTIC 0
-#    define INTERNAL 0
-#    define UNCATEGORIZED 0
+// Enabled checks
+#    define _HD_VALID_INPUT_RANGE    true
+#    define _HD_VALID_ELEMENT_ACCESS true
+#    define _HD_VALID_PRECONDITIONS  true
+// Disabled checks
+#    define _HD_NON_NULL             false
+#    define _HD_OVERLAPPING_RANGES   false
+#    define _HD_COMPATIBLE_ALLOCATOR false
+#    define _HD_PEDANTIC             false
+#    define _HD_SEMANTIC_REQUIREMENT false
+#    define _HD_INTERNAL             false
+#    define _HD_UNCATEGORIZED        false
 
 // Extensive hardening mode checks.
 
@@ -400,16 +407,19 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
-#    define VALID_INPUT_RANGE 1
-#    define VALID_ELEMENT_ACCESS 1
-#    define VALID_PRECONDITIONS 1
-#    define NON_NULL 1
-#    define OVERLAPPING_RANGES 1
-#    define COMPATIBLE_ALLOCATOR 1
-#    define PEDANTIC 1
-#    define UNCATEGORIZED 1
+// Enabled checks.
+#    define _HD_VALID_INPUT_RANGE    true
+#    define _HD_VALID_ELEMENT_ACCESS true
+#    define _HD_VALID_PRECONDITIONS  true
+#    define _HD_NON_NULL             true
+#    define _HD_OVERLAPPING_RANGES   true
+#    define _HD_COMPATIBLE_ALLOCATOR true
+#    define _HD_PEDANTIC             true
+#    define _HD_UNCATEGORIZED        true
+// Disabled checks.
+#    define _HD_INTERNAL             false
+#    define _HD_SEMANTIC_REQUIREMENT false
 
-#    define INTERNAL 0
 
 // Debug hardening mode checks.
 
@@ -429,15 +439,16 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
 
-#    define VALID_INPUT_RANGE 1
-#    define VALID_ELEMENT_ACCESS 1
-#    define VALID_PRECONDITIONS 1
-#    define NON_NULL 1
-#    define OVERLAPPING_RANGES 1
-#    define COMPATIBLE_ALLOCATOR 1
-#    define PEDANTIC 1
-#    define INTERNAL 1
-#    define UNCATEGORIZED 1
+#    define _HD_VALID_INPUT_RANGE    true
+#    define _HD_VALID_ELEMENT_ACCESS true
+#    define _HD_VALID_PRECONDITIONS  true
+#    define _HD_NON_NULL             true
+#    define _HD_OVERLAPPING_RANGES   true
+#    define _HD_COMPATIBLE_ALLOCATOR true
+#    define _HD_PEDANTIC             true
+#    define _HD_SEMANTIC_REQUIREMENT true
+#    define _HD_INTERNAL             true
+#    define _HD_UNCATEGORIZED        true
 
 // Disable all checks if hardening is not enabled.
 
@@ -457,15 +468,17 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
-#    define VALID_INPUT_RANGE 0
-#    define VALID_ELEMENT_ACCESS 0
-#    define VALID_PRECONDITIONS 0
-#    define NON_NULL 0
-#    define OVERLAPPING_RANGES 0
-#    define COMPATIBLE_ALLOCATOR 0
-#    define PEDANTIC 0
-#    define INTERNAL 0
-#    define UNCATEGORIZED 0
+// All checks disabled.
+#    define _HD_VALID_INPUT_RANGE    false
+#    define _HD_VALID_ELEMENT_ACCESS false
+#    define _HD_VALID_PRECONDITIONS  false
+#    define _HD_NON_NULL             false
+#    define _HD_OVERLAPPING_RANGES   false
+#    define _HD_COMPATIBLE_ALLOCATOR false
+#    define _HD_PEDANTIC             false
+#    define _HD_SEMANTIC_REQUIREMENT false
+#    define _HD_INTERNAL             false
+#    define _HD_UNCATEGORIZED        false
 
 #  endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 

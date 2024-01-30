@@ -229,7 +229,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
-    _LIBCPP_ASSERT_P(VALID_ELEMENT_ACCESS|VALID_PRECONDITIONS, __n < __count_, "Subscript argument must be less than size.");
+    _LIBCPP_ASSERT_P(_HD_VALID_ELEMENT_ACCESS|_HD_VALID_PRECONDITIONS, __n < __count_, "Subscript argument must be less than size.");
     return __current_[__n];
   }
 

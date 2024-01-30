@@ -34,4 +34,8 @@
 #  define _LIBCPP_ASSUME(expression) ((void)0)
 #endif
 
+#define _LIBCPP_ASSERT_OR_ASSUME(assert_or_assume, expression, message)                                                \
+  (__builtin_expect(static_cast<bool>(assert_or_assume), 0)                                                            \
+       ? _LIBCPP_ASSERT(expression, message) : _LIBCPP_ASSUME(expression))
+
 #endif // _LIBCPP___ASSERT
