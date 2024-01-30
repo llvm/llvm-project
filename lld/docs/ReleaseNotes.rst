@@ -41,8 +41,24 @@ COFF Improvements
 * Added support for ``--time-trace`` and associated ``--time-trace-granularity``.
   This generates a .json profile trace of the linker execution.
 
+* Prefer library paths specified with ``-libpath:`` over the implicitly
+  detected toolchain paths.
+
 MinGW Improvements
 ------------------
+
+* Added support for many LTO and ThinLTO options.
+
+* LLD no longer tries to autodetect and pick up MSVC/WinSDK installations
+  when run in MinGW mode.
+
+* The ``--icf=safe`` option now works as expected; it was previously a no-op.
+
+* More correctly handle LTO of files that define ``__imp_`` prefixed dllimport
+  redirections.
+
+* The strip flags ``-S`` and ``-s`` now can be used to strip out DWARF debug
+  info and symbol tables while emitting a PDB debug info file.
 
 MachO Improvements
 ------------------

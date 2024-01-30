@@ -1195,6 +1195,8 @@ Windows Support
   linking may succeed but the resulting executables may expose issues at
   runtime.
 
+- Clang now passes relevant LTO options to the linker (LLD) in MinGW mode.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 - Added builtins support for all LSX (128-bits SIMD) and LASX (256-bits SIMD)
