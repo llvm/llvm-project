@@ -70,3 +70,5 @@ namespace dr1113 { // dr1113: partial
   }
   void g() { f(); }
 }
+
+// dr1150: na

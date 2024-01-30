@@ -360,6 +360,45 @@ namespace dr1563 { // dr1563: yes
 #endif
 }
 
+namespace dr1567 { // dr1567: 3.3
+#if __cplusplus >= 201103L
+struct B;
+struct A {
+  A(const A&);
+  A(const B&) = delete;
+  A(A&&);
+  A(B&&) = delete;
+  A(int); // #dr1567-A-int
+};
+
+struct B: A { // #dr1567-B
+  using A::A; // #dr1567-using-A
+  B(double); // #dr1567-B-double
+};
+
+A a{0};
+B b{1.0};
+// Good, deleted converting ctors are not inherited as copy/move ctors
+B b2{b};
+B b3{B{1.0}};
+// Good, copy/move ctors are not inherited
+B b4{a};
+// since-cxx11-error@-1 {{no matching constructor for initialization of 'B'}}
+//   since-cxx11-note@#dr1567-A-int {{candidate inherited constructor not viable: no known conversion from 'A' to 'int' for 1st argument}}
+//   since-cxx11-note@#dr1567-using-A {{constructor from base class 'A' inherited here}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'A' to 'const B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'A' to 'B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B-double {{candidate constructor not viable: no known conversion from 'A' to 'double' for 1st argument}}
+B b5{A{0}};
+// since-cxx11-error@-1 {{no matching constructor for initialization of 'B'}}
+//   since-cxx11-note@#dr1567-A-int {{candidate inherited constructor not viable: no known conversion from 'A' to 'int' for 1st argument}}
+//   since-cxx11-note@#dr1567-using-A {{constructor from base class 'A' inherited here}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'A' to 'const B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'A' to 'B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B-double {{candidate constructor not viable: no known conversion from 'A' to 'double' for 1st argument}}
+#endif
+}
+
 namespace dr1573 { // dr1573: 3.9
 #if __cplusplus >= 201103L
   // ellipsis is inherited (p0136r1 supersedes this part).
