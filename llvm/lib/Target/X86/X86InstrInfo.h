@@ -647,8 +647,7 @@ private:
                                     unsigned OpNum,
                                     ArrayRef<MachineOperand> MOs,
                                     MachineBasicBlock::iterator InsertPt,
-                                    unsigned BitsSize, Align Alignment,
-                                    bool AllowCommute) const;
+                                    unsigned BitsSize, bool AllowCommute) const;
 
   /// isFrameOperand - Return true and the FrameIndex if the specified
   /// operand and follow operands form a reference to the stack frame.

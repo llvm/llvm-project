@@ -143,8 +143,8 @@ const X86FoldTableEntry *llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
   return lookupFoldTableImpl(FoldTable, RegOp);
 }
 
-const X86FoldTableEntry *
-llvm::lookupBroadcastFoldTable(unsigned RegOp, unsigned OpNum) {
+const X86FoldTableEntry *llvm::lookupBroadcastFoldTable(unsigned RegOp,
+                                                        unsigned OpNum) {
   ArrayRef<X86FoldTableEntry> FoldTable;
   if (OpNum == 1)
     FoldTable = ArrayRef(BroadcastTable1);
