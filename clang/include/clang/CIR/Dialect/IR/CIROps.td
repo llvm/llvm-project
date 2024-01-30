@@ -636,7 +636,7 @@ def ConditionOp : CIR_Op<"condition", [
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "WhileOp", "ForOp", "AwaitOp",
-                 "TernaryOp", "GlobalOp", "DoWhileOp", "CatchOp"]>]> {
+                 "TernaryOp", "GlobalOp", "DoWhileOp", "CatchOp", "TryOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -2262,55 +2262,31 @@ def AwaitOp : CIR_Op<"await",
 
 def TryOp : CIR_Op<"try",
        [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-        RecursivelySpeculatable, NoRegionArguments]> {
+        RecursivelySpeculatable, AutomaticAllocationScope,
+        NoRegionArguments]> {
   let summary = "";
   let description = [{
     ```mlir
-    cir.scope  {
-      // Selector and exception control related allocas
-      // C++ `try {}` local variable declarations
-      %except_info = cir.try {
-        %res0, %exh = cir.call @return_something()
-        %if %exh
-          cir.yield %exh
-
-        %exh2 = cir.call @return_void()
-        %if %exh2
-          cir.yield %exh
-        cir.yield #zero : !except_type
-      }
-      ...
-      cir.br ^cleanup
-      ^cleanup:
-        // Run dtors
-        ...
-        // Catch based %except_info
-        cir.catch(%except_info, [
-          /*catch A*/ {},
-          /*catch B*/ {},
-          ...
-          all {}
-        ])
-      cir.yield
-    }
+    TBD
     ```
 
     Note that variables declared inside a `try {}` in C++ will
-    have their allocas places in the surrounding scope.
+    have their allocas places in the surrounding (parent) scope.
   }];
 
   let regions = (region SizedRegion<1>:$body);
-  // FIXME: should be exception type.
-  let results = (outs CIR_AnyType:$result);
+  let results = (outs ExceptionInfoPtr:$result);
 
   let assemblyFormat = [{
-    `{`
-      $body
-    `}` `:` functional-type(operands, results) attr-dict
+    $body `:` functional-type(operands, results) attr-dict
   }];
 
-  // Everything already covered elswhere.
+  // Everything already covered elsewhere.
   let hasVerifier = 0;
+  let builders = [
+    OpBuilder<(ins
+              "function_ref<void(OpBuilder &, Type &, Location)>":$tryBuilder)>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//

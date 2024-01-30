@@ -325,7 +325,7 @@ CIRGenFunction::buildCXXTryStmtUnderScope(const CXXTryStmt &S) {
   // populate right away. Reserve some space to store the exception info but
   // don't emit the bulk right away, for now only make sure the scope returns
   // the exception information.
-  auto tryScope = builder.create<mlir::cir::ScopeOp>(
+  auto tryScope = builder.create<mlir::cir::TryOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
         // Allocate space for our exception info that might be passed down
