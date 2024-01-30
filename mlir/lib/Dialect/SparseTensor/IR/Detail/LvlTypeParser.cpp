@@ -35,12 +35,12 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   ERROR_IF(failed(parser.parseOptionalKeyword(&base)),
            "expected valid level format (e.g. dense, compressed or singleton)")
   uint64_t properties = 0;
-  SmallVector<unsigned> blockSizes;
+  SmallVector<unsigned> structure;
 
-  if (base.compare("block") == 0) {
+  if (base.compare("structured") == 0) {
     ParseResult res = parser.parseCommaSeparatedList(
         mlir::OpAsmParser::Delimiter::OptionalSquare,
-        [&]() -> ParseResult { return parseBlockSizes(parser, &blockSizes); },
+        [&]() -> ParseResult { return parseStructure(parser, &structure); },
         " in block n out of m");
     FAILURE_IF_FAILED(res)
   }
@@ -56,13 +56,13 @@ FailureOr<uint64_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
     properties |= static_cast<uint64_t>(LevelFormat::Dense);
   } else if (base.compare("compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::Compressed);
-  } else if (base.compare("block") == 0) {
-    if (blockSizes.size() != 2) {
-      parser.emitError(loc, "expected exactly 2 block sizes");
+  } else if (base.compare("structured") == 0) {
+    if (structure.size() != 2) {
+      parser.emitError(loc, "expected exactly 2 structure sizes");
       return failure();
     }
     properties |= static_cast<uint64_t>(LevelFormat::NOutOfM);
-    properties |= nToBits(blockSizes[0]) | mToBits(blockSizes[1]);
+    properties |= nToBits(structure[0]) | mToBits(structure[1]);
   } else if (base.compare("loose_compressed") == 0) {
     properties |= static_cast<uint64_t>(LevelFormat::LooseCompressed);
   } else if (base.compare("singleton") == 0) {
@@ -95,8 +95,8 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
 }
 
 ParseResult
-LvlTypeParser::parseBlockSizes(AsmParser &parser,
-                               SmallVector<unsigned> *blockSizes) const {
+LvlTypeParser::parseStructure(AsmParser &parser,
+                              SmallVector<unsigned> *structure) const {
   int intVal;
   auto loc = parser.getCurrentLocation();
   OptionalParseResult intValParseResult = parser.parseOptionalInteger(intVal);
@@ -105,7 +105,7 @@ LvlTypeParser::parseBlockSizes(AsmParser &parser,
       parser.emitError(loc, "failed to parse block size");
       return failure();
     }
-    blockSizes->push_back(intVal);
+    structure->push_back(intVal);
     return success();
   }
   parser.emitError(loc, "expected valid integer for block size");

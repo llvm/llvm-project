@@ -172,36 +172,36 @@ enum class Action : uint32_t {
 /// | 8-bit n | 8-bit m | 16-bit LevelFormat | 16-bit LevelProperty |
 ///
 enum class LevelType : uint64_t {
-  Undef = 0,                    // 0x00_00_0000_0000
-  Dense = 65536,                // 0x00_00_0001_0000
-  Compressed = 131072,          // 0x00_00_0002_0000
-  CompressedNu = 131073,        // 0x00_00_0002_0001
-  CompressedNo = 131074,        // 0x00_00_0002_0002
-  CompressedNuNo = 131075,      // 0x00_00_0002_0003
-  Singleton = 262144,           // 0x00_00_0004_0000
-  SingletonNu = 262145,         // 0x00_00_0004_0001
-  SingletonNo = 262146,         // 0x00_00_0004_0002
-  SingletonNuNo = 262147,       // 0x00_00_0004_0003
-  LooseCompressed = 524288,     // 0x00_00_0008_0000
-  LooseCompressedNu = 524289,   // 0x00_00_0008_0001
-  LooseCompressedNo = 524290,   // 0x00_00_0008_0002
-  LooseCompressedNuNo = 524291, // 0x00_00_0008_0003
-  NOutOfM = 1048576,            // 0x00_00_0010_0000
+  Undef = 0x000000000000,
+  Dense = 0x000000010000,
+  Compressed = 0x000000020000,
+  CompressedNu = 0x000000020001,
+  CompressedNo = 0x000000020002,
+  CompressedNuNo = 0x000000020003,
+  Singleton = 0x000000040000,
+  SingletonNu = 0x000000040001,
+  SingletonNo = 0x000000040002,
+  SingletonNuNo = 0x000000040003,
+  LooseCompressed = 0x000000080000,
+  LooseCompressedNu = 0x000000080001,
+  LooseCompressedNo = 0x000000080002,
+  LooseCompressedNuNo = 0x000000080003,
+  NOutOfM = 0x000000100000,
 };
 
 /// This enum defines all supported storage format without the level properties.
 enum class LevelFormat : uint64_t {
-  Dense = 65536,            // 0x0001_0000
-  Compressed = 131072,      // 0x0002_0000
-  Singleton = 262144,       // 0x0004_0000
-  LooseCompressed = 524288, // 0x0008_0000
-  NOutOfM = 1048576,        // 0x0010_0000
+  Dense = 0x00010000,
+  Compressed = 0x00020000,
+  Singleton = 0x00040000,
+  LooseCompressed = 0x00080000,
+  NOutOfM = 0x00100000,
 };
 
 /// This enum defines all the nondefault properties for storage formats.
 enum class LevelPropertyNondefault : uint64_t {
-  Nonunique = 1,  // 0x0001
-  Nonordered = 2, // 0x0002
+  Nonunique = 0x0001,
+  Nonordered = 0x0002,
 };
 
 /// Get N of NOutOfM level type.
@@ -265,7 +265,7 @@ constexpr const char *toMLIRString(LevelType lt) {
     return "loose_compressed(nonunique, nonordered)";
   default:
     if (isNOutOfMLT(lt)) {
-      return "block";
+      return "structured";
     }
   }
   return "";

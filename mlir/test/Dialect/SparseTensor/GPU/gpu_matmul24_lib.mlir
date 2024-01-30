@@ -4,7 +4,7 @@
   map = ( i, j ) ->
   ( i            : dense,
     j floordiv 4 : dense,
-    j mod 4      : block[2, 4]
+    j mod 4      : structured[2, 4]
   )
 }>
 
