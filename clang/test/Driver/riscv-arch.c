@@ -156,8 +156,9 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32L %s
 // RV32L: error: invalid arch name 'rv32l'
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32imadf -### %s \
-// RUN:   -fsyntax-only 2>&1 | FileCheck %s
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32imadf -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32IMADF %s
+// RV32IMADF: error: invalid arch name 'rv32imadf'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32imm -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32IMM %s
@@ -183,8 +184,9 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64L %s
 // RV64L: error: invalid arch name 'rv64l'
 
-// RUN: %clang --target=riscv64-unknown-elf -march=rv64imadf -### %s \
-// RUN:   -fsyntax-only 2>&1 | FileCheck %s
+// RUN: not %clang --target=riscv64-unknown-elf -march=rv64imadf -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64IMADF %s
+// RV64IMADF: error: invalid arch name 'rv64imadf'
 
 // RUN: not %clang --target=riscv64-unknown-elf -march=rv64imm -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64IMM %s
@@ -214,7 +216,7 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32imcq -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ORDER %s
 // RV32-ORDER: error: invalid arch name 'rv32imcq',
-// RV32-ORDER: unsupported standard user-level extension 'q'
+// RV32-ORDER: standard user-level extension not given in canonical order 'q'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32izvl64b -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVL64B-ER %s
@@ -316,7 +318,7 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_a -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-PREFIX %s
 // RV32-PREFIX: error: invalid arch name 'rv32ixabc_a',
-// RV32-PREFIX: unsupported non-standard user-level extension 'xabc'
+// RV32-PREFIX: invalid extension prefix 'a'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixdef_sabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-X-ORDER %s
