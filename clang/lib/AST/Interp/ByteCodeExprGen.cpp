@@ -1019,7 +1019,7 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (DiscardResult)
     return this->discard(Base);
 
-  if (!this->visit(Base))
+  if (!this->delegate(Base))
     return false;
 
   // Base above gives us a pointer on the stack.
@@ -1507,8 +1507,10 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
       return this->emitGetPtrLocal(*LocalIndex, E);
     }
   } else {
+    const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
+
     if (std::optional<unsigned> LocalIndex =
-            allocateLocal(SubExpr, /*IsExtended=*/true)) {
+            allocateLocal(Inner, /*IsExtended=*/true)) {
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
       return this->visitInitializer(SubExpr);
