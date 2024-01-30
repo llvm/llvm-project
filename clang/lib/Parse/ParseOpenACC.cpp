@@ -110,6 +110,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("dtype", OpenACCClauseKind::DType)
       .Case("finalize", OpenACCClauseKind::Finalize)
       .Case("firstprivate", OpenACCClauseKind::FirstPrivate)
+      .Case("gang", OpenACCClauseKind::Gang)
       .Case("host", OpenACCClauseKind::Host)
       .Case("if", OpenACCClauseKind::If)
       .Case("if_present", OpenACCClauseKind::IfPresent)
@@ -165,9 +166,14 @@ enum class OpenACCSpecialTokenKind {
   Force,
   Num,
   Length,
+  Dim,
+  Static,
 };
 
 bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
+  if (Tok.is(tok::kw_static) && Kind == OpenACCSpecialTokenKind::Static)
+    return true;
+
   if (!Tok.is(tok::identifier))
     return false;
 
@@ -186,6 +192,10 @@ bool isOpenACCSpecialToken(OpenACCSpecialTokenKind Kind, Token Tok) {
     return Tok.getIdentifierInfo()->isStr("num");
   case OpenACCSpecialTokenKind::Length:
     return Tok.getIdentifierInfo()->isStr("length");
+  case OpenACCSpecialTokenKind::Dim:
+    return Tok.getIdentifierInfo()->isStr("dim");
+  case OpenACCSpecialTokenKind::Static:
+    return Tok.getIdentifierInfo()->isStr("static");
   }
   llvm_unreachable("Unknown 'Kind' Passed");
 }
@@ -464,6 +474,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
+  case OpenACCClauseKind::Gang:
     return ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
@@ -632,7 +643,8 @@ bool Parser::ParseOpenACCSizeExpr() {
   // The size-expr ends up being ambiguous when only looking at the current
   // token, as it could be a deref of a variable/expression.
   if (getCurToken().is(tok::star) &&
-      NextToken().isOneOf(tok::comma, tok::r_paren)) {
+      NextToken().isOneOf(tok::comma, tok::r_paren,
+                          tok::annot_pragma_openacc_end)) {
     ConsumeToken();
     return false;
   }
@@ -653,6 +665,58 @@ bool Parser::ParseOpenACCSizeExprList() {
     ExpectAndConsume(tok::comma);
 
     if (ParseOpenACCSizeExpr()) {
+      SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+                Parser::StopBeforeMatch);
+      return false;
+    }
+  }
+  return false;
+}
+
+/// OpenACC 3.3 Section 2.9:
+///
+/// where gang-arg is one of:
+/// [num:]int-expr
+/// dim:int-expr
+/// static:size-expr
+bool Parser::ParseOpenACCGangArg() {
+
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Static, getCurToken()) &&
+      NextToken().is(tok::colon)) {
+    // 'static' just takes a size-expr, which is an int-expr or an asterisk.
+    ConsumeToken();
+    ConsumeToken();
+    return ParseOpenACCSizeExpr();
+  }
+
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Dim, getCurToken()) &&
+      NextToken().is(tok::colon)) {
+    ConsumeToken();
+    ConsumeToken();
+    return ParseOpenACCIntExpr().isInvalid();
+  }
+
+  if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Num, getCurToken()) &&
+      NextToken().is(tok::colon)) {
+    ConsumeToken();
+    ConsumeToken();
+    // Fallthrough to the 'int-expr' handling for when 'num' is omitted.
+  }
+  // This is just the 'num' case where 'num' is optional.
+  return ParseOpenACCIntExpr().isInvalid();
+}
+
+bool Parser::ParseOpenACCGangArgList() {
+  if (ParseOpenACCGangArg()) {
+    SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return false;
+  }
+
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    ExpectAndConsume(tok::comma);
+
+    if (ParseOpenACCGangArg()) {
       SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
                 Parser::StopBeforeMatch);
       return false;
@@ -839,6 +903,10 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
           return true;
         break;
       }
+      case OpenACCClauseKind::Gang:
+        if (ParseOpenACCGangArgList())
+          return true;
+        break;
       default:
         llvm_unreachable("Not an optional parens type?");
       }
