@@ -163,11 +163,15 @@ public:
     return Error::success();
   }
 
-  Error postEmitFinalizer() override {
-    updateLKMarkers();
-
+  Error preEmitFinalizer() override {
     if (Error E = rewriteORCTables())
       return E;
+
+    return Error::success();
+  }
+
+  Error postEmitFinalizer() override {
+    updateLKMarkers();
 
     return Error::success();
   }
