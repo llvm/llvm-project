@@ -6,5 +6,5 @@ void inlined_fn_streaming(void) __arm_streaming {}
 __arm_locally_streaming
 void inlined_fn_caller_local(void) { inlined_fn_streaming(); }
 void inlined_fn_caller_streaming(void) __arm_streaming { inlined_fn_streaming(); }
-// expected-error@+1 {{always_inline function 'inlined_fn_streaming' and its caller 'inlined_fn_caller' have mismatched streaming attributes}}
+// expected-error@+1 {{always_inline function 'inlined_fn_streaming' and its caller 'inlined_fn_caller' have mismatching streaming attributes}}
 void inlined_fn_caller(void) { inlined_fn_streaming(); }
