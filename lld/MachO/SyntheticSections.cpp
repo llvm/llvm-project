@@ -931,7 +931,7 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
     assert(j != methnameToSelref.end());
     auto selrefAddr = j->second->getVA(0);
     target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                 stubOffset, selrefAddr, 0, objcMsgSend);
+                                 stubOffset, selrefAddr, objcMsgSend);
   }
 }
 
