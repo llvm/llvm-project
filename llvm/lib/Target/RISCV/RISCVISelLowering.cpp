@@ -1464,9 +1464,15 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   auto &DL = I.getModule()->getDataLayout();
 
   auto SetRVVLoadStoreInfo = [&](unsigned PtrOp, bool IsStore,
-                                 bool IsUnitStrided) {
+                                 bool IsUnitStrided, bool UsePtrVal = false) {
     Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
-    Info.ptrVal = I.getArgOperand(PtrOp);
+    // We can't use ptrVal if the intrinsic can access memory before the
+    // pointer. This means we can't use it for strided or indexed intrinsics.
+    if (UsePtrVal)
+      Info.ptrVal = I.getArgOperand(PtrOp);
+    else
+      Info.fallbackAddressSpace =
+          I.getArgOperand(PtrOp)->getType()->getPointerAddressSpace();
     Type *MemTy;
     if (IsStore) {
       // Store value is the first operand.
@@ -1526,7 +1532,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg7_load:
   case Intrinsic::riscv_seg8_load:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 0, /*IsStore*/ false,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_seg2_store:
   case Intrinsic::riscv_seg3_store:
   case Intrinsic::riscv_seg4_store:
@@ -1537,19 +1543,21 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // Operands are (vec, ..., vec, ptr, vl)
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
                                /*IsStore*/ true,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vle:
   case Intrinsic::riscv_vle_mask:
   case Intrinsic::riscv_vleff:
   case Intrinsic::riscv_vleff_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ false,
-                               /*IsUnitStrided*/ true);
+                               /*IsUnitStrided*/ true,
+                               /*UsePtrVal*/ true);
   case Intrinsic::riscv_vse:
   case Intrinsic::riscv_vse_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
                                /*IsStore*/ true,
-                               /*IsUnitStrided*/ true);
+                               /*IsUnitStrided*/ true,
+                               /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlse:
   case Intrinsic::riscv_vlse_mask:
   case Intrinsic::riscv_vloxei:
@@ -1584,7 +1592,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg8ff:
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
                                /*IsStore*/ false,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlseg2_mask:
   case Intrinsic::riscv_vlseg3_mask:
   case Intrinsic::riscv_vlseg4_mask:
@@ -1601,7 +1609,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_vlseg8ff_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 4,
                                /*IsStore*/ false,
-                               /*IsUnitStrided*/ false);
+                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_vlsseg2:
   case Intrinsic::riscv_vlsseg3:
   case Intrinsic::riscv_vlsseg4:
