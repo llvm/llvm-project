@@ -12,14 +12,14 @@ import os
 import traceback
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB Modules
 from . import configuration
 from lldbsuite.test_event import build_exception
 
 
-class LLDBTestResult(unittest2.TextTestResult):
+class LLDBTestResult(unittest.TextTestResult):
     """
     Enforce a singleton pattern to allow introspection of test progress.
 

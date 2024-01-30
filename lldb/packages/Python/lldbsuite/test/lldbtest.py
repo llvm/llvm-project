@@ -44,7 +44,7 @@ import time
 import traceback
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB modules
 import lldb
@@ -517,7 +517,7 @@ def builder_module():
     return lldbplatformutil.builder_module()
 
 
-class Base(unittest2.TestCase):
+class Base(unittest.TestCase):
     """
     Abstract base for performing lldb (see TestBase) or other generic tests (see
     BenchBase for one example).  lldbtest.Base works with the test driver to
@@ -1704,13 +1704,13 @@ class LLDBTestCaseFactory(type):
 
                     xfail_reason = xfail_for_debug_info_cat_fn(cat)
                     if xfail_reason:
-                        test_method = unittest2.expectedFailure(xfail_reason)(
+                        test_method = unittest.expectedFailure(xfail_reason)(
                             test_method
                         )
 
                     skip_reason = skip_for_debug_info_cat_fn(cat)
                     if skip_reason:
-                        test_method = unittest2.skip(skip_reason)(test_method)
+                        test_method = unittest.skip(skip_reason)(test_method)
 
                     newattrs[method_name] = test_method
 
