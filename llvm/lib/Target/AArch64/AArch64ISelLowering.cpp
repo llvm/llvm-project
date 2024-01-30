@@ -21248,6 +21248,61 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
   return SDValue();
 }
 
+// A custom combine to lower load <3 x i8> as the more efficient sequence
+// below:
+//    ldrb wX, [x0, #2]
+//    ldrh wY, [x0]
+//    orr wX, wY, wX, lsl #16
+//    fmov s0, wX
+//
+// Note that an alternative sequence with even fewer (although usually more
+// complex/expensive) instructions would be:
+//   ld1r.4h { v0 }, [x0], #2
+//   ld1.b { v0 }[2], [x0]
+//
+// Generating this sequence unfortunately results in noticeably worse codegen
+// for code that extends the loaded v3i8, due to legalization breaking vector
+// shuffle detection in a way that is very difficult to work around.
+// TODO: Revisit once v3i8 legalization has been improved in general.
+static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
+  EVT MemVT = LD->getMemoryVT();
+  if (MemVT != EVT::getVectorVT(*DAG.getContext(), MVT::i8, 3) ||
+      LD->getOriginalAlign() >= 4)
+    return SDValue();
+
+  SDLoc DL(LD);
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Chain = LD->getChain();
+  SDValue BasePtr = LD->getBasePtr();
+  MachineMemOperand *MMO = LD->getMemOperand();
+  assert(LD->getOffset().isUndef() && "undef offset expected");
+
+  // Load 2 x i8, then 1 x i8.
+  SDValue L16 = DAG.getLoad(MVT::i16, DL, Chain, BasePtr, MMO);
+  TypeSize Offset2 = TypeSize::getFixed(2);
+  SDValue L8 = DAG.getLoad(MVT::i8, DL, Chain,
+                           DAG.getMemBasePlusOffset(BasePtr, Offset2, DL),
+                           MF.getMachineMemOperand(MMO, 2, 1));
+
+  // Extend to i32.
+  SDValue Ext16 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L16);
+  SDValue Ext8 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L8);
+
+  // Pack 2 x i8 and 1 x i8 in an i32 and convert to v4i8.
+  SDValue Shl = DAG.getNode(ISD::SHL, DL, MVT::i32, Ext8,
+                            DAG.getConstant(16, DL, MVT::i32));
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i32, Ext16, Shl);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v4i8, Or);
+
+  // Extract v3i8 again.
+  SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MemVT, Cast,
+                                DAG.getConstant(0, DL, MVT::i64));
+  SDValue TokenFactor = DAG.getNode(
+      ISD::TokenFactor, DL, MVT::Other,
+      {SDValue(cast<SDNode>(L16), 1), SDValue(cast<SDNode>(L8), 1)});
+  return DAG.getMergeValues({Extract, TokenFactor}, DL);
+}
+
 // Perform TBI simplification if supported by the target and try to break up
 // nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit
 // load instructions can be selected.
@@ -21259,10 +21314,16 @@ static SDValue performLOADCombine(SDNode *N,
     performTBISimplification(N->getOperand(1), DCI, DAG);
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
-  EVT MemVT = LD->getMemoryVT();
-  if (LD->isVolatile() || !LD->isNonTemporal() || !Subtarget->isLittleEndian())
+  if (LD->isVolatile() || !Subtarget->isLittleEndian())
     return SDValue(N, 0);
 
+  if (SDValue Res = combineV3I8LoadExt(LD, DAG))
+    return Res;
+
+  if (!LD->isNonTemporal())
+    return SDValue(N, 0);
+
+  EVT MemVT = LD->getMemoryVT();
   if (MemVT.isScalableVector() || MemVT.getSizeInBits() <= 256 ||
       MemVT.getSizeInBits() % 256 == 0 ||
       256 % MemVT.getScalarSizeInBits() != 0)

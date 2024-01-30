@@ -26,8 +26,8 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary16) {
   EXPECT_EQ(u16(0b0'00001'0000000000), u16(Rep::min_normal()));
   EXPECT_EQ(u16(0b0'11110'1111111111), u16(Rep::max_normal()));
   EXPECT_EQ(u16(0b0'11111'0000000000), u16(Rep::inf()));
-  EXPECT_EQ(u16(0b0'11111'0100000000), u16(Rep::build_nan()));
-  EXPECT_EQ(u16(0b0'11111'1000000000), u16(Rep::build_quiet_nan()));
+  EXPECT_EQ(u16(0b0'11111'0100000000), u16(Rep::signaling_nan()));
+  EXPECT_EQ(u16(0b0'11111'1000000000), u16(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary32) {
@@ -43,9 +43,9 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary32) {
   EXPECT_EQ(u32(0b0'00000001'00000000000000000000000), u32(Rep::min_normal()));
   EXPECT_EQ(u32(0b0'11111110'11111111111111111111111), u32(Rep::max_normal()));
   EXPECT_EQ(u32(0b0'11111111'00000000000000000000000), u32(Rep::inf()));
-  EXPECT_EQ(u32(0b0'11111111'01000000000000000000000), u32(Rep::build_nan()));
-  EXPECT_EQ(u32(0b0'11111111'10000000000000000000000),
-            u32(Rep::build_quiet_nan()));
+  EXPECT_EQ(u32(0b0'11111111'01000000000000000000000),
+            u32(Rep::signaling_nan()));
+  EXPECT_EQ(u32(0b0'11111111'10000000000000000000000), u32(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary64) {
@@ -75,10 +75,10 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary64) {
       u64(Rep::inf()));
   EXPECT_EQ(
       u64(0b0'11111111111'0100000000000000000000000000000000000000000000000000),
-      u64(Rep::build_nan()));
+      u64(Rep::signaling_nan()));
   EXPECT_EQ(
       u64(0b0'11111111111'1000000000000000000000000000000000000000000000000000),
-      u64(Rep::build_quiet_nan()));
+      u64(Rep::quiet_nan()));
 }
 
 static constexpr UInt128 u128(uint64_t hi, uint64_t lo) {
@@ -123,11 +123,11 @@ TEST(LlvmLibcFPBitsTest, FPType_IEEE754_Binary128) {
   EXPECT_EQ(
       u128(0b0'111111111111111'010000000000000000000000000000000000000000000000,
            0b0000000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_nan()));
+      UInt128(Rep::signaling_nan()));
   EXPECT_EQ(
       u128(0b0'111111111111111'100000000000000000000000000000000000000000000000,
            0b0000000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_quiet_nan()));
+      UInt128(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
@@ -164,11 +164,11 @@ TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80) {
   EXPECT_EQ(
       u128(0b0'111111111111111,
            0b1010000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_nan()));
+      UInt128(Rep::signaling_nan()));
   EXPECT_EQ(
       u128(0b0'111111111111111,
            0b1100000000000000000000000000000000000000000000000000000000000000),
-      UInt128(Rep::build_quiet_nan()));
+      UInt128(Rep::quiet_nan()));
 }
 
 TEST(LlvmLibcFPBitsTest, FPType_X86_Binary80_IsNan) {
@@ -227,8 +227,8 @@ enum class FP {
   ONE,
   MAX_NORMAL,
   INF,
-  BUILD_NAN,
-  BUILD_QUIET_NAN
+  SIGNALING_NAN,
+  QUIET_NAN
 };
 
 using FPTypes = LIBC_NAMESPACE::testing::TypeList<
@@ -254,10 +254,10 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
       return T::max_normal(sign);
     case FP::INF:
       return T::inf(sign);
-    case FP::BUILD_NAN:
-      return T::build_nan(sign);
-    case FP::BUILD_QUIET_NAN:
-      return T::build_quiet_nan(sign);
+    case FP::SIGNALING_NAN:
+      return T::signaling_nan(sign);
+    case FP::QUIET_NAN:
+      return T::quiet_nan(sign);
     }
   };
   static constexpr auto make = [](Sign sign, FP fp) -> T {
@@ -266,7 +266,8 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
   constexpr FP fp_values[] = {
       FP::ZERO,       FP::MIN_SUBNORMAL, FP::MAX_SUBNORMAL,
       FP::MIN_NORMAL, FP::ONE,           FP::MAX_NORMAL,
-      FP::INF,        FP::BUILD_NAN,     FP::BUILD_QUIET_NAN};
+      FP::INF,        FP::SIGNALING_NAN, FP::QUIET_NAN,
+  };
   constexpr Sign signs[] = {Sign::POS, Sign::NEG};
   for (Sign sign : signs) {
     for (FP fp : fp_values) {
@@ -274,23 +275,23 @@ TYPED_TEST(LlvmLibcFPBitsTest, Properties, FPTypes) {
       // is_zero
       ASSERT_EQ(value.is_zero(), fp == FP::ZERO);
       // is_inf_or_nan
-      ASSERT_EQ(value.is_inf_or_nan(), fp == FP::INF || fp == FP::BUILD_NAN ||
-                                           fp == FP::BUILD_QUIET_NAN);
+      ASSERT_EQ(value.is_inf_or_nan(), fp == FP::INF ||
+                                           fp == FP::SIGNALING_NAN ||
+                                           fp == FP::QUIET_NAN);
       // is_finite
-      ASSERT_EQ(value.is_finite(), fp != FP::INF && fp != FP::BUILD_NAN &&
-                                       fp != FP::BUILD_QUIET_NAN);
+      ASSERT_EQ(value.is_finite(), fp != FP::INF && fp != FP::SIGNALING_NAN &&
+                                       fp != FP::QUIET_NAN);
       // is_inf
       ASSERT_EQ(value.is_inf(), fp == FP::INF);
       // is_nan
-      ASSERT_EQ(value.is_nan(),
-                fp == FP::BUILD_NAN || fp == FP::BUILD_QUIET_NAN);
+      ASSERT_EQ(value.is_nan(), fp == FP::SIGNALING_NAN || fp == FP::QUIET_NAN);
       // is_normal
       ASSERT_EQ(value.is_normal(),
                 fp == FP::MIN_NORMAL || fp == FP::ONE || fp == FP::MAX_NORMAL);
       // is_quiet_nan
-      ASSERT_EQ(value.is_quiet_nan(), fp == FP::BUILD_QUIET_NAN);
+      ASSERT_EQ(value.is_quiet_nan(), fp == FP::QUIET_NAN);
       // is_signaling_nan
-      ASSERT_EQ(value.is_signaling_nan(), fp == FP::BUILD_NAN);
+      ASSERT_EQ(value.is_signaling_nan(), fp == FP::SIGNALING_NAN);
       // is_subnormal
       ASSERT_EQ(value.is_subnormal(), fp == FP::ZERO ||
                                           fp == FP::MIN_SUBNORMAL ||
@@ -312,7 +313,8 @@ TEST(LlvmLibcFPBitsTest, FloatType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits::build_nan()).c_str(), "(NaN)");
+  EXPECT_STREQ(LIBC_NAMESPACE::str(FloatBits::signaling_nan()).c_str(),
+               "(NaN)");
 
   FloatBits zero(0.0f);
   EXPECT_TRUE(zero.is_pos());
@@ -362,7 +364,7 @@ TEST(LlvmLibcFPBitsTest, FloatType) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBF900000 = (S: 1, E: 0x007F, M: 0x00100000)");
 
-  FloatBits quiet_nan = FloatBits::build_quiet_nan();
+  FloatBits quiet_nan = FloatBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
@@ -373,7 +375,8 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::build_nan()).c_str(), "(NaN)");
+  EXPECT_STREQ(LIBC_NAMESPACE::str(DoubleBits::signaling_nan()).c_str(),
+               "(NaN)");
 
   DoubleBits zero(0.0);
   EXPECT_TRUE(zero.is_pos());
@@ -423,7 +426,7 @@ TEST(LlvmLibcFPBitsTest, DoubleType) {
   EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
                "0xBFF2000000000000 = (S: 1, E: 0x03FF, M: 0x0002000000000000)");
 
-  DoubleBits quiet_nan = DoubleBits::build_quiet_nan();
+  DoubleBits quiet_nan = DoubleBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 
@@ -438,7 +441,7 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::build_nan()).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::signaling_nan()).c_str(),
                "(NaN)");
 
   LongDoubleBits zero(0.0l);
@@ -504,7 +507,7 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
       "0x000000000000BFFF9000000000000000 = "
       "(S: 1, E: 0x3FFF, I: 1, M: 0x00000000000000001000000000000000)");
 
-  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan();
+  LongDoubleBits quiet_nan = LongDoubleBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #else
@@ -518,7 +521,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::build_nan()).c_str(),
+  EXPECT_STREQ(LIBC_NAMESPACE::str(LongDoubleBits::signaling_nan()).c_str(),
                "(NaN)");
 
   LongDoubleBits zero(0.0l);
@@ -578,7 +581,7 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  LongDoubleBits quiet_nan = LongDoubleBits::build_quiet_nan();
+  LongDoubleBits quiet_nan = LongDoubleBits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 #endif
 }
@@ -592,7 +595,8 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "(+Infinity)");
   EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::inf(Sign::NEG)).c_str(),
                "(-Infinity)");
-  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::build_nan()).c_str(), "(NaN)");
+  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits::signaling_nan()).c_str(),
+               "(NaN)");
 
   Float128Bits zero = Float128Bits::zero(Sign::POS);
   EXPECT_TRUE(zero.is_pos());
@@ -651,7 +655,7 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
                "0xBFFF2000000000000000000000000000 = "
                "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
 
-  Float128Bits quiet_nan = Float128Bits::build_quiet_nan();
+  Float128Bits quiet_nan = Float128Bits::quiet_nan();
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #endif // LIBC_COMPILER_HAS_FLOAT128
