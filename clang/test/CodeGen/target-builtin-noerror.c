@@ -91,7 +91,6 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("clwb");
   (void)__builtin_cpu_supports("clzero");
   (void)__builtin_cpu_supports("cx16");
-  (void)__builtin_cpu_supports("cx8");
   (void)__builtin_cpu_supports("enqcmd");
   (void)__builtin_cpu_supports("fsgsbase");
   (void)__builtin_cpu_supports("lwp");
