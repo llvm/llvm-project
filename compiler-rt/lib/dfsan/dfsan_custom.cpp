@@ -2147,7 +2147,7 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_write(
   *ret_label = 0;
   return write(fd, buf, count);
 }
-} // namespace __dfsan
+}  // namespace __dfsan
 
 // Type used to extract a dfsan_label with va_arg()
 typedef int dfsan_label_va;
