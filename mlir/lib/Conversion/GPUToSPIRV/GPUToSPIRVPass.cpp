@@ -99,12 +99,17 @@ void GPUToSPIRVPass::runOnOperation() {
       spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
       spirv::convertMemRefTypesAndAttrs(gpuModule, converter);
 
-      // Run the conversion on an empty pattern set to diagnose any illegal ops
-      // left.
-      if (failed(applyFullConversion(
-              gpuModule, *spirv::getMemorySpaceToStorageClassTarget(*context),
-              RewritePatternSet{context})))
-        return signalPassFailure();
+      // Check if there are any illegal ops remaining.
+      std::unique_ptr<ConversionTarget> target =
+          spirv::getMemorySpaceToStorageClassTarget(*context);
+      gpuModule->walk([&target, this](Operation *childOp) {
+        if (target->isIllegal(childOp)) {
+          childOp->emitOpError("failed to legalize memory space");
+          signalPassFailure();
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
     }
 
     std::unique_ptr<ConversionTarget> target =

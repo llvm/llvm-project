@@ -21,8 +21,9 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -301,12 +302,17 @@ public:
     // Perform the replacement.
     spirv::convertMemRefTypesAndAttrs(op, converter);
 
-    // Only perform the conversion to check that there are no illegal ops
-    // remaining. Do not attempt to convert anything.
-    if (failed(applyFullConversion(
-            op, *spirv::getMemorySpaceToStorageClassTarget(*context),
-            RewritePatternSet{context})))
-      return signalPassFailure();
+    // Check if there are any illegal ops remaining.
+    std::unique_ptr<ConversionTarget> target =
+        spirv::getMemorySpaceToStorageClassTarget(*context);
+    op->walk([&target, this](Operation *childOp) {
+      if (target->isIllegal(childOp)) {
+        childOp->emitOpError("failed to legalize memory space");
+        signalPassFailure();
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    });
   }
 
 private:
