@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 ! Check distinguishability for specific procedures of defined operators and
 ! assignment. These are different from names because there a normal generic
@@ -18,7 +18,7 @@ module m1
   end type
   type :: t2
   end type
-  !PORTABILITY: Generic 'OPERATOR(.foo.)' should not have specific procedures 's2' and 't1%p' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'OPERATOR(.foo.)' may not have specific procedures 's2' and 't1%p' as their interfaces are not distinguishable
   interface operator(.foo.)
     procedure :: s2
   end interface
@@ -39,7 +39,7 @@ module m2
     integer :: n
   contains
     procedure, pass(x1) :: p1 => s1
-    !PORTABILITY: Generic 'assignment(=)' should not have specific procedures 't1%p1' and 't2%p2' as their interfaces are not distinguishable by the incomplete rules in the standard
+    !ERROR: Generic 'assignment(=)' may not have specific procedures 't1%p1' and 't2%p2' as their interfaces are not distinguishable
     generic :: assignment(=) => p1
   end type
   type :: t2
