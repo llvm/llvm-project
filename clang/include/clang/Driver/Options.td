@@ -3617,16 +3617,16 @@ defm tocdata : BoolOption<"m","tocdata",
   "This is the default. TOC data transformation is not applied to any"
   "variables. Only variables specified explicitly in -mtocdata= will"
   "have the TOC data transformation.">,
-  BothFlags<[], [ClangOption, CLOption]>>, Group<m_Group>;
+  BothFlags<[TargetSpecific], [ClangOption, CLOption]>>, Group<m_Group>;
 def mtocdata_EQ : CommaJoined<["-"], "mtocdata=">,
   Visibility<[ClangOption, CC1Option]>,
-  Flags<[TargetSpecific]>,
+  Flags<[TargetSpecific]>, Group<m_Group>,
   HelpText<"Specifies a list of variables to which the TOC data transformation"
            "will be applied.">,
   MarshallingInfoStringVector<CodeGenOpts<"TocDataVarsUserSpecified">>;
 def mno_tocdata_EQ : CommaJoined<["-"], "mno-tocdata=">,
   Visibility<[ClangOption, CC1Option]>,
-  Flags<[TargetSpecific]>,
+  Flags<[TargetSpecific]>, Group<m_Group>,
   HelpText<"Specifies a list of variables to be exempt from the TOC data"
            "transformation.">,
   MarshallingInfoStringVector<CodeGenOpts<"NoTocDataVars">>;
