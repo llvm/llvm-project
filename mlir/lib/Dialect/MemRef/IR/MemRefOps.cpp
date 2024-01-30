@@ -3227,8 +3227,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor) {
   // result types are identical already.
   if (getPermutation().isIdentity() && getType() == getIn().getType())
     return getIn();
-  if (succeeded(foldMemRefCast(*this)))
-    return getResult();
   // Fold two consecutive memref.transpose Ops into one by composing their
   // permutation maps.
   if (auto otherTransposeOp = getIn().getDefiningOp<memref::TransposeOp>()) {
