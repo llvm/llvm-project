@@ -6,6 +6,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CallGraph.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/raw_ostream.h"
