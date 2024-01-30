@@ -1280,7 +1280,7 @@ void AccAttributeVisitor::CheckAssociatedLoop(
                   evaluate::CollectSymbols(*lowerExpr);
               checkExprHasSymbols(ivs, lowerSyms);
             }
-            if (auto upperExpr = semantics::AnalyzeExpr(context_, b->upper)) {
+            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->upper)}) {
               semantics::UnorderedSymbolSet upperSyms =
                   evaluate::CollectSymbols(*upperExpr);
               checkExprHasSymbols(ivs, upperSyms);
