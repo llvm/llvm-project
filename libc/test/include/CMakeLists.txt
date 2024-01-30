@@ -27,13 +27,5 @@ if (LLVM_LIBC_FULL_BUILD)
     DEPENDS
       libc.include.llvm-libc-macros.stdbit_macros
       libc.include.stdbit
-      # Intentionally do not depend on libc.src.stdbit.*. The include test is
-      # simply testing the macros provided by stdbit.h, not the implementation
-      # of the underlying functions which the type generic macros may dispatch
-      # to.
-    COMPILE_OPTIONS
-      # stdbit.h is full of type generic macros implemented via C11 _Generic.
-      # Clang will produce -Wno-c11-extensions when using _Generic in C++ mode.
-      -Wno-c11-extensions
   )
 endif()
