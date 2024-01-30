@@ -544,8 +544,8 @@ public:
     }
 
     /// Compares the name of this entry against Target, returning true if they
-    /// are equal. This is helpful is hot code paths that do not need the length
-    /// of the name.
+    /// are equal. This is more efficient in hot code paths that do not need the
+    /// length of the name.
     bool sameNameAs(StringRef Target) const {
       // Note: this is not the name, but the rest of debug_str starting from
       // name. This handles corrupt data (non-null terminated) without
