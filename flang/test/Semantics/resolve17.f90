@@ -96,7 +96,7 @@ contains
   end
 end
 subroutine s6
-  !ERROR: Generic 'g' should not have specific procedures 'sa' and 'sb' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 'sa' and 'sb' as their interfaces are not distinguishable
   use m6a, g => gg
   use m6b, g => gg
 end
@@ -180,7 +180,7 @@ contains
   end
 end module
 subroutine s9
-  !PORTABILITY: USE-associated generic 'g' should not have specific procedures 'g' and 'g' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: USE-associated generic 'g' may not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
   use m9a
   use m9b
 end
@@ -197,7 +197,7 @@ contains
 end
 module m10b
   use m10a
-  !PORTABILITY: Generic 'g' should not have specific procedures 's' and 's' as their interfaces are not distinguishable by the incomplete rules in the standard
+  !ERROR: Generic 'g' may not have specific procedures 's' and 's' as their interfaces are not distinguishable
   interface g
     module procedure s
   end interface
