@@ -1,6 +1,7 @@
 """
-Watch larger-than-8-bytes regions of memory, confirm that
-writes to those regions are detected.
+Watch a large unaligned memory region that
+lldb will need multiple hardware watchpoints
+to cover.
 """
 
 
@@ -10,7 +11,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class UnalignedWatchpointTestCase(TestBase):
+class UnalignedLargeWatchpointTestCase(TestBase):
     def continue_and_report_stop_reason(self, process, iter_str):
         process.Continue()
         self.assertIn(
@@ -21,20 +22,11 @@ class UnalignedWatchpointTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    # debugserver on AArch64 has this feature.
-    @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
-    @skipUnlessDarwin
-
-    # LWP_TODO: until debugserver advertises that it supports
-    # MASK watchpoints, this test can't be enabled, lldb won't
-    # try to send watchpoints larger than 8 bytes.
-    @skipIfDarwin
-
-    # debugserver only gained the ability to watch larger regions
-    # with this patch.
-    @skipIfOutOfTreeDebugserver
-    def test_large_watchpoint(self):
-        """Test watchpoint that covers a large region of memory."""
+    # Test on 64-bit targets where we probably have
+    # four watchpoint registers that can watch doublewords (8-byte).
+    @skipIf(archs=no_match(["arm64", "arm64e", "aarch64", "x86_64"]))
+    def test_unaligned_large_watchpoint(self):
+        """Test watching an unaligned region of memory that requires multiple watchpoints."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -45,16 +37,22 @@ class UnalignedWatchpointTestCase(TestBase):
 
         array_addr = frame.GetValueForVariablePath("array").GetValueAsUnsigned()
 
-        # watch 256 uint32_t elements in the middle of the array,
-        # don't assume that the heap allocated array is aligned
+        # Don't assume that the heap allocated array is aligned
         # to a 1024 byte boundary to begin with, force alignment.
-        wa_256_addr = (array_addr + 1024) & ~(1024 - 1)
+        # wa_addr = (array_addr + 1024) & ~(1024 - 1)
+        wa_addr = array_addr
+
+        # Now make the start address unaligned.
+        wa_addr = wa_addr + 7
+
         err = lldb.SBError()
         wp_opts = lldb.SBWatchpointOptions()
         wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
-        wp = target.WatchpointCreateByAddress(wa_256_addr, 1024, wp_opts, err)
+        wp = target.WatchpointCreateByAddress(wa_addr, 22, wp_opts, err)
         self.assertTrue(wp.IsValid())
         self.assertSuccess(err)
+        if self.TraceOn():
+            self.runCmd("watch list -v")
 
         c_count = 0
         reason = self.continue_and_report_stop_reason(process, "continue #%d" % c_count)
@@ -63,6 +61,8 @@ class UnalignedWatchpointTestCase(TestBase):
             reason = self.continue_and_report_stop_reason(
                 process, "continue #%d" % c_count
             )
-            self.assertLessEqual(c_count, 16)
+            self.assertLessEqual(c_count, 22)
 
-        self.assertEqual(c_count, 16)
+        self.assertEqual(c_count, 22)
+        self.expect("watchpoint list -v", substrs=["hit_count = 22"])
+        self.assertEqual(wp.GetHitCount(), 22)
