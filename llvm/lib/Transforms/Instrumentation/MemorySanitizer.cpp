@@ -4559,9 +4559,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     } else {
       // ElemTy, derived from elementtype(), does not encode the alignment of
       // the pointer. Conservatively assume that the shadow memory is unaligned.
+      // Avoid StoreInst as SizeVal may be large, expanding to many
+      // instructions.
       auto [ShadowPtr, _] =
           getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
-      IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
+      IRB.CreateMemSet(ShadowPtr, ConstantInt::getNullValue(IRB.getInt8Ty()),
+                       SizeVal, Align(1));
     }
   }
 

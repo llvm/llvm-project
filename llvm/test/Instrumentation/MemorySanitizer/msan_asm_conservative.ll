@@ -177,8 +177,8 @@ entry:
 }
 
 ; CHECK-LABEL: @f_2i_2o_mem
-; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id1 to i64), i64 87960930222080) to ptr), align 1
-; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id2 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @id1 to i64), i64 87960930222080) to ptr), i8 0, i64 4, i1 false)
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @id2 to i64), i64 87960930222080) to ptr), i8 0, i64 4, i1 false)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id2{{.*}}, i64 4)
 ; CHECK: call void asm "", "=*m,=*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @id1, ptr elementtype(i32) @id2, ptr elementtype(i32) @is1, ptr elementtype(i32) @is2)
@@ -196,7 +196,7 @@ entry:
 
 ; CHECK-LABEL: @f_1i_1o_memreg
 ; CHECK: [[IS1_F7:%.*]] = load i32, ptr @is1, align 4
-; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id1 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @id1 to i64), i64 87960930222080) to ptr), i8 0, i64 4, i1 false)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK: call void @__msan_warning
 ; CHECK: call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @id1, i32 [[IS1_F7]], ptr elementtype(i32) @is1)
@@ -215,7 +215,7 @@ entry:
 }
 
 ; CHECK-LABEL: @f_3o_reg_mem_reg
-; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id2 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @id2 to i64), i64 87960930222080) to ptr), i8 0, i64 4, i1 false)
 ; CHECK-CONS: call void @__msan_instrument_asm_store(ptr @id2, i64 4)
 ; CHECK: call { i32, i32 } asm "", "=r,=*m,=r,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @id2)
 
@@ -240,7 +240,7 @@ entry:
 ; CHECK: [[PAIR1_F9:%.*]] = load {{.*}} @pair1
 ; CHECK: [[C1_F9:%.*]] = load {{.*}} @c1
 ; CHECK: [[MEMCPY_S1_F9:%.*]] = load {{.*}} @memcpy_s1
-; USER-CONS:  store { i32, i32 } zeroinitializer, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @pair2 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @pair2 to i64), i64 87960930222080) to ptr), i8 0, i64 8, i1 false)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
 ; CHECK: call void @__msan_warning
 ; KMSAN: call void @__msan_warning
@@ -257,9 +257,9 @@ entry:
 }
 
 ; CHECK-LABEL: @f_3i_3o_complex_mem
-; USER-CONS:       store { i32, i32 } zeroinitializer, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @pair2 to i64), i64 87960930222080) to ptr), align 1
-; USER-CONS-NEXT:  store i8 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @c2 to i64), i64 87960930222080) to ptr), align 1
-; USER-CONS-NEXT:  store i64 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @memcpy_d1 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS:       call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @pair2 to i64), i64 87960930222080) to ptr), i8 0, i64 8, i1 false)
+; USER-CONS-NEXT:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @c2 to i64), i64 87960930222080) to ptr), i8 0, i64 1, i1 false)
+; USER-CONS-NEXT:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @memcpy_d1 to i64), i64 87960930222080) to ptr), i8 0, i64 8, i1 false)
 ; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
 ; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@c2{{.*}}, i64 1)
 ; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)
