@@ -119,6 +119,8 @@ Improvements to Clang's time-trace
 
 Bug Fixes in This Version
 -------------------------
+- Clang now accepts elaborated-type-specifiers that explicitly specialize
+  a member class template for an implicit instantiation of a class template.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
