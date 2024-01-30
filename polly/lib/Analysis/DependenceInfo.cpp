@@ -647,9 +647,8 @@ bool Dependences::isValidSchedule(Scop &S, isl::schedule NewSched) const {
   return isValidSchedule(S, NewSchedules);
 }
 
-bool
-Dependences::isValidSchedule(Scop &S,
-                             const StatementToIslMapTy &NewSchedule) const {
+bool Dependences::isValidSchedule(
+    Scop &S, const StatementToIslMapTy &NewSchedule) const {
   if (LegalityCheckDisabled)
     return true;
 

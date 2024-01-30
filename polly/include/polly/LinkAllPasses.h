@@ -138,8 +138,8 @@ void initializeJSONImporterPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeDependenceInfoPass(llvm::PassRegistry &);
 void initializeDependenceInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeDependenceInfoWrapperPassPass(llvm::PassRegistry &);
-void
-initializeDependenceInfoPrinterLegacyFunctionPassPass(llvm::PassRegistry &);
+void initializeDependenceInfoPrinterLegacyFunctionPassPass(
+    llvm::PassRegistry &);
 void initializeIslAstInfoWrapperPassPass(llvm::PassRegistry &);
 void initializeIslAstInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);

@@ -990,8 +990,8 @@ void IslScheduleOptimizerWrapperPass::printScop(raw_ostream &OS, Scop &) const {
   runScheduleOptimizerPrinter(OS, LastSchedule);
 }
 
-void
-IslScheduleOptimizerWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void IslScheduleOptimizerWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<DependenceInfo>();
   AU.addRequired<TargetTransformInfoWrapperPass>();

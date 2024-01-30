@@ -332,8 +332,8 @@ namespace llvm {
 void initializeDependenceInfoPass(llvm::PassRegistry &);
 void initializeDependenceInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeDependenceInfoWrapperPassPass(llvm::PassRegistry &);
-void
-initializeDependenceInfoPrinterLegacyFunctionPassPass(llvm::PassRegistry &);
+void initializeDependenceInfoPrinterLegacyFunctionPassPass(
+    llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

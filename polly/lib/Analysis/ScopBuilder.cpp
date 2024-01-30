@@ -827,9 +827,8 @@ void ScopBuilder::buildInvariantEquivalenceClasses() {
   }
 }
 
-bool
-ScopBuilder::buildDomains(Region *R,
-                          DenseMap<BasicBlock *, isl::set> &InvalidDomainMap) {
+bool ScopBuilder::buildDomains(
+    Region *R, DenseMap<BasicBlock *, isl::set> &InvalidDomainMap) {
   bool IsOnlyNonAffineRegion = scop->isNonAffineSubRegion(R);
   auto *EntryBB = R->getEntry();
   auto *L = IsOnlyNonAffineRegion ? nullptr : LI.getLoopFor(EntryBB);
@@ -3298,9 +3297,8 @@ bool ScopBuilder::buildAliasGroups() {
   return true;
 }
 
-bool
-ScopBuilder::buildAliasGroup(AliasGroupTy &AliasGroup,
-                             DenseSet<const ScopArrayInfo *> HasWriteAccess) {
+bool ScopBuilder::buildAliasGroup(
+    AliasGroupTy &AliasGroup, DenseSet<const ScopArrayInfo *> HasWriteAccess) {
   AliasGroupTy ReadOnlyAccesses;
   AliasGroupTy ReadWriteAccesses;
   SmallPtrSet<const ScopArrayInfo *, 4> ReadWriteArrays;
