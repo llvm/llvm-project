@@ -33,9 +33,9 @@ for.end:
 ; This has the same trip count as loop_with_tc_32 but since the resulting interleaved group 
 ; in this case may access memory out-of-bounds, it requires a scalar epilogue iteration for 
 ; correctness, making at most 31 iterations available for interleaving.
-; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar remainder
+; When the auto-vectorizer chooses VF 16, it should choose IC 1 to leave a smaller scalar remainder
 ; than IC 2
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 1)
 define void @loop_with_tc_32_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q) {
 entry:
   br label %for.body
@@ -229,15 +229,15 @@ for.end:
 ; This has the same trip count as loop_with_tc_128 but since the resulting interleaved group 
 ; in this case may access memory out-of-bounds, it requires a scalar epilogue iteration for 
 ; correctness, making at most 127 iterations available for interleaving.
-; TODO: Like loop_with_tc_128, the entry block should branch into the vector loop, instead of the scalar epilogue.
-; TODO: When the auto-vectorizer chooses VF 16, it should choose IC 2 to leave a smaller scalar 
+; Like loop_with_tc_128, the entry block should branch into the vector loop, instead of the scalar epilogue.
+; When the auto-vectorizer chooses VF 16, it should choose IC 2 to leave a smaller scalar 
 ; remainder than IC 4
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 8)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
 define void @loop_with_tc_128_scalar_epilogue_reqd(ptr noalias %p, ptr noalias %q) {
 ; CHECK-IR-LABEL: define void @loop_with_tc_128_scalar_epilogue_reqd(
 ; CHECK-IR-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]]) {
 ; CHECK-IR-NEXT:  entry:
-; CHECK-IR-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-IR-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 entry:
   br label %for.body
 

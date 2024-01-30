@@ -2413,6 +2413,9 @@ private:
   /// \param TE Tree entry checked for permutation.
   /// \param VL List of scalars (a subset of the TE scalar), checked for
   /// permutations. Must form single-register vector.
+  /// \param ForOrder Tries to fetch the best candidates for ordering info. Also
+  /// commands to build the mask using the original vector value, without
+  /// relying on the potential reordering.
   /// \returns ShuffleKind, if gathered values can be represented as shuffles of
   /// previous tree entries. \p Part of \p Mask is filled with the shuffle mask.
   std::optional<TargetTransformInfo::ShuffleKind>
@@ -2426,6 +2429,9 @@ private:
   /// \param TE Tree entry checked for permutation.
   /// \param VL List of scalars (a subset of the TE scalar), checked for
   /// permutations.
+  /// \param ForOrder Tries to fetch the best candidates for ordering info. Also
+  /// commands to build the mask using the original vector value, without
+  /// relying on the potential reordering.
   /// \returns per-register series of ShuffleKind, if gathered values can be
   /// represented as shuffles of previous tree entries. \p Mask is filled with
   /// the shuffle mask (also on per-register base).
@@ -3817,7 +3823,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
     std::iota(CurrentOrder.begin(), CurrentOrder.end(), 0);
     return CurrentOrder;
   }
-  auto IsBroadcastMask = [](ArrayRef<int> Mask) {
+  auto IsSplatMask = [](ArrayRef<int> Mask) {
     int SingleElt = PoisonMaskElem;
     return all_of(Mask, [&](int I) {
       if (SingleElt == PoisonMaskElem && I != PoisonMaskElem)
@@ -3826,10 +3832,10 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
     });
   };
   // Exclusive broadcast mask - ignore.
-  if ((ExtractShuffles.empty() && IsBroadcastMask(Mask) &&
+  if ((ExtractShuffles.empty() && IsSplatMask(Mask) &&
        (Entries.size() != 1 ||
         Entries.front().front()->ReorderIndices.empty())) ||
-      (GatherShuffles.empty() && IsBroadcastMask(ExtractMask)))
+      (GatherShuffles.empty() && IsSplatMask(ExtractMask)))
     return std::nullopt;
   SmallBitVector ShuffledSubMasks(NumParts);
   auto TransformMaskToOrder = [&](MutableArrayRef<unsigned> CurrentOrder,
