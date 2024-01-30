@@ -41,16 +41,20 @@ COFF Improvements
 * Added support for ``--time-trace`` and associated ``--time-trace-granularity``.
   This generates a .json profile trace of the linker execution.
 
-* Prefer library paths specified with ``-libpath:`` over the implicitly
+* LLD now prefers library paths specified with ``-libpath:`` over the implicitly
   detected toolchain paths.
 
 MinGW Improvements
 ------------------
 
-* Added support for many LTO and ThinLTO options.
+* Added support for many LTO and ThinLTO options (most LTO options supported
+  by the ELF driver, that are implemented by the COFF backend as well,
+  should be supported now).
 
-* LLD no longer tries to autodetect and pick up MSVC/WinSDK installations
-  when run in MinGW mode.
+* LLD no longer tries to autodetect and use library paths from MSVC/WinSDK
+  installations when run in MinGW mode; that mode of operation shouldn't
+  ever be needed in MinGW mode, and could be a source of unexpected
+  behaviours.
 
 * The ``--icf=safe`` option now works as expected; it was previously a no-op.
 

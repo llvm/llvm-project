@@ -322,9 +322,10 @@ Changes to the LLVM tools
 * llvm-rc and llvm-windres now accept file path references in ``.rc`` files
   concatenated from multiple string literals.
 
-* The llvm-windres option ``--preprocessor`` now resolve its argument
+* The llvm-windres option ``--preprocessor`` now resolves its argument
   in the PATH environment variable as expected, and options passed with
-  ``--preprocessor-arg`` are placed before the input file as they should.
+  ``--preprocessor-arg`` are placed before the input file as they should
+  be.
 
 * The llvm-windres option ``--preprocessor`` has been updated with the
   breaking behaviour change from GNU windres from binutils 2.36, where
