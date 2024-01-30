@@ -1107,6 +1107,11 @@ let SubtargetPredicate = HasPseudoScalarTrans in {
   def : PseudoScalarPatF16<any_amdgcn_sqrt, V_S_SQRT_F16_e64>;
 }
 
+let SubtargetPredicate = isGFX12_10Plus, isReMaterializable = 1 in {
+  defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>>;
+  defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>>;
+} // End SubtargetPredicate = isGFX12_10Plus, isReMaterializable = 1
+
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
 //===----------------------------------------------------------------------===//
@@ -1367,6 +1372,8 @@ defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b1
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 
 defm V_LSHL_ADD_U64        : VOP3Only_Realtriple_gfx1210<0x252>;
+defm V_ASHR_PK_I8_I32      : VOP3Only_Realtriple_gfx1210<0x290>;
+defm V_ASHR_PK_U8_I32      : VOP3Only_Realtriple_gfx1210<0x291>;
 defm V_CVT_PK_BF16_F32     : VOP3Only_Realtriple_gfx1210<0x36d>;
 defm V_CVT_SR_PK_BF16_F32  : VOP3Only_Realtriple_gfx1210<0x36e>;
 

@@ -224,3 +224,13 @@ v_trig_preop_f64 v[4:5], v[8:9], v2 row_share:1
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX1210-ERR-NEXT:{{^}}v_trig_preop_f64 v[4:5], v[8:9], v2 row_share:1
 // GFX1210-ERR-NEXT:{{^}}                                    ^
+
+v_ashr_pk_i8_i32 v1, v2, v3, v4 clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR-NEXT:{{^}}v_ashr_pk_i8_i32 v1, v2, v3, v4 clamp
+// GFX1210-ERR-NEXT:{{^}}                                ^
+
+v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR-NEXT:{{^}}v_ashr_pk_u8_i32 v1, v2, v3, v4 clamp
+// GFX1210-ERR-NEXT:{{^}}                                ^
