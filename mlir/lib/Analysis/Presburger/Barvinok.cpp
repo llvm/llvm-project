@@ -224,16 +224,15 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 
 /// This is an implementation of the Clauss-Loechner algorithm for chamber
 /// decomposition.
-/// We maintain a list of pairwise disjoint chambers and their generating
-/// functions. We iterate over the list of regions, each time adding the
-/// generating function to the chambers where the corresponding vertex is
-/// active and separating the chambers where it is not.
+/// We maintain a list of pairwise disjoint chambers and the generating
+/// functions corresponding to each one. We iterate over the list of regions,
+/// each time adding the current region's generating function to the chambers
+/// where it is active and separating the chambers where it is not.
 ///
-/// Given the region each vertex is active in, for each subset of vertices,
-/// the region that precisely this subset is in, is the intersection of the
-/// regions that these are active in, intersected with the complements of the
-/// remaining regions. The generating function for this region is the sum of
-/// generating functions for the vertices' tangent cones.
+/// Given the region each generating function is active in, for each subset of
+/// generating functions the region that (the sum of) precisely this subset is
+/// in, is the intersection of the regions that these are active in,
+/// intersected with the complements of the remaining regions.
 std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 mlir::presburger::detail::computeChamberDecomposition(
     unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>
@@ -329,7 +328,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
   // For a given permutation, we consider a subset which contains
   // the i'th inequality if the i'th bit in the bitset is 1.
   // We start with the permutation that takes the last numVars inequalities.
-  std::vector<int> indicator(numIneqs);
+  SmallVector<int> indicator(numIneqs);
   for (unsigned i = numIneqs - numVars; i < numIneqs; ++i)
     indicator[i] = 1;
 
@@ -368,7 +367,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // The region (in parameter space) where this vertex is active is given
     // by substituting the vertex into the *remaining* inequalities of the
     // polytope (those which were not collected into `subset`), i.e.,
-    // [A2 | B2 | c2].
+    // remaining = [A2 | B2 | c2].
     // Thus, the coefficients of the parameters after substitution become
     // (A2 • X + B2)
     // and the constant terms become
@@ -387,8 +386,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // We convert the representation of the active region to an integers-only
     // form so as to store it as a PresburgerSet.
     IntegerPolyhedron activeRegionRel(
-        PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0),
-        activeRegion.normalizeRows());
+        PresburgerSpace::getRelationSpace(0, numSymbols, 0, 0), activeRegion);
 
     // Now, we compute the generating function at this vertex.
     // We collect the inequalities corresponding to each vertex to compute

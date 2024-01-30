@@ -891,6 +891,14 @@ public:
       addInequality(inequalities.getRow(i));
   }
 
+  explicit IntegerPolyhedron(const PresburgerSpace &space,
+                             FracMatrix inequalities)
+      : IntegerPolyhedron(space) {
+    IntMatrix ineqsNormalized = inequalities.normalizeRows();
+    for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)
+      addInequality(ineqsNormalized.getRow(i));
+  }
+
   /// Construct a set from an IntegerRelation. The relation should have
   /// no domain vars.
   explicit IntegerPolyhedron(const IntegerRelation &rel)

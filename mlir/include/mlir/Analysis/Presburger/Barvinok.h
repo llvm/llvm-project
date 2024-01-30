@@ -95,16 +95,13 @@ GeneratingFunction computeUnimodularConeGeneratingFunction(ParamPoint vertex,
 /// If there is no solution, return null.
 std::optional<ParamPoint> solveParametricEquations(FracMatrix equations);
 
-/// Given a list of possibly intersecting regions (PresburgerSet) and
-/// the vertices active in each region, produce a pairwise disjoint list of
-/// regions (chambers) and identify the vertices active in each of these new
-/// regions.
-/// In the return type, the vertices are stored by their index in the
-/// `vertices` argument, i.e., the set {2, 3, 4} represents the vertex set
-/// {vertices[2], vertices[3], vertices[4]}.
-/// The ith relation corresponds to the activity region of the ith vertex set.
-/// Note that here, by disjoint, we mean that the intersection is not
-/// full-dimensional.
+/// Given a list of possibly intersecting regions (PresburgerSet) and the
+/// generating functions active in each region, produce a pairwise disjoint
+/// list of regions (chambers) and identify the generating function of the
+/// polytope in each chamber.
+/// The returned list partitions the universe into parts depending on which
+/// subset of GFs is active there, and gives the sum of active GFs for each
+/// part. Lower-dimensional partitions are ignored.
 std::vector<std::pair<PresburgerSet, GeneratingFunction>>
 computeChamberDecomposition(
     unsigned numSymbols, ArrayRef<std::pair<PresburgerSet, GeneratingFunction>>

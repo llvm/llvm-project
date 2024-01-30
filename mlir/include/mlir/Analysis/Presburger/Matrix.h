@@ -203,7 +203,7 @@ public:
   /// 1 and which are 0 in a given bitset.
   /// The first matrix returned has the rows corresponding to 1 and the second
   /// corresponding to 2.
-  std::pair<Matrix<T>, Matrix<T>> splitByBitset(std::vector<int> indicator);
+  std::pair<Matrix<T>, Matrix<T>> splitByBitset(ArrayRef<int> indicator);
 
   /// Print the matrix.
   void print(raw_ostream &os) const;

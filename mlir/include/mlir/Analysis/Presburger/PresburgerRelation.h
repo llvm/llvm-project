@@ -217,9 +217,9 @@ public:
   /// redundencies.
   PresburgerRelation simplify() const;
 
-  /// Return true if any of the disjuncts is full-dimensional.
-  /// We find if a disjunct is full-dimensional by checking if it is flat
-  /// along the dimension of any of its inequalities.
+  /// We consider a disjunct to be full-dimensional if it is not flat along the
+  /// dimension of any of its inequalities.
+  /// A PresburgerRelation is full-dimensional if any of its disjuncts is.
   bool isFullDim() const;
 
   /// Print the set's internal state.
