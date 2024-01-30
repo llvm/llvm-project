@@ -1078,9 +1078,8 @@ VPlan *VPlan::duplicate() {
   auto *NewPlan = new VPlan(NewPreheader, cast<VPBasicBlock>(NewEntry));
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
-    VPValue *NewLiveIn = new VPValue(OldLiveIn->getLiveInIRValue());
-    NewPlan->VPLiveInsToFree.push_back(NewLiveIn);
-    Old2NewVPValues[OldLiveIn] = NewLiveIn;
+    Old2NewVPValues[OldLiveIn] =
+        NewPlan->getVPValueOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
@@ -1090,7 +1089,8 @@ VPlan *VPlan::duplicate() {
   }
   assert(TripCount && "trip count must be set");
   if (TripCount->isLiveIn())
-    Old2NewVPValues[TripCount] = new VPValue(TripCount->getLiveInIRValue());
+    Old2NewVPValues[TripCount] =
+        NewPlan->getVPValueOrAddLiveIn(TripCount->getLiveInIRValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
