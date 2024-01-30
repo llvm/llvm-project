@@ -362,7 +362,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
-                                 mlir::cir::CallOp *callOrInvoke,
+                                 mlir::cir::CIRCallOpInterface *callOrTryCall,
                                  bool IsMustTail, mlir::Location loc,
                                  std::optional<const clang::CallExpr *> E) {
   auto builder = CGM.getBuilder();
@@ -598,33 +598,46 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   auto callLoc = loc;
   assert(builder.getInsertionBlock() && "expected valid basic block");
 
-  mlir::cir::CallOp theCall;
-  if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr)) {
-    assert(fnOp && "only direct call supported");
-    theCall = builder.create<mlir::cir::CallOp>(callLoc, fnOp, CIRCallArgs);
-  } else if (auto loadOp = dyn_cast<mlir::cir::LoadOp>(CalleePtr)) {
-    theCall = builder.create<mlir::cir::CallOp>(callLoc, loadOp->getResult(0),
-                                                CIRFuncTy, CIRCallArgs);
-  } else if (auto getGlobalOp = dyn_cast<mlir::cir::GetGlobalOp>(CalleePtr)) {
-    // FIXME(cir): This peephole optimization to avoids indirect calls for
-    // builtins. This should be fixed in the builting declaration instead by not
-    // emitting an unecessary get_global in the first place.
-    auto *globalOp = mlir::SymbolTable::lookupSymbolIn(CGM.getModule(),
-                                                       getGlobalOp.getName());
-    assert(getGlobalOp && "undefined global function");
-    auto callee = llvm::dyn_cast<mlir::cir::FuncOp>(globalOp);
-    assert(callee && "operation is not a function");
-    theCall = builder.create<mlir::cir::CallOp>(callLoc, callee, CIRCallArgs);
-  } else {
-    llvm_unreachable("expected call variant to be handled");
-  }
+  mlir::cir::CIRCallOpInterface theCall = [&]() {
+    mlir::cir::FuncType indirectFuncTy;
+    mlir::Value indirectFuncVal;
+    mlir::cir::FuncOp directFuncOp;
 
-  if (E)
-    theCall.setAstAttr(
-        mlir::cir::ASTCallExprAttr::get(builder.getContext(), *E));
+    if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(CalleePtr)) {
+      directFuncOp = fnOp;
+    } else if (auto loadOp = dyn_cast<mlir::cir::LoadOp>(CalleePtr)) {
+      indirectFuncTy = CIRFuncTy;
+      indirectFuncVal = loadOp->getResult(0);
+    } else if (auto getGlobalOp = dyn_cast<mlir::cir::GetGlobalOp>(CalleePtr)) {
+      // FIXME(cir): This peephole optimization to avoids indirect calls for
+      // builtins. This should be fixed in the builting declaration instead by
+      // not emitting an unecessary get_global in the first place.
+      auto *globalOp = mlir::SymbolTable::lookupSymbolIn(CGM.getModule(),
+                                                         getGlobalOp.getName());
+      assert(getGlobalOp && "undefined global function");
+      directFuncOp = llvm::dyn_cast<mlir::cir::FuncOp>(globalOp);
+      assert(directFuncOp && "operation is not a function");
+    } else {
+      llvm_unreachable("expected call variant to be handled");
+    }
 
-  if (callOrInvoke)
-    callOrInvoke = &theCall;
+    mlir::cir::CIRCallOpInterface callLikeOp;
+    if (indirectFuncTy) {
+      callLikeOp = builder.create<mlir::cir::CallOp>(
+          callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs);
+    } else {
+      callLikeOp =
+          builder.create<mlir::cir::CallOp>(callLoc, directFuncOp, CIRCallArgs);
+    }
+
+    if (E)
+      callLikeOp->setAttr(
+          "ast", mlir::cir::ASTCallExprAttr::get(builder.getContext(), *E));
+
+    if (callOrTryCall)
+      *callOrTryCall = callLikeOp;
+    return callLikeOp;
+  }();
 
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     assert(!FD->getAttr<CFGuardAttr>() && "NYI");
@@ -666,7 +679,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
             DestIsVolatile = false;
           }
 
-          auto Results = theCall.getResults();
+          auto Results = theCall->getOpResults();
           assert(Results.size() <= 1 && "multiple returns NYI");
 
           SourceLocRAIIObject Loc{*this, callLoc};
@@ -676,7 +689,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
         case TEK_Scalar: {
           // If the argument doesn't match, perform a bitcast to coerce it. This
           // can happen due to trivial type mismatches.
-          auto Results = theCall.getResults();
+          auto Results = theCall->getOpResults();
           assert(Results.size() <= 1 && "multiple returns NYI");
           assert(Results[0].getType() == RetCIRTy && "Bitcast support NYI");
           return RValue::get(Results[0]);

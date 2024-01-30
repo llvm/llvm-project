@@ -699,7 +699,7 @@ void CIRGenFunction::buildCXXConstructorCall(
   const CIRGenFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CIRGenCallee Callee = CIRGenCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
-  mlir::cir::CallOp C;
+  mlir::cir::CIRCallOpInterface C;
   buildCall(Info, Callee, ReturnValueSlot(), Args, &C, false, getLoc(Loc));
 
   assert(CGM.getCodeGenOpts().OptimizationLevel == 0 ||

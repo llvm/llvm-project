@@ -775,16 +775,17 @@ public:
   /// LLVM arguments and the types they were derived from.
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
-                   const CallArgList &Args, mlir::cir::CallOp *callOrInvoke,
+                   const CallArgList &Args,
+                   mlir::cir::CIRCallOpInterface *callOrTryCall,
                    bool IsMustTail, mlir::Location loc,
                    std::optional<const clang::CallExpr *> E = std::nullopt);
   RValue buildCall(const CIRGenFunctionInfo &CallInfo,
                    const CIRGenCallee &Callee, ReturnValueSlot ReturnValue,
                    const CallArgList &Args,
-                   mlir::cir::CallOp *callOrInvoke = nullptr,
+                   mlir::cir::CIRCallOpInterface *callOrTryCall = nullptr,
                    bool IsMustTail = false) {
     assert(currSrcLoc && "source location must have been set");
-    return buildCall(CallInfo, Callee, ReturnValue, Args, callOrInvoke,
+    return buildCall(CallInfo, Callee, ReturnValue, Args, callOrTryCall,
                      IsMustTail, *currSrcLoc, std::nullopt);
   }
   RValue buildCall(clang::QualType FnType, const CIRGenCallee &Callee,

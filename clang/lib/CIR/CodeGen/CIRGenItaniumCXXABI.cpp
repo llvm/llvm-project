@@ -619,7 +619,7 @@ struct CallEndCatch final : EHScopeStack::Cleanup {
     // Traditional LLVM codegen would emit a call to __cxa_end_catch
     // here. For CIR, just let it pass since the cleanup is going
     // to be emitted on a later pass when lowering the catch region.
-    // CGF.EmitRuntimeCallOrInvoke(getEndCatchFn(CGF.CGM));
+    // CGF.EmitRuntimeCallOrTryCall(getEndCatchFn(CGF.CGM));
     CGF.getBuilder().create<mlir::cir::YieldOp>(*CGF.currSrcLoc);
   }
 };
