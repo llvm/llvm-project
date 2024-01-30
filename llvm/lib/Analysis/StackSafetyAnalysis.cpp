@@ -280,7 +280,11 @@ const SCEV *StackSafetyLocalAnalysis::getSCEVAsPointer(Value *Val) {
   Type *ValTy = Val->getType();
 
   // We don't handle targets with multiple address spaces.
-  assert(ValTy->isPointerTy());
+  if(!ValTy->isPointerTy()) {
+    auto *PtrTy = PointerType::getUnqual(SE.getContext());
+    return SE.getTruncateOrZeroExtend(SE.getSCEV(Val), PtrTy);
+  }
+
   if (ValTy->getPointerAddressSpace() != 0)
     return nullptr;
   return SE.getSCEV(Val);
