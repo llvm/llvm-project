@@ -371,6 +371,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   { // Scope for SwitchInstProfUpdateWrapper. It must not live during
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
+    unsigned ReachableCaseCount = 0;
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
@@ -407,6 +408,35 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
       // Increment the case iterator since we didn't delete it.
       ++CI;
+      ++ReachableCaseCount;
+    }
+
+    BasicBlock *DefaultDest = SI->getDefaultDest();
+    if (!isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
+      ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
+                                                    /*UndefAllowed*/ false);
+      // The default dest is unreachable if all cases are covered.
+      if (!CR.isSizeLargerThan(ReachableCaseCount)) {
+        BasicBlock *NewUnreachableBB =
+            BasicBlock::Create(BB->getContext(), "default.unreachable",
+                               BB->getParent(), DefaultDest);
+        new UnreachableInst(BB->getContext(), NewUnreachableBB);
+
+        bool RemoveOldBB = --SuccessorsCount[DefaultDest] == 0;
+
+        if (RemoveOldBB)
+          DefaultDest->removePredecessor(BB);
+        SI->setDefaultDest(NewUnreachableBB);
+
+        if (RemoveOldBB)
+          DTU.applyUpdatesPermissive(
+              {{DominatorTree::Delete, BB, DefaultDest}});
+        DTU.applyUpdatesPermissive(
+            {{DominatorTree::Insert, BB, NewUnreachableBB}});
+
+        ++NumDeadCases;
+        Changed = true;
+      }
     }
   }
 
@@ -1227,6 +1257,7 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
+    assert(DT->verify());
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }

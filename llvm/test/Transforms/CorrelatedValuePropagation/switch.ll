@@ -8,7 +8,7 @@ define i32 @test_unreachable_default(i32 noundef %num) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[NUM]], -120
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SUB]], 3
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 2
-; CHECK-NEXT:    switch i32 [[COND]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:    switch i32 [[COND]], label [[DEFAULT_UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:      i32 1, label [[SW_BB2:%.*]]
 ; CHECK-NEXT:      i32 2, label [[SW_BB4:%.*]]
@@ -22,11 +22,13 @@ define i32 @test_unreachable_default(i32 noundef %num) {
 ; CHECK:       sw.bb4:
 ; CHECK-NEXT:    [[CALL5:%.*]] = call i32 @call2()
 ; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       default.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    [[CALL6:%.*]] = call i32 @call3()
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL6]], [[SW_DEFAULT]] ], [ [[CALL5]], [[SW_BB4]] ], [ [[CALL3]], [[SW_BB2]] ], [ [[CALL]], [[SW_BB]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL6]], [[SW_DEFAULT:%.*]] ], [ [[CALL5]], [[SW_BB4]] ], [ [[CALL3]], [[SW_BB2]] ], [ [[CALL]], [[SW_BB]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -67,10 +69,10 @@ define i32 @test_unreachable_default_shared_edge(i32 noundef %num) {
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[NUM]], -120
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SUB]], 3
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 2
-; CHECK-NEXT:    switch i32 [[COND]], label [[SW_BB4:%.*]] [
+; CHECK-NEXT:    switch i32 [[COND]], label [[DEFAULT_UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
 ; CHECK-NEXT:      i32 1, label [[SW_BB2:%.*]]
-; CHECK-NEXT:      i32 2, label [[SW_BB4]]
+; CHECK-NEXT:      i32 2, label [[SW_BB4:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @call0()
@@ -78,6 +80,8 @@ define i32 @test_unreachable_default_shared_edge(i32 noundef %num) {
 ; CHECK:       sw.bb2:
 ; CHECK-NEXT:    [[CALL3:%.*]] = call i32 @call1()
 ; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       default.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       sw.bb4:
 ; CHECK-NEXT:    [[CALL5:%.*]] = call i32 @call2()
 ; CHECK-NEXT:    br label [[CLEANUP]]
