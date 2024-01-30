@@ -22,6 +22,14 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
+
+enum Linkage {
+ Invalid = 0,
+ External = 1,
+ Internal = 2,
+};
+
+
 /// The identity of a type_info object depends on the canonical unqualified
 /// type only.
 TypeInfoLValue::TypeInfoLValue(const Type *T)
@@ -157,7 +165,6 @@ void APValue::LValuePathEntry::Profile(llvm::FoldingSetNodeID &ID) const {
 APValue::LValuePathSerializationHelper::LValuePathSerializationHelper(
     ArrayRef<LValuePathEntry> Path, QualType ElemTy)
     : Ty((const void *)ElemTy.getTypePtrOrNull()), Path(Path) {}
-
 QualType APValue::LValuePathSerializationHelper::getType() {
   return QualType::getFromOpaquePtr(Ty);
 }
