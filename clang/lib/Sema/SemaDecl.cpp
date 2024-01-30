@@ -163,6 +163,7 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw_char32_t:
   case tok::kw_typeof:
   case tok::annot_decltype:
+  case tok::annot_pack_indexing_type:
   case tok::kw_decltype:
     return getLangOpts().CPlusPlus;
 
@@ -12752,7 +12753,8 @@ namespace {
       }
 
       if (OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(E)) {
-        HandleValue(OVE->getSourceExpr());
+        if (Expr *SE = OVE->getSourceExpr())
+          HandleValue(SE);
         return;
       }
 

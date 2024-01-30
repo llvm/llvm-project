@@ -1275,11 +1275,10 @@ static void foldIdenticalLiterals() {
 static void addSynthenticMethnames() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  const int prefixLength = ObjCStubsSection::symbolPrefix.size();
   for (Symbol *sym : symtab->getSymbols())
     if (isa<Undefined>(sym))
-      if (sym->getName().starts_with(ObjCStubsSection::symbolPrefix))
-        os << sym->getName().drop_front(prefixLength) << '\0';
+      if (ObjCStubsSection::isObjCStubSymbol(sym))
+        os << ObjCStubsSection::getMethname(sym) << '\0';
 
   if (data.empty())
     return;

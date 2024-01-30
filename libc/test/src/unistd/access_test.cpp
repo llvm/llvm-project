@@ -24,29 +24,29 @@ TEST(LlvmLibcAccessTest, CreateAndTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/access.test";
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, F_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, X_OK | W_OK | R_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IXUSR);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, F_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, X_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, R_OK), -1);
-  ASSERT_EQ(libc_errno, EACCES);
+  ASSERT_ERRNO_EQ(EACCES);
   libc_errno = 0;
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, W_OK), -1);
-  ASSERT_EQ(libc_errno, EACCES);
+  ASSERT_ERRNO_EQ(EACCES);
   libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 }

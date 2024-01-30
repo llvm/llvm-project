@@ -556,6 +556,9 @@ public:
   using UP::FRACTION_MASK;
   using UP::SIGN_MASK;
 
+  LIBC_INLINE constexpr FPRep() = default;
+  LIBC_INLINE constexpr explicit FPRep(StorageType x) : UP(x) {}
+
   // Comparison
   LIBC_INLINE constexpr friend bool operator==(FPRep a, FPRep b) {
     return a.uintval() == b.uintval();

@@ -1834,6 +1834,9 @@ void Fortran::lower::mapSymbolAttributes(
     return;
   }
 
+  if (Fortran::evaluate::IsAssumedRank(sym))
+    TODO(loc, "assumed-rank variable in procedure implemented in Fortran");
+
   Fortran::lower::BoxAnalyzer ba;
   ba.analyze(sym);
 

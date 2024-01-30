@@ -214,8 +214,10 @@ std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
                                                 const APFloat *ConstRHS,
                                                 bool LookThroughSrc = true);
 
-/// Compute the possible floating-point classes that \p LHS could be based on an
-/// fcmp returning true. Returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
+/// Compute the possible floating-point classes that \p LHS could be based on
+/// fcmp \Pred \p LHS, \p RHS.
+///
+/// \returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
 ///
 /// If the compare returns an exact class test, ClassesIfTrue == ~ClassesIfFalse
 ///
@@ -230,10 +232,13 @@ std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
 ///
 std::tuple<Value *, FPClassTest, FPClassTest>
 fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 const APFloat *ConstRHS, bool LookThroughSrc = true);
+                 Value *RHS, bool LookThroughSrc = true);
 std::tuple<Value *, FPClassTest, FPClassTest>
 fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 Value *RHS, bool LookThroughSrc = true);
+                 FPClassTest RHS, bool LookThroughSrc = true);
+std::tuple<Value *, FPClassTest, FPClassTest>
+fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                 const APFloat &RHS, bool LookThroughSrc = true);
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
