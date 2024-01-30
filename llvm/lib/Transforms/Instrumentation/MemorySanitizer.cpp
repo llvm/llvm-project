@@ -4563,7 +4563,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // instructions.
       auto [ShadowPtr, _] =
           getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
-      if (Size < 32)
+      if (Size <= 32)
         IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
       else
         IRB.CreateMemSet(ShadowPtr, ConstantInt::getNullValue(IRB.getInt8Ty()),

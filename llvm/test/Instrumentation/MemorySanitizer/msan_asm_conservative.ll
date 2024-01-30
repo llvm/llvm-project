@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.pair = type { i32, i32 }
-%struct.large = type { [9 x i32] }
+%struct.large = type { [33 x i8] }
 
 @id1 = common dso_local global i32 0, align 4
 @is1 = common dso_local global i32 0, align 4
@@ -266,6 +266,7 @@ entry:
 ; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)
 ; CHECK: call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.pair) @pair2, ptr elementtype(i8) @c2, ptr elementtype(ptr) @memcpy_d1, ptr elementtype(%struct.pair) @pair1, ptr elementtype(i8) @c1, ptr elementtype(ptr) @memcpy_s1)
 
+; Use memset when the size is larger.
 define dso_local void @f_1i_1o_mem_large() sanitize_memory {
 entry:
   %0 = call i32 asm "", "=r,=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.large) @large, ptr elementtype(%struct.large) @large)
@@ -273,8 +274,8 @@ entry:
   ret void
 }
 ; CHECK-LABEL: @f_1i_1o_mem_large(
-; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @large to i64), i64 87960930222080) to ptr), i8 0, i64 36, i1 false)
-; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@large{{.*}}, i64 36)
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @large to i64), i64 87960930222080) to ptr), i8 0, i64 33, i1 false)
+; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@large{{.*}}, i64 33)
 ; CHECK: call i32 asm "", "=r,=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.large) @large, ptr elementtype(%struct.large) @large)
 
 ; A simple asm goto construct to check that callbr is handled correctly:
