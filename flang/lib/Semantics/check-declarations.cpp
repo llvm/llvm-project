@@ -3532,6 +3532,16 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
 void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
     const SourceName &name, GenericKind kind, const Symbol &proc1,
     const Symbol &proc2) {
+  if (!context_.ShouldWarn(
+          common::LanguageFeature::IndistinguishableSpecifics)) {
+    // The rules for distinguishing specific procedures (F'2023 15.4.3.4.5)
+    // are inadequate for some real-world cases like pFUnit, which has
+    // some generic interfaces whose specific procedures are provably
+    // unambiguous, but fail all of the standard's criteria for being
+    // conformably distinct.  So the best we can do here is to emit optional
+    // portability warnings for such cases.
+    return;
+  }
   std::string name1{proc1.name().ToString()};
   std::string name2{proc2.name().ToString()};
   if (kind.IsOperator() || kind.IsAssignment()) {
@@ -3546,11 +3556,11 @@ void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
   parser::Message *msg;
   if (scope.sourceRange().Contains(name)) {
     msg = &context_.Say(name,
-        "Generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US,
+        "Generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable by the incomplete rules in the standard"_port_en_US,
         MakeOpName(name), name1, name2);
   } else {
     msg = &context_.Say(*GetTopLevelUnitContaining(proc1).GetName(),
-        "USE-associated generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US,
+        "USE-associated generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable by the incomplete rules in the standard"_port_en_US,
         MakeOpName(name), name1, name2);
   }
   AttachDeclaration(*msg, scope, proc1);

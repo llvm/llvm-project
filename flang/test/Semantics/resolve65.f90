@@ -1,13 +1,13 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Test restrictions on what subprograms can be used for defined assignment.
 
 module m1
   implicit none
   type :: t
   contains
-    !ERROR: Generic 'assignment(=)' may not have specific procedures 't%assign_t4' and 't%assign_t5' as their interfaces are not distinguishable
-    !ERROR: Generic 'assignment(=)' may not have specific procedures 't%assign_t4' and 't%assign_t6' as their interfaces are not distinguishable
-    !ERROR: Generic 'assignment(=)' may not have specific procedures 't%assign_t5' and 't%assign_t6' as their interfaces are not distinguishable
+    !PORTABILITY: Generic 'assignment(=)' should not have specific procedures 't%assign_t4' and 't%assign_t5' as their interfaces are not distinguishable by the incomplete rules in the standard
+    !PORTABILITY: Generic 'assignment(=)' should not have specific procedures 't%assign_t4' and 't%assign_t6' as their interfaces are not distinguishable by the incomplete rules in the standard
+    !PORTABILITY: Generic 'assignment(=)' should not have specific procedures 't%assign_t5' and 't%assign_t6' as their interfaces are not distinguishable by the incomplete rules in the standard
     !ERROR: Defined assignment procedure 'binding' must be a subroutine
     generic :: assignment(=) => binding
     procedure :: binding => assign_t1
@@ -63,7 +63,7 @@ end
 module m2
   type :: t
   end type
-  !ERROR: Generic 'assignment(=)' may not have specific procedures 's3' and 's4' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'assignment(=)' should not have specific procedures 's3' and 's4' as their interfaces are not distinguishable by the incomplete rules in the standard
   interface assignment(=)
     !ERROR: In defined assignment subroutine 's1', dummy argument 'y' may not be OPTIONAL
     subroutine s1(x, y)
