@@ -291,6 +291,8 @@ public:
   void VisitTypeTraitExpr(const TypeTraitExpr *Node);
   void VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *Node);
   void VisitExpressionTraitExpr(const ExpressionTraitExpr *Node);
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Node);
   void VisitExprWithCleanups(const ExprWithCleanups *Node);
   void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *Node);
