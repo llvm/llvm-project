@@ -2,7 +2,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 
 ! CHECK: omp.wsloop reduction(@max_i_32
-! CHECK: omp.reduction
+! CHECK: arith.cmpi sgt
+! CHECK: arith.select
 
 module m1
   intrinsic max
