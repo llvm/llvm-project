@@ -3514,6 +3514,24 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   }
 }
 
+// Based on the comment for `AMDGPUInstructionSelector::selectWritelane`:
+// Writelane is special in that it can use SGPR and M0 (which would normally
+// count as using the constant bus twice - but in this case it is allowed since
+// the lane selector doesn't count as a use of the constant bus). However, it is
+// still required to abide by the 1 SGPR rule.
+static bool checkWriteLane(const MCInst &Inst) {
+  const unsigned Opcode = Inst.getOpcode();
+  if (Opcode != V_WRITELANE_B32_gfx6_gfx7 && Opcode != V_WRITELANE_B32_vi)
+    return false;
+  const MCOperand &LaneSelOp = Inst.getOperand(2);
+  if (!LaneSelOp.isReg())
+    return false;
+  auto LaneSelReg = mc2PseudoReg(LaneSelOp.getReg());
+  if (LaneSelReg == M0 || LaneSelReg == M0_gfxpre11)
+    return true;
+  return false;
+}
+
 bool AMDGPUAsmParser::validateConstantBusLimitations(
     const MCInst &Inst, const OperandVector &Operands) {
   const unsigned Opcode = Inst.getOpcode();
@@ -3527,6 +3545,9 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
         (SIInstrFlags::VOPC | SIInstrFlags::VOP1 | SIInstrFlags::VOP2 |
          SIInstrFlags::VOP3 | SIInstrFlags::VOP3P | SIInstrFlags::SDWA)) &&
       !isVOPD(Opcode))
+    return true;
+
+  if (checkWriteLane(Inst))
     return true;
 
   // Check special imm operands (used by madmk, etc)
