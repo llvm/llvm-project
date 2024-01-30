@@ -1037,7 +1037,7 @@ let SubtargetPredicate = isGFX11Plus in {
 let SubtargetPredicate = HasBF16ConversionInsts in {
   let FPDPRounding = 1 in {
     defm V_CVT_PK_BF16_F32    : VOP3Inst<"v_cvt_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32>>;
-    defm V_CVT_SR_PK_BF16_F32 : VOP3Inst<"v_cvt_sr_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32_V2I16>>;
+    defm V_CVT_SR_PK_BF16_F32 : VOP3Inst<"v_cvt_sr_pk_bf16_f32", VOP3_Profile<VOP_V2BF16_F32_F32_I32>>;
   }
   def : GCNPat<(v2bf16 (fpround v2f32:$src)),
                (V_CVT_PK_BF16_F32_e64 0, (EXTRACT_SUBREG $src, sub0), 0, (EXTRACT_SUBREG $src, sub1))>;
@@ -1048,7 +1048,7 @@ let SubtargetPredicate = HasBF16ConversionInsts in {
                                                    (VOP3Mods f32:$src1, i32:$src1_modifiers))),
                (V_CVT_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1)>;
   def : GCNPat<(v2bf16 (int_amdgcn_cvt_sr_pk_bf16_f32 (VOP3Mods f32:$src0, i32:$src0_modifiers),
-                                                      (VOP3Mods f32:$src1, i32:$src1_modifiers), v2i16:$src2)),
+                                                      (VOP3Mods f32:$src1, i32:$src1_modifiers), i32:$src2)),
                (V_CVT_SR_PK_BF16_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1, 0, $src2)>;
 }
 
