@@ -2,6 +2,13 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -global-isel -stop-after=irtranslator -verify-machineinstrs < %s | FileCheck  -check-prefixes=RV32I %s
 
 define void @vload_vint8m1(ptr %pa) {
-  %va = load <vscale x 8 x i8>, ptr %pa
-	ret void
+  ; RV32I-LABEL: name: vload_vint8m1
+  ; RV32I: bb.1 (%ir-block.0):
+  ; RV32I-NEXT:   liveins: $x10
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+  ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(<vscale x 8 x s8>) = G_LOAD [[COPY]](p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
+  ; RV32I-NEXT:   PseudoRET
+  %va = load <vscale x 8 x i8>, ptr %pa, align 8
+  ret void
 }
