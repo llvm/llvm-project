@@ -16,6 +16,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+
+// Ignore if statements that are inside macros.
+AST_MATCHER(IfStmt, isIfInMacro) {
+  return Node.getIfLoc().isMacroID() || Node.getEndLoc().isMacroID();
+}
+
+} // namespace
+
 static const llvm::StringRef AlgorithmHeader("<algorithm>");
 
 static bool minCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
@@ -64,13 +73,15 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
   clang::QualType GlobalImplicitCastType;
-  if (CondLhs->getType()
-          .getCanonicalType()
-          .getNonReferenceType()
-          .getUnqualifiedType() != CondRhs->getType()
-                                       .getCanonicalType()
-                                       .getNonReferenceType()
-                                       .getUnqualifiedType()) {
+  clang::QualType LhsType = CondLhs->getType()
+                                .getCanonicalType()
+                                .getNonReferenceType()
+                                .getUnqualifiedType();
+  clang::QualType RhsType = CondRhs->getType()
+                                .getCanonicalType()
+                                .getNonReferenceType()
+                                .getUnqualifiedType();
+  if (LhsType != RhsType) {
     GlobalImplicitCastType = BO->getLHS()->getType();
   }
 
@@ -93,25 +104,15 @@ void UseStdMinMaxCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
-// Ignore if statements that are inside macros.
-AST_MATCHER(IfStmt, isIfInMacro) {
-  return Node.getIfLoc().isMacroID() || Node.getEndLoc().isMacroID();
-}
-
-// Ignore expressions that are of dependent types.
-AST_MATCHER(Expr, isExprDependentType) {
-  return Node.getType()->isDependentType();
-}
-
 void UseStdMinMaxCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperator =
-      binaryOperator(hasOperatorName("="), hasLHS(expr().bind("AssignLhs")),
-                     hasRHS(expr().bind("AssignRhs")));
+      binaryOperator(hasOperatorName("="),
+                     hasLHS(expr(unless(isTypeDependent())).bind("AssignLhs")),
+                     hasRHS(expr(unless(isTypeDependent())).bind("AssignRhs")));
   auto BinaryOperator =
-      binaryOperator(
-          hasAnyOperatorName("<", ">", "<=", ">="),
-          hasLHS(expr(unless(isExprDependentType())).bind("CondLhs")),
-          hasRHS(expr(unless(isExprDependentType())).bind("CondRhs")))
+      binaryOperator(hasAnyOperatorName("<", ">", "<=", ">="),
+                     hasLHS(expr(unless(isTypeDependent())).bind("CondLhs")),
+                     hasRHS(expr(unless(isTypeDependent())).bind("CondRhs")))
           .bind("binaryOp");
   Finder->addMatcher(
       ifStmt(stmt().bind("if"), unless(isIfInMacro()),
