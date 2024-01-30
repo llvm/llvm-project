@@ -228,8 +228,8 @@ void SampleProfileProber::computeCFGHash(
 
     for (BasicBlock *Succ : successors(BBPtr)) {
       auto Index = getBlockId(Succ);
-      assert(Index &&
-             "Ignored block(zero ID) should not be used for hash computation");
+      assert(Index && "Ignored block(zero ID) is used for hash computation, it "
+                      "could cause profile checksum mismatch");
       for (int J = 0; J < 4; J++)
         Indexes.push_back((uint8_t)(Index >> (J * 8)));
     }

@@ -16,7 +16,6 @@ namespace llvm {
 /// Compute a list of blocks that are only reachable via EH paths.
 template <typename FunctionT, typename BlockT>
 static void computeEHOnlyBlocks(FunctionT &F, DenseSet<BlockT *> &EHBlocks) {
-  assert(EHBlocks.empty() && "Output set should be empty");
   // A block can be unknown if its not reachable from anywhere
   // EH if its only reachable from start blocks via some path through EH pads
   // NonEH if it's reachable from Non EH blocks as well.
@@ -80,7 +79,6 @@ static void computeEHOnlyBlocks(FunctionT &F, DenseSet<BlockT *> &EHBlocks) {
     }
   }
 
-  EHBlocks.clear();
   for (auto Entry : Statuses) {
     if (Entry.second == EH)
       EHBlocks.insert(Entry.first);
