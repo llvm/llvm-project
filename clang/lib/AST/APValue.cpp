@@ -22,6 +22,13 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
+
+enum Linkage {
+ Invalid = 0,
+ External = 1,
+ Internal = 2,
+};
+
 /// The identity of a type_info object depends on the canonical unqualified
 /// type only.
 TypeInfoLValue::TypeInfoLValue(const Type *T)
@@ -42,7 +49,7 @@ static_assert(
 APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
     : Ptr(P ? cast<ValueDecl>(P->getCanonicalDecl()) : nullptr), Local{I, V} {}
 APValue::LValueBase::LValueBase(const Expr *P, unsigned I, unsigned V)
-    : Ptr(P), Local{I, V} {}
+    : Ptr(P), Local{I, V} {}
 
 APValue::LValueBase APValue::LValueBase::getDynamicAlloc(DynamicAllocLValue LV,
                                                          QualType Type) {
@@ -143,7 +150,6 @@ bool operator==(const APValue::LValueBase &LHS,
          LHS.Local.Version == RHS.Local.Version;
 }
 }
-
 APValue::LValuePathEntry::LValuePathEntry(BaseOrMemberType BaseOrMember) {
   if (const Decl *D = BaseOrMember.getPointer())
     BaseOrMember.setPointer(D->getCanonicalDecl());
@@ -156,7 +162,7 @@ void APValue::LValuePathEntry::Profile(llvm::FoldingSetNodeID &ID) const {
 
 APValue::LValuePathSerializationHelper::LValuePathSerializationHelper(
     ArrayRef<LValuePathEntry> Path, QualType ElemTy)
-    : Ty((const void *)ElemTy.getTypePtrOrNull()), Path(Path) {}
+    : Ty((const void *)ElemTy.getTypePtrOrNull()), Path(Path) {}
 
 QualType APValue::LValuePathSerializationHelper::getType() {
   return QualType::getFromOpaquePtr(Ty);
