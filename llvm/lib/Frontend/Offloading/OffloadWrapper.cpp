@@ -112,7 +112,8 @@ PointerType *getBinDescPtrTy(Module &M) {
 ///
 /// Global variable that represents BinDesc is returned.
 GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
-                              EntryArrayTy EntryArray, StringRef Suffix) {
+                              EntryArrayTy EntryArray, StringRef Suffix,
+                              bool Relocatable) {
   LLVMContext &C = M.getContext();
   auto [EntriesB, EntriesE] = EntryArray;
 
@@ -129,7 +130,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
                                      GlobalVariable::InternalLinkage, Data,
                                      ".omp_offloading.device_image" + Suffix);
     Image->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    Image->setSection(".llvm.offloading");
+    Image->setSection(Relocatable ? ".llvm.offloading.relocatable"
+                                  : ".llvm.offloading");
     Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
 
     StringRef Binary(Buf.data(), Buf.size());
@@ -582,8 +584,9 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 
 Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
                                      EntryArrayTy EntryArray,
-                                     llvm::StringRef Suffix) {
-  GlobalVariable *Desc = createBinDesc(M, Images, EntryArray, Suffix);
+                                     llvm::StringRef Suffix, bool Relocatable) {
+  GlobalVariable *Desc =
+      createBinDesc(M, Images, EntryArray, Suffix, Relocatable);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
