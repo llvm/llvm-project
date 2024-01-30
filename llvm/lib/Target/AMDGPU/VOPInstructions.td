@@ -825,6 +825,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let mayRaiseFPException = ReadsModeReg;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 
   string Mnemonic = OpName;
   string AsmOperands = asmOps;
@@ -870,6 +871,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
 
   // Copy relevant pseudo op flags
   let isConvergent         = ps.isConvergent;
+  let hasPostISelHook      = ps.hasPostISelHook;
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AssemblerPredicate   = ps.AssemblerPredicate;
   let OtherPredicates      = ps.OtherPredicates;

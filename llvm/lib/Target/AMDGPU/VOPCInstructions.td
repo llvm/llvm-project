@@ -285,6 +285,7 @@ multiclass VOPC_Pseudos <string opName,
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
+    let hasPostISelHook = DefExec;
     let isCompare = 1;
     let isCommutable = 1;
   }
@@ -304,6 +305,7 @@ multiclass VOPC_Pseudos <string opName,
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
+    let hasPostISelHook = DefExec;
     let isCompare = 1;
   }
 
@@ -313,6 +315,7 @@ multiclass VOPC_Pseudos <string opName,
         let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
         let SchedRW = P.Schedule;
         let isConvergent = DefExec;
+        let hasPostISelHook = DefExec;
         let isCompare = 1;
         let VOPC = 1;
         let Constraints = "";
@@ -342,6 +345,7 @@ multiclass VOPCX_Pseudos <string opName,
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
     let isConvergent = 1;
+    let hasPostISelHook = 1;
     let isCompare = 1;
     let isCommutable = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
@@ -365,6 +369,7 @@ multiclass VOPCX_Pseudos <string opName,
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
     let isConvergent = 1;
+    let hasPostISelHook = 1;
     let isCompare = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
   }
@@ -375,6 +380,7 @@ multiclass VOPCX_Pseudos <string opName,
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
         let isConvergent = 1;
+        let hasPostISelHook = 1;
         let isCompare = 1;
         let VOPC = 1;
         let Constraints = "";
@@ -846,6 +852,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
                             !if(DefVcc, [VCC], []));
     let SchedRW = p.Schedule;
     let isConvergent = DefExec;
+    let hasPostISelHook = DefExec;
   }
 
   def _e64 : VOP3_Pseudo<opName, p, getVOPCClassPat64<p>.ret>,
@@ -860,6 +867,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
                             !if(DefVcc, [VCC], []));
     let SchedRW = p.Schedule;
     let isConvergent = DefExec;
+    let hasPostISelHook = DefExec;
   }
 
   let SubtargetPredicate = isGFX11Plus in {
@@ -869,6 +877,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
                                 !if(DefVcc, [VCC], []));
         let SchedRW = p.Schedule;
         let isConvergent = DefExec;
+        let hasPostISelHook = DefExec;
         let VOPC = 1;
         let Constraints = "";
       }
@@ -892,6 +901,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
     let isConvergent = 1;
+    let hasPostISelHook = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
   }
 
@@ -907,6 +917,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
     let isConvergent = 1;
+    let hasPostISelHook = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
   }
 
@@ -916,6 +927,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
         let isConvergent = 1;
+        let hasPostISelHook = 1;
         let VOPC = 1;
         let Constraints = "";
       }

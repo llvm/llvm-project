@@ -177,6 +177,7 @@ def WWM_COPY : SPseudoInstSI <
   let hasSideEffects = 0;
   let isAsCheapAsAMove = 1;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def ENTER_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
@@ -246,7 +247,7 @@ def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
 
 // Invert the exec mask and overwrite the inactive lanes of dst with inactive,
 // restoring it after we're done.
-let Defs = [SCC], isConvergent = 1 in {
+let Defs = [SCC], isConvergent = 1, hasPostISelHook = 1 in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VSrc_b32: $src, VSrc_b32:$inactive),
   [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
@@ -369,6 +370,7 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   let mayLoad = 0;
   let mayStore = 0;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
   let FixedSize = 1;
   let Size = 0;
   let isMeta = 1;
@@ -382,6 +384,7 @@ def SCHED_BARRIER : SPseudoInstSI<(outs), (ins i32imm:$mask),
   let mayLoad = 0;
   let mayStore = 0;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
   let FixedSize = 1;
   let Size = 0;
   let isMeta = 1;
@@ -397,6 +400,7 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   let mayLoad = 0;
   let mayStore = 0;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
   let FixedSize = 1;
   let Size = 0;
   let isMeta = 1;
@@ -410,6 +414,7 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
   let mayLoad = 0;
   let mayStore = 0;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
   let FixedSize = 1;
   let Size = 0;
   let isMeta = 1;
@@ -509,6 +514,7 @@ multiclass PseudoInstKill <dag ins> {
   let Defs = [EXEC,SCC] in
   def _PSEUDO : PseudoInstSI <(outs), ins> {
     let isConvergent = 1;
+    let hasPostISelHook = 1;
     let usesCustomInserter = 1;
   }
 
@@ -626,6 +632,7 @@ def SI_CALL_ISEL : SPseudoInstSI <
   let usesCustomInserter = 1;
   // TODO: Should really base this on the call target
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def : GCNPat<
@@ -644,6 +651,7 @@ def SI_CALL : SPseudoInstSI <
   let SchedRW = [WriteBranch];
   // TODO: Should really base this on the call target
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
@@ -659,6 +667,7 @@ class SI_TCRETURN_Pseudo<RegisterClass rc, SDNode sd> : SPseudoInstSI <(outs),
   let SchedRW = [WriteBranch];
   // TODO: Should really base this on the call target
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 // Tail call handling pseudo
@@ -693,6 +702,7 @@ class SI_CS_CHAIN_TC<
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteBranch];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 
   let WaveSizePredicate = wavesizepred;
 }
@@ -931,7 +941,7 @@ defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
-let SGPRSpill = 1, VALU = 1, isConvergent = 1 in {
+let SGPRSpill = 1, VALU = 1, isConvergent = 1, hasPostISelHook = 1 in {
 def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
   let Size = 4;
@@ -1031,7 +1041,7 @@ defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
 defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
 defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
 
-let isConvergent = 1 in {
+let isConvergent = 1, hasPostISelHook = 1 in {
   defm SI_SPILL_WWM_V32  : SI_SPILL_VGPR <VGPR_32>;
   defm SI_SPILL_WWM_AV32 : SI_SPILL_VGPR <AV_32, 1>;
 }
@@ -3974,6 +3984,7 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let SchedRW = [WriteBranch];
   // TODO: Should really base this on the call target
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def G_FPTRUNC_ROUND_UPWARD : AMDGPUGenericInstruction {

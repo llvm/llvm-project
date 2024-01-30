@@ -256,6 +256,7 @@ def V_READFIRSTLANE_B32 :
   let VALU = 1;
   let Uses = [EXEC];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 
   bits<8> vdst;
   bits<9> src0;

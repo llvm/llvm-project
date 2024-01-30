@@ -432,6 +432,7 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
   let mayLoad = 0;
   let mayStore = 0;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 
   let has_data1 = 0;
   let has_gds = 0;
@@ -582,7 +583,7 @@ defm DS_WRXCHG_RTN_B64 : DS_1A1D_RET_mc<"ds_wrxchg_rtn_b64", VReg_64>;
 defm DS_WRXCHG2_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2_rtn_b64", VReg_128, VReg_64>;
 defm DS_WRXCHG2ST64_RTN_B64 : DS_1A2D_Off8_RET_mc<"ds_wrxchg2st64_rtn_b64", VReg_128, VReg_64>;
 
-let isConvergent = 1, usesCustomInserter = 1 in {
+let isConvergent = 1, hasPostISelHook = 1, usesCustomInserter = 1 in {
 def DS_GWS_INIT       : DS_GWS_1D<"ds_gws_init"> {
   let mayLoad = 0;
 }
@@ -627,7 +628,7 @@ def DS_WRITE_SRC2_B32 : DS_1A<"ds_write_src2_b32">;
 def DS_WRITE_SRC2_B64 : DS_1A<"ds_write_src2_b64">;
 } // End SubtargetPredicate = HasDsSrc2Insts
 
-let Uses = [EXEC], mayLoad = 0, mayStore = 0, isConvergent = 1 in {
+let Uses = [EXEC], mayLoad = 0, mayStore = 0, isConvergent = 1, hasPostISelHook = 1 in {
 def DS_SWIZZLE_B32 : DS_1A_RET <"ds_swizzle_b32", VGPR_32, 0, Swizzle>;
 }
 
@@ -677,7 +678,7 @@ let SubtargetPredicate = isGFX7Plus in {
 defm DS_WRAP_RTN_B32 : DS_1A2D_RET_mc<"ds_wrap_rtn_b32", VGPR_32>;
 defm DS_CONDXCHG32_RTN_B64 : DS_1A1D_RET_mc<"ds_condxchg32_rtn_b64", VReg_64>;
 
-let isConvergent = 1, usesCustomInserter = 1 in {
+let isConvergent = 1, hasPostISelHook = 1, usesCustomInserter = 1 in {
 def DS_GWS_SEMA_RELEASE_ALL : DS_GWS_0D<"ds_gws_sema_release_all">;
 }
 

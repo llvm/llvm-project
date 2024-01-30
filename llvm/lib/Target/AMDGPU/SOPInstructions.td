@@ -448,6 +448,7 @@ def S_BARRIER_SIGNAL_M0 : SOP1_Pseudo <"s_barrier_signal m0", (outs), (ins),
   "", [(int_amdgcn_s_barrier_signal_var M0)]>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (outs), (ins),
@@ -455,30 +456,35 @@ def S_BARRIER_SIGNAL_ISFIRST_M0 : SOP1_Pseudo <"s_barrier_signal_isfirst m0", (o
   let Defs = [SCC];
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_INIT_M0 : SOP1_Pseudo <"s_barrier_init m0", (outs), (ins),
   "", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_INIT_IMM : SOP1_Pseudo <"s_barrier_init", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
   "", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_WAKEUP_BARRIER_M0 : SOP1_Pseudo <"s_wakeup_barrier m0", (outs), (ins),
   "", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 } // End Uses = [M0]
 
@@ -486,6 +492,7 @@ def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
   (ins SplitBarrier:$src0), "$src0", [(int_amdgcn_s_barrier_signal timm:$src0)]>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (outs),
@@ -493,18 +500,21 @@ def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (out
   let Defs = [SCC];
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 } // End has_sdst = 0
 
@@ -512,6 +522,7 @@ def S_GET_BARRIER_STATE_IMM : SOP1_Pseudo <"s_get_barrier_state", (outs SSrc_b32
   (ins SplitBarrier:$src0), "$sdst, $src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs SSrc_b32:$sdst),
@@ -519,6 +530,7 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
   let Uses = [M0];
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 } // End hasSideEffects = 1
 
@@ -1561,12 +1573,14 @@ def S_BARRIER : SOPP_Pseudo <"s_barrier", (ins), "",
   let simm16 = 0;
   let fixed_imm = 1;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_barrier_wait timm:$simm16)]> {
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
+  let hasPostISelHook = 1;
 }
 
 def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins), "",
@@ -1575,6 +1589,7 @@ def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins), "",
   let simm16 = 0;
   let fixed_imm = 1;
   let isConvergent = 1;
+  let hasPostISelHook = 1;
   let Defs = [SCC];
 }
 

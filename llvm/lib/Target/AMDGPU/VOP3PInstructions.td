@@ -677,7 +677,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node>
 
 multiclass MAIInst<string OpName, string P, SDPatternOperator node,
                    bit NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap> {
-  let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
+  let isConvergent = 1, hasPostISelHook = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),

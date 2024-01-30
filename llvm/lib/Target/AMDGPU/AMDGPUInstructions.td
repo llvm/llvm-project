@@ -46,6 +46,9 @@ class AMDGPUInst <dag outs, dag ins, string asm = "",
 
   let TSFlags{63} = isRegisterLoad;
   let TSFlags{62} = isRegisterStore;
+
+  assert !if(!eq(isConvergent, 1), !eq(hasPostISelHook, 1), true),
+         !strconcat(NAME, ": Every convergent operation needs post-isel processing.");
 }
 
 class AMDGPUShaderInst <dag outs, dag ins, string asm = "",
