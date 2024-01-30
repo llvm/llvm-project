@@ -688,10 +688,14 @@ set(files
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
+  __thread/support.h
+  __thread/support/c11.h
+  __thread/support/external.h
+  __thread/support/pthread.h
+  __thread/support/windows.h
   __thread/this_thread.h
   __thread/thread.h
   __thread/timed_backoff_policy.h
-  __threading_support
   __tree
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
