@@ -1104,7 +1104,7 @@ RecTy *TGParser::ParseType() {
     Lex.Lex();
     return DagRecTy::get(Records);
   case tgtok::Id: {
-    std::string TypeName = Lex.getCurStrVal();
+    const std::string TypeName = Lex.getCurStrVal();
     if (TypeAliases.count(TypeName)) {
       Lex.Lex();
       return TypeAliases[TypeName];
@@ -3682,7 +3682,7 @@ bool TGParser::ParseDeftype() {
   if (Lex.getCode() != tgtok::Id)
     return TokError("expected identifier");
 
-  std::string TypeName = Lex.getCurStrVal();
+  const std::string TypeName = Lex.getCurStrVal();
   if (TypeAliases.count(TypeName) || Records.getClass(TypeName))
     return TokError("type of this name '" + TypeName + "' already exists");
 
