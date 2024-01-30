@@ -659,8 +659,8 @@ public:
     // either.
     if (const CXXMethodDecl *Method =
             dyn_cast_or_null<CXXMethodDecl>(Callee.Decl))
-      if (Method->isInstance() &&
-          (IsFunctor || Method->hasCXXExplicitFunctionObjectParameter()))
+      if (IsFunctor || (Method->isInstance() &&
+                        Method->hasCXXExplicitFunctionObjectParameter()))
         Args = Args.drop_front(1);
     processCall(Callee, Args);
     return true;
