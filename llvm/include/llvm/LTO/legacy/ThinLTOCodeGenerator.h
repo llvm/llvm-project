@@ -62,8 +62,8 @@ public:
   }
 
   virtual ~ModuleCacheEntry() {}
-protected:
-  std::optional<std::string> computeCacheKey(
+
+  static std::optional<std::string> computeCacheKey(
       const ModuleSummaryIndex &Index, StringRef ModuleID,
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
