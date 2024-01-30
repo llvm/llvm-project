@@ -272,3 +272,63 @@ define void @align_func() align 2 {
 ; CHECK-LABEL: @align_decl
 ; CHECK-SAME: attributes {alignment = 64 : i64}
 declare void @align_decl() align 64
+
+; // -----
+
+; CHECK-LABEL: @func_attr_unsafe_fp_math_true
+; CHECK-SAME: attributes {unsafe_fp_math = true}
+declare void @func_attr_unsafe_fp_math_true() "unsafe-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_unsafe_fp_math_false
+; CHECK-SAME: attributes {unsafe_fp_math = false}
+declare void @func_attr_unsafe_fp_math_false() "unsafe-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_infs_fp_math_true
+; CHECK-SAME: attributes {no_infs_fp_math = true}
+declare void @func_attr_no_infs_fp_math_true() "no-infs-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_infs_fp_math_false
+; CHECK-SAME: attributes {no_infs_fp_math = false}
+declare void @func_attr_no_infs_fp_math_false() "no-infs-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_nans_fp_math_true
+; CHECK-SAME: attributes {no_nans_fp_math = true}
+declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_nans_fp_math_false
+; CHECK-SAME: attributes {no_nans_fp_math = false}
+declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_approx_func_fp_math_true
+; CHECK-SAME: attributes {approx_func_fp_math = true}
+declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_approx_func_fp_math_false
+; CHECK-SAME: attributes {approx_func_fp_math = false}
+declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_true
+; CHECK-SAME: attributes {no_signed_zeros_fp_math = true}
+declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"="true"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_false
+; CHECK-SAME: attributes {no_signed_zeros_fp_math = false}
+declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math"="false"

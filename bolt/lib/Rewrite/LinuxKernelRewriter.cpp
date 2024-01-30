@@ -95,7 +95,7 @@ class LinuxKernelRewriter final : public MetadataRewriter {
         return 1;
       if (IP > Other.IP)
         return 0;
-      return ORC == NullORC;
+      return ORC == NullORC && Other.ORC != NullORC;
     }
   };
 
@@ -163,11 +163,15 @@ public:
     return Error::success();
   }
 
-  Error postEmitFinalizer() override {
-    updateLKMarkers();
-
+  Error preEmitFinalizer() override {
     if (Error E = rewriteORCTables())
       return E;
+
+    return Error::success();
+  }
+
+  Error postEmitFinalizer() override {
+    updateLKMarkers();
 
     return Error::success();
   }
