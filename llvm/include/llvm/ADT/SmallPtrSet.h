@@ -443,8 +443,7 @@ class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
   }
 
   // Make sure that SmallSize is a power of two, round up if not.
-  static constexpr size_t SmallSizePowTwo =
-      detail::RoundUpToPowerOfTwo(SmallSize);
+  static constexpr size_t SmallSizePowTwo = RoundUpToPowerOfTwo(SmallSize);
   /// SmallStorage - Fixed size storage used in 'small mode'.
   const void *SmallStorage[SmallSizePowTwo];
 
