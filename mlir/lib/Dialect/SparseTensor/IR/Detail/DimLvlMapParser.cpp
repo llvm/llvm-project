@@ -299,6 +299,8 @@ ParseResult DimLvlMapParser::parseLvlSpec(bool requireLvlVarBinding) {
   FAILURE_IF_FAILED(type)
 
   lvlSpecs.emplace_back(var, expr, static_cast<LevelType>(*type));
+  llvm::errs() << "type = " << toMLIRString(static_cast<LevelType>(*type))
+               << "\n";
   return success();
 }
 

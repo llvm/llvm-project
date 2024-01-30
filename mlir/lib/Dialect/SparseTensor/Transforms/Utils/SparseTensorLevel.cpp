@@ -1291,7 +1291,7 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
     Value crd = genToCoordinates(b, l, t, lvl);
     return std::make_unique<SingletonLevel>(tid, lvl, lt, sz, crd);
   }
-  case LevelFormat::TwoOutOfFour: {
+  case LevelFormat::NOutOfM: {
     Value crd = genToCoordinates(b, l, t, lvl);
     return std::make_unique<TwoOutFourLevel>(tid, lvl, lt, sz, crd);
   }
