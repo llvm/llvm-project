@@ -70,6 +70,9 @@ C++20 Feature Support
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented `P2718R0: Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_. Also
+  materialize temporary object which is a prvalue in discarded-value expression.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Compiler flags ``-std=c++2c`` and ``-std=gnu++2c`` have been added for experimental C++2c implementation work.
