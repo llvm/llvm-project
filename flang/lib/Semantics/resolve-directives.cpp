@@ -1275,7 +1275,7 @@ void AccAttributeVisitor::CheckAssociatedLoop(
       if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
         if (auto &control{loop->GetLoopControl()}) {
           if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
-            if (auto lowerExpr = semantics::AnalyzeExpr(context_, b->lower)) {
+            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->lower)}) {
               semantics::UnorderedSymbolSet lowerSyms =
                   evaluate::CollectSymbols(*lowerExpr);
               checkExprHasSymbols(ivs, lowerSyms);
