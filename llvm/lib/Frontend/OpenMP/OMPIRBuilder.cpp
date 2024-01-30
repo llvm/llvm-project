@@ -6345,9 +6345,8 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     }
   };
 
-  if (!Config.isTargetDevice()) {
+  if (!Config.isTargetDevice())
     OI.PostOutlineCB = HostPostOutlineCB;
-  }
 
   addOutlineInfo(std::move(OI));
 
