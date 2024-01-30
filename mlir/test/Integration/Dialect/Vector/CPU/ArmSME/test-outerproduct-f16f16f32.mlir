@@ -1,15 +1,15 @@
-// DEFINE: %{entry} = test_outerproduct_f16f16f32
+// DEFINE: %{entry} = main
 // DEFINE: %{fusion_opts} = -arm-sme-outer-product-fusion
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme %{fusion_opts} \
+// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
 // DEFINE:   -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
 // DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
 // DEFINE:   -test-lower-to-llvm -o %t
 // DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry} -entry-point-result=void \
-// DEFINE:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib
+// DEFINE:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%mlir_arm_runner_utils,%arm_sme_abi_shlib
 
 // RUN: %{compile}
 
@@ -21,11 +21,21 @@
 // REDEFINE: %{fusion_opts} =
 // RUN: %{run} | FileCheck %s
 
-// TODO: Add run line for masked test once QEMU is fixed.
-// REDEFINE: %{entry} = test_masked_outerproduct_f16f16f32
+func.func @main() {
+  %c128 = arith.constant 128 : i32
+  func.call @setArmSVLBits(%c128) : (i32) -> ()
 
-// TODO: Add run line for masked test once QEMU is fixed.
-// REDEFINE: %{fusion_opts} =
+  func.call @test_outerproduct_f16f16f32() : () -> ()
+
+  // TODO: A bug in QEMU causes masked FMOPAs to hang [1]. Should be fixed in
+  // 8.2.0, this test currently isn't run, once this version is available in CI
+  // it can be run. The output without check lines in the function are correct
+  // and have been verified on a version with the fix.
+  // [1] https://gitlab.com/qemu-project/qemu/-/issues/1985
+  //func.call @test_masked_outerproduct_f16f16f32() : () -> ()
+
+  return
+}
 
 func.func @test_outerproduct_f16f16f32() {
   %undef = llvm.mlir.undef : vector<[4]xf16>
@@ -49,20 +59,15 @@ func.func @test_outerproduct_f16f16f32() {
   %0 = vector.outerproduct %a0_ext, %b0_ext, %acc : vector<[4]xf32>, vector<[4]xf32>
   %1 = vector.outerproduct %a1_ext, %b1_ext, %0 : vector<[4]xf32>, vector<[4]xf32>
 
-  // CHECK:      (  79,  95, 111, 127
-  // CHECK-NEXT: (  99, 123, 147, 171
-  // CHECK-NEXT: ( 119, 151, 183, 215
-  // CHECK-NEXT: ( 139, 179, 219, 259
+  // CHECK:      (  79,  95, 111, 127 )
+  // CHECK-NEXT: (  99, 123, 147, 171 )
+  // CHECK-NEXT: ( 119, 151, 183, 215 )
+  // CHECK-NEXT: ( 139, 179, 219, 259 )
   vector.print %1 : vector<[4]x[4]xf32>
 
   return
 }
 
-// TODO: A bug in QEMU causes masked FMOPAs to hang [1]. Should be fixed in
-// 8.2.0, this test currently isn't run, once this version is available in CI
-// it can be run. The check lines here are correct and have been verified on a
-// version with the fix.
-// [1] https://gitlab.com/qemu-project/qemu/-/issues/1985
 func.func @test_masked_outerproduct_f16f16f32() {
   %undef = llvm.mlir.undef : vector<[4]xf16>
 
@@ -96,11 +101,14 @@ func.func @test_masked_outerproduct_f16f16f32() {
     vector.outerproduct %a1_ext, %b1_ext, %0 : vector<[4]xf32>, vector<[4]xf32>
   } : vector<[4]x[4]xi1> -> vector<[4]x[4]xf32>
 
-  // MASKED:      (  79,  95,  7, 7
-  // MASKED-NEXT: (  99, 123, 17, 7
-  // MASKED-NEXT: ( 115, 139,  7, 7
-  // MASKED-NEXT: (   7,   7,  7, 7
+  // TODO: CHECK these lines once QEMU is fixed.
+  // (  79,  95,  7, 7 )
+  // (  99, 123, 17, 7 )
+  // ( 115, 139,  7, 7 )
+  // (   7,   7,  7, 7 )
   vector.print %1 : vector<[4]x[4]xf32>
 
   return
 }
+
+func.func private @setArmSVLBits(%bits : i32)
