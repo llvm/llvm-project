@@ -119,6 +119,9 @@ public:
   /// registers.
   bool isAllocatable() const { return MC->isAllocatable(); }
 
+  /// Return true if this register class has a defined BaseClassOrder.
+  bool isBaseClass() const { return MC->isBaseClass(); }
+
   /// Return true if the specified TargetRegisterClass
   /// is a proper sub-class of this TargetRegisterClass.
   bool hasSubClass(const TargetRegisterClass *RC) const {

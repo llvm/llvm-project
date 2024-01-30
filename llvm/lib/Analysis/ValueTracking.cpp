@@ -2739,6 +2739,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         break;
       case Intrinsic::vscale:
         return true;
+      case Intrinsic::experimental_get_vector_length:
+        return isKnownNonZero(I->getOperand(0), Depth, Q);
       default:
         break;
       }
