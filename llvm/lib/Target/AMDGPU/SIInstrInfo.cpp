@@ -2600,8 +2600,6 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
 
     for (unsigned I = 1; I <= 2; ++I) { // old and src operands.
       const MachineOperand &SrcOp = MI.getOperand(I);
-      if (I == 2)
-        MovDPP.addImm(0); // add src modifier
       assert(!SrcOp.isFPImm());
       if (SrcOp.isImm()) {
         APInt Imm(64, SrcOp.getImm());
@@ -3298,6 +3296,7 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
 bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B32_e32:
+  case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
   case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::V_MOV_B64_e64:
@@ -3310,11 +3309,6 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_MOV_B32:
     return true;
-  case AMDGPU::V_MOV_B32_e64: {
-    int16_t Idx = AMDGPU::getNamedOperandIdx(AMDGPU::V_MOV_B32_e64,
-                                             AMDGPU::OpName::src0_modifiers);
-    return MI.getOperand(Idx).getImm() == SISrcMods::NONE;
-  }
   default:
     return false;
   }

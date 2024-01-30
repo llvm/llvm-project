@@ -208,7 +208,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                            bool CombBCZ,
                                            bool IsShrinkable) const {
   assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
-         MovMI.getOpcode() == AMDGPU::V_MOV_B32_e64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
 
@@ -276,37 +275,17 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       break;
     }
 
-    MachineOperand *MovMod = nullptr;
-    if (AMDGPU::hasNamedOperand(MovMI.getOpcode(),
-                                AMDGPU::OpName::src0_modifiers)) {
-      MovMod = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0_modifiers);
-      if (MovMod)
-        assert(0LL == (MovMod->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG)));
-    }
-    if (auto *Mod0 =
-            TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0_modifiers)) {
-      assert(NumOperands ==
-             AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::src0_modifiers));
+    
+    auto *Mod0 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0_modifiers);
+    if (Mod0) {
+      assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
+                                          AMDGPU::OpName::src0_modifiers));
       assert(HasVOP3DPP ||
              (0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
-      // MovMod   MIMod
-      // abs      abs   -> abs
-      // abs      neg   -> abs|neg
-      // neg      abs   -> abs
-      // neg      neg   -> 0
-      if (MovMod && MovMod->getImm() == SISrcMods::ABS &&
-          Mod0->getImm() == SISrcMods::NEG)
-        DPPInst.addImm(SISrcMods::ABS | SISrcMods::NEG);
-      else if (MovMod && MovMod->getImm() == SISrcMods::NEG &&
-               Mod0->getImm() == SISrcMods::NEG)
-        DPPInst.addImm(0);
-      else if (Mod0->getImm() == SISrcMods::NONE && MovMod)
-        DPPInst.addImm(MovMod->getImm());
-      else
-        DPPInst.addImm(Mod0->getImm());
+      DPPInst.addImm(Mod0->getImm());
       ++NumOperands;
     } else if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src0_modifiers)) {
-      DPPInst.addImm(MovMod ? MovMod->getImm() : 0);
+      DPPInst.addImm(0);
       ++NumOperands;
     }
 
@@ -529,7 +508,6 @@ bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, unsigned OpndName,
 
 bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
   assert(MovMI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
-         MovMI.getOpcode() == AMDGPU::V_MOV_B32_e64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp ||
          MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO);
   LLVM_DEBUG(dbgs() << "\nDPP combine: " << MovMI);
@@ -769,9 +747,7 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (auto &MBB : MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(llvm::reverse(MBB))) {
-      if ((MI.getOpcode() == AMDGPU::V_MOV_B32_dpp ||
-           MI.getOpcode() == AMDGPU::V_MOV_B32_e64_dpp) &&
-          combineDPPMov(MI)) {
+      if (MI.getOpcode() == AMDGPU::V_MOV_B32_dpp && combineDPPMov(MI)) {
         Changed = true;
         ++NumDPPMovsCombined;
       } else if (MI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
