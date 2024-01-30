@@ -13840,42 +13840,49 @@ SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
   return SDValue();
 }
 
-static SDValue tryLowerToRoundingShiftRightByImm(SDValue Shift,
-                                                 SelectionDAG &DAG) {
+// Check if we can we lower this SRL to a rounding shift instruction. ResVT is
+// possibly a truncated type, it tells how many bits of the value are to be
+// used.
+static bool canLowerSRLToRoundingShiftForVT(SDValue Shift, EVT ResVT,
+                                            SelectionDAG &DAG,
+                                            unsigned &ShiftValue,
+                                            SDValue &RShOperand) {
   if (Shift->getOpcode() != ISD::SRL)
-    return SDValue();
+    return false;
 
-  EVT ResVT = Shift.getValueType();
-  assert(ResVT.isScalableVT());
+  EVT VT = Shift.getValueType();
+  assert(VT.isScalableVT());
 
   auto ShiftOp1 =
       dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(Shift->getOperand(1)));
   if (!ShiftOp1)
-    return SDValue();
-  unsigned ShiftValue = ShiftOp1->getZExtValue();
+    return false;
 
+  ShiftValue = ShiftOp1->getZExtValue();
   if (ShiftValue < 1 || ShiftValue > ResVT.getScalarSizeInBits())
-    return SDValue();
+    return false;
 
   SDValue Add = Shift->getOperand(0);
   if (Add->getOpcode() != ISD::ADD || !Add->hasOneUse())
-    return SDValue();
+    return false;
 
-  if (!Add->getFlags().hasNoUnsignedWrap())
-    return SDValue();
+  assert(ResVT.getScalarSizeInBits() <= VT.getScalarSizeInBits() &&
+         "ResVT must be truncated or same type as the shift.");
+  // Check if an overflow can lead to incorrect results.
+  uint64_t ExtraBits = VT.getScalarSizeInBits() - ResVT.getScalarSizeInBits();
+  if (ShiftValue > ExtraBits && !Add->getFlags().hasNoUnsignedWrap())
+    return false;
 
   auto AddOp1 =
       dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(Add->getOperand(1)));
   if (!AddOp1)
-    return SDValue();
+    return false;
   uint64_t AddValue = AddOp1->getZExtValue();
   if (AddValue != 1ULL << (ShiftValue - 1))
-    return SDValue();
+    return false;
 
-  SDLoc DL(Shift);
-  return DAG.getNode(AArch64ISD::URSHR_I_PRED, DL, ResVT,
-                     getPredicateForVector(DAG, DL, ResVT), Add->getOperand(0),
-                     DAG.getTargetConstant(ShiftValue, DL, MVT::i32));
+  RShOperand = Add->getOperand(0);
+  return true;
 }
 
 SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
@@ -13903,9 +13910,14 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                        Op.getOperand(0), Op.getOperand(1));
   case ISD::SRA:
   case ISD::SRL:
-    if (VT.isScalableVector() && Subtarget->hasSVE2orSME())
-      if (SDValue RSH = tryLowerToRoundingShiftRightByImm(Op, DAG))
-        return RSH;
+    if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+      SDValue RShOperand;
+      unsigned ShiftValue;
+      if (canLowerSRLToRoundingShiftForVT(Op, VT, DAG, ShiftValue, RShOperand))
+        return DAG.getNode(AArch64ISD::URSHR_I_PRED, DL, VT,
+                           getPredicateForVector(DAG, DL, VT), RShOperand,
+                           DAG.getTargetConstant(ShiftValue, DL, MVT::i32));
+    }
 
     if (VT.isScalableVector() ||
         useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())) {
@@ -20855,9 +20867,20 @@ static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static bool isHalvingTruncateAndConcatOfLegalIntScalableType(SDNode *N) {
+  if (N->getOpcode() != AArch64ISD::UZP1)
+    return false;
+  SDValue Op0 = N->getOperand(0);
+  EVT SrcVT = Op0->getValueType(0);
+  EVT DstVT = N->getValueType(0);
+  return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv16i8) ||
+         (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv8i16) ||
+         (SrcVT == MVT::nxv2i64 && DstVT == MVT::nxv4i32);
+}
+
 // Try to combine rounding shifts where the operands come from an extend, and
 // the result is truncated and combined into one vector.
-//   uzp1(urshr(uunpklo(X),C), urshr(uunpkhi(X), C)) -> urshr(X, C)
+//   uzp1(rshrnb(uunpklo(X),C), rshrnb(uunpkhi(X), C)) -> urshr(X, C)
 static SDValue tryCombineExtendRShTrunc(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == AArch64ISD::UZP1 && "Only UZP1 expected.");
   SDValue Op0 = N->getOperand(0);
@@ -20865,59 +20888,46 @@ static SDValue tryCombineExtendRShTrunc(SDNode *N, SelectionDAG &DAG) {
   EVT VT = Op0->getValueType(0);
   EVT ResVT = N->getValueType(0);
 
-  // Truncating combine?
-  if (ResVT.widenIntegerVectorElementType(*DAG.getContext()) !=
-      VT.getDoubleNumVectorElementsVT(*DAG.getContext()))
-    return SDValue();
-
   unsigned RshOpc = Op0.getOpcode();
-  if (RshOpc != AArch64ISD::URSHR_I_PRED)
-    return SDValue();
-  if (!isAllActivePredicate(DAG, Op0.getOperand(0)) ||
-      !isAllActivePredicate(DAG, Op1.getOperand(0)))
+  if (RshOpc != AArch64ISD::RSHRNB_I)
     return SDValue();
 
   // Same op code and imm value?
-  SDValue ShiftValue = Op0.getOperand(2);
-  if (RshOpc != Op1.getOpcode() || ShiftValue != Op1.getOperand(2))
-    return SDValue();
-  // We cannot reduce the type if shift value is too large for type.
-  if (ShiftValue->getAsZExtVal() > ResVT.getScalarSizeInBits())
+  SDValue ShiftValue = Op0.getOperand(1);
+  if (RshOpc != Op1.getOpcode() || ShiftValue != Op1.getOperand(1))
     return SDValue();
 
   // Same unextended operand value?
-  SDValue Lo = Op0.getOperand(1);
-  SDValue Hi = Op1.getOperand(1);
+  SDValue Lo = Op0.getOperand(0);
+  SDValue Hi = Op1.getOperand(0);
   if (Lo.getOpcode() != AArch64ISD::UUNPKLO &&
       Hi.getOpcode() != AArch64ISD::UUNPKHI)
     return SDValue();
   SDValue OrigArg = Lo.getOperand(0);
-  if (OrigArg != Op1.getOperand(1).getOperand(0))
+  if (OrigArg != Hi.getOperand(0))
     return SDValue();
 
   SDLoc DL(N);
-  return DAG.getNode(RshOpc, DL, ResVT, getPredicateForVector(DAG, DL, ResVT),
-                     OrigArg, Op0.getOperand(2));
+  return DAG.getNode(AArch64ISD::URSHR_I_PRED, DL, ResVT,
+                     getPredicateForVector(DAG, DL, ResVT), OrigArg,
+                     ShiftValue);
 }
 
 // Try to simplify:
-//    t1 = nxv8i16 urshr(X, shiftvalue)
+//    t1 = nxv8i16 add(X, 1 << (ShiftValue - 1))
+//    t2 = nxv8i16 srl(t1, ShiftValue)
 // to
-//    t1 = nxv16i8 rshrnb(X, shiftvalue).
-//    t2 = nxv8i16 = bitcast t1
+//    t1 = nxv8i16 rshrnb(X, shiftvalue).
 // rshrnb will zero the top half bits of each element. Therefore, this combine
 // should only be performed when a following instruction with the rshrnb
 // as an operand does not care about the top half of each element. For example,
 // a uzp1 or a truncating store.
 static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
                                          const AArch64Subtarget *Subtarget) {
-  if (Srl->getOpcode() != AArch64ISD::URSHR_I_PRED)
-    return SDValue();
-
-  if (!isAllActivePredicate(DAG, Srl.getOperand(0)))
-    return SDValue();
-
   EVT VT = Srl->getValueType(0);
+  if (!VT.isScalableVector() || !Subtarget->hasSVE2())
+    return SDValue();
+
   EVT ResVT;
   if (VT == MVT::nxv8i16)
     ResVT = MVT::nxv16i8;
@@ -20928,13 +20938,14 @@ static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
   else
     return SDValue();
 
-  unsigned ShiftValue = Srl->getOperand(2)->getAsZExtVal();
-  if (ShiftValue > ResVT.getScalarSizeInBits())
-    return SDValue();
-
   SDLoc DL(Srl);
-  SDValue Rshrnb = DAG.getNode(AArch64ISD::RSHRNB_I, DL, ResVT,
-                               {Srl->getOperand(1), Srl->getOperand(2)});
+  unsigned ShiftValue;
+  SDValue RShOperand;
+  if (!canLowerSRLToRoundingShiftForVT(Srl, ResVT, DAG, ShiftValue, RShOperand))
+    return SDValue();
+  SDValue Rshrnb = DAG.getNode(
+      AArch64ISD::RSHRNB_I, DL, ResVT,
+      {RShOperand, DAG.getTargetConstant(ShiftValue, DL, MVT::i32)});
   return DAG.getNode(ISD::BITCAST, DL, VT, Rshrnb);
 }
 
@@ -20972,14 +20983,23 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue RSh = tryCombineExtendRShTrunc(N, DAG))
-    return RSh;
+  if (SDValue Urshr = tryCombineExtendRShTrunc(N, DAG))
+    return Urshr;
 
   if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Op0, DAG, Subtarget))
     return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Rshrnb, Op1);
 
   if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Op1, DAG, Subtarget))
     return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0, Rshrnb);
+
+  // uzp1(bitcast(x), bitcast(y)) -> uzp1(x, y)
+  if (isHalvingTruncateAndConcatOfLegalIntScalableType(N) &&
+      Op0.getOpcode() == ISD::BITCAST && Op1.getOpcode() == ISD::BITCAST) {
+    if (Op0.getOperand(0).getValueType() == Op1.getOperand(0).getValueType()) {
+      return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0.getOperand(0),
+                         Op1.getOperand(0));
+    }
+  }
 
   // uzp1(unpklo(uzp1(x, y)), z) => uzp1(x, z)
   if (Op0.getOpcode() == AArch64ISD::UUNPKLO) {
