@@ -145,6 +145,17 @@ static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
                                         MandatoryLiteral, ImmWidth));          \
   }
 
+static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
+                                AMDGPUDisassembler::OpWidthTy OpWidth,
+                                unsigned Imm, unsigned EncImm,
+                                bool MandatoryLiteral, unsigned ImmWidth,
+                                const MCDisassembler *Decoder) {
+  assert(Imm < (1U << EncSize) && "Operand doesn't fit encoding!");
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(
+      Inst, DAsm->decodeSrcOp(OpWidth, EncImm, MandatoryLiteral, ImmWidth));
+}
+
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
 // get register class. Used by SGPR only operands.
 #define DECODE_OPERAND_REG_7(RegClass, OpWidth)                                \
@@ -154,9 +165,12 @@ static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
 // Imm{9} is acc(agpr or vgpr) Imm{8} should be 0 (see VOP3Pe_SMFMAC).
 // Set Imm{8} to 1 (IS_VGPR) to decode using 'enum10' from decodeSrcOp.
 // Used by AV_ register classes (AGPR or VGPR only register operands).
-#define DECODE_OPERAND_REG_AV10(RegClass, OpWidth)                             \
-  DECODE_SrcOp(Decode##RegClass##RegisterClass, 10, OpWidth,                   \
-               Imm | AMDGPU::EncValues::IS_VGPR, false, 0)
+template <AMDGPUDisassembler::OpWidthTy OpWidth>
+static DecodeStatus decodeAV10(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
+                               const MCDisassembler *Decoder) {
+  return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm | AMDGPU::EncValues::IS_VGPR,
+                     false, 0, Decoder);
+}
 
 // Decoder for Src(9-bit encoding) registers only.
 #define DECODE_OPERAND_SRC_REG_9(RegClass, OpWidth)                            \
@@ -165,13 +179,20 @@ static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
 // Decoder for Src(9-bit encoding) AGPR, register number encoded in 9bits, set
 // Imm{9} to 1 (set acc) and decode using 'enum10' from decodeSrcOp, registers
 // only.
-#define DECODE_OPERAND_SRC_REG_A9(RegClass, OpWidth)                           \
-  DECODE_SrcOp(decodeOperand_##RegClass, 9, OpWidth, Imm | 512, false, 0)
+template <AMDGPUDisassembler::OpWidthTy OpWidth>
+static DecodeStatus decodeSrcA9(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,
+                                const MCDisassembler *Decoder) {
+  return decodeSrcOp(Inst, 9, OpWidth, Imm, Imm | 512, false, 0, Decoder);
+}
 
 // Decoder for 'enum10' from decodeSrcOp, Imm{0-8} is 9-bit Src encoding
 // Imm{9} is acc, registers only.
-#define DECODE_SRC_OPERAND_REG_AV10(RegClass, OpWidth)                         \
-  DECODE_SrcOp(decodeOperand_##RegClass, 10, OpWidth, Imm, false, 0)
+template <AMDGPUDisassembler::OpWidthTy OpWidth>
+static DecodeStatus decodeSrcAV10(MCInst &Inst, unsigned Imm,
+                                  uint64_t /* Addr */,
+                                  const MCDisassembler *Decoder) {
+  return decodeSrcOp(Inst, 10, OpWidth, Imm, Imm, false, 0, Decoder);
+}
 
 // Decoder for RegisterOperands using 9-bit Src encoding. Operand can be
 // register from RegClass or immediate. Registers that don't belong to RegClass
@@ -229,9 +250,6 @@ DECODE_OPERAND_REG_8(AReg_256)
 DECODE_OPERAND_REG_8(AReg_512)
 DECODE_OPERAND_REG_8(AReg_1024)
 
-DECODE_OPERAND_REG_AV10(AVDst_128, OPW128)
-DECODE_OPERAND_REG_AV10(AVDst_512, OPW512)
-
 // Decoders for register only source RegisterOperands that use use 9-bit Src
 // encoding: 'decodeOperand_<RegClass>'.
 
@@ -240,12 +258,6 @@ DECODE_OPERAND_SRC_REG_9(VReg_64, OPW64)
 DECODE_OPERAND_SRC_REG_9(VReg_128, OPW128)
 DECODE_OPERAND_SRC_REG_9(VReg_256, OPW256)
 DECODE_OPERAND_SRC_REG_9(VRegOrLds_32, OPW32)
-
-DECODE_OPERAND_SRC_REG_A9(AGPR_32, OPW32)
-
-DECODE_SRC_OPERAND_REG_AV10(AV_32, OPW32)
-DECODE_SRC_OPERAND_REG_AV10(AV_64, OPW64)
-DECODE_SRC_OPERAND_REG_AV10(AV_128, OPW128)
 
 // Decoders for register or immediate RegisterOperands that use 9-bit Src
 // encoding: 'decodeOperand_<RegClass>_Imm<ImmWidth>'.

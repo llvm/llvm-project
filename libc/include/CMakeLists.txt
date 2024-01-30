@@ -84,6 +84,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  limits
+  DEF_FILE limits.h.def
+  GEN_HDR limits.h
+  DEPENDS
+    .llvm-libc-macros.limits_macros
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h
@@ -214,6 +222,15 @@ if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in")
 else()
   message(STATUS "Skipping header signal.h as the target config is missing")
 endif()
+
+add_gen_header(
+  stdbit
+  DEF_FILE stdbit.h.def
+  GEN_HDR stdbit.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdbit_macros
+)
 
 add_gen_header(
   stdio

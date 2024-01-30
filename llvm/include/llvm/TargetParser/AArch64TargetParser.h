@@ -32,8 +32,8 @@ struct ArchInfo;
 struct CpuInfo;
 
 // Function Multi Versioning CPU features. They must be kept in sync with
-// compiler-rt enum CPUFeatures in lib/builtins/cpu_model.c with FEAT_MAX as
-// sentinel.
+// compiler-rt enum CPUFeatures in lib/builtins/cpu_model/aarch64.c with
+// FEAT_MAX as sentinel.
 enum CPUFeatures {
   FEAT_RNG,
   FEAT_FLAGM,
@@ -813,7 +813,8 @@ struct CpuAlias {
   StringRef Name;
 };
 
-inline constexpr CpuAlias CpuAliases[] = {{"grace", "neoverse-v2"}};
+inline constexpr CpuAlias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
+                                          {"grace", "neoverse-v2"}};
 
 bool getExtensionFeatures(
     const AArch64::ExtensionBitset &Extensions,

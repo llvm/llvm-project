@@ -69,7 +69,7 @@ template <typename T> struct FPTest : public Test {
   static constexpr T zero = FPBits::zero(Sign::POS).get_val();
   static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
   static constexpr T aNaN = FPBits::build_quiet_nan().get_val();
-  static constexpr T sNaN = FPBits::build_nan(Sign::POS, 1).get_val();
+  static constexpr T sNaN = FPBits::build_nan().get_val();
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();
@@ -98,7 +98,7 @@ template <typename T> struct FPTest : public Test {
   const T zero = FPBits::zero(Sign::POS).get_val();                            \
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();                        \
   const T aNaN = FPBits::build_quiet_nan().get_val();                          \
-  const T sNaN = FPBits::build_nan(Sign::POS, 1).get_val();                    \
+  const T sNaN = FPBits::build_nan().get_val();                                \
   const T inf = FPBits::inf(Sign::POS).get_val();                              \
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
   const T min_normal = FPBits::min_normal().get_val();                         \
