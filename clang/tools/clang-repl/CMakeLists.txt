@@ -6,6 +6,7 @@ set( LLVM_LINK_COMPONENTS
   OrcJIT
   OrcShared
   Support
+  TargetParser
   )
 
 add_clang_tool(clang-repl

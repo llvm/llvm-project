@@ -2,10 +2,6 @@
 // RUN:   clang-repl -Xcc -fno-color-diagnostics -Xcc -Xclang -Xcc -ast-dump \
 // RUN:            -Xcc -Xclang -Xcc -ast-dump-filter -Xcc -Xclang -Xcc Test 2>&1| \
 // RUN:         FileCheck %s
-// RUN: cat %s | \
-// RUN:   clang-repl -oop-executor -Xcc -fno-color-diagnostics -Xcc -Xclang -Xcc -ast-dump \
-// RUN:            -Xcc -Xclang -Xcc -ast-dump-filter -Xcc -Xclang -Xcc Test 2>&1| \
-// RUN:         FileCheck %s
 
 int TestVar = 12;
 // CHECK: Dumping TestVar:

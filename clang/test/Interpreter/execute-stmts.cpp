@@ -1,7 +1,6 @@
 // REQUIRES: host-supports-jit
 // UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl -Xcc -Xclang -Xcc  -verify | FileCheck %s
-// RUN: cat %s | clang-repl -oop-executor -Xcc -Xclang -Xcc -verify | FileCheck %s
 // RUN: %clang_cc1 -verify -fincremental-extensions -emit-llvm -o -  %s \
 // RUN:           | FileCheck --check-prefix=CODEGEN-CHECK %s
 

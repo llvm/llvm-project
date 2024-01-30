@@ -25,6 +25,7 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include <netdb.h>
 #include <optional>
 #include <sys/socket.h>
@@ -52,7 +53,8 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
-static llvm::cl::OptionCategory OOPCategory("Out-of-process Execution Options");
+static llvm::cl::OptionCategory OOPCategory(
+    "Out-of-process Execution Options (Only available on ELF/Linux)");
 static llvm::cl::opt<std::string> OutOfProcessExecutor(
     "oop-executor",
     llvm::cl::desc("Launch an out-of-process executor to run code"),
@@ -164,7 +166,15 @@ ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos,
   return Comps;
 }
 
-static llvm::Error sanitizeArguments(const char *ArgV0) {
+static llvm::Error sanitizeOopArguments(const char *ArgV0) {
+  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+  if ((OutOfProcessExecutor.getNumOccurrences() ||
+       OutOfProcessExecutorConnect.getNumOccurrences()) &&
+      (!SystemTriple.isOSBinFormatELF()))
+    return llvm::make_error<llvm::StringError>(
+        "Out-process-executors are currently only supported on ELF",
+        llvm::inconvertibleErrorCode());
+
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OutOfProcessExecutor.getNumOccurrences() &&
       !!OutOfProcessExecutorConnect.getNumOccurrences())
@@ -178,7 +188,7 @@ static llvm::Error sanitizeArguments(const char *ArgV0) {
   if (!!OutOfProcessExecutor.getNumOccurrences() &&
       OutOfProcessExecutor.empty()) {
     llvm::SmallString<256> OOPExecutorPath(llvm::sys::fs::getMainExecutable(
-        ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
+        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
     llvm::sys::path::remove_filename(OOPExecutorPath);
     llvm::sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
     OutOfProcessExecutor = OOPExecutorPath.str().str();
@@ -187,7 +197,7 @@ static llvm::Error sanitizeArguments(const char *ArgV0) {
   // Out-of-process executors must run with the ORC runtime for destructor support.
   if (OrcRuntimePath.empty() && (OutOfProcessExecutor.getNumOccurrences() || OutOfProcessExecutorConnect.getNumOccurrences())) {
     llvm::SmallString<256> OrcPath(llvm::sys::fs::getMainExecutable(
-        ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
+        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
     llvm::sys::path::remove_filename(OrcPath); // Remove clang-repl filename.
     llvm::sys::path::remove_filename(OrcPath); // Remove ./bin directory.
     llvm::sys::path::append(OrcPath, "lib/clang/18/lib/x86_64-unknown-linux-gnu/liborc_rt.a");
@@ -413,7 +423,7 @@ int main(int argc, const char **argv) {
   if (CudaEnabled)
     DeviceCI->LoadRequestedPlugins();
 
-  ExitOnErr(sanitizeArguments(argv[0]));
+  ExitOnErr(sanitizeOopArguments(argv[0]));
 
   std::unique_ptr<clang::Interpreter> Interp;
 

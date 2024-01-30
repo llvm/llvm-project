@@ -4,7 +4,6 @@
 // Tests that a global destructor is ran on platforms with gnu exception support.
 //
 // RUN: cat %s | clang-repl | FileCheck %s
-// RUN: cat %s | clang-repl -oop-executor | FileCheck %s
 
 extern "C" int printf(const char *, ...);
 

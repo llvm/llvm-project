@@ -1,7 +1,6 @@
 // REQUIRES: host-supports-jit
 // UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl | FileCheck %s
-// RUN: cat %s | clang-repl -oop-executor | FileCheck %s
 // RUN: cat %s | clang-repl -Xcc -O2 | FileCheck %s
 extern "C" int printf(const char *, ...);
 
