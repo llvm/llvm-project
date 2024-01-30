@@ -1696,9 +1696,7 @@ class LLDBTestCaseFactory(type):
 
                     xfail_reason = xfail_for_debug_info_cat_fn(cat)
                     if xfail_reason:
-                        test_method = unittest.expectedFailure(xfail_reason)(
-                            test_method
-                        )
+                        test_method = unittest.expectedFailure(test_method)
 
                     skip_reason = skip_for_debug_info_cat_fn(cat)
                     if skip_reason:
