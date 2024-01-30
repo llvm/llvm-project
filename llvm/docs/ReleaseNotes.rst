@@ -181,6 +181,7 @@ Changes to the RISC-V Backend
   specification.
 * The Smepmp 1.0 extension is now supported.
 * ``-mcpu=sifive-p670`` was added.
+* Support for the Zicond extension is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
