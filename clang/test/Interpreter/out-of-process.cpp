@@ -31,15 +31,6 @@ int a = 12;
 static __typeof(a) b __attribute__((__weakref__("a")));
 int c = b;
 
-// Test dynamic libraries.
-extern "C" int ultimate_answer;
-extern "C" int calculate_answer();
-%lib libdynamic-library-test.so
-printf("Return value: %d\n", calculate_answer());
-// CHECK: Return value: 5
-printf("Variable: %d\n", ultimate_answer);
-// CHECK-NEXT: Variable: 42
-
 // Test lambdas.
 auto l1 = []() { printf("ONE\n"); return 42; };
 auto l2 = []() { printf("TWO\n"); return 17; };

@@ -15,6 +15,7 @@
 // }
 
 // RUN: cat %s | env LD_LIBRARY_PATH=%S/Inputs:$LD_LIBRARY_PATH clang-repl | FileCheck %s
+// RUN: cat %s | env LD_LIBRARY_PATH=%S/Inputs:$LD_LIBRARY_PATH clang-repl -oop-executor | FileCheck %s
 
 extern "C" int printf(const char* format, ...);
 

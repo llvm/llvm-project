@@ -492,6 +492,9 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
 
   if (auto DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
           EE->getExecutionSession(), name))
+    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
+  else
+    return DLSG.takeError();
 
   return llvm::Error::success();
 }

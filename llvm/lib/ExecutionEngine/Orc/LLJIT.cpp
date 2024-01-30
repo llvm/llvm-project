@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
@@ -108,10 +109,10 @@ public:
     std::string WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
     auto Triple = ES.getTargetTriple();
     if (Triple.isOSBinFormatELF()) {
-      WrapperToCall = FirstInitialization ? "__orc_rt_jit_dlopen_wrapper" : "__orc_rt_jit_dlupdate_wrapper";
-      if (FirstInitialization) {
-        FirstInitialization = false;
-      }
+      WrapperToCall = !InitializedJITDylibs.contains(&JD)
+                          ? "__orc_rt_jit_dlopen_wrapper"
+                          : "__orc_rt_jit_dlupdate_wrapper";
+      InitializedJITDylibs.insert(&JD);
     }
 
     if (auto WrapperAddr =
@@ -152,7 +153,9 @@ public:
 private:
   orc::LLJIT &J;
   DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
-  bool FirstInitialization = true; // Used to track if reinitialization is needed for ELF
+  llvm::SmallPtrSet<orc::JITDylib const *, 8>
+      InitializedJITDylibs; // Used to track if reinitialization is required for
+                            // ELF.
 };
 
 class GenericLLVMIRPlatformSupport;
