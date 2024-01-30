@@ -114,7 +114,6 @@ template <class T, class Container>
 */
 
 #include <__algorithm/ranges_copy.h>
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>

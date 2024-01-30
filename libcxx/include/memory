@@ -917,7 +917,6 @@ template<size_t N, class T>
 
 // clang-format on
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/align.h>

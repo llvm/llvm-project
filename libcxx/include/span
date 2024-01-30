@@ -128,7 +128,7 @@ template<class R>
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__config>
 #include <__fwd/span.h>
 #include <__iterator/bounded_iter.h>

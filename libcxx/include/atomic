@@ -587,7 +587,6 @@ template <class T>
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__atomic/aliases.h>
 #include <__atomic/atomic.h>
 #include <__atomic/atomic_base.h>
