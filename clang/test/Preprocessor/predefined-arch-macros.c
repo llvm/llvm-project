@@ -4294,13 +4294,20 @@
 
 // Begin amdgcn tests ----------------
 
-// RUN: %clang -march=amdgcn -E -dM %s -o - 2>&1 \
+// RUN: %clang -mcpu=gfx803 -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_AMDGCN
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_803
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target amdgcn-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_NONE
 // CHECK_AMDGCN: #define __AMDGCN__ 1
-// CHECK_AMDGCN: #define __HAS_FMAF__ 1
-// CHECK_AMDGCN: #define __HAS_FP64__ 1
-// CHECK_AMDGCN: #define __HAS_LDEXPF__ 1
+// CHECK_AMDGCN_803: #define __HAS_FMAF__ 1
+// CHECK_AMDGCN_803: #define __HAS_FP64__ 1
+// CHECK_AMDGCN_803: #define __HAS_LDEXPF__ 1
+// CHECK_AMDGCN_NONE-NOT: #define __HAS_FMAF__
+// CHECK_AMDGCN_NONE-NOT: #define __HAS_FP64__
+// CHECK_AMDGCN_NONE-NOT: #define __HAS_LDEXPF__
+// CHECK_AMDGCN_NONE-NOT: #define __AMDGCN_WAVEFRONT_SIZE__
 
 // Begin r600 tests ----------------
 
@@ -4315,6 +4322,15 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
 // CHECK_R600_FP64-DAG: #define __R600__ 1
 // CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
+
+// Begin HIP host tests -----------
+
+// RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only \
+// RUN:     --offload-arch=gfx803 -target x86_64-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_HIP_HOST
+// CHECK_HIP_HOST: #define __AMDGCN_WAVEFRONT_SIZE__ 64
+// CHECK_HIP_HOST: #define __AMDGPU__ 1
+// CHECK_HIP_HOST: #define __AMD__ 1
 
 // Begin avr tests ----------------
 
