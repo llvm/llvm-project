@@ -655,7 +655,10 @@ public:
     bits = merge(bits, mantVal, FRACTION_MASK);
   }
 
-  // TODO: Use an uint32_t for 'biased_exp'.
+  // Unsafe function to create a floating point representation.
+  // It simply packs the sign, biased exponent and mantissa values without
+  // checking bound nor normalization.
+  // FIXME: Use an uint32_t for 'biased_exp'.
   LIBC_INLINE static constexpr RetT
   create_value(Sign sign, StorageType biased_exp, StorageType mantissa) {
     static_assert(fp_type != FPType::X86_Binary80,
@@ -664,14 +667,14 @@ public:
                        Sig(mantissa)));
   }
 
-  // The function convert integer number and unbiased exponent to proper float
+  // The function converts integer number and unbiased exponent to proper float
   // T type:
   //   Result = number * 2^(ep+1 - exponent_bias)
   // Be careful!
-  //   1) "ep" is raw exponent value.
-  //   2) The function add to +1 to ep for seamless normalized to denormalized
+  //   1) "ep" is the raw exponent value.
+  //   2) The function adds +1 to ep for seamless normalized to denormalized
   //      transition.
-  //   3) The function did not check exponent high limit.
+  //   3) The function does not check exponent high limit.
   //   4) "number" zero value is not processed correctly.
   //   5) Number is unsigned, so the result can be only positive.
   LIBC_INLINE static constexpr RetT make_value(StorageType number, int ep) {
