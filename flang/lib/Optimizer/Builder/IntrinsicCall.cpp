@@ -2218,7 +2218,7 @@ mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
   return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
 
-// ATAN, ATAN2PI
+// ATANPI, ATAN2PI
 mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
   // assert for: atanpi(X), atanpi(Y,X), atan2pi(Y,X)
