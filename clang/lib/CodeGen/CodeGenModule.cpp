@@ -4092,25 +4092,6 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
 static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
-unsigned
-TargetMVPriority(const TargetInfo &TI,
-                 const CodeGenFunction::MultiVersionResolverOption &RO) {
-  unsigned Priority = 0;
-  unsigned NumFeatures = 0;
-  for (StringRef Feat : RO.Conditions.Features) {
-    Priority = std::max(Priority, TI.multiVersionSortPriority(Feat));
-    NumFeatures++;
-  }
-
-  if (!RO.Conditions.Architecture.empty())
-    Priority = std::max(
-        Priority, TI.multiVersionSortPriority(RO.Conditions.Architecture));
-
-  Priority += TI.multiVersionFeatureCost() * NumFeatures;
-
-  return Priority;
-}
-
 // Multiversion functions should be at most 'WeakODRLinkage' so that a different
 // TU can forward declare the function without causing problems.  Particularly
 // in the cases of CPUDispatch, this causes issues. This also makes sure we
@@ -4244,7 +4225,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::stable_sort(
         Options, [&TI](const CodeGenFunction::MultiVersionResolverOption &LHS,
                        const CodeGenFunction::MultiVersionResolverOption &RHS) {
-          return TargetMVPriority(TI, LHS) > TargetMVPriority(TI, RHS);
+          return LHS.priority(TI) > RHS.priority(TI);
         });
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);

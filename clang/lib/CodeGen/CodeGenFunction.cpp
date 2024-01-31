@@ -2697,6 +2697,24 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   CGM.getSanStats().create(IRB, SSK);
 }
 
+unsigned CodeGenFunction::MultiVersionResolverOption::priority(
+    const TargetInfo &TI) const {
+  unsigned Priority = 0;
+  unsigned NumFeatures = 0;
+  for (StringRef Feat : Conditions.Features) {
+    Priority = std::max(Priority, TI.multiVersionSortPriority(Feat));
+    NumFeatures++;
+  }
+
+  if (!Conditions.Architecture.empty())
+    Priority = std::max(Priority,
+                        TI.multiVersionSortPriority(Conditions.Architecture));
+
+  Priority += TI.multiVersionFeatureCost() * NumFeatures;
+
+  return Priority;
+}
+
 void CodeGenFunction::EmitKCFIOperandBundle(
     const CGCallee &Callee, SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
   const FunctionProtoType *FP =

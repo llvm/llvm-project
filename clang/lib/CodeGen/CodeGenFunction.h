@@ -4965,6 +4965,8 @@ public:
     MultiVersionResolverOption(llvm::Function *F, StringRef Arch,
                                ArrayRef<StringRef> Feats)
         : Function(F), Conditions(Arch, Feats) {}
+
+    unsigned priority(const TargetInfo &TI) const;
   };
 
   // Emits the body of a multiversion function's resolver. Assumes that the

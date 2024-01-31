@@ -4966,11 +4966,6 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
-// FIXME: put this somewhere nicer to share
-unsigned
-TargetMVPriority(const TargetInfo &TI,
-                 const CodeGenFunction::MultiVersionResolverOption &RO);
-
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -5478,8 +5473,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                   // If there is a higher priority callee, we can't do the
                   // optimization at all, as it would be a valid choice at
                   // runtime.
-                  if (TargetMVPriority(TI, CalleeMVRO) >
-                      TargetMVPriority(TI, CallerMVRO)) {
+                  if (CalleeMVRO.priority(TI) > CallerMVRO.priority(TI)) {
                     HasHigherPriorityCallee = true;
                     return;
                   }
@@ -5487,8 +5481,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                   // FIXME: we could allow a lower-priority match when the
                   // features are a proper subset. But for now, to keep things
                   // simpler, we only care about a precise match.
-                  if (TargetMVPriority(TI, CalleeMVRO) <
-                      TargetMVPriority(TI, CallerMVRO))
+                  if (CalleeMVRO.priority(TI) < CallerMVRO.priority(TI))
                     return;
 
                   if (llvm::Constant *Func = CGM.GetGlobalValue(MangledName)) {
