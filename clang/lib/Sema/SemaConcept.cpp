@@ -807,8 +807,20 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
       ScopeForParameters.InstantiatedLocal(PVD, PVD);
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
-  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext()))
+
+  // See TreeTransform::RebuildTemplateSpecializationType. A context scope is
+  // essential for having an injected class as the canonical type for a template
+  // specialization type at the rebuilding stage. This guarantees that, for
+  // out-of-line definitions, injected class name types and their equivalent
+  // template specializations can be profiled to the same value, which makes it
+  // possible that e.g. constraints involving C<Class<T>> and C<Class> are
+  // perceived identical.
+  std::optional<Sema::ContextRAII> ContextScope;
+  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext())) {
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
+    ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
+                         /*NewThisContext=*/false);
+  }
   ExprResult SubstConstr = S.SubstConstraintExprWithoutSatisfaction(
       const_cast<clang::Expr *>(ConstrExpr), MLTAL);
   if (SFINAE.hasErrorOccurred() || !SubstConstr.isUsable())
