@@ -2227,7 +2227,7 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
   mlir::Value atan;
   mlir::MLIRContext *context = builder.getContext();
 
-  // atanpi(Y,X) atan2pi(Y,X) == atan2(Y,X) / pi
+  // atanpi = atan / pi
   if (args.size() == 2) {
     atan = builder.create<mlir::math::Atan2Op>(loc, fir::getBase(args[0]),
                                                fir::getBase(args[1]));
