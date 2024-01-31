@@ -32815,10 +32815,11 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // No other ValueType for FP_EXTEND should reach this point.
     assert(N->getValueType(0) == MVT::v2f32 &&
            "Do not know how to legalize this Node");
-    if (!Subtarget.hasFP16() || !Subtarget.hasVLX())
-      return;
     bool IsStrict = N->isStrictFPOpcode();
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
+    if (!Subtarget.hasFP16() || !Subtarget.hasVLX() ||
+        Src.getValueType().getVectorElementType() != MVT::f16)
+      return;
     SDValue Ext = IsStrict ? DAG.getConstantFP(0.0, dl, MVT::v2f16)
                            : DAG.getUNDEF(MVT::v2f16);
     SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f16, Src, Ext);
