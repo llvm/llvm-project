@@ -3679,14 +3679,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // reserve these registers.
   if (!Subtarget->enableFlatScratch()) {
     if (IsChainCallConv)
-      CCInfo.AllocateRegBlock(
-          ArrayRef<MCPhysReg>{AMDGPU::SGPR48, AMDGPU::SGPR49, AMDGPU::SGPR50,
-                              AMDGPU::SGPR51},
-          4);
+      CCInfo.AllocateReg(AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51);
     else
-      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1,
-                                                  AMDGPU::SGPR2, AMDGPU::SGPR3},
-                              4);
+      CCInfo.AllocateReg(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3);
   }
 
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
