@@ -81,8 +81,8 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
                                 : m_context.getOrLoadDebugInfoData();
   lldb::offset_t offset = 0;
   while (data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> expected_unit_sp = DWARFUnit::extract(
-        m_dwarf, m_units.size(), data, section, &offset);
+    llvm::Expected<DWARFUnitSP> expected_unit_sp =
+        DWARFUnit::extract(m_dwarf, m_units.size(), data, section, &offset);
 
     if (!expected_unit_sp) {
       // FIXME: Propagate this error up.
