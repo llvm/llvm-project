@@ -692,7 +692,7 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
   LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
   LLVMOrcCDependenceMapPair Dependency = {JD, {&DependencySymbol, 1}};
   LLVMOrcCSymbolDependenceGroup DependenceSet = {
-      /*.Symbols = */ { /*.Symbols = */ &TargetSym.Name, /* .Length = */ 1},
+      /*.Symbols = */ {/*.Symbols = */ &TargetSym.Name, /* .Length = */ 1},
       /* .Dependencies = */ &Dependency,
       /* .NumDependencies = */ 1};
 
