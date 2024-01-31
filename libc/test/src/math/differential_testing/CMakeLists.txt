@@ -27,7 +27,10 @@ function(add_diff_binary target_name)
   get_fq_target_name(${target_name} fq_target_name)
   get_fq_deps_list(fq_deps_list ${DIFF_DEPENDS})
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+      link_object_files skipped_entrypoints_list
+      INTERNAL TRUE
+      ${fq_deps_list}
+  )
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Will not build ${fq_target_name} as it has missing deps: "

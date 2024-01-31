@@ -419,7 +419,18 @@ add_libc_test(
 )
 
 # Tests all implementations that can run on the target CPU.
+
+# TODO: For GPUs, hermetic tests still need to get linked against
+# __internal__ targets.  Update this test generator so that hermetic tests
+# work on GPUs again.
 function(add_libc_multi_impl_test name)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  # Hermetic tests for GPUs still need to link against __internal__ targets.
+    set(unit_test_only "UNIT_TEST_ONLY")
+  else()
+    set(unit_test_only "")
+  endif()
+
   get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
   foreach(fq_config_name IN LISTS fq_implementations)
     get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
@@ -430,6 +441,7 @@ function(add_libc_multi_impl_test name)
       string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
       add_libc_test(
         ${target_name}_test
+        ${unit_test_only}
         SUITE
           libc-string-tests
         COMPILE_OPTIONS

@@ -13,16 +13,10 @@
 #include "src/__support/UInt128.h"
 #include "test/UnitTest/TestLogger.h"
 
-#if __STDC_HOSTED__
-#include <time.h>
-#define LIBC_TEST_USE_CLOCK
-#elif defined(TARGET_SUPPORTS_CLOCK)
-#include <time.h>
-
+#ifdef LIBC_TEST_USE_CLOCK
+#include "include/llvm-libc-macros/time-macros.h" // CLOCKS_PER_SEC
 #include "src/time/clock.h"
-extern "C" clock_t clock() noexcept { return LIBC_NAMESPACE::clock(); }
-#define LIBC_TEST_USE_CLOCK
-#endif
+#endif // LIBC_TEST_USE_CLOCK
 
 namespace LIBC_NAMESPACE {
 namespace testing {
@@ -126,13 +120,17 @@ int Test::runTests(const char *TestFilter) {
       continue;
     }
     tlog << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
-    [[maybe_unused]] const auto start_time = clock();
+#ifdef LIBC_TEST_USE_CLOCK
+    const auto start_time = LIBC_NAMESPACE::clock();
+#endif
     RunContext Ctx;
     T->SetUp();
     T->setContext(&Ctx);
     T->Run();
     T->TearDown();
-    [[maybe_unused]] const auto end_time = clock();
+#ifdef LIBC_TEST_USE_CLOCK
+    const auto end_time = LIBC_NAMESPACE::clock();
+#endif // LIBC_TEST_USE_CLOCK
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
       tlog << RED << "[  FAILED  ] " << RESET << TestName << '\n';

@@ -5,6 +5,7 @@
 # Usage:
 #   get_object_files_for_test(<result var>
 #                             <skipped_entrypoints_var>
+#                             INTERNAL <internal>
 #                             <target0> [<target1> ...])
 #
 #   The list of object files is collected in <result_var>.
@@ -12,11 +13,24 @@
 #   set to a true value.
 #   targetN is either an "add_entrypoint_target" target or an
 #   "add_object_library" target.
+#   If INTERNAL is TRUE, then we collect `target.__internal__` for entry points.
 function(get_object_files_for_test result skipped_entrypoints_list)
+  cmake_parse_arguments(
+    GET_OBJ
+    "" # No optional
+    "INTERNAL" # Single-value
+    "" # No multi-value
+    ${ARGN}
+  )
   set(object_files "")
   set(skipped_list "")
   set(checked_list "")
-  set(unchecked_list "${ARGN}")
+  set(unchecked_list "${GET_OBJ_UNPARSED_ARGUMENTS}")
+
+  set(check_obj_for_tests "CHECK_OBJ_FOR_TESTS_${GET_OBJ_INTERNAL}")
+  set(object_files_for_tests "OBJECT_FILES_FOR_TESTS_${GET_OBJ_INTERNAL}")
+  set(skipped_list_for_tests "SKIPPED_LIST_FOR_TESTS_${GET_OBJ_INTERNAL}")
+
   list(REMOVE_DUPLICATES unchecked_list)
 
   foreach(dep IN LISTS unchecked_list)
@@ -37,19 +51,23 @@ function(get_object_files_for_test result skipped_entrypoints_list)
       continue()
     endif()
 
-    get_target_property(dep_checked ${dep} "CHECK_OBJ_FOR_TESTS")
+    get_target_property(dep_checked ${dep} ${check_obj_for_tests})
 
     if(dep_checked)
       # Target full dependency has already been checked.  Just use the results.
-      get_target_property(dep_obj ${dep} "OBJECT_FILES_FOR_TESTS")
-      get_target_property(dep_skip ${dep} "SKIPPED_LIST_FOR_TESTS")
+      get_target_property(dep_obj ${dep} ${object_files_for_tests})
+      get_target_property(dep_skip ${dep} ${skipped_list_for_tests})
     else()
       # Target full dependency hasn't been checked.  Recursively check its DEPS.
       set(dep_obj "${dep}")
       set(dep_skip "")
 
       get_target_property(indirect_deps ${dep} "DEPS")
-      get_object_files_for_test(dep_obj dep_skip ${indirect_deps})
+      get_object_files_for_test(
+          dep_obj dep_skip
+          INTERNAL ${GET_OBJ_INTERNAL}
+          ${indirect_deps}
+      )
 
       if(${dep_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
         get_target_property(dep_object_files ${dep} "OBJECT_FILES")
@@ -62,7 +80,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           list(APPEND dep_skip ${dep})
           list(REMOVE_ITEM dep_obj ${dep})
         endif()
-        get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
+        if(${GET_OBJ_INTERNAL})
+          get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
+        else()
+          get_target_property(object_file_raw ${dep} "OBJECT_FILE")
+        endif()
         if(object_file_raw)
           list(APPEND dep_obj ${object_file_raw})
         endif()
@@ -73,9 +95,9 @@ function(get_object_files_for_test result skipped_entrypoints_list)
       endif()
 
       set_target_properties(${dep} PROPERTIES
-        OBJECT_FILES_FOR_TESTS "${dep_obj}"
-        SKIPPED_LIST_FOR_TESTS "${dep_skip}"
-        CHECK_OBJ_FOR_TESTS "YES"
+        "${object_files_for_tests}" "${dep_obj}"
+        "${skipped_list_for_tests}" "${dep_skip}"
+        "${check_obj_for_tests}" "YES"
       )
 
     endif()
@@ -140,7 +162,10 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+      link_object_files skipped_entrypoints_list
+      INTERNAL TRUE
+      ${fq_deps_list}
+  )
   if(skipped_entrypoints_list)
     # If a test is OS/target machine independent, it has to be skipped if the
     # OS/target machine combination does not provide any dependent entrypoints.
@@ -165,6 +190,15 @@ function(create_libc_unittest fq_target_name)
       message(STATUS ${msg})
     endif()
     return()
+  endif()
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Adding unit test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS LIBC_UNITTEST_DEPENDS)
+        message(STATUS "  ${fq_target_name} depends on ${dep}")
+      endforeach()
+    endif()
   endif()
 
   if(LIBC_UNITTEST_NO_RUN_POSTBUILD)
@@ -389,7 +423,10 @@ function(add_libc_fuzzer target_name)
   get_fq_target_name(${target_name} fq_target_name)
   get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+      link_object_files skipped_entrypoints_list
+      INTERNAL TRUE
+      ${fq_deps_list}
+  )
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Skipping fuzzer target ${fq_target_name} as it has missing deps: "
@@ -493,6 +530,16 @@ function(add_integration_test test_name)
   get_fq_target_name(${test_name}.libc fq_libc_target_name)
 
   get_fq_deps_list(fq_deps_list ${INTEGRATION_TEST_DEPENDS})
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Adding integration test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS fq_deps_list)
+        message(STATUS "  ${fq_target_name} depends on ${dep}")
+      endforeach()
+    endif()
+  endif()
+
   list(APPEND fq_deps_list
       # All integration tests use the operating system's startup object with the
       # integration test object and need to inherit the same dependencies.
@@ -500,6 +547,7 @@ function(add_integration_test test_name)
       libc.test.IntegrationTest.test
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
+      libc.src.stdlib.atexit
       libc.src.string.bcmp
       libc.src.string.bzero
       libc.src.string.memcmp
@@ -516,10 +564,28 @@ function(add_integration_test test_name)
 
   list(REMOVE_DUPLICATES fq_deps_list)
 
-  # TODO: Instead of gathering internal object files from entrypoints,
-  # collect the object files with public names of entrypoints.
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  # Hermetic tests for GPUs still need to link against __internal__ targets.
+    set(internal_targets TRUE)
+  else()
+    set(internal_targets FALSE)
+  endif()
+
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+      link_object_files skipped_entrypoints_list
+      INTERNAL ${internal_targets}
+      ${fq_deps_list}
+  )
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Get objects for test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS link_object_files)
+        message(STATUS "  ${fq_target_name} need object ${dep}")
+      endforeach()
+    endif()
+  endif()
+  
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Skipping integration test ${fq_target_name} as it has missing deps: "
@@ -672,6 +738,16 @@ function(add_libc_hermetic_test test_name)
   get_fq_target_name(${test_name}.libc fq_libc_target_name)
 
   get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Adding hermetic test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS fq_deps_list)
+        message(STATUS "  ${fq_target_name} depends on ${dep}")
+      endforeach()
+    endif()
+  endif()
+
   list(APPEND fq_deps_list
       # Hermetic tests use the platform's startup object. So, their deps also
       # have to be collected.
@@ -700,11 +776,31 @@ function(add_libc_hermetic_test test_name)
 
   list(REMOVE_DUPLICATES fq_deps_list)
 
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    # Hermetic tests for GPUs still need to link against __internal__ targets.
+    set(internal_targets TRUE)
+  else()
+    set(internal_targets FALSE)
+  endif()
+
   # TODO: Instead of gathering internal object files from entrypoints,
   # collect the object files with public names of entrypoints.
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
-  if(skipped_entrypoints_list)
+      link_object_files skipped_entrypoints_list
+      INTERNAL ${internal_targets}
+      ${fq_deps_list}
+  )
+
+  if(SHOW_INTERMEDIATE_OBJECTS)
+    message(STATUS "Get objects for test ${fq_target_name}")
+    if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
+      foreach(dep IN LISTS link_object_files)
+        message(STATUS "  ${fq_target_name} need object ${dep}")
+      endforeach()
+    endif()
+  endif()
+
+    if(skipped_entrypoints_list)
     set(msg "Skipping hermetic test ${fq_target_name} as it has missing deps: "
             "${skipped_entrypoints_list}.")
     message(STATUS ${msg})

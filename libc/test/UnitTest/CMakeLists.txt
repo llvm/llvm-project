@@ -1,3 +1,12 @@
+# When the clock target is available, it will be used inside the test lib
+# to indicate the performance of the tests.
+set(clock_target "")
+if(libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  set(clock_target
+      libc.src.time.clock
+      libc.include.llvm-libc-macros.time_macros)
+endif()
+
 function(add_unittest_framework_library name)
   cmake_parse_arguments(
     "TEST_LIB"
@@ -26,29 +35,58 @@ function(add_unittest_framework_library name)
       ${TEST_LIB_SRCS}
       ${TEST_LIB_HDRS}
     )
+    set_target_properties(${lib} PROPERTIES
+      TEST_FRAMEWORK TRUE)
     target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
     target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
-    if(TARGET libc.src.time.clock)
-      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
+    if(clock_target)
+      message(STATUS "   Clock targets: ${clock_target}")
+      target_compile_definitions(${lib} PRIVATE LIBC_TEST_USE_CLOCK)
     endif()
   endforeach()
+
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_BUILD_DIR}/include)
   target_compile_options(${name}.hermetic
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} -ffreestanding -nostdinc++)
 
   if(TEST_LIB_DEPENDS)
-    foreach(dep IN LISTS ${TEST_LIB_DEPENDS})
-      if(TARGET ${dep}.unit)
-        add_dependencies(${name}.unit ${dep}.unit)
+    set(normal_deps "")
+    set(framework_deps "")
+    foreach(dep IN LISTS TEST_LIB_DEPENDS)
+      if(TARGET ${dep})
+        get_target_property(dep_is_framework ${dep} TEST_FRAMEWORK)
+        if(dep_is_framework)
+          list(APPEND framework_deps ${dep})
+        else()
+          list(APPEND normal_deps ${dep})
+        endif()
       else()
-        add_dependencies(${name}.unit ${dep})
-      endif()
-      if(TARGET ${dep}.hermetic)
-        add_dependencies(${name}.hermetic ${dep}.hermetic)
-      else()
-        add_dependencies(${name}.hermetic ${dep})
+        list(APPEND normal_deps ${dep})
       endif()
     endforeach()
+
+    foreach(dep IN LISTS framework_deps)
+      target_link_libraries(${name}.unit ${dep}.unit)
+      target_link_libraries(${name}.hermetic ${dep}.hermetic)
+    endforeach()
+
+    get_object_files_for_test(
+        link_object_files skipped_entrypoints_list
+        INTERNAL TRUE
+        ${normal_deps}
+    )
+
+    target_link_libraries(${name}.unit ${link_object_files})
+    if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+      target_link_libraries(${name}.hermetic ${link_object_files})
+    else()
+      get_object_files_for_test(
+          link_object_files skipped_entrypoints_list
+          INTERNAL FALSE
+          ${normal_deps}
+      )
+      target_link_libraries(${name}.hermetic ${link_object_files})
+    endif()
   endif()
 endfunction()
 
@@ -70,6 +108,7 @@ add_unittest_framework_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
+    ${clock_target}
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
@@ -114,6 +153,7 @@ add_unittest_framework_library(
     libc.src.__support.FPUtil.fpbits_str
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.errno.errno
 )
 
 add_unittest_framework_library(

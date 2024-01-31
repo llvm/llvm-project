@@ -84,3 +84,13 @@ LLVM_LIBC_FUNCTION(int, atexit, (StdCAtExitCallback * callback)) {
 }
 
 } // namespace LIBC_NAMESPACE
+
+#if !defined(LIBC_COPT_PUBLIC_PACKAGING) && defined(LIBC_ATEXIT_EXPORT_C_SYMBOL)
+// Tests for nVidia GPUs need to be compiled with -fno-use-cxa-atexit, so we
+// need to export the C symbol `atexit` also for __internal__ targets.
+extern "C" {
+int atexit(LIBC_NAMESPACE::StdCAtExitCallback *callback) {
+  return LIBC_NAMESPACE::atexit(callback);
+}
+}
+#endif // LIBC_ATEXIT_EXPORT_C_SYMBOL

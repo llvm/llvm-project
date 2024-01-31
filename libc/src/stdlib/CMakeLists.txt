@@ -363,6 +363,13 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
+# Tests for nVidia GPUs need to be compiled with -fno-use-cxa-atexit, so we need
+# to export the C symbol `atexit` also for __internal__ targets.
+set(atexit_compile_options "")
+if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  set(atexit_compile_options "-DLIBC_ATEXIT_EXPORT_C_SYMBOL")
+endif()
+
 add_entrypoint_object(
   atexit
   SRCS
@@ -371,6 +378,8 @@ add_entrypoint_object(
     atexit.h
   CXX_STANDARD
     20 # For constinit of the atexit callback list.
+  COMPILE_OPTIONS
+    ${atexit_compile_options}
   DEPENDS
     libc.src.__support.fixedvector
     libc.src.__support.blockstore

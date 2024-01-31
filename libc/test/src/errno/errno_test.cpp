@@ -12,5 +12,5 @@
 TEST(LlvmLibcErrnoTest, Basic) {
   int test_val = 123;
   libc_errno = test_val;
-  ASSERT_EQ(test_val, libc_errno);
+  ASSERT_ERRNO_EQ(test_val);
 }
