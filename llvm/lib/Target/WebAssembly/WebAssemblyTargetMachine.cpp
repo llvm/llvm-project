@@ -249,7 +249,7 @@ private:
     SubtargetFeatures TF{TargetFS};
     for (std::string const &F : TF.getFeatures())
       if (!SubtargetFeatures::isEnabled(F))
-        Ret += F;
+        Ret += F + ",";
     return Ret;
   }
 
