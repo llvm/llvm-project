@@ -775,6 +775,18 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
   Indentation += 2;
 
+  // Emit ULEB128 encoded value to OS, returning the number of bytes emitted.
+  auto emitULEB128 = [](DecoderTable::const_iterator I,
+                        formatted_raw_ostream &OS) {
+    unsigned Len = 0;
+    while (*I >= 128) {
+      OS << (unsigned)*I++ << ", ";
+      Len++;
+    }
+    OS << (unsigned)*I++ << ", ";
+    return Len + 1;
+  };
+
   // FIXME: We may be able to use the NumToSkip values to recover
   // appropriate indentation levels.
   DecoderTable::const_iterator I = Table.begin();
@@ -794,14 +806,11 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       OS.indent(Indentation) << "MCD::OPC_ExtractField, ";
 
       // ULEB128 encoded start value.
-      uint8_t Buffer[16], *P = Buffer;
-      while ((*P++ = *I++) >= 128)
-        assert((P - Buffer) <= (ptrdiff_t)sizeof(Buffer) &&
-               "ULEB128 value too large!");
-      unsigned Start = decodeULEB128(Buffer);
-      for (P = Buffer; *P >= 128; ++P)
-        OS << (unsigned)*P << ", ";
-      OS << (unsigned)*P << ", ";
+      const char *ErrMsg = nullptr;
+      unsigned Start = decodeULEB128(Table.data() + Pos + 1, nullptr,
+                                     Table.data() + Table.size(), &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
+      I += emitULEB128(I, OS);
 
       unsigned Len = *I++;
       OS << Len << ",  // Inst{";
@@ -814,9 +823,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS.indent(Indentation) << "MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
-      while (*I >= 128)
-        OS << (unsigned)*I++ << ", ";
-      OS << (unsigned)*I++ << ", ";
+      I += emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint8_t Byte = *I++;
@@ -835,16 +842,13 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS.indent(Indentation) << "MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
-      for (; *I >= 128; ++I)
-        OS << (unsigned)*I << ", ";
-      OS << (unsigned)*I++ << ", ";
+      I += emitULEB128(I, OS);
       // 8-bit length.
       unsigned Len = *I++;
       OS << Len << ", ";
       // ULEB128 encoded field value.
-      for (; *I >= 128; ++I)
-        OS << (unsigned)*I << ", ";
-      OS << (unsigned)*I++ << ", ";
+      I += emitULEB128(I, OS);
+
       // 24-bit numtoskip value.
       uint8_t Byte = *I++;
       uint32_t NumToSkip = Byte;
@@ -861,9 +865,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     case MCD::OPC_CheckPredicate: {
       ++I;
       OS.indent(Indentation) << "MCD::OPC_CheckPredicate, ";
-      for (; *I >= 128; ++I)
-        OS << (unsigned)*I << ", ";
-      OS << (unsigned)*I++ << ", ";
+      I += emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint8_t Byte = *I++;
@@ -882,23 +884,18 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     case MCD::OPC_TryDecode: {
       bool IsTry = *I == MCD::OPC_TryDecode;
       ++I;
-      // Extract the ULEB128 encoded Opcode to a buffer.
-      uint8_t Buffer[16], *p = Buffer;
-      while ((*p++ = *I++) >= 128)
-        assert((p - Buffer) <= (ptrdiff_t)sizeof(Buffer)
-               && "ULEB128 value too large!");
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128(Buffer);
+      const char *ErrMsg = nullptr;
+      unsigned Opc = decodeULEB128(Table.data() + Pos + 1, nullptr,
+                                   Table.data() + Table.size(), &ErrMsg);
+      assert(ErrMsg == nullptr && "ULEB128 value too large!");
+
       OS.indent(Indentation) << "MCD::OPC_" << (IsTry ? "Try" : "")
         << "Decode, ";
-      for (p = Buffer; *p >= 128; ++p)
-        OS << (unsigned)*p << ", ";
-      OS << (unsigned)*p << ", ";
+      I += emitULEB128(I, OS);
 
       // Decoder index.
-      for (; *I >= 128; ++I)
-        OS << (unsigned)*I << ", ";
-      OS << (unsigned)*I++ << ", ";
+      I += emitULEB128(I, OS);
 
       if (!IsTry) {
         OS << "// Opcode: " << NumberedEncodings[Opc] << "\n";
