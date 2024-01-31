@@ -1886,13 +1886,13 @@ UPCStandalonePointerGadget::getFixits(const FixitStrategy &S) const {
       return FixItList{{FixItHint::CreateInsertion(*EndOfOperand, ".data()")}};
     // FIXME: Points inside a macro expansion.
     break;
-    }
-    case FixitStrategy::Kind::Wontfix:
-    case FixitStrategy::Kind::Iterator:
-    case FixitStrategy::Kind::Array:
-      return std::nullopt;
-    case FixitStrategy::Kind::Vector:
-      llvm_unreachable("unsupported strategies for FixableGadgets");
+  }
+  case FixitStrategy::Kind::Wontfix:
+  case FixitStrategy::Kind::Iterator:
+  case FixitStrategy::Kind::Array:
+    return std::nullopt;
+  case FixitStrategy::Kind::Vector:
+    llvm_unreachable("unsupported strategies for FixableGadgets");
   }
 
   return std::nullopt;
@@ -2007,7 +2007,6 @@ UPCPreIncrementGadget::getFixits(const FixitStrategy &S) const {
   }
   return std::nullopt; // Not in the cases that we can handle for now, give up.
 }
-
 
 // For a non-null initializer `Init` of `T *` type, this function returns
 // `FixItHint`s producing a list initializer `{Init,  S}` as a part of a fix-it
@@ -2497,22 +2496,30 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
 
     const SourceLocation IdentifierLoc = getVarDeclIdentifierLoc(D);
 
-    // Get the spelling of the element type as written in the source file (including macros, etc.).
-    auto MaybeElemTypeTxt = getRangeText({D->getBeginLoc(), IdentifierLoc}, Ctx.getSourceManager(), Ctx.getLangOpts());
+    // Get the spelling of the element type as written in the source file
+    // (including macros, etc.).
+    auto MaybeElemTypeTxt =
+        getRangeText({D->getBeginLoc(), IdentifierLoc}, Ctx.getSourceManager(),
+                     Ctx.getLangOpts());
     if (!MaybeElemTypeTxt)
       return {};
     const llvm::StringRef ElemTypeTxt = MaybeElemTypeTxt->trim();
 
     // Find the '[' token.
-    std::optional<Token> NextTok = Lexer::findNextToken(IdentifierLoc, Ctx.getSourceManager(), Ctx.getLangOpts());
+    std::optional<Token> NextTok = Lexer::findNextToken(
+        IdentifierLoc, Ctx.getSourceManager(), Ctx.getLangOpts());
     while (NextTok && !NextTok->is(tok::l_square))
-      NextTok = Lexer::findNextToken(NextTok->getLocation(), Ctx.getSourceManager(), Ctx.getLangOpts());
+      NextTok = Lexer::findNextToken(NextTok->getLocation(),
+                                     Ctx.getSourceManager(), Ctx.getLangOpts());
     if (!NextTok)
       return {};
     const SourceLocation LSqBracketLoc = NextTok->getLocation();
 
-    // Get the spelling of the array size as written in the source file (including macros, etc.).
-    auto MaybeArraySizeTxt = getRangeText({LSqBracketLoc.getLocWithOffset(1), D->getTypeSpecEndLoc()}, Ctx.getSourceManager(), Ctx.getLangOpts());
+    // Get the spelling of the array size as written in the source file
+    // (including macros, etc.).
+    auto MaybeArraySizeTxt = getRangeText(
+        {LSqBracketLoc.getLocWithOffset(1), D->getTypeSpecEndLoc()},
+        Ctx.getSourceManager(), Ctx.getLangOpts());
     if (!MaybeArraySizeTxt)
       return {};
     const llvm::StringRef ArraySizeTxt = MaybeArraySizeTxt->trim();
@@ -2521,7 +2528,8 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
       // Examples:
       //    int arr1[] = {0, 1, 2};
       //    int arr2{3, 4, 5};
-      // We might be able to preserve the non-specified size with `auto` and `std::to_array`:
+      // We might be able to preserve the non-specified size with `auto` and
+      // `std::to_array`:
       //    auto arr1 = std::to_array<int>({0, 1, 2});
       return {};
     }
@@ -2536,8 +2544,8 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
 
     SmallString<32> Replacement;
     raw_svector_ostream OS(Replacement);
-    OS << "std::array<" << ElemTypeTxt << ", "
-       << ArraySizeTxt << "> " << IdentText->str();
+    OS << "std::array<" << ElemTypeTxt << ", " << ArraySizeTxt << "> "
+       << IdentText->str();
 
     FixIts.push_back(FixItHint::CreateReplacement(
         SourceRange{D->getBeginLoc(), D->getTypeSpecEndLoc()}, OS.str()));
