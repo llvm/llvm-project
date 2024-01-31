@@ -602,6 +602,9 @@ public:
 
   std::unique_ptr<MCAsmBackend> MAB;
 
+  /// Indicates if the binary is Linux kernel.
+  bool IsLinuxKernel{false};
+
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
 
