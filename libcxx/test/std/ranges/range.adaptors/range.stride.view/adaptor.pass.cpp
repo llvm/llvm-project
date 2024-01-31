@@ -51,6 +51,7 @@ constexpr bool test() {
   // Check various forms of
 
   // view | stride
+  // two tests: first with stride of 1; second with stride of 2.
   {
     using View                                                          = BasicTestView<cpp17_input_iterator<int*>>;
     auto view                                                           = make_input_view(arr, arr + N);
@@ -71,10 +72,12 @@ constexpr bool test() {
     auto strided_iter                                                   = strided.begin();
 
     assert(*strided_iter == arr[0]);
+    std::ranges::advance(strided_iter, 1);
+    assert(*strided_iter == arr[2]);
   }
 
   // adaptor | stride
-  // Parallels the two tests from above.
+  // two tests: first with stride of 1; second with stride of 2.
   const auto i2 = [](int i) { return i * 2; };
   {
     auto view                           = make_input_view(arr, arr + N);
@@ -82,6 +85,7 @@ constexpr bool test() {
 
     auto transform_stride_applied      = transform_stride_partial(view);
     auto transform_stride_applied_iter = transform_stride_applied.begin();
+
     assert(*transform_stride_applied_iter == i2(arr[0]));
     std::ranges::advance(transform_stride_applied_iter, 2);
     assert(*transform_stride_applied_iter == i2(arr[2]));
@@ -93,21 +97,33 @@ constexpr bool test() {
 
     const auto transform_stride_applied = transform_stride_partial(view);
     auto transform_stride_applied_iter  = transform_stride_applied.begin();
+
     assert(*transform_stride_applied_iter == i2(arr[0]));
+    std::ranges::advance(transform_stride_applied_iter, 1);
+    assert(*transform_stride_applied_iter == i2(arr[2]));
   }
 
+  // stride | adaptor
+  // two tests: first with stride of 1; second with stride of 2.
   {
-    using View                                                          = BasicTestView<int*, int*>;
-    auto view                                                           = View(arr, arr + N);
-    std::same_as<std::ranges::stride_view<View>> decltype(auto) strided = view | std::views::stride(1);
-    auto strided_iter                                                   = strided.begin();
-    auto strided_iter_next                                              = strided_iter;
+    auto view                   = make_input_view(arr, arr + N);
+    const auto stride_transform = std::views::stride(view, 1) | std::views::transform(i2);
 
-    (void)strided_iter_next++;
+    auto stride_transform_iter = stride_transform.begin();
 
-    assert(*strided_iter == arr[0]);
-    assert(*strided_iter_next == arr[1]);
-    assert(strided_iter_next - strided_iter == 1);
+    assert(*stride_transform_iter == i2(arr[0]));
+    std::ranges::advance(stride_transform_iter, 2);
+    assert(*stride_transform_iter == i2(arr[2]));
+  }
+  {
+    auto view                   = make_input_view(arr, arr + N);
+    const auto stride_transform = std::views::stride(view, 2) | std::views::transform(i2);
+
+    auto stride_transform_iter = stride_transform.begin();
+
+    assert(*stride_transform_iter == i2(arr[0]));
+    std::ranges::advance(stride_transform_iter, 1);
+    assert(*stride_transform_iter == i2(arr[2]));
   }
 
   // Check SFINAE friendliness
