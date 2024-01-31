@@ -408,7 +408,7 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
           args.getLastArg(clang::driver::options::OPT_moutline_atomics,
                           clang::driver::options::OPT_mno_outline_atomics)) {
     // Option -moutline-atomics supported for AArch64 target only.
-    if (!targetTriple.isAArch64()) {
+    if (targetTriple.isAArch64()) {
       if (A->getOption().matches(
               clang::driver::options::OPT_moutline_atomics)) {
         opts.featuresAsWritten.push_back("+outline-atomics");
