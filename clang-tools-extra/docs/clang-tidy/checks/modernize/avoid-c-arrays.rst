@@ -61,8 +61,10 @@ can be either ``char* argv[]`` or ``char** argv``, but cannot be
 
 .. option:: AllowStringArrays
 
-  When set to `true` (default is `false`), incomplete array types constructed
-  from string literals will be ignored. Example:
+  When set to `true` (default is `false`), variables of character array type
+  with deduced length, initialized directly from string literals, will be ignored.
+  This option doesn't affect cases where length can't be deduced, resembling
+  pointers, as seen in class members and parameters. Example:
 
   .. code:: c++
 
