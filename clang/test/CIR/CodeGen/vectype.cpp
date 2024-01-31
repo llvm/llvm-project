@@ -2,6 +2,7 @@
 
 typedef int vi4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));
+typedef long long vll2 __attribute__((vector_size(16)));
 
 void vector_int_test(int x) {
 
@@ -49,6 +50,20 @@ void vector_int_test(int x) {
   // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
   vi4 n = ~a;
   // CHECK: %{{[0-9]+}} = cir.unary(not, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
+
+  // Comparisons
+  vi4 o = a == b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(eq, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>
+  vi4 p = a != b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ne, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>
+  vi4 q = a < b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(lt, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>
+  vi4 r = a > b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(gt, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>
+  vi4 s = a <= b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(le, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>
+  vi4 t = a >= b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ge, %{{[0-9]+}}, %{{[0-9]+}}) : <!s32i x 4>, <!s32i x 4>
 }
 
 void vector_double_test(int x, double y) {
@@ -86,4 +101,18 @@ void vector_double_test(int x, double y) {
   // CHECK: %{{[0-9]+}} = cir.unary(plus, %{{[0-9]+}}) : !cir.vector<f64 x 2>, !cir.vector<f64 x 2>
   vd2 m = -a;
   // CHECK: %{{[0-9]+}} = cir.unary(minus, %{{[0-9]+}}) : !cir.vector<f64 x 2>, !cir.vector<f64 x 2>
+
+  // Comparisons
+  vll2 o = a == b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(eq, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  vll2 p = a != b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ne, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  vll2 q = a < b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(lt, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  vll2 r = a > b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(gt, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  vll2 s = a <= b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(le, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
+  vll2 t = a >= b;
+  // CHECK: %{{[0-9]+}} = cir.vec.cmp(ge, %{{[0-9]+}}, %{{[0-9]+}}) : <f64 x 2>, <!s64i x 2>
 }

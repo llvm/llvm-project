@@ -4,6 +4,7 @@
 
 typedef int vi4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));
+typedef long long vll2 __attribute__((vector_size(16)));
 
 void vector_int_test(int x) {
 
@@ -124,6 +125,44 @@ void vector_int_test(int x) {
   // CHECK: %[[#T103:]] = llvm.insertelement %[[#T94]], %[[#T101]][%[[#T102]] : i64] : vector<4xi32>
   // CHECK: %[[#T104:]] = llvm.xor %[[#T103]], %[[#T93]]  : vector<4xi32>
   // CHECK: llvm.store %[[#T104]], %[[#T29:]] : vector<4xi32>, !llvm.ptr
+
+  // Comparisons
+  vi4 o = a == b;
+  // CHECK: %[[#T105:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T106:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T107:]] = llvm.icmp "eq" %[[#T105]], %[[#T106]] : vector<4xi32>
+  // CHECK: %[[#T108:]] = llvm.sext %[[#T107]] : vector<4xi1> to vector<4xi32>
+  // CHECK: llvm.store %[[#T108]], %[[#To:]] : vector<4xi32>, !llvm.ptr
+  vi4 p = a != b;
+  // CHECK: %[[#T109:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T110:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T111:]] = llvm.icmp "ne" %[[#T109]], %[[#T110]] : vector<4xi32>
+  // CHECK: %[[#T112:]] = llvm.sext %[[#T111]] : vector<4xi1> to vector<4xi32>
+  // CHECK: llvm.store %[[#T112]], %[[#Tp:]] : vector<4xi32>, !llvm.ptr
+  vi4 q = a < b;
+  // CHECK: %[[#T113:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T114:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T115:]] = llvm.icmp "slt" %[[#T113]], %[[#T114]] : vector<4xi32>
+  // CHECK: %[[#T116:]] = llvm.sext %[[#T115]] : vector<4xi1> to vector<4xi32>
+  // CHECK: llvm.store %[[#T116]], %[[#Tq:]] : vector<4xi32>, !llvm.ptr
+  vi4 r = a > b;
+  // CHECK: %[[#T117:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T118:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T119:]] = llvm.icmp "sgt" %[[#T117]], %[[#T118]] : vector<4xi32>
+  // CHECK: %[[#T120:]] = llvm.sext %[[#T119]] : vector<4xi1> to vector<4xi32>
+  // CHECK: llvm.store %[[#T120]], %[[#Tr:]] : vector<4xi32>, !llvm.ptr
+  vi4 s = a <= b;
+  // CHECK: %[[#T121:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T122:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T123:]] = llvm.icmp "sle" %[[#T121]], %[[#T122]] : vector<4xi32>
+  // CHECK: %[[#T124:]] = llvm.sext %[[#T123]] : vector<4xi1> to vector<4xi32>
+  // CHECK: llvm.store %[[#T124]], %[[#Ts:]] : vector<4xi32>, !llvm.ptr
+  vi4 t = a >= b;
+  // CHECK: %[[#T125:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T126:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#T127:]] = llvm.icmp "sge" %[[#T125]], %[[#T126]] : vector<4xi32>
+  // CHECK: %[[#T128:]] = llvm.sext %[[#T127]] : vector<4xi1> to vector<4xi32>
+  // CHECK: llvm.store %[[#T128]], %[[#Tt:]] : vector<4xi32>, !llvm.ptr
 }
 
 void vector_double_test(int x, double y) {
@@ -155,7 +194,7 @@ void vector_double_test(int x, double y) {
 
   // Extract element.
   double c = a[x];
-  // CHECK: 38 = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T38:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
   // CHECK: %[[#T39:]] = llvm.load %[[#T1]] : !llvm.ptr -> i32
   // CHECK: %[[#T40:]] = llvm.extractelement %[[#T38]][%[[#T39]] : i32] : vector<2xf64>
   // CHECK: llvm.store %[[#T40]], %[[#T9:]] : f64, !llvm.ptr
@@ -198,4 +237,42 @@ void vector_double_test(int x, double y) {
   // CHECK: %[[#T58:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
   // CHECK: %[[#T59:]] = llvm.fneg %[[#T58]]  : vector<2xf64>
   // CHECK: llvm.store %[[#T59]], %[[#T21:]] : vector<2xf64>, !llvm.ptr
+
+  // Comparisons
+  vll2 o = a == b;
+  // CHECK: %[[#T60:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T61:]] = llvm.load %[[#T7]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T62:]] = llvm.fcmp "oeq" %[[#T60]], %[[#T61]] : vector<2xf64>
+  // CHECK: %[[#T63:]] = llvm.sext %[[#T62]] : vector<2xi1> to vector<2xi64>
+  // CHECK: llvm.store %[[#T63]], %[[#To:]] : vector<2xi64>, !llvm.ptr
+  vll2 p = a != b;
+  // CHECK: %[[#T64:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T65:]] = llvm.load %[[#T7]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T66:]] = llvm.fcmp "une" %[[#T64]], %[[#T65]] : vector<2xf64>
+  // CHECK: %[[#T67:]] = llvm.sext %[[#T66]] : vector<2xi1> to vector<2xi64>
+  // CHECK: llvm.store %[[#T67]], %[[#Tp:]] : vector<2xi64>, !llvm.ptr
+  vll2 q = a < b;
+  // CHECK: %[[#T68:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T69:]] = llvm.load %[[#T7]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T70:]] = llvm.fcmp "olt" %[[#T68]], %[[#T69]] : vector<2xf64>
+  // CHECK: %[[#T71:]] = llvm.sext %[[#T70]] : vector<2xi1> to vector<2xi64>
+  // CHECK: llvm.store %[[#T71]], %[[#Tq:]] : vector<2xi64>, !llvm.ptr
+  vll2 r = a > b;
+  // CHECK: %[[#T72:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T73:]] = llvm.load %[[#T7]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T74:]] = llvm.fcmp "ogt" %[[#T72]], %[[#T73]] : vector<2xf64>
+  // CHECK: %[[#T75:]] = llvm.sext %[[#T74]] : vector<2xi1> to vector<2xi64>
+  // CHECK: llvm.store %[[#T75]], %[[#Tr:]] : vector<2xi64>, !llvm.ptr
+  vll2 s = a <= b;
+  // CHECK: %[[#T76:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T77:]] = llvm.load %[[#T7]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T78:]] = llvm.fcmp "ole" %[[#T76]], %[[#T77]] : vector<2xf64>
+  // CHECK: %[[#T79:]] = llvm.sext %[[#T78]] : vector<2xi1> to vector<2xi64>
+  // CHECK: llvm.store %[[#T79]], %[[#Ts:]] : vector<2xi64>, !llvm.ptr
+  vll2 t = a >= b;
+  // CHECK: %[[#T80:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T81:]] = llvm.load %[[#T7]] : !llvm.ptr -> vector<2xf64>
+  // CHECK: %[[#T82:]] = llvm.fcmp "oge" %[[#T80]], %[[#T81]] : vector<2xf64>
+  // CHECK: %[[#T83:]] = llvm.sext %[[#T82]] : vector<2xi1> to vector<2xi64>
+  // CHECK: llvm.store %[[#T83]], %[[#Tt:]] : vector<2xi64>, !llvm.ptr
 }
