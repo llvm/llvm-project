@@ -544,6 +544,43 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let hasVerifier = 1;
 }
 
+def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
+  let summary = "Verbatim operation";
+  let description = [{
+    The `verbatim` operation produces no results and the value is emitted as is
+    followed by a line break  ('\n' character) during translation.
+
+    Note: Use with caution. This operation can have arbitrary effects on the
+    semantics of the emitted code. Use semantically more meaningful operations
+    whenever possible. Additionally this op is *NOT* intended to be used to
+    inject large snippets of code.
+
+    This operation can be used in situations where a more suitable operation is
+    not yet implemented in the dialect or where preprocessor directives
+    interfere with the structure of the code. One example of this is to declare
+    the linkage of external symbols to make the generated code usable in both C
+    and C++ contexts:
+
+    ```c++
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
+
+    ...
+    
+    #ifdef __cplusplus
+    }
+    #endif
+    ```
+  }];
+
+  let arguments = (ins
+    StrAttr:$value,
+    UnitAttr:$trailing_semicolon
+  );
+  let assemblyFormat = "$value attr-dict";
+}
+
 def EmitC_AssignOp : EmitC_Op<"assign", []> {
   let summary = "Assign operation";
   let description = [{
