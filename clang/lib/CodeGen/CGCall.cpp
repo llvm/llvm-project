@@ -5446,68 +5446,71 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // resolver when there is a precise match on the feature sets, and no
   // possibility of a better match at runtime.
   if (const auto *CallerFD = dyn_cast_or_null<FunctionDecl>(CurGD.getDecl()))
-    if (const auto *CallerTVA = CallerFD->getAttr<TargetVersionAttr>())
-      if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
-        // FIXME: do the same where either the caller or callee are
-        // target_clones.
-        if (FD->isTargetMultiVersion()) {
-          llvm::SmallVector<StringRef, 8> CallerFeats;
-          CallerTVA->getFeatures(CallerFeats);
-          MultiVersionResolverOption CallerMVRO(nullptr, "", CallerFeats);
+    if (CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+        !CallerFD->hasAttr<OptimizeNoneAttr>())
+      if (const auto *CallerTVA = CallerFD->getAttr<TargetVersionAttr>())
+        if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+          // FIXME: do the same where either the caller or callee are
+          // target_clones.
+          if (FD->isTargetMultiVersion()) {
+            llvm::SmallVector<StringRef, 8> CallerFeats;
+            CallerTVA->getFeatures(CallerFeats);
+            MultiVersionResolverOption CallerMVRO(nullptr, "", CallerFeats);
 
-          bool HasHigherPriorityCallee = false;
-          llvm::Constant *FoundMatchingCallee = nullptr;
-          getContext().forEachMultiversionedFunctionVersion(
-              FD, [this, FD, &CallerMVRO, &HasHigherPriorityCallee,
-                   &FoundMatchingCallee](const FunctionDecl *CurFD) {
-                const auto *CalleeTVA = CurFD->getAttr<TargetVersionAttr>();
+            bool HasHigherPriorityCallee = false;
+            llvm::Constant *FoundMatchingCallee = nullptr;
+            getContext().forEachMultiversionedFunctionVersion(
+                FD, [this, FD, &CallerMVRO, &HasHigherPriorityCallee,
+                     &FoundMatchingCallee](const FunctionDecl *CurFD) {
+                  const auto *CalleeTVA = CurFD->getAttr<TargetVersionAttr>();
 
-                GlobalDecl CurGD{
-                    (CurFD->isDefined() ? CurFD->getDefinition() : CurFD)};
-                StringRef MangledName = CGM.getMangledName(CurFD);
+                  GlobalDecl CurGD{
+                      (CurFD->isDefined() ? CurFD->getDefinition() : CurFD)};
+                  StringRef MangledName = CGM.getMangledName(CurFD);
 
-                llvm::SmallVector<StringRef, 8> CalleeFeats;
-                CalleeTVA->getFeatures(CalleeFeats);
-                MultiVersionResolverOption CalleeMVRO(nullptr, "", CalleeFeats);
+                  llvm::SmallVector<StringRef, 8> CalleeFeats;
+                  CalleeTVA->getFeatures(CalleeFeats);
+                  MultiVersionResolverOption CalleeMVRO(nullptr, "",
+                                                        CalleeFeats);
 
-                const TargetInfo &TI = getTarget();
+                  const TargetInfo &TI = getTarget();
 
-                // If there is a higher priority callee, we can't do the
-                // optimization at all, as it would be a valid choice at
-                // runtime.
-                if (TargetMVPriority(TI, CalleeMVRO) >
-                    TargetMVPriority(TI, CallerMVRO)) {
-                  HasHigherPriorityCallee = true;
-                  return;
-                }
+                  // If there is a higher priority callee, we can't do the
+                  // optimization at all, as it would be a valid choice at
+                  // runtime.
+                  if (TargetMVPriority(TI, CalleeMVRO) >
+                      TargetMVPriority(TI, CallerMVRO)) {
+                    HasHigherPriorityCallee = true;
+                    return;
+                  }
 
-                // FIXME: we could allow a lower-priority match when the
-                // features are a proper subset. But for now, to keep things
-                // simpler, we only care about a precise match.
-                if (TargetMVPriority(TI, CalleeMVRO) <
-                    TargetMVPriority(TI, CallerMVRO))
-                  return;
+                  // FIXME: we could allow a lower-priority match when the
+                  // features are a proper subset. But for now, to keep things
+                  // simpler, we only care about a precise match.
+                  if (TargetMVPriority(TI, CalleeMVRO) <
+                      TargetMVPriority(TI, CallerMVRO))
+                    return;
 
-                if (llvm::Constant *Func = CGM.GetGlobalValue(MangledName)) {
-                  FoundMatchingCallee = Func;
-                  return;
-                }
+                  if (llvm::Constant *Func = CGM.GetGlobalValue(MangledName)) {
+                    FoundMatchingCallee = Func;
+                    return;
+                  }
 
-                if (CurFD->isDefined()) {
-                  // FIXME: not sure how to get the address
-                } else {
-                  const CGFunctionInfo &FI =
-                      getTypes().arrangeGlobalDeclaration(FD);
-                  llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
-                  FoundMatchingCallee =
-                      CGM.GetAddrOfFunction(CurGD, Ty, /*ForVTable=*/false,
-                                            /*DontDefer=*/false, ForDefinition);
-                }
-              });
+                  if (CurFD->isDefined()) {
+                    // FIXME: not sure how to get the address
+                  } else {
+                    const CGFunctionInfo &FI =
+                        getTypes().arrangeGlobalDeclaration(FD);
+                    llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
+                    FoundMatchingCallee = CGM.GetAddrOfFunction(
+                        CurGD, Ty, /*ForVTable=*/false,
+                        /*DontDefer=*/false, ForDefinition);
+                  }
+                });
 
-          if (FoundMatchingCallee && !HasHigherPriorityCallee)
-            CalleePtr = FoundMatchingCallee;
-        }
+            if (FoundMatchingCallee && !HasHigherPriorityCallee)
+              CalleePtr = FoundMatchingCallee;
+          }
 
   // If we're using inalloca, set up that argument.
   if (ArgMemory.isValid()) {
