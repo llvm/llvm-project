@@ -428,6 +428,12 @@ def FeatureRealTrue16Insts : SubtargetFeature<"real-true16",
   "Use true 16-bit registers"
 >;
 
+def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
+  "HasBF16ConversionInsts",
+  "true",
+  "Has bf16 conversion instructions"
+>;
+
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -1396,7 +1402,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureKernargPreload]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features, [FeatureGFX950Insts, FeatureLocalMemorySize163840, FeaturePrngInst])>;
+  !listconcat(FeatureISAVersion9_4_Common.Features, [FeatureGFX950Insts, FeatureLocalMemorySize163840, FeaturePrngInst, FeatureBF16ConversionInsts])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -1968,6 +1974,9 @@ def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">;
+
+def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
