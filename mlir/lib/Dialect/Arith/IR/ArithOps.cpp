@@ -1403,11 +1403,10 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [&targetSemantics](APFloat a, bool &castStatus) {
-        bool loosesInfo = false;
-        auto status =
-            a.convert(targetSemantics, llvm::RoundingMode::NearestTiesToEven,
-                      &loosesInfo);
-        castStatus = !loosesInfo && status == APFloat::opOK;
+        bool losesInfo = false;
+        auto status = a.convert(
+            targetSemantics, llvm::RoundingMode::NearestTiesToEven, &losesInfo);
+        castStatus = !losesInfo && status == APFloat::opOK;
         return a;
       });
 }
