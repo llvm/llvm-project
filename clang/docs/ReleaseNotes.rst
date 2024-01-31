@@ -1054,6 +1054,9 @@ Bug Fixes to C++ Support
   Fixes (`#78830 <https://github.com/llvm/llvm-project/issues/78830>`_)
   Fixes (`#60085 <https://github.com/llvm/llvm-project/issues/60085>`_)
 
+- Fix incorrect code generation caused by the object argument of ``static operator()`` and ``static operator[]`` calls not being evaluated.
+  Fixes (`#67976 <https://github.com/llvm/llvm-project/issues/67976>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
