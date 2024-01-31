@@ -30,7 +30,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  CacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -84,11 +84,12 @@ ValueObjectSP LibStdcppUniquePtrSyntheticFrontEnd::GetTuple() {
   return obj_child_sp;
 }
 
-bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
+SyntheticChildrenFrontEnd::CacheState
+LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   ValueObjectSP tuple_sp = GetTuple();
 
   if (!tuple_sp)
-    return false;
+    return CacheState::Invalid;
 
   std::unique_ptr<SyntheticChildrenFrontEnd> tuple_frontend(
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
@@ -110,7 +111,7 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   }
   m_obj_obj = nullptr;
 
-  return false;
+  return CacheState::Invalid;
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }

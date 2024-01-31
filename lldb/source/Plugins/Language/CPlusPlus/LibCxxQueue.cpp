@@ -26,7 +26,7 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  bool Update() override;
+  CacheState Update() override;
 
   size_t CalculateNumChildren() override {
     return m_container_sp ? m_container_sp->GetNumChildren() : 0;
@@ -47,13 +47,13 @@ private:
 };
 } // namespace
 
-bool QueueFrontEnd::Update() {
+SyntheticChildrenFrontEnd::CacheState QueueFrontEnd::Update() {
   m_container_sp = nullptr;
   ValueObjectSP c_sp = m_backend.GetChildMemberWithName("c");
   if (!c_sp)
-    return false;
+    return CacheState::Invalid;
   m_container_sp = c_sp->GetSyntheticValue().get();
-  return false;
+  return CacheState::Invalid;
 }
 
 SyntheticChildrenFrontEnd *

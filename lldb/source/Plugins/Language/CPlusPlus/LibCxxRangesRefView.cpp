@@ -38,7 +38,7 @@ public:
     return m_range_sp;
   }
 
-  bool Update() override;
+  CacheState Update() override;
 
   bool MightHaveChildren() override { return true; }
 
@@ -59,17 +59,17 @@ lldb_private::formatters::LibcxxStdRangesRefViewSyntheticFrontEnd::
     Update();
 }
 
-bool lldb_private::formatters::LibcxxStdRangesRefViewSyntheticFrontEnd::
-    Update() {
+SyntheticChildrenFrontEnd::CacheState
+lldb_private::formatters::LibcxxStdRangesRefViewSyntheticFrontEnd::Update() {
   ValueObjectSP range_ptr =
       GetChildMemberWithName(m_backend, {ConstString("__range_")});
   if (!range_ptr)
-    return false;
+    return CacheState::Invalid;
 
   lldb_private::Status error;
   m_range_sp = range_ptr->Dereference(error);
 
-  return error.Success();
+  return error.Success() ? CacheState::Valid : CacheState::Invalid;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

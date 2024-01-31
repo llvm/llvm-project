@@ -33,7 +33,7 @@ public:
   }
 
   bool MightHaveChildren() override { return true; }
-  bool Update() override;
+  CacheState Update() override;
   size_t CalculateNumChildren() override { return m_elements.size(); }
   ValueObjectSP GetChildAtIndex(size_t idx) override;
 
@@ -78,13 +78,13 @@ llvm::StringRef GenericBitsetFrontEnd::GetDataContainerMemberName() {
   llvm_unreachable("Unknown StdLib enum");
 }
 
-bool GenericBitsetFrontEnd::Update() {
+SyntheticChildrenFrontEnd::CacheState GenericBitsetFrontEnd::Update() {
   m_elements.clear();
   m_first = nullptr;
 
   TargetSP target_sp = m_backend.GetTargetSP();
   if (!target_sp)
-    return false;
+    return CacheState::Invalid;
 
   size_t size = 0;
 
@@ -94,7 +94,7 @@ bool GenericBitsetFrontEnd::Update() {
   m_elements.assign(size, ValueObjectSP());
   m_first =
       m_backend.GetChildMemberWithName(GetDataContainerMemberName()).get();
-  return false;
+  return CacheState::Invalid;
 }
 
 ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(size_t idx) {

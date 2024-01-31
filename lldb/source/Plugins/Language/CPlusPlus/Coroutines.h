@@ -38,7 +38,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  bool Update() override;
+  CacheState Update() override;
 
   bool MightHaveChildren() override;
 

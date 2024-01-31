@@ -46,17 +46,17 @@ public:
     return m_impl.GetIndexAtIndex(idx, m_uint_star_type);
   }
 
-  bool Update() override {
+  CacheState Update() override {
     m_impl.Clear();
 
     auto type_system = m_backend.GetCompilerType().GetTypeSystem();
     if (!type_system)
-      return false;
+      return CacheState::Invalid;
 
     auto ast = ScratchTypeSystemClang::GetForTarget(
         *m_backend.GetExecutionContextRef().GetTargetSP());
     if (!ast)
-      return false;
+      return CacheState::Invalid;
 
     m_uint_star_type = ast->GetPointerSizedIntType(false);
 
@@ -65,18 +65,18 @@ public:
 
     ProcessSP process_sp = m_backend.GetProcessSP();
     if (!process_sp)
-      return false;
+      return CacheState::Invalid;
 
     ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
 
     if (!runtime)
-      return false;
+      return CacheState::Invalid;
 
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(
         runtime->GetClassDescriptor(m_backend));
 
     if (!descriptor.get() || !descriptor->IsValid())
-      return false;
+      return CacheState::Invalid;
 
     uint64_t info_bits(0), value_bits(0), payload(0);
 
@@ -119,7 +119,7 @@ public:
         }
       }
     }
-    return false;
+    return CacheState::Invalid;
   }
 
   bool MightHaveChildren() override { return m_impl.m_mode != Mode::Invalid; }

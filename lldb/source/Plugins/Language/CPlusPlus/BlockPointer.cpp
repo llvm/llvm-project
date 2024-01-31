@@ -136,7 +136,7 @@ public:
 
   // return true if this object is now safe to use forever without ever
   // updating again; the typical (and tested) answer here is 'false'
-  bool Update() override { return false; }
+  CacheState Update() override { return CacheState::Invalid; }
 
   // maybe return false if the block pointer is, say, null
   bool MightHaveChildren() override { return true; }
