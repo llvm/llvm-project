@@ -607,10 +607,12 @@ HIP Specific Elements
    `HIP kernel language <https://rocm.docs.amd.com/projects/HIP/en/latest/reference/kernel_language.html>`_;
    whilst things like using `__device__` annotations might accidentally "work",
    they are not guaranteed to, and thus cannot be relied upon by user code;
+
    - A consequence of the above is that both bitcode linking and linking
      relocatable object files will "work", but it is not guaranteed to remain
      working or actively tested at the moment; this restriction might be relaxed
      in the future.
+
 2. Combining explicit HIP, CUDA or OpenMP Offload compilation with
    ``--hipstdpar`` based offloading is not allowed or supported in any way.
 3. There is no way to target different accelerators via a standard algorithm
