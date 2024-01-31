@@ -331,8 +331,7 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
     return Err;
 
   if (Args.hasArg(OPT_relocatable))
-    if (Error Err = relocateOffloadSection(Args, ExecutableName))
-      return Err;
+    return relocateOffloadSection(Args, ExecutableName)
 
   return Error::success();
 }

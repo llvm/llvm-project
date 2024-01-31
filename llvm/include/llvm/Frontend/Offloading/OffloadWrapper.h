@@ -20,7 +20,8 @@ using EntryArrayTy = std::pair<GlobalVariable *, GlobalVariable *>;
 /// \param EntryArray Optional pair pointing to the `__start` and `__stop`
 /// symbols holding the `__tgt_offload_entry` array.
 /// \param Suffix An optional suffix appended to the emitted symbols.
-/// \param Relocatable Indicate if we need to change the offloading section.
+/// \param Relocatable Indicate if we need to change the offloading section to
+/// create a relocatable object.
 llvm::Error wrapOpenMPBinaries(llvm::Module &M,
                                llvm::ArrayRef<llvm::ArrayRef<char>> Images,
                                EntryArrayTy EntryArray,
