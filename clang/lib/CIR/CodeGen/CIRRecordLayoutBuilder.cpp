@@ -601,15 +601,16 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
   builder.lower(/*nonVirtualBaseType=*/false);
 
   // If we're in C++, compute the base subobject type.
-  mlir::cir::StructType *BaseTy = nullptr;
+  mlir::cir::StructType BaseTy;
   if (llvm::isa<CXXRecordDecl>(D) && !D->isUnion() &&
       !D->hasAttr<FinalAttr>()) {
-    BaseTy = Ty;
+    BaseTy = *Ty;
     if (builder.astRecordLayout.getNonVirtualSize() !=
         builder.astRecordLayout.getSize()) {
       CIRRecordLowering baseBuilder(*this, D, /*Packed=*/builder.isPacked);
+      baseBuilder.lower(/*NonVirtualBaseType=*/true);
       auto baseIdentifier = getRecordTypeName(D, ".base");
-      *BaseTy =
+      BaseTy =
           Builder.getCompleteStructTy(baseBuilder.fieldTypes, baseIdentifier,
                                       /*packed=*/false, D);
       // TODO(cir): add something like addRecordTypeName
@@ -630,7 +631,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty ? *Ty : mlir::cir::StructType{},
-      BaseTy ? *BaseTy : mlir::cir::StructType{},
+      BaseTy ? BaseTy : mlir::cir::StructType{},
       (bool)builder.IsZeroInitializable,
       (bool)builder.IsZeroInitializableAsBase);
 
