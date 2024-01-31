@@ -32817,8 +32817,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
            "Do not know how to legalize this Node");
     bool IsStrict = N->isStrictFPOpcode();
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
-    if (!Subtarget.hasFP16() || !Subtarget.hasVLX() ||
-        Src.getValueType().getVectorElementType() != MVT::f16)
+    if (Src.getValueType().getVectorElementType() != MVT::f16)
       return;
     SDValue Ext = IsStrict ? DAG.getConstantFP(0.0, dl, MVT::v2f16)
                            : DAG.getUNDEF(MVT::v2f16);
