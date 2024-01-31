@@ -224,9 +224,8 @@ private:
   CompilerType m_type;
   Status m_error; // An error object describing errors associated with this
                   // watchpoint.
-  WatchpointOptions
-      m_options; // Settable watchpoint options, which is a delegate to handle
-                 // the callback machinery.
+  WatchpointOptions m_options; // Settable watchpoint options, which is a
+                               // delegate to handle the callback machinery.
   std::unique_ptr<UserExpression> m_condition_up; // The condition to test.
 
   void SetID(lldb::watch_id_t id) { m_id = id; }
