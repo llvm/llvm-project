@@ -227,7 +227,7 @@ using Entry = llvm::DWARFDebugNames::Entry;
 /// `entry` itself is not included in the list.
 /// If any parent does not have an `IDX_parent`, or the Entry data is corrupted,
 /// nullopt is returned.
-static std::optional<llvm::SmallVector<Entry, 4>>
+std::optional<llvm::SmallVector<Entry, 4>>
 getParentChain(Entry entry, uint32_t max_parents) {
   llvm::SmallVector<Entry, 4> parent_entries;
 
@@ -236,12 +236,13 @@ getParentChain(Entry entry, uint32_t max_parents) {
       return std::nullopt;
 
     llvm::Expected<std::optional<Entry>> parent = entry.getParentDIEEntry();
-    if (!parent) { // Bad data.
+    if (!parent) {
+      // Bad data.
       consumeError(parent.takeError());
       return std::nullopt;
     }
 
-    // Last parent in the chain
+    // Last parent in the chain.
     if (!parent->has_value())
       break;
 
@@ -259,18 +260,12 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
   if (context.GetSize() == 0)
     return;
 
-  // Fallback: use the base class implementation.
-  auto fallback_impl = [&](const DebugNames::Entry &entry) {
-    return ProcessEntry(entry, [&](DWARFDIE die) {
-      return GetFullyQualifiedTypeImpl(context, die, callback);
-    });
-  };
-
   llvm::StringRef leaf_name = context[0].name;
   llvm::SmallVector<llvm::StringRef> parent_names;
   for (auto idx : llvm::seq<int>(1, context.GetSize()))
     parent_names.emplace_back(context[idx].name);
 
+  // For each entry, grab its parent chain and check if we have a match.
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(leaf_name)) {
     if (!isType(entry.tag()))
@@ -278,10 +273,14 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
 
     // Grab at most one extra parent, subsequent parents are not necessary to
     // test equality.
-    auto parent_chain = getParentChain(entry, parent_names.size() + 1);
+    std::optional<llvm::SmallVector<Entry, 4>> parent_chain =
+        getParentChain(entry, parent_names.size() + 1);
 
     if (!parent_chain) {
-      if (!fallback_impl(entry))
+      // Fallback: use the base class implementation.
+      if (!ProcessEntry(entry, [&](DWARFDIE die) {
+            return GetFullyQualifiedTypeImpl(context, die, callback);
+          }))
         return;
       continue;
     }
@@ -301,6 +300,7 @@ bool DebugNamesDWARFIndex::SameParentChain(
 
   auto SameAsEntryATName = [this](llvm::StringRef name,
                                   const DebugNames::Entry &entry) {
+    // Peek at the AT_name of `entry` and test equality to `name`.
     auto maybe_dieoffset = entry.getDIEUnitOffset();
     if (!maybe_dieoffset)
       return false;
@@ -310,6 +310,8 @@ bool DebugNamesDWARFIndex::SameParentChain(
     return name == m_debug_info.PeekDIEName(*die_ref);
   };
 
+  // If the AT_name of any parent fails to match the expected name, we don't
+  // have a match.
   for (auto [parent_name, parent_entry] :
        llvm::zip_equal(parent_names, parent_entries))
     if (!SameAsEntryATName(parent_name, parent_entry))

@@ -20,17 +20,21 @@ using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 using StringRef = llvm::StringRef;
 
-void check_num_matches(DebugNamesDWARFIndex &index, int expected_num_matches,
-                       llvm::ArrayRef<DWARFDeclContext::Entry> ctx_entries) {
+static void
+check_num_matches(DebugNamesDWARFIndex &index, int expected_num_matches,
+                  llvm::ArrayRef<DWARFDeclContext::Entry> ctx_entries) {
   DWARFDeclContext ctx(ctx_entries);
   int num_matches = 0;
-  auto increment_matches = [&](DWARFDIE die) {
+
+  index.GetFullyQualifiedType(ctx, [&](DWARFDIE die) {
     num_matches++;
     return true;
-  };
-
-  index.GetFullyQualifiedType(ctx, increment_matches);
+  });
   ASSERT_EQ(num_matches, expected_num_matches);
+}
+
+static DWARFDeclContext::Entry make_entry(const char *c) {
+  return DWARFDeclContext::Entry(dwarf::DW_TAG_class_type, c);
 }
 
 TEST(DWARFDebugNamesIndexTest, FullyQualifiedQueryWithIDXParent) {
@@ -117,9 +121,6 @@ DWARF:
   auto *index = static_cast<DebugNamesDWARFIndex *>(symbol_file->getIndex());
   ASSERT_NE(index, nullptr);
 
-  auto make_entry = [](const char *c) {
-    return DWARFDeclContext::Entry(dwarf::DW_TAG_class_type, c);
-  };
   check_num_matches(*index, 1, {make_entry("1")});
   check_num_matches(*index, 1, {make_entry("2"), make_entry("1")});
   check_num_matches(*index, 1,
@@ -201,9 +202,6 @@ DWARF:
   auto *index = static_cast<DebugNamesDWARFIndex *>(symbol_file->getIndex());
   ASSERT_NE(index, nullptr);
 
-  auto make_entry = [](const char *c) {
-    return DWARFDeclContext::Entry(dwarf::DW_TAG_class_type, c);
-  };
   check_num_matches(*index, 1, {make_entry("1")});
   check_num_matches(*index, 1, {make_entry("2"), make_entry("1")});
   check_num_matches(*index, 1, {make_entry("2")});
