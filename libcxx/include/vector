@@ -527,7 +527,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __x)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value);
 
   template <class _InputIterator,
             __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value &&
@@ -1263,7 +1263,7 @@ vector<_Tp, _Allocator>::vector(initializer_list<value_type> __il, const allocat
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocator>&
 vector<_Tp, _Allocator>::operator=(vector&& __x)
-    _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+    _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
   __move_assign(__x, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1952,7 +1952,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   vector(vector&& __v, const __type_identity_t<allocator_type>& __a);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector& operator=(vector&& __v)
-      _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
+      _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value);
 
   template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
   void _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 assign(_InputIterator __first, _InputIterator __last);
@@ -2499,7 +2499,7 @@ vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>&
 vector<bool, _Allocator>::operator=(vector&& __v)
-    _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value)) {
+    _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
   __move_assign(__v, integral_constant<bool, __storage_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
