@@ -22,6 +22,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
+const char ThreadSafeFileSystem::ID = 0;
 void ThreadSafeFileSystem::anchor() {}
 void CachingOnDiskFileSystem::anchor() {}
 
