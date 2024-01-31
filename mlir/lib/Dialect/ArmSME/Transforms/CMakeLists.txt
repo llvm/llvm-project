@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRArmSMETransforms
   EnableArmStreaming.cpp
+  OuterProductFusion.cpp
   TileAllocation.cpp
 
   ADDITIONAL_HEADER_DIRS
