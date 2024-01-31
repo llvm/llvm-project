@@ -128,15 +128,8 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
-    if (E->isGLValue()) {
-      if (E->getType()->isFunctionType())
-        return PT_FnPtr;
-      return PT_Ptr;
-    }
-
-    return classify(E->getType());
+    return Ctx.classify(E);
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
