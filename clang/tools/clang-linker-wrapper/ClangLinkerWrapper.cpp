@@ -333,7 +333,7 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
   if (Args.hasArg(OPT_relocatable))
     return relocateOffloadSection(Args, ExecutableName)
 
-  return Error::success();
+        return Error::success();
 }
 
 void printVersion(raw_ostream &OS) {
