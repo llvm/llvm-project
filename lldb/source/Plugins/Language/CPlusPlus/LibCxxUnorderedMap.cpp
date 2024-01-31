@@ -214,7 +214,11 @@ bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   if (!p1_sp)
     return false;
 
-  m_tree = GetFirstValueOfLibCXXCompressedPair(*p1_sp).get();
+  ValueObjectSP value_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
+  if (!value_sp)
+    return false;
+
+  m_tree = value_sp->GetChildMemberWithName("__next_").get();
   if (m_tree == nullptr)
     return false;
 
