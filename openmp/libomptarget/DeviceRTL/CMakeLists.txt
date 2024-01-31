@@ -386,7 +386,7 @@ foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
 
     compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa ${amd_options})
   elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx61)
+    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
   else()
     libomptarget_error_say("Unknown GPU architecture '${gpu_arch}'")
   endif()
