@@ -9,9 +9,9 @@ end function
 
 ! CHECK-LABEL: @_QPtest_real4
 ! CHECK-FAST: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f32
-! CHECK: %[[dpi:.*]] = arith.constant 3.1415926535897931 : f64
-! CHECK: %[[pi:.*]] = fir.convert %[[dpi]] : (f64) -> f32
-! CHECK: %{{.*}} = arith.divf %[[atan2]], %[[pi]] fastmath<contract> : f32
+! CHECK: %[[dpi:.*]] = arith.constant 0.31830988618379069 : f64
+! CHECK: %[[inv_pi:.*]] = fir.convert %[[dpi]] : (f64) -> f32
+! CHECK: %{{.*}} = arith.mulf %[[atan2]], %[[inv_pi]] fastmath<contract> : f32
 
 function test_real8(y,x)
   real(8) :: x, y, test_real8
@@ -20,5 +20,5 @@ end function
 
 ! CHECK-LABEL: @_QPtest_real8
 ! CHECK-FAST: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f64
-! CHECK: %[[pi:.*]] = arith.constant 3.1415926535897931 : f64
-! CHECK: %{{.*}} = arith.divf %[[atan2]], %[[pi]] fastmath<contract> : f64
+! CHECK: %[[inv_pi:.*]] = arith.constant 0.31830988618379069 : f64
+! CHECK: %{{.*}} = arith.mulf %[[atan2]], %[[inv_pi]] fastmath<contract> : f64

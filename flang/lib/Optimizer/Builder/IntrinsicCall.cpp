@@ -2236,11 +2236,11 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
         mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
     atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
   }
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
   mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::FloatType::getF64(context), pi);
+      builder.createRealConstant(loc, mlir::FloatType::getF64(context), inv_pi);
   mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
-  return builder.create<mlir::arith::DivFOp>(loc, atan, factor);
+  return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
 
 // ASSOCIATED
