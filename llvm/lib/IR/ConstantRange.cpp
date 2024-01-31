@@ -1467,7 +1467,28 @@ ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
   if (isSingleElement() && getSingleElement()->isAllOnes())
     return Other.binaryNot();
 
-  return fromKnownBits(toKnownBits() ^ Other.toKnownBits(), /*IsSigned*/false);
+  KnownBits LHSKnown = toKnownBits();
+  KnownBits RHSKnown = Other.toKnownBits();
+  KnownBits Known = LHSKnown ^ RHSKnown;
+  ConstantRange CR = fromKnownBits(Known, /*IsSigned*/ false);
+  // Typically the following code doesn't improve the result if BW = 1.
+  if (getBitWidth() == 1)
+    return CR;
+
+  // If LHS is known to be the subset of RHS, treat LHS ^ RHS as RHS -nuw/nsw
+  // LHS. If RHS is known to be the subset of LHS, treat LHS ^ RHS as LHS
+  // -nuw/nsw RHS.
+  if (LHSKnown.getMaxValue().isSubsetOf(RHSKnown.getMinValue()))
+    CR = CR.intersectWith(
+        Other.subWithNoWrap(*this, OverflowingBinaryOperator::NoUnsignedWrap |
+                                       OverflowingBinaryOperator::NoSignedWrap),
+        PreferredRangeType::Unsigned);
+  else if (RHSKnown.getMaxValue().isSubsetOf(LHSKnown.getMinValue()))
+    CR = CR.intersectWith(
+        subWithNoWrap(Other, OverflowingBinaryOperator::NoUnsignedWrap |
+                                 OverflowingBinaryOperator::NoSignedWrap),
+        PreferredRangeType::Unsigned);
+  return CR;
 }
 
 ConstantRange

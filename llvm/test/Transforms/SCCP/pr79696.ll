@@ -12,8 +12,7 @@ define i1 @constant_range_xor(i64 %a) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A]], i1 true)
 ; CHECK-NEXT:    [[CONV:%.*]] = xor i64 [[CTLZ]], 63
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[CONV]], 13
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
