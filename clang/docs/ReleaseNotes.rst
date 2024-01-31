@@ -1164,6 +1164,12 @@ Arm and AArch64 Support
   * Cortex-A720 (cortex-a720).
   * Cortex-X4 (cortex-x4).
 
+- Function Multi Versioning has been extended to support Load-Acquire RCpc
+  instructions v3 (rcpc3) as well as Memory Copy and Memory Set Acceleration
+  instructions (mops) when targeting AArch64. The feature identifiers (in
+  parenthesis) can be used with either of the ``target_version`` and
+  ``target_clones`` attributes.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
