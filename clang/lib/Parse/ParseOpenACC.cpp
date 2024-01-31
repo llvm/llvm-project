@@ -129,6 +129,7 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("use_device", OpenACCClauseKind::UseDevice)
       .Case("vector", OpenACCClauseKind::Vector)
       .Case("vector_length", OpenACCClauseKind::VectorLength)
+      .Case("wait", OpenACCClauseKind::Wait)
       .Case("worker", OpenACCClauseKind::Worker)
       .Default(OpenACCClauseKind::Invalid);
 }
@@ -475,6 +476,7 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::Gang:
+  case OpenACCClauseKind::Wait:
     return ClauseParensKind::Optional;
 
   case OpenACCClauseKind::Default:
@@ -782,29 +784,37 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
       ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
       // An invalid expression can be just about anything, so just give up on
       // this clause list.
-      if (CondExpr.isInvalid())
-        return true;
+      if (CondExpr.isInvalid()) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     }
     case OpenACCClauseKind::CopyIn:
       tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::ReadOnly, Kind);
-      if (ParseOpenACCClauseVarList(Kind))
-        return true;
+      if (ParseOpenACCClauseVarList(Kind)) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     case OpenACCClauseKind::Create:
     case OpenACCClauseKind::CopyOut:
       tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Zero,
                                          Kind);
-      if (ParseOpenACCClauseVarList(Kind))
-        return true;
+      if (ParseOpenACCClauseVarList(Kind)) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     case OpenACCClauseKind::Reduction:
       // If we're missing a clause-kind (or it is invalid), see if we can parse
       // the var-list anyway.
       ParseReductionOperator(*this);
-      if (ParseOpenACCClauseVarList(Kind))
-        return true;
+      if (ParseOpenACCClauseVarList(Kind)) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     case OpenACCClauseKind::Self:
       // The 'self' clause is a var-list instead of a 'condition' in the case of
@@ -826,22 +836,28 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
     case OpenACCClauseKind::UseDevice:
-      if (ParseOpenACCClauseVarList(Kind))
-        return true;
+      if (ParseOpenACCClauseVarList(Kind)) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     case OpenACCClauseKind::Collapse: {
       tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Force,
                                          Kind);
       ExprResult NumLoops =
           getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
-      if (NumLoops.isInvalid())
-        return true;
+      if (NumLoops.isInvalid()) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     }
     case OpenACCClauseKind::Bind: {
       ExprResult BindArg = ParseOpenACCBindClauseArgument();
-      if (BindArg.isInvalid())
-        return true;
+      if (BindArg.isInvalid()) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     }
     case OpenACCClauseKind::NumGangs:
@@ -850,8 +866,10 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
     case OpenACCClauseKind::DefaultAsync:
     case OpenACCClauseKind::VectorLength: {
       ExprResult IntExpr = ParseOpenACCIntExpr();
-      if (IntExpr.isInvalid())
-        return true;
+      if (IntExpr.isInvalid()) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     }
     case OpenACCClauseKind::DType:
@@ -861,12 +879,15 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         // device_type in Sema.
         ConsumeToken();
       } else if (ParseOpenACCDeviceTypeList()) {
-        return true;
+        Parens.skipToEnd();
+        return false;
       }
       break;
     case OpenACCClauseKind::Tile:
-      if (ParseOpenACCSizeExprList())
-        return true;
+      if (ParseOpenACCSizeExprList()) {
+        Parens.skipToEnd();
+        return false;
+      }
       break;
     default:
       llvm_unreachable("Not a required parens type?");
@@ -881,8 +902,10 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
         ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
         // An invalid expression can be just about anything, so just give up on
         // this clause list.
-        if (CondExpr.isInvalid())
-          return true;
+        if (CondExpr.isInvalid()) {
+          Parens.skipToEnd();
+          return false;
+        }
         break;
       }
       case OpenACCClauseKind::Vector:
@@ -893,19 +916,31 @@ bool Parser::ParseOpenACCClauseParams(OpenACCDirectiveKind DirKind,
                                                : OpenACCSpecialTokenKind::Num,
                                            Kind);
         ExprResult IntExpr = ParseOpenACCIntExpr();
-        if (IntExpr.isInvalid())
-          return true;
+        if (IntExpr.isInvalid()) {
+          Parens.skipToEnd();
+          return false;
+        }
         break;
       }
       case OpenACCClauseKind::Async: {
         ExprResult AsyncArg = ParseOpenACCAsyncArgument();
-        if (AsyncArg.isInvalid())
-          return true;
+        if (AsyncArg.isInvalid()) {
+          Parens.skipToEnd();
+          return false;
+        }
         break;
       }
       case OpenACCClauseKind::Gang:
-        if (ParseOpenACCGangArgList())
-          return true;
+        if (ParseOpenACCGangArgList()) {
+          Parens.skipToEnd();
+          return false;
+        }
+        break;
+      case OpenACCClauseKind::Wait:
+        if (ParseOpenACCWaitArgument()) {
+          Parens.skipToEnd();
+          return false;
+        }
         break;
       default:
         llvm_unreachable("Not an optional parens type?");
@@ -940,8 +975,7 @@ bool Parser::ParseOpenACCWaitArgument() {
     // Consume colon.
     ConsumeToken();
 
-    ExprResult IntExpr =
-        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    ExprResult IntExpr = ParseOpenACCIntExpr();
     if (IntExpr.isInvalid())
       return true;
 
@@ -962,14 +996,6 @@ bool Parser::ParseOpenACCWaitArgument() {
   // the term 'async-argument' means a nonnegative scalar integer expression, or
   // one of the special values 'acc_async_noval' or 'acc_async_sync', as defined
   // in the C header file and the Fortran opacc module.
-  //
-  // We are parsing this simply as list of assignment expressions (to avoid
-  // comma being troublesome), and will ensure it is an integral type.  The
-  // 'special' types are defined as macros, so we can't really check those
-  // (other than perhaps as values at one point?), but the standard does say it
-  // is implementation-defined to use any other negative value.
-  //
-  //
   bool FirstArg = true;
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     if (!FirstArg) {
@@ -978,8 +1004,7 @@ bool Parser::ParseOpenACCWaitArgument() {
     }
     FirstArg = false;
 
-    ExprResult CurArg =
-        getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+    ExprResult CurArg = ParseOpenACCAsyncArgument();
 
     if (CurArg.isInvalid())
       return true;
