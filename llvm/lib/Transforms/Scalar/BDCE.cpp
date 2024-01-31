@@ -23,10 +23,13 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "bdce"
 
@@ -122,6 +125,38 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
         Changed = true;
         NumSExt2ZExt++;
         continue;
+      }
+    }
+
+    // Simplify and, or, xor when their mask does not affect the demanded bits.
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+      APInt Demanded = DB.getDemandedBits(BO);
+      if (!Demanded.isAllOnes()) {
+        const APInt *Mask;
+        if (match(BO->getOperand(1), m_APInt(Mask))) {
+          bool CanBeSimplified = false;
+          switch (BO->getOpcode()) {
+          case Instruction::Or:
+          case Instruction::Xor:
+            CanBeSimplified = !Demanded.intersects(*Mask);
+            break;
+          case Instruction::And:
+            CanBeSimplified = Demanded.isSubsetOf(*Mask);
+            break;
+          default:
+            // TODO: Handle more cases here.
+            break;
+          }
+
+          if (CanBeSimplified) {
+            clearAssumptionsOfUsers(BO, DB);
+            BO->replaceAllUsesWith(BO->getOperand(0));
+            Worklist.push_back(BO);
+            ++NumSimplified;
+            Changed = true;
+            continue;
+          }
+        }
       }
     }
 
