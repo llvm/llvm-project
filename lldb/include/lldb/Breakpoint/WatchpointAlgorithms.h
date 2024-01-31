@@ -61,11 +61,12 @@ public:
       lldb::addr_t addr, size_t size, bool read, bool write,
       lldb::WatchpointHardwareFeature supported_features, ArchSpec &arch);
 
-public:
-  // These methods should be protected, but giving access to the algorithms
-  // in the unittests is not straightforward, so they're marked public.
-  // Do not call directly elsewhere.
+  struct Region {
+    lldb::addr_t addr;
+    size_t size;
+  };
 
+protected:
   /// Convert a user's watchpoint request into an array of addr+size that
   /// can be watched with power-of-2 style hardware watchpoints.
   ///
@@ -90,10 +91,17 @@ public:
   ///
   /// \param[in] address_byte_size
   ///     The address byte size on this target.
-  static std::vector<std::pair<lldb::addr_t, size_t>>
-  PowerOf2Watchpoints(lldb::addr_t user_addr, size_t user_size,
-                      size_t min_byte_size, size_t max_byte_size,
-                      uint32_t address_byte_size);
+  static std::vector<Region> PowerOf2Watchpoints(lldb::addr_t user_addr,
+                                                 size_t user_size,
+                                                 size_t min_byte_size,
+                                                 size_t max_byte_size,
+                                                 uint32_t address_byte_size);
+};
+
+// For the unittests to have access to the individual algorithms
+class WatchpointAlgorithmsTest : public WatchpointAlgorithms {
+public:
+  using WatchpointAlgorithms::PowerOf2Watchpoints;
 };
 
 } // namespace lldb_private

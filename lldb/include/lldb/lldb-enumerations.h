@@ -460,7 +460,7 @@ FLAGS_ENUM(WatchpointHardwareFeature){
     /// Intel systems can watch 1, 2, 4, or 8 bytes (in 64-bit targets),
     /// aligned naturally.
     eWatchpointHardwareX86 = (1u << 1),
-    ///
+
     /// ARM systems with Byte Address Select watchpoints
     /// can watch any consecutive series of bytes up to the
     /// size of a pointer (4 or 8 bytes), at a pointer-size

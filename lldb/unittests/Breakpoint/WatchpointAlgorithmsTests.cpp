@@ -16,27 +16,21 @@
 using namespace lldb;
 using namespace lldb_private;
 
-struct granule {
-  addr_t addr;
-  size_t size;
-};
-
 struct testcase {
-  struct granule user;     // What the user requested
-  std::vector<granule> hw; // The hardware watchpoints we'll use
+  WatchpointAlgorithms::Region user; // What the user requested
+  std::vector<WatchpointAlgorithms::Region>
+      hw; // The hardware watchpoints we'll use
 };
 
 void check_testcase(testcase test,
-                    std::vector<std::pair<addr_t, size_t>> result,
+                    std::vector<WatchpointAlgorithms::Region> result,
                     size_t min_byte_size, size_t max_byte_size,
                     uint32_t address_byte_size) {
 
   EXPECT_EQ(result.size(), test.hw.size());
   for (size_t i = 0; i < result.size(); i++) {
-    addr_t entry_addr = std::get<0>(result[i]);
-    size_t entry_size = std::get<1>(result[i]);
-    EXPECT_EQ(entry_addr, test.hw[i].addr);
-    EXPECT_EQ(entry_size, test.hw[i].size);
+    EXPECT_EQ(result[i].addr, test.hw[i].addr);
+    EXPECT_EQ(result[i].size, test.hw[i].size);
   }
 }
 
@@ -76,7 +70,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     size_t min_byte_size = 1;
     size_t max_byte_size = 8;
     size_t address_byte_size = 8;
-    auto result = WatchpointAlgorithms::PowerOf2Watchpoints(
+    auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
     check_testcase(test, result, min_byte_size, max_byte_size,
@@ -97,7 +91,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     size_t min_byte_size = 1;
     size_t max_byte_size = 4;
     size_t address_byte_size = 4;
-    auto result = WatchpointAlgorithms::PowerOf2Watchpoints(
+    auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
     check_testcase(test, result, min_byte_size, max_byte_size,
@@ -153,7 +147,7 @@ TEST(WatchpointAlgorithmsTests, PowerOf2Watchpoints) {
     size_t min_byte_size = 1;
     size_t max_byte_size = INT32_MAX;
     size_t address_byte_size = 8;
-    auto result = WatchpointAlgorithms::PowerOf2Watchpoints(
+    auto result = WatchpointAlgorithmsTest::PowerOf2Watchpoints(
         user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
     check_testcase(test, result, min_byte_size, max_byte_size,

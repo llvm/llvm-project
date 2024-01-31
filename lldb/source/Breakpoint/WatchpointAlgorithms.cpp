@@ -22,31 +22,29 @@ WatchpointAlgorithms::AtomizeWatchpointRequest(
     addr_t addr, size_t size, bool read, bool write,
     WatchpointHardwareFeature supported_features, ArchSpec &arch) {
 
-  std::vector<std::pair<addr_t, size_t>> entries;
+  std::vector<Region> entries;
 
   if (supported_features &
       WatchpointHardwareFeature::eWatchpointHardwareArmMASK) {
     entries =
         PowerOf2Watchpoints(addr, size,
-                            /* min_byte_size */ 1,
-                            /* max_byte_size */ INT32_MAX,
-                            /* address_byte_size */ arch.GetAddressByteSize());
+                            /*min_byte_size*/ 1,
+                            /*max_byte_size*/ INT32_MAX,
+                            /*address_byte_size*/ arch.GetAddressByteSize());
   } else {
     // As a fallback, assume we can watch any power-of-2
     // number of bytes up through the size of an address in the target.
     entries =
         PowerOf2Watchpoints(addr, size,
-                            /* min_byte_size */ 1,
-                            /* max_byte_size */ arch.GetAddressByteSize(),
-                            /* address_byte_size */ arch.GetAddressByteSize());
+                            /*min_byte_size*/ 1,
+                            /*max_byte_size*/ arch.GetAddressByteSize(),
+                            /*address_byte_size*/ arch.GetAddressByteSize());
   }
 
   std::vector<WatchpointResourceSP> resources;
-  for (std::pair<addr_t, size_t> &ent : entries) {
-    addr_t addr = std::get<0>(ent);
-    size_t size = std::get<1>(ent);
+  for (Region &ent : entries) {
     WatchpointResourceSP wp_res_sp =
-        std::make_shared<WatchpointResource>(addr, size, read, write);
+        std::make_shared<WatchpointResource>(ent.addr, ent.size, read, write);
     resources.push_back(wp_res_sp);
   }
 
@@ -66,8 +64,7 @@ WatchpointAlgorithms::AtomizeWatchpointRequest(
 /// If a user asks to watch 16 bytes at 0x1000, and this target supports
 /// 8-byte watchpoints, we can implement this with two 8-byte watchpoints
 /// at 0x1000 and 0x1008.
-
-std::vector<std::pair<addr_t, size_t>>
+std::vector<WatchpointAlgorithms::Region>
 WatchpointAlgorithms::PowerOf2Watchpoints(addr_t user_addr, size_t user_size,
                                           size_t min_byte_size,
                                           size_t max_byte_size,
@@ -130,7 +127,7 @@ WatchpointAlgorithms::PowerOf2Watchpoints(addr_t user_addr, size_t user_size,
   aligned_size = std::min(aligned_size, max_byte_size);
   aligned_start = user_addr & ~(aligned_size - 1);
 
-  std::vector<std::pair<addr_t, size_t>> result;
+  std::vector<Region> result;
   addr_t current_address = aligned_start;
   const addr_t user_end_address = user_addr + user_size;
   while (current_address + aligned_size < user_end_address) {
@@ -138,9 +135,8 @@ WatchpointAlgorithms::PowerOf2Watchpoints(addr_t user_addr, size_t user_size,
     current_address += aligned_size;
   }
 
-  if (current_address < user_end_address) {
+  if (current_address < user_end_address)
     result.push_back({current_address, aligned_size});
-  }
 
   return result;
 }
