@@ -529,9 +529,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    InstructionCost GatherCost = getRISCVInstructionCost(
-        {RISCV::VID_V, RISCV::VRSUB_VX, RISCV::VRGATHER_VV}, LT.second,
-        CostKind);
+    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VRSUB_VX, RISCV : VRGATHER_VV};
+    if (LT.second.isFixedLengthVector() &&
+        isInt<5>(LT.second.getVectorNumElements() - 1))
+      Opcodes[1] = RISCV::VRSUB_VI;
+    InstructionCost GatherCost =
+        getRISCVInstructionCost(Opcodes, LT.second, CostKind);
     // Mask operation additionally required extend and truncate
     InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
     return LT.first * (LenCost + GatherCost + ExtendCost);
