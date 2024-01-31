@@ -200,7 +200,9 @@ static bool shouldCacheStatFailures(StringRef Filename) {
 DependencyScanningWorkerFilesystem::DependencyScanningWorkerFilesystem(
     DependencyScanningFilesystemSharedCache &SharedCache,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : ProxyFileSystem(std::move(FS)), SharedCache(SharedCache),
+    : llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
+                        llvm::vfs::ProxyFileSystem>(std::move(FS)),
+      SharedCache(SharedCache),
       WorkingDirForCacheLookup(llvm::errc::invalid_argument) {
   updateWorkingDirForCacheLookup();
 }
@@ -392,3 +394,5 @@ void DependencyScanningWorkerFilesystem::updateWorkingDirForCacheLookup() {
   assert(!WorkingDirForCacheLookup ||
          llvm::sys::path::is_absolute_gnu(*WorkingDirForCacheLookup));
 }
+
+const char DependencyScanningWorkerFilesystem::ID = 0;

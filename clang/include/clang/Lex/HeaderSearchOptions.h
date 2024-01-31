@@ -237,6 +237,9 @@ public:
   /// diagnostics.
   unsigned ModulesStrictContextHash : 1;
 
+  /// Whether to include ivfsoverlay usage information in written AST files.
+  unsigned ModulesIncludeVFSUsage : 1;
+
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
         ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
@@ -250,7 +253,7 @@ public:
         ModulesSkipDiagnosticOptions(false),
         ModulesSkipHeaderSearchPaths(false),
         ModulesSkipPragmaDiagnosticMappings(false), ModulesHashContent(false),
-        ModulesStrictContextHash(false) {}
+        ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,
