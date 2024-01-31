@@ -123,7 +123,8 @@ bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   if (!data_type_finder_sp)
     return false;
 
-  data_type_finder_sp = GetFirstValueOfLibCXXCompressedPair(*data_type_finder_sp);
+  data_type_finder_sp =
+      GetFirstValueOfLibCXXCompressedPair(*data_type_finder_sp);
   if (!data_type_finder_sp)
     return false;
 
