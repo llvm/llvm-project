@@ -167,6 +167,9 @@ enum : uint64_t {
 
   // ds_gws_* instructions.
   GWS = UINT64_C(1) << 62,
+
+  // Is a SWMMAC instruction.
+  IsSWMMAC = UINT64_C(1) << 63,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -400,6 +403,10 @@ enum CPol {
   TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
   TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
   TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+
+  // Volatile (used to preserve/signal operation volatility for buffer
+  // operations not a real instruction bit)
+  VOLATILE = 1 << 31,
 };
 
 } // namespace CPol
@@ -1172,11 +1179,13 @@ enum Type { TRAP = -2, WORKGROUP = -1 };
 
 #define R_00B860_COMPUTE_TMPRING_SIZE                                   0x00B860
 #define   S_00B860_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
-#define   S_00B860_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
+#define   S_00B860_WAVESIZE_GFX11(x)                                  (((x) & 0x7FFF) << 12)
+#define   S_00B860_WAVESIZE_GFX12Plus(x)                              (((x) & 0x3FFFF) << 12)
 
 #define R_0286E8_SPI_TMPRING_SIZE                                       0x0286E8
 #define   S_0286E8_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
-#define   S_0286E8_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
+#define   S_0286E8_WAVESIZE_GFX11(x)                                  (((x) & 0x7FFF) << 12)
+#define   S_0286E8_WAVESIZE_GFX12Plus(x)                              (((x) & 0x3FFFF) << 12)
 
 #define R_028B54_VGT_SHADER_STAGES_EN                                 0x028B54
 #define   S_028B54_HS_W32_EN(x)                                       (((x) & 0x1) << 21)

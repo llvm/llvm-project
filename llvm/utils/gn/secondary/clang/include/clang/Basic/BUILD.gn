@@ -82,14 +82,22 @@ clang_tablegen("AttrSubMatchRulesList") {
   td_file = "Attr.td"
 }
 
-clang_tablegen("AttrTokenKinds") {
-  args = [ "-gen-clang-attr-token-kinds" ]
+clang_tablegen("RegularKeywordAttrInfo") {
+  args = [ "-gen-clang-regular-keyword-attr-info" ]
   td_file = "Attr.td"
 }
 
 clang_tablegen("AttrHasAttributeImpl") {
   args = [ "-gen-clang-attr-has-attribute-impl" ]
   td_file = "Attr.td"
+}
+
+clang_tablegen("Builtins") {
+  args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinsBPF") {
+  args = [ "-gen-clang-builtins" ]
 }
 
 # ARM CDE, MVE, and NEON.

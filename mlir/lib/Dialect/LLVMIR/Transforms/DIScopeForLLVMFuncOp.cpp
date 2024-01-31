@@ -67,18 +67,19 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
 
   StringAttr funcNameAttr = llvmFunc.getNameAttr();
   // Only definitions need a distinct identifier and a compilation unit.
-  mlir::DistinctAttr id;
-  if (!llvmFunc.isExternal())
+  DistinctAttr id;
+  auto subprogramFlags = LLVM::DISubprogramFlags::Optimized;
+  if (!llvmFunc.isExternal()) {
     id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
-  else
+    subprogramFlags = subprogramFlags | LLVM::DISubprogramFlags::Definition;
+  } else {
     compileUnitAttr = {};
-  mlir::LLVM::DISubprogramAttr subprogramAttr = LLVM::DISubprogramAttr::get(
+  }
+  auto subprogramAttr = LLVM::DISubprogramAttr::get(
       context, id, compileUnitAttr, fileAttr, funcNameAttr, funcNameAttr,
       fileAttr,
       /*line=*/line,
-      /*scopeline=*/col,
-      LLVM::DISubprogramFlags::Definition | LLVM::DISubprogramFlags::Optimized,
-      subroutineTypeAttr);
+      /*scopeline=*/col, subprogramFlags, subroutineTypeAttr);
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 

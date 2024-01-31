@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -32,6 +31,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -3534,8 +3534,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandFABS(Node));
     break;
   case ISD::IS_FPCLASS: {
-    auto CNode = cast<ConstantSDNode>(Node->getOperand(1));
-    auto Test = static_cast<FPClassTest>(CNode->getZExtValue());
+    auto Test = static_cast<FPClassTest>(Node->getConstantOperandVal(1));
     if (SDValue Expanded =
             TLI.expandIS_FPCLASS(Node->getValueType(0), Node->getOperand(0),
                                  Test, Node->getFlags(), SDLoc(Node), DAG))

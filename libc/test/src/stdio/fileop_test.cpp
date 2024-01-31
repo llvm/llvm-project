@@ -121,16 +121,16 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
 
   // libc_errno = 0;
   // ASSERT_NE(LIBC_NAMESPACE::fseek(file, 0, SEEK_SET), 0);
-  // EXPECT_NE(libc_errno, 0);
+  // ASSERT_ERRNO_FAILURE();
 
   // libc_errno = 0;
   // ASSERT_NE(LIBC_NAMESPACE::fclose(file), 0);
-  // EXPECT_NE(libc_errno, 0);
+  // ASSERT_ERRNO_FAILURE();
 
   // libc_errno = 0;
   // ASSERT_EQ(LIBC_NAMESPACE::fopen("INVALID FILE NAME", "r"),
   //           static_cast<FILE *>(nullptr));
-  // EXPECT_NE(libc_errno, 0);
+  // ASSERT_ERRNO_FAILURE();
 }
 
 TEST(LlvmLibcFILETest, FFlush) {

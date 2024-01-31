@@ -214,6 +214,32 @@ std::pair<Value *, FPClassTest> fcmpToClassTest(CmpInst::Predicate Pred,
                                                 const APFloat *ConstRHS,
                                                 bool LookThroughSrc = true);
 
+/// Compute the possible floating-point classes that \p LHS could be based on
+/// fcmp \Pred \p LHS, \p RHS.
+///
+/// \returns { TestedValue, ClassesIfTrue, ClassesIfFalse }
+///
+/// If the compare returns an exact class test, ClassesIfTrue == ~ClassesIfFalse
+///
+/// This is a less exact version of fcmpToClassTest (e.g. fcmpToClassTest will
+/// only succeed for a test of x > 0 implies positive, but not x > 1).
+///
+/// If \p LookThroughSrc is true, consider the input value when computing the
+/// mask. This may look through sign bit operations.
+///
+/// If \p LookThroughSrc is false, ignore the source value (i.e. the first pair
+/// element will always be LHS.
+///
+std::tuple<Value *, FPClassTest, FPClassTest>
+fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                 Value *RHS, bool LookThroughSrc = true);
+std::tuple<Value *, FPClassTest, FPClassTest>
+fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                 FPClassTest RHS, bool LookThroughSrc = true);
+std::tuple<Value *, FPClassTest, FPClassTest>
+fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                 const APFloat &RHS, bool LookThroughSrc = true);
+
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
   FPClassTest KnownFPClasses = fcAllFlags;
@@ -332,6 +358,12 @@ struct KnownFPClass {
 
   void knownNot(FPClassTest RuleOut) {
     KnownFPClasses = KnownFPClasses & ~RuleOut;
+    if (isKnownNever(fcNan) && !SignBit) {
+      if (isKnownNever(fcNegative))
+        SignBit = false;
+      else if (isKnownNever(fcPositive))
+        SignBit = true;
+    }
   }
 
   void fneg() {
@@ -365,6 +397,12 @@ struct KnownFPClass {
   void signBitMustBeZero() {
     KnownFPClasses &= (fcPositive | fcNan);
     SignBit = false;
+  }
+
+  /// Assume the sign bit is one.
+  void signBitMustBeOne() {
+    KnownFPClasses &= (fcNegative | fcNan);
+    SignBit = true;
   }
 
   void copysign(const KnownFPClass &Sign) {
@@ -553,15 +591,18 @@ inline bool isKnownNeverNaN(const Value *V, const DataLayout &DL,
   return Known.isKnownNeverNaN();
 }
 
-/// Return true if we can prove that the specified FP value's sign bit is 0.
-///
-///      NaN --> true/false (depending on the NaN's sign bit)
-///       +0 --> true
-///       -0 --> false
-///   x > +0 --> true
-///   x < -0 --> false
-bool SignBitMustBeZero(const Value *V, const DataLayout &DL,
-                       const TargetLibraryInfo *TLI);
+/// Return false if we can prove that the specified FP value's sign bit is 0.
+/// Return true if we can prove that the specified FP value's sign bit is 1.
+/// Otherwise return std::nullopt.
+inline std::optional<bool> computeKnownFPSignBit(
+    const Value *V, const DataLayout &DL,
+    const TargetLibraryInfo *TLI = nullptr, unsigned Depth = 0,
+    AssumptionCache *AC = nullptr, const Instruction *CtxI = nullptr,
+    const DominatorTree *DT = nullptr, bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcAllFlags, Depth, TLI, AC,
+                                           CtxI, DT, UseInstrInfo);
+  return Known.SignBit;
+}
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8

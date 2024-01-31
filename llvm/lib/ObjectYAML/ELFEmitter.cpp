@@ -1439,9 +1439,9 @@ void ELFState<ELFT>::writeSectionContent(
       for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
-                           CBA.writeULEB128(BBE.Size) +
-                           CBA.writeULEB128(BBE.Metadata);
+        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
+        SHeader.sh_size += CBA.writeULEB128(BBE.Size);
+        SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
       }
     }
 
@@ -1469,8 +1469,10 @@ void ELFState<ELFT>::writeSectionContent(
         SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
       if (PGOBBE.Successors) {
         SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb] : *PGOBBE.Successors)
-          SHeader.sh_size += CBA.writeULEB128(ID) + CBA.writeULEB128(BrProb);
+        for (const auto &[ID, BrProb] : *PGOBBE.Successors) {
+          SHeader.sh_size += CBA.writeULEB128(ID);
+          SHeader.sh_size += CBA.writeULEB128(BrProb);
+        }
       }
     }
   }

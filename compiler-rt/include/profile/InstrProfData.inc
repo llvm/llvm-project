@@ -123,6 +123,8 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::PointerType::getUnqual(Ctx), Next, \
 
 /* INSTR_PROF_RAW_HEADER  start */
 /* Definition of member fields of the raw profile header data structure. */
+/* Please update llvm/docs/InstrProfileFormat.rst as appropriate when updating
+   raw profile format. */
 #ifndef INSTR_PROF_RAW_HEADER
 #define INSTR_PROF_RAW_HEADER(Type, Name, Initializer)
 #else

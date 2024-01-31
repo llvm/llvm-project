@@ -280,7 +280,7 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                          operandDimPos)))
       return failure();
 
-    Value dynamicDim = linalgOp.hasTensorSemantics()
+    Value dynamicDim = linalgOp.hasPureTensorSemantics()
                            ? (Value)rewriter.create<tensor::DimOp>(
                                  linalgOp.getLoc(), operand, operandDimPos)
                            : (Value)rewriter.create<memref::DimOp>(
@@ -1952,7 +1952,7 @@ struct PadOpVectorizationWithTransferReadPattern
     if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
       return failure();
 
-    rewriter.updateRootInPlace(xferOp, [&]() {
+    rewriter.modifyOpInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
       xferOp->setAttr(xferOp.getInBoundsAttrName(),
                       rewriter.getBoolArrayAttr(inBounds));
@@ -2499,8 +2499,8 @@ struct Conv1DGenerator
       return;
     // (LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC) OR
     // (non-channeled convolution -> LHS and RHS both have single dimensions).
-    if (!((lhsShapedType.getRank() == 3 && resShapedType.getRank() == 3) ||
-          (lhsShapedType.getRank() == 1 && resShapedType.getRank() == 1)))
+    if ((lhsShapedType.getRank() != 3 || resShapedType.getRank() != 3) &&
+        (lhsShapedType.getRank() != 1 || resShapedType.getRank() != 1))
       return;
 
     Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));

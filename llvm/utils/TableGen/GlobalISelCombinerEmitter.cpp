@@ -2185,6 +2185,11 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
     }
   }
 
+  // Erase the root.
+  unsigned RootInsnID =
+      M.getInsnVarID(M.getInstructionMatcher(MatchRoot->getName()));
+  M.addAction<EraseInstAction>(RootInsnID);
+
   return true;
 }
 
@@ -2318,7 +2323,7 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
           M.actions_begin(), getLLTCodeGenOrTempType(Ty, M), TempRegID);
     }
 
-    DstMI.addRenderer<TempRegRenderer>(TempRegID);
+    DstMI.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
   }
 
   // Render MIFlags
@@ -2418,12 +2423,6 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
     // checkSemantics should have ensured that we can only rewrite the root.
     // Ensure we're deleting it.
     assert(MatchOpTable.getDef(Old) == MatchRoot);
-    // TODO: We could avoid adding the action again if it's already in. The
-    // MatchTable is smart enough to only emit one opcode even if
-    // EraseInstAction is present multiple times. I think searching for a copy
-    // is more expensive than just blindly adding it though.
-    M.addAction<EraseInstAction>(/*InsnID*/ 0);
-
     return true;
   }
   }

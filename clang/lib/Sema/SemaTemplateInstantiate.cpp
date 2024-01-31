@@ -223,6 +223,9 @@ Response HandleFunction(const FunctionDecl *Function,
       (!Pattern || !Pattern->getLexicalDeclContext()->isFileContext())) {
     return Response::ChangeDecl(Function->getLexicalDeclContext());
   }
+
+  if (ForConstraintInstantiation && Function->getFriendObjectKind())
+    return Response::ChangeDecl(Function->getLexicalDeclContext());
   return Response::UseNextDecl(Function);
 }
 
@@ -1972,9 +1975,8 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     }
   } else if (arg.getKind() == TemplateArgument::Declaration ||
              arg.getKind() == TemplateArgument::NullPtr) {
-    ValueDecl *VD;
     if (arg.getKind() == TemplateArgument::Declaration) {
-      VD = arg.getAsDecl();
+      ValueDecl *VD = arg.getAsDecl();
 
       // Find the instantiation of the template argument.  This is
       // required for nested templates.
@@ -1982,21 +1984,20 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
              getSema().FindInstantiatedDecl(loc, VD, TemplateArgs));
       if (!VD)
         return ExprError();
-    } else {
-      // Propagate NULL template argument.
-      VD = nullptr;
     }
 
-    QualType paramType = VD ? arg.getParamTypeForDecl() : arg.getNullPtrType();
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
     assert(!paramType.isNull() && "type substitution failed for param type");
     assert(!paramType->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, paramType, loc);
     refParam = paramType->isReferenceType();
   } else {
-    result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
+    QualType paramType = arg.getNonTypeTemplateArgumentType();
+    result = SemaRef.BuildExpressionFromNonTypeTemplateArgument(arg, loc);
+    refParam = paramType->isReferenceType();
     assert(result.isInvalid() ||
            SemaRef.Context.hasSameType(result.get()->getType(),
-                                       arg.getIntegralType()));
+                                       paramType.getNonReferenceType()));
   }
 
   if (result.isInvalid())

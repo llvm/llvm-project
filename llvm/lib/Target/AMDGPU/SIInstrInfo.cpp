@@ -338,8 +338,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     if (!isa<ConstantSDNode>(Off0) || !isa<ConstantSDNode>(Off1))
       return false;
 
-    Offset0 = cast<ConstantSDNode>(Off0)->getZExtValue();
-    Offset1 = cast<ConstantSDNode>(Off1)->getZExtValue();
+    Offset0 = Off0->getAsZExtVal();
+    Offset1 = Off1->getAsZExtVal();
     return true;
   }
 
@@ -2410,13 +2410,22 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // the encoding of $symbol starts 12 bytes after the start of the s_add_u32
     // instruction.
 
+    int64_t Adjust = 0;
+    if (ST.hasGetPCZeroExtension()) {
+      // Fix up hardware that does not sign-extend the 48-bit PC value by
+      // inserting: s_sext_i32_i16 reghi, reghi
+      Bundler.append(
+          BuildMI(MF, DL, get(AMDGPU::S_SEXT_I32_I16), RegHi).addReg(RegHi));
+      Adjust += 4;
+    }
+
     if (OpLo.isGlobal())
-      OpLo.setOffset(OpLo.getOffset() + 4);
+      OpLo.setOffset(OpLo.getOffset() + Adjust + 4);
     Bundler.append(
         BuildMI(MF, DL, get(AMDGPU::S_ADD_U32), RegLo).addReg(RegLo).add(OpLo));
 
     if (OpHi.isGlobal())
-      OpHi.setOffset(OpHi.getOffset() + 12);
+      OpHi.setOffset(OpHi.getOffset() + Adjust + 12);
     Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADDC_U32), RegHi)
                        .addReg(RegHi)
                        .add(OpHi));
@@ -2479,6 +2488,19 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case AMDGPU::S_MUL_U64_U32_PSEUDO:
   case AMDGPU::S_MUL_I64_I32_PSEUDO:
     MI.setDesc(get(AMDGPU::S_MUL_U64));
+    break;
+
+  case AMDGPU::S_GETPC_B64_pseudo:
+    MI.setDesc(get(AMDGPU::S_GETPC_B64));
+    if (ST.hasGetPCZeroExtension()) {
+      Register Dst = MI.getOperand(0).getReg();
+      Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
+      // Fix up hardware that does not sign-extend the 48-bit PC value by
+      // inserting: s_sext_i32_i16 dsthi, dsthi
+      BuildMI(MBB, std::next(MI.getIterator()), DL, get(AMDGPU::S_SEXT_I32_I16),
+              DstHi)
+          .addReg(DstHi);
+    }
     break;
   }
   return true;
@@ -3329,7 +3351,7 @@ void SIInstrInfo::removeModOperands(MachineInstr &MI) const {
   }
 }
 
-bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 Register Reg, MachineRegisterInfo *MRI) const {
   if (!MRI->hasOneNonDBGUse(Reg))
     return false;
@@ -5276,10 +5298,16 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_FLOOR_F32: return AMDGPU::V_FLOOR_F32_e64;
   case AMDGPU::S_TRUNC_F32: return AMDGPU::V_TRUNC_F32_e64;
   case AMDGPU::S_RNDNE_F32: return AMDGPU::V_RNDNE_F32_e64;
-  case AMDGPU::S_CEIL_F16: return AMDGPU::V_CEIL_F16_t16_e64;
-  case AMDGPU::S_FLOOR_F16: return AMDGPU::V_FLOOR_F16_t16_e64;
-  case AMDGPU::S_TRUNC_F16: return AMDGPU::V_TRUNC_F16_t16_e64;
-  case AMDGPU::S_RNDNE_F16: return AMDGPU::V_RNDNE_F16_t16_e64;
+  case AMDGPU::S_CEIL_F16:
+    return ST.useRealTrue16Insts() ? AMDGPU::V_CEIL_F16_t16_e64
+                                   : AMDGPU::V_CEIL_F16_fake16_e64;
+  case AMDGPU::S_FLOOR_F16:
+    return ST.useRealTrue16Insts() ? AMDGPU::V_FLOOR_F16_t16_e64
+                                   : AMDGPU::V_FLOOR_F16_fake16_e64;
+  case AMDGPU::S_TRUNC_F16:
+    return AMDGPU::V_TRUNC_F16_fake16_e64;
+  case AMDGPU::S_RNDNE_F16:
+    return AMDGPU::V_RNDNE_F16_fake16_e64;
   case AMDGPU::S_ADD_F32: return AMDGPU::V_ADD_F32_e64;
   case AMDGPU::S_SUB_F32: return AMDGPU::V_SUB_F32_e64;
   case AMDGPU::S_MIN_F32: return AMDGPU::V_MIN_F32_e64;
@@ -5328,15 +5356,15 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_CMP_NEQ_F16: return AMDGPU::V_CMP_NEQ_F16_t16_e64;
   case AMDGPU::S_CMP_NLT_F16: return AMDGPU::V_CMP_NLT_F16_t16_e64;
   case AMDGPU::V_S_EXP_F32_e64: return AMDGPU::V_EXP_F32_e64;
-  case AMDGPU::V_S_EXP_F16_e64: return AMDGPU::V_EXP_F16_t16_e64;
+  case AMDGPU::V_S_EXP_F16_e64: return AMDGPU::V_EXP_F16_fake16_e64;
   case AMDGPU::V_S_LOG_F32_e64: return AMDGPU::V_LOG_F32_e64;
-  case AMDGPU::V_S_LOG_F16_e64: return AMDGPU::V_LOG_F16_t16_e64;
+  case AMDGPU::V_S_LOG_F16_e64: return AMDGPU::V_LOG_F16_fake16_e64;
   case AMDGPU::V_S_RCP_F32_e64: return AMDGPU::V_RCP_F32_e64;
-  case AMDGPU::V_S_RCP_F16_e64: return AMDGPU::V_RCP_F16_t16_e64;
+  case AMDGPU::V_S_RCP_F16_e64: return AMDGPU::V_RCP_F16_fake16_e64;
   case AMDGPU::V_S_RSQ_F32_e64: return AMDGPU::V_RSQ_F32_e64;
-  case AMDGPU::V_S_RSQ_F16_e64: return AMDGPU::V_RSQ_F16_t16_e64;
+  case AMDGPU::V_S_RSQ_F16_e64: return AMDGPU::V_RSQ_F16_fake16_e64;
   case AMDGPU::V_S_SQRT_F32_e64: return AMDGPU::V_SQRT_F32_e64;
-  case AMDGPU::V_S_SQRT_F16_e64: return AMDGPU::V_SQRT_F16_t16_e64;
+  case AMDGPU::V_S_SQRT_F16_e64: return AMDGPU::V_SQRT_F16_fake16_e64;
   }
   llvm_unreachable(
       "Unexpected scalar opcode without corresponding vector one!");
@@ -6098,7 +6126,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 
   // Try to eliminate the copy if it is copying an immediate value.
   if (Def->isMoveImmediate() && DstRC != &AMDGPU::VReg_1RegClass)
-    FoldImmediate(*Copy, *Def, OpReg, &MRI);
+    foldImmediate(*Copy, *Def, OpReg, &MRI);
 
   bool ImpDef = Def->isImplicitDef();
   while (!ImpDef && Def && Def->isCopy()) {
@@ -7266,8 +7294,14 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
     if (AMDGPU::getNamedOperandIdx(NewOpcode,
                                    AMDGPU::OpName::src0_modifiers) >= 0)
       NewInstr.addImm(0);
-    if (AMDGPU::getNamedOperandIdx(NewOpcode, AMDGPU::OpName::src0) >= 0)
-      NewInstr->addOperand(Inst.getOperand(1));
+    if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::src0)) {
+      MachineOperand Src = Inst.getOperand(1);
+      if (AMDGPU::isTrue16Inst(NewOpcode) && ST.useRealTrue16Insts() &&
+          Src.isReg() && RI.isVGPR(MRI, Src.getReg()))
+        NewInstr.addReg(Src.getReg(), 0, AMDGPU::lo16);
+      else
+        NewInstr->addOperand(Src);
+    }
 
     if (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16) {
       // We are converting these to a BFE, so we need to add the missing
@@ -8745,6 +8779,7 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
       {
           {MONoClobber, "amdgpu-noclobber"},
+          {MOLastUse, "amdgpu-last-use"},
       };
 
   return ArrayRef(TargetFlags);
@@ -8933,8 +8968,9 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
 
 // Depending on the used address space and instructions, some immediate offsets
 // are allowed and some are not.
-// In general, flat instruction offsets can only be non-negative, global and
-// scratch instruction offsets can also be negative.
+// Pre-GFX12, flat instruction offsets can only be non-negative, global and
+// scratch instruction offsets can also be negative. On GFX12, offsets can be
+// negative for all variants.
 //
 // There are several bugs related to these offsets:
 // On gfx10.1, flat instructions that go into the global address space cannot
@@ -9065,8 +9101,7 @@ bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
 }
 
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
-  if (SIInstrInfo::isSoftWaitcnt(Opcode))
-    Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
+  Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
 
   unsigned Gen = subtargetEncodingFamily(ST);
 
@@ -9101,12 +9136,6 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
-
-  // TODO-GFX12: Remove this.
-  // Hack to allow some GFX12 codegen tests to run before all the encodings are
-  // implemented.
-  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX12)
-    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)
