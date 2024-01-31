@@ -303,15 +303,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined comdat '$" +
                      ForwardRefComdats.begin()->first + "'");
 
-  // Automatically create declarations for intrinsics. Intrinsics can only be
-  // called directly, so the call function type directly determines the
-  // declaration function type.
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
-    if (!StringRef(Name).starts_with("llvm."))
-      continue;
-
-    // Don't do anything if the intrinsic is called with different function
-    // types. This would result in a verifier error anyway.
     auto GetCommonFunctionType = [](Value *V) -> FunctionType * {
       FunctionType *FTy = nullptr;
       for (User *U : V->users()) {
@@ -322,10 +314,38 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       }
       return FTy;
     };
-    if (FunctionType *FTy = GetCommonFunctionType(Info.first)) {
-      Function *Fn =
-          Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
-      Info.first->replaceAllUsesWith(Fn);
+
+    auto GetDeclarationType = [&](StringRef Name, Value *V) -> Type * {
+      // Automatically create declarations for intrinsics. Intrinsics can only
+      // be called directly, so the call function type directly determines the
+      // declaration function type.
+      if (Name.starts_with("llvm."))
+        // Don't do anything if the intrinsic is called with different function
+        // types. This would result in a verifier error anyway.
+        return GetCommonFunctionType(V);
+
+      if (AllowIncompleteIR) {
+        // If incomplete IR is allowed, also add declarations for
+        // non-intrinsics. First check whether this global is only used in
+        // calls with the same type, in which case we'll insert a function.
+        if (auto *Ty = GetCommonFunctionType(V))
+          return Ty;
+
+        // Otherwise, fall back to using a dummy i8 type.
+        return Type::getInt8Ty(Context);
+      }
+      return nullptr;
+    };
+
+    if (Type *Ty = GetDeclarationType(Name, Info.first)) {
+      GlobalValue *GV;
+      if (auto *FTy = dyn_cast<FunctionType>(Ty))
+        GV = Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
+      else
+        GV = new GlobalVariable(*M, Ty, /*isConstant*/ false,
+                                GlobalValue::ExternalLinkage,
+                                /*Initializer*/ nullptr, Name);
+      Info.first->replaceAllUsesWith(GV);
       Info.first->eraseFromParent();
       ForwardRefVals.erase(Name);
     }
