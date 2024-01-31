@@ -16,7 +16,6 @@ FOO_DWO_DEBUGINFO_SIZE = 380
 
 
 class TestDebugInfoSize(lldbtest.TestBase):
-
     def get_output_from_yaml(self):
         exe = self.getBuildArtifact("a.out")
         main_dwo = self.getBuildArtifact("a.out-main.dwo")
