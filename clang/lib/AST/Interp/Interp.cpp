@@ -141,7 +141,7 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 namespace clang {
 namespace interp {
 static void popArg(InterpState &S, const Expr *Arg) {
-  PrimType Ty = S.getContext().classify(Arg->getType()).value_or(PT_Ptr);
+  PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 

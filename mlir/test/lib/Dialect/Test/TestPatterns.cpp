@@ -213,6 +213,44 @@ struct MoveBeforeParentOp : public RewritePattern {
   }
 };
 
+/// This pattern inlines blocks that are nested in
+/// "test.inline_blocks_into_parent" into the parent block.
+struct InlineBlocksIntoParent : public RewritePattern {
+  InlineBlocksIntoParent(MLIRContext *context)
+      : RewritePattern("test.inline_blocks_into_parent", /*benefit=*/1,
+                       context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (Region &r : op->getRegions()) {
+      while (!r.empty()) {
+        rewriter.inlineBlockBefore(&r.front(), op);
+        changed = true;
+      }
+    }
+    return success(changed);
+  }
+};
+
+/// This pattern splits blocks at "test.split_block_here" and replaces the op
+/// with a new op (to prevent an infinite loop of block splitting).
+struct SplitBlockHere : public RewritePattern {
+  SplitBlockHere(MLIRContext *context)
+      : RewritePattern("test.split_block_here", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.splitBlock(op->getBlock(), op->getIterator());
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.new_op", op->getContext()).getIdentifier(),
+        op->getOperands(), op->getResultTypes());
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
 struct TestPatternDriver
     : public PassWrapper<TestPatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
@@ -292,12 +330,14 @@ public:
     mlir::RewritePatternSet patterns(ctx);
     patterns.add<
         // clang-format off
-        InsertSameOp,
-        ReplaceWithNewOp,
-        EraseOp,
         ChangeBlockOp,
+        EraseOp,
         ImplicitChangeOp,
-        MoveBeforeParentOp
+        InlineBlocksIntoParent,
+        InsertSameOp,
+        MoveBeforeParentOp,
+        ReplaceWithNewOp,
+        SplitBlockHere
         // clang-format on
         >(ctx);
     SmallVector<Operation *> ops;
@@ -305,7 +345,9 @@ public:
       StringRef opName = op->getName().getStringRef();
       if (opName == "test.insert_same_op" || opName == "test.change_block_op" ||
           opName == "test.replace_with_new_op" || opName == "test.erase_op" ||
-          opName == "test.move_before_parent_op") {
+          opName == "test.move_before_parent_op" ||
+          opName == "test.inline_blocks_into_parent" ||
+          opName == "test.split_block_here") {
         ops.push_back(op);
       }
     });
