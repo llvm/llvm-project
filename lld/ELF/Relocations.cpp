@@ -1493,33 +1493,6 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     }
   }
 
-  // if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
-  //   // Assume relocations from relocatable objects are RELA.
-  //   assert(RelTy::IsRela);
-  //   std::lock_guard<std::mutex> lock(relocMutex);
-  //   // For a preemptible symbol, we can't use a relative relocation. For an
-  //   // undefined symbol, we can't compute offset at link-time and use a
-  //   relative
-  //   // relocation. Use a symbolic relocation instead.
-  //   Partition &part = sec->getPartition();
-  //   if (sym.isPreemptible || sym.isUndefined()) {
-  //     part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
-  //   } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0 &&
-  //              isInt<32>(sym.getVA(addend))) {
-  //     // Implicit addend is below 32-bits so we can use the compressed
-  //     // relative relocation section. The R_AARCH64_AUTH_RELATIVE
-  //     // has a smaller addend fielf as bits [63:32] encode the
-  //     signing-schema. sec->addReloc({expr, type, offset, addend, &sym});
-  //     part.relrAuthDyn->relocsVec[parallel::getThreadIndex()].push_back(
-  //         {sec, offset});
-  //   } else {
-  //     part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
-  //                             DynamicReloc::AddendOnlyWithTargetVA, sym,
-  //                             addend, R_ABS});
-  //   }
-  //   return;
-  // }
-
   // If the relocation does not emit a GOT or GOTPLT entry but its computation
   // uses their addresses, we need GOT or GOTPLT to be created.
   //

@@ -13,20 +13,20 @@
 # RUN: not ld.lld tag11.o tag12.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
 
 # ERR1: error: incompatible values of AArch64 PAuth compatibility info found
-# ERR1: {{.*}}: 0x2A000000000000000{{1|2}}00000000000000
-# ERR1: {{.*}}: 0x2A000000000000000{{1|2}}00000000000000
+# ERR1: tag11.o: 0x2A000000000000000{{1|2}}00000000000000
+# ERR1: tag2.o: 0x2A000000000000000{{1|2}}00000000000000
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-errs.s -o errs.o
 # RUN: not ld.lld errs.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR2 %s
 
-# ERR2:      error: {{.*}}: invalid type field value 42 (1 expected)
-# ERR2-NEXT: error: {{.*}}: invalid name field value XXX (ARM expected)
-# ERR2-NEXT: error: {{.*}}: AArch64 PAuth compatibility info is too short (at least 16 bytes expected)
+# ERR2:      error: errs.o:(.note.AARCH64-PAUTH-ABI-tag): invalid type field value 42 (1 expected)
+# ERR2-NEXT: error: errs.o:(.note.AARCH64-PAUTH-ABI-tag): invalid name field value XXX (ARM expected)
+# ERR2-NEXT: error: errs.o:(.note.AARCH64-PAUTH-ABI-tag): AArch64 PAuth compatibility info is too short (at least 16 bytes expected)
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-short.s -o short.o
 # RUN: not ld.lld short.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR3 %s
 
-# ERR3: error: {{.*}}: section is too short
+# ERR3: error: short.o:(.note.AARCH64-PAUTH-ABI-tag): section is too short
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu no-info.s -o noinfo1.o
 # RUN: cp noinfo1.o noinfo2.o
@@ -34,10 +34,10 @@
 # RUN: ld.lld -z pauth-report=warning tag11.o noinfo1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix WARN %s
 # RUN: ld.lld -z pauth-report=none tag11.o noinfo1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix NONE %s
 
-# ERR4:      error: {{.*}}noinfo1.o has no AArch64 PAuth compatibility info while {{.*}}tag11.o has one; either all or no input files must have it
-# ERR4-NEXT: error: {{.*}}noinfo2.o has no AArch64 PAuth compatibility info while {{.*}}tag11.o has one; either all or no input files must have it
-# WARN:      warning: {{.*}}noinfo1.o has no AArch64 PAuth compatibility info while {{.*}}tag11.o has one; either all or no input files must have it
-# WARN-NEXT: warning: {{.*}}noinfo2.o has no AArch64 PAuth compatibility info while {{.*}}tag11.o has one; either all or no input files must have it
+# ERR4:      error: noinfo1.o has no AArch64 PAuth compatibility info while tag11.o has one; either all or no input files must have it
+# ERR4-NEXT: error: noinfo2.o has no AArch64 PAuth compatibility info while tag11.o has one; either all or no input files must have it
+# WARN:      warning: noinfo1.o has no AArch64 PAuth compatibility info while tag11.o has one; either all or no input files must have it
+# WARN-NEXT: warning: noinfo2.o has no AArch64 PAuth compatibility info while tag11.o has one; either all or no input files must have it
 # NONE-NOT:  {{.*}} has no AArch64 PAuth compatibility info while {{.*}} has one; either all or no input files must have it
 
 #--- abi-tag-short.s
