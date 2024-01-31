@@ -239,7 +239,7 @@ public:
       // for us.
       if (const auto *AT = getFieldDesc()->getType()->getAsArrayTypeUnsafe())
         return AT->getElementType();
-      if (const auto *CT = getFieldDesc()->getType()->castAs<ComplexType>())
+      if (const auto *CT = getFieldDesc()->getType()->getAs<ComplexType>())
         return CT->getElementType();
     }
     return getFieldDesc()->getType();
