@@ -93,6 +93,16 @@ static_assert(__imag(I3) == 0, "");
 /// FIXME: This should work in the new interpreter as well.
 // constexpr _Complex _BitInt(8) A = 0;// = {4};
 
+
+void func(void) {
+  __complex__ int arr;
+  _Complex int result;
+  int ii = 0;
+  int bb = 0;
+  /// The following line will call into the constant interpreter.
+  result = arr * ii;
+}
+
 namespace CastToBool {
   constexpr _Complex int F = {0, 1};
   static_assert(F, "");
