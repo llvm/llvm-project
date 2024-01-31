@@ -1425,10 +1425,11 @@ PluginManager::GetInstrumentationRuntimeCreateCallbackAtIndex(uint32_t idx) {
 struct TypeSystemInstance : public PluginInstance<TypeSystemCreateInstance> {
   TypeSystemInstance(llvm::StringRef name, llvm::StringRef description,
                      CallbackType create_callback,
+                     DebuggerInitializeCallback debugger_init_callback,
                      LanguageSet supported_languages_for_types,
                      LanguageSet supported_languages_for_expressions)
-      : PluginInstance<TypeSystemCreateInstance>(name, description,
-                                                 create_callback),
+      : PluginInstance<TypeSystemCreateInstance>(
+            name, description, create_callback, debugger_init_callback),
         supported_languages_for_types(supported_languages_for_types),
         supported_languages_for_expressions(
             supported_languages_for_expressions) {}
@@ -1447,11 +1448,12 @@ static TypeSystemInstances &GetTypeSystemInstances() {
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     TypeSystemCreateInstance create_callback,
+    DebuggerInitializeCallback debugger_init_callback,
     LanguageSet supported_languages_for_types,
     LanguageSet supported_languages_for_expressions) {
   return GetTypeSystemInstances().RegisterPlugin(
-      name, description, create_callback, supported_languages_for_types,
-      supported_languages_for_expressions);
+      name, description, create_callback, debugger_init_callback,
+      supported_languages_for_types, supported_languages_for_expressions);
 }
 
 bool PluginManager::UnregisterPlugin(TypeSystemCreateInstance create_callback) {
@@ -1539,6 +1541,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
+  GetTypeSystemInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.
@@ -1664,6 +1667,7 @@ static constexpr llvm::StringLiteral kTracePluginName("trace");
 static constexpr llvm::StringLiteral kObjectFilePluginName("object-file");
 static constexpr llvm::StringLiteral kSymbolFilePluginName("symbol-file");
 static constexpr llvm::StringLiteral kSymbolLocatorPluginName("symbol-locator");
+static constexpr llvm::StringLiteral kTypeSystemPluginName("typesystem");
 static constexpr llvm::StringLiteral kJITLoaderPluginName("jit-loader");
 static constexpr llvm::StringLiteral
     kStructuredDataPluginName("structured-data");
@@ -1760,6 +1764,22 @@ bool PluginManager::CreateSettingForSymbolFilePlugin(
   return CreateSettingForPlugin(debugger, kSymbolFilePluginName,
                                 "Settings for symbol file plug-ins",
                                 properties_sp, description, is_global_property);
+}
+
+lldb::OptionValuePropertiesSP
+PluginManager::GetSettingForTypeSystemPlugin(Debugger &debugger,
+                                             ConstString setting_name) {
+  return GetSettingForPlugin(debugger, setting_name,
+                             ConstString(kTypeSystemPluginName));
+}
+
+bool PluginManager::CreateSettingForTypeSystemPlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    ConstString description, bool is_global_property) {
+  return CreateSettingForPlugin(
+      debugger, ConstString(kTypeSystemPluginName),
+      ConstString("Settings for type system plug-ins"), properties_sp,
+      description, is_global_property);
 }
 
 lldb::OptionValuePropertiesSP

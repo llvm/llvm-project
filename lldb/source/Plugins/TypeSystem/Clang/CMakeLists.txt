@@ -19,3 +19,15 @@ add_lldb_library(lldbPluginTypeSystemClang PLUGIN
   LINK_COMPONENTS
     Support
 )
+
+lldb_tablegen(TypeSystemClangProperties.inc -gen-lldb-property-defs
+  SOURCE TypeSystemClangProperties.td
+  TARGET LLDBPluginTypeSystemClangPropertiesGen)
+
+lldb_tablegen(TypeSystemClangPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE TypeSystemClangProperties.td
+  TARGET LLDBPluginTypeSystemClangPropertiesEnumGen)
+
+add_dependencies(lldbPluginTypeSystemClang
+  LLDBPluginTypeSystemClangPropertiesGen
+  LLDBPluginTypeSystemClangPropertiesEnumGen)

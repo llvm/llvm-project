@@ -94,6 +94,42 @@ using llvm::StringSwitch;
 LLDB_PLUGIN_DEFINE(TypeSystemClang)
 
 namespace {
+
+#define LLDB_PROPERTIES_typesystemclang
+#include "TypeSystemClangProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_typesystemclang
+#include "TypeSystemClangPropertiesEnum.inc"
+};
+
+class PluginProperties : public Properties {
+public:
+  static ConstString GetSettingName() {
+    return ConstString(TypeSystemClang::GetPluginNameStatic());
+  }
+
+  PluginProperties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_typesystemclang_properties);
+  }
+
+  bool UseRedeclCompletion() const {
+    const auto ret = m_collection_sp->GetPropertyAtIndexAs<bool>(
+        ePropertyRedeclCompletion, nullptr);
+
+    return ret && *ret;
+  }
+};
+
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
+
+} // namespace
+
+namespace {
 static void VerifyDecl(clang::Decl *decl) {
   assert(decl && "VerifyDecl called with nullptr?");
 #ifndef NDEBUG
@@ -649,10 +685,22 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForExpressions() {
   return languages;
 }
 
+void TypeSystemClang::DebuggerInitialize(Debugger &debugger) {
+  if (PluginManager::GetSettingForTypeSystemPlugin(
+          debugger, PluginProperties::GetSettingName()))
+    return;
+  const bool is_global_setting = true;
+  PluginManager::CreateSettingForTypeSystemPlugin(
+      debugger, GetGlobalPluginProperties().GetValueProperties(),
+      ConstString("Properties for the Clang type system plug-in."),
+      is_global_setting);
+}
+
 void TypeSystemClang::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
-      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions());
+      DebuggerInitialize, GetSupportedLanguagesForTypes(),
+      GetSupportedLanguagesForExpressions());
 }
 
 void TypeSystemClang::Terminate() {
@@ -9055,6 +9103,10 @@ npdb::PdbAstBuilder *TypeSystemClang::GetNativePDBParser() {
   if (!m_native_pdb_ast_parser_up)
     m_native_pdb_ast_parser_up = std::make_unique<npdb::PdbAstBuilder>(*this);
   return m_native_pdb_ast_parser_up.get();
+}
+
+bool TypeSystemClang::UseRedeclCompletion() {
+  return GetGlobalPluginProperties().UseRedeclCompletion();
 }
 
 bool TypeSystemClang::LayoutRecordType(
