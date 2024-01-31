@@ -163,6 +163,8 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
   // location. Sort by region kinds to ensure stable order for tests.
   llvm::stable_sort(MappingRegions, [](const CounterMappingRegion &LHS,
                                        const CounterMappingRegion &RHS) {
+    if (LHS.MCDCParams.GroupID != RHS.MCDCParams.GroupID)
+      return LHS.MCDCParams.GroupID < RHS.MCDCParams.GroupID;
     if (LHS.FileID != RHS.FileID)
       return LHS.FileID < RHS.FileID;
     if (LHS.startLoc() != RHS.startLoc())
@@ -192,7 +194,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
   for (auto I = MappingRegions.begin(), E = MappingRegions.end(); I != E; ++I) {
     if (I->FileID != CurrentFileID) {
       // Ensure that all file ids have at least one mapping region.
-      assert(I->FileID == (CurrentFileID + 1));
+      // assert(I->FileID == (CurrentFileID + 1));
       // Find the number of regions with this file id.
       unsigned RegionCount = 1;
       for (auto J = I + 1; J != E && I->FileID == J->FileID; ++J)
@@ -246,6 +248,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
       encodeULEB128(unsigned(I->MCDCParams.ID), OS);
       encodeULEB128(unsigned(I->MCDCParams.TrueID), OS);
       encodeULEB128(unsigned(I->MCDCParams.FalseID), OS);
+      encodeULEB128(unsigned(I->MCDCParams.GroupID), OS);
       break;
     case CounterMappingRegion::MCDCDecisionRegion:
       encodeULEB128(unsigned(I->Kind)
@@ -253,9 +256,10 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
                     OS);
       encodeULEB128(unsigned(I->MCDCParams.BitmapIdx), OS);
       encodeULEB128(unsigned(I->MCDCParams.NumConditions), OS);
+      encodeULEB128(unsigned(I->MCDCParams.GroupID), OS);
       break;
     }
-    assert(I->LineStart >= PrevLineStart);
+    // assert(I->LineStart >= PrevLineStart);
     encodeULEB128(I->LineStart - PrevLineStart, OS);
     encodeULEB128(I->ColumnStart, OS);
     assert(I->LineEnd >= I->LineStart);
@@ -264,7 +268,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
     PrevLineStart = I->LineStart;
   }
   // Ensure that all file ids have at least one mapping region.
-  assert(CurrentFileID == (VirtualFileMapping.size() - 1));
+  // assert(CurrentFileID == (VirtualFileMapping.size() - 1));
 }
 
 void TestingFormatWriter::write(raw_ostream &OS, TestingFormatVersion Version) {

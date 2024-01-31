@@ -244,7 +244,7 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
     Counter C, C2;
-    uint64_t BIDX = 0, NC = 0, ID = 0, TID = 0, FID = 0;
+    uint64_t BIDX = 0, NC = 0, ID = 0, TID = 0, FID = 0, GID = 0;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.
@@ -308,12 +308,16 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readIntMax(FID, std::numeric_limits<unsigned>::max()))
             return Err;
+          if (auto Err = readIntMax(GID, std::numeric_limits<unsigned>::max()))
+            return Err;
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;
           if (auto Err = readIntMax(BIDX, std::numeric_limits<unsigned>::max()))
             return Err;
           if (auto Err = readIntMax(NC, std::numeric_limits<unsigned>::max()))
+            return Err;
+          if (auto Err = readIntMax(GID, std::numeric_limits<unsigned>::max()))
             return Err;
           break;
         default:
@@ -374,7 +378,7 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
         CounterMappingRegion::MCDCParameters{
             static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
             static_cast<unsigned>(ID), static_cast<unsigned>(TID),
-            static_cast<unsigned>(FID)},
+            static_cast<unsigned>(FID), static_cast<unsigned>(GID)},
         InferredFileID, ExpandedFileID, LineStart, ColumnStart,
         LineStart + NumLines, ColumnEnd, Kind);
     if (CMR.startLoc() > CMR.endLoc())

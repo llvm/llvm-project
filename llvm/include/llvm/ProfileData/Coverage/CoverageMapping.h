@@ -260,6 +260,7 @@ struct CounterMappingRegion {
     /// IDs used to represent a branch region and other branch regions
     /// evaluated based on True and False branches.
     MCDCConditionID ID = 0, TrueID = 0, FalseID = 0;
+    MCDCConditionID GroupID;
   };
 
   /// Primary Counter that is also used for Branch Regions (TrueCount).
