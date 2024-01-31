@@ -3264,7 +3264,10 @@ cc_library(
 cc_library(
     name = "MeshDialect",
     srcs = ["lib/Dialect/Mesh/IR/MeshOps.cpp"],
-    hdrs = ["include/mlir/Dialect/Mesh/IR/MeshOps.h"],
+    hdrs = [
+        "include/mlir/Dialect/Mesh/IR/MeshDialect.h",
+        "include/mlir/Dialect/Mesh/IR/MeshOps.h",
+    ],
     includes = ["include"],
     deps = [
         ":ArithDialect",
