@@ -5174,7 +5174,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1 && isStaticallyPresent(args[0]) &&
          "MOLD argument required to lower NULL outside of any context");
   mlir::Type ptrTy = fir::getBase(args[0]).getType();
-  if (fir::isBoxProcAddressType(ptrTy)) {
+  if (ptrTy && fir::isBoxProcAddressType(ptrTy)) {
     auto boxProcType = mlir::cast<fir::BoxProcType>(fir::unwrapRefType(ptrTy));
     mlir::Value boxStorage = builder.createTemporary(loc, boxProcType);
     mlir::Value nullBoxProc =
