@@ -557,8 +557,11 @@ public:
   mlir::Value VisitUnaryImag(const UnaryOperator *E) {
     llvm_unreachable("NYI");
   }
+
   mlir::Value VisitUnaryExtension(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    // __extension__ doesn't requred any codegen
+    // just forward the value
+    return Visit(E->getSubExpr());
   }
 
   mlir::Value buildUnaryOp(const UnaryOperator *E, mlir::cir::UnaryOpKind kind,
