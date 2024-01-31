@@ -1073,3 +1073,12 @@ func.func @dim_0_ranked(%arg : memref<f32>, %arg1 : index) {
   memref.dim %arg, %arg1 : memref<f32> // expected-error {{'memref.dim' op operand #0 must be unranked.memref of any type values or non-0-ranked.memref of any type values, but got 'memref<f32>'}}
   return
 }
+
+// -----
+
+func.func @subview_invalid_strides(%m: memref<7x22x333x4444xi32>) {
+  // expected-error @below{{expected result type to be 'memref<7x11x333x4444xi32, strided<[32556744, 2959704, 4444, 1]>>' or a rank-reduced version. (mismatch of result layout)}}
+  %subview = memref.subview %m[0, 0, 0, 0] [7, 11, 333, 4444] [1, 2, 1, 1]
+      : memref<7x22x333x4444xi32> to memref<7x11x333x4444xi32>
+  return
+}
