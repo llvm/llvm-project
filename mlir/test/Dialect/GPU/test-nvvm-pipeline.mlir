@@ -1,3 +1,4 @@
+// REQUIRES: host-supports-nvptx
 // RUN: mlir-opt %s \
 // RUN:  | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-format=isa" \ 
 // RUN:    -split-input-file | FileCheck %s
