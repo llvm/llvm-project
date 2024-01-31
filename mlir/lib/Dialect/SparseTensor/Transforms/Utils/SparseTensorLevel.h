@@ -15,11 +15,9 @@
 namespace mlir {
 namespace sparse_tensor {
 
-class ConcreteIterator;
-
-/// The base class for all types of sparse tensor levels. It provides
-/// interfaces to query the loop range (see `peekRangeAt`) and look up the
-/// coordinates (see `peekCrdAt`).
+/// The base class for all types of sparse tensor levels. It provides interfaces
+/// to query the loop range (see `peekRangeAt`) and look up the coordinates (see
+/// `peekCrdAt`).
 class SparseTensorLevel {
   SparseTensorLevel(SparseTensorLevel &&) = delete;
   SparseTensorLevel(const SparseTensorLevel &) = delete;
@@ -33,6 +31,7 @@ public:
     return std::string(toMLIRString(lt)) + "[" + std::to_string(tid) + "," +
            std::to_string(lvl) + "]";
   }
+
   virtual Value peekCrdAt(OpBuilder &b, Location l, Value iv) const = 0;
 
   /// Peeks the lower and upper bound to *fully* traverse the level with
@@ -53,17 +52,7 @@ public:
 
   Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
-  Value getSize() const { return lvlVals.front(); }
-  Value getCrdBuf() const {
-    assert(lvlVals.size() > 1);
-    return lvlVals[1];
-  }
-  Value getPosBuf() const {
-    assert(lvlVals.size() > 2);
-    return lvlVals[2];
-  }
-  ValueRange getLvlVals() const { return lvlVals; }
-  ValueRange getLvlBufs() const { return ValueRange(lvlVals).drop_front(); }
+  Value getSize() const { return lvlSize; }
 
   //
   // Level properties
@@ -72,24 +61,12 @@ public:
 
 protected:
   SparseTensorLevel(unsigned tid, unsigned lvl, LevelType lt, Value lvlSize)
-      : tid(tid), lvl(lvl), lt(lt), lvlVals() {
-    lvlVals.push_back(lvlSize);
-  };
-
-  SparseTensorLevel(unsigned tid, unsigned lvl, LevelType lt, Value lvlSize,
-                    ValueRange lvlBufs)
-      : tid(tid), lvl(lvl), lt(lt), lvlVals() {
-    lvlVals.push_back(lvlSize);
-    lvlVals.append(lvlBufs.begin(), lvlBufs.end());
-  };
+      : tid(tid), lvl(lvl), lt(lt), lvlSize(lvlSize){};
 
 public:
   const unsigned tid, lvl;
   const LevelType lt;
-  // The first value in the vector is always lvlsize; for sparse levels, the
-  // second value is always the coordinate buffer; for sparse level with
-  // position buffers, the third value is always the position buffer.
-  SmallVector<Value, 3> lvlVals;
+  const Value lvlSize;
 };
 
 enum class IterKind : uint8_t {

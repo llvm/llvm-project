@@ -45,6 +45,19 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 //===----------------------------------------------------------------------===//
 
 namespace {
+class SparseLevel : public SparseTensorLevel {
+public:
+  SparseLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
+              Value crdBuffer)
+      : SparseTensorLevel(tid, lvl, lt, lvlSize), crdBuffer(crdBuffer) {}
+
+  Value peekCrdAt(OpBuilder &b, Location l, Value iv) const override {
+    return genIndexLoad(b, l, crdBuffer, iv);
+  }
+
+protected:
+  const Value crdBuffer;
+};
 
 class DenseLevel : public SparseTensorLevel {
 public:
@@ -60,27 +73,53 @@ public:
                         Value max) const override {
     assert(max == nullptr && "Dense level can not be non-unique.");
     if (encoded) {
-      Value posLo = MULI(p, getSize());
-      return {posLo, getSize()};
+      Value posLo = MULI(p, lvlSize);
+      return {posLo, lvlSize};
     }
     // No need to linearize the position for non-annotated tensors.
-    return {C_IDX(0), getSize()};
+    return {C_IDX(0), lvlSize};
   }
 
   const bool encoded;
 };
 
-class SparseLevel : public SparseTensorLevel {
+class CompressedLevel : public SparseLevel {
 public:
-  SparseLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
-              ValueRange lvlBuf)
-      : SparseTensorLevel(tid, lvl, lt, lvlSize, lvlBuf) {
-    assert(!lvlBuf.empty());
+  CompressedLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
+                  Value posBuffer, Value crdBuffer)
+      : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer), posBuffer(posBuffer) {}
+
+  ValuePair peekRangeAt(OpBuilder &b, Location l, Value p,
+                        Value max) const override {
+    if (max == nullptr) {
+      Value pLo = genIndexLoad(b, l, posBuffer, p);
+      Value pHi = genIndexLoad(b, l, posBuffer, ADDI(p, C_IDX(1)));
+      return {pLo, pHi};
+    }
+    llvm_unreachable("compressed-nu should be the first non-unique level.");
   }
 
-  Value peekCrdAt(OpBuilder &b, Location l, Value iv) const override {
-    return genIndexLoad(b, l, getLvlBufs().front(), iv);
+private:
+  const Value posBuffer;
+};
+
+class LooseCompressedLevel : public SparseLevel {
+public:
+  LooseCompressedLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
+                       Value posBuffer, Value crdBuffer)
+      : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer), posBuffer(posBuffer) {}
+
+  ValuePair peekRangeAt(OpBuilder &b, Location l, Value p,
+                        Value max) const override {
+    assert(max == nullptr && "loss compressed level can not be non-unique.");
+    p = MULI(p, C_IDX(2));
+    Value pLo = genIndexLoad(b, l, posBuffer, p);
+    Value pHi = genIndexLoad(b, l, posBuffer, ADDI(p, C_IDX(1)));
+    return {pLo, pHi};
   }
+
+private:
+  const Value posBuffer;
 };
 
 class SingletonLevel : public SparseLevel {
@@ -102,8 +141,8 @@ public:
 class TwoOutFourLevel : public SparseLevel {
 public:
   TwoOutFourLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
-                  Value crdBuf)
-      : SparseLevel(tid, lvl, lt, lvlSize, crdBuf) {}
+                  Value crdBuffer)
+      : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, Value p,
                         Value max) const override {
@@ -111,39 +150,6 @@ public:
     // Each 2:4 blk has exactly two specified elements.
     Value posLo = MULI(p, C_IDX(2));
     return {posLo, ADDI(posLo, C_IDX(2))};
-  }
-};
-
-class CompressedLevel : public SparseLevel {
-public:
-  CompressedLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
-                  Value posBuffer, Value crdBuffer)
-      : SparseLevel(tid, lvl, lt, lvlSize, {crdBuffer, posBuffer}) {}
-
-  ValuePair peekRangeAt(OpBuilder &b, Location l, Value p,
-                        Value max) const override {
-    if (max == nullptr) {
-      Value pLo = genIndexLoad(b, l, getPosBuf(), p);
-      Value pHi = genIndexLoad(b, l, getPosBuf(), ADDI(p, C_IDX(1)));
-      return {pLo, pHi};
-    }
-    llvm_unreachable("compressed-nu should be the first non-unique level.");
-  }
-};
-
-class LooseCompressedLevel : public SparseLevel {
-public:
-  LooseCompressedLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
-                       Value posBuffer, Value crdBuffer)
-      : SparseLevel(tid, lvl, lt, lvlSize, {crdBuffer, posBuffer}) {}
-
-  ValuePair peekRangeAt(OpBuilder &b, Location l, Value p,
-                        Value max) const override {
-    assert(max == nullptr && "loss compressed level can not be non-unique.");
-    p = MULI(p, C_IDX(2));
-    Value pLo = genIndexLoad(b, l, getPosBuf(), p);
-    Value pHi = genIndexLoad(b, l, getPosBuf(), ADDI(p, C_IDX(1)));
-    return {pLo, pHi};
   }
 };
 
@@ -195,9 +201,7 @@ static Value offsetFromMinCrd(OpBuilder &b, Location l, Value minCrd,
 //===----------------------------------------------------------------------===//
 // SparseIterator derived classes.
 //===----------------------------------------------------------------------===//
-
-namespace mlir {
-namespace sparse_tensor {
+namespace {
 
 // The iterator that traverses a concrete sparse tensor levels. High-level
 // abstract iterators wrap it to achieve more complex goals (such as collapsing
@@ -231,11 +235,6 @@ protected:
   // synchronized.
   SmallVector<Value> cursorValsStorage;
 };
-
-} // namespace sparse_tensor
-} // namespace mlir
-
-namespace {
 
 class TrivialIterator : public ConcreteIterator {
 public:
