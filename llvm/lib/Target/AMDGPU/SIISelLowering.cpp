@@ -539,8 +539,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::FSIN, ISD::FCOS, ISD::FDIV}, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f64, Custom);
 
-  setOperationAction(ISD::BF16_TO_FP, {MVT::i16, MVT::f32, MVT::f64}, Expand);
-  setOperationAction(ISD::FP_TO_BF16, {MVT::i16, MVT::f32, MVT::f64}, Expand);
+  setOperationAction({ISD::BF16_TO_FP, ISD::STRICT_BF16_TO_FP},
+                     {MVT::i16, MVT::f32, MVT::f64}, Expand);
+  setOperationAction({ISD::FP_TO_BF16, ISD::STRICT_FP_TO_BF16},
+                     {MVT::i16, MVT::f32, MVT::f64}, Expand);
 
   // Custom lower these because we can't specify a rule based on an illegal
   // source bf16.

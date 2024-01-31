@@ -1033,6 +1033,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
                                     Node->getOperand(0).getValueType());
     break;
   case ISD::STRICT_FP_TO_FP16:
+  case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::STRICT_LRINT:
@@ -3248,12 +3249,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   }
+  case ISD::STRICT_BF16_TO_FP:
+    // When it reaches here, the target chooses to do that for strictfp. Since
+    // we don't technically have strict variant of the conversion, we falls back
+    // to the non-strict one.
+    LLVM_FALLTHROUGH;
   case ISD::BF16_TO_FP: {
     // Always expand bf16 to f32 casts, they lower to ext + shift.
     //
     // Note that the operand of this code can be bf16 or an integer type in case
     // bf16 is not supported on the target and was softened.
-    SDValue Op = Node->getOperand(0);
+    SDValue Op = Node->getOperand(Node->getOpcode() == ISD::BF16_TO_FP ? 0 : 1);
     if (Op.getValueType() == MVT::bf16) {
       Op = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32,
                        DAG.getNode(ISD::BITCAST, dl, MVT::i16, Op));
@@ -3271,10 +3277,17 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Op);
     break;
   }
+  case ISD::STRICT_FP_TO_BF16:
+    // When it reaches here, the target chooses to do that for strictfp. Since
+    // we don't technically have strict variant of the conversion, we falls back
+    // to the non-strict one.
+    LLVM_FALLTHROUGH;
   case ISD::FP_TO_BF16: {
-    SDValue Op = Node->getOperand(0);
+    bool IsStrictFP = Node->getOpcode() == ISD::STRICT_FP_TO_BF16;
+    SDValue Op = Node->getOperand(IsStrictFP ? 1 : 0);
     if (Op.getValueType() != MVT::f32)
-      Op = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Op,
+      Op = DAG.getNode(IsStrictFP ? ISD::STRICT_FP_ROUND : ISD::FP_ROUND, dl,
+                       MVT::f32, Op,
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
     Op = DAG.getNode(
         ISD::SRL, dl, MVT::i32, DAG.getNode(ISD::BITCAST, dl, MVT::i32, Op),
@@ -4773,12 +4786,17 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   }
   case ISD::STRICT_FP_EXTEND:
-  case ISD::STRICT_FP_TO_FP16: {
-    RTLIB::Libcall LC =
-        Node->getOpcode() == ISD::STRICT_FP_TO_FP16
-            ? RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16)
-            : RTLIB::getFPEXT(Node->getOperand(1).getValueType(),
-                              Node->getValueType(0));
+  case ISD::STRICT_FP_TO_FP16:
+  case ISD::STRICT_FP_TO_BF16: {
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (Node->getOpcode() == ISD::STRICT_FP_TO_FP16)
+      LC = RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16);
+    else if (Node->getOpcode() == ISD::STRICT_FP_TO_BF16)
+      LC = RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::bf16);
+    else
+      LC = RTLIB::getFPEXT(Node->getOperand(1).getValueType(),
+                           Node->getValueType(0));
+
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to legalize as libcall");
 
     TargetLowering::MakeLibCallOptions CallOptions;

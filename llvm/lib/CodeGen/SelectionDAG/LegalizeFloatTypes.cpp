@@ -918,6 +918,7 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FP_TO_FP16:
   case ISD::FP_TO_FP16:  // Same as FP_ROUND for softening purposes
   case ISD::FP_TO_BF16:
+  case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:    Res = SoftenFloatOp_FP_ROUND(N); break;
   case ISD::STRICT_FP_TO_SINT:
@@ -2193,13 +2194,11 @@ static ISD::NodeType GetPromotionOpcodeStrict(EVT OpVT, EVT RetVT) {
   if (RetVT == MVT::f16)
     return ISD::STRICT_FP_TO_FP16;
 
-  if (OpVT == MVT::bf16) {
-    // TODO: return ISD::STRICT_BF16_TO_FP;
-  }
+  if (OpVT == MVT::bf16)
+    return ISD::STRICT_BF16_TO_FP;
 
-  if (RetVT == MVT::bf16) {
-    // TODO: return ISD::STRICT_FP_TO_BF16;
-  }
+  if (RetVT == MVT::bf16)
+    return ISD::STRICT_FP_TO_BF16;
 
   report_fatal_error("Attempt at an invalid promotion-related conversion");
 }
@@ -2999,10 +2998,16 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
   EVT SVT = N->getOperand(0).getValueType();
 
   if (N->isStrictFPOpcode()) {
-    assert(RVT == MVT::f16);
-    SDValue Res =
-        DAG.getNode(ISD::STRICT_FP_TO_FP16, SDLoc(N), {MVT::i16, MVT::Other},
-                    {N->getOperand(0), N->getOperand(1)});
+    // FIXME: assume we only have two f16 variants for now.
+    unsigned Opcode;
+    if (RVT == MVT::f16)
+      Opcode = ISD::STRICT_FP_TO_FP16;
+    else if (RVT == MVT::bf16)
+      Opcode = ISD::STRICT_FP_TO_BF16;
+    else
+      llvm_unreachable("unknown half type");
+    SDValue Res = DAG.getNode(Opcode, SDLoc(N), {MVT::i16, MVT::Other},
+                              {N->getOperand(0), N->getOperand(1)});
     ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
     return Res;
   }
