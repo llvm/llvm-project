@@ -31,8 +31,6 @@ function test_real4_yx(y,x)
 end function
 
 ! CHECK-LABEL: @_QPtest_real4_yx
-! CHECK: %[[terminationCheck:.*]] = arith.andi %[[YEq0:.*]], %[[XEq0:.*]] : i1
-! CHECK: fir.if %[[terminationCheck]]
 ! CHECK: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f32
 ! CHECK: %[[dpi:.*]] = arith.constant 3.1415926535897931 : f64
 ! CHECK: %[[pi:.*]] = fir.convert %[[dpi]] : (f64) -> f32
@@ -44,8 +42,6 @@ function test_real8_yx(y,x)
 end function
 
 ! CHECK-LABEL: @_QPtest_real8_yx
-! CHECK: %[[terminationCheck:.*]] = arith.andi %[[YEq0:.*]], %[[XEq0:.*]] : i1
-! CHECK: fir.if %[[terminationCheck]]
 ! CHECK: %[[atan2:.*]] = math.atan2 %{{.*}}, %{{.*}}: f64
 ! CHECK: %[[pi:.*]] = arith.constant 3.1415926535897931 : f64
 ! CHECK: %{{.*}} = arith.divf %[[atan2]], %[[pi]] fastmath<contract> : f64

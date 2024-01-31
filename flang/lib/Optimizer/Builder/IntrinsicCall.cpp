@@ -2204,10 +2204,8 @@ mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
 
   // atand(Y,X) atan2d(Y,X) == atan2(Y,X) * 180/pi
   if (args.size() == 2) {
-    mlir::Value y = fir::getBase(args[0]);
-    mlir::Value x = fir::getBase(args[1]);
-    atanNoneZeroCheck(y, x, builder, loc);
-    atan = builder.create<mlir::math::Atan2Op>(loc, y, x);
+    atan = builder.create<mlir::math::Atan2Op>(loc, fir::getBase(args[0]),
+                                               fir::getBase(args[1]));
   } else {
     mlir::FunctionType ftype =
         mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
@@ -2231,10 +2229,8 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
 
   // atanpi(Y,X) atan2pi(Y,X) == atan2(Y,X) / pi
   if (args.size() == 2) {
-    mlir::Value y = fir::getBase(args[0]);
-    mlir::Value x = fir::getBase(args[1]);
-    atanNoneZeroCheck(y, x, builder, loc);
-    atan = builder.create<mlir::math::Atan2Op>(loc, y, x);
+    atan = builder.create<mlir::math::Atan2Op>(loc, fir::getBase(args[0]),
+                                               fir::getBase(args[1]));
   } else {
     mlir::FunctionType ftype =
         mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
