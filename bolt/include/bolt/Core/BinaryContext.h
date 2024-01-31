@@ -554,6 +554,9 @@ public:
   /// Huge page size to use.
   static constexpr unsigned HugePageSize = 0x200000;
 
+  /// Addresses reserved for kernel on x86_64 start at this location.
+  static constexpr uint64_t KernelStartX86_64 = 0xFFFF'FFFF'8000'0000;
+
   /// Map address to a constant island owner (constant data in code section)
   std::map<uint64_t, BinaryFunction *> AddressToConstantIslandMap;
 
@@ -601,6 +604,9 @@ public:
   std::unique_ptr<MCDisassembler> SymbolicDisAsm;
 
   std::unique_ptr<MCAsmBackend> MAB;
+
+  /// Indicates if the binary is Linux kernel.
+  bool IsLinuxKernel{false};
 
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
