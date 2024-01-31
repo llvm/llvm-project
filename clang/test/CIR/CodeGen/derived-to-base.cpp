@@ -77,6 +77,9 @@ void C3::Layer::Initialize() {
 
 // CHECK-DAG: !ty_22C23A3ALayer22 = !cir.struct<class "C2::Layer"
 // CHECK-DAG: !ty_22C33A3ALayer22 = !cir.struct<struct "C3::Layer"
+// CHECK-DAG: !ty_22A22 = !cir.struct<class "A"
+// CHECK-DAG: !ty_22A2Ebase22 = !cir.struct<class "A.base"
+// CHECK-DAG: !ty_22B22 = !cir.struct<class "B" {!cir.struct<class "A.base"
 
 // CHECK: cir.func @_ZN2C35Layer10InitializeEv
 
