@@ -53,8 +53,10 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
       anything();
   if (AllowStringArrays)
     IgnoreStringArrayIfNeededMatcher =
-        unless(typeLoc(loc(hasCanonicalType(incompleteArrayType(hasElementType(isAnyCharacter())))),
-                       hasParent(varDecl(hasInitializer(stringLiteral()), unless(parmVarDecl())))));
+        unless(typeLoc(loc(hasCanonicalType(incompleteArrayType(
+                           hasElementType(isAnyCharacter())))),
+                       hasParent(varDecl(hasInitializer(stringLiteral()),
+                                         unless(parmVarDecl())))));
 
   Finder->addMatcher(
       typeLoc(hasValidBeginLoc(), hasType(arrayType()),
