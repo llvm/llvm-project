@@ -34,7 +34,6 @@ static_library("Breakpoint") {
     "StoppointCallbackContext.cpp",
     "StoppointSite.cpp",
     "Watchpoint.cpp",
-    "WatchpointAlgorithms.cpp",
     "WatchpointList.cpp",
     "WatchpointOptions.cpp",
     "WatchpointResource.cpp",
