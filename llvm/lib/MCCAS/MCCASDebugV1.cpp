@@ -218,6 +218,11 @@ bool mccasformats::v1::doesntDedup(dwarf::Form Form, dwarf::Attribute Attr) {
             dwarf::Attribute::DW_AT_call_file}},
           {dwarf::Form::DW_FORM_addrx, {}},
           {dwarf::Form::DW_FORM_addr, {}},
+          {dwarf::Form::DW_FORM_strx, {}},
+          {dwarf::Form::DW_FORM_strx1, {}},
+          {dwarf::Form::DW_FORM_strx2, {}},
+          {dwarf::Form::DW_FORM_strx3, {}},
+          {dwarf::Form::DW_FORM_strx4, {}},
       };
 
   auto it = FormsToPartition.find(Form);
