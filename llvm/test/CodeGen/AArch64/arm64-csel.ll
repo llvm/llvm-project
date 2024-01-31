@@ -423,10 +423,9 @@ entry:
 define i32 @or(i32 %num, i32 %x) {
 ; CHECK-LABEL: or:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    and w8, w0, #0xff00
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    cmp w1, #0
+; CHECK-NEXT:    cinc w0, w8, ne
 ; CHECK-NEXT:    ret
 entry:
   %and = and i32 %num, 65280
@@ -439,10 +438,9 @@ entry:
 define i64 @or64(i64 %num, i64 %x) {
 ; CHECK-LABEL: or64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    and x8, x0, #0xff00
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    cinc x0, x8, ne
 ; CHECK-NEXT:    ret
 entry:
   %and = and i64 %num, 65280
@@ -457,8 +455,7 @@ define i32 @selor32(i32 %num, i32 %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0xff00
 ; CHECK-NEXT:    cmp w1, #0
-; CHECK-NEXT:    orr w9, w8, #0x1
-; CHECK-NEXT:    csel w0, w9, w8, ne
+; CHECK-NEXT:    cinc w0, w8, ne
 ; CHECK-NEXT:    ret
 entry:
   %and = and i32 %num, 65280
@@ -489,8 +486,7 @@ define i64 @selor64(i64 %num, i64 %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and x8, x0, #0xff00
 ; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    orr x9, x8, #0x1
-; CHECK-NEXT:    csel x0, x9, x8, ne
+; CHECK-NEXT:    cinc x0, x8, ne
 ; CHECK-NEXT:    ret
 entry:
   %and = and i64 %num, 65280
@@ -504,9 +500,8 @@ entry:
 define i64 @selor64_disjoint(i64 %num, i64 %x) {
 ; CHECK-LABEL: selor64_disjoint:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    orr x8, x0, #0x1
 ; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    csel x0, x8, x0, ne
+; CHECK-NEXT:    cinc x0, x0, ne
 ; CHECK-NEXT:    ret
 entry:
   %tobool.not = icmp ne i64 %x, 0
