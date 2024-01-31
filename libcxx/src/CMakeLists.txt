@@ -205,14 +205,6 @@ if (LIBCXX_ENABLE_SHARED)
     else()
       set(triple "${LLVM_DEFAULT_TARGET_TRIPLE}")
     endif()
-    cxx_abi_identifier(abi_identifier
-      "${triple}"
-      "${LIBCXX_CXX_ABI}"
-      "${LIBCXX_ABI_VERSION}"
-      "${LIBCXX_ABI_UNSTABLE}"
-      "${LIBCXX_ENABLE_EXCEPTIONS}"
-      "${LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS}"
-    )
     add_link_flags("-Wl,-map,${CMAKE_CURRENT_BINARY_DIR}/../lib/abi/linker.map")
   endif()
 
