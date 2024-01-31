@@ -21019,7 +21019,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   // Example:
   // nxv4i32 = uzp1 bitcast(nxv4i32 x to nxv2i64), bitcast(nxv4i32 y to nxv2i64)
   // to
-  // nxv4i32 = uzp1 nxv2i64, nxv2i64
+  // nxv4i32 = uzp1 nxv4i32 x, nxv4i32 y
   if (isHalvingTruncateAndConcatOfLegalIntScalableType(N) &&
       Op0.getOpcode() == ISD::BITCAST && Op1.getOpcode() == ISD::BITCAST) {
     if (Op0.getOperand(0).getValueType() == Op1.getOperand(0).getValueType()) {
