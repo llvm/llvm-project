@@ -2971,7 +2971,7 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
                   tok::annot_cxxscope))
     TryAnnotateTypeOrScopeToken();
 
-  if (!Actions.isSimpleTypeSpecifier(Tok.getKind())) {
+  if (!Actions.isSimpleTypeSpecifier(Tok)) {
     //   objc-receiver:
     //     expression
     // Make sure any typos in the receiver are corrected or diagnosed, so that
