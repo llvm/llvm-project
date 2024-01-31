@@ -10,7 +10,7 @@ struct task {
     std::suspend_always final_suspend() noexcept;
     void return_void();
     std::suspend_always yield_value(int) { return {}; }
-      task get_return_object();
+    task get_return_object();
     void unhandled_exception();
   };
 };
@@ -47,4 +47,19 @@ task test6() {
   abort();
   1; // expected-warning {{code will never be executed}}
   co_await std::suspend_never{};
+}
+
+task test7() {
+  // coroutine statements are not considered unreachable.
+  co_await std::suspend_never{};
+  abort();
+  co_await std::suspend_never{};
+}
+
+task test8() {
+  // coroutine statements are not considered unreachable.
+  // co_await std::suspend_never{};
+  abort();
+  co_return;
+  1 + 1; // expected-warning {{code will never be executed}}
 }
