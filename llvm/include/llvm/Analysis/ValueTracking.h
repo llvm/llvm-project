@@ -333,7 +333,7 @@ struct KnownFPClass {
   void knownNot(FPClassTest RuleOut) {
     KnownFPClasses = KnownFPClasses & ~RuleOut;
     if (isKnownNever(fcNan) && !SignBit) {
-      if (isKnownNever(OrderedLessThanZeroMask | fcNegZero))
+      if (isKnownNever(fcNegative))
         SignBit = false;
       else if (isKnownNever(OrderedGreaterThanZeroMask | fcPosZero))
         SignBit = true;
