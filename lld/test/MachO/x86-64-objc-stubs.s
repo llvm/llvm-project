@@ -10,8 +10,10 @@
 
 # WARNING: warning: -objc_stubs_small is not yet implemented, defaulting to -objc_stubs_fast
 
-# RUN: %lld -arch x86_64 -lSystem -o %t-icf.out --icf=all %t.o
-# RUN: llvm-otool -vs __DATA __objc_selrefs %t-icf.out | FileCheck %s --check-prefix=ICF
+# RUN: %lld -arch x86_64 -lSystem -o %t-icfsafe.out --icf=safe %t.o
+# RUN: llvm-otool -vs __DATA __objc_selrefs %t-icfsafe.out | FileCheck %s --check-prefix=ICF
+# RUN: %lld -arch x86_64 -lSystem -o %t-icfall.out --icf=all %t.o
+# RUN: llvm-otool -vs __DATA __objc_selrefs %t-icfall.out | FileCheck %s --check-prefix=ICF
 
 # CHECK: Sections:
 # CHECK: __got            {{[0-9a-f]*}} [[#%x, GOTSTART:]] DATA
