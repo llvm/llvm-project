@@ -85,7 +85,6 @@ chrono sstream
 chrono stdexcept
 chrono string
 chrono string_view
-chrono tuple
 chrono vector
 chrono version
 cinttypes cstdint

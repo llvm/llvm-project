@@ -1402,9 +1402,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_T1, _T2>::pair(
       second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 
 #  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
-
 #    define _LIBCPP_NOEXCEPT_RETURN(...)                                                                               \
       noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }
 
