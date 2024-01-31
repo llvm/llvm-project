@@ -2791,9 +2791,11 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
   }
 }
 
-void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC, const llvm::opt::ArgList &Args, llvm::opt::ArgStringList & CmdArgs, const llvm::Triple &Triple)
-{
-    if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
+void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
                                options::OPT_mno_outline_atomics)) {
     // Option -moutline-atomics supported for AArch64 target only.
     if (!Triple.isAArch64()) {

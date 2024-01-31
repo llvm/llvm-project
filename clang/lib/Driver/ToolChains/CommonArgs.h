@@ -216,7 +216,10 @@ void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple);
 
-void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC, const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs, const llvm::Triple &Triple);
+void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                           const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs,
+                           const llvm::Triple &Triple);
 
 } // end namespace tools
 } // end namespace driver
@@ -225,5 +228,4 @@ void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC, const llvm::opt
 clang::CodeGenOptions::FramePointerKind
 getFramePointerKind(const llvm::opt::ArgList &Args, const llvm::Triple &Triple);
 
-                                  
 #endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
