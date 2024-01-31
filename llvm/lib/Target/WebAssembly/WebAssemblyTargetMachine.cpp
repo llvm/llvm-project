@@ -200,8 +200,7 @@ public:
   bool runOnModule(Module &M) override {
     FeatureBitset Features = coalesceFeatures(M);
 
-    std::string FeatureStr =
-        getFeatureString(Features, WasmTM->getTargetFeatureString());
+    std::string FeatureStr = getFeatureString(Features);
     WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
@@ -239,17 +238,12 @@ private:
     return Features;
   }
 
-  static std::string getFeatureString(const FeatureBitset &Features,
-                                      StringRef TargetFS) {
+  std::string getFeatureString(const FeatureBitset &Features) {
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
         Ret += (StringRef("+") + KV.Key + ",").str();
     }
-    SubtargetFeatures TF{TargetFS};
-    for (std::string const &F : TF.getFeatures())
-      if (!SubtargetFeatures::isEnabled(F))
-        Ret += F;
     return Ret;
   }
 
