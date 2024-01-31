@@ -158,12 +158,6 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 // CHECK9: error: 'what-error' diagnostics expected but not seen:
 #endif
 
-#ifdef TEST10
-// RUN : not %clang_cc1 -DTEST10 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK10 %s
-
-// CHECK10: error: no expected directives found: consider use of 'foo-no-diagnostics'
-#endif
-
 #ifdef TEST_WIDE_DELIM
 // RUN: not %clang_cc1 -DTEST_WIDE_DELIM -verify %s 2>&1 | FileCheck -check-prefix=CHECK-WIDE-DELIM %s
 
@@ -192,4 +186,10 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 // CHECK-WIDE-DELIM-NEXT: 8 errors generated.
 #endif
 
+#endif
+
+#ifdef TEST10
+// RUN : not %clang_cc1 -DTEST10 -verify=foo %s 2>&1 | FileCheck -check-prefix=CHECK10 %s
+
+// CHECK10: error: no expected directives found: consider use of 'foo-no-diagnostics'
 #endif
