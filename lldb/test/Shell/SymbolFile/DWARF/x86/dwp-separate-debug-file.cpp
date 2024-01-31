@@ -11,10 +11,10 @@
 // Run one time with the index cache enabled to populate the index cache. When
 // we populate the index cache we have to parse all of the DWARF debug info
 // and it is always available.
-// RUN: rm -rf %T/lldb-index-cache
+// RUN: rm -rf %t.lldb-index-cache
 // RUN: %lldb \
 // RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %T/lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \
@@ -28,7 +28,7 @@
 // don't crash and that we can find types when using .dwp files.
 // RUN: %lldb \
 // RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %T/lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \
@@ -46,10 +46,10 @@
 // Run one time with the index cache enabled to populate the index cache. When
 // we populate the index cache we have to parse all of the DWARF debug info
 // and it is always available.
-// RUN: rm -rf %T/lldb-index-cache
+// RUN: rm -rf %t.lldb-index-cache
 // RUN: %lldb \
 // RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %T/lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \
@@ -63,7 +63,7 @@
 // don't crash and that we can find types when using .dwp files.
 // RUN: %lldb \
 // RUN:   -O 'settings set symbols.enable-lldb-index-cache true' \
-// RUN:   -O 'settings set symbols.lldb-index-cache-path %T/lldb-index-cache' \
+// RUN:   -O 'settings set symbols.lldb-index-cache-path %t.lldb-index-cache' \
 // RUN:   -O 'settings set target.preload-symbols false' \
 // RUN:   -o "script lldb.target.modules[0].FindTypes('::A').GetTypeAtIndex(0)" \
 // RUN:   -o "statistics dump" \

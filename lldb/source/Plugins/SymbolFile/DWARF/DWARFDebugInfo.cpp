@@ -24,6 +24,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFFormValue.h"
 #include "DWARFTypeUnit.h"
+#include "LogChannelDWARF.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -81,12 +82,14 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
                                 : m_context.getOrLoadDebugInfoData();
   lldb::offset_t offset = 0;
   while (data.ValidOffset(offset)) {
+    const lldb::offset_t unit_header_offset = offset;
     llvm::Expected<DWARFUnitSP> expected_unit_sp =
         DWARFUnit::extract(m_dwarf, m_units.size(), data, section, &offset);
 
     if (!expected_unit_sp) {
-      // FIXME: Propagate this error up.
-      llvm::consumeError(expected_unit_sp.takeError());
+      Log *log = GetLog(DWARFLog::DebugInfo);
+      LLDB_LOG(log, "Unable to extract DWARFUnitHeader at {0:x}: {1}",
+               unit_header_offset, llvm::toString(expected_unit_sp.takeError()));
       return;
     }
 
