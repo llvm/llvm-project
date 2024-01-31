@@ -50,4 +50,3 @@
 // CHECK-NOT: -complex-range=fortran
 // WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN2: warning: overriding '-fcx-fortran-rules' option with '-fcx-limited-range' [-Woverriding-option]
-// range-no-diagnostics
