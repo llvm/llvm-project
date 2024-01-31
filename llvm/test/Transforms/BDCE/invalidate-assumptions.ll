@@ -100,7 +100,7 @@ define void @PR34179(ptr %a) {
 define i64 @disjoint(i64 %x) {
 ; CHECK-LABEL: define i64 @disjoint(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[X]], -2
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[X]], -2
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
   %and = and i64 %x, 1
@@ -112,7 +112,7 @@ define i32 @disjoint_indirect(i64 %x) {
 ; CHECK-LABEL: define i32 @disjoint_indirect(
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[TRUNC]], -2
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TRUNC]], -2
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %and = and i64 %x, 1
