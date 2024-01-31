@@ -4064,15 +4064,16 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
 }
 
 /// The offset of a field from the beginning of the record.
-static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
-                                 const FieldDecl *FD, int64_t &Offset) {
-  ASTContext &Ctx = CGF.getContext();
+bool CodeGenFunction::getFieldOffsetInBits(const RecordDecl *RD,
+                                           const FieldDecl *FD,
+                                           int64_t &Offset) {
+  ASTContext &Ctx = getContext();
   const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
   unsigned FieldNo = 0;
 
   for (const Decl *D : RD->decls()) {
     if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (getFieldOffsetInBits(CGF, Record, FD, Offset)) {
+      if (getFieldOffsetInBits(Record, FD, Offset)) {
         Offset += Layout.getFieldOffset(FieldNo);
         return true;
       }
@@ -4108,11 +4109,11 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
     return std::optional<int64_t>();
 
   int64_t FD1Offset = 0;
-  if (!getFieldOffsetInBits(CGF, FD1OuterRec, FD1, FD1Offset))
+  if (!CGF.getFieldOffsetInBits(FD1OuterRec, FD1, FD1Offset))
     return std::optional<int64_t>();
 
   int64_t FD2Offset = 0;
-  if (!getFieldOffsetInBits(CGF, FD2OuterRec, FD2, FD2Offset))
+  if (!CGF.getFieldOffsetInBits(FD2OuterRec, FD2, FD2Offset))
     return std::optional<int64_t>();
 
   return std::make_optional<int64_t>(FD1Offset - FD2Offset);

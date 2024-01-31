@@ -26,6 +26,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -1051,6 +1052,145 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
 }
 
+namespace {
+
+/// \p StructBaseExpr returns the base \p Expr with a structure or union type.
+struct StructBaseExpr : public ConstStmtVisitor<StructBaseExpr, const Expr *> {
+  StructBaseExpr() = default;
+
+  //===--------------------------------------------------------------------===//
+  //                            Visitor Methods
+  //===--------------------------------------------------------------------===//
+
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  const Expr *Visit(const Expr *E) {
+    QualType Ty = E->getType();
+    if (Ty->isStructureType() || Ty->isUnionType())
+      return E;
+
+    return ConstStmtVisitor<StructBaseExpr, const Expr *>::Visit(E);
+  }
+
+  const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
+
+  const Expr *VisitMemberExpr(const MemberExpr *E) {
+    return Visit(E->getBase());
+  }
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    return Visit(E->getBase());
+  }
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
+/// The offset of a field from the beginning of the record.
+llvm::Value *
+CodeGenFunction::tryEmitObjectSizeCalculation(const Expr *E, unsigned Type,
+                                              llvm::IntegerType *ResType) {
+  if ((Type & 0x01) != 0)
+    // We handle only the whole object size.
+    return nullptr;
+
+  E = E->IgnoreParenImpCasts();
+
+  const Expr *Base = StructBaseExpr().Visit(E);
+  if (!Base)
+    return nullptr;
+
+  const RecordDecl *RD = Base->getType()->getAsRecordDecl();
+  if (!RD)
+    return nullptr;
+
+  // Get the full size of the struct.
+  ASTContext &Ctx = getContext();
+  const RecordDecl *OuterRD = RD->getOuterLexicalRecordContext();
+  const clang::Type *RT = OuterRD->getTypeForDecl();
+  CharUnits RecordSize = Ctx.getTypeSizeInChars(RT);
+
+  Value *Res = nullptr;
+
+  if (const auto *U = dyn_cast<UnaryOperator>(E);
+      U && (U->getOpcode() == UO_AddrOf || U->getOpcode() == UO_Deref))
+    E = U->getSubExpr()->IgnoreParenImpCasts();
+
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+    const Expr *Idx = ASE->getIdx();
+    Base = ASE->getBase()->IgnoreParenImpCasts();
+
+    if (const auto *ME = dyn_cast<MemberExpr>(Base);
+        ME && ME->getType()->isConstantArrayType()) {
+      // The simple case:
+      //
+      //     struct s {
+      //         int arr[42];
+      //         char c;
+      //         /* others */
+      //     };
+      //
+      //     __builtin_dynamic_object_size(&p->arr[idx], 0);
+      //
+      // We can translate the __builtin_dynamic_object_call into:
+      //
+      //     sizeof(struct s) - offsetof(arr) - (idx * sizeof(int))
+      //
+      bool IsSigned = Idx->getType()->isSignedIntegerType();
+      Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
+      IdxInst = Builder.CreateIntCast(IdxInst, ResType, IsSigned);
+
+      const ConstantArrayType *CAT = cast<ConstantArrayType>(ME->getType());
+      CharUnits ElemSize = Ctx.getTypeSizeInChars(CAT->getElementType());
+      Value *ElemSizeInst = Builder.getInt32(ElemSize.getQuantity());
+      ElemSizeInst = Builder.CreateIntCast(ElemSizeInst, ResType, IsSigned);
+
+      // idx * sizeof(<arr element type>)
+      Res = Builder.CreateMul(IdxInst, ElemSizeInst, "", !IsSigned, IsSigned);
+
+      // sizeof(struct s)
+      Value *RecordSizeInst = Builder.getInt32(RecordSize.getQuantity());
+      RecordSizeInst = Builder.CreateIntCast(RecordSizeInst, ResType,
+                                             RT->isSignedIntegerType());
+
+      // offsetof(arr)
+      int64_t Offset = 0;
+      getFieldOffsetInBits(OuterRD, cast<FieldDecl>(ME->getMemberDecl()),
+                           Offset);
+
+      CharUnits OffsetVal = Ctx.toCharUnitsFromBits(Offset);
+      Value *OffsetInst = Builder.getInt64(OffsetVal.getQuantity());
+      OffsetInst = Builder.CreateIntCast(OffsetInst, ResType, IsSigned);
+
+      // sizeof(struct s) - offsetof(arr) ...
+      RecordSizeInst = Builder.CreateSub(RecordSizeInst, OffsetInst, "",
+                                         !IsSigned, IsSigned);
+      // ... - (idx * sizeof(<arr element type>))
+      RecordSizeInst =
+          Builder.CreateSub(RecordSizeInst, Res, "", !IsSigned, IsSigned);
+
+      // Don't allow the index or result to be negative.
+      Value *Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(Res),
+                                     Builder.CreateIsNotNeg(RecordSizeInst));
+
+      Res = Builder.CreateSelect(Cmp, RecordSizeInst,
+                                 ConstantInt::get(ResType, 0, IsSigned));
+    }
+  }
+
+  return Res;
+}
+
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
 ///   - A llvm::Argument (if E is a param with the pass_object_size attribute on
@@ -1083,18 +1223,21 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     }
   }
 
-  if (IsDynamic) {
-    // Emit special code for a flexible array member with the "counted_by"
-    // attribute.
-    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
-      return V;
-  }
-
   // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate E for side-effects. In either case, we shouldn't lower to
   // @llvm.objectsize.
   if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
+
+  if (IsDynamic) {
+    // Emit special code for a flexible array member with the "counted_by"
+    // attribute.
+    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
+      return V;
+
+    if (Value *V = tryEmitObjectSizeCalculation(E, Type, ResType))
+      return V;
+  }
 
   Value *Ptr = EmittedE ? EmittedE : EmitScalarExpr(E);
   assert(Ptr->getType()->isPointerTy() &&
