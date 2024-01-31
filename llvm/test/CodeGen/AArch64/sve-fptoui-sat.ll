@@ -268,11 +268,11 @@ define <vscale x 8 x i32> @test_signed_v8f64_v8i32(<vscale x 8 x double> %f) {
 ; CHECK-NEXT:    mov z7.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    mov z24.d, p4/m, #0 // =0x0
 ; CHECK-NEXT:    sel z1.d, p5, z0.d, z5.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    sel z2.d, p6, z0.d, z6.d
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    sel z3.d, p1, z0.d, z7.d
+; CHECK-NEXT:    sel z2.d, p6, z0.d, z6.d
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    sel z3.d, p1, z0.d, z7.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    sel z4.d, p0, z0.d, z24.d
 ; CHECK-NEXT:    uzp1 z0.s, z2.s, z1.s
 ; CHECK-NEXT:    uzp1 z1.s, z4.s, z3.s
@@ -351,11 +351,11 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK-NEXT:    mov z7.d, p3/m, #0 // =0x0
 ; CHECK-NEXT:    mov z24.d, p4/m, #0 // =0x0
 ; CHECK-NEXT:    sel z0.d, p5, z2.d, z5.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    sel z1.d, p6, z2.d, z6.d
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    sel z3.d, p1, z2.d, z7.d
+; CHECK-NEXT:    sel z1.d, p6, z2.d, z6.d
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    sel z3.d, p1, z2.d, z7.d
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    sel z2.d, p0, z2.d, z24.d
 ; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
 ; CHECK-NEXT:    uzp1 z1.s, z2.s, z3.s

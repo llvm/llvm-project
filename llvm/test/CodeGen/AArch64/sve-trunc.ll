@@ -136,9 +136,9 @@ define <vscale x 16 x i1> @trunc_i64toi1_split3(<vscale x 16 x i64> %in) {
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    uzp1 p3.s, p4.s, p3.s
 ; CHECK-NEXT:    uzp1 p4.s, p6.s, p5.s
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    uzp1 p0.s, p0.s, p2.s
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p2.s
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.h, p3.h, p1.h
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p4.h
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload

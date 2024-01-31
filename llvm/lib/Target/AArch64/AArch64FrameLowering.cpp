@@ -3196,9 +3196,21 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     return true;
   }
 
+  SmallVector<RegPairInfo, 8> RegPairsScalable = RegPairs;
+  llvm::stable_sort(
+      RegPairsScalable, [](const RegPairInfo &A, const RegPairInfo &B) {
+        return !(A.Type == RegPairInfo::PPR && B.Type == RegPairInfo::ZPR);
+      });
+
+  for (const RegPairInfo &RPI : RegPairsScalable)
+    if (RPI.isScalable())
+      EmitMI(RPI);
+
   if (ReverseCSRRestoreSeq) {
     MachineBasicBlock::iterator First = MBB.end();
     for (const RegPairInfo &RPI : reverse(RegPairs)) {
+      if (RPI.isScalable())
+        continue;
       MachineBasicBlock::iterator It = EmitMI(RPI);
       if (First == MBB.end())
         First = It;
@@ -3207,6 +3219,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MBB.splice(MBBI, &MBB, First);
   } else {
     for (const RegPairInfo &RPI : RegPairs) {
+      if (RPI.isScalable())
+        continue;
       (void)EmitMI(RPI);
     }
   }
