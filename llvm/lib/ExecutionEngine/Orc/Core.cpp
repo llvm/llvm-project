@@ -2699,8 +2699,10 @@ Error ExecutionSession::OL_notifyResolved(MaterializationResponsibility &MR,
   return MR.JD.resolve(MR, Symbols);
 }
 
+template <typename HandleNewDepFn>
 void ExecutionSession::propagateExtraEmitDeps(
-    std::deque<JITDylib::EmissionDepUnit *> Worklist, EDUInfosMap &EDUInfos) {
+    std::deque<JITDylib::EmissionDepUnit *> Worklist, EDUInfosMap &EDUInfos,
+    HandleNewDepFn HandleNewDep) {
 
   // Iterate to a fixed-poient to propagate extra-emit dependencies through the
   // EDU graph.
@@ -2727,6 +2729,7 @@ void ExecutionSession::propagateExtraEmitDeps(
         DenseSet<NonOwningSymbolStringPtr> *UserEDUNewDepsForJD = nullptr;
         for (auto Dep : Deps) {
           if (UserEDUDepsForJD.insert(Dep).second) {
+	    HandleNewDep(*UserEDU, *DepJD, Dep);
             if (UserEDUInfo) {
               if (!UserEDUNewDepsForJD) {
                 // If UserEDU has no new deps then it's not in the worklist
@@ -2879,7 +2882,10 @@ ExecutionSession::EDUInfosMap ExecutionSession::simplifyDepGroups(
   }
 
   // 4. Propagate dependencies through the EDU graph.
-  propagateExtraEmitDeps(Worklist, EDUInfos);
+  propagateExtraEmitDeps(
+      Worklist, EDUInfos,
+      [](JITDylib::EmissionDepUnit &, JITDylib &, NonOwningSymbolStringPtr) {
+      });
 
   return EDUInfos;
 }
@@ -3159,7 +3165,6 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
     }
 
     // Now look for users of this EDU.
-    DenseSet<JITDylib::EmissionDepUnit *> *EDUUsers = nullptr;
     for (auto &[Sym, Flags] : EDU->Symbols) {
       assert(TargetJD.Symbols.count(SymbolStringPtr(Sym)) &&
              "Sym not present in symbol table");
@@ -3177,14 +3182,10 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
           MII->second.DependantEDUs.empty())
         continue;
 
-      if (!EDUUsers)
-        EDUUsers = &EDUInfo->IntraEmitUsers;
       for (auto &DependantEDU : MII->second.DependantEDUs) {
-        if (IL_removeEDUDependence(*DependantEDU, TargetJD, Sym, EDUInfos)) {
+        if (IL_removeEDUDependence(*DependantEDU, TargetJD, Sym, EDUInfos))
           EDUInfo = &EDUInfos[EDU];
-          EDUUsers = &EDUInfo->IntraEmitUsers;
-        }
-        EDUUsers->insert(DependantEDU);
+        EDUInfo->IntraEmitUsers.insert(DependantEDU);
       }
       MII->second.DependantEDUs.clear();
     }
@@ -3199,7 +3200,12 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
     }
   }
 
-  propagateExtraEmitDeps(Worklist, EDUInfos);
+  propagateExtraEmitDeps(
+      Worklist, EDUInfos,
+      [](JITDylib::EmissionDepUnit &EDU, JITDylib &JD,
+	 NonOwningSymbolStringPtr Sym) {
+	JD.MaterializingInfos[SymbolStringPtr(Sym)].DependantEDUs.insert(&EDU);
+      });
 
   JITDylib::AsynchronousSymbolQuerySet CompletedQueries;
 
