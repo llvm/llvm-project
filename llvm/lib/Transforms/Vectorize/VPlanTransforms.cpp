@@ -491,17 +491,39 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 
 static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
                                     ScalarEvolution &SE, Instruction *TruncI,
-                                    Type *IVTy, VPValue *StartV,
-                                    VPValue *Step) {
+                                    VPValue *StartV, VPValue *Step) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   auto IP = HeaderVPBB->getFirstNonPhi();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  Type *TruncTy = TruncI ? TruncI->getType() : IVTy;
-  VPValue *BaseIV = CanonicalIV;
-  if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step, TruncTy)) {
-    BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step,
-                                   TruncI ? TruncI->getType() : nullptr);
-    HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
+  VPSingleDefRecipe *BaseIV = CanonicalIV;
+  if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step)) {
+    BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step);
+    HeaderVPBB->insert(BaseIV, IP);
+  }
+
+  // Truncate base induction if needed.
+  VPTypeAnalysis TypeInfo(SE.getContext());
+  Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
+  if (TruncI) {
+    Type *TruncTy = TruncI->getType();
+    assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
+    BaseIV = new VPScalarCastRecipe(Instruction::Trunc, BaseIV, TruncTy);
+    HeaderVPBB->insert(BaseIV, IP);
+    ResultTy = TruncTy;
+  }
+
+  // Truncate step if needed.
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  if (ResultTy != StepTy) {
+    assert(StepTy->getScalarSizeInBits() > ResultTy->getScalarSizeInBits() &&
+           "Not truncating.");
+    assert(StepTy->isIntegerTy() && "Truncation requires an integer type");
+    Step = new VPScalarCastRecipe(Instruction::Trunc, Step, ResultTy);
+    auto *VecPreheader =
+        cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
+    VecPreheader->appendRecipe(Step->getDefiningRecipe());
   }
 
   VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
@@ -523,9 +545,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Steps = createScalarIVSteps(
-        Plan, ID, SE, WideIV->getTruncInst(), WideIV->getPHINode()->getType(),
-        WideIV->getStartValue(), WideIV->getStepValue());
+    VPValue *Steps =
+        createScalarIVSteps(Plan, ID, SE, WideIV->getTruncInst(),
+                            WideIV->getStartValue(), WideIV->getStepValue());
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs)
@@ -805,6 +827,17 @@ static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+  // Try to remove redundant blend recipes.
+  if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
+    VPValue *Inc0 = Blend->getIncomingValue(0);
+    for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
+      if (Inc0 != Blend->getIncomingValue(I))
+        return;
+    Blend->replaceAllUsesWith(Inc0);
+    Blend->eraseFromParent();
+    return;
+  }
+
   switch (getOpcodeForRecipe(R)) {
   case Instruction::Mul: {
     VPValue *A = R.getOperand(0);
@@ -1009,8 +1042,8 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeRedundantCanonicalIVs(Plan);
   removeRedundantInductionCasts(Plan);
 
-  optimizeInductions(Plan, SE);
   simplifyRecipes(Plan, SE.getContext());
+  optimizeInductions(Plan, SE);
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);

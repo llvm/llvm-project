@@ -133,7 +133,8 @@ protected:
     }
   }
 
-  void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
     RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
     // Invalidate the finger print of the op that owns the block into which the
     // op was inserted into.
@@ -377,8 +378,9 @@ private:
   /// simplifications.
   void addOperandsToWorklist(ValueRange operands);
 
-  /// Notify the driver that the given block was created.
-  void notifyBlockCreated(Block *block) override;
+  /// Notify the driver that the given block was inserted.
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// Notify the driver that the given block is about to be removed.
   void notifyBlockRemoved(Block *block) override;
@@ -638,9 +640,10 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
     worklist.push(op);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockCreated(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockInserted(
+    Block *block, Region *previous, Region::iterator previousIt) {
   if (config.listener)
-    config.listener->notifyBlockCreated(block);
+    config.listener->notifyBlockInserted(block, previous, previousIt);
 }
 
 void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {

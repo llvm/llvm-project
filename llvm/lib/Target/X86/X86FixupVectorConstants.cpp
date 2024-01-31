@@ -406,14 +406,14 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     unsigned OpNoBcst32 = 0, OpNoBcst64 = 0;
     if (OpSrc32) {
       if (const X86FoldTableEntry *Mem2Bcst =
-              llvm::lookupBroadcastFoldTable(OpSrc32, 32)) {
+              llvm::lookupBroadcastFoldTableBySize(OpSrc32, 32)) {
         OpBcst32 = Mem2Bcst->DstOp;
         OpNoBcst32 = Mem2Bcst->Flags & TB_INDEX_MASK;
       }
     }
     if (OpSrc64) {
       if (const X86FoldTableEntry *Mem2Bcst =
-              llvm::lookupBroadcastFoldTable(OpSrc64, 64)) {
+              llvm::lookupBroadcastFoldTableBySize(OpSrc64, 64)) {
         OpBcst64 = Mem2Bcst->DstOp;
         OpNoBcst64 = Mem2Bcst->Flags & TB_INDEX_MASK;
       }

@@ -814,9 +814,19 @@ ObjCStubsSection::ObjCStubsSection()
               : target->objcStubsSmallAlignment;
 }
 
+bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
+  return sym->getName().starts_with(symbolPrefix);
+}
+
+StringRef ObjCStubsSection::getMethname(Symbol *sym) {
+  assert(isObjCStubSymbol(sym) && "not an objc stub");
+  auto name = sym->getName();
+  StringRef methname = name.drop_front(symbolPrefix.size());
+  return methname;
+}
+
 void ObjCStubsSection::addEntry(Symbol *sym) {
-  assert(sym->getName().starts_with(symbolPrefix) && "not an objc stub");
-  StringRef methname = sym->getName().drop_front(symbolPrefix.size());
+  StringRef methname = getMethname(sym);
   offsets.push_back(
       in.objcMethnameSection->getStringOffset(methname).outSecOff);
 

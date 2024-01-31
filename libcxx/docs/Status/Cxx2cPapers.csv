@@ -17,7 +17,7 @@
 "`P0792R14 <https://wg21.link/P0792R14>`__","LWG","``function_ref``: a type-erased callable reference","Varna June 2023","","",""
 "`P2874R2 <https://wg21.link/P2874R2>`__","LWG","Mandating Annex D Require No More","Varna June 2023","","",""
 "`P2757R3 <https://wg21.link/P2757R3>`__","LWG","Type-checking format args","Varna June 2023","","","|format|"
-"`P2637R3 <https://wg21.link/P2637R3>`__","LWG","Member ``visit``","Varna June 2023","|Partial|","18.0",""
+"`P2637R3 <https://wg21.link/P2637R3>`__","LWG","Member ``visit``","Varna June 2023","|Complete|","19.0",""
 "`P2641R4 <https://wg21.link/P2641R4>`__","CWG, LWG","Checking if a ``union`` alternative is active","Varna June 2023","","",""
 "`P1759R6 <https://wg21.link/P1759R6>`__","LWG","Native handles and file streams","Varna June 2023","|Complete|","18.0",""
 "`P2697R1 <https://wg21.link/P2697R1>`__","LWG","Interfacing ``bitset`` with ``string_view``","Varna June 2023","|Complete|","18.0",""
