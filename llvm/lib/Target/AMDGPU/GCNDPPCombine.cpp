@@ -40,7 +40,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIDefines.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -275,9 +274,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       break;
     }
 
-    
-    auto *Mod0 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0_modifiers);
-    if (Mod0) {
+    if (auto *Mod0 = TII->getNamedOperand(OrigMI,
+                                          AMDGPU::OpName::src0_modifiers)) {
       assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
                                           AMDGPU::OpName::src0_modifiers));
       assert(HasVOP3DPP ||
@@ -288,7 +286,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       DPPInst.addImm(0);
       ++NumOperands;
     }
-
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
     assert(Src0);
     int Src0Idx = NumOperands;
