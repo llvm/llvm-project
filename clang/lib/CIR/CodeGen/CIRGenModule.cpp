@@ -158,7 +158,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       /*isSigned=*/false);
   UInt8PtrTy = builder.getPointerTo(UInt8Ty);
   UInt8PtrPtrTy = builder.getPointerTo(UInt8PtrTy);
-  // TODO: AllocaInt8PtrTy
+  AllocaInt8PtrTy = UInt8PtrTy;
   // TODO: GlobalsInt8PtrTy
   // TODO: ConstGlobalsPtrTy
   // TODO: ASTAllocaAddressSpace

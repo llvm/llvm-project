@@ -64,10 +64,10 @@ struct CIRGenTypeCache {
   };
 
   /// void* in alloca address space
-  //   union {
-  //     mlir::cir::PointerType AllocaVoidPtrTy;
-  //     mlir::cir::PointerType AllocaInt8PtrTy;
-  //   };
+  union {
+    mlir::cir::PointerType AllocaVoidPtrTy;
+    mlir::cir::PointerType AllocaInt8PtrTy;
+  };
 
   /// void* in default globals address space
   //   union {

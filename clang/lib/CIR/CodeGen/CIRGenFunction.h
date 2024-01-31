@@ -93,6 +93,14 @@ private:
   llvm::DenseMap<const OpaqueValueExpr *, LValue> OpaqueLValues;
   llvm::DenseMap<const OpaqueValueExpr *, RValue> OpaqueRValues;
 
+  // This keeps track of the associated size for each VLA type.
+  // We track this by the size expression rather than the type itself because
+  // in certain situations, like a const qualifier applied to an VLA typedef,
+  // multiple VLA types can share the same size expression.
+  // FIXME: Maybe this could be a stack of maps that is pushed/popped as we
+  // enter/leave scopes.
+  llvm::DenseMap<const Expr *, mlir::Value> VLASizeMap;
+
 public:
   /// A non-RAII class containing all the information about a bound
   /// opaque value.  OpaqueValueMapping, below, is a RAII wrapper for
@@ -707,6 +715,22 @@ public:
   /// \returns SSA value with the argument.
   mlir::Value buildVAArg(VAArgExpr *VE, Address &VAListAddr);
 
+  void buildVariablyModifiedType(QualType Ty);
+
+  struct VlaSizePair {
+    mlir::Value NumElts;
+    QualType Type;
+
+    VlaSizePair(mlir::Value NE, QualType T) : NumElts(NE), Type(T) {}
+  };
+
+  /// Returns an MLIR value that corresponds to the size,
+  /// in non-variably-sized elements, of a variable length array type,
+  /// plus that largest non-variably-sized element type.  Assumes that
+  /// the type has already been emitted with buildVariablyModifiedType.
+  VlaSizePair getVLASize(const VariableArrayType *vla);
+  VlaSizePair getVLASize(QualType vla);
+
   mlir::Value emitBuiltinObjectSize(const Expr *E, unsigned Type,
                                     mlir::cir::IntType ResType,
                                     mlir::Value EmittedE, bool IsDynamic);
@@ -1241,6 +1265,8 @@ public:
 
   void pushEHDestroy(QualType::DestructionKind dtorKind, Address addr,
                      QualType type);
+
+  void pushStackRestore(CleanupKind kind, Address SPMem);
 
   static bool
   IsConstructorDelegationValid(const clang::CXXConstructorDecl *Ctor);
