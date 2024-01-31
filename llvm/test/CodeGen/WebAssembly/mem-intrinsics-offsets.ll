@@ -4,11 +4,27 @@
 target triple = "wasm32-unknown-unknown"
 
 define void @call_memset(ptr dereferenceable(16)) #0 {
+; CHECK-LABEL: call_memset:
+; CHECK:         .functype call_memset (i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i64.const $push0=, 0
+; CHECK-NEXT:    i64.store 8($0):p2align=0, $pop0
+; CHECK-NEXT:    i64.const $push1=, 0
+; CHECK-NEXT:    i64.store 0($0):p2align=0, $pop1
+; CHECK-NEXT:    return
     call void @llvm.memset.p0.i32(ptr align 1 %0, i8 0, i32 16, i1 false)
     ret void
 }
 
 define void @call_memcpy(ptr dereferenceable(16) %dst, ptr dereferenceable(16) %src) #0 {
+; CHECK-LABEL: call_memcpy:
+; CHECK:         .functype call_memcpy (i32, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    i64.load $push0=, 8($1):p2align=0
+; CHECK-NEXT:    i64.store 8($0):p2align=0, $pop0
+; CHECK-NEXT:    i64.load $push1=, 0($1):p2align=0
+; CHECK-NEXT:    i64.store 0($0):p2align=0, $pop1
+; CHECK-NEXT:    return
     call void @llvm.memcpy.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 16, i1 false)
     ret void
 }
