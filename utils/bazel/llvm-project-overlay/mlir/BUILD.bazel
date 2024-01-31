@@ -2096,14 +2096,17 @@ cc_library(
         ":ArmSMETransformsPassIncGen",
         ":ControlFlowDialect",
         ":FuncDialect",
+        ":FuncTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
         ":SCFDialect",
+        ":SCFTransforms",
         ":Transforms",
+        ":DialectUtils",
         ":VectorDialect",
-        "//llvm:Support",
+        "//third_party/llvm/llvm-project/llvm:Support",
     ],
 )
 
