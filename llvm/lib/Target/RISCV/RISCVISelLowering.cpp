@@ -4937,9 +4937,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       return V;
 
     if (VT.getScalarSizeInBits() == 8 &&
-        any_of(enumerate(Mask), [&](const auto &Idx) {
-          return Idx.value() > 255;
-        })) {
+        any_of(Mask, [&](const auto &Idx) { return Idx > 255; })) {
       // On such a vector we're unable to use i8 as the index type.
       // FIXME: We could promote the index to i16 and use vrgatherei16, but that
       // may involve vector splitting if we're already at LMUL=8, or our
