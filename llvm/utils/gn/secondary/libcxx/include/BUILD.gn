@@ -66,9 +66,13 @@ if (current_toolchain == default_toolchain) {
     values = []
   }
 
-  copy("write_assertion_handler") {
-    sources = [ "//libcxx/vendor/llvm/default_assertion_handler.in" ]
-    outputs = [ "$libcxx_generated_include_dir/__assertion_handler" ]
+  # This uses write_cmake_config() instead of a normal copy() rule because
+  # copy() uses `sources`, and if there's more than one `sources` in a file,
+  # sync_source_lists_from_cmake.py can't auto-sync changes.
+  write_cmake_config("write_assertion_handler") {
+    input = "//libcxx/vendor/llvm/default_assertion_handler.in"
+    output = "$libcxx_generated_include_dir/__assertion_handler"
+    values = []
   }
 
   copy("copy_headers") {
@@ -761,10 +765,14 @@ if (current_toolchain == default_toolchain) {
       "__thread/id.h",
       "__thread/jthread.h",
       "__thread/poll_with_backoff.h",
+      "__thread/support.h",
+      "__thread/support/c11.h",
+      "__thread/support/external.h",
+      "__thread/support/pthread.h",
+      "__thread/support/windows.h",
       "__thread/this_thread.h",
       "__thread/thread.h",
       "__thread/timed_backoff_policy.h",
-      "__threading_support",
       "__tree",
       "__tuple/make_tuple_types.h",
       "__tuple/pair_like.h",
