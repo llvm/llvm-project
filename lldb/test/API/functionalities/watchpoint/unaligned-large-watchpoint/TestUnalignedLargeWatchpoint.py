@@ -13,6 +13,8 @@ from lldbsuite.test import lldbutil
 
 class UnalignedLargeWatchpointTestCase(TestBase):
     def continue_and_report_stop_reason(self, process, iter_str):
+        if self.TraceOn():
+            self.runCmd("script print('continue')")
         process.Continue()
         self.assertIn(
             process.GetState(), [lldb.eStateStopped, lldb.eStateExited], iter_str
@@ -32,6 +34,8 @@ class UnalignedLargeWatchpointTestCase(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", self.main_source_file
         )
+        self.runCmd("break set -p done")
+        self.runCmd("break set -p exiting")
 
         frame = thread.GetFrameAtIndex(0)
 
@@ -66,3 +70,32 @@ class UnalignedLargeWatchpointTestCase(TestBase):
         self.assertEqual(c_count, 22)
         self.expect("watchpoint list -v", substrs=["hit_count = 22"])
         self.assertEqual(wp.GetHitCount(), 22)
+
+        target.DeleteWatchpoint(wp.GetID())
+
+        # Now try watching a 16 byte variable
+        # (not unaligned, but a good check to do anyway)
+        #
+        frame = thread.GetFrameAtIndex(0)
+        err = lldb.SBError()
+        wp = frame.locals["variable"][0].Watch(True, False, True, err)
+        self.assertSuccess(err)
+        if self.TraceOn():
+            self.runCmd("frame select 0")
+            self.runCmd("watchpoint list")
+
+        c_count = 0
+        reason = self.continue_and_report_stop_reason(process, "continue #%d" % c_count)
+        while reason == lldb.eStopReasonWatchpoint:
+            c_count = c_count + 1
+            reason = self.continue_and_report_stop_reason(
+                process, "continue #%d" % c_count
+            )
+            self.assertLessEqual(c_count, 4)
+
+        if self.TraceOn():
+            self.runCmd("frame select 0")
+
+        self.assertEqual(c_count, 4)
+        self.expect("watchpoint list -v", substrs=["hit_count = 4"])
+        self.assertEqual(wp.GetHitCount(), 4)
