@@ -23,7 +23,9 @@ void foo() { C c; } // bar is not invoked, because the V subobject is not initia
 #endif
 }
 
-// CHECK: {{.*}}
+// FIXME: As specified in the comment above (which comes from an example in the Standard),
+//        we are not supposed to unconditionally call `bar()` and call a constructor
+//        inherited from `V`.
 
 // SINCE-CXX11-LABEL: define linkonce_odr void @dr2504::B::B()
 // SINCE-CXX11-NOT:     br
@@ -31,3 +33,5 @@ void foo() { C c; } // bar is not invoked, because the V subobject is not initia
 // SINCE-CXX11-NOT:     br
 // SINCE-CXX11:         call void @dr2504::A::A(int)
 // SINCE-CXX11-LABEL: }
+
+// CHECK: {{.*}}
