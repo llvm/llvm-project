@@ -62,7 +62,7 @@ void foo() {
   Obj.fp = T_func<Cls1>;
   Cls1 Cls1Obj;
 
-  // CST: call %class.Cls1* {{.*}} [ "type"(metadata !"_ZTSFPv4Cls1S_PKvRS0_RKS0_E.generalized") ]
+  // CST: call noundef ptr %{{.*}} [ "type"(metadata !"_ZTSFPv4Cls1S_PKvRS0_RKS0_E.generalized") ]
   Obj.fp(Cls1Obj, &Cls1Obj, &Cls1Obj, Cls1Obj, Cls1Obj);
 
   // Make indirect calls to Cls2's member methods
@@ -75,21 +75,21 @@ void foo() {
 
   auto *Obj2Ptr = &Obj;
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvvE.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvvE.generalized") ]
   (Obj2Ptr->*fp_f1)();
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFv4Cls1E.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFv4Cls1E.generalized") ]
   (Obj2Ptr->*fp_f2)(Cls1Obj);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvPvE.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvPvE.generalized") ]
   (Obj2Ptr->*fp_f3)(&Cls1Obj);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvPKvE.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvPKvE.generalized") ]
   (Obj2Ptr->*fp_f4)(&Cls1Obj);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvR4Cls1E.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvR4Cls1E.generalized") ]
   (Obj2Ptr->*fp_f5)(Cls1Obj);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvRK4Cls1E.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvRK4Cls1E.generalized") ]
   (Obj2Ptr->*fp_f6)(Cls1Obj);
 }

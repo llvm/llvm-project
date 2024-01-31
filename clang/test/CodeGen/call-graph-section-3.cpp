@@ -38,15 +38,15 @@ void foo() {
   auto FpBaseVf = &Base::vf;
   auto FpDerivedVf = &Derived::vf;
 
-  // CST: call i32 %{{.*}}(%class.Base* {{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
+  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
   (Bptr->*FpBaseVf)(0);
 
-  // CST: call i32 %{{.*}}(%class.Base* {{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
+  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
   (BptrToD->*FpBaseVf)(0);
 
-  // CST: call i32 %{{.*}}(%class.Base* {{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
+  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
   (Dptr->*FpBaseVf)(0);
 
-  // CST: call i32 %{{.*}}(%class.Derived* {{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
+  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
   (Dptr->*FpDerivedVf)(0);
 }

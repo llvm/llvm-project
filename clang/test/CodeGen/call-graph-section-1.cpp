@@ -11,7 +11,7 @@
 
 class Cls1 {
 public:
-  // FT-DAG: define {{.*}} i32* @_ZN4Cls18receiverEPcPf({{.*}} !type [[F_TCLS1RECEIVER:![0-9]+]]
+  // FT-DAG: define {{.*}} ptr @_ZN4Cls18receiverEPcPf({{.*}} !type [[F_TCLS1RECEIVER:![0-9]+]]
   static int *receiver(char *a, float *b) { return 0; }
 };
 
@@ -22,7 +22,7 @@ public:
   // FT-DAG: define {{.*}} i32 @_ZN4Cls22f1Ecfd({{.*}} !type [[F_TCLS2F1:![0-9]+]]
   int f1(char a, float b, double c) { return 0; }
 
-  // FT-DAG: define {{.*}} i32* @_ZN4Cls22f2EPcPfPd({{.*}} !type [[F_TCLS2F2:![0-9]+]]
+  // FT-DAG: define {{.*}} ptr @_ZN4Cls22f2EPcPfPd({{.*}} !type [[F_TCLS2F2:![0-9]+]]
   int *f2(char *a, float *b, double *c) { return 0; }
 
   // FT-DAG: define {{.*}} void @_ZN4Cls22f3E4Cls1({{.*}} !type [[F_TCLS2F3F4:![0-9]+]]
@@ -65,7 +65,7 @@ void foo() {
   Cls2 ObjCls2;
   ObjCls2.fp = &Cls1::receiver;
 
-  // CST: call i32* {{.*}} [ "type"(metadata !"_ZTSFPvS_S_E.generalized") ]
+  // CST: call noundef ptr %{{.*}} [ "type"(metadata !"_ZTSFPvS_S_E.generalized") ]
   ObjCls2.fp(0, 0);
 
   auto fp_f1 = &Cls2::f1;
@@ -81,30 +81,30 @@ void foo() {
   Cls2 *ObjCls2Ptr = &ObjCls2;
   Cls1 Cls1Param;
 
-  // CST: call i32 %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFicfdE.generalized") ]
+  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFicfdE.generalized") ]
   (ObjCls2Ptr->*fp_f1)(0, 0, 0);
 
-  // CST: call i32* %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
+  // CST: call noundef ptr %{{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
   (ObjCls2Ptr->*fp_f2)(0, 0, 0);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFv4Cls1E.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFv4Cls1E.generalized") ]
   (ObjCls2Ptr->*fp_f3)(Cls1Param);
 
-  // CST: call void  %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFv4Cls1E.generalized") ]
+  // CST: call void  %{{.*}} [ "type"(metadata !"_ZTSFv4Cls1E.generalized") ]
   (ObjCls2Ptr->*fp_f4)(Cls1Param);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvPvE.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvPvE.generalized") ]
   (ObjCls2Ptr->*fp_f5)(&Cls1Param);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvPKvE.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvPKvE.generalized") ]
   (ObjCls2Ptr->*fp_f6)(&Cls1Param);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvR4Cls1E.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvR4Cls1E.generalized") ]
   (ObjCls2Ptr->*fp_f7)(Cls1Param);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSFvRK4Cls1E.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSFvRK4Cls1E.generalized") ]
   (ObjCls2Ptr->*fp_f8)(Cls1Param);
 
-  // CST: call void %{{.*}}(%class.Cls2*{{.*}} [ "type"(metadata !"_ZTSKFvvE.generalized") ]
+  // CST: call void %{{.*}} [ "type"(metadata !"_ZTSKFvvE.generalized") ]
   (ObjCls2Ptr->*fp_f9)();
 }

@@ -23,7 +23,7 @@ int baz(char a, float b, double c) {
   return 1;
 }
 
-// CHECK-DAG: define {{(dso_local)?}} i32* @qux({{.*}} !type [[F_TPTR:![0-9]+]]
+// CHECK-DAG: define {{(dso_local)?}} ptr @qux({{.*}} !type [[F_TPTR:![0-9]+]]
 int *qux(char *a, float *b, double *c) {
   return 0;
 }
@@ -36,8 +36,8 @@ void corge() {
   fp_baz('a', .0f, .0);
 
   int *(*fp_qux)(char *, float *, double *) = qux;
-  // ITANIUM: call i32* {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
-  // MS:      call i32* {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
+  // ITANIUM: call ptr {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
+  // MS:      call ptr {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
   fp_qux(0, 0, 0);
 }
 
@@ -56,14 +56,14 @@ void stparam(struct st2 a, struct st2 *b) {}
 void stf() {
   struct st1 St1;
   St1.fp = qux;
-  // ITANIUM: call i32* {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
-  // MS:      call i32* {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
+  // ITANIUM: call ptr {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
+  // MS:      call ptr {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
   St1.fp(0, 0, 0);
 
   struct st2 St2;
   St2.m.fp = qux;
-  // ITANIUM: call i32* {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
-  // MS:      call i32* {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
+  // ITANIUM: call ptr {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
+  // MS:      call ptr {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
   St2.m.fp(0, 0, 0);
 
   // ITANIUM: call void {{.*}} [ "type"(metadata !"_ZTSFv3st2PvE.generalized") ]
