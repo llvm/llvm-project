@@ -890,8 +890,9 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     const auto llvmTy =
         getTypeConverter()->convertType(op.getResult().getType());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(op, llvmTy,
-                                                    adaptor.getAddr());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+        op, llvmTy, adaptor.getAddr(), /* alignment */ 0,
+        /* volatile */ op.getIsVolatile());
     return mlir::LogicalResult::success();
   }
 };
@@ -903,8 +904,9 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::StoreOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(op, adaptor.getValue(),
-                                                     adaptor.getAddr());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
+        op, adaptor.getValue(), adaptor.getAddr(),
+        /* alignment */ 0, /* volatile */ op.getIsVolatile());
     return mlir::LogicalResult::success();
   }
 };

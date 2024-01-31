@@ -315,8 +315,8 @@ void LoweringPreparePass::lowerGetBitfieldOp(GetBitfieldOp op) {
   auto resultTy = op.getType();
   auto addr = op.getAddr();
   auto loc = addr.getLoc();
-  mlir::Value val =
-      builder.create<mlir::cir::LoadOp>(loc, storageType, op.getAddr());
+  mlir::Value val = builder.create<mlir::cir::LoadOp>(
+      loc, storageType, op.getAddr(), /* deref */ false, op.getIsVolatile());
   auto valWidth = val.getType().cast<IntType>().getWidth();
 
   if (info.getIsSigned()) {
@@ -384,7 +384,7 @@ void LoweringPreparePass::lowerSetBitfieldOp(SetBitfieldOp op) {
     srcVal = builder.createOr(val, srcVal);
   }
 
-  builder.create<mlir::cir::StoreOp>(loc, srcVal, addr);
+  builder.create<mlir::cir::StoreOp>(loc, srcVal, addr, op.getIsVolatile());
 
   if (!op->getUses().empty()) {
     mlir::Value resultVal = maskedVal;

@@ -537,9 +537,9 @@ mlir::Value CIRGenFunction::buildToMemory(mlir::Value Value, QualType Ty) {
 }
 
 void CIRGenFunction::buildStoreOfScalar(mlir::Value value, LValue lvalue) {
-  // TODO: constant matrix type, volatile, no init, non temporal, TBAA
-  buildStoreOfScalar(value, lvalue.getAddress(), false, lvalue.getType(),
-                     lvalue.getBaseInfo(), false, false);
+  // TODO: constant matrix type, no init, non temporal, TBAA
+  buildStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
+                     lvalue.getType(), lvalue.getBaseInfo(), false, false);
 }
 
 void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
@@ -570,7 +570,8 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.create<mlir::cir::StoreOp>(*currSrcLoc, Value, Addr.getPointer());
+  builder.create<mlir::cir::StoreOp>(*currSrcLoc, Value, Addr.getPointer(),
+                                     Volatile);
 
   if (isNontemporal) {
     llvm_unreachable("NYI");
@@ -617,9 +618,9 @@ RValue CIRGenFunction::buildLoadOfBitfieldLValue(LValue LV,
   bool useVolatile = LV.isVolatileQualified() &&
                      info.VolatileStorageSize != 0 && isAAPCS(CGM.getTarget());
 
-  auto field =
-      builder.createGetBitfield(getLoc(Loc), resLTy, ptr.getPointer(),
-                                ptr.getElementType(), info, useVolatile);
+  auto field = builder.createGetBitfield(getLoc(Loc), resLTy, ptr.getPointer(),
+                                         ptr.getElementType(), info,
+                                         LV.isVolatile(), useVolatile);
   assert(!UnimplementedFeature::emitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
@@ -677,9 +678,9 @@ void CIRGenFunction::buildStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
   mlir::Value dstAddr = Dst.getAddress().getPointer();
 
-  Result = builder.createSetBitfield(dstAddr.getLoc(), resLTy, dstAddr,
-                                     ptr.getElementType(), Src.getScalarVal(),
-                                     info, useVolatile);
+  Result = builder.createSetBitfield(
+      dstAddr.getLoc(), resLTy, dstAddr, ptr.getElementType(),
+      Src.getScalarVal(), info, Dst.isVolatileQualified(), useVolatile);
 }
 
 static LValue buildGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
@@ -2405,7 +2406,8 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
   }
 
   mlir::cir::LoadOp Load = builder.create<mlir::cir::LoadOp>(
-      Loc, Addr.getElementType(), Addr.getPointer());
+      Loc, Addr.getElementType(), Addr.getPointer(), /* deref */ false,
+      Volatile);
 
   if (isNontemporal) {
     llvm_unreachable("NYI");
