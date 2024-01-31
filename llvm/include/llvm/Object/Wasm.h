@@ -34,7 +34,7 @@ namespace object {
 
 class WasmSymbol {
 public:
-  WasmSymbol(const wasm::WasmSymbolInfo &Info,
+  WasmSymbol(const wasm::WasmSymbolInfo &&Info,
              const wasm::WasmGlobalType *GlobalType,
              const wasm::WasmTableType *TableType,
              const wasm::WasmSignature *Signature)
@@ -43,7 +43,7 @@ public:
     assert(!Signature || Signature->Kind != wasm::WasmSignature::Placeholder);
   }
 
-  const wasm::WasmSymbolInfo &Info;
+  const wasm::WasmSymbolInfo Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
   const wasm::WasmSignature *Signature;

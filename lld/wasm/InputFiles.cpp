@@ -322,20 +322,20 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
     return;
   }
 
-  auto *info = make<WasmSymbolInfo>();
-  info->Name = tableImport->Field;
-  info->Kind = WASM_SYMBOL_TYPE_TABLE;
-  info->ImportModule = tableImport->Module;
-  info->ImportName = tableImport->Field;
-  info->Flags = WASM_SYMBOL_UNDEFINED;
-  info->Flags |= WASM_SYMBOL_NO_STRIP;
-  info->ElementIndex = 0;
-  LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info->Name
+  WasmSymbolInfo info;
+  info.Name = tableImport->Field;
+  info.Kind = WASM_SYMBOL_TYPE_TABLE;
+  info.ImportModule = tableImport->Module;
+  info.ImportName = tableImport->Field;
+  info.Flags = WASM_SYMBOL_UNDEFINED;
+  info.Flags |= WASM_SYMBOL_NO_STRIP;
+  info.ElementIndex = 0;
+  LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info.Name
                     << "\n");
   const WasmGlobalType *globalType = nullptr;
   const WasmSignature *signature = nullptr;
   auto *wasmSym =
-      make<WasmSymbol>(*info, globalType, &tableImport->Table, signature);
+      make<WasmSymbol>(std::move(info), globalType, &tableImport->Table, signature);
   Symbol *sym = createUndefined(*wasmSym, false);
   // We're only sure it's a TableSymbol if the createUndefined succeeded.
   if (errorCount())

@@ -471,7 +471,6 @@ struct WasmLinkingData {
   uint32_t Version;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<StringRef> Comdats;
-  std::vector<WasmSymbolInfo> SymbolTable;
 };
 
 struct WasmSignature {
