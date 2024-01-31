@@ -108,6 +108,7 @@ public:
   bool VisitOffsetOfExpr(const OffsetOfExpr *E);
   bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
+  bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
