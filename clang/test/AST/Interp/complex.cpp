@@ -47,16 +47,31 @@ static_assert(__real(12u) == 12u, "");
 static_assert(__imag(4.0) == 0.0, "");
 static_assert(__imag(13) == 0, "");
 
-constexpr int ignoredCast() {
+
+constexpr _Complex long L1 = D;
+static_assert(__real(L1) == 1.0, "");
+static_assert(__imag(L1) == 3.0, "");
+
+constexpr _Complex short I4 = L1;
+static_assert(__real(I4) == 1, "");
+static_assert(__imag(I4) == 3, "");
+
+constexpr _Complex float D3 = D;
+static_assert(__real(D3) == 1.0, "");
+static_assert(__imag(D3) == 3.0, "");
+
+
+constexpr int ignored() {
   I2;
   (int)I2;
   (float)I2;
   D1;
   (int)D1;
   (double)D1;
+  (_Complex float)I2;
   return 0;
 }
-static_assert(ignoredCast() == 0, "");
+static_assert(ignored() == 0, "");
 static_assert((int)I1 == 1, "");
 static_assert((float)D == 1.0f, "");
 

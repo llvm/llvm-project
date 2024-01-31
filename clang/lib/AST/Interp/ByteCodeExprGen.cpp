@@ -311,6 +311,63 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitInitElem(T, 1, SubExpr);
   }
 
+  case CK_IntegralComplexCast:
+  case CK_FloatingComplexCast:
+  case CK_IntegralComplexToFloatingComplex:
+  case CK_FloatingComplexToIntegralComplex: {
+    assert(CE->getType()->isAnyComplexType());
+    assert(SubExpr->getType()->isAnyComplexType());
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
+    if (!Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(CE, /*IsExtended=*/true);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+
+    // Location for the SubExpr.
+    // Since SubExpr is of complex type, visiting it results in a pointer
+    // anyway, so we just create a temporary pointer variable.
+    std::optional<unsigned> SubExprOffset = allocateLocalPrimitive(
+        SubExpr, PT_Ptr, /*IsConst=*/true, /*IsExtended=*/false);
+    if (!SubExprOffset)
+      return false;
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, *SubExprOffset, CE))
+      return false;
+
+    PrimType SourceElemT = *classifyComplexElementType(SubExpr->getType());
+    QualType DestElemType =
+        CE->getType()->getAs<ComplexType>()->getElementType();
+    PrimType DestElemT = classifyPrim(DestElemType);
+    // Cast both elements individually.
+    for (unsigned I = 0; I != 2; ++I) {
+      if (!this->emitGetLocal(PT_Ptr, *SubExprOffset, CE))
+        return false;
+      if (!this->emitConstUint8(I, CE))
+        return false;
+      if (!this->emitArrayElemPtrPopUint8(CE))
+        return false;
+      if (!this->emitLoadPop(SourceElemT, CE))
+        return false;
+
+      // Do the cast.
+      if (!this->emitPrimCast(SourceElemT, DestElemT, DestElemType, CE))
+        return false;
+
+      // Save the value.
+      if (!this->emitInitElem(DestElemT, I, CE))
+        return false;
+    }
+    return true;
+  }
+
   case CK_ToVoid:
     return discard(SubExpr);
 
