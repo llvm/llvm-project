@@ -2705,7 +2705,7 @@ static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
 static void EmitComplexRangeDiag(const Driver &D,
                                  LangOptions::ComplexRangeKind Range1,
                                  LangOptions::ComplexRangeKind Range2) {
-  if (Range1 != LangOptions::ComplexRangeKind::CX_Full)
+  if (Range1 != Range2 && Range1 != LangOptions::ComplexRangeKind::CX_None)
     D.Diag(clang::diag::warn_drv_overriding_option)
         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
 }
