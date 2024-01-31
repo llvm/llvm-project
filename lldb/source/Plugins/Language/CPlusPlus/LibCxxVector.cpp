@@ -11,7 +11,6 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
-#include <iterator>
 #include <optional>
 
 using namespace lldb;
