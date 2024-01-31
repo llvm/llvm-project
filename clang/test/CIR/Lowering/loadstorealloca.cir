@@ -10,6 +10,14 @@ module {
     %2 = cir.load %0 : cir.ptr <!u32i>, !u32i
     cir.return %2 : !u32i
   }
+
+  cir.func @test_volatile() -> !u32i {
+    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.const(#cir.int<1> : !u32i) : !u32i
+    cir.store volatile %1, %0 : !u32i, cir.ptr <!u32i>
+    %2 = cir.load volatile %0 : cir.ptr <!u32i>, !u32i
+    cir.return %2 : !u32i
+  }
 }
 
 //      MLIR: module {
@@ -19,4 +27,13 @@ module {
 // MLIR-NEXT:     %2 = llvm.mlir.constant(1 : i32) : i32
 // MLIR-NEXT:     llvm.store %2, %1 : i32, !llvm.ptr
 // MLIR-NEXT:     %3 = llvm.load %1 : !llvm.ptr -> i32
+// MLIR-NEXT:     return %3 : i32
+
+
+//      MLIR:   func @test_volatile() -> i32
+// MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     %2 = llvm.mlir.constant(1 : i32) : i32
+// MLIR-NEXT:     llvm.store volatile %2, %1 : i32, !llvm.ptr
+// MLIR-NEXT:     %3 = llvm.load volatile %1 : !llvm.ptr -> i32
 // MLIR-NEXT:     return %3 : i32
