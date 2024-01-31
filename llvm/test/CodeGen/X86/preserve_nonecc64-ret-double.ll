@@ -22,6 +22,12 @@ declare preserve_nonecc double @bar_double(i64, i64)
 define void @preserve_nonecc2() nounwind {
 entry:
 ;ALL-LABEL: preserve_nonecc2
+;ALL:       movq %rax
+;ALL:       movq %rcx
+;ALL:       movq %rdx
+;ALL:       movq %r8
+;ALL:       movq %r9
+;ALL:       movq %r10
 ;ALL:       movq %r11
 ;ALL:       movaps %xmm0
 ;ALL:       movaps %xmm1
@@ -39,6 +45,12 @@ entry:
 ;ALL:       movaps %xmm13
 ;ALL:       movaps %xmm14
 ;ALL:       movaps %xmm15
+;ALL:       movq {{.*}}, %rax
+;ALL:       movq {{.*}}, %rcx
+;ALL:       movq {{.*}}, %rdx
+;ALL:       movq {{.*}}, %r8
+;ALL:       movq {{.*}}, %r9
+;ALL:       movq {{.*}}, %r10
 ;ALL:       movq {{.*}}, %r11
 ;ALL:       movaps {{.*}} %xmm0
 ;ALL:       movaps {{.*}} %xmm1
