@@ -1312,6 +1312,31 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              the frame. This is an internal detail of how LDS variables are lowered,
                                              language front ends should not set this attribute.
 
+    "amdgpu-gds-size"                        Bytes expected to be allocated at the start of GDS memory at entry.
+
+    "amdgpu-git-ptr-high"                    The hard-wired high half of the address of the global information table
+                                             for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
+                                             current hardware only allows a 16 bit value.
+
+    "amdgpu-32bit-address-high-bits"         Assumed high 32-bits for
+                                             32-bit address spaces which are really truncated
+                                             64-bit addresses (i.e., addrspace(6))
+
+    "amdgpu-color-export"                    Assumed 1 for :ref:`amdgpu_ps <amdgpu_ps>`, and 0 for other calling conventions.
+
+    "amdgpu-depth-export"                    ..TODO:: Describe.
+
+    "InitialPSInputAddr"                     ..TODO:: Describe.
+
+
+    "amdgpu-wave-priority-threshold"         ..TODO:: Describe.
+
+    "amdgpu-memory-bound".                   Set internally by backend
+
+    "amdgpu-wave-limiter"                    Set internally by backend
+
+    "amdgpu-unroll-threshold"                ..TODO:: Describe.
+
      ======================================= ==========================================================
 
 Calling Conventions
@@ -1397,7 +1422,7 @@ The AMDGPU backend supports the following calling conventions:
      ``amdgpu_ls``                   Used for AMDPAL vertex shader if tessellation is in use.
                                      ..TODO::
                                      Describe.
-
+.. _amdgpu_ps:
      ``amdgpu_ps``                   Used for Mesa/AMDPAL pixel shaders.
                                      ..TODO::
                                      Describe.
