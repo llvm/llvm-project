@@ -357,8 +357,9 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
 
   for (auto dim : descMemref.getShape()) {
     if (dim <= 0 || dim > kMaxTMADimension) {
-      return op->emitError() << "the tensor map descriptor must not have zero "
-                                "dimension";
+      return op->emitError() << "the tensor map descriptor must have "
+                                "dimensions between 1 and "
+                             << kMaxTMADimension << " but it is " << dim;
     }
   }
   if (descMemref.getRank() > 1) {
