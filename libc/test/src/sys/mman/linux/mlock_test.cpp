@@ -131,7 +131,13 @@ TEST(LlvmLibcMlockTest, InvalidFlag) {
 
   // Invalid mlockall flags.
   EXPECT_THAT(LIBC_NAMESPACE::mlockall(1234), Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::mlockall(MCL_ONFAULT), Fails(EINVAL));
+
+  // man 2 mlockall says EINVAL is a valid return code when MCL_ONFAULT was
+  // specified without MCL_FUTURE or MCL_CURRENT, but this seems to fail on
+  // Linux 4.19.y (EOL).
+  // TODO(ndesaulniers) re-enable after
+  // https://github.com/llvm/llvm-project/issues/80073 is fixed.
+  // EXPECT_THAT(LIBC_NAMESPACE::mlockall(MCL_ONFAULT), Fails(EINVAL));
 
   LIBC_NAMESPACE::munmap(addr, alloc_size);
 }
