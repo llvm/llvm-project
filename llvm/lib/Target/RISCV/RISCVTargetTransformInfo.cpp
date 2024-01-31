@@ -326,6 +326,48 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     switch (Kind) {
     default:
       break;
+    case TTI::SK_ExtractSubvector:
+      if (isa<FixedVectorType>(SubTp)) {
+        unsigned TpRegs = getRegUsageForType(Tp);
+        unsigned NumElems =
+            divideCeil(Tp->getElementCount().getFixedValue(), TpRegs);
+        // Whole vector extract - just the vector itself + (possible) vsetvli.
+        // TODO: consider adding the cost for vsetvli.
+        if (Index % NumElems == 0) {
+          std::pair<InstructionCost, MVT> SubLT =
+              getTypeLegalizationCost(SubTp);
+          return Index == 0
+                     ? TTI::TCC_Free
+                     : SubLT.first * getRISCVInstructionCost(RISCV::VMV_V_V,
+                                                             SubLT.second,
+                                                             CostKind);
+        }
+      }
+      break;
+    case TTI::SK_InsertSubvector:
+      if (auto *FSubTy = dyn_cast<FixedVectorType>(SubTp)) {
+        unsigned TpRegs = getRegUsageForType(Tp);
+        unsigned SubTpRegs = getRegUsageForType(SubTp);
+        unsigned NextSubTpRegs = getRegUsageForType(FixedVectorType::get(
+            Tp->getElementType(), FSubTy->getNumElements() + 1));
+        unsigned NumElems =
+            divideCeil(Tp->getElementCount().getFixedValue(), TpRegs);
+        // Whole vector insert - just the vector itself + (possible) vsetvli.
+        // TODO: consider adding the cost for vsetvli.
+        if (Index % NumElems == 0 &&
+            (any_of(Args, UndefValue::classof) ||
+             (SubTpRegs != 0 && SubTpRegs != NextSubTpRegs &&
+              TpRegs / SubTpRegs > 1))) {
+          std::pair<InstructionCost, MVT> SubLT =
+              getTypeLegalizationCost(SubTp);
+          return Index == 0
+                     ? TTI::TCC_Free
+                     : SubLT.first * getRISCVInstructionCost(RISCV::VMV_V_V,
+                                                             SubLT.second,
+                                                             CostKind);
+        }
+      }
+      break;
     case TTI::SK_PermuteSingleSrc: {
       if (Mask.size() >= 2 && LT.second.isFixedLengthVector()) {
         MVT EltTp = LT.second.getVectorElementType();
