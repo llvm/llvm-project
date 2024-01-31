@@ -13,13 +13,23 @@ entry:
 ; CHECK-NEXT: AddressSize: 32bit
 ; CHECK:        Symbol {
 ; CHECK-NEXT:     Index: 0
-; CHECK-NEXT:     Name: <stdin>
+; CHECK-NEXT:     Name: .file
 ; CHECK-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECK-NEXT:     Section: N_DEBUG
 ; CHECK-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
 ; CHECK-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; CHECK-NEXT:     StorageClass: C_FILE (0x67)
-; CHECK-NEXT:     NumberOfAuxEntries: 0
+; CHECK-NEXT:     NumberOfAuxEntries: 2
+; CHECK-NEXT:     File Auxiliary Entry {
+; CHECK-NEXT:       Index: 1
+; CHECK-NEXT:       Name:
+; CHECK-NEXT:       Type: XFT_FN (0x0)
+; CHECK-NEXT:     }
+; CHECK-NEXT:     File Auxiliary Entry {
+; CHECK-NEXT:       Index: 2
+; CHECK-NEXT:       Name: LLVM
+; CHECK-NEXT:       Type: XFT_CV (0x2)
+; CHECK-NEXT:     }
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Index: [[#Index:]]

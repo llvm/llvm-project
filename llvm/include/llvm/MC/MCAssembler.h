@@ -133,6 +133,8 @@ private:
 
   /// List of declared file names
   std::vector<std::pair<std::string, size_t>> FileNames;
+  // Optional compiler version.
+  std::string CompilerVersion;
 
   MCDwarfLineTableParams LTParams;
 
@@ -485,6 +487,15 @@ public:
   void addFileName(StringRef FileName) {
     FileNames.emplace_back(std::string(FileName), Symbols.size());
   }
+
+  bool setCompilerVersion(std::string CompilerVers) {
+    if (CompilerVersion.empty()) {
+      CompilerVersion = CompilerVers;
+      return true;
+    }
+    return false;
+  }
+  StringRef getCompilerVersion() { return CompilerVersion; }
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.

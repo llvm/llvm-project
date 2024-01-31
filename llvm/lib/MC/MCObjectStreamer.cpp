@@ -902,7 +902,10 @@ void MCObjectStreamer::emitFileDirective(StringRef Filename,
                                          StringRef TimeStamp,
                                          StringRef Description) {
   getAssembler().addFileName(Filename);
-  // TODO: add additional info to integrated assembler.
+  if (!CompilerVerion.empty())
+    getAssembler().setCompilerVersion(CompilerVerion.data());
+  // TODO: add TimeStamp and Description to .file symbol table entry
+  // with the integrated assembler.
 }
 
 void MCObjectStreamer::emitAddrsig() {
