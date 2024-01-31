@@ -578,7 +578,7 @@ def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
                   "ModelPOSIX",
                   "If set to true, the checker models additional functions "
                   "from the POSIX standard.",
-                  "false",
+                  "true",
                   InAlpha>
   ]>,
   WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
