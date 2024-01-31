@@ -36,19 +36,19 @@ module {
     %23 = cir.load %2 : cir.ptr <f32>, f32
     %24 = cir.load %3 : cir.ptr <f32>, f32
     %25 = cir.cmp(gt, %23, %24) : f32, !cir.bool
-    // CHECK: llvm.fcmp "ugt"
+    // CHECK: llvm.fcmp "ogt"
     %26 = cir.load %2 : cir.ptr <f32>, f32
     %27 = cir.load %3 : cir.ptr <f32>, f32
     %28 = cir.cmp(eq, %26, %27) : f32, !cir.bool
-    // CHECK: llvm.fcmp "ueq"
+    // CHECK: llvm.fcmp "oeq"
     %29 = cir.load %2 : cir.ptr <f32>, f32
     %30 = cir.load %3 : cir.ptr <f32>, f32
     %31 = cir.cmp(lt, %29, %30) : f32, !cir.bool
-    // CHECK: llvm.fcmp "ult"
+    // CHECK: llvm.fcmp "olt"
     %32 = cir.load %2 : cir.ptr <f32>, f32
     %33 = cir.load %3 : cir.ptr <f32>, f32
     %34 = cir.cmp(ge, %32, %33) : f32, !cir.bool
-    // CHECK: llvm.fcmp "uge"
+    // CHECK: llvm.fcmp "oge"
     %35 = cir.load %2 : cir.ptr <f32>, f32
     %36 = cir.load %3 : cir.ptr <f32>, f32
     %37 = cir.cmp(ne, %35, %36) : f32, !cir.bool
@@ -56,7 +56,7 @@ module {
     %38 = cir.load %2 : cir.ptr <f32>, f32
     %39 = cir.load %3 : cir.ptr <f32>, f32
     %40 = cir.cmp(le, %38, %39) : f32, !cir.bool
-    // CHECK: llvm.fcmp "ule"
+    // CHECK: llvm.fcmp "ole"
 
     // Pointer comparisons.
     %41 = cir.cmp(ne, %0, %1) : !cir.ptr<!s32i>, !cir.bool

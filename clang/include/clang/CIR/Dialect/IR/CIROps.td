@@ -1847,6 +1847,31 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecCmp
+//===----------------------------------------------------------------------===//
+
+def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare two vectors";
+  let description = [{
+    The `cir.vec.cmp` operation does an element-wise comparison of two vectors
+    of the same type. The result is a vector of the same size as the operands
+    whose element type is the signed integral type that is the same size as the
+    element type of the operands.  The values in the result are 0 or -1.
+  }];
+
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind, CIR_VectorType:$lhs,
+                       CIR_VectorType:$rhs);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` type($lhs) `,` type($result) attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // BaseClassAddr
 //===----------------------------------------------------------------------===//
 
