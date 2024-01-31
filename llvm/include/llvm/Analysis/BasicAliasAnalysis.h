@@ -43,7 +43,8 @@ class BasicAAResult : public AAResultBase {
   const Function &F;
   const TargetLibraryInfo &TLI;
   AssumptionCache &AC;
-  // Don't access this directly, use getDT() instead.
+  /// Use getDT() instead of accessing this member directly, in order to
+  /// respect the AAQI.UseDominatorTree option.
   DominatorTree *DT_;
 
   DominatorTree *getDT(const AAQueryInfo &AAQI) const {
