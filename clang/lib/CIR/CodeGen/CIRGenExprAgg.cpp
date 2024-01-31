@@ -172,7 +172,7 @@ public:
                  << S->getStmtClassName() << "\n";
     llvm_unreachable("NYI");
   }
-  void VisitParenExpr(ParenExpr *PE) { llvm_unreachable("NYI"); }
+  void VisitParenExpr(ParenExpr *PE) { Visit(PE->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     llvm_unreachable("NYI");
   }
