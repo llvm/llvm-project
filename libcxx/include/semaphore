@@ -103,25 +103,25 @@ public:
     }
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void acquire() {
-    auto const __test_fn = [this]() -> bool {
+    auto const __poll_fn = [this]() -> bool {
       auto __old = __a_.load(memory_order_relaxed);
       return (__old != 0) && __a_.compare_exchange_strong(__old, __old - 1, memory_order_acquire, memory_order_relaxed);
     };
-    auto const __test_with_old = [this](__cxx_contention_t& __monitor) -> bool {
+    auto const __backoff_test = [this](__cxx_contention_t& __monitor) -> bool {
       ptrdiff_t __old = __monitor;
       bool __r        = __try_acquire_impl(__old);
       __monitor       = static_cast<__cxx_contention_t>(__old);
       return __r;
     };
-    __cxx_atomic_wait(&__a_.__a_, __test_fn, __test_with_old);
+    __cxx_atomic_wait(&__a_.__a_, __poll_fn, __backoff_test);
   }
   template <class _Rep, class _Period>
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
   try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     if (__rel_time == chrono::duration<_Rep, _Period>::zero())
       return try_acquire();
-    auto const __test_fn = [this]() { return try_acquire(); };
-    return std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy(), __rel_time);
+    auto const __poll_fn = [this]() { return try_acquire(); };
+    return std::__libcpp_thread_poll_with_backoff(__poll_fn, __libcpp_timed_backoff_policy(), __rel_time);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
     auto __old = __a_.load(memory_order_acquire);
