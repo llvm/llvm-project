@@ -857,6 +857,8 @@ struct CounterCoverageMappingBuilder
 
   unsigned getRegionBitmap(const Stmt *S) { return MCDCBitmapMap[S]; }
 
+  unsigned long MCDCDebugCounter;
+
   /// Push a region onto the stack.
   ///
   /// Returns the index on the stack where the region was pushed. This can be
@@ -866,7 +868,7 @@ struct CounterCoverageMappingBuilder
                     std::optional<SourceLocation> EndLoc = std::nullopt,
                     std::optional<Counter> FalseCount = std::nullopt,
                     MCDCConditionID ID = 0, MCDCConditionID TrueID = 0,
-                    MCDCConditionID FalseID = 0) {
+                    MCDCConditionID FalseID = 0, MCDCConditionID GroupID = 0) {
 
     if (StartLoc && !FalseCount) {
       MostRecentLocation = *StartLoc;
@@ -886,17 +888,19 @@ struct CounterCoverageMappingBuilder
     if (EndLoc && EndLoc->isInvalid())
       EndLoc = std::nullopt;
     RegionStack.emplace_back(Count, FalseCount,
-                             MCDCParameters{0, 0, ID, TrueID, FalseID},
+                             MCDCParameters{
+                               0, 0,
+                               ID, TrueID, FalseID, GroupID},
                              StartLoc, EndLoc);
 
     return RegionStack.size() - 1;
   }
 
-  size_t pushRegion(unsigned BitmapIdx, unsigned Conditions,
+  size_t pushRegion(unsigned BitmapIdx, unsigned Conditions, MCDCConditionID GroupID,
                     std::optional<SourceLocation> StartLoc = std::nullopt,
                     std::optional<SourceLocation> EndLoc = std::nullopt) {
 
-    RegionStack.emplace_back(MCDCParameters{BitmapIdx, Conditions}, StartLoc,
+    RegionStack.emplace_back(MCDCParameters{BitmapIdx, Conditions, 0, 0, 0, GroupID}, StartLoc,
                              EndLoc);
 
     return RegionStack.size() - 1;
@@ -1032,7 +1036,8 @@ struct CounterCoverageMappingBuilder
   /// result in the generation of a branch.
   void
   createBranchRegion(const Expr *C, Counter TrueCnt, Counter FalseCnt,
-                     const MCDCDecisionIDPair &IDPair = MCDCDecisionIDPair()) {
+                     const MCDCDecisionIDPair &IDPair = MCDCDecisionIDPair(),
+                     MCDCConditionID GroupID = 0) {
     // Check for NULL conditions.
     if (!C)
       return;
@@ -1054,19 +1059,19 @@ struct CounterCoverageMappingBuilder
       // CodeGenFunction.c always returns false, but that is very heavy-handed.
       if (ConditionFoldsToBool(C))
         popRegions(pushRegion(Counter::getZero(), getStart(C), getEnd(C),
-                              Counter::getZero(), ID, TrueID, FalseID));
+                              Counter::getZero(), ID, TrueID, FalseID, GroupID));
       else
         // Otherwise, create a region with the True counter and False counter.
         popRegions(pushRegion(TrueCnt, getStart(C), getEnd(C), FalseCnt, ID,
-                              TrueID, FalseID));
+                              TrueID, FalseID, GroupID));
     }
   }
 
   /// Create a Decision Region with a BitmapIdx and number of Conditions. This
   /// type of region "contains" branch regions, one for each of the conditions.
   /// The visualization tool will group everything together.
-  void createDecisionRegion(const Expr *C, unsigned BitmapIdx, unsigned Conds) {
-    popRegions(pushRegion(BitmapIdx, Conds, getStart(C), getEnd(C)));
+  void createDecisionRegion(const Expr *C, unsigned BitmapIdx, unsigned Conds, MCDCConditionID GroupID) {
+    popRegions(pushRegion(BitmapIdx, Conds, GroupID, getStart(C), getEnd(C)));
   }
 
   /// Create a Branch Region around a SwitchCase for code coverage
@@ -1153,7 +1158,8 @@ struct CounterCoverageMappingBuilder
                 I.getCounter(), I.getFalseCounter(),
                 MCDCParameters{0, 0, I.getMCDCParams().ID,
                                I.getMCDCParams().TrueID,
-                               I.getMCDCParams().FalseID},
+                               I.getMCDCParams().FalseID,
+                               I.getMCDCParams().GroupID},
                 Loc, getEndOfFileOrMacro(Loc), I.isBranch());
           else
             SourceRegions.emplace_back(I.getCounter(), Loc,
@@ -1342,7 +1348,9 @@ struct CounterCoverageMappingBuilder
       SourceManager &SM, const LangOptions &LangOpts)
       : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
         MCDCBitmapMap(MCDCBitmapMap),
-        MCDCBuilder(CVM.getCodeGenModule(), CondIDMap, MCDCBitmapMap) {}
+        MCDCBuilder(CVM.getCodeGenModule(), CondIDMap, MCDCBitmapMap) {
+    MCDCDebugCounter = 0;
+  }
 
   /// Write the mapping data to the output stream
   void write(llvm::raw_ostream &OS) {
@@ -1973,6 +1981,8 @@ struct CounterCoverageMappingBuilder
   void VisitBinLAnd(const BinaryOperator *E) {
     bool IsRootNode = MCDCBuilder.isIdle();
 
+    MCDCDebugCounter++;
+
     // Keep track of Binary Operator and assign MCDC condition IDs.
     MCDCBuilder.pushAndAssignIDs(E);
 
@@ -1993,7 +2003,7 @@ struct CounterCoverageMappingBuilder
     // Create MCDC Decision Region if at top-level (root).
     unsigned NumConds = 0;
     if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
-      createDecisionRegion(E, getRegionBitmap(E), NumConds);
+      createDecisionRegion(E, getRegionBitmap(E), NumConds, MCDCDebugCounter);
 
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
@@ -2006,11 +2016,11 @@ struct CounterCoverageMappingBuilder
 
     // Create Branch Region around LHS condition.
     createBranchRegion(E->getLHS(), RHSExecCnt,
-                       subtractCounters(ParentCnt, RHSExecCnt), DecisionLHS);
+                       subtractCounters(ParentCnt, RHSExecCnt), DecisionLHS, MCDCDebugCounter);
 
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), RHSTrueCnt,
-                       subtractCounters(RHSExecCnt, RHSTrueCnt), DecisionRHS);
+                       subtractCounters(RHSExecCnt, RHSTrueCnt), DecisionRHS, MCDCDebugCounter);
   }
 
   // Determine whether the right side of OR operation need to be visited.
@@ -2025,6 +2035,8 @@ struct CounterCoverageMappingBuilder
 
   void VisitBinLOr(const BinaryOperator *E) {
     bool IsRootNode = MCDCBuilder.isIdle();
+
+    MCDCDebugCounter++;
 
     // Keep track of Binary Operator and assign MCDC condition IDs.
     MCDCBuilder.pushAndAssignIDs(E);
@@ -2046,7 +2058,7 @@ struct CounterCoverageMappingBuilder
     // Create MCDC Decision Region if at top-level (root).
     unsigned NumConds = 0;
     if (IsRootNode && (NumConds = MCDCBuilder.getTotalConditionsAndReset(E)))
-      createDecisionRegion(E, getRegionBitmap(E), NumConds);
+      createDecisionRegion(E, getRegionBitmap(E), NumConds, MCDCDebugCounter);
 
     // Extract the RHS's Execution Counter.
     Counter RHSExecCnt = getRegionCounter(E);
@@ -2063,11 +2075,11 @@ struct CounterCoverageMappingBuilder
 
     // Create Branch Region around LHS condition.
     createBranchRegion(E->getLHS(), subtractCounters(ParentCnt, RHSExecCnt),
-                       RHSExecCnt, DecisionLHS);
+                       RHSExecCnt, DecisionLHS, MCDCDebugCounter);
 
     // Create Branch Region around RHS condition.
     createBranchRegion(E->getRHS(), subtractCounters(RHSExecCnt, RHSFalseCnt),
-                       RHSFalseCnt, DecisionRHS);
+                       RHSFalseCnt, DecisionRHS, MCDCDebugCounter);
   }
 
   void VisitLambdaExpr(const LambdaExpr *LE) {
