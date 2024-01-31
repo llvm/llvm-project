@@ -1261,6 +1261,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   BasicBlock::iterator BBIt(LoadI);
   bool IsLoadCSE;
   BatchAAResults BatchAA(*AA);
+  // The dominator tree is updated lazily and may not be valid at this point.
+  BatchAA.disableDominatorTree();
   if (Value *AvailableVal = FindAvailableLoadedValue(
           LoadI, LoadBB, BBIt, DefMaxInstsToScan, &BatchAA, &IsLoadCSE)) {
     // If the value of the load is locally available within the block, just use
