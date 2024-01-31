@@ -19,6 +19,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
@@ -1396,4 +1397,178 @@ void CIRGenFunction::checkTargetFeatures(SourceLocation Loc,
             << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
     }
   }
+}
+
+CIRGenFunction::VlaSizePair CIRGenFunction::getVLASize(QualType type) {
+  const VariableArrayType *vla =
+      CGM.getASTContext().getAsVariableArrayType(type);
+  assert(vla && "type was not a variable array type!");
+  return getVLASize(vla);
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLASize(const VariableArrayType *type) {
+  // The number of elements so far; always size_t.
+  mlir::Value numElements;
+
+  QualType elementType;
+  do {
+    elementType = type->getElementType();
+    mlir::Value vlaSize = VLASizeMap[type->getSizeExpr()];
+    assert(vlaSize && "no size for VLA!");
+    assert(vlaSize.getType() == SizeTy);
+
+    if (!numElements) {
+      numElements = vlaSize;
+    } else {
+      // It's undefined behavior if this wraps around, so mark it that way.
+      // FIXME: Teach -fsanitize=undefined to trap this.
+
+      numElements = builder.createMul(numElements, vlaSize);
+    }
+  } while ((type = getContext().getAsVariableArrayType(elementType)));
+
+  assert(numElements && "Undefined elements number");
+  return {numElements, elementType};
+}
+
+// TODO(cir): most part of this function can be shared between CIRGen
+// and traditional LLVM codegen
+void CIRGenFunction::buildVariablyModifiedType(QualType type) {
+  assert(type->isVariablyModifiedType() &&
+         "Must pass variably modified type to EmitVLASizes!");
+
+  // We're going to walk down into the type and look for VLA
+  // expressions.
+  do {
+    assert(type->isVariablyModifiedType());
+
+    const Type *ty = type.getTypePtr();
+    switch (ty->getTypeClass()) {
+    case clang::Type::CountAttributed:
+    case clang::Type::PackIndexing:
+    case clang::Type::ArrayParameter:
+      llvm_unreachable("NYI");
+
+#define TYPE(Class, Base)
+#define ABSTRACT_TYPE(Class, Base)
+#define NON_CANONICAL_TYPE(Class, Base)
+#define DEPENDENT_TYPE(Class, Base) case Type::Class:
+#define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base)
+#include "clang/AST/TypeNodes.inc"
+      llvm_unreachable("unexpected dependent type!");
+
+    // These types are never variably-modified.
+    case Type::Builtin:
+    case Type::Complex:
+    case Type::Vector:
+    case Type::ExtVector:
+    case Type::ConstantMatrix:
+    case Type::Record:
+    case Type::Enum:
+    case Type::Using:
+    case Type::TemplateSpecialization:
+    case Type::ObjCTypeParam:
+    case Type::ObjCObject:
+    case Type::ObjCInterface:
+    case Type::ObjCObjectPointer:
+    case Type::BitInt:
+      llvm_unreachable("type class is never variably-modified!");
+
+    case Type::Elaborated:
+      type = cast<clang::ElaboratedType>(ty)->getNamedType();
+      break;
+
+    case Type::Adjusted:
+      type = cast<clang::AdjustedType>(ty)->getAdjustedType();
+      break;
+
+    case Type::Decayed:
+      type = cast<clang::DecayedType>(ty)->getPointeeType();
+      break;
+
+    case Type::Pointer:
+      type = cast<clang::PointerType>(ty)->getPointeeType();
+      break;
+
+    case Type::BlockPointer:
+      type = cast<clang::BlockPointerType>(ty)->getPointeeType();
+      break;
+
+    case Type::LValueReference:
+    case Type::RValueReference:
+      type = cast<clang::ReferenceType>(ty)->getPointeeType();
+      break;
+
+    case Type::MemberPointer:
+      type = cast<clang::MemberPointerType>(ty)->getPointeeType();
+      break;
+
+    case Type::ConstantArray:
+    case Type::IncompleteArray:
+      // Losing element qualification here is fine.
+      type = cast<clang::ArrayType>(ty)->getElementType();
+      break;
+
+    case Type::VariableArray: {
+      // Losing element qualification here is fine.
+      const VariableArrayType *vat = cast<clang::VariableArrayType>(ty);
+
+      // Unknown size indication requires no size computation.
+      // Otherwise, evaluate and record it.
+      if (const Expr *sizeExpr = vat->getSizeExpr()) {
+        // It's possible that we might have emitted this already,
+        // e.g. with a typedef and a pointer to it.
+        mlir::Value &entry = VLASizeMap[sizeExpr];
+        if (!entry) {
+          mlir::Value size = buildScalarExpr(sizeExpr);
+          assert(!UnimplementedFeature::sanitizeVLABound());
+
+          // Always zexting here would be wrong if it weren't
+          // undefined behavior to have a negative bound.
+          // FIXME: What about when size's type is larger than size_t?
+          entry = builder.createIntCast(size, SizeTy);
+        }
+      }
+      type = vat->getElementType();
+      break;
+    }
+
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+      type = cast<clang::FunctionType>(ty)->getReturnType();
+      break;
+
+    case Type::Paren:
+    case Type::TypeOf:
+    case Type::UnaryTransform:
+    case Type::Attributed:
+    case Type::BTFTagAttributed:
+    case Type::SubstTemplateTypeParm:
+    case Type::MacroQualified:
+      // Keep walking after single level desugaring.
+      type = type.getSingleStepDesugaredType(getContext());
+      break;
+
+    case Type::Typedef:
+    case Type::Decltype:
+    case Type::Auto:
+    case Type::DeducedTemplateSpecialization:
+      // Stop walking: nothing to do.
+      return;
+
+    case Type::TypeOfExpr:
+      // Stop walking: emit typeof expression.
+      buildIgnoredExpr(cast<clang::TypeOfExprType>(ty)->getUnderlyingExpr());
+      return;
+
+    case Type::Atomic:
+      type = cast<clang::AtomicType>(ty)->getValueType();
+      break;
+
+    case Type::Pipe:
+      type = cast<clang::PipeType>(ty)->getElementType();
+      break;
+    }
+  } while (type->isVariablyModifiedType());
 }

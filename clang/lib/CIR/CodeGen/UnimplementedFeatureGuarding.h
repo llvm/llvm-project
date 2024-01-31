@@ -58,6 +58,7 @@ struct UnimplementedFeature {
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool pointerOverflowSanitizer() { return false; }
   static bool sanitizeDtor() { return false; }
+  static bool sanitizeVLABound() { return false; }
 
   // ObjC
   static bool setObjCGCLValueClass() { return false; }
