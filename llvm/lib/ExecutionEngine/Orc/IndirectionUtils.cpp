@@ -43,7 +43,7 @@ private:
     Result[Name] = {Compile(), JITSymbolFlags::Exported};
     // No dependencies, so these calls cannot fail.
     cantFail(R->notifyResolved(Result));
-    cantFail(R->notifyEmitted());
+    cantFail(R->notifyEmitted({}));
   }
 
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
