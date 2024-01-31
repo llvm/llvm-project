@@ -27,7 +27,7 @@ constexpr bool test() {
   // Make sure that stride member function is noexcept.
   static_assert(noexcept(str.stride()));
   // Make sure that the type returned by stride matches what is expected.
-  static_assert(std::is_same_v<std::ranges::range_difference_t<View>, decltype(str.stride())>);
+  ASSERT_SAME_TYPE(std::ranges::range_difference_t<View>, decltype(str.stride()));
   // Make sure that we get back a stride equal to the one that we gave in the ctor.
   assert(str.stride() == 1);
 

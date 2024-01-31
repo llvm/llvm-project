@@ -16,6 +16,7 @@
 
 #include "../types.h"
 #include "__ranges/access.h"
+#include "test_macros.h"
 
 template <typename T>
 concept iter_moveable = requires(T&& t) { std::ranges::iter_move(t); };
@@ -30,7 +31,7 @@ constexpr bool test() {
     auto svb         = StrideView(View(a, a + 4, &iter_move_counter), 1).begin();
 
     static_assert(iter_moveable<std::ranges::iterator_t<StrideView>>);
-    static_assert(std::is_same_v<int, decltype(std::ranges::iter_move(svb))>);
+    ASSERT_SAME_TYPE(int, decltype(std::ranges::iter_move(svb)));
     static_assert(noexcept(std::ranges::iter_move(svb)));
 
     auto&& result = std::ranges::iter_move(svb);
@@ -52,7 +53,7 @@ constexpr bool test() {
     auto svb         = StrideView(View(a, a + 4, &iter_move_counter), 1).begin();
 
     static_assert(iter_moveable<std::ranges::iterator_t<StrideView>>);
-    static_assert(std::is_same_v<int, decltype(std::ranges::iter_move(svb))>);
+    ASSERT_SAME_TYPE(int, decltype(std::ranges::iter_move(svb)));
     static_assert(!noexcept(std::ranges::iter_move(svb)));
 
     auto&& result = std::ranges::iter_move(svb);

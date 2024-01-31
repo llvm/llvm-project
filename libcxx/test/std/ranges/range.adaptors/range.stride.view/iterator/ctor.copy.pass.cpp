@@ -17,6 +17,7 @@
 
 #include "../types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 struct NotSimpleViewIterEnd;
 template <bool, bool>
@@ -260,7 +261,7 @@ constexpr bool non_const_iterator_copy_ctor() {
 
     StrideView str{NotSimpleViewBeingStrided{}, 5};
     // Confirm (5)
-    static_assert(std::is_same_v<StrideViewIter, decltype(str.begin())>);
+    ASSERT_SAME_TYPE(StrideViewIter, decltype(str.begin()));
 
     // Now, do what we wanted the whole time: make sure that we can copy construct a
     // stride_view::iterator<true> from a stride_view::iterator<false>. The copy
@@ -345,18 +346,17 @@ constexpr bool non_const_iterator_copy_ctor() {
     using StrideViewConstSentinel = std::ranges::sentinel_t<const StrideView>;
 
     // Confirm (1) and (2)
-    static_assert(std::is_same_v<NotSimpleViewBeingStridedIterator, decltype(std::declval<StrideViewIter>().base())>);
-    static_assert(
-        std::is_same_v<NotSimpleViewBeingStridedConstIterator, decltype(std::declval<StrideViewConstIter>().base())>);
+    ASSERT_SAME_TYPE(NotSimpleViewBeingStridedIterator, decltype(std::declval<StrideViewIter>().base()));
+    ASSERT_SAME_TYPE(NotSimpleViewBeingStridedConstIterator, decltype(std::declval<StrideViewConstIter>().base()));
     // Confirm (3)
     static_assert(std::convertible_to<NotSimpleViewBeingStridedIterator, NotSimpleViewBeingStridedIterator>);
     static_assert(std::convertible_to<StrideViewIter, StrideViewConstIter>);
     // Confirm (4)
-    static_assert(std::is_same_v<StrideViewSentinel, StrideViewConstSentinel>);
+    ASSERT_SAME_TYPE(StrideViewSentinel, StrideViewConstSentinel);
 
     StrideView str{NotSimpleViewBeingStrided{}, 5};
     // Confirm (5)
-    static_assert(std::is_same_v<StrideViewIter, decltype(str.begin())>);
+    ASSERT_SAME_TYPE(StrideViewIter, decltype(str.begin()));
 
     // Now, do what we wanted the whole time: make sure that we can copy construct a
     // stride_view::iterator<true> from a stride_view::iterator<false>. The copy
