@@ -2729,7 +2729,7 @@ void ExecutionSession::propagateExtraEmitDeps(
         DenseSet<NonOwningSymbolStringPtr> *UserEDUNewDepsForJD = nullptr;
         for (auto Dep : Deps) {
           if (UserEDUDepsForJD.insert(Dep).second) {
-	    HandleNewDep(*UserEDU, *DepJD, Dep);
+            HandleNewDep(*UserEDU, *DepJD, Dep);
             if (UserEDUInfo) {
               if (!UserEDUNewDepsForJD) {
                 // If UserEDU has no new deps then it's not in the worklist
@@ -2884,8 +2884,7 @@ ExecutionSession::EDUInfosMap ExecutionSession::simplifyDepGroups(
   // 4. Propagate dependencies through the EDU graph.
   propagateExtraEmitDeps(
       Worklist, EDUInfos,
-      [](JITDylib::EmissionDepUnit &, JITDylib &, NonOwningSymbolStringPtr) {
-      });
+      [](JITDylib::EmissionDepUnit &, JITDylib &, NonOwningSymbolStringPtr) {});
 
   return EDUInfos;
 }
@@ -3203,8 +3202,8 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
   propagateExtraEmitDeps(
       Worklist, EDUInfos,
       [](JITDylib::EmissionDepUnit &EDU, JITDylib &JD,
-	 NonOwningSymbolStringPtr Sym) {
-	JD.MaterializingInfos[SymbolStringPtr(Sym)].DependantEDUs.insert(&EDU);
+         NonOwningSymbolStringPtr Sym) {
+        JD.MaterializingInfos[SymbolStringPtr(Sym)].DependantEDUs.insert(&EDU);
       });
 
   JITDylib::AsynchronousSymbolQuerySet CompletedQueries;

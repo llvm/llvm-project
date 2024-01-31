@@ -1814,9 +1814,9 @@ private:
       DenseMap<JITDylib::EmissionDepUnit *, JITDylib::EmissionDepUnitInfo>;
 
   template <typename HandleNewDepFn>
-  void propagateExtraEmitDeps(
-      std::deque<JITDylib::EmissionDepUnit *> Worklist, EDUInfosMap &EDUInfos,
-      HandleNewDepFn HandleNewDep);
+  void propagateExtraEmitDeps(std::deque<JITDylib::EmissionDepUnit *> Worklist,
+                              EDUInfosMap &EDUInfos,
+                              HandleNewDepFn HandleNewDep);
   EDUInfosMap simplifyDepGroups(MaterializationResponsibility &MR,
                                 ArrayRef<SymbolDependenceGroup> EmittedDeps);
   void IL_makeEDUReady(std::shared_ptr<JITDylib::EmissionDepUnit> EDU,
