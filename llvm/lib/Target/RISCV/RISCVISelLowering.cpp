@@ -13799,14 +13799,9 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
   // False value of MergeOp should be all zeros
   SDValue Z = MergeOp->getOperand(2);
 
-  // Fixed-length vector
-  if (MergeOpc == RISCVISD::VMERGE_VL) {
-    if (Z.getOpcode() != ISD::INSERT_SUBVECTOR)
-      return SDValue();
-    if (!isNullOrNullSplat(Z.getOperand(0)) && !Z.getOperand(0).isUndef())
-      return SDValue();
+  if (Z.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      (isNullOrNullSplat(Z.getOperand(0)) || Z.getOperand(0).isUndef()))
     Z = Z.getOperand(1);
-  }
 
   if (!ISD::isConstantSplatVectorAllZeros(Z.getNode()))
     return SDValue();
