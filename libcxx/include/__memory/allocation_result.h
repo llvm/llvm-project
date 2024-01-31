@@ -27,7 +27,7 @@ struct allocation_result {
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
 
-#endif   // _LIBCPP_STD_VER
+#endif // _LIBCPP_STD_VER
 
 _LIBCPP_END_NAMESPACE_STD
 
