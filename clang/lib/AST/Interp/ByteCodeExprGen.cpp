@@ -379,7 +379,8 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return true;
     const ComparisonCategoryInfo *CmpInfo =
         Ctx.getASTContext().CompCategories.lookupInfoForType(BO->getType());
-    assert(CmpInfo);
+    if (!CmpInfo)
+      return false;
 
     // We need a temporary variable holding our return value.
     if (!Initializing) {
