@@ -3429,7 +3429,7 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
 
   const auto *BO = cast<BinaryOperator>(Ops.E);
   if (CGF.SanOpts.hasOneOf(SanitizerKind::SignedIntegerOverflow |
-      SanitizerKind::SignedIntegerWrap) &&
+                           SanitizerKind::SignedIntegerWrap) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
       Ops.mayHaveIntegerOverflow()) {
@@ -3448,7 +3448,6 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
     if (CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap))
       Checks.push_back(
           std::make_pair(NotOverflow, SanitizerKind::SignedIntegerWrap));
-
   }
 
   if (Checks.size() > 0)
@@ -3459,8 +3458,8 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     if (CGF.SanOpts.hasOneOf(SanitizerKind::IntegerDivideByZero |
-        SanitizerKind::SignedIntegerOverflow |
-        SanitizerKind::SignedIntegerWrap) &&
+                             SanitizerKind::SignedIntegerOverflow |
+                             SanitizerKind::SignedIntegerWrap) &&
         Ops.Ty->isIntegerType() &&
         (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
       llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
@@ -3509,8 +3508,8 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
 Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   // Rem in C can't be a floating point type: C99 6.5.5p2.
   if (CGF.SanOpts.hasOneOf(SanitizerKind::IntegerDivideByZero |
-      SanitizerKind::SignedIntegerOverflow |
-      SanitizerKind::SignedIntegerWrap) &&
+                           SanitizerKind::SignedIntegerOverflow |
+                           SanitizerKind::SignedIntegerWrap) &&
       Ops.Ty->isIntegerType() &&
       (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
@@ -3575,15 +3574,16 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
     // If the signed-integer-overflow or signed-integer-wrap sanitizer is
     // enabled, emit a call to its runtime. Otherwise, this is a -ftrapv check,
     // so just emit a trap.
-    if (!isSigned || CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)
-                  || CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
+    if (!isSigned || CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) ||
+        CGF.SanOpts.has(SanitizerKind::SignedIntegerWrap)) {
       llvm::Value *NotOverflow = Builder.CreateNot(overflow);
 
       SanitizerMask Kind = SanitizerKind::UnsignedIntegerOverflow;
       if (isSigned)
         Kind = CGF.getLangOpts().getSignedOverflowBehavior() ==
-            LangOptions::SOB_Defined ? SanitizerKind::SignedIntegerWrap :
-                                       SanitizerKind::SignedIntegerOverflow;
+                       LangOptions::SOB_Defined
+                   ? SanitizerKind::SignedIntegerWrap
+                   : SanitizerKind::SignedIntegerOverflow;
 
       EmitBinOpCheck(std::make_pair(NotOverflow, Kind), Ops);
     } else
