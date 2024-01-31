@@ -2059,6 +2059,22 @@ template <> inline Floating ReadArg<Floating>(InterpState &S, CodePtr &OpPC) {
   return F;
 }
 
+template <>
+inline IntegralAP<false> ReadArg<IntegralAP<false>>(InterpState &S,
+                                                    CodePtr &OpPC) {
+  IntegralAP<false> I = IntegralAP<false>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
+template <>
+inline IntegralAP<true> ReadArg<IntegralAP<true>>(InterpState &S,
+                                                  CodePtr &OpPC) {
+  IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
 } // namespace interp
 } // namespace clang
 
