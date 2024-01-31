@@ -55,24 +55,18 @@ static constexpr Builtin::Info BuiltinInfo[] = {
 };
 
 void AArch64TargetInfo::setArchFeatures() {
+  // FIXME Could we drop this function altogether and migrate everything
+  //       to AArch64TargetParser in LLVM core?
   if (*ArchInfo == llvm::AArch64::ARMV8R) {
-    HasDotProd = true;
     HasDIT = true;
     HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
     HasCCPP = true;
-    HasCRC = true;
     HasLSE = true;
-    HasRDM = true;
   } else if (ArchInfo->Version.getMajor() == 8) {
     if (ArchInfo->Version.getMinor() >= 7u) {
       HasWFxT = true;
     }
-    if (ArchInfo->Version.getMinor() >= 6u) {
-      HasBFloat16 = true;
-      HasMatMul = true;
-    }
+    // No special cases for Armv8.6-a
     if (ArchInfo->Version.getMinor() >= 5u) {
       HasAlternativeNZCV = true;
       HasFRInt3264 = true;
@@ -82,30 +76,19 @@ void AArch64TargetInfo::setArchFeatures() {
       HasBTI = true;
     }
     if (ArchInfo->Version.getMinor() >= 4u) {
-      HasDotProd = true;
       HasDIT = true;
       HasFlagM = true;
     }
-    if (ArchInfo->Version.getMinor() >= 3u) {
-      HasRCPC = true;
-      FPU |= NeonMode;
-    }
+    // No special cases for Armv8.3-a
     if (ArchInfo->Version.getMinor() >= 2u) {
       HasCCPP = true;
     }
-    if (ArchInfo->Version.getMinor() >= 1u) {
-      HasCRC = true;
-      HasLSE = true;
-      HasRDM = true;
-    }
+    // No special cases for Armv8.1-a
   } else if (ArchInfo->Version.getMajor() == 9) {
     if (ArchInfo->Version.getMinor() >= 2u) {
       HasWFxT = true;
     }
-    if (ArchInfo->Version.getMinor() >= 1u) {
-      HasBFloat16 = true;
-      HasMatMul = true;
-    }
+    // No special cases for Armv9.1-a
     FPU |= SveMode;
     HasSVE2 = true;
     HasFullFP16 = true;
@@ -115,15 +98,9 @@ void AArch64TargetInfo::setArchFeatures() {
     HasSB = true;
     HasPredRes = true;
     HasBTI = true;
-    HasDotProd = true;
     HasDIT = true;
     HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
     HasCCPP = true;
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
   }
 }
 
@@ -257,7 +234,6 @@ void AArch64TargetInfo::getTargetDefinesARMV82A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_COMPLEX", "1");
-  Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
   Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
   // Also include the Armv8.2 defines
   getTargetDefinesARMV82A(Opts, Builder);
@@ -272,7 +248,6 @@ void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   Builder.defineMacro("__ARM_FEATURE_FRINT", "1");
-  Builder.defineMacro("__ARM_FEATURE_BTI", "1");
   // Also include the Armv8.4 defines
   getTargetDefinesARMV84A(Opts, Builder);
 }
@@ -472,7 +447,10 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if ((FPU & NeonMode) && HasFullFP16)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
   if (HasFullFP16)
-   Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
+    Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
+
+  if (HasJSCVT)
+    Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
 
   if (HasDotProd)
     Builder.defineMacro("__ARM_FEATURE_DOTPROD", "1");
@@ -529,6 +507,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
     Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
   }
+
+  if (HasBTI)
+    Builder.defineMacro("__ARM_FEATURE_BTI", "1");
 
   if (Opts.BranchTargetEnforcement)
     Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
@@ -741,7 +722,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
     if (Feature == "+neon" || Feature == "+fp-armv8")
       FPU |= NeonMode;
-    if (Feature == "+jscvt") {
+    if (Feature == "+jsconv") {
       HasJSCVT = true;
       FPU |= NeonMode;
     }
@@ -860,7 +841,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+dit")
       HasDIT = true;
-    if (Feature == "+cccp")
+    if (Feature == "+ccpp")
       HasCCPP = true;
     if (Feature == "+ccdp") {
       HasCCPP = true;
