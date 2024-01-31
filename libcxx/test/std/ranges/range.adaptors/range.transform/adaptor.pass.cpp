@@ -20,11 +20,6 @@
 #include "test_macros.h"
 #include "types.h"
 
-template <class View, class T>
-concept CanBePiped = requires (View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
-};
-
 struct NonCopyableFunction {
   NonCopyableFunction(NonCopyableFunction const&) = delete;
   template <class T>

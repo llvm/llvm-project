@@ -32,11 +32,6 @@ struct Foo {
   constexpr Foo(int ii) : i(ii) {}
 };
 
-template <class View, class T>
-concept CanBePiped = requires(View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
-};
-
 constexpr bool test() {
   int buffer1[3] = {1, 2, 3};
   int buffer2[2] = {4, 5};
