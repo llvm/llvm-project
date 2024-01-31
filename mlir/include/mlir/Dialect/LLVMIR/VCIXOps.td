@@ -62,7 +62,6 @@ def VCIX_BinaryImmOp
     Arguments<(ins VCIX_OpcodeAttr: $opcode,
                    LLVM_AnyVector: $vs2,
                    VCIX_ImmAttr: $imm,
-                   VCIX_Register: $rd,
                    Optional<VCIX_VL>: $vl)> {
   string llvmBuilder = [{
       llvm::Type *xlen =getXlenType($opcode, moduleTranslation);
