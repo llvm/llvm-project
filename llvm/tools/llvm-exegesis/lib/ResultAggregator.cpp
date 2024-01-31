@@ -89,6 +89,7 @@ ResultAggregator::CreateAggregator(Benchmark::RepetitionModeE RepetitionMode) {
   case Benchmark::RepetitionModeE::MiddleHalfLoop:
     return std::make_unique<MiddleHalfResultAggregator>();
   }
+  llvm_unreachable("Unknown Benchmark::RepetitionModeE enum");
 }
 
 } // namespace exegesis

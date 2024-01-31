@@ -358,6 +358,12 @@ struct KnownFPClass {
 
   void knownNot(FPClassTest RuleOut) {
     KnownFPClasses = KnownFPClasses & ~RuleOut;
+    if (isKnownNever(fcNan) && !SignBit) {
+      if (isKnownNever(fcNegative))
+        SignBit = false;
+      else if (isKnownNever(fcPositive))
+        SignBit = true;
+    }
   }
 
   void fneg() {
@@ -391,6 +397,12 @@ struct KnownFPClass {
   void signBitMustBeZero() {
     KnownFPClasses &= (fcPositive | fcNan);
     SignBit = false;
+  }
+
+  /// Assume the sign bit is one.
+  void signBitMustBeOne() {
+    KnownFPClasses &= (fcNegative | fcNan);
+    SignBit = true;
   }
 
   void copysign(const KnownFPClass &Sign) {
@@ -579,15 +591,18 @@ inline bool isKnownNeverNaN(const Value *V, const DataLayout &DL,
   return Known.isKnownNeverNaN();
 }
 
-/// Return true if we can prove that the specified FP value's sign bit is 0.
-///
-///      NaN --> true/false (depending on the NaN's sign bit)
-///       +0 --> true
-///       -0 --> false
-///   x > +0 --> true
-///   x < -0 --> false
-bool SignBitMustBeZero(const Value *V, const DataLayout &DL,
-                       const TargetLibraryInfo *TLI);
+/// Return false if we can prove that the specified FP value's sign bit is 0.
+/// Return true if we can prove that the specified FP value's sign bit is 1.
+/// Otherwise return std::nullopt.
+inline std::optional<bool> computeKnownFPSignBit(
+    const Value *V, const DataLayout &DL,
+    const TargetLibraryInfo *TLI = nullptr, unsigned Depth = 0,
+    AssumptionCache *AC = nullptr, const Instruction *CtxI = nullptr,
+    const DominatorTree *DT = nullptr, bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcAllFlags, Depth, TLI, AC,
+                                           CtxI, DT, UseInstrInfo);
+  return Known.SignBit;
+}
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
