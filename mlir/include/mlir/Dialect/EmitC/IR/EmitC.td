@@ -513,22 +513,6 @@ def EmitC_FuncOp : EmitC_Op<"func", [
     CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
   >];
   let extraClassDeclaration = [{
-    /// Create a deep copy of this function and all of its blocks, remapping any
-    /// operands that use values outside of the function using the map that is
-    /// provided (leaving them alone if no entry is present). If the mapper
-    /// contains entries for function arguments, these arguments are not
-    /// included in the new function. Replaces references to cloned sub-values
-    /// with the corresponding value that is copied, and adds those mappings to
-    /// the mapper.
-    FuncOp clone(IRMapping &mapper);
-    FuncOp clone();
-
-    /// Clone the internal blocks and attributes from this function into dest.
-    /// Any cloned blocks are appended to the back of dest. This function
-    /// asserts that the attributes of the current function and dest are
-    /// compatible.
-    void cloneInto(FuncOp dest, IRMapping &mapper);
-
     //===------------------------------------------------------------------===//
     // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
