@@ -2106,7 +2106,7 @@ cc_library(
         ":Transforms",
         ":DialectUtils",
         ":VectorDialect",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
 
