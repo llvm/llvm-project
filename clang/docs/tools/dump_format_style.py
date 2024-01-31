@@ -474,7 +474,7 @@ with open(INCLUDE_STYLE_FILE) as f:
 opts = sorted(opts, key=lambda x: x.name)
 options_text = "\n\n".join(map(str, opts))
 
-with open(DOC_FILE) as f:
+with open(DOC_FILE, encoding="utf-8") as f:
     contents = f.read()
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
