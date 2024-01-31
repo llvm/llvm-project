@@ -106,7 +106,6 @@ class SBBreakpointCallbackCase(TestBase):
         self.addTearDownHook(lambda: os.remove(self.getBuildArtifact(test_name)))
 
         test_exe = self.getBuildArtifact(test_name)
-        self.signBinary(test_exe)
         exe = [test_exe, self.getBuildArtifact(self.inferior)]
 
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}

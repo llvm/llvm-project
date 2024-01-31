@@ -827,6 +827,17 @@ static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+  // Try to remove redundant blend recipes.
+  if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
+    VPValue *Inc0 = Blend->getIncomingValue(0);
+    for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
+      if (Inc0 != Blend->getIncomingValue(I))
+        return;
+    Blend->replaceAllUsesWith(Inc0);
+    Blend->eraseFromParent();
+    return;
+  }
+
   switch (getOpcodeForRecipe(R)) {
   case Instruction::Mul: {
     VPValue *A = R.getOperand(0);
@@ -1031,8 +1042,8 @@ void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeRedundantCanonicalIVs(Plan);
   removeRedundantInductionCasts(Plan);
 
-  optimizeInductions(Plan, SE);
   simplifyRecipes(Plan, SE.getContext());
+  optimizeInductions(Plan, SE);
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);
