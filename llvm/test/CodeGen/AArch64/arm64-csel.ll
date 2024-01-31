@@ -500,9 +500,8 @@ entry:
 define i64 @selor64_disjoint(i64 %num, i64 %x) {
 ; CHECK-LABEL: selor64_disjoint:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    orr x8, x0, #0x1
 ; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    csel x0, x8, x0, ne
+; CHECK-NEXT:    cinc x0, x0, ne
 ; CHECK-NEXT:    ret
 entry:
   %tobool.not = icmp ne i64 %x, 0
