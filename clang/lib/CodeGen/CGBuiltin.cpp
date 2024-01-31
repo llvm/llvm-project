@@ -21189,10 +21189,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_clmulh_64:
   case RISCV::BI__builtin_riscv_clmulr_32:
   case RISCV::BI__builtin_riscv_clmulr_64:
-  case RISCV::BI__builtin_riscv_mopr_32:
-  case RISCV::BI__builtin_riscv_mopr_64:
-  case RISCV::BI__builtin_riscv_moprr_32:
-  case RISCV::BI__builtin_riscv_moprr_64:
   case RISCV::BI__builtin_riscv_xperm4_32:
   case RISCV::BI__builtin_riscv_xperm4_64:
   case RISCV::BI__builtin_riscv_xperm8_32:
@@ -21239,16 +21235,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_clmulr_32:
     case RISCV::BI__builtin_riscv_clmulr_64:
       ID = Intrinsic::riscv_clmulr;
-      break;
-
-    // Zimop
-    case RISCV::BI__builtin_riscv_mopr_32:
-    case RISCV::BI__builtin_riscv_mopr_64:
-      ID = Intrinsic::riscv_mopr;
-      break;
-    case RISCV::BI__builtin_riscv_moprr_32:
-    case RISCV::BI__builtin_riscv_moprr_64:
-      ID = Intrinsic::riscv_moprr;
       break;
 
     // Zbkx
@@ -21308,6 +21294,19 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   case RISCV::BI__builtin_riscv_sm3p1:
     ID = Intrinsic::riscv_sm3p1;
+    break;
+
+  // Zimop
+  case RISCV::BI__builtin_riscv_mopr_32:
+  case RISCV::BI__builtin_riscv_mopr_64:
+    ID = Intrinsic::riscv_mopr;
+    IntrinsicTypes = {ResultType};
+    break;
+
+  case RISCV::BI__builtin_riscv_moprr_32:
+  case RISCV::BI__builtin_riscv_moprr_64:
+    ID = Intrinsic::riscv_moprr;
+    IntrinsicTypes = {ResultType};
     break;
 
   // Zihintntl
