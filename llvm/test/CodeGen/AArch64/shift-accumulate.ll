@@ -178,8 +178,7 @@ define <2 x i64> @usra_with_movi_v2i64(<16 x i8> %0, <16 x i8> %1) {
 define <4 x i16> @usra_v4i16_disjointor(<4 x i16> %a) {
 ; CHECK-LABEL: usra_v4i16_disjointor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v1.4h, v0.4h, #7
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    usra v0.4h, v0.4h, #7
 ; CHECK-NEXT:    ret
   %s = lshr <4 x i16> %a, <i16 7, i16 7, i16 7, i16 7>
   %o = or disjoint <4 x i16> %s, %a
