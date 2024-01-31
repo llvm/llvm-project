@@ -20885,7 +20885,6 @@ static SDValue tryCombineExtendRShTrunc(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == AArch64ISD::UZP1 && "Only UZP1 expected.");
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
-  EVT VT = Op0->getValueType(0);
   EVT ResVT = N->getValueType(0);
 
   unsigned RshOpc = Op0.getOpcode();
@@ -20992,15 +20991,6 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Op1, DAG, Subtarget))
     return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0, Rshrnb);
 
-  // uzp1(bitcast(x), bitcast(y)) -> uzp1(x, y)
-  if (isHalvingTruncateAndConcatOfLegalIntScalableType(N) &&
-      Op0.getOpcode() == ISD::BITCAST && Op1.getOpcode() == ISD::BITCAST) {
-    if (Op0.getOperand(0).getValueType() == Op1.getOperand(0).getValueType()) {
-      return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0.getOperand(0),
-                         Op1.getOperand(0));
-    }
-  }
-
   // uzp1(unpklo(uzp1(x, y)), z) => uzp1(x, z)
   if (Op0.getOpcode() == AArch64ISD::UUNPKLO) {
     if (Op0.getOperand(0).getOpcode() == AArch64ISD::UZP1) {
@@ -21024,6 +21014,19 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   // This optimization only works on little endian.
   if (!IsLittleEndian)
     return SDValue();
+
+  // uzp1(bitcast(x), bitcast(y)) -> uzp1(x, y)
+  // Example:
+  // nxv4i32 = uzp1 bitcast(nxv4i32 x to nxv2i64), bitcast(nxv4i32 y to nxv2i64)
+  // to
+  // nxv4i32 = uzp1 nxv2i64, nxv2i64
+  if (isHalvingTruncateAndConcatOfLegalIntScalableType(N) &&
+      Op0.getOpcode() == ISD::BITCAST && Op1.getOpcode() == ISD::BITCAST) {
+    if (Op0.getOperand(0).getValueType() == Op1.getOperand(0).getValueType()) {
+      return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0.getOperand(0),
+                         Op1.getOperand(0));
+    }
+  }
 
   if (ResVT != MVT::v2i32 && ResVT != MVT::v4i16 && ResVT != MVT::v8i8)
     return SDValue();

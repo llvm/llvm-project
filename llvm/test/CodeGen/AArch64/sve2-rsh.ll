@@ -40,27 +40,18 @@ define <vscale x 2 x i64> @neg_urshr_3(<vscale x 2 x i64> %x, <vscale x 2 x i64>
 }
 
 ; Add has two uses.
-define <vscale x 2 x i64> @neg_urshr_4(<vscale x 2 x i64> %x) {
+define <vscale x 2 x i64> @neg_urshr_4(<vscale x 2 x i64> %x, ptr %p) {
 ; CHECK-LABEL: neg_urshr_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str z8, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    add z0.d, z0.d, #32 // =0x20
-; CHECK-NEXT:    lsr z8.d, z0.d, #6
-; CHECK-NEXT:    bl use
-; CHECK-NEXT:    mov z0.d, z8.d
-; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    add z1.d, z1.d, #32 // =0x20
+; CHECK-NEXT:    lsr z0.d, z1.d, #6
+; CHECK-NEXT:    st1d { z1.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %add = add nuw nsw <vscale x 2 x i64> %x, splat (i64 32)
   %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
-  call void @use(<vscale x 2 x i64> %add)
+  store <vscale x 2 x i64> %add, ptr %p
   ret <vscale x 2 x i64> %sh
 }
 
@@ -286,5 +277,3 @@ define <vscale x 2 x i64> @urshr_i64(<vscale x 2 x i64> %x) {
   %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
   ret <vscale x 2 x i64> %sh
 }
-
-declare void @use(<vscale x 2 x i64>)
