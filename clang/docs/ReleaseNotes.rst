@@ -168,6 +168,9 @@ Bug Fixes to C++ Support
   parameter where we did an incorrect specialization of the initialization of
   the default parameter.
   Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
+- Addressed an issue where constraints involving injected class types are perceived
+  distinct from its specialization types.
+  (`#56482 <https://github.com/llvm/llvm-project/issues/56482>`_)
 - Fixed a bug where variables referenced by requires-clauses inside
   nested generic lambdas were not properly injected into the constraint scope.
   (`#73418 <https://github.com/llvm/llvm-project/issues/73418>`_)
