@@ -1514,6 +1514,7 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
       // If found any unused scratch SGPR, reserve the register itself for Exec
       // copy and there is no need for any spills in that case.
       MFI->setSGPRForEXECCopy(UnusedScratchReg);
+      MRI.replaceRegWith(ReservedRegForExecCopy, UnusedScratchReg);
       LiveUnits.addReg(UnusedScratchReg);
     } else {
       // Needs spill.
