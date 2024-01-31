@@ -138,12 +138,6 @@ public:
     return EC;
   }
 
-  char convert(char SingleChar) const {
-    SmallString<1> Result;
-    Converter->convert(StringRef(&SingleChar, 1), Result, false);
-    return Result[0];
-  }
-
   std::error_code flush() const { return Converter->flush(); }
 
   std::error_code flush(SmallVectorImpl<char> &Result) const {
