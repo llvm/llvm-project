@@ -19,7 +19,6 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
-#  ifndef _LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS
 
 template <class _Pointer, class _SizeType = size_t>
 struct allocation_result {
@@ -28,16 +27,6 @@ struct allocation_result {
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
 
-#  else
-
-template <class _Pointer>
-struct allocation_result {
-  _Pointer ptr;
-  size_t count;
-};
-_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
-
-#  endif // _LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS
 #endif   // _LIBCPP_STD_VER
 
 _LIBCPP_END_NAMESPACE_STD

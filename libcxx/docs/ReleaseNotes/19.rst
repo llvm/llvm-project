@@ -44,9 +44,7 @@ Implemented Papers
 
 Improvements and New Features
 -----------------------------
-
-- The ``_LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS`` macro has been added to re-enable user specialization
-  of `allocator_traits`, which was disabled by `P2652R2 <https://wg21.link/P2652R2>`_.
+TODO
 
 
 Deprecations and Removals

@@ -285,7 +285,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits {
     return __a.allocate(__n);
   }
 
-#if _LIBCPP_STD_VER >= 23 && !defined(_LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS)
+#if _LIBCPP_STD_VER >= 23
   template <class _Ap = _Alloc>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr allocation_result<pointer, size_type>
   allocate_at_least(_Ap& __alloc, size_type __n) {

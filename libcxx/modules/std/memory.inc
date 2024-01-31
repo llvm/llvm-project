@@ -43,10 +43,6 @@ export namespace std {
 
 #if _LIBCPP_STD_VER >= 23
   using std::allocation_result;
-
-#  ifdef _LIBCPP_ENABLE_CXX23_USER_SPECIALIZATION_OF_ALLOCATOR_TRAITS
-  using std::allocate_at_least;
-#  endif
 #endif
 
   // [default.allocator], the default allocator
