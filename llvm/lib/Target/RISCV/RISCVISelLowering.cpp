@@ -19514,6 +19514,11 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
+
+  if (Subtarget.hasStdExtZacas() && AI->getOperation() == AtomicRMWInst::Nand &&
+      (Size == Subtarget.getXLen() || Size == 32))
+    return AtomicExpansionKind::CmpXChg;
+
   return AtomicExpansionKind::None;
 }
 
