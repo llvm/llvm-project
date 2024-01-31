@@ -148,6 +148,10 @@ public:
   void buildCopy(QualType type, const AggValueSlot &dest,
                  const AggValueSlot &src);
 
+  void buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
+                      QualType ArrayQTy, Expr *ExprToVisit,
+                      ArrayRef<Expr *> Args, Expr *ArrayFiller);
+
   AggValueSlot::NeedsGCBarriers_t needsGC(QualType T) {
     if (CGF.getLangOpts().getGC() && TypeRequiresGCollection(T))
       llvm_unreachable("garbage collection is NYI");
@@ -392,6 +396,113 @@ void AggExprEmitter::buildCopy(QualType type, const AggValueSlot &dest,
       UnimplementedFeature::volatileTypes())
     llvm_unreachable("volatile is NYI");
   CGF.buildAggregateCopy(DestLV, SrcLV, type, dest.mayOverlap(), false);
+}
+
+// FIXME(cir): This function could be shared with traditional LLVM codegen
+/// Determine if E is a trivial array filler, that is, one that is
+/// equivalent to zero-initialization.
+static bool isTrivialFiller(Expr *E) {
+  if (!E)
+    return true;
+
+  if (isa<ImplicitValueInitExpr>(E))
+    return true;
+
+  if (auto *ILE = dyn_cast<InitListExpr>(E)) {
+    if (ILE->getNumInits())
+      return false;
+    return isTrivialFiller(ILE->getArrayFiller());
+  }
+
+  if (auto *Cons = dyn_cast_or_null<CXXConstructExpr>(E))
+    return Cons->getConstructor()->isDefaultConstructor() &&
+           Cons->getConstructor()->isTrivial();
+
+  // FIXME: Are there other cases where we can avoid emitting an initializer?
+  return false;
+}
+
+void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
+                                    QualType ArrayQTy, Expr *ExprToVisit,
+                                    ArrayRef<Expr *> Args, Expr *ArrayFiller) {
+  uint64_t NumInitElements = Args.size();
+
+  uint64_t NumArrayElements = AType.getSize();
+  assert(NumInitElements != 0 && "expected at least one initializaed value");
+  assert(NumInitElements <= NumArrayElements);
+
+  QualType elementType =
+      CGF.getContext().getAsArrayType(ArrayQTy)->getElementType();
+
+  auto cirElementType = CGF.convertType(elementType);
+  auto cirElementPtrType = mlir::cir::PointerType::get(
+      CGF.getBuilder().getContext(), cirElementType);
+  auto loc = CGF.getLoc(ExprToVisit->getSourceRange());
+
+  // Cast from cir.ptr<cir.array<elementType> to cir.ptr<elementType>
+  auto begin = CGF.getBuilder().create<mlir::cir::CastOp>(
+      loc, cirElementPtrType, mlir::cir::CastKind::array_to_ptrdecay,
+      DestPtr.getPointer());
+
+  CharUnits elementSize = CGF.getContext().getTypeSizeInChars(elementType);
+  CharUnits elementAlign =
+      DestPtr.getAlignment().alignmentOfArrayElement(elementSize);
+
+  // Exception safety requires us to destroy all the
+  // already-constructed members if an initializer throws.
+  // For that, we'll need an EH cleanup.
+  [[maybe_unused]] QualType::DestructionKind dtorKind =
+      elementType.isDestructedType();
+  [[maybe_unused]] Address endOfInit = Address::invalid();
+  assert(!CGF.needsEHCleanup(dtorKind) && "destructed types NIY");
+
+  // The 'current element to initialize'.  The invariants on this
+  // variable are complicated.  Essentially, after each iteration of
+  // the loop, it points to the last initialized element, except
+  // that it points to the beginning of the array before any
+  // elements have been initialized.
+  mlir::Value element = begin;
+
+  // Don't build the 'one' before the cycle to avoid
+  // emmiting the redundant cir.const(1) instrs.
+  mlir::Value one;
+
+  // Emit the explicit initializers.
+  for (uint64_t i = 0; i != NumInitElements; ++i) {
+    if (i == 1)
+      one = CGF.getBuilder().getConstInt(
+          loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), 1);
+
+    // Advance to the next element.
+    if (i > 0) {
+      element = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
+          loc, cirElementPtrType, element, one);
+
+      // Tell the cleanup that it needs to destroy up to this
+      // element.  TODO: some of these stores can be trivially
+      // observed to be unnecessary.
+      assert(!endOfInit.isValid() && "destructed types NIY");
+    }
+
+    LValue elementLV = CGF.makeAddrLValue(
+        Address(element, cirElementType, elementAlign), elementType);
+    buildInitializationToLValue(Args[i], elementLV);
+  }
+
+  // Check whether there's a non-trivial array-fill expression.
+  bool hasTrivialFiller = isTrivialFiller(ArrayFiller);
+
+  // Any remaining elements need to be zero-initialized, possibly
+  // using the filler expression.  We can skip this if the we're
+  // emitting to zeroed memory.
+  if (NumInitElements != NumArrayElements &&
+      !(Dest.isZeroed() && hasTrivialFiller &&
+        CGF.getTypes().isZeroInitializable(elementType))) {
+    llvm_unreachable("zero-initialization of arrays NIY");
+  }
+
+  // Leave the partial-array cleanup if we entered one.
+  assert(!dtorKind && "destructed types NIY");
 }
 
 /// True if the given aggregate type requires special GC API calls.
@@ -888,6 +999,16 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   LValue DestLV = CGF.makeAddrLValue(Dest.getAddress(), ExprToVisit->getType());
 
   // Handle initialization of an array.
+  if (ExprToVisit->getType()->isConstantArrayType()) {
+    auto AType = cast<mlir::cir::ArrayType>(Dest.getAddress().getElementType());
+    buildArrayInit(Dest.getAddress(), AType, ExprToVisit->getType(),
+                   ExprToVisit, InitExprs, ArrayFiller);
+    return;
+  } else if (ExprToVisit->getType()->isVariableArrayType()) {
+    llvm_unreachable("variable arrays NYI");
+    return;
+  }
+
   if (ExprToVisit->getType()->isArrayType()) {
     llvm_unreachable("NYI");
   }
