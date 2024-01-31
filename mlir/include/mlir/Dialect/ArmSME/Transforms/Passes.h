@@ -36,6 +36,9 @@ std::unique_ptr<Pass> createTileAllocationPass();
 /// variants.
 std::unique_ptr<Pass> createOuterProductFusionPass();
 
+/// Pass that legalizes vectors so they can be lowered to ArmSME.
+std::unique_ptr<Pass> createVectorLegalizationPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
