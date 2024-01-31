@@ -52,7 +52,7 @@ SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
     Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine);
   if (FuncName == "__arm_tpidr2_restore")
     Bitmask |= SMEAttrs::SM_Compatible | encodeZAState(StateValue::In) |
-                SMEAttrs::SME_ABI_Routine;
+               SMEAttrs::SME_ABI_Routine;
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {

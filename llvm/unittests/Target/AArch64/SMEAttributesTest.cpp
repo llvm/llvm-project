@@ -38,22 +38,21 @@ TEST(SMEAttributes, Constructors) {
               ->getFunction("foo"))
           .hasStreamingCompatibleInterface());
 
-
   ASSERT_TRUE(
       SA(*parseIR("declare void @foo() \"aarch64_in_za\"")->getFunction("foo"))
           .isInZA());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_out_za\"")
-                      ->getFunction("foo"))
-                  .isOutZA());
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_out_za\"")->getFunction("foo"))
+          .isOutZA());
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_inout_za\"")
                       ->getFunction("foo"))
                   .isInOutZA());
   ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_preserves_za\"")
                       ->getFunction("foo"))
                   .isPreservesZA());
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_new_za\"")
-                      ->getFunction("foo"))
-                  .isNewZA());
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_new_za\"")->getFunction("foo"))
+          .isNewZA());
 
   ASSERT_TRUE(
       SA(*parseIR("declare void @foo() \"aarch64_in_zt0\"")->getFunction("foo"))

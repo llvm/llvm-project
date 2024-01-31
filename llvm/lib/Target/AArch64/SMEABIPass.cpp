@@ -60,9 +60,8 @@ FunctionPass *llvm::createSMEABIPass() { return new SMEABI(); }
 void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
   auto *TPIDR2SaveTy =
       FunctionType::get(Builder.getVoidTy(), {}, /*IsVarArgs=*/false);
-  auto Attrs =
-      AttributeList()
-          .addFnAttribute(M->getContext(), "aarch64_pstate_sm_compatible");
+  auto Attrs = AttributeList().addFnAttribute(M->getContext(),
+                                              "aarch64_pstate_sm_compatible");
   FunctionCallee Callee =
       M->getOrInsertFunction("__arm_tpidr2_save", TPIDR2SaveTy, Attrs);
   CallInst *Call = Builder.CreateCall(Callee);
