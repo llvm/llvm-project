@@ -88,10 +88,10 @@ module {
     // Prepare a buffer for x0, x1, x2, y0 and a buffer for y1.
     %xys = memref.alloc() : memref<20xi32>
     %xy = memref.cast %xys : memref<20xi32> to memref<?xi32>
-    %x0 = memref.subview %xy[%i0][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
-    %x1 = memref.subview %xy[%i1][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
-    %x2 = memref.subview %xy[%i2][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
-    %y0 = memref.subview %xy[%i3][%i5][4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %x0 = memref.subview %xy[%i0][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %x1 = memref.subview %xy[%i1][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %x2 = memref.subview %xy[%i2][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
+    %y0 = memref.subview %xy[%i3][%i5][%i4] : memref<?xi32> to memref<?xi32, strided<[4], offset: ?>>
     %y1s = memref.alloc() : memref<7xi32>
     %y1 = memref.cast %y1s : memref<7xi32> to memref<?xi32>
 
