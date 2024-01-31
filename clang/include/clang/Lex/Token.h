@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_LEX_TOKEN_H
 #define LLVM_CLANG_LEX_TOKEN_H
 
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -23,6 +22,7 @@
 namespace clang {
 
 class IdentifierInfo;
+class LangOptions;
 
 /// Token - This structure provides full information about a lexed token.
 /// It is not intended to be space efficient, it is intended to return as much
