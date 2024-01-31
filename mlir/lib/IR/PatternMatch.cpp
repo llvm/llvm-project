@@ -317,7 +317,16 @@ void RewriterBase::inlineBlockBefore(Block *source, Block *dest,
 
   // Move operations from the source block to the dest block and erase the
   // source block.
-  dest->getOperations().splice(before, source->getOperations());
+  if (!listener) {
+    // Fast path: If no listener is attached, move all operations at once.
+    dest->getOperations().splice(before, source->getOperations());
+  } else {
+    while (!source->empty())
+      moveOpBefore(&source->front(), dest, before);
+  }
+
+  // Erase the source block.
+  assert(source->empty() && "expected 'source' to be empty");
   eraseBlock(source);
 }
 
