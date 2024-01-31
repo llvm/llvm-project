@@ -34,7 +34,7 @@ public:
     // Multiple results func was not converted to `emitc.func`.
     if (callOp.getNumResults() > 1)
       return rewriter.notifyMatchFailure(
-          callOp, "Only functions with zero or one result can be converted");
+          callOp, "only functions with zero or one result can be converted");
 
     rewriter.replaceOpWithNewOp<emitc::CallOp>(
         callOp,
@@ -55,11 +55,11 @@ public:
 
     if (funcOp.getFunctionType().getNumResults() > 1)
       return rewriter.notifyMatchFailure(
-          funcOp, "Only functions with zero or one result can be converted");
+          funcOp, "only functions with zero or one result can be converted");
 
     if (funcOp.isDeclaration())
       return rewriter.notifyMatchFailure(funcOp,
-                                         "Declarations cannot be converted");
+                                         "declarations cannot be converted");
 
     // Create the converted `emitc.func` op.
     emitc::FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
@@ -95,7 +95,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (returnOp.getNumOperands() > 1)
       return rewriter.notifyMatchFailure(
-          returnOp, "Only zero or one operand is supported");
+          returnOp, "only zero or one operand is supported");
 
     rewriter.replaceOpWithNewOp<emitc::ReturnOp>(
         returnOp,
@@ -112,7 +112,5 @@ public:
 void mlir::populateFuncToEmitCPatterns(RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
 
-  patterns.add<CallOpConversion>(ctx);
-  patterns.add<FuncOpConversion>(ctx);
-  patterns.add<ReturnOpConversion>(ctx);
+  patterns.add<CallOpConversion, FuncOpConversion, ReturnOpConversion>(ctx);
 }

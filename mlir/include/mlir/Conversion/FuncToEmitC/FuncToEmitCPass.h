@@ -14,11 +14,8 @@
 namespace mlir {
 class Pass;
 
-#define GEN_PASS_DECL_FUNCTOEMITC
+#define GEN_PASS_DECL_CONVERTFUNCTOEMITC
 #include "mlir/Conversion/Passes.h.inc"
-
-std::unique_ptr<Pass> createConvertFuncToEmitC();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_FUNCTOEMITC_FUNCTOEMITCPASS_H

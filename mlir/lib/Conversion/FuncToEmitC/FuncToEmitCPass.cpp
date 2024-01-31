@@ -36,9 +36,7 @@ void ConvertFuncToEmitC::runOnOperation() {
   ConversionTarget target(getContext());
 
   target.addLegalDialect<emitc::EmitCDialect>();
-  target.addIllegalOp<func::CallOp>();
-  target.addIllegalOp<func::FuncOp>();
-  target.addIllegalOp<func::ReturnOp>();
+  target.addIllegalOp<func::CallOp, func::FuncOp, func::ReturnOp>();
 
   RewritePatternSet patterns(&getContext());
   populateFuncToEmitCPatterns(patterns);
