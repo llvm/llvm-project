@@ -5,10 +5,38 @@
 define preserve_nonecc double @preserve_nonecc1() nounwind {
 entry:
 ;ALL-LABEL:   preserve_nonecc1
+;ALL-NOT:     movq %rax
+;ALL-NOT:     movq %rbx
+;ALL-NOT:     movq %rcx
+;ALL-NOT:     movq %rdx
+;ALL-NOT:     movq %rsi
+;ALL-NOT:     movq %rdi
+;ALL-NOT:     movq %r8
+;ALL-NOT:     movq %r9
+;ALL-NOT:     movq %r10
+;ALL-NOT:     movq %r11
+;ALL-NOT:     movq %r12
+;ALL-NOT:     movq %r13
+;ALL-NOT:     movq %r14
+;ALL-NOT:     movq %r15
 ;ALL-NOT:     movaps %xmm1
 ;ALL-NOT:     movaps %xmm0
 ;AVX-NOT:     vmovups %ymm1
 ;AVX-NOT:     vmovups %ymm0
+;ALL-NOT:     movq {{.*}}, %rax
+;ALL-NOT:     movq {{.*}}, %rbx
+;ALL-NOT:     movq {{.*}}, %rcx
+;ALL-NOT:     movq {{.*}}, %rdx
+;ALL-NOT:     movq {{.*}}, %rsi
+;ALL-NOT:     movq {{.*}}, %rdi
+;ALL-NOT:     movq {{.*}}, %r8
+;ALL-NOT:     movq {{.*}}, %r9
+;ALL-NOT:     movq {{.*}}, %r10
+;ALL-NOT:     movq {{.*}}, %r11
+;ALL-NOT:     movq {{.*}}, %r12
+;ALL-NOT:     movq {{.*}}, %r13
+;ALL-NOT:     movq {{.*}}, %r14
+;ALL-NOT:     movq {{.*}}, %r15
 ;ALL-NOT:     movaps {{.*}} %xmm0
 ;ALL-NOT:     movaps {{.*}} %xmm1
 ;AVX-NOT:     vmovups {{.*}} %ymm0
