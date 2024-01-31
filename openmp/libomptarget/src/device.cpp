@@ -67,7 +67,6 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 
 DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      PendingCtorsDtors(), PendingGlobalsMtx(),
       ForceSynchronousTargetRegions(false), MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
@@ -344,48 +343,11 @@ int32_t DeviceTy::destroyEvent(void *Event) {
   return OFFLOAD_SUCCESS;
 }
 
-void DeviceTy::addOffloadEntry(const OffloadEntryTy &Entry) {
-  std::lock_guard<decltype(PendingGlobalsMtx)> Lock(PendingGlobalsMtx);
-  DeviceOffloadEntries.getExclusiveAccessor()->insert({Entry.getName(), Entry});
-  if (Entry.isGlobal())
-    return;
-
-  if (Entry.isCTor()) {
-    DP("Adding ctor " DPxMOD " to the pending list.\n",
-       DPxPTR(Entry.getAddress()));
-    MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
-            "removed in a future release \n",
-            Entry.getNameAsCStr());
-    PendingCtorsDtors[Entry.getBinaryDescription()].PendingCtors.push_back(
-        Entry.getAddress());
-  } else if (Entry.isDTor()) {
-    // Dtors are pushed in reverse order so they are executed from end
-    // to beginning when unregistering the library!
-    DP("Adding dtor " DPxMOD " to the pending list.\n",
-       DPxPTR(Entry.getAddress()));
-    MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
-            "removed in a future release \n",
-            Entry.getNameAsCStr());
-    PendingCtorsDtors[Entry.getBinaryDescription()].PendingDtors.push_front(
-        Entry.getAddress());
-  }
-
-  if (Entry.isLink()) {
-    MESSAGE(
-        "WARNING: The \"link\" attribute is not yet supported for entry: %s!\n",
-        Entry.getNameAsCStr());
-  }
-}
-
 void DeviceTy::dumpOffloadEntries() {
   fprintf(stderr, "Device %i offload entries:\n", DeviceID);
   for (auto &It : *DeviceOffloadEntries.getExclusiveAccessor()) {
     const char *Kind = "kernel";
-    if (It.second.isCTor())
-      Kind = "constructor";
-    else if (It.second.isDTor())
-      Kind = "destructor";
-    else if (It.second.isLink())
+    if (It.second.isLink())
       Kind = "link";
     else if (It.second.isGlobal())
       Kind = "global var.";

@@ -109,6 +109,9 @@ Changes in existing checks
 Removed checks
 ^^^^^^^^^^^^^^
 
+- Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
+  since the rule DCL21-CPP has been removed from the CERT guidelines.
+
 Improvements to include-fixer
 -----------------------------
 

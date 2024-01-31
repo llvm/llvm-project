@@ -38,13 +38,6 @@ struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 
-struct PendingCtorDtorListsTy {
-  std::list<void *> PendingCtors;
-  std::list<void *> PendingDtors;
-};
-typedef std::map<__tgt_bin_desc *, PendingCtorDtorListsTy>
-    PendingCtorsDtorsPerLibrary;
-
 struct DeviceTy {
   int32_t DeviceID;
   PluginAdaptorTy *RTL;
@@ -55,10 +48,6 @@ struct DeviceTy {
   int32_t TeamProcs;
 
   bool HasMappedGlobalData = false;
-
-  PendingCtorsDtorsPerLibrary PendingCtorsDtors;
-
-  std::mutex PendingGlobalsMtx;
 
   /// Flag to force synchronous data transfers
   /// Controlled via environment flag OMPX_FORCE_SYNC_REGIONS
@@ -167,9 +156,6 @@ struct DeviceTy {
   void setTeamProcs(int32_t num_team_procs) { TeamProcs = num_team_procs; }
   int32_t getTeamProcs() { return TeamProcs; }
   /// }
-
-  /// Register \p Entry as an offload entry that is avalable on this device.
-  void addOffloadEntry(const OffloadEntryTy &Entry);
 
   /// Print all offload entries to stderr.
   void dumpOffloadEntries();

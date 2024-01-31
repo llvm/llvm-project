@@ -3273,7 +3273,9 @@ private:
     if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
       hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
           loc, *this, assign.lhs, localSymbols, stmtCtx);
-      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              assign.rhs)) {
+        // rhs is null(). rhs being null(pptr) is handled in genNull.
         auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
         hlfir::Entity rhs(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));

@@ -169,10 +169,6 @@ Bug Fixes to C++ Support
 
 - Fix crash when using lifetimebound attribute in function with trailing return.
   Fixes (`#73619 <https://github.com/llvm/llvm-project/issues/73619>`_)
-- Fix a crash when specializing an out-of-line member function with a default
-  parameter where we did an incorrect specialization of the initialization of
-  the default parameter.
-  Fixes (`#68490 <https://github.com/llvm/llvm-project/issues/68490>`_)
 - Addressed an issue where constraints involving injected class types are perceived
   distinct from its specialization types.
   (`#56482 <https://github.com/llvm/llvm-project/issues/56482>`_)
@@ -277,6 +273,9 @@ Improvements
 ^^^^^^^^^^^^
 
 - Support importing C++20 modules in clang-repl.
+
+- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
+  textual and JSON dumping for various ``TypeLoc``-related nodes.
 
 Moved checkers
 ^^^^^^^^^^^^^^
