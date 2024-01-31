@@ -456,6 +456,9 @@ public:
     if (Error E = Controller.initialize(ScanInstance, OriginalInvocation))
       return reportError(std::move(E));
 
+    if (ScanInstance.getDiagnostics().hasErrorOccurred())
+      return false;
+
     if (!ScanInstance.ExecuteAction(*Action))
       return false;
 
