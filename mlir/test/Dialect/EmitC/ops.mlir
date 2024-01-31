@@ -166,3 +166,14 @@ func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
   }
   return
 }
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "extern \"C\" {"
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "}  // extern \"C\""
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "typedef int32_t i32;"
+emitc.verbatim "typedef float f32;"

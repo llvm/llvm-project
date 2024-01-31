@@ -2683,7 +2683,7 @@ public:
 
   void DiagnoseUseOfUnimplementedSelectors();
 
-  bool isSimpleTypeSpecifier(tok::TokenKind Kind) const;
+  bool isSimpleTypeSpecifier(const Token &Tok) const;
 
   ParsedType getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                          Scope *S, CXXScopeSpec *SS = nullptr,
@@ -12381,6 +12381,9 @@ public:
   /// Called on well-formed 'relaxed' clause.
   OMPClause *ActOnOpenMPRelaxedClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'weak' clause.
+  OMPClause *ActOnOpenMPWeakClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
 
   /// Called on well-formed 'init' clause.
   OMPClause *

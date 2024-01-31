@@ -2375,6 +2375,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((AArch64ISD::NodeType)Opcode) {
   case AArch64ISD::FIRST_NUMBER:
     break;
+    MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
     MAKE_CASE(AArch64ISD::SMSTART)
     MAKE_CASE(AArch64ISD::SMSTOP)
     MAKE_CASE(AArch64ISD::RESTORE_ZA)
@@ -7154,13 +7155,18 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   }
 }
 
+static bool isPassedInFPR(EVT VT) {
+  return VT.isFixedLengthVector() ||
+         (VT.isFloatingPoint() && !VT.isScalableVector());
+}
+
 /// LowerCallResult - Lower the result values of a call into the
 /// appropriate copies out of appropriate physical registers.
 SDValue AArch64TargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<CCValAssign> &RVLocs, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-    SDValue ThisVal) const {
+    SDValue ThisVal, bool RequiresSMChange) const {
   DenseMap<unsigned, SDValue> CopiedRegs;
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
@@ -7204,6 +7210,10 @@ SDValue AArch64TargetLowering::LowerCallResult(
       Val = DAG.getZExtOrTrunc(Val, DL, VA.getValVT());
       break;
     }
+
+    if (RequiresSMChange && isPassedInFPR(VA.getValVT()))
+      Val = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL, Val.getValueType(),
+                        Val);
 
     InVals.push_back(Val);
   }
@@ -7915,6 +7925,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
           return ArgReg.Reg == VA.getLocReg();
         });
       } else {
+        // Add an extra level of indirection for streaming mode changes by
+        // using a pseudo copy node that cannot be rematerialised between a
+        // smstart/smstop and the call by the simple register coalescer.
+        if (RequiresSMChange && isPassedInFPR(Arg.getValueType()))
+          Arg = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
+                            Arg.getValueType(), Arg);
         RegsToPass.emplace_back(VA.getLocReg(), Arg);
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
@@ -7991,11 +8007,19 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (IsVarArg && Subtarget->isWindowsArm64EC()) {
+    SDValue ParamPtr = StackPtr;
+    if (IsTailCall) {
+      // Create a dummy object at the top of the stack that can be used to get
+      // the SP after the epilogue
+      int FI = MF.getFrameInfo().CreateFixedObject(1, FPDiff, true);
+      ParamPtr = DAG.getFrameIndex(FI, PtrVT);
+    }
+
     // For vararg calls, the Arm64EC ABI requires values in x4 and x5
     // describing the argument list.  x4 contains the address of the
     // first stack parameter. x5 contains the size in bytes of all parameters
     // passed on the stack.
-    RegsToPass.emplace_back(AArch64::X4, StackPtr);
+    RegsToPass.emplace_back(AArch64::X4, ParamPtr);
     RegsToPass.emplace_back(AArch64::X5,
                             DAG.getConstant(NumBytes, DL, MVT::i64));
   }
@@ -8151,9 +8175,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  SDValue Result = LowerCallResult(Chain, InGlue, CallConv, IsVarArg, RVLocs,
-                                   DL, DAG, InVals, IsThisReturn,
-                                   IsThisReturn ? OutVals[0] : SDValue());
+  SDValue Result = LowerCallResult(
+      Chain, InGlue, CallConv, IsVarArg, RVLocs, DL, DAG, InVals, IsThisReturn,
+      IsThisReturn ? OutVals[0] : SDValue(), RequiresSMChange);
 
   if (!Ins.empty())
     InGlue = Result.getValue(Result->getNumValues() - 1);

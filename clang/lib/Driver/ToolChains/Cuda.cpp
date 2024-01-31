@@ -392,7 +392,12 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     GPUArchName = Args.getLastArgValue(options::OPT_march_EQ);
     if (GPUArchName.empty())
       GPUArchName = getProcessorFromTargetID(TC.getTriple(), TC.getTargetID());
-    assert(!GPUArchName.empty() && "Must have an architecture passed in.");
+      
+    if (GPUArchName.empty()) {
+      C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
+          << getToolChain().getArchName() << getShortName();
+      return;
+    }
   }
 
   // Obtain architecture from the action.
@@ -599,7 +604,11 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (GPUArch.empty())
     GPUArch = getProcessorFromTargetID(getToolChain().getTriple(),
                                        getToolChain().getTargetID());
-  assert(!GPUArch.empty() && "At least one GPU Arch required for nvlink.");
+  if (GPUArch.empty()) {
+    C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
+        << getToolChain().getArchName() << getShortName();
+    return;
+  }
 
   CmdArgs.push_back("-arch");
   CmdArgs.push_back(Args.MakeArgString(GPUArch));
@@ -751,9 +760,8 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 llvm::opt::DerivedArgList *
 NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                               StringRef BoundArch,
-                              Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      ToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+                              Action::OffloadKind OffloadKind) const {
+  DerivedArgList *DAL = ToolChain::TranslateArgs(Args, BoundArch, OffloadKind);
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
@@ -763,7 +771,8 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  if (!DAL->hasArg(options::OPT_march_EQ)) {
+  // TODO: We should accept 'generic' as a valid architecture.
+  if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {

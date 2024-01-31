@@ -322,6 +322,9 @@ public:
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
+    if (ScanInstance.getDiagnostics().hasErrorOccurred())
+      return false;
+
     const bool Result = ScanInstance.ExecuteAction(*Action);
 
     if (Result)
