@@ -9,6 +9,7 @@
 #include <assert.h>
 
 #include "lldb/Breakpoint/WatchpointResource.h"
+#include "lldb/Utility/Stream.h"
 
 #include <algorithm>
 
@@ -113,7 +114,8 @@ bool WatchpointResource::ShouldStop(StoppointCallbackContext *context) {
 }
 
 void WatchpointResource::Dump(Stream *s) const {
-  return; // LWP_TODO
+  s->Printf("addr = 0x%8.8" PRIx64 " size = %zu", m_addr, m_size);
+  return;
 }
 
 wp_resource_id_t WatchpointResource::GetNextID() {
