@@ -657,8 +657,8 @@ void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,
 void CIRGenFunction::buildScalarInit(const Expr *init, mlir::Location loc,
                                      LValue lvalue, bool capturedByInit) {
   // TODO: this is where a lot of ObjC lifetime stuff would be done.
-  mlir::Value value = buildScalarExpr(init);
   SourceLocRAIIObject Loc{*this, loc};
+  mlir::Value value = buildScalarExpr(init);
   buildStoreThroughLValue(RValue::get(value), lvalue);
   return;
 }
