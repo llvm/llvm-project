@@ -7686,10 +7686,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (!BaseOpcode->Sampler) {
     Unorm = True;
   } else {
-    auto UnormConst =
-        cast<ConstantSDNode>(Op.getOperand(ArgOffset + Intr->UnormIndex));
+    uint64_t UnormConst =
+        Op.getConstantOperandVal(ArgOffset + Intr->UnormIndex);
 
-    Unorm = UnormConst->getZExtValue() ? True : False;
+    Unorm = UnormConst ? True : False;
   }
 
   SDValue TFE;

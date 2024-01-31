@@ -193,6 +193,39 @@ func.func @f3ext(%a: vector<5xi8>) -> vector<8xi17> {
   return %1 : vector<8xi17>
 }
 
+// CHECK-LABEL: func.func @aligned_extsi(
+func.func @aligned_extsi(%a: vector<8xi4>) -> vector<8xi32> {
+  // CHECK: arith.shli
+  // CHECK: arith.shrsi
+  // CHECK: arith.shrsi
+  // CHECK: vector.shuffle
+  // CHECK: arith.extsi %{{.*}} : vector<8xi8> to vector<8xi32>
+  %0 = arith.extsi %a : vector<8xi4> to vector<8xi32>
+  return %0 : vector<8xi32>
+}
+
+// CHECK-LABEL: func.func @aligned_extsi_base_case(
+func.func @aligned_extsi_base_case(%a: vector<8xi4>) -> vector<8xi8> {
+  // CHECK: arith.shli
+  // CHECK: arith.shrsi
+  // CHECK: arith.shrsi
+  // CHECK: vector.shuffle
+  // CHECK-NOT: arith.extsi
+  %0 = arith.extsi %a : vector<8xi4> to vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+// CHECK-LABEL: func.func @aligned_sitofp(
+func.func @aligned_sitofp(%a: vector<8xi4>) -> vector<8xf32> {
+  // CHECK: arith.shli
+  // CHECK: arith.shrsi
+  // CHECK: arith.shrsi
+  // CHECK: shuffle
+  // CHECK: arith.sitofp %{{.*}} : vector<8xi8> to vector<8xf32>
+  %0 = arith.sitofp %a : vector<8xi4> to vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
