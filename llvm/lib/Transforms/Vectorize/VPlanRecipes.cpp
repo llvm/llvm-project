@@ -279,11 +279,17 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   Builder.SetCurrentDebugLocation(getDebugLoc());
 
   if (Instruction::isBinaryOp(getOpcode())) {
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return State.get(this, 0);
+      return OnlyFirstLaneUsed ? State.get(this, VPIteration(0, 0))
+                               : State.get(this, 0);
 
-    Value *A = State.get(getOperand(0), Part);
-    Value *B = State.get(getOperand(1), Part);
+    Value *A = OnlyFirstLaneUsed
+                   ? State.get(getOperand(0), VPIteration(Part, 0))
+                   : State.get(getOperand(0), Part);
+    Value *B = OnlyFirstLaneUsed
+                   ? State.get(getOperand(1), VPIteration(Part, 0))
+                   : State.get(getOperand(1), Part);
     auto *Res =
         Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     if (auto *I = dyn_cast<Instruction>(Res))
@@ -385,8 +391,8 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     if (Part != 0)
       return nullptr;
     // First create the compare.
-    Value *IV = State.get(getOperand(0), Part);
-    Value *TC = State.get(getOperand(1), Part);
+    Value *IV = State.get(getOperand(0), VPIteration(0, 0));
+    Value *TC = State.get(getOperand(1), VPIteration(0, 0));
     Value *Cond = Builder.CreateICmpEQ(IV, TC);
 
     // Now create the branch.
@@ -407,7 +413,7 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   }
   case VPInstruction::ComputeReductionResult: {
     if (Part != 0)
-      return State.get(this, 0);
+      return State.get(this, VPIteration(0, 0));
 
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -512,7 +518,17 @@ void VPInstruction::execute(VPTransformState &State) {
     if (!hasResult())
       continue;
     assert(GeneratedValue && "generateInstruction must produce a value");
-    State.set(this, GeneratedValue, Part);
+    if (GeneratedValue->getType()->isVectorTy())
+      State.set(this, GeneratedValue, Part);
+    else {
+      if (getOpcode() == VPInstruction::ComputeReductionResult) {
+        State.set(this, GeneratedValue, VPIteration(Part, 0));
+      } else {
+        assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
+               "scalar value but not only first lane used");
+        State.set(this, GeneratedValue, VPIteration(Part, 0));
+      }
+    }
   }
 }
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
@@ -525,11 +541,13 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return false;
   case Instruction::ICmp:
     return vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::ComputeReductionResult:
+    return true;
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
-    return getOperand(0) == Op;
+    return true;
   };
   llvm_unreachable("switch should return");
 }

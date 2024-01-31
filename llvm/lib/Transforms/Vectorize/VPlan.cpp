@@ -213,8 +213,13 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 }
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
-  if (Def->isLiveIn())
-    return Def->getLiveInIRValue();
+  if (Def->isLiveIn()) {
+    if (Value *V = Def->getLiveInIRValue())
+      return V;
+    if (hasScalarValue(Def, VPIteration(0, 0))) {
+      return Data.PerPartScalars[Def][0][0];
+    }
+  }
 
   if (hasScalarValue(Def, Instance)) {
     return Data
@@ -794,7 +799,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   // FIXME: Model VF * UF computation completely in VPlan.
   State.set(&VFxUF,
             createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
-            0);
+            VPIteration(0, 0));
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
@@ -883,8 +888,11 @@ void VPlan::execute(VPTransformState *State) {
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
       Value *Phi = State->get(PhiR, Part);
-      Value *Val = State->get(PhiR->getBackedgeValue(),
-                              SinglePartNeeded ? State->UF - 1 : Part);
+      Value *Val =
+          isa<VPCanonicalIVPHIRecipe>(PhiR)
+              ? State->get(PhiR->getBackedgeValue(), VPIteration(Part, 0))
+              : State->get(PhiR->getBackedgeValue(),
+                           SinglePartNeeded ? State->UF - 1 : Part);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
