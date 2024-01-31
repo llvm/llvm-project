@@ -788,9 +788,13 @@ private:
   void handleImplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &result,
       bool isBindC) {
-    if (result.IsProcedurePointer())
-      TODO(interface.converter.getCurrentLocation(),
-           "procedure pointer result not yet handled");
+    if (auto proc{result.IsProcedurePointer()}) {
+      mlir::Type mlirType = fir::BoxProcType::get(
+          &mlirContext, getProcedureType(*proc, interface.converter));
+      addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                   Property::Value);
+      return;
+    }
     const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
         result.GetTypeAndShape();
     assert(typeAndShape && "expect type for non proc pointer result");
