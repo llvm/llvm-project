@@ -356,6 +356,23 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isInitialized())
+    return true;
+
+  assert(S.getLangOpts().CPlusPlus);
+  const auto *VD = cast<VarDecl>(Ptr.getDeclDesc()->asValueDecl());
+  if ((!VD->hasConstantInitialization() &&
+       VD->mightBeUsableInConstantExpressions(S.getCtx())) ||
+      (S.getLangOpts().OpenCL && !S.getLangOpts().CPlusPlus11 &&
+       !VD->hasICEInitializer(S.getCtx()))) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+  }
+  return false;
+}
+
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;

@@ -157,22 +157,22 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       isSpecialOpaqueType(OriginalArgType))
     return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
-  MDString *MDKernelArgType = getOCLKernelArgType(F, ArgIdx);
-  if (!MDKernelArgType || (!MDKernelArgType->getString().ends_with("*") &&
-                           !MDKernelArgType->getString().ends_with("_t")))
-    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
-
-  if (MDKernelArgType->getString().ends_with("*"))
-    return GR->getOrCreateSPIRVTypeByName(
-        MDKernelArgType->getString(), MIRBuilder,
-        addressSpaceToStorageClass(OriginalArgType->getPointerAddressSpace()));
-
-  if (MDKernelArgType->getString().ends_with("_t"))
-    return GR->getOrCreateSPIRVTypeByName(
-        "opencl." + MDKernelArgType->getString().str(), MIRBuilder,
-        SPIRV::StorageClass::Function, ArgAccessQual);
-
-  llvm_unreachable("Unable to recognize argument type name.");
+  SPIRVType *ResArgType = nullptr;
+  if (MDString *MDKernelArgType = getOCLKernelArgType(F, ArgIdx)) {
+    StringRef MDTypeStr = MDKernelArgType->getString();
+    if (MDTypeStr.ends_with("*"))
+      ResArgType = GR->getOrCreateSPIRVTypeByName(
+          MDTypeStr, MIRBuilder,
+          addressSpaceToStorageClass(
+              OriginalArgType->getPointerAddressSpace()));
+    else if (MDTypeStr.ends_with("_t"))
+      ResArgType = GR->getOrCreateSPIRVTypeByName(
+          "opencl." + MDTypeStr.str(), MIRBuilder,
+          SPIRV::StorageClass::Function, ArgAccessQual);
+  }
+  return ResArgType ? ResArgType
+                    : GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder,
+                                               ArgAccessQual);
 }
 
 static bool isEntryPoint(const Function &F) {

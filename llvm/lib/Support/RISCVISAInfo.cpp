@@ -195,6 +195,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 // clang-format off
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zaamo", {0, 2}},
+    {"zabha", {1, 0}},
     {"zacas", {1, 0}},
     {"zalrsc", {0, 2}},
 
@@ -743,8 +744,7 @@ static Error processMultiLetterExtension(
 
   if (!IgnoreUnknown && Name.size() == Type.size())
     return createStringError(errc::invalid_argument,
-                             "%s name missing after '%s'", Desc.str().c_str(),
-                             Type.str().c_str());
+                             Desc + " name missing after '" + Type + "'");
 
   unsigned Major, Minor, ConsumeLength;
   if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
@@ -759,8 +759,8 @@ static Error processMultiLetterExtension(
 
   // Check if duplicated extension.
   if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
-    return createStringError(errc::invalid_argument, "duplicated %s '%s'",
-                             Desc.str().c_str(), Name.str().c_str());
+    return createStringError(errc::invalid_argument,
+                             "duplicated " + Desc + " '" + Name + "'");
 
   if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
     return Error::success();
@@ -794,8 +794,8 @@ static Error processSingleLetterExtension(
   // Check if duplicated extension.
   if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
     return createStringError(errc::invalid_argument,
-                             "duplicated standard user-level extension '%s'",
-                             Name.str().c_str());
+                             "duplicated standard user-level extension '" +
+                                 Name + "'");
 
   if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
     return Error::success();
@@ -907,7 +907,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         if (auto E = processSingleLetterExtension(
                 CurrExt, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
-          return E;
+          return std::move(E);
       } else if (CurrExt.front() == 'z' || CurrExt.front() == 's' ||
                  CurrExt.front() == 'x') {
         // Handle other types of extensions other than the standard
@@ -921,15 +921,15 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         if (auto E = processMultiLetterExtension(
                 CurrExt, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
-          return E;
+          return std::move(E);
         // Multi-letter extension must be seperate following extension with
         // underscore
         break;
       } else {
         // FIXME: Could it be ignored by IgnoreUnknown?
         return createStringError(errc::invalid_argument,
-                                 "invalid standard user-level extension '%c'",
-                                 CurrExt.front());
+                                 "invalid standard user-level extension '" +
+                                     Twine(CurrExt.front()) + "'");
       }
     }
   }
@@ -941,13 +941,13 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     if (!RISCVISAInfo::isSupportedExtension(ExtName)) {
       if (ExtName.size() == 1) {
-        return createStringError(
-            errc::invalid_argument,
-            "unsupported standard user-level extension '%s'", ExtName.c_str());
+        return createStringError(errc::invalid_argument,
+                                 "unsupported standard user-level extension '" +
+                                     ExtName + "'");
       }
-      return createStringError(errc::invalid_argument, "unsupported %s '%s'",
-                               getExtensionTypeDesc(ExtName).str().c_str(),
-                               ExtName.c_str());
+      return createStringError(errc::invalid_argument,
+                               "unsupported " + getExtensionTypeDesc(ExtName) +
+                                   " '" + ExtName + "'");
     }
     ISAInfo->addExtension(ExtName, ExtVers);
   }
@@ -1018,6 +1018,7 @@ static const char *ImpliedExtsXSfvfnrclipxfqf[] = {"zve32f"};
 static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zvfbfmin"};
 static const char *ImpliedExtsXSfvqmaccdod[] = {"zve32x"};
 static const char *ImpliedExtsXSfvqmaccqoq[] = {"zve32x"};
+static const char *ImpliedExtsZabha[] = {"a"};
 static const char *ImpliedExtsZacas[] = {"a"};
 static const char *ImpliedExtsZcb[] = {"zca"};
 static const char *ImpliedExtsZcd[] = {"d", "zca"};
@@ -1092,6 +1093,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"xsfvqmaccdod"}, {ImpliedExtsXSfvqmaccdod}},
     {{"xsfvqmaccqoq"}, {ImpliedExtsXSfvqmaccqoq}},
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
+    {{"zabha"}, {ImpliedExtsZabha}},
     {{"zacas"}, {ImpliedExtsZacas}},
     {{"zcb"}, {ImpliedExtsZcb}},
     {{"zcd"}, {ImpliedExtsZcd}},
