@@ -8265,8 +8265,8 @@ def warn_condition_is_assignment : Warning<"using the result of an "
 def warn_free_nonheap_object
   : Warning<"attempt to call %0 on non-heap %select{object %2|object: block expression|object: lambda-to-function-pointer conversion}1">,
     InGroup<FreeNonHeapObject>;
-def warn_free_called_on_unallocated_object : Warning<
-  "'%0' called on unallocated object '%1'">,
+def warn_called_on_unallocated_object : Warning<
+  "calling function '%0' on an unallocated object '%1'">,
   InGroup<FreeNonHeapObject>;
 
 // Completely identical except off by default.

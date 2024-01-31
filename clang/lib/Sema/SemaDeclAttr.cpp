@@ -3785,7 +3785,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   if (S.IsPointerToPointer(ParamTy, Ty)) {
     VarDecl *VD = cast<VarDecl>(D);
-    S.Diag(Loc, diag::warn_free_called_on_unallocated_object)
+    S.Diag(Loc, diag::warn_called_on_unallocated_object)
         << NI.getName() << VD;
     return;
   }
