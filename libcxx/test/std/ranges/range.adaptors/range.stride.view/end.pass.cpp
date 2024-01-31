@@ -101,7 +101,7 @@ constexpr bool test_default_sentinel() {
 
     auto v  = UnsimpleUnCommonView{};
     auto sv = std::ranges::stride_view<UnsimpleUnCommonView>(v, 1);
-    static_assert(std::is_same_v<std::default_sentinel_t, decltype(sv.end())>);
+    ASSERT_SAME_TYPE(std::default_sentinel_t, decltype(sv.end()));
   }
 
   {
@@ -111,7 +111,7 @@ constexpr bool test_default_sentinel() {
     auto v  = SimpleUnCommonView{};
     auto sv = std::ranges::stride_view<SimpleUnCommonView>(v, 1);
 
-    static_assert(std::is_same_v<std::default_sentinel_t, decltype(sv.end())>);
+    ASSERT_SAME_TYPE(std::default_sentinel_t, decltype(sv.end()));
   }
   return true;
 }
