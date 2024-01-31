@@ -513,7 +513,7 @@ Error RewriteInstance::discoverStorage() {
                                                      Phdr.p_filesz,
                                                      Phdr.p_align};
       if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
-          Phdr.p_vaddr >= 0xFFFF'FFFF'8000'0000)
+          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
         BC->IsLinuxKernel = true;
       break;
     case ELF::PT_INTERP:
