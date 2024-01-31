@@ -473,7 +473,6 @@ private:
   bool WorkGroupIDY : 1;
   bool WorkGroupIDZ : 1;
   bool WorkGroupInfo : 1;
-  bool WaveID : 1;
   bool LDSKernelId : 1;
   bool PrivateSegmentWaveByteOffset : 1;
 
@@ -591,7 +590,8 @@ private:
   bool allocateVirtualVGPRForSGPRSpills(MachineFunction &MF, int FI,
                                         unsigned LaneIndex);
   bool allocatePhysicalVGPRForSGPRSpills(MachineFunction &MF, int FI,
-                                         unsigned LaneIndex);
+                                         unsigned LaneIndex,
+                                         bool IsPrologEpilog);
 
 public:
   Register getVGPRForAGPRCopy() const {
@@ -631,6 +631,7 @@ public:
   }
 
   ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }
+
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
 
@@ -745,7 +746,12 @@ public:
       I->second.IsDead = true;
   }
 
+  // To bring the Physical VGPRs in the highest range allocated for CSR SGPR
+  // spilling into the lowest available range.
+  void shiftSpillPhysVGPRsToLowestRange(MachineFunction &MF);
+
   bool allocateSGPRSpillToVGPRLane(MachineFunction &MF, int FI,
+                                   bool SpillToPhysVGPRLane = false,
                                    bool IsPrologEpilog = false);
   bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
 
@@ -787,35 +793,21 @@ public:
   }
 
   // Add system SGPRs.
-  Register addWorkGroupIDX(bool HasArchitectedSGPRs) {
-    Register Reg =
-        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP9 : getNextSystemSGPR();
-    ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(Reg);
-    if (!HasArchitectedSGPRs)
-      NumSystemSGPRs += 1;
-
+  Register addWorkGroupIDX() {
+    ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(getNextSystemSGPR());
+    NumSystemSGPRs += 1;
     return ArgInfo.WorkGroupIDX.getRegister();
   }
 
-  Register addWorkGroupIDY(bool HasArchitectedSGPRs) {
-    Register Reg =
-        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
-    unsigned Mask = HasArchitectedSGPRs && hasWorkGroupIDZ() ? 0xffff : ~0u;
-    ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(Reg, Mask);
-    if (!HasArchitectedSGPRs)
-      NumSystemSGPRs += 1;
-
+  Register addWorkGroupIDY() {
+    ArgInfo.WorkGroupIDY = ArgDescriptor::createRegister(getNextSystemSGPR());
+    NumSystemSGPRs += 1;
     return ArgInfo.WorkGroupIDY.getRegister();
   }
 
-  Register addWorkGroupIDZ(bool HasArchitectedSGPRs) {
-    Register Reg =
-        HasArchitectedSGPRs ? (MCPhysReg)AMDGPU::TTMP7 : getNextSystemSGPR();
-    unsigned Mask = HasArchitectedSGPRs ? 0xffff << 16 : ~0u;
-    ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(Reg, Mask);
-    if (!HasArchitectedSGPRs)
-      NumSystemSGPRs += 1;
-
+  Register addWorkGroupIDZ() {
+    ArgInfo.WorkGroupIDZ = ArgDescriptor::createRegister(getNextSystemSGPR());
+    NumSystemSGPRs += 1;
     return ArgInfo.WorkGroupIDZ.getRegister();
   }
 
@@ -824,14 +816,6 @@ public:
     NumSystemSGPRs += 1;
     return ArgInfo.WorkGroupInfo.getRegister();
   }
-
-  // Supported for GFX12+.
-  Register addWaveID() {
-    ArgInfo.WaveID = ArgDescriptor::createRegister(AMDGPU::TTMP8, 0x1f << 25);
-    return ArgInfo.WaveID.getRegister();
-  }
-
-  bool hasWaveID() const { return WaveID; }
 
   bool hasLDSKernelId() const { return LDSKernelId; }
 
@@ -1097,22 +1081,6 @@ public:
   /// \returns Default/requested maximum number of waves per execution unit.
   unsigned getMaxWavesPerEU() const {
     return WavesPerEU.second;
-  }
-
-  /// \returns SGPR used for \p Dim's work group ID.
-  Register getWorkGroupIDSGPR(unsigned Dim) const {
-    switch (Dim) {
-    case 0:
-      assert(hasWorkGroupIDX());
-      return ArgInfo.WorkGroupIDX.getRegister();
-    case 1:
-      assert(hasWorkGroupIDY());
-      return ArgInfo.WorkGroupIDY.getRegister();
-    case 2:
-      assert(hasWorkGroupIDZ());
-      return ArgInfo.WorkGroupIDZ.getRegister();
-    }
-    llvm_unreachable("unexpected dimension");
   }
 
   const AMDGPUGWSResourcePseudoSourceValue *

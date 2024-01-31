@@ -94,6 +94,7 @@ enum CPUFeatures {
   FEAT_SME_I64,
   FEAT_SME2,
   FEAT_RCPC3,
+  FEAT_MOPS,
   FEAT_MAX,
   FEAT_EXT = 62,
   FEAT_INIT
@@ -246,7 +247,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"memtag", AArch64::AEK_MTE, "+mte", "-mte", FEAT_MEMTAG, "", 440},
     {"memtag2", AArch64::AEK_NONE, {}, {}, FEAT_MEMTAG2, "+mte", 450},
     {"memtag3", AArch64::AEK_NONE, {}, {}, FEAT_MEMTAG3, "+mte", 460},
-    {"mops", AArch64::AEK_MOPS, "+mops", "-mops", FEAT_INIT, "", 0},
+    {"mops", AArch64::AEK_MOPS, "+mops", "-mops", FEAT_MOPS, "+mops", 650},
     {"pauth", AArch64::AEK_PAUTH, "+pauth", "-pauth", FEAT_INIT, "", 0},
     {"pmull", AArch64::AEK_NONE, {}, {}, FEAT_PMULL, "+aes,+fp-armv8,+neon", 160},
     {"pmuv3", AArch64::AEK_PERFMON, "+perfmon", "-perfmon", FEAT_INIT, "", 0},

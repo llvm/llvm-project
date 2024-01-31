@@ -430,6 +430,7 @@ def : SourceOfDivergence<int_amdgcn_swmmac_f32_16x16x32_fp8_fp8>;
 def : SourceOfDivergence<int_amdgcn_swmmac_f32_16x16x32_fp8_bf8>;
 def : SourceOfDivergence<int_amdgcn_swmmac_f32_16x16x32_bf8_fp8>;
 def : SourceOfDivergence<int_amdgcn_swmmac_f32_16x16x32_bf8_bf8>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr>;
 def : SourceOfDivergence<int_amdgcn_waterfall_end>;
 
 // The dummy boolean output is divergent from the IR's perspective,

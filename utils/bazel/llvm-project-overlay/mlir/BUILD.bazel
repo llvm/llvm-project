@@ -2724,6 +2724,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
@@ -8031,6 +8032,7 @@ cc_library(
     deps = [
         ":AMDGPUDialect",
         ":ArithDialect",
+        ":ArithUtils",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
         ":IR",
@@ -8053,8 +8055,8 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":ArmSMEDialect",
         ":ArithDialect",
+        ":ArmSMEDialect",
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",

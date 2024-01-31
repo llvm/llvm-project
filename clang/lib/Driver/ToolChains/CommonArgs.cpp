@@ -317,9 +317,7 @@ void tools::handleTargetFeaturesGroup(const Driver &D,
       continue;
     }
 
-    bool IsNegative = Name.starts_with("no-");
-    if (IsNegative)
-      Name = Name.substr(3);
+    bool IsNegative = Name.consume_front("no-");
 
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
@@ -781,6 +779,28 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_gdwarf_aranges)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          "-generate-arange-section"));
+  }
+
+  // Pass vector library arguments to LTO.
+  Arg *ArgVecLib = Args.getLastArg(options::OPT_fveclib);
+  if (ArgVecLib && ArgVecLib->getNumValues() == 1) {
+    // Map the vector library names from clang front-end to opt front-end. The
+    // values are taken from the TargetLibraryInfo class command line options.
+    std::optional<StringRef> OptVal =
+        llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
+            .Case("Accelerate", "Accelerate")
+            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("MASSV", "MASSV")
+            .Case("SVML", "SVML")
+            .Case("SLEEF", "sleefgnuabi")
+            .Case("Darwin_libsystem_m", "Darwin_libsystem_m")
+            .Case("ArmPL", "ArmPL")
+            .Case("none", "none")
+            .Default(std::nullopt);
+
+    if (OptVal)
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine(PluginOptPrefix) + "-vector-library=" + OptVal.value()));
   }
 
   // Try to pass driver level flags relevant to LTO code generation down to

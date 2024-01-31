@@ -1161,7 +1161,7 @@ define <2 x i16> @ustest_f64i16(<2 x double> %x) nounwind {
 ; SSE-LABEL: ustest_f64i16:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <65535,65535,u,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,u,u]
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm0
@@ -3803,7 +3803,7 @@ define <2 x i16> @ustest_f64i16_mm(<2 x double> %x) nounwind {
 ; SSE-LABEL: ustest_f64i16_mm:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <65535,65535,u,u>
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,u,u]
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
 ; SSE-NEXT:    pand %xmm2, %xmm0

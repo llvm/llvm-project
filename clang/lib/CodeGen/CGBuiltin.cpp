@@ -4011,7 +4011,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Dest.getPointer()), E->getArg(1)->getType(),
                         E->getArg(1)->getExprLoc(), FD, 0);
     Builder.CreateMemMove(Dest, Src, SizeVal, false);
-    return RValue::get(Dest.getPointer());
+    return RValue::get(nullptr);
   }
 
   case Builtin::BImemcpy:
@@ -18329,9 +18329,14 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     // the form:
     //             D = A * B + C
     // We need to specify one type for matrices AB and one for matrices CD.
+    // Sparse matrix operations can have different types for A and B as well as
+    // an additional type for sparsity index.
+    // Destination type should be put before types used for source operands.
     SmallVector<unsigned, 2> ArgsForMatchingMatrixTypes;
-    // Some intrinsics expect "false" as an extra bool argument.
-    bool AppendExtraBoolArg = false;
+    // On GFX12, the intrinsics with 16-bit accumulator use a packed layout.
+    // There is no need for the variable opsel argument, so always set it to
+    // "false".
+    bool AppendFalseForOpselArg = false;
     unsigned BuiltinWMMAOp;
 
     switch (BuiltinID) {
@@ -18339,136 +18344,136 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_f16_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf16_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12:
-      AppendExtraBoolArg = true;
+      AppendFalseForOpselArg = true;
       LLVM_FALLTHROUGH;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x16_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12:
-      AppendExtraBoolArg = true;
+      AppendFalseForOpselArg = true;
       LLVM_FALLTHROUGH;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_tied_w64:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f16_16x16x16_f16_tied;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16_tied;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu8_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {1, 4};
+      ArgsForMatchingMatrixTypes = {4, 1}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_i32_16x16x16_iu8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w64:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x16_iu4_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {1, 4};
+      ArgsForMatchingMatrixTypes = {4, 1}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_i32_16x16x16_iu4;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_fp8_fp8_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_fp8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_fp8_bf8_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_fp8_bf8_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_fp8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf8_fp8_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf8_fp8_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_bf8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x16_bf8_bf8_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {0, 2};
+      ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x16_bf8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x32_iu4_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_i32_16x16x32_iu4_w64_gfx12:
-      ArgsForMatchingMatrixTypes = {1, 4};
+      ArgsForMatchingMatrixTypes = {4, 1}; // CD, AB
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_i32_16x16x32_iu4;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_f16_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_f16_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf16_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf16_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f16_16x16x32_f16_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_f16_16x16x32_f16_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f16_16x16x32_f16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x32_iu8_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x32_iu8_w64:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x32_iu4_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x32_iu4_w64:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x64_iu4_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_i32_16x16x64_iu4_w64:
-      ArgsForMatchingMatrixTypes = {1, 3, 4, 5};
+      ArgsForMatchingMatrixTypes = {4, 1, 3, 5}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_fp8_fp8_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8;
       break;
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w32:
     case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64:
-      ArgsForMatchingMatrixTypes = {0, 1, 2, 3};
+      ArgsForMatchingMatrixTypes = {2, 0, 1, 3}; // CD, A, B, Index
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8;
       break;
     }
@@ -18476,7 +18481,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *, 6> Args;
     for (int i = 0, e = E->getNumArgs(); i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
-    if (AppendExtraBoolArg)
+    if (AppendFalseForOpselArg)
       Args.push_back(Builder.getFalse());
 
     SmallVector<llvm::Type *, 6> ArgTypes;

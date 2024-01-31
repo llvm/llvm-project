@@ -116,17 +116,17 @@ void testUseAfterFree() {
 }
 
 void testNoCopy() {
-  char *p = (char *)calloc(sizeof(int), 1);
+  char *p = (char *)calloc(1, sizeof(int));
   CustomData *w = [CustomData somethingNoCopy:p]; // no-warning
 }
 
 void testFreeWhenDone() {
-  char *p = (char *)calloc(sizeof(int), 1);
+  char *p = (char *)calloc(1, sizeof(int));
   CustomData *w = [CustomData something:p freeWhenDone:1]; // no-warning
 }
 
 void testFreeWhenDonePositive() {
-  char *p = (char *)calloc(sizeof(int), 1);
+  char *p = (char *)calloc(1, sizeof(int));
   CustomData *w = [CustomData something:p freeWhenDone:0]; // expected-warning{{leak}}
 }
 

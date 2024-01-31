@@ -23,8 +23,8 @@ on:
       - 'cmake/**'
       - '.github/workflows/libcxx-build-and-test.yaml'
   schedule:
-    # Run nightly at 8 AM UTC (or roughly 3 AM eastern)
-    - cron: '0 3 * * *'
+    # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
+    - cron: '0 8 * * *'
 
 permissions:
   contents: read # Default everything to read-only

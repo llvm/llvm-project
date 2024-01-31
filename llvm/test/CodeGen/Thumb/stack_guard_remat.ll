@@ -1,4 +1,4 @@
-; RUN: cp %s %t.pic.ll
+; RUN: cat %s > %t.pic.ll
 ; RUN: echo -e '!llvm.module.flags = !{!0}\n!0 = !{i32 7, !"PIC Level", i32 2}' >> %t.pic.ll
 ; RUN: llc < %t.pic.ll -mtriple=thumb-apple-darwin -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC
 ; RUN: llc < %s -mtriple=thumb-apple-darwin -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=NO-PIC  -check-prefix=STATIC

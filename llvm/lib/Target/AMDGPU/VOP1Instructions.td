@@ -399,10 +399,10 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
 
   let OutsDPP = (outs Src0RC32:$vdst);
   let InsDPP16 = (ins Src0RC32:$old, Src0RC32:$src0,
-                      dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+                      dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                      DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, DppFI:$fi);
   let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
-  let InsDPP8 = (ins Src0RC32:$old, Src0RC32:$src0, dpp8:$dpp8, FI:$fi);
+  let InsDPP8 = (ins Src0RC32:$old, Src0RC32:$src0, dpp8:$dpp8, DppFI:$fi);
   let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
 
   let OutsVOP3DPP = (outs Src0RC64:$vdst);
@@ -638,28 +638,22 @@ let SubtargetPredicate = isGFX9Only in {
   }
 }
 
+
 // Similar to VOPProfile_Base_CVT_F32_F8, but for VOP3 instructions.
 def VOPProfile_Base_CVT_PK_F32_F8_OpSel : VOPProfileI2F <v2f32, i32> {
-  let InsVOP3OpSel = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0,
-                          clampmod:$clamp, omod:$omod, op_sel0:$op_sel);
-
   let HasOpSel = 1;
   let HasExtVOP3DPP = 0;
 }
 
-def VOPProfile_Base_CVT_F32_F8_OpSel : VOPProfile<[f32, i32, i32, untyped]> {
-  let InsVOP3OpSel = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0,
-                          Src1Mod:$src1_modifiers, Src1RC64:$src1,
-                          clampmod:$clamp, omod:$omod, op_sel0:$op_sel);
-  let AsmVOP3OpSel = !subst(", $src1_modifiers", "", getAsmVOP3OpSel<2, 0, 0, 1, 1, 0>.ret);
-
+def VOPProfile_Base_CVT_F32_F8_OpSel : VOPProfile<[f32, i32, untyped, untyped]> {
   let HasOpSel = 1;
   let HasExtDPP = 1;
   let HasExtVOP3DPP = 1;
-
+  let IsFP8 = 1;
+  let HasClamp = 0;
+  let HasOMod = 0;
+  let HasModifiers = 1;
   let Src1VOP3DPP = Src1RC64;
-  let AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3OpSel>.ret;
-  let AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3OpSel>.ret;
 }
 
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 0,
@@ -674,9 +668,11 @@ class Cvt_F32_F8_Pat_OpSel<SDPatternOperator node, bits<2> index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
     (f32 (node i32:$src, index)),
     !if (index,
-         (inst_e64 !if(index{0}, SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), $src,
-                   !if(index{1}, SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), (i32 0),
-                   0, 0, 0),
+         (inst_e64 !if(index{0},
+                         !if(index{1}, !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1),
+                                       SRCMODS.OP_SEL_0),
+                         !if(index{1}, SRCMODS.OP_SEL_1, 0)),
+                    $src, 0),
          (inst_e32 $src))
 >;
 

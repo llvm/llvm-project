@@ -2194,12 +2194,6 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
-  if (C.getArgs().hasArg(options::OPT_print_std_module_manifest_path)) {
-    llvm::outs() << GetStdModuleManifestPath(C, C.getDefaultToolChain())
-                 << '\n';
-    return false;
-  }
-
   if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
     if (std::optional<std::string> RuntimePath = TC.getRuntimePath())
       llvm::outs() << *RuntimePath << '\n';
@@ -4770,9 +4764,9 @@ Action *Driver::ConstructPhaseAction(
   case phases::Backend: {
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
-      if (Args.hasArg(options::OPT_ffat_lto_objects))
-        Output = Args.hasArg(options::OPT_emit_llvm) ? types::TY_LTO_IR
-                                                     : types::TY_PP_Asm;
+      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+          !Args.hasArg(options::OPT_emit_llvm))
+        Output = types::TY_PP_Asm;
       else if (Args.hasArg(options::OPT_S))
         Output = types::TY_LTO_IR;
       else
@@ -6172,44 +6166,6 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   return std::string(Name);
 }
 
-std::string Driver::GetStdModuleManifestPath(const Compilation &C,
-                                             const ToolChain &TC) const {
-  std::string error = "<NOT PRESENT>";
-
-  switch (TC.GetCXXStdlibType(C.getArgs())) {
-  case ToolChain::CST_Libcxx: {
-    std::string lib = GetFilePath("libc++.so", TC);
-
-    // Note when there are multiple flavours of libc++ the module json needs to
-    // look at the command-line arguments for the proper json.
-    // These flavours do not exist at the moment, but there are plans to
-    // provide a variant that is built with sanitizer instrumentation enabled.
-
-    // For example
-    //  StringRef modules = [&] {
-    //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
-    //    if (Sanitize.needsAsanRt())
-    //      return "modules-asan.json";
-    //    return "modules.json";
-    //  }();
-
-    SmallString<128> path(lib.begin(), lib.end());
-    llvm::sys::path::remove_filename(path);
-    llvm::sys::path::append(path, "modules.json");
-    if (TC.getVFS().exists(path))
-      return static_cast<std::string>(path);
-
-    return error;
-  }
-
-  case ToolChain::CST_Libstdcxx:
-    // libstdc++ does not provide Standard library modules yet.
-    return error;
-  }
-
-  return error;
-}
-
 std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
   SmallString<128> Path;
   std::error_code EC = llvm::sys::fs::createTemporaryFile(Prefix, Suffix, Path);
@@ -6526,18 +6482,15 @@ bool Driver::GetReleaseVersion(StringRef Str, unsigned &Major, unsigned &Minor,
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Minor))
     return false;
   if (Str.empty())
     return true;
-  if (Str[0] != '.')
+  if (!Str.consume_front("."))
     return false;
-  Str = Str.drop_front(1);
 
   if (Str.consumeInteger(10, Micro))
     return false;
@@ -6565,9 +6518,8 @@ bool Driver::GetReleaseVersion(StringRef Str,
     Digits[CurDigit] = Digit;
     if (Str.empty())
       return true;
-    if (Str[0] != '.')
+    if (!Str.consume_front("."))
       return false;
-    Str = Str.drop_front(1);
     CurDigit++;
   }
 

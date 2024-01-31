@@ -1000,9 +1000,9 @@ def SDWAVopcDst : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
+class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
                       string ConvertMethod = "nullptr">
-    : CustomOperand<Type, 1, Name> {
+    : CustomOperand<Type, Optional, NAME> {
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
@@ -1045,9 +1045,9 @@ class ArrayOperand0<string Id, string Name = NAME>
 
 let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
-def offset : NamedIntOperand<i32, "offset", "Offset">;
-def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
-def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
+def Offset : NamedIntOperand<i32, "offset">;
+def Offset0 : NamedIntOperand<i8, "offset0">;
+def Offset1 : NamedIntOperand<i8, "offset1">;
 
 def gds : NamedBitOperand<"gds", "GDS">;
 
@@ -1101,25 +1101,25 @@ def dpp8 : CustomOperand<i32, 0, "DPP8">;
 def dpp_ctrl : CustomOperand<i32, 0, "DPPCtrl">;
 
 let DefaultValue = "0xf" in {
-def row_mask : NamedIntOperand<i32, "row_mask", "DppRowMask">;
-def bank_mask : NamedIntOperand<i32, "bank_mask", "DppBankMask">;
+def DppRowMask : NamedIntOperand<i32, "row_mask">;
+def DppBankMask : NamedIntOperand<i32, "bank_mask">;
 }
-def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl",
+def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl", 1,
     "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
-def FI : NamedIntOperand<i32, "fi", "DppFI">;
+def DppFI : NamedIntOperand<i32, "fi">;
 
 def blgp : CustomOperand<i32, 1, "BLGP">;
-def cbsz : NamedIntOperand<i32, "cbsz", "CBSZ">;
-def abid : NamedIntOperand<i32, "abid", "ABID">;
+def CBSZ : NamedIntOperand<i32, "cbsz">;
+def ABID : NamedIntOperand<i32, "abid">;
 
 def hwreg : CustomOperand<i32, 0, "Hwreg">;
 
 def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
-def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
-def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
-def wait_va_vdst : NamedIntOperand<i8, "wait_va_vdst", "WaitVAVDst">;
-def wait_va_vsrc : NamedIntOperand<i8, "wait_vm_vsrc", "WaitVMVSrc">;
+def WaitVDST : NamedIntOperand<i8, "wait_vdst">;
+def WaitEXP : NamedIntOperand<i8, "wait_exp">;
+def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst">;
+def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
@@ -1700,8 +1700,9 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
         !if(HasOMod,
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                clampmod0:$clamp, omod0:$omod),
-          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               clampmod0:$clamp))
+          !if (HasClamp,
+            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, clampmod0:$clamp),
+            (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
       /* else */,
         // VOP1 without modifiers
         !if (HasClamp,
@@ -1845,8 +1846,8 @@ class getInsDPP <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperand 
                  Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOld = 1> {
   dag ret = !con(getInsDPPBase<OldRC, Src0RC, Src1RC, Src2RC, NumSrcArgs,
                            HasModifiers, Src0Mod, Src1Mod, Src2Mod, HasOld>.ret,
-                 (ins dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl));
+                 (ins dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                      DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl));
 }
 
 class getInsDPP16 <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperand Src1RC,
@@ -1854,7 +1855,7 @@ class getInsDPP16 <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperan
                    Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOld = 1> {
   dag ret = !con(getInsDPP<OldRC, Src0RC, Src1RC, Src2RC, NumSrcArgs,
                            HasModifiers, Src0Mod, Src1Mod, Src2Mod, HasOld>.ret,
-                 (ins FI:$fi));
+                 (ins DppFI:$fi));
 }
 
 class getInsDPP8 <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperand Src1RC,
@@ -1862,7 +1863,7 @@ class getInsDPP8 <RegisterOperand OldRC, RegisterOperand Src0RC, RegisterOperand
                   Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOld = 1> {
   dag ret = !con(getInsDPPBase<OldRC, Src0RC, Src1RC, Src2RC, NumSrcArgs,
                            HasModifiers, Src0Mod, Src1Mod, Src2Mod, HasOld>.ret,
-                 (ins dpp8:$dpp8, FI:$fi));
+                 (ins dpp8:$dpp8, DppFI:$fi));
 }
 
 class getInsVOP3DPPBase<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs, bit HasOld> {
@@ -1876,18 +1877,18 @@ class getInsVOP3DPPBase<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs, bit
 
 class getInsVOP3DPP<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs, bit HasOld = 1> {
   dag ret = !con(getInsVOP3DPPBase<VOP3Base,OldRC,NumSrcArgs,HasOld>.ret,
-                 (ins dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl));
+                 (ins dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+                      DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl));
 }
 
 class getInsVOP3DPP16<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs, bit HasOld = 1> {
   dag ret = !con(getInsVOP3DPP<VOP3Base,OldRC,NumSrcArgs,HasOld>.ret,
-                 (ins FI:$fi));
+                 (ins DppFI:$fi));
 }
 
 class getInsVOP3DPP8<dag VOP3Base, RegisterOperand OldRC, int NumSrcArgs, bit HasOld = 1> {
   dag ret = !con(getInsVOP3DPPBase<VOP3Base,OldRC,NumSrcArgs,HasOld>.ret,
-                 (ins dpp8:$dpp8, FI:$fi));
+                 (ins dpp8:$dpp8, DppFI:$fi));
 }
 
 // Ins for SDWA
@@ -2296,6 +2297,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsSingle = 0;
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
+
+  field bit IsFP8 = 0;
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;

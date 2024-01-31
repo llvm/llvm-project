@@ -1213,6 +1213,45 @@ instead a real binary. There are 4 potential solutions to the problem:
   $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 -resource-dir <resource-dir> mod.cppm -c -o mod.o
 
 
+Import modules with clang-repl
+==============================
+
+We're able to import C++20 named modules with clang-repl.
+
+Let's start with a simple example:
+
+.. code-block:: c++
+
+  // M.cppm
+  export module M;
+  export const char* Hello() {
+      return "Hello Interpreter for Modules!";
+  }
+
+We still need to compile the named module in ahead.
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
+  $ clang++ M.pcm -c -o M.o
+  $ clang++ -shared M.o -o libM.so
+
+Note that we need to compile the module unit into a dynamic library so that the clang-repl
+can load the object files of the module units.
+
+Then we are able to import module ``M`` in clang-repl.
+
+.. code-block:: console
+
+  $ clang-repl -Xcc=-std=c++20 -Xcc=-fprebuilt-module-path=.
+  # We need to load the dynamic library first before importing the modules.
+  clang-repl> %lib libM.so
+  clang-repl> import M;
+  clang-repl> extern "C" int printf(const char *, ...);
+  clang-repl> printf("%s\n", Hello());
+  Hello Interpreter for Modules!
+  clang-repl> %quit
+
 Possible Questions
 ==================
 

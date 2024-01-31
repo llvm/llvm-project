@@ -2738,22 +2738,22 @@ def int_amdgcn_s_wait_event_export_ready :
 
 class AMDGPUWmmaIntrinsic<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       AB,               // %A
-      LLVMMatchType<0>, // %B
-      CD,               // %C
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       AB,               // %A
-      LLVMMatchType<0>, // %B
-      CD,               // %C
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
       llvm_i1_ty,       // %high (op_sel) for GFX11, 0 for GFX12
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
@@ -2761,13 +2761,13 @@ class AMDGPUWmmaIntrinsicOPSEL<LLVMType AB, LLVMType CD> :
 
 class AMDGPUWmmaIntrinsicIU<LLVMType AB, LLVMType CD> :
   Intrinsic<
-    [LLVMMatchType<1>], // %D
+    [CD], // %D
     [
       llvm_i1_ty,       // %A_sign
       AB,               // %A
       llvm_i1_ty,       // %B_sign
-      LLVMMatchType<0>, // %B
-      CD,               // %C
+      LLVMMatchType<1>, // %B
+      LLVMMatchType<0>, // %C
       llvm_i1_ty,       // %clamp
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
@@ -2882,11 +2882,11 @@ def int_amdgcn_wmma_i32_16x16x32_iu4     : AMDGPUWmmaIntrinsicIU<llvm_anyint_ty,
 
 class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<
-    [LLVMMatchType<2>], // %D
+    [CD],               // %D
     [
       A,                // %A
       B,                // %B
-      CD,               // %C
+      LLVMMatchType<0>, // %C
       Index             // %Sparsity index for A
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn]
@@ -2894,13 +2894,13 @@ class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Ind
 
 class AMDGPUSWmmacIntrinsicIUIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
   Intrinsic<
-    [LLVMMatchType<2>], // %D
+    [CD],               // %D
     [
       llvm_i1_ty,       // %A_sign
       A,                // %A
       llvm_i1_ty,       // %B_sign
       B,                // %B
-      CD,               // %C
+      LLVMMatchType<0>, // %C
       Index,            // %Sparsity index for A
       llvm_i1_ty,       // %clamp
     ],
@@ -2928,7 +2928,7 @@ def int_amdgcn_global_atomic_fmax_num : AMDGPUAtomicRtn<llvm_anyfloat_ty>;
 
 def int_amdgcn_atomic_cond_sub_u32 : AMDGPUAtomicRtn<llvm_i32_ty>;
 
-class AMDGPULoadTr<LLVMType ptr_ty>:
+class AMDGPULoadIntrinsic<LLVMType ptr_ty>:
   Intrinsic<
     [llvm_any_ty],
     [ptr_ty],
@@ -2948,7 +2948,7 @@ class AMDGPULoadTr<LLVMType ptr_ty>:
 // <4 x half>   @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1))  -> global_load_tr_b128
 // <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1)) -> global_load_tr_b128
 
-def int_amdgcn_global_load_tr : AMDGPULoadTr<global_ptr_ty>;
+def int_amdgcn_global_load_tr : AMDGPULoadIntrinsic<global_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :

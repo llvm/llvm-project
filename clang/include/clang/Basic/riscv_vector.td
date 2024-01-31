@@ -2479,9 +2479,13 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       }
       }] in {
 
-    defm : RVVNonTupleVCreateBuiltin<1, [0]>;
-    defm : RVVNonTupleVCreateBuiltin<2, [0, 1]>;
-    defm : RVVNonTupleVCreateBuiltin<3, [0, 1, 2]>;
+    // Since the vcreate_v uses LFixedLog2LMUL, setting the Log2LMUL to [-3] can
+    // avoid creating the intrinsics which contain the same name and prototype.
+    let Log2LMUL = [-3] in {
+      defm : RVVNonTupleVCreateBuiltin<1, [0]>;
+      defm : RVVNonTupleVCreateBuiltin<2, [0, 1]>;
+      defm : RVVNonTupleVCreateBuiltin<3, [0, 1, 2]>;
+    }
 
     foreach nf = NFList in {
       let NF = nf in {

@@ -1945,14 +1945,14 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   auto [OleVal, OleClass] =
       fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
-  EXPECT_EQ(nullptr, OleVal);
-  EXPECT_EQ(fcAllFlags, OleClass);
+  EXPECT_EQ(A->getOperand(0), OleVal);
+  EXPECT_EQ(~fcNan, OleClass);
 
   auto [UgtVal, UgtClass] =
       fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
-  EXPECT_EQ(nullptr, UgtVal);
-  EXPECT_EQ(fcAllFlags, UgtClass);
+  EXPECT_EQ(A4->getOperand(0), UgtVal);
+  EXPECT_EQ(fcNan, UgtClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
