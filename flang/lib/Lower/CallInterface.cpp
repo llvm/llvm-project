@@ -371,7 +371,7 @@ bool Fortran::lower::CallerInterface::mustMapInterfaceSymbols() const {
   const std::optional<Fortran::evaluate::characteristics::FunctionResult>
       &result = characteristic->functionResult;
   if (!result || result->CanBeReturnedViaImplicitInterface() ||
-      !getInterfaceDetails())
+      !getInterfaceDetails() || result->IsProcedurePointer())
     return false;
   bool allResultSpecExprConstant = true;
   auto visitor = [&](const Fortran::lower::SomeExpr &e) {
@@ -788,9 +788,13 @@ private:
   void handleImplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &result,
       bool isBindC) {
-    if (result.IsProcedurePointer())
-      TODO(interface.converter.getCurrentLocation(),
-           "procedure pointer result not yet handled");
+    if (auto proc{result.IsProcedurePointer()}) {
+      mlir::Type mlirType = fir::BoxProcType::get(
+          &mlirContext, getProcedureType(*proc, interface.converter));
+      addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                   Property::Value);
+      return;
+    }
     const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
         result.GetTypeAndShape();
     assert(typeAndShape && "expect type for non proc pointer result");
@@ -976,8 +980,11 @@ private:
     };
     if (obj.attrs.test(Attrs::Optional))
       addMLIRAttr(fir::getOptionalAttrName());
-    if (obj.attrs.test(Attrs::Asynchronous))
-      TODO(loc, "ASYNCHRONOUS in procedure interface");
+    // Skipping obj.attrs.test(Attrs::Asynchronous), this does not impact the
+    // way the argument is passed given flang implement asynch IO synchronously.
+    // TODO: it would be safer to treat them as volatile because since Fortran
+    // 2018 asynchronous can also be used for C defined asynchronous user
+    // processes (see 18.10.4 Asynchronous communication).
     if (obj.attrs.test(Attrs::Contiguous))
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
@@ -1111,39 +1118,40 @@ private:
       const Fortran::evaluate::characteristics::FunctionResult &result) {
     using Attr = Fortran::evaluate::characteristics::FunctionResult::Attr;
     mlir::Type mlirType;
-    if (auto proc{result.IsProcedurePointer()})
+    if (auto proc{result.IsProcedurePointer()}) {
       mlirType = fir::BoxProcType::get(
           &mlirContext, getProcedureType(*proc, interface.converter));
-    else {
-      const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
-          result.GetTypeAndShape();
-      assert(typeAndShape && "expect type for non proc pointer result");
-      mlirType = translateDynamicType(typeAndShape->type());
-      const auto *resTypeAndShape{result.GetTypeAndShape()};
-      bool resIsPolymorphic =
-          resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
-      bool resIsAssumedType =
-          resTypeAndShape && resTypeAndShape->type().IsAssumedType();
-      if (std::optional<fir::SequenceType::Shape> bounds =
-              getBounds(*typeAndShape))
-        mlirType = fir::SequenceType::get(*bounds, mlirType);
-      if (result.attrs.test(Attr::Allocatable))
-        mlirType = fir::wrapInClassOrBoxType(
-            fir::HeapType::get(mlirType), resIsPolymorphic, resIsAssumedType);
-      if (result.attrs.test(Attr::Pointer))
-        mlirType =
-            fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
-                                      resIsPolymorphic, resIsAssumedType);
+      addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                   Property::Value);
+      return;
+    }
+    const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
+        result.GetTypeAndShape();
+    assert(typeAndShape && "expect type for non proc pointer result");
+    mlirType = translateDynamicType(typeAndShape->type());
+    const auto *resTypeAndShape{result.GetTypeAndShape()};
+    bool resIsPolymorphic =
+        resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
+    bool resIsAssumedType =
+        resTypeAndShape && resTypeAndShape->type().IsAssumedType();
+    if (std::optional<fir::SequenceType::Shape> bounds =
+            getBounds(*typeAndShape))
+      mlirType = fir::SequenceType::get(*bounds, mlirType);
+    if (result.attrs.test(Attr::Allocatable))
+      mlirType = fir::wrapInClassOrBoxType(fir::HeapType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
+    if (result.attrs.test(Attr::Pointer))
+      mlirType = fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
 
-      if (fir::isa_char(mlirType)) {
-        // Character scalar results must be passed as arguments in lowering so
-        // that an assumed length character function callee can access the
-        // result length. A function with a result requiring an explicit
-        // interface does not have to be compatible with assumed length
-        // function, but most compilers supports it.
-        handleImplicitCharacterResult(typeAndShape->type());
-        return;
-      }
+    if (fir::isa_char(mlirType)) {
+      // Character scalar results must be passed as arguments in lowering so
+      // that an assumed length character function callee can access the
+      // result length. A function with a result requiring an explicit
+      // interface does not have to be compatible with assumed length
+      // function, but most compilers supports it.
+      handleImplicitCharacterResult(typeAndShape->type());
+      return;
     }
 
     addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,

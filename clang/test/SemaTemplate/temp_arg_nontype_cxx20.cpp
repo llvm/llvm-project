@@ -354,3 +354,20 @@ namespace ReportedRegression1 {
     return dummy.exit_code();
   }
 }
+
+namespace ReportedRegression2 {
+  const char str[] = "dummy";
+
+  struct S {
+    S operator+(const char*) const;
+  };
+
+  template <const char* in>
+  void fn() {
+    auto s = S{} + in;
+  }
+
+  void use() {
+    fn<str>();
+  }
+}

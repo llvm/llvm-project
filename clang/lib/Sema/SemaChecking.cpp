@@ -7611,9 +7611,8 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   unsigned NumArgs = TheCall->getNumArgs();
 
   Expr *ImplicitThis = nullptr;
-  if (IsMemberOperatorCall && !FDecl->isStatic() &&
-      !FDecl->hasCXXExplicitFunctionObjectParameter()) {
-    // If this is a call to a non-static member operator, hide the first
+  if (IsMemberOperatorCall && !FDecl->hasCXXExplicitFunctionObjectParameter()) {
+    // If this is a call to a member operator, hide the first
     // argument from checkCall.
     // FIXME: Our choice of AST representation here is less than ideal.
     ImplicitThis = Args[0];
@@ -16134,7 +16133,10 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 /// Check conversion of given expression to boolean.
 /// Input argument E is a logical expression.
 static void CheckBoolLikeConversion(Sema &S, Expr *E, SourceLocation CC) {
-  if (S.getLangOpts().Bool)
+  // While C23 does have bool as a keyword, we still need to run the bool-like
+  // conversion checks as bools are still not used as the return type from
+  // "boolean" operators or as the input type for conditional operators.
+  if (S.getLangOpts().Bool && !S.getLangOpts().C23)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isAtomicType())
     return;
