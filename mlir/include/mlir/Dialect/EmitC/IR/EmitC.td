@@ -548,8 +548,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
   let summary = "Verbatim operation";
   let description = [{
     The `verbatim` operation produces no results and the value is emitted as is
-    durung translation. If `trailing_semicolon` is present an additional 
-    semicolon is emitted.
+    followed by a '\n' character during translation.
 
     Note: Use with caution. This operation can have arbitrary effects on the
     semantics of the emitted code. Use semantically more meaningful operations
@@ -579,8 +578,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     StrAttr:$value,
     UnitAttr:$trailing_semicolon
   );
-  let assemblyFormat = "$value (`trailing_semicolon` $trailing_semicolon^)? attr-dict";
-  let hasVerifier = 1;
+  let assemblyFormat = "$value attr-dict";
 }
 
 def EmitC_AssignOp : EmitC_Op<"assign", []> {

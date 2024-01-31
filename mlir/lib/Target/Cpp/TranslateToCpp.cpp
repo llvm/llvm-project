@@ -435,8 +435,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   os << verbatimOp.getValue();
 
-  if (verbatimOp.getTrailingSemicolon())
-    os << ";";
   return success();
 }
 

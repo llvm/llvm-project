@@ -15,7 +15,7 @@ emitc.verbatim "}  // extern \"C\""
 emitc.verbatim "#endif  // __cplusplus"
 // CHECK-NEXT: #endif  // __cplusplus
 
-emitc.verbatim "typedef int32_t i32" {trailing_semicolon = unit}
+emitc.verbatim "typedef int32_t i32;"
 // CHECK-NEXT: typedef int32_t i32;
-emitc.verbatim "typedef float f32" trailing_semicolon
+emitc.verbatim "typedef float f32;"
 // CHECK-NEXT: typedef float f32;

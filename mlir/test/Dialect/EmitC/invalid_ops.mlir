@@ -289,11 +289,3 @@ func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
   }
   return %r : i32
 }
-
-// -----
-
-func.func @verbatim_trailing_semicolon() {
-    // expected-error @+1 {{'emitc.verbatim' op ';' not allowed as the last character, use the `trailing_semicolon` attribute instead}}
-    emitc.verbatim "typedef int32_t i32;"
-    return
-}

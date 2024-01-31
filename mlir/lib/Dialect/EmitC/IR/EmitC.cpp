@@ -585,17 +585,6 @@ LogicalResult emitc::VariableOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// VerbatimOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult emitc::VerbatimOp::verify() {
-  if (getValue().back() == ';')
-    return emitOpError() << "';' not allowed as the last character, use the "
-                            "`trailing_semicolon` attribute instead";
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
