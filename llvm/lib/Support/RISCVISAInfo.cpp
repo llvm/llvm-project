@@ -743,8 +743,7 @@ static Error processMultiLetterExtension(
 
   if (!IgnoreUnknown && Name.size() == Type.size())
     return createStringError(errc::invalid_argument,
-                             "%s name missing after '%s'", Desc.str().c_str(),
-                             Type.str().c_str());
+                             Desc + " name missing after '" + Type + "'");
 
   unsigned Major, Minor, ConsumeLength;
   if (auto E = getExtensionVersion(Name, Vers, Major, Minor, ConsumeLength,
@@ -759,8 +758,8 @@ static Error processMultiLetterExtension(
 
   // Check if duplicated extension.
   if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
-    return createStringError(errc::invalid_argument, "duplicated %s '%s'",
-                             Desc.str().c_str(), Name.str().c_str());
+    return createStringError(errc::invalid_argument,
+                             "duplicated " + Desc + " '" + Name + "'");
 
   if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
     return Error::success();
@@ -794,8 +793,8 @@ static Error processSingleLetterExtension(
   // Check if duplicated extension.
   if (!IgnoreUnknown && SeenExtMap.contains(Name.str()))
     return createStringError(errc::invalid_argument,
-                             "duplicated standard user-level extension '%s'",
-                             Name.str().c_str());
+                             "duplicated standard user-level extension '" +
+                                 Name + "'");
 
   if (IgnoreUnknown && !RISCVISAInfo::isSupportedExtension(Name))
     return Error::success();
@@ -928,8 +927,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
       } else {
         // FIXME: Could it be ignored by IgnoreUnknown?
         return createStringError(errc::invalid_argument,
-                                 "invalid standard user-level extension '%c'",
-                                 CurrExt.front());
+                                 "invalid standard user-level extension '" +
+                                     Twine(CurrExt.front()) + "'");
       }
     }
   }
@@ -941,13 +940,13 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     if (!RISCVISAInfo::isSupportedExtension(ExtName)) {
       if (ExtName.size() == 1) {
-        return createStringError(
-            errc::invalid_argument,
-            "unsupported standard user-level extension '%s'", ExtName.c_str());
+        return createStringError(errc::invalid_argument,
+                                 "unsupported standard user-level extension '" +
+                                     ExtName + "'");
       }
-      return createStringError(errc::invalid_argument, "unsupported %s '%s'",
-                               getExtensionTypeDesc(ExtName).str().c_str(),
-                               ExtName.c_str());
+      return createStringError(errc::invalid_argument,
+                               "unsupported " + getExtensionTypeDesc(ExtName) +
+                                   " '" + ExtName + "'");
     }
     ISAInfo->addExtension(ExtName, ExtVers);
   }
