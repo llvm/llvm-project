@@ -2174,25 +2174,6 @@ mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
   return getRuntimeCallGenerator("asin", ftype)(builder, loc, {arg});
 }
 
-// ATAND
-void static atanNoneZeroCheck(mlir::Value y, mlir::Value x,
-                              fir::FirOpBuilder &builder, mlir::Location loc) {
-  // When Y == 0 X must not be 0
-  mlir::Value zero = builder.createRealZeroConstant(loc, y.getType());
-  mlir::Value cmpYEq0 = builder.create<mlir::arith::CmpFOp>(
-      loc, mlir::arith::CmpFPredicate::UEQ, y, zero);
-  mlir::Value cmpXEq0 = builder.create<mlir::arith::CmpFOp>(
-      loc, mlir::arith::CmpFPredicate::UEQ, x, zero);
-  mlir::Value terminationCheck =
-      builder.create<mlir::arith::AndIOp>(loc, cmpYEq0, cmpXEq0);
-  builder.genIfThenElse(loc, terminationCheck)
-      .genThen([&]() {
-        fir::runtime::genReportFatalUserError(builder, loc,
-                                              "When Y == 0 X must not be 0");
-      })
-      .end();
-}
-
 // ATAND, ATAN2D
 mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -2202,7 +2183,7 @@ mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::Value atan;
 
-  // atand(Y,X) atan2d(Y,X) == atan2(Y,X) * 180/pi
+  // atand = atan * 180/pi
   if (args.size() == 2) {
     atan = builder.create<mlir::math::Atan2Op>(loc, fir::getBase(args[0]),
                                                fir::getBase(args[1]));
