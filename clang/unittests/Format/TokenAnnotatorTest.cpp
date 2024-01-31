@@ -2608,7 +2608,7 @@ TEST_F(TokenAnnotatorTest, StreamOperator) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
   auto Tokens = annotate("auto foo() -> enum En {}");
-  ASSERT_EQ(Tokens.size(), 10u);
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
 }
 
