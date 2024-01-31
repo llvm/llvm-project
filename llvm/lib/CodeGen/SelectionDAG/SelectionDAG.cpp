@@ -7574,18 +7574,20 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
       Value = DAG.getExtLoad(
           ISD::EXTLOAD, dl, NVT, Chain,
-          isDereferenceable ? DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)) :
-            DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
+          isDereferenceable
+              ? DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff))
+              : DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
           commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
       OutLoadChains.push_back(Value.getValue(1));
 
       isDereferenceable =
-        DstPtrInfo.getWithOffset(DstOff).isDereferenceable(VTSize, C, DL);
+          DstPtrInfo.getWithOffset(DstOff).isDereferenceable(VTSize, C, DL);
       Store = DAG.getTruncStore(
           Chain, dl, Value,
-          isDereferenceable ? DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)) :
-            DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+          isDereferenceable
+              ? DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff))
+              : DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
           DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
       OutStoreChains.push_back(Store);
     }
@@ -7719,7 +7721,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
     if (isDereferenceable)
       SrcMMOFlags |= MachineMemOperand::MODereferenceable;
-// TODO: Fix memmove too.
+    // TODO: Fix memmove too.
     Value = DAG.getLoad(
         VT, dl, Chain,
         DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
