@@ -335,7 +335,7 @@ struct KnownFPClass {
     if (isKnownNever(fcNan) && !SignBit) {
       if (isKnownNever(fcNegative))
         SignBit = false;
-      else if (isKnownNever(OrderedGreaterThanZeroMask | fcPosZero))
+      else if (isKnownNever(fcPositive))
         SignBit = true;
     }
   }
