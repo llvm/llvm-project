@@ -34,6 +34,9 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+static cl::opt<bool> EnableOrLikeSelectOpt("enable-riscv-or-like-select",
+                                           cl::init(true), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
@@ -1593,4 +1596,16 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
          std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost,
                   C2.NumIVMuls, C2.NumBaseAdds,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+}
+
+bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
+  // For the binary operators (e.g. or) we need to be more careful than
+  // selects, here we only transform them if they are already at a natural
+  // break point in the code - the end of a block with an unconditional
+  // terminator.
+  if (EnableOrLikeSelectOpt && I->getOpcode() == Instruction::Or &&
+      isa<BranchInst>(I->getNextNode()) &&
+      cast<BranchInst>(I->getNextNode())->isUnconditional())
+    return true;
+  return BaseT::shouldTreatInstructionLikeSelect(I);
 }

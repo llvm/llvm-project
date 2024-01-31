@@ -1192,11 +1192,16 @@ public:
   }
 
   static Matcher matcher() {
+    // clang-format off
     return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
         binaryOperator(hasOperatorName("+="),
-                       hasLHS(declRefExpr(toSupportedVariable())),
+                       hasLHS(
+                        declRefExpr(
+                          hasPointerType(),
+                          toSupportedVariable())),
                        hasRHS(expr().bind(OffsetTag)))
             .bind(UUCAddAssignTag)))));
+    // clang-format on
   }
 
   virtual std::optional<FixItList> getFixits(const Strategy &S) const override;

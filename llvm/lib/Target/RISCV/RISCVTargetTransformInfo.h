@@ -364,6 +364,9 @@ public:
   bool shouldFoldTerminatingConditionAfterLSR() const {
     return true;
   }
+
+  bool enableSelectOptimize() { return ST->enableSelectOptimize(); }
+  bool shouldTreatInstructionLikeSelect(const Instruction *I);
 };
 
 } // end namespace llvm
