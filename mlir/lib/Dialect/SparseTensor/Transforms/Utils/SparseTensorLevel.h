@@ -136,21 +136,20 @@ public:
   //
 
   // Whether the iterator support random access (i.e., support look up by
-  // *coordinate*). A random access iterator must also traverses a dense
-  // space.
+  // *coordinate*). A random access iterator must also traverses a dense space.
   virtual bool randomAccessible() const = 0;
 
   // Whether the iterator can simply traversed by a for loop.
   virtual bool iteratableByFor() const { return false; };
 
-  // Get the upper bound of the sparse space that the iterator might visited.
-  // A sparse space is a subset of a dense space [0, bound), this function
-  // returns *bound*.
+  // Get the upper bound of the sparse space that the iterator might visited. A
+  // sparse space is a subset of a dense space [0, bound), this function returns
+  // *bound*.
   virtual Value upperBound(OpBuilder &b, Location l) const = 0;
 
-  // Serializes and deserializes the current status to/from a set of values.
-  // The ValueRange should contain values that are sufficient to recover the
-  // current iterating postion (i.e., itVals) as well as loop bound.
+  // Serializes and deserializes the current status to/from a set of values. The
+  // ValueRange should contain values that are sufficient to recover the current
+  // iterating postion (i.e., itVals) as well as loop bound.
   //
   // Not every type of iterator supports the operations, e.g., non-empty
   // subsection iterator does not because the the number of non-empty
@@ -227,8 +226,8 @@ public:
   //    yield it
   //
   // The function is virtual to allow alternative implementation. For example,
-  // if it.next() is trivial to compute, we can use a select operation
-  // instead. E.g.,
+  // if it.next() is trivial to compute, we can use a select operation instead.
+  // E.g.,
   //
   //  it = select cond ? it+1 : it
   virtual ValueRange forwardIf(OpBuilder &b, Location l, Value cond);
@@ -260,12 +259,12 @@ private:
   // A range of value that together defines the current state of the
   // iterator. Only loop variants should be included.
   //
-  // For trivial iterators, it is the position; for dedup iterators, it
-  // consists of the positon and the segment high, for non-empty subsection
-  // iterator, it is the metadata that specifies the subsection. Note that the
-  // wrapped iterator shares the same storage to maintain itVals with it
-  // wrapper, which means the wrapped iterator might only own a subset of all
-  // the values stored in itValStorage.
+  // For trivial iterators, it is the position; for dedup iterators, it consists
+  // of the positon and the segment high, for non-empty subsection iterator, it
+  // is the metadata that specifies the subsection.
+  // Note that the wrapped iterator shares the same storage to maintain itVals
+  // with it wrapper, which means the wrapped iterator might only own a subset
+  // of all the values stored in itValStorage.
   const unsigned cursorValsCnt;
   SmallVectorImpl<Value> &cursorValsStorageRef;
 };

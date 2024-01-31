@@ -45,6 +45,7 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 class SparseLevel : public SparseTensorLevel {
 public:
   SparseLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
@@ -201,6 +202,7 @@ static Value offsetFromMinCrd(OpBuilder &b, Location l, Value minCrd,
 //===----------------------------------------------------------------------===//
 // SparseIterator derived classes.
 //===----------------------------------------------------------------------===//
+
 namespace {
 
 // The iterator that traverses a concrete sparse tensor levels. High-level
