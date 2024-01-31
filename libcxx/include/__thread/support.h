@@ -23,6 +23,8 @@
 // The following functionality must be provided by any implementation:
 //
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+
 using __libcpp_timespec_t = ...;
 
 //
@@ -97,6 +99,8 @@ using __libcpp_tls_key = ...;
 int __libcpp_tls_create(__libcpp_tls_key*, void (*__at_exit)(void*));
 void* __libcpp_tls_get(__libcpp_tls_key);
 int __libcpp_tls_set(__libcpp_tls_key, void*);
+
+_LIBCPP_END_NAMESPACE_STD
 
 */
 
