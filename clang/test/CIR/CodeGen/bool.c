@@ -7,6 +7,14 @@ typedef struct {
   bool x;
 } S;
 
+// CHECK:  cir.func @init_bool
+// CHECK:    [[ALLOC:%.*]] = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>
+// CHECK:    [[ZERO:%.*]] = cir.const(#cir.zero : !ty_22S22) : !ty_22S22
+// CHECK:    cir.store [[ZERO]], [[ALLOC]] : !ty_22S22, cir.ptr <!ty_22S22>
+void init_bool(void) {
+  S s = {0};
+}
+
 // CHECK:  cir.func @store_bool
 // CHECK:    [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_22S22>, cir.ptr <!cir.ptr<!ty_22S22>>
 // CHECK:    cir.store %arg0, [[TMP0]] : !cir.ptr<!ty_22S22>, cir.ptr <!cir.ptr<!ty_22S22>> 
