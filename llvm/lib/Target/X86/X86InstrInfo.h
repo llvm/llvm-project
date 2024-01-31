@@ -643,6 +643,12 @@ private:
                                         MachineBasicBlock::iterator InsertPt,
                                         unsigned Size, Align Alignment) const;
 
+  MachineInstr *foldMemoryBroadcast(MachineFunction &MF, MachineInstr &MI,
+                                    unsigned OpNum,
+                                    ArrayRef<MachineOperand> MOs,
+                                    MachineBasicBlock::iterator InsertPt,
+                                    unsigned BitsSize, bool AllowCommute) const;
+
   /// isFrameOperand - Return true and the FrameIndex if the specified
   /// operand and follow operands form a reference to the stack frame.
   bool isFrameOperand(const MachineInstr &MI, unsigned int Op,
@@ -686,7 +692,15 @@ private:
                             const MachineInstr &OI, bool *IsSwapped,
                             int64_t *ImmDelta) const;
 
+  /// Commute operands of \p MI for memory fold.
+  ///
+  /// \param Idx1 the index of operand to be commuted.
+  ///
+  /// \returns the index of operand that is commuted with \p Idx1. If the method
+  /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+
+  /// Undo the commute of operands of \p MI at index \p Idx1 and index \p Idx2.
   void UndoCommuteForFold(MachineInstr &MI, unsigned Idx1, unsigned Idx2) const;
 };
 } // namespace llvm

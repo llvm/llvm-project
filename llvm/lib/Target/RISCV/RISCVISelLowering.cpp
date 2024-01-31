@@ -13776,8 +13776,11 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Y = N->getOperand(0);
   SDValue MergeOp = N->getOperand(1);
-  if (MergeOp.getOpcode() != RISCVISD::VMERGE_VL)
+  unsigned MergeOpc = MergeOp.getOpcode();
+
+  if (MergeOpc != RISCVISD::VMERGE_VL && MergeOpc != ISD::VSELECT)
     return SDValue();
+
   SDValue X = MergeOp->getOperand(1);
 
   if (!MergeOp.hasOneUse())
@@ -13795,11 +13798,12 @@ static SDValue combineVWADDWSelect(SDNode *N, SelectionDAG &DAG) {
 
   // False value of MergeOp should be all zeros
   SDValue Z = MergeOp->getOperand(2);
-  if (Z.getOpcode() != ISD::INSERT_SUBVECTOR)
-    return SDValue();
-  if (!ISD::isBuildVectorAllZeros(Z.getOperand(1).getNode()))
-    return SDValue();
-  if (!isNullOrNullSplat(Z.getOperand(0)) && !Z.getOperand(0).isUndef())
+
+  if (Z.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      (isNullOrNullSplat(Z.getOperand(0)) || Z.getOperand(0).isUndef()))
+    Z = Z.getOperand(1);
+
+  if (!ISD::isConstantSplatVectorAllZeros(Z.getNode()))
     return SDValue();
 
   return DAG.getNode(Opc, SDLoc(N), N->getValueType(0),
@@ -19143,50 +19147,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SWAP_CSR)
   NODE_NAME_CASE(CZERO_EQZ)
   NODE_NAME_CASE(CZERO_NEZ)
-  NODE_NAME_CASE(SF_VC_X_SE_E8MF8)
-  NODE_NAME_CASE(SF_VC_X_SE_E8MF4)
-  NODE_NAME_CASE(SF_VC_X_SE_E8MF2)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E8M8)
-  NODE_NAME_CASE(SF_VC_X_SE_E16MF4)
-  NODE_NAME_CASE(SF_VC_X_SE_E16MF2)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E16M8)
-  NODE_NAME_CASE(SF_VC_X_SE_E32MF2)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E32M8)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M1)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M2)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M4)
-  NODE_NAME_CASE(SF_VC_X_SE_E64M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E8MF8)
-  NODE_NAME_CASE(SF_VC_I_SE_E8MF4)
-  NODE_NAME_CASE(SF_VC_I_SE_E8MF2)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E8M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E16MF4)
-  NODE_NAME_CASE(SF_VC_I_SE_E16MF2)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E16M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E32MF2)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E32M8)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M1)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M2)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M4)
-  NODE_NAME_CASE(SF_VC_I_SE_E64M8)
   NODE_NAME_CASE(SF_VC_XV_SE)
   NODE_NAME_CASE(SF_VC_IV_SE)
   NODE_NAME_CASE(SF_VC_VV_SE)
