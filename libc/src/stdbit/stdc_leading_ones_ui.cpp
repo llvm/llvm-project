@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned, stdc_leading_ones_ui, (unsigned value)) {
-  return cpp::countl_one(value);
+  return static_cast<unsigned>(cpp::countl_one(value));
 }
 
 } // namespace LIBC_NAMESPACE
