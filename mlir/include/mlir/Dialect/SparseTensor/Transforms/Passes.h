@@ -47,6 +47,12 @@ enum class ReinterpretMapScope {
   kExceptGeneric, // reinterprets operation other than linalg.generic
 };
 
+/// Defines a scope for reinterpret map pass.
+enum class DebugSparseIteration {
+  kNone,          // generate fully inlined (and functional) sparse iteration
+  kInterfaceOnly, // generate only place-holder for sparse iteration
+};
+
 #define GEN_PASS_DECL
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
@@ -74,11 +80,20 @@ std::unique_ptr<Pass> createPreSparsificationRewritePass();
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
+  SparsificationOptions(SparseParallelizationStrategy p, DebugSparseIteration d,
+                        bool enableRT)
+      : parallelizationStrategy(p), debugSparseIteration(d),
+        enableRuntimeLibrary(enableRT) {}
+
   SparsificationOptions(SparseParallelizationStrategy p, bool enableRT)
-      : parallelizationStrategy(p), enableRuntimeLibrary(enableRT) {}
+      : SparsificationOptions(p, DebugSparseIteration::kNone, enableRT) {}
+
   SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone, true) {}
+      : SparsificationOptions(SparseParallelizationStrategy::kNone,
+                              DebugSparseIteration::kNone, true) {}
+
   SparseParallelizationStrategy parallelizationStrategy;
+  DebugSparseIteration debugSparseIteration;
   bool enableRuntimeLibrary;
 };
 

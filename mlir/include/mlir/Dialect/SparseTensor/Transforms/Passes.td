@@ -130,6 +130,13 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"debugSparseIteration", "debug-sparse-iteration", "mlir::DebugSparseIteration",
+           "mlir::DebugSparseIteration::kNone",
+           "Pretty print sparse loops to debug sparse iteration", [{llvm::cl::values(
+             clEnumValN(mlir::DebugSparseIteration::kNone, "none",
+                        "Turn off pretty printing and generates functional code."),
+             clEnumValN(mlir::DebugSparseIteration::kInterfaceOnly, "interface-only",
+                        "Generate non-functional interfaces for sparse iteration."))}]>,
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
            "true", "Enable runtime library for manipulating sparse tensors">,
   ];
