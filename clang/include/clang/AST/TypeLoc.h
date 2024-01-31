@@ -229,6 +229,9 @@ public:
   /// __nullable, or __null_unspecifier), if there is one.
   SourceLocation findNullabilityLoc() const;
 
+  void dump() const;
+  void dump(llvm::raw_ostream &, const ASTContext &) const;
+
 private:
   static bool isKind(const TypeLoc&) {
     return true;
