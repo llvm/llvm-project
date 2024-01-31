@@ -93,11 +93,9 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   // Even if CSR list is same, we could have had a different allocation order
   // if ignoreCSRForAllocationOrder is evaluated differently.
   BitVector CSRHintsForAllocOrder(TRI->getNumRegs());
-  for (const MCPhysReg *I = CSR; *I; ++I)
-    for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
-      CSRHintsForAllocOrder[*AI] = STI.ignoreCSRForAllocationOrder(mf, *AI);
-  if (IgnoreCSRForAllocOrder.size() != CSRHintsForAllocOrder.size() ||
-      IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
+  for (MCPhysReg I = 1, E = TRI->getNumRegs(); I != E; ++I)
+    CSRHintsForAllocOrder[I] = STI.ignoreCSRForAllocationOrder(mf, I);
+  if (IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
     Update = true;
     IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;
   }
