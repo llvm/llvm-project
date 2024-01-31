@@ -124,7 +124,7 @@ define i32 @disjoint_indirect(i64 %x) {
 define i32 @range(i32 %x) {
 ; CHECK-LABEL: define i32 @range(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 100), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 100)
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[UMIN]], -2
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
@@ -133,6 +133,3 @@ define i32 @range(i32 %x) {
   %and = and i32 %umin, -2
   ret i32 %and
 }
-;.
-; CHECK: [[RNG0]] = !{i32 1, i32 101}
-;.

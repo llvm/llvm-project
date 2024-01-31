@@ -12377,6 +12377,9 @@ public:
   /// Called on well-formed 'relaxed' clause.
   OMPClause *ActOnOpenMPRelaxedClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'weak' clause.
+  OMPClause *ActOnOpenMPWeakClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
 
   /// Called on well-formed 'init' clause.
   OMPClause *
