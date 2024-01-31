@@ -205,18 +205,24 @@ void IfClause() {
 #pragma acc serial if, seq
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial if(
   for(;;){}
 
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial if( seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+5{{expected expression}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial if(, seq
   for(;;){}
@@ -284,18 +290,24 @@ void SyncClause() {
 #pragma acc serial loop self, seq
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial loop self(
   for(;;){}
 
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial loop self( seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+5{{expected expression}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial loop self(, seq
   for(;;){}
@@ -340,7 +352,9 @@ void SyncClause() {
 #pragma acc serial self(i > j
   for(;;){}
 
-  // expected-error@+2{{use of undeclared identifier 'seq'}}
+  // expected-error@+4{{use of undeclared identifier 'seq'}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial self(i > j, seq
   for(;;){}
@@ -405,11 +419,15 @@ void VarListClauses() {
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy), seq
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy(
 
-  // expected-error@+2{{expected expression}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ')'}}
+  // expected-note@+2{{to match this '('}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc serial copy(, seq
 
