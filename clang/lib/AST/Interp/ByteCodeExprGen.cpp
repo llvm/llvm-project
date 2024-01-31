@@ -2204,15 +2204,13 @@ bool ByteCodeExprGen<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
     return this->emitConstSint64(Value, E);
   case PT_Uint64:
     return this->emitConstUint64(Value, E);
-  case PT_IntAP:
-  case PT_IntAPS:
-    assert(false);
-    return false;
   case PT_Bool:
     return this->emitConstBool(Value, E);
   case PT_Ptr:
   case PT_FnPtr:
   case PT_Float:
+  case PT_IntAP:
+  case PT_IntAPS:
     llvm_unreachable("Invalid integral type");
     break;
   }
@@ -2228,6 +2226,11 @@ bool ByteCodeExprGen<Emitter>::emitConst(T Value, const Expr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
                                          const Expr *E) {
+  if (Ty == PT_IntAPS)
+    return this->emitConstIntAPS(Value, E);
+  if (Ty == PT_IntAP)
+    return this->emitConstIntAP(Value, E);
+
   if (Value.isSigned())
     return this->emitConst(Value.getSExtValue(), Ty, E);
   return this->emitConst(Value.getZExtValue(), Ty, E);
