@@ -5033,60 +5033,56 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   MVT IndexContainerVT =
       ContainerVT.changeVectorElementType(IndexVT.getScalarType());
 
-  // Base case for the recursion just below - handle the worst case
-  // single source permutation.  Note that all the splat variants
-  // are handled above.
-  if (V2.isUndef()) {
-    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
-    SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
-    LHSIndices = convertToScalableVector(IndexContainerVT, LHSIndices, DAG,
-                                         Subtarget);
-    SDValue Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
-                                 DAG.getUNDEF(ContainerVT), TrueMask, VL);
-    return convertFromScalableVector(VT, Gather, DAG, Subtarget);
-  }
-
-  // Translate the gather index we computed above (and possibly swapped)
-  // back to a shuffle mask.  This step should disappear once we complete
-  // the migration to recursive design.
-  SmallVector<int> ShuffleMaskLHS;
-  ShuffleMaskLHS.reserve(GatherIndicesLHS.size());
-  for (SDValue GatherIndex : GatherIndicesLHS) {
-    if (GatherIndex.isUndef()) {
-      ShuffleMaskLHS.push_back(-1);
-      continue;
-    }
-    auto *IdxC = cast<ConstantSDNode>(GatherIndex);
-    ShuffleMaskLHS.push_back(IdxC->getZExtValue());
-  }
-
-  // Recursively invoke lowering for the LHS as if there were no RHS.
-  // This allows us to leverage all of our single source permute tricks.
-  SDValue Gather =
-    DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
-  Gather = convertToScalableVector(ContainerVT, Gather, DAG, Subtarget);
-
-  // Blend in second vector source with an additional vrgather.
-  V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
-
-  MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
-  SelectMask =
-    convertToScalableVector(MaskContainerVT, SelectMask, DAG, Subtarget);
-
-  // If only one index is used, we can use a "splat" vrgather.
-  // TODO: We can splat the most-common index and fix-up any stragglers, if
-  // that's beneficial.
-  if (RHSIndexCounts.size() == 1) {
-    int SplatIndex = RHSIndexCounts.begin()->getFirst();
-    Gather = DAG.getNode(GatherVXOpc, DL, ContainerVT, V2,
-                         DAG.getConstant(SplatIndex, DL, XLenVT), Gather,
-                         SelectMask, VL);
+  SDValue Gather;
+  // TODO: This doesn't trigger for i64 vectors on RV32, since there we
+  // encounter a bitcasted BUILD_VECTOR with low/high i32 values.
+  if (SDValue SplatValue = DAG.getSplatValue(V1, /*LegalTypes*/ true)) {
+    Gather = lowerScalarSplat(SDValue(), SplatValue, VL, ContainerVT, DL, DAG,
+                              Subtarget);
   } else {
-    SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
-    RHSIndices =
-      convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
-    Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices, Gather,
-                         SelectMask, VL);
+    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+    // If only one index is used, we can use a "splat" vrgather.
+    // TODO: We can splat the most-common index and fix-up any stragglers, if
+    // that's beneficial.
+    if (LHSIndexCounts.size() == 1) {
+      int SplatIndex = LHSIndexCounts.begin()->getFirst();
+      Gather = DAG.getNode(GatherVXOpc, DL, ContainerVT, V1,
+                           DAG.getConstant(SplatIndex, DL, XLenVT),
+                           DAG.getUNDEF(ContainerVT), TrueMask, VL);
+    } else {
+      SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
+      LHSIndices =
+          convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
+
+      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
+                           DAG.getUNDEF(ContainerVT), TrueMask, VL);
+    }
+  }
+
+  // If a second vector operand is used by this shuffle, blend it in with an
+  // additional vrgather.
+  if (!V2.isUndef()) {
+    V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
+
+    MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
+    SelectMask =
+        convertToScalableVector(MaskContainerVT, SelectMask, DAG, Subtarget);
+
+    // If only one index is used, we can use a "splat" vrgather.
+    // TODO: We can splat the most-common index and fix-up any stragglers, if
+    // that's beneficial.
+    if (RHSIndexCounts.size() == 1) {
+      int SplatIndex = RHSIndexCounts.begin()->getFirst();
+      Gather = DAG.getNode(GatherVXOpc, DL, ContainerVT, V2,
+                           DAG.getConstant(SplatIndex, DL, XLenVT), Gather,
+                           SelectMask, VL);
+    } else {
+      SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
+      RHSIndices =
+          convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
+      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices, Gather,
+                           SelectMask, VL);
+    }
   }
 
   return convertFromScalableVector(VT, Gather, DAG, Subtarget);
