@@ -548,7 +548,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
   let summary = "Verbatim operation";
   let description = [{
     The `verbatim` operation produces no results and the value is emitted as is
-    followed by a '\n' character during translation.
+    followed by a line break  ('\n' character) during translation.
 
     Note: Use with caution. This operation can have arbitrary effects on the
     semantics of the emitted code. Use semantically more meaningful operations
