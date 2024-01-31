@@ -2153,9 +2153,10 @@ defm GLOBAL_LOAD_LDS_USHORT : FLAT_Real_AllAddr_LDS <0x028, 0x12>;
 defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Real_AllAddr_LDS <0x029, 0x13>;
 defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Real_AllAddr_LDS <0x02a, 0x14>;
 
+let SubtargetPredicate = HasGFX950Insts in {
 defm GLOBAL_LOAD_LDS_DWORDX3 : FLAT_Real_AllAddr_LDS <0x07e, 0x07e>;
 defm GLOBAL_LOAD_LDS_DWORDX4 : FLAT_Real_AllAddr_LDS <0x07d, 0x07d>;
-
+}
 
 defm GLOBAL_ATOMIC_SWAP       : FLAT_Global_Real_Atomics_vi <0x40>;
 defm GLOBAL_ATOMIC_CMPSWAP    : FLAT_Global_Real_Atomics_vi <0x41>;
