@@ -622,7 +622,7 @@ public:
   /// elements of DepGroups must be non-overlapping (no symbol should appear in
   /// more than one of hte symbol sets), but do not have to be exhaustive. Any
   /// symbol in this MaterializationResponsibility object that is not covered
-  /// by an entry will be take to have no dependencies.
+  /// by an entry will be treated as having no dependencies.
   ///
   /// This method will return an error if any symbols being resolved have been
   /// moved to the error state due to the failure of a dependency. If this

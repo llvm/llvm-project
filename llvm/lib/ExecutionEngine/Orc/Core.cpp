@@ -2704,7 +2704,7 @@ void ExecutionSession::propagateExtraEmitDeps(
     std::deque<JITDylib::EmissionDepUnit *> Worklist, EDUInfosMap &EDUInfos,
     HandleNewDepFn HandleNewDep) {
 
-  // Iterate to a fixed-poient to propagate extra-emit dependencies through the
+  // Iterate to a fixed-point to propagate extra-emit dependencies through the
   // EDU graph.
   while (!Worklist.empty()) {
     auto &EDU = *Worklist.front();
@@ -2816,8 +2816,8 @@ ExecutionSession::EDUInfosMap ExecutionSession::simplifyDepGroups(
   }
 #endif // NDEBUG
 
-  // 3. Use the DegGroups DepGroups array to build a graph of dependencies
-  //    between EmissionDepUnits in this finalization. We want to remove these
+  // 3. Use the DepGroups array to build a graph of dependencies between
+  //    EmissionDepUnits in this finalization. We want to remove these
   //    intra-finalization uses, propagating dependencies on symbols outside
   //    this finalization. Add EDUs to the worklist.
   for (auto &DG : EmittedDeps) {

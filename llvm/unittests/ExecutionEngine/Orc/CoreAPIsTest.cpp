@@ -692,7 +692,7 @@ TEST_F(CoreAPIsStandardTest, FailureInDependency) {
 
   // Check that we can still resolve Foo (even though it has been failed).
   EXPECT_THAT_ERROR(FooR->notifyResolved({{Foo, FooSym}}), Succeeded())
-      << "Expected resolution for \"Foo\" to fail.";
+      << "Expected resolution for \"Foo\" to succeed despite error state.";
 
   FooR->failMaterialization();
 
