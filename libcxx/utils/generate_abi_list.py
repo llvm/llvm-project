@@ -34,7 +34,7 @@ def main(argv):
         "--mapfile",
         dest="mapfile",
         default=None,
-        help="The name of the mapfile that contains supplementary information about symbols. (optional)",
+        help="The name of the mapfile that contains supplementary information about symbols. (optional, macOS-only feature)",
     )
     parser.add_argument(
         "-o",
