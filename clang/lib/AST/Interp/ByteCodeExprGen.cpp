@@ -342,7 +342,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->emitSetLocal(PT_Ptr, *SubExprOffset, CE))
       return false;
 
-    PrimType SourceElemT = *classifyComplexElementType(SubExpr->getType());
+    PrimType SourceElemT = classifyComplexElementType(SubExpr->getType());
     QualType DestElemType =
         CE->getType()->getAs<ComplexType>()->getElementType();
     PrimType DestElemT = classifyPrim(DestElemType);
