@@ -607,9 +607,7 @@ define i1 @select_constants_and_icmp_ne_fval(i1 %x, i1 %y) {
 
 define i1 @icmp_eq_select(i1 %cond, i32 %a, i32 %b) {
 ; CHECK-LABEL: @icmp_eq_select(
-; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[COND:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]
-; CHECK-NEXT:    [[RHS:%.*]] = select i1 [[COND]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %lhs = select i1 %cond, i32 %a, i32 %b
