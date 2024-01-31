@@ -269,3 +269,28 @@ func.func @test_inline_block_before() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// CHECK-AN: notifyOperationInserted: test.op_3, was last in block
+// CHECK-AN: notifyOperationInserted: test.op_2, was last in block
+// CHECK-AN: notifyOperationInserted: test.split_block_here, was last in block
+// CHECK-AN: notifyOperationInserted: test.new_op, was unlinked
+// CHECK-AN: notifyOperationRemoved: test.split_block_here
+// CHECK-AN-LABEL: func @test_split_block(
+//          CHECK:   "test.op_with_region"() ({
+//          CHECK:     test.op_1
+//          CHECK:   ^{{.*}}:
+//          CHECK:     test.new_op
+//          CHECK:     test.op_2
+//          CHECK:     test.op_3
+//          CHECK:   }) : () -> ()
+func.func @test_split_block() {
+  "test.op_with_region"() ({
+    "test.op_1"() : () -> ()
+    "test.split_block_here"() : () -> ()
+    "test.op_2"() : () -> ()
+    "test.op_3"() : () -> ()
+  }) : () -> ()
+  return
+}
