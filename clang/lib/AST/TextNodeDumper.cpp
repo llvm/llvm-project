@@ -1397,6 +1397,26 @@ void TextNodeDumper::VisitExpressionTraitExpr(const ExpressionTraitExpr *Node) {
   OS << " " << getTraitSpelling(Node->getTrait());
 }
 
+void TextNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+  if (Node->hasRewrittenInit()) {
+    OS << " has rewritten init";
+    AddChild([=] {
+      ColorScope Color(OS, ShowColors, StmtColor);
+      Visit(Node->getExpr());
+    });
+  }
+}
+
+void TextNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+  if (Node->hasRewrittenInit()) {
+    OS << " has rewritten init";
+    AddChild([=] {
+      ColorScope Color(OS, ShowColors, StmtColor);
+      Visit(Node->getExpr());
+    });
+  }
+}
+
 void TextNodeDumper::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *Node) {
   if (const ValueDecl *VD = Node->getExtendingDecl()) {
