@@ -371,7 +371,7 @@ public:
     auto elementType = typeConverter.convertType(
         cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
     if (!elementType)
-      return failure();
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
     rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, elementType,
                                              adaptor.getBasePtr(), indices);
     return success();
