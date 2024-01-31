@@ -7571,17 +7571,21 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
         SrcMMOFlags |= MachineMemOperand::MODereferenceable;
       if (isConstant)
         SrcMMOFlags |= MachineMemOperand::MOInvariant;
-
+llvm::errs() << "isDereferenceable " << isDereferenceable<<'\n';
       Value = DAG.getExtLoad(
           ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
+          isDereferenceable ? DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)) :
+            DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
           commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
       OutLoadChains.push_back(Value.getValue(1));
 
+      isDereferenceable =
+        DstPtrInfo.getWithOffset(DstOff).isDereferenceable(VTSize, C, DL);
       Store = DAG.getTruncStore(
           Chain, dl, Value,
-          DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+          isDereferenceable ? DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)) :
+            DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
           DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
       OutStoreChains.push_back(Store);
     }
@@ -7715,7 +7719,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
     if (isDereferenceable)
       SrcMMOFlags |= MachineMemOperand::MODereferenceable;
-
+// TODO: Fix memmove too.
     Value = DAG.getLoad(
         VT, dl, Chain,
         DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
@@ -7863,9 +7867,13 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
         Value = getMemsetValue(Src, VT, DAG, dl);
     }
     assert(Value.getValueType() == VT && "Value with wrong type.");
+    bool Dereferenceable = DstPtrInfo.isDereferenceable(DstOff, *DAG.getContext(), DAG.getDataLayout());
+    llvm::errs() << llvm::format(" calling, dstoff %d deref is %d", DstOff, Dereferenceable)<<"\n";
+
     SDValue Store = DAG.getStore(
         Chain, dl, Value,
-        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
+        Dereferenceable ? DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)) :
+          DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
         DstPtrInfo.getWithOffset(DstOff), Alignment,
         isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
         NewAAInfo);
@@ -8112,6 +8120,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // For cases within the target-specified limits, this is the best choice.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (ConstantSize) {
+    llvm::errs() << "Constant size\n";
     // Memset with size zero? Just return the original chain.
     if (ConstantSize->isZero())
       return Chain;

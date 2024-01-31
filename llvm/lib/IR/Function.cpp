@@ -242,6 +242,7 @@ Type *Argument::getParamInAllocaType() const {
 uint64_t Argument::getDereferenceableBytes() const {
   assert(getType()->isPointerTy() &&
          "Only pointers have dereferenceable bytes");
+         this->dump();
   return getParent()->getParamDereferenceableBytes(getArgNo());
 }
 
