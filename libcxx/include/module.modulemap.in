@@ -555,11 +555,6 @@ module std_experimental [system] {
     textual header "experimental/__config"
     export *
   }
-  // FIXME these should be private
-  module __memory {
-    header "experimental/__memory"
-    export *
-  }
 }
 
 // Convenience method to get all of the above modules in a single import statement.
