@@ -1084,8 +1084,8 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
     // transposing the elements and truncating them back to the original size.
     // TODO: Use unsigned extension (more efficient) when emulation or backend
     // support is available.
-    auto srcNativeVecType =
-        srcSubByteVecType.cloneWith(std::nullopt, rewriter.getI8Type());
+    auto srcNativeVecType = srcSubByteVecType.cloneWith(
+        std::nullopt, rewriter.getIntegerType(minNativeBitwidth));
     Value extOp = rewriter.create<arith::ExtSIOp>(loc, srcNativeVecType,
                                                   transposeOp.getVector());
     Value newTranspose = rewriter.create<vector::TransposeOp>(
@@ -1096,7 +1096,6 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
     return success();
   }
 };
-
 
 } // namespace
 
