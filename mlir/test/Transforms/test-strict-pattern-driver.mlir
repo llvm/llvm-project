@@ -249,3 +249,23 @@ func.func @test_move_op_before() {
   }) : () -> ()
   return
 }
+
+// -----
+
+// CHECK-AN: notifyOperationInserted: test.op_1, previous = test.op_2
+// CHECK-AN: notifyOperationInserted: test.op_2, previous = test.op_3
+// CHECK-AN: notifyOperationInserted: test.op_3, was last in block
+// CHECK-AN-LABEL: func @test_inline_block_before(
+//       CHECK-AN:   test.op_1
+//       CHECK-AN:   test.op_2
+//       CHECK-AN:   test.op_3
+//       CHECK-AN:   test.inline_blocks_into_parent
+//       CHECK-AN:   return
+func.func @test_inline_block_before() {
+  "test.inline_blocks_into_parent"() ({
+    "test.op_1"() : () -> ()
+    "test.op_2"() : () -> ()
+    "test.op_3"() : () -> ()
+  }) : () -> ()
+  return
+}
