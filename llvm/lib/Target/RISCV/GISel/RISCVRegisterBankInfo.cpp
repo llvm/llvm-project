@@ -25,6 +25,7 @@ namespace llvm {
 namespace RISCV {
 
 const RegisterBankInfo::PartialMapping PartMappings[] = {
+    // clang-format off
     {0, 32, GPRBRegBank},
     {0, 64, GPRBRegBank},
     {0, 32, FPRBRegBank},
@@ -33,6 +34,7 @@ const RegisterBankInfo::PartialMapping PartMappings[] = {
     {0, 128, VRBRegBank},
     {0, 256, VRBRegBank},
     {0, 512, VRBRegBank},
+    // clang-format on
 };
 
 enum PartialMappingIdx {
