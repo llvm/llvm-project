@@ -5,6 +5,7 @@
 settings  show interpreter.stop-command-source-on-error
 # CHECK: interpreter.stop-command-source-on-error (boolean) = false
 
+log enable -v lldb watch
 b main
 run
 # CHECK: stopped
