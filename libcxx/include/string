@@ -585,7 +585,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
-#include <__memory/allocation_result.h>
 #include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>

@@ -512,7 +512,6 @@
   { include: [ "<__memory/aligned_alloc.h>", "private", "<memory>", "public" ] },
   { include: [ "<__memory/allocate_at_least.h>", "private", "<memory>", "public" ] },
   { include: [ "<__memory/allocation_guard.h>", "private", "<memory>", "public" ] },
-  { include: [ "<__memory/allocation_result.h>", "private", "<memory>", "public" ] },
   { include: [ "<__memory/allocator.h>", "private", "<memory>", "public" ] },
   { include: [ "<__memory/allocator_arg_t.h>", "private", "<memory>", "public" ] },
   { include: [ "<__memory/allocator_destructor.h>", "private", "<memory>", "public" ] },

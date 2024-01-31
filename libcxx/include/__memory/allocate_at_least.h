@@ -10,7 +10,6 @@
 #define _LIBCPP___MEMORY_ALLOCATE_AT_LEAST_H
 
 #include <__config>
-#include <__memory/allocation_result.h>
 #include <__memory/allocator_traits.h>
 #include <cstddef>
 

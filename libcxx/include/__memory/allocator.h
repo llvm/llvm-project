@@ -13,7 +13,6 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
-#include <__memory/allocation_result.h>
 #include <__memory/allocator_traits.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>

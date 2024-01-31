@@ -11,7 +11,6 @@
 #define _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
 
 #include <__config>
-#include <__memory/allocation_result.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
@@ -231,6 +230,17 @@ struct __has_select_on_container_copy_construction<
     decltype((void)std::declval<_Alloc>().select_on_container_copy_construction())> : true_type {};
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
+
+#if _LIBCPP_STD_VER >= 23
+
+template <class _Pointer, class _SizeType = size_t>
+struct allocation_result {
+  _Pointer ptr;
+  _SizeType count;
+};
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
+
+#endif // _LIBCPP_STD_VER
 
 template <class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS allocator_traits {

@@ -521,7 +521,6 @@ set(files
   __memory/aligned_alloc.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
-  __memory/allocation_result.h
   __memory/allocator.h
   __memory/allocator_arg_t.h
   __memory/allocator_destructor.h

@@ -1499,7 +1499,6 @@ module std_private_memory_align                           [system] { header "__m
 module std_private_memory_aligned_alloc                   [system] { header "__memory/aligned_alloc.h" }
 module std_private_memory_allocate_at_least               [system] { header "__memory/allocate_at_least.h" }
 module std_private_memory_allocation_guard                [system] { header "__memory/allocation_guard.h" }
-module std_private_memory_allocation_result               [system] { header "__memory/allocation_result.h" }
 module std_private_memory_allocator                       [system] { header "__memory/allocator.h" }
 module std_private_memory_allocator_arg_t                 [system] { header "__memory/allocator_arg_t.h" }
 module std_private_memory_allocator_destructor            [system] { header "__memory/allocator_destructor.h" }
