@@ -284,7 +284,7 @@ TEST(SMEAttributes, Transitions) {
   SA Private_ZA = SA(SA::Normal);
   SA ZA_Shared = SA(SA::encodeZAState(SA::StateValue::In));
   SA ZT0_Shared = SA(SA::encodeZT0State(SA::StateValue::In));
-  SA ZA_ZT0_Shared = SA(SA::encodeZT0State(SA::StateValue::In) |
+  SA ZA_ZT0_Shared = SA(SA::encodeZAState(SA::StateValue::In) |
                         SA::encodeZT0State(SA::StateValue::In));
 
   // Shared ZA -> Private ZA Interface
