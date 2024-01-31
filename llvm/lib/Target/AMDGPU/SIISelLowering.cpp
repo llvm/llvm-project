@@ -7133,7 +7133,7 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool
 SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
-  // Subtargets that use ELF REL relocations (instead of RELA) can only store a
+  // OSes that use ELF REL relocations (instead of RELA) can only store a
   // 32-bit addend in the instruction, so it is not safe to allow offset folding
   // which can create arbitrary 64-bit addends. (This is only a problem for
   // R_AMDGPU_*32_HI relocations since other relocation types are unaffected by
