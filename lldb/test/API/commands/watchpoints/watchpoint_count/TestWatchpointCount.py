@@ -34,6 +34,8 @@ class TestWatchpointCount(TestBase):
         self.runCmd("p &x1")
         self.runCmd("p &x2")
         self.runCmd("watchpoint list")
+        self.runCmd("frame select 0")
+        self.runCmd("bt")
 
         process.Continue()
 
@@ -48,6 +50,7 @@ class TestWatchpointCount(TestBase):
         # LWP_TODO: Adding temporary prints to debug a test
         # failure on the x86-64 Debian bot.
         self.runCmd("frame select 0")
+        self.runCmd("bt")
         self.runCmd("disassemble")
 
         stop_reason = thread.GetStopReason()
