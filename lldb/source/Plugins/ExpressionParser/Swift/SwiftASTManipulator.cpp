@@ -997,7 +997,6 @@ static void AddNodesToBeginningFunction(
       body->getRBraceLoc());
 
   function->setBody(new_function_body, function->getBodyKind());
-  function->setHasSingleExpressionBody(false);
 }
 
 bool SwiftASTManipulator::AddExternalVariables(
