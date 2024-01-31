@@ -10,7 +10,10 @@ extern volatile int a, b, c;
 void test_add_overflow(void) {
   // CHECK: [[ADD0:%.*]] = load {{.*}} i32
   // CHECK-NEXT: [[ADD1:%.*]] = load {{.*}} i32
-  // CHECK-NEXT: {{%.*}} = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[ADD0]], i32 [[ADD1]])
+  // CHECK-NEXT: [[ADD2:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[ADD0]], i32 [[ADD1]])
+  // CHECK: [[ADD4:%.*]] = extractvalue { i32, i1 } [[ADD2]], 1
+  // CHECK-NEXT: [[ADD5:%.*]] = xor i1 [[ADD4]], true
+  // CHECK-NEXT: br i1 [[ADD5]], {{.*}} %handler.add_overflow
   // CHECK: call void @__ubsan_handle_add_overflow
 
   // CHECKSIO-NOT: call void @__ubsan_handle_add_overflow
@@ -21,11 +24,13 @@ void test_add_overflow(void) {
 void test_inc_overflow(void) {
   // This decays and gets handled by __ubsan_handle_add_overflow...
   // CHECK: [[INC0:%.*]] = load {{.*}} i32
-  // CHECK-NEXT: call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[INC0]], i32 1)
-  // CHECK: br {{.*}} %handler.add_overflow
+  // CHECK-NEXT: [[INC1:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[INC0]], i32 1)
+  // CHECK: [[INC3:%.*]] = extractvalue { i32, i1 } [[INC1]], 1
+  // CHECK-NEXT: [[INC4:%.*]] = xor i1 [[INC3]], true
+  // CHECK-NEXT: br i1 [[INC4]], {{.*}} %handler.add_overflow
+  // CHECK: call void @__ubsan_handle_add_overflow
 
-  // CHECKSIO-NOT: br {{.*}} %handler.add_overflow
-  ++a;
+  // CHECKSIO-NOT: call void @__ubsan_handle_add_overflow
   a++;
 }
 
@@ -33,7 +38,10 @@ void test_inc_overflow(void) {
 void test_sub_overflow(void) {
   // CHECK: [[SUB0:%.*]] = load {{.*}} i32
   // CHECK-NEXT: [[SUB1:%.*]] = load {{.*}} i32
-  // CHECK-NEXT: call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 [[SUB0]], i32 [[SUB1]])
+  // CHECK-NEXT: [[SUB2:%.*]] = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 [[SUB0]], i32 [[SUB1]])
+  // CHECK: [[SUB4:%.*]] = extractvalue { i32, i1 } [[SUB2]], 1
+  // CHECK-NEXT: [[SUB5:%.*]] = xor i1 [[SUB4]], true
+  // CHECK-NEXT br i1 [[SUB5]], {{.*}} %handler.sub_overflow
   // CHECK: call void @__ubsan_handle_sub_overflow
 
   // CHECKSIO-NOT: call void @__ubsan_handle_sub_overflow
@@ -44,7 +52,10 @@ void test_sub_overflow(void) {
 void test_mul_overflow(void) {
   // CHECK: [[MUL0:%.*]] = load {{.*}} i32
   // CHECK-NEXT: [[MUL1:%.*]] = load {{.*}} i32
-  // CHECK-NEXT: call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[MUL0]], i32 [[MUL1]])
+  // CHECK-NEXT: [[MUL2:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[MUL0]], i32 [[MUL1]])
+  // CHECK: [[MUL4:%.*]] = extractvalue { i32, i1 } [[MUL2]], 1
+  // CHECK-NEXT [[MUL5:%.*]] = xor i1 [[MUL4]], true
+  // CHECK-NEXT br i1 [[MUL5]], {{.*}} %handler.mul_overflow
   // CHECK: call void @__ubsan_handle_mul_overflow
 
   // CHECKSIO-NOT: call void @__ubsan_handle_mul_overflow
