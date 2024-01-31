@@ -6,7 +6,7 @@
 ; RUN: llvm-objdump --section-headers %t.obj | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc < %t.ll -filetype=asm -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-; CHECK: (2/4) of callsites' profile are invalid and (15/50) of samples are discarded due to callsite location mismatch.
+; CHECK: (1/3) of callsites' profile are invalid and (15/50) of samples are discarded due to callsite location mismatch.
 
 ; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 4, !"MismatchedCallsiteSamples", i64 15, !"TotalProfiledFunc", i64 3, !"TotalFunctionSamples", i64 50}
 

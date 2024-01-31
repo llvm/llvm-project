@@ -11,7 +11,7 @@
 
 ; CHECK: (1/3) of functions' profile are invalid and (10/50) of samples are discarded due to function hash mismatch.
 ; CHECK: (2/3) of callsites' profile are invalid and (20/50) of samples are discarded due to callsite location mismatch.
-; CHECK: Out of 0 callsites used for profile matching, 0 callsites have been recovered. After the matching, (2/3) of callsites are still invalid (20/50) of samples are still discarded.
+; CHECK: (0/3) of callsites and (0/50) of samples are recovered by stale profile matching.
 
 ; CHECK-MD: ![[#]] = !{!"NumMismatchedCallsites", i64 2, !"TotalProfiledCallsites", i64 3, !"MismatchedCallsiteSamples", i64 20, !"TotalProfiledFunc", i64 3, !"TotalFunctionSamples", i64 50, !"NumMismatchedFuncHash", i64 1, !"MismatchedFuncHashSamples", i64 10, !"PostMatchNumMismatchedCallsites", i64 0, !"NumCallsitesForMatching", i64 0, !"PostMatchMismatchedCallsiteSamples", i64 20}
 
