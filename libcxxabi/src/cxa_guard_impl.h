@@ -55,7 +55,13 @@
 #  endif
 #endif
 
-#include <__thread/support.h>
+// TODO: Temporary workaround, see https://github.com/llvm/llvm-project/pull/79654#issuecomment-1919397302
+#if __has_include(<__thread/support.h>)
+#  include <__thread/support.h>
+#else
+#  include <__threading_support>
+#endif
+
 #include <cstdint>
 #include <cstring>
 #include <limits.h>

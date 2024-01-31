@@ -45,10 +45,16 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
       LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
                      "Failed to set type: {0}");
     } else {
-      if (auto ts = *type_system_or_err)
-        m_type =
-            ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
-      else
+      if (auto ts = *type_system_or_err) {
+        if (size <= target.GetArchitecture().GetAddressByteSize()) {
+          m_type =
+              ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
+        } else {
+          CompilerType clang_uint8_type =
+              ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8);
+          m_type = clang_uint8_type.GetArrayType(size);
+        }
+      } else
         LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
                        "Failed to set type: Typesystem is no longer live: {0}");
     }
@@ -352,6 +358,20 @@ void Watchpoint::DumpWithLevel(Stream *s,
       s->Printf("\n    declare @ '%s'", m_decl_str.c_str());
     if (!m_watch_spec_str.empty())
       s->Printf("\n    watchpoint spec = '%s'", m_watch_spec_str.c_str());
+    if (IsEnabled()) {
+      if (ProcessSP process_sp = m_target.GetProcessSP()) {
+        auto &resourcelist = process_sp->GetWatchpointResourceList();
+        size_t idx = 0;
+        s->Printf("\n    watchpoint resources:");
+        for (WatchpointResourceSP &wpres : resourcelist.Sites()) {
+          if (wpres->ConstituentsContains(this)) {
+            s->Printf("\n       #%zu: ", idx);
+            wpres->Dump(s);
+          }
+          idx++;
+        }
+      }
+    }
 
     // Dump the snapshots we have taken.
     DumpSnapshots(s, "    ");
