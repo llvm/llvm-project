@@ -88,9 +88,6 @@ struct allocator_traits
     static pointer allocate(allocator_type& a, size_type n);                          // constexpr and [[nodiscard]] in C++20
     static pointer allocate(allocator_type& a, size_type n, const_void_pointer hint); // constexpr and [[nodiscard]] in C++20
 
-    [[nodiscard]] static constexpr allocation_result<pointer, size_type>
-      allocate_at_least(Alloc& a, size_type n); // Since C++23
-
     static void deallocate(allocator_type& a, pointer p, size_type n) noexcept; // constexpr in C++20
 
     template <class T, class... Args>
