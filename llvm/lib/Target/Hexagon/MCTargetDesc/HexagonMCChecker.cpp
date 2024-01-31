@@ -40,6 +40,18 @@ void HexagonMCChecker::init() {
   // Initialize read-only registers set.
   ReadOnly.insert(Hexagon::PC);
   ReadOnly.insert(Hexagon::C9_8);
+  ReadOnly.insert(Hexagon::UPMUCNT0);
+  ReadOnly.insert(Hexagon::UPMUCNT1);
+  ReadOnly.insert(Hexagon::UPMUCNT2);
+  ReadOnly.insert(Hexagon::UPMUCNT3);
+  ReadOnly.insert(Hexagon::UPMUCNT4);
+  ReadOnly.insert(Hexagon::UPMUCNT5);
+  ReadOnly.insert(Hexagon::UPMUCNT6);
+  ReadOnly.insert(Hexagon::UPMUCNT7);
+  ReadOnly.insert(Hexagon::C21_20);
+  ReadOnly.insert(Hexagon::C23_22);
+  ReadOnly.insert(Hexagon::C25_24);
+  ReadOnly.insert(Hexagon::C27_26);
 
   // Figure out the loop-registers definitions.
   if (HexagonMCInstrInfo::isInnerLoop(MCB)) {
