@@ -52,9 +52,9 @@ append_if(OPENMP_HAVE_DATA_SECTIONS "-fdata-sections" CMAKE_C_FLAGS CMAKE_CXX_FL
 
 if (MSVC)
   # Disable "warning C4201: nonstandard extension used: nameless struct/union"
-  append("-wd4201" CMAKE_C_FLAGS CMAKE_CXX_FLAGS )
+  append("-wd4201" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   
   # Disable "warning C4190: '__kmpc_atomic_cmplx8_rd' has C-linkage specified, but returns
   # UDT '__kmp_cmplx64_t' which is incompatible with C"
-  append("-wd4190" CMAKE_C_FLAGS CMAKE_CXX_FLAGS )
+  append("-wd4190" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
