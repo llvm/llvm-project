@@ -574,10 +574,7 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     ```
   }];
 
-  let arguments = (ins
-    StrAttr:$value,
-    UnitAttr:$trailing_semicolon
-  );
+  let arguments = (ins StrAttr:$value);
   let assemblyFormat = "$value attr-dict";
 }
 
