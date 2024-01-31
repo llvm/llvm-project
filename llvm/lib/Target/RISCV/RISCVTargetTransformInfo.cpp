@@ -84,8 +84,14 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
       Cost += VL;
       break;
     }
+    case RISCV::VMV_X_S:
     case RISCV::VMV_S_X:
-      // FIXME: VMV_S_X doesn't use LMUL, the cost should be 1
+    case RISCV::VFMV_F_S:
+    case RISCV::VFMV_S_F:
+    case RISCV::VMNAND_MM:
+    case RISCV::VCPOP_M:
+      Cost += 1;
+      break;
     default:
       Cost += LMULCost;
     }
@@ -443,10 +449,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // vsetivli     zero, 8, e8, mf2, ta, ma (ignored)
     // vmv.s.x      v0, a0
     // vmerge.vvm   v8, v9, v8, v0
+    // We use 2 for the cost of the mask materialization as this is the true
+    // cost for small masks and most shuffles are small.  At worst, this cost
+    // should be a very small constant for the constant pool load.  As such,
+    // we may bias towards large selects slightly more than truely warranted.
     return LT.first *
-           (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for li
-            getRISCVInstructionCost({RISCV::VMV_S_X, RISCV::VMERGE_VVM},
-                                    LT.second, CostKind));
+           (1 + getRISCVInstructionCost({RISCV::VMV_S_X, RISCV::VMERGE_VVM},
+                                        LT.second, CostKind));
   }
   case TTI::SK_Broadcast: {
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
@@ -474,10 +483,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
       return LT.first *
              (TLI->getLMULCost(LT.second) + // FIXME: this should be 1 for andi
-              TLI->getLMULCost(
-                  LT.second) + // FIXME: vmv.x.s is the same as extractelement
               getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM,
-                                       RISCV::VMV_V_X, RISCV::VMSNE_VI},
+                                       RISCV::VMV_X_S, RISCV::VMV_V_X,
+                                       RISCV::VMSNE_VI},
                                       LT.second, CostKind));
     }
 
@@ -655,494 +663,61 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
 // instruction counts with the following adjustments made:
 // * One vsetvli is considered free.
 static const CostTblEntry VectorIntrinsicCostTable[]{
-    {Intrinsic::floor, MVT::v2f32, 9},
-    {Intrinsic::floor, MVT::v4f32, 9},
-    {Intrinsic::floor, MVT::v8f32, 9},
-    {Intrinsic::floor, MVT::v16f32, 9},
-    {Intrinsic::floor, MVT::nxv1f32, 9},
-    {Intrinsic::floor, MVT::nxv2f32, 9},
-    {Intrinsic::floor, MVT::nxv4f32, 9},
-    {Intrinsic::floor, MVT::nxv8f32, 9},
-    {Intrinsic::floor, MVT::nxv16f32, 9},
-    {Intrinsic::floor, MVT::v2f64, 9},
-    {Intrinsic::floor, MVT::v4f64, 9},
-    {Intrinsic::floor, MVT::v8f64, 9},
-    {Intrinsic::floor, MVT::v16f64, 9},
-    {Intrinsic::floor, MVT::nxv1f64, 9},
-    {Intrinsic::floor, MVT::nxv2f64, 9},
-    {Intrinsic::floor, MVT::nxv4f64, 9},
-    {Intrinsic::floor, MVT::nxv8f64, 9},
-    {Intrinsic::ceil, MVT::v2f32, 9},
-    {Intrinsic::ceil, MVT::v4f32, 9},
-    {Intrinsic::ceil, MVT::v8f32, 9},
-    {Intrinsic::ceil, MVT::v16f32, 9},
-    {Intrinsic::ceil, MVT::nxv1f32, 9},
-    {Intrinsic::ceil, MVT::nxv2f32, 9},
-    {Intrinsic::ceil, MVT::nxv4f32, 9},
-    {Intrinsic::ceil, MVT::nxv8f32, 9},
-    {Intrinsic::ceil, MVT::nxv16f32, 9},
-    {Intrinsic::ceil, MVT::v2f64, 9},
-    {Intrinsic::ceil, MVT::v4f64, 9},
-    {Intrinsic::ceil, MVT::v8f64, 9},
-    {Intrinsic::ceil, MVT::v16f64, 9},
-    {Intrinsic::ceil, MVT::nxv1f64, 9},
-    {Intrinsic::ceil, MVT::nxv2f64, 9},
-    {Intrinsic::ceil, MVT::nxv4f64, 9},
-    {Intrinsic::ceil, MVT::nxv8f64, 9},
-    {Intrinsic::trunc, MVT::v2f32, 7},
-    {Intrinsic::trunc, MVT::v4f32, 7},
-    {Intrinsic::trunc, MVT::v8f32, 7},
-    {Intrinsic::trunc, MVT::v16f32, 7},
-    {Intrinsic::trunc, MVT::nxv1f32, 7},
-    {Intrinsic::trunc, MVT::nxv2f32, 7},
-    {Intrinsic::trunc, MVT::nxv4f32, 7},
-    {Intrinsic::trunc, MVT::nxv8f32, 7},
-    {Intrinsic::trunc, MVT::nxv16f32, 7},
-    {Intrinsic::trunc, MVT::v2f64, 7},
-    {Intrinsic::trunc, MVT::v4f64, 7},
-    {Intrinsic::trunc, MVT::v8f64, 7},
-    {Intrinsic::trunc, MVT::v16f64, 7},
-    {Intrinsic::trunc, MVT::nxv1f64, 7},
-    {Intrinsic::trunc, MVT::nxv2f64, 7},
-    {Intrinsic::trunc, MVT::nxv4f64, 7},
-    {Intrinsic::trunc, MVT::nxv8f64, 7},
-    {Intrinsic::round, MVT::v2f32, 9},
-    {Intrinsic::round, MVT::v4f32, 9},
-    {Intrinsic::round, MVT::v8f32, 9},
-    {Intrinsic::round, MVT::v16f32, 9},
-    {Intrinsic::round, MVT::nxv1f32, 9},
-    {Intrinsic::round, MVT::nxv2f32, 9},
-    {Intrinsic::round, MVT::nxv4f32, 9},
-    {Intrinsic::round, MVT::nxv8f32, 9},
-    {Intrinsic::round, MVT::nxv16f32, 9},
-    {Intrinsic::round, MVT::v2f64, 9},
-    {Intrinsic::round, MVT::v4f64, 9},
-    {Intrinsic::round, MVT::v8f64, 9},
-    {Intrinsic::round, MVT::v16f64, 9},
-    {Intrinsic::round, MVT::nxv1f64, 9},
-    {Intrinsic::round, MVT::nxv2f64, 9},
-    {Intrinsic::round, MVT::nxv4f64, 9},
-    {Intrinsic::round, MVT::nxv8f64, 9},
-    {Intrinsic::roundeven, MVT::v2f32, 9},
-    {Intrinsic::roundeven, MVT::v4f32, 9},
-    {Intrinsic::roundeven, MVT::v8f32, 9},
-    {Intrinsic::roundeven, MVT::v16f32, 9},
-    {Intrinsic::roundeven, MVT::nxv1f32, 9},
-    {Intrinsic::roundeven, MVT::nxv2f32, 9},
-    {Intrinsic::roundeven, MVT::nxv4f32, 9},
-    {Intrinsic::roundeven, MVT::nxv8f32, 9},
-    {Intrinsic::roundeven, MVT::nxv16f32, 9},
-    {Intrinsic::roundeven, MVT::v2f64, 9},
-    {Intrinsic::roundeven, MVT::v4f64, 9},
-    {Intrinsic::roundeven, MVT::v8f64, 9},
-    {Intrinsic::roundeven, MVT::v16f64, 9},
-    {Intrinsic::roundeven, MVT::nxv1f64, 9},
-    {Intrinsic::roundeven, MVT::nxv2f64, 9},
-    {Intrinsic::roundeven, MVT::nxv4f64, 9},
-    {Intrinsic::roundeven, MVT::nxv8f64, 9},
-    {Intrinsic::rint, MVT::v2f32, 7},
-    {Intrinsic::rint, MVT::v4f32, 7},
-    {Intrinsic::rint, MVT::v8f32, 7},
-    {Intrinsic::rint, MVT::v16f32, 7},
-    {Intrinsic::rint, MVT::nxv1f32, 7},
-    {Intrinsic::rint, MVT::nxv2f32, 7},
-    {Intrinsic::rint, MVT::nxv4f32, 7},
-    {Intrinsic::rint, MVT::nxv8f32, 7},
-    {Intrinsic::rint, MVT::nxv16f32, 7},
-    {Intrinsic::rint, MVT::v2f64, 7},
-    {Intrinsic::rint, MVT::v4f64, 7},
-    {Intrinsic::rint, MVT::v8f64, 7},
-    {Intrinsic::rint, MVT::v16f64, 7},
-    {Intrinsic::rint, MVT::nxv1f64, 7},
-    {Intrinsic::rint, MVT::nxv2f64, 7},
-    {Intrinsic::rint, MVT::nxv4f64, 7},
-    {Intrinsic::rint, MVT::nxv8f64, 7},
-    {Intrinsic::lrint, MVT::v2i32, 1},
-    {Intrinsic::lrint, MVT::v4i32, 1},
-    {Intrinsic::lrint, MVT::v8i32, 1},
-    {Intrinsic::lrint, MVT::v16i32, 1},
-    {Intrinsic::lrint, MVT::nxv1i32, 1},
-    {Intrinsic::lrint, MVT::nxv2i32, 1},
-    {Intrinsic::lrint, MVT::nxv4i32, 1},
-    {Intrinsic::lrint, MVT::nxv8i32, 1},
-    {Intrinsic::lrint, MVT::nxv16i32, 1},
-    {Intrinsic::lrint, MVT::v2i64, 1},
-    {Intrinsic::lrint, MVT::v4i64, 1},
-    {Intrinsic::lrint, MVT::v8i64, 1},
-    {Intrinsic::lrint, MVT::v16i64, 1},
-    {Intrinsic::lrint, MVT::nxv1i64, 1},
-    {Intrinsic::lrint, MVT::nxv2i64, 1},
-    {Intrinsic::lrint, MVT::nxv4i64, 1},
-    {Intrinsic::lrint, MVT::nxv8i64, 1},
-    {Intrinsic::llrint, MVT::v2i64, 1},
-    {Intrinsic::llrint, MVT::v4i64, 1},
-    {Intrinsic::llrint, MVT::v8i64, 1},
-    {Intrinsic::llrint, MVT::v16i64, 1},
-    {Intrinsic::llrint, MVT::nxv1i64, 1},
-    {Intrinsic::llrint, MVT::nxv2i64, 1},
-    {Intrinsic::llrint, MVT::nxv4i64, 1},
-    {Intrinsic::llrint, MVT::nxv8i64, 1},
-    {Intrinsic::nearbyint, MVT::v2f32, 9},
-    {Intrinsic::nearbyint, MVT::v4f32, 9},
-    {Intrinsic::nearbyint, MVT::v8f32, 9},
-    {Intrinsic::nearbyint, MVT::v16f32, 9},
-    {Intrinsic::nearbyint, MVT::nxv1f32, 9},
-    {Intrinsic::nearbyint, MVT::nxv2f32, 9},
-    {Intrinsic::nearbyint, MVT::nxv4f32, 9},
-    {Intrinsic::nearbyint, MVT::nxv8f32, 9},
-    {Intrinsic::nearbyint, MVT::nxv16f32, 9},
-    {Intrinsic::nearbyint, MVT::v2f64, 9},
-    {Intrinsic::nearbyint, MVT::v4f64, 9},
-    {Intrinsic::nearbyint, MVT::v8f64, 9},
-    {Intrinsic::nearbyint, MVT::v16f64, 9},
-    {Intrinsic::nearbyint, MVT::nxv1f64, 9},
-    {Intrinsic::nearbyint, MVT::nxv2f64, 9},
-    {Intrinsic::nearbyint, MVT::nxv4f64, 9},
-    {Intrinsic::nearbyint, MVT::nxv8f64, 9},
-    {Intrinsic::bswap, MVT::v2i16, 3},
-    {Intrinsic::bswap, MVT::v4i16, 3},
-    {Intrinsic::bswap, MVT::v8i16, 3},
-    {Intrinsic::bswap, MVT::v16i16, 3},
-    {Intrinsic::bswap, MVT::nxv1i16, 3},
-    {Intrinsic::bswap, MVT::nxv2i16, 3},
-    {Intrinsic::bswap, MVT::nxv4i16, 3},
-    {Intrinsic::bswap, MVT::nxv8i16, 3},
-    {Intrinsic::bswap, MVT::nxv16i16, 3},
-    {Intrinsic::bswap, MVT::v2i32, 12},
-    {Intrinsic::bswap, MVT::v4i32, 12},
-    {Intrinsic::bswap, MVT::v8i32, 12},
-    {Intrinsic::bswap, MVT::v16i32, 12},
-    {Intrinsic::bswap, MVT::nxv1i32, 12},
-    {Intrinsic::bswap, MVT::nxv2i32, 12},
-    {Intrinsic::bswap, MVT::nxv4i32, 12},
-    {Intrinsic::bswap, MVT::nxv8i32, 12},
-    {Intrinsic::bswap, MVT::nxv16i32, 12},
-    {Intrinsic::bswap, MVT::v2i64, 31},
-    {Intrinsic::bswap, MVT::v4i64, 31},
-    {Intrinsic::bswap, MVT::v8i64, 31},
-    {Intrinsic::bswap, MVT::v16i64, 31},
-    {Intrinsic::bswap, MVT::nxv1i64, 31},
-    {Intrinsic::bswap, MVT::nxv2i64, 31},
-    {Intrinsic::bswap, MVT::nxv4i64, 31},
-    {Intrinsic::bswap, MVT::nxv8i64, 31},
-    {Intrinsic::vp_bswap, MVT::v2i16, 3},
-    {Intrinsic::vp_bswap, MVT::v4i16, 3},
-    {Intrinsic::vp_bswap, MVT::v8i16, 3},
-    {Intrinsic::vp_bswap, MVT::v16i16, 3},
-    {Intrinsic::vp_bswap, MVT::nxv1i16, 3},
-    {Intrinsic::vp_bswap, MVT::nxv2i16, 3},
-    {Intrinsic::vp_bswap, MVT::nxv4i16, 3},
-    {Intrinsic::vp_bswap, MVT::nxv8i16, 3},
-    {Intrinsic::vp_bswap, MVT::nxv16i16, 3},
-    {Intrinsic::vp_bswap, MVT::v2i32, 12},
-    {Intrinsic::vp_bswap, MVT::v4i32, 12},
-    {Intrinsic::vp_bswap, MVT::v8i32, 12},
-    {Intrinsic::vp_bswap, MVT::v16i32, 12},
-    {Intrinsic::vp_bswap, MVT::nxv1i32, 12},
-    {Intrinsic::vp_bswap, MVT::nxv2i32, 12},
-    {Intrinsic::vp_bswap, MVT::nxv4i32, 12},
-    {Intrinsic::vp_bswap, MVT::nxv8i32, 12},
-    {Intrinsic::vp_bswap, MVT::nxv16i32, 12},
-    {Intrinsic::vp_bswap, MVT::v2i64, 31},
-    {Intrinsic::vp_bswap, MVT::v4i64, 31},
-    {Intrinsic::vp_bswap, MVT::v8i64, 31},
-    {Intrinsic::vp_bswap, MVT::v16i64, 31},
-    {Intrinsic::vp_bswap, MVT::nxv1i64, 31},
-    {Intrinsic::vp_bswap, MVT::nxv2i64, 31},
-    {Intrinsic::vp_bswap, MVT::nxv4i64, 31},
-    {Intrinsic::vp_bswap, MVT::nxv8i64, 31},
-    {Intrinsic::vp_fshl, MVT::v2i8, 7},
-    {Intrinsic::vp_fshl, MVT::v4i8, 7},
-    {Intrinsic::vp_fshl, MVT::v8i8, 7},
-    {Intrinsic::vp_fshl, MVT::v16i8, 7},
-    {Intrinsic::vp_fshl, MVT::nxv1i8, 7},
-    {Intrinsic::vp_fshl, MVT::nxv2i8, 7},
-    {Intrinsic::vp_fshl, MVT::nxv4i8, 7},
-    {Intrinsic::vp_fshl, MVT::nxv8i8, 7},
-    {Intrinsic::vp_fshl, MVT::nxv16i8, 7},
-    {Intrinsic::vp_fshl, MVT::nxv32i8, 7},
-    {Intrinsic::vp_fshl, MVT::nxv64i8, 7},
-    {Intrinsic::vp_fshl, MVT::v2i16, 7},
-    {Intrinsic::vp_fshl, MVT::v4i16, 7},
-    {Intrinsic::vp_fshl, MVT::v8i16, 7},
-    {Intrinsic::vp_fshl, MVT::v16i16, 7},
-    {Intrinsic::vp_fshl, MVT::nxv1i16, 7},
-    {Intrinsic::vp_fshl, MVT::nxv2i16, 7},
-    {Intrinsic::vp_fshl, MVT::nxv4i16, 7},
-    {Intrinsic::vp_fshl, MVT::nxv8i16, 7},
-    {Intrinsic::vp_fshl, MVT::nxv16i16, 7},
-    {Intrinsic::vp_fshl, MVT::nxv32i16, 7},
-    {Intrinsic::vp_fshl, MVT::v2i32, 7},
-    {Intrinsic::vp_fshl, MVT::v4i32, 7},
-    {Intrinsic::vp_fshl, MVT::v8i32, 7},
-    {Intrinsic::vp_fshl, MVT::v16i32, 7},
-    {Intrinsic::vp_fshl, MVT::nxv1i32, 7},
-    {Intrinsic::vp_fshl, MVT::nxv2i32, 7},
-    {Intrinsic::vp_fshl, MVT::nxv4i32, 7},
-    {Intrinsic::vp_fshl, MVT::nxv8i32, 7},
-    {Intrinsic::vp_fshl, MVT::nxv16i32, 7},
-    {Intrinsic::vp_fshl, MVT::v2i64, 7},
-    {Intrinsic::vp_fshl, MVT::v4i64, 7},
-    {Intrinsic::vp_fshl, MVT::v8i64, 7},
-    {Intrinsic::vp_fshl, MVT::v16i64, 7},
-    {Intrinsic::vp_fshl, MVT::nxv1i64, 7},
-    {Intrinsic::vp_fshl, MVT::nxv2i64, 7},
-    {Intrinsic::vp_fshl, MVT::nxv4i64, 7},
-    {Intrinsic::vp_fshl, MVT::nxv8i64, 7},
-    {Intrinsic::vp_fshr, MVT::v2i8, 7},
-    {Intrinsic::vp_fshr, MVT::v4i8, 7},
-    {Intrinsic::vp_fshr, MVT::v8i8, 7},
-    {Intrinsic::vp_fshr, MVT::v16i8, 7},
-    {Intrinsic::vp_fshr, MVT::nxv1i8, 7},
-    {Intrinsic::vp_fshr, MVT::nxv2i8, 7},
-    {Intrinsic::vp_fshr, MVT::nxv4i8, 7},
-    {Intrinsic::vp_fshr, MVT::nxv8i8, 7},
-    {Intrinsic::vp_fshr, MVT::nxv16i8, 7},
-    {Intrinsic::vp_fshr, MVT::nxv32i8, 7},
-    {Intrinsic::vp_fshr, MVT::nxv64i8, 7},
-    {Intrinsic::vp_fshr, MVT::v2i16, 7},
-    {Intrinsic::vp_fshr, MVT::v4i16, 7},
-    {Intrinsic::vp_fshr, MVT::v8i16, 7},
-    {Intrinsic::vp_fshr, MVT::v16i16, 7},
-    {Intrinsic::vp_fshr, MVT::nxv1i16, 7},
-    {Intrinsic::vp_fshr, MVT::nxv2i16, 7},
-    {Intrinsic::vp_fshr, MVT::nxv4i16, 7},
-    {Intrinsic::vp_fshr, MVT::nxv8i16, 7},
-    {Intrinsic::vp_fshr, MVT::nxv16i16, 7},
-    {Intrinsic::vp_fshr, MVT::nxv32i16, 7},
-    {Intrinsic::vp_fshr, MVT::v2i32, 7},
-    {Intrinsic::vp_fshr, MVT::v4i32, 7},
-    {Intrinsic::vp_fshr, MVT::v8i32, 7},
-    {Intrinsic::vp_fshr, MVT::v16i32, 7},
-    {Intrinsic::vp_fshr, MVT::nxv1i32, 7},
-    {Intrinsic::vp_fshr, MVT::nxv2i32, 7},
-    {Intrinsic::vp_fshr, MVT::nxv4i32, 7},
-    {Intrinsic::vp_fshr, MVT::nxv8i32, 7},
-    {Intrinsic::vp_fshr, MVT::nxv16i32, 7},
-    {Intrinsic::vp_fshr, MVT::v2i64, 7},
-    {Intrinsic::vp_fshr, MVT::v4i64, 7},
-    {Intrinsic::vp_fshr, MVT::v8i64, 7},
-    {Intrinsic::vp_fshr, MVT::v16i64, 7},
-    {Intrinsic::vp_fshr, MVT::nxv1i64, 7},
-    {Intrinsic::vp_fshr, MVT::nxv2i64, 7},
-    {Intrinsic::vp_fshr, MVT::nxv4i64, 7},
-    {Intrinsic::vp_fshr, MVT::nxv8i64, 7},
-    {Intrinsic::bitreverse, MVT::v2i8, 17},
-    {Intrinsic::bitreverse, MVT::v4i8, 17},
-    {Intrinsic::bitreverse, MVT::v8i8, 17},
-    {Intrinsic::bitreverse, MVT::v16i8, 17},
-    {Intrinsic::bitreverse, MVT::nxv1i8, 17},
-    {Intrinsic::bitreverse, MVT::nxv2i8, 17},
-    {Intrinsic::bitreverse, MVT::nxv4i8, 17},
-    {Intrinsic::bitreverse, MVT::nxv8i8, 17},
-    {Intrinsic::bitreverse, MVT::nxv16i8, 17},
-    {Intrinsic::bitreverse, MVT::v2i16, 24},
-    {Intrinsic::bitreverse, MVT::v4i16, 24},
-    {Intrinsic::bitreverse, MVT::v8i16, 24},
-    {Intrinsic::bitreverse, MVT::v16i16, 24},
-    {Intrinsic::bitreverse, MVT::nxv1i16, 24},
-    {Intrinsic::bitreverse, MVT::nxv2i16, 24},
-    {Intrinsic::bitreverse, MVT::nxv4i16, 24},
-    {Intrinsic::bitreverse, MVT::nxv8i16, 24},
-    {Intrinsic::bitreverse, MVT::nxv16i16, 24},
-    {Intrinsic::bitreverse, MVT::v2i32, 33},
-    {Intrinsic::bitreverse, MVT::v4i32, 33},
-    {Intrinsic::bitreverse, MVT::v8i32, 33},
-    {Intrinsic::bitreverse, MVT::v16i32, 33},
-    {Intrinsic::bitreverse, MVT::nxv1i32, 33},
-    {Intrinsic::bitreverse, MVT::nxv2i32, 33},
-    {Intrinsic::bitreverse, MVT::nxv4i32, 33},
-    {Intrinsic::bitreverse, MVT::nxv8i32, 33},
-    {Intrinsic::bitreverse, MVT::nxv16i32, 33},
-    {Intrinsic::bitreverse, MVT::v2i64, 52},
-    {Intrinsic::bitreverse, MVT::v4i64, 52},
-    {Intrinsic::bitreverse, MVT::v8i64, 52},
-    {Intrinsic::bitreverse, MVT::v16i64, 52},
-    {Intrinsic::bitreverse, MVT::nxv1i64, 52},
-    {Intrinsic::bitreverse, MVT::nxv2i64, 52},
-    {Intrinsic::bitreverse, MVT::nxv4i64, 52},
-    {Intrinsic::bitreverse, MVT::nxv8i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::v2i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::v4i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::v8i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::v16i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::nxv1i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::nxv2i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::nxv4i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::nxv8i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::nxv16i8, 17},
-    {Intrinsic::vp_bitreverse, MVT::v2i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::v4i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::v8i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::v16i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::nxv1i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::nxv2i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::nxv4i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::nxv8i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::nxv16i16, 24},
-    {Intrinsic::vp_bitreverse, MVT::v2i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::v4i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::v8i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::v16i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::nxv1i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::nxv2i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::nxv4i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::nxv8i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::nxv16i32, 33},
-    {Intrinsic::vp_bitreverse, MVT::v2i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::v4i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::v8i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::v16i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::nxv1i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::nxv2i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::nxv4i64, 52},
-    {Intrinsic::vp_bitreverse, MVT::nxv8i64, 52},
-    {Intrinsic::ctpop, MVT::v2i8, 12},
-    {Intrinsic::ctpop, MVT::v4i8, 12},
-    {Intrinsic::ctpop, MVT::v8i8, 12},
-    {Intrinsic::ctpop, MVT::v16i8, 12},
-    {Intrinsic::ctpop, MVT::nxv1i8, 12},
-    {Intrinsic::ctpop, MVT::nxv2i8, 12},
-    {Intrinsic::ctpop, MVT::nxv4i8, 12},
-    {Intrinsic::ctpop, MVT::nxv8i8, 12},
-    {Intrinsic::ctpop, MVT::nxv16i8, 12},
-    {Intrinsic::ctpop, MVT::v2i16, 19},
-    {Intrinsic::ctpop, MVT::v4i16, 19},
-    {Intrinsic::ctpop, MVT::v8i16, 19},
-    {Intrinsic::ctpop, MVT::v16i16, 19},
-    {Intrinsic::ctpop, MVT::nxv1i16, 19},
-    {Intrinsic::ctpop, MVT::nxv2i16, 19},
-    {Intrinsic::ctpop, MVT::nxv4i16, 19},
-    {Intrinsic::ctpop, MVT::nxv8i16, 19},
-    {Intrinsic::ctpop, MVT::nxv16i16, 19},
-    {Intrinsic::ctpop, MVT::v2i32, 20},
-    {Intrinsic::ctpop, MVT::v4i32, 20},
-    {Intrinsic::ctpop, MVT::v8i32, 20},
-    {Intrinsic::ctpop, MVT::v16i32, 20},
-    {Intrinsic::ctpop, MVT::nxv1i32, 20},
-    {Intrinsic::ctpop, MVT::nxv2i32, 20},
-    {Intrinsic::ctpop, MVT::nxv4i32, 20},
-    {Intrinsic::ctpop, MVT::nxv8i32, 20},
-    {Intrinsic::ctpop, MVT::nxv16i32, 20},
-    {Intrinsic::ctpop, MVT::v2i64, 21},
-    {Intrinsic::ctpop, MVT::v4i64, 21},
-    {Intrinsic::ctpop, MVT::v8i64, 21},
-    {Intrinsic::ctpop, MVT::v16i64, 21},
-    {Intrinsic::ctpop, MVT::nxv1i64, 21},
-    {Intrinsic::ctpop, MVT::nxv2i64, 21},
-    {Intrinsic::ctpop, MVT::nxv4i64, 21},
-    {Intrinsic::ctpop, MVT::nxv8i64, 21},
-    {Intrinsic::vp_ctpop, MVT::v2i8, 12},
-    {Intrinsic::vp_ctpop, MVT::v4i8, 12},
-    {Intrinsic::vp_ctpop, MVT::v8i8, 12},
-    {Intrinsic::vp_ctpop, MVT::v16i8, 12},
-    {Intrinsic::vp_ctpop, MVT::nxv1i8, 12},
-    {Intrinsic::vp_ctpop, MVT::nxv2i8, 12},
-    {Intrinsic::vp_ctpop, MVT::nxv4i8, 12},
-    {Intrinsic::vp_ctpop, MVT::nxv8i8, 12},
-    {Intrinsic::vp_ctpop, MVT::nxv16i8, 12},
-    {Intrinsic::vp_ctpop, MVT::v2i16, 19},
-    {Intrinsic::vp_ctpop, MVT::v4i16, 19},
-    {Intrinsic::vp_ctpop, MVT::v8i16, 19},
-    {Intrinsic::vp_ctpop, MVT::v16i16, 19},
-    {Intrinsic::vp_ctpop, MVT::nxv1i16, 19},
-    {Intrinsic::vp_ctpop, MVT::nxv2i16, 19},
-    {Intrinsic::vp_ctpop, MVT::nxv4i16, 19},
-    {Intrinsic::vp_ctpop, MVT::nxv8i16, 19},
-    {Intrinsic::vp_ctpop, MVT::nxv16i16, 19},
-    {Intrinsic::vp_ctpop, MVT::v2i32, 20},
-    {Intrinsic::vp_ctpop, MVT::v4i32, 20},
-    {Intrinsic::vp_ctpop, MVT::v8i32, 20},
-    {Intrinsic::vp_ctpop, MVT::v16i32, 20},
-    {Intrinsic::vp_ctpop, MVT::nxv1i32, 20},
-    {Intrinsic::vp_ctpop, MVT::nxv2i32, 20},
-    {Intrinsic::vp_ctpop, MVT::nxv4i32, 20},
-    {Intrinsic::vp_ctpop, MVT::nxv8i32, 20},
-    {Intrinsic::vp_ctpop, MVT::nxv16i32, 20},
-    {Intrinsic::vp_ctpop, MVT::v2i64, 21},
-    {Intrinsic::vp_ctpop, MVT::v4i64, 21},
-    {Intrinsic::vp_ctpop, MVT::v8i64, 21},
-    {Intrinsic::vp_ctpop, MVT::v16i64, 21},
-    {Intrinsic::vp_ctpop, MVT::nxv1i64, 21},
-    {Intrinsic::vp_ctpop, MVT::nxv2i64, 21},
-    {Intrinsic::vp_ctpop, MVT::nxv4i64, 21},
-    {Intrinsic::vp_ctpop, MVT::nxv8i64, 21},
-    {Intrinsic::vp_ctlz, MVT::v2i8, 19},
-    {Intrinsic::vp_ctlz, MVT::v4i8, 19},
-    {Intrinsic::vp_ctlz, MVT::v8i8, 19},
-    {Intrinsic::vp_ctlz, MVT::v16i8, 19},
-    {Intrinsic::vp_ctlz, MVT::nxv1i8, 19},
-    {Intrinsic::vp_ctlz, MVT::nxv2i8, 19},
-    {Intrinsic::vp_ctlz, MVT::nxv4i8, 19},
-    {Intrinsic::vp_ctlz, MVT::nxv8i8, 19},
-    {Intrinsic::vp_ctlz, MVT::nxv16i8, 19},
-    {Intrinsic::vp_ctlz, MVT::nxv32i8, 19},
-    {Intrinsic::vp_ctlz, MVT::nxv64i8, 19},
-    {Intrinsic::vp_ctlz, MVT::v2i16, 28},
-    {Intrinsic::vp_ctlz, MVT::v4i16, 28},
-    {Intrinsic::vp_ctlz, MVT::v8i16, 28},
-    {Intrinsic::vp_ctlz, MVT::v16i16, 28},
-    {Intrinsic::vp_ctlz, MVT::nxv1i16, 28},
-    {Intrinsic::vp_ctlz, MVT::nxv2i16, 28},
-    {Intrinsic::vp_ctlz, MVT::nxv4i16, 28},
-    {Intrinsic::vp_ctlz, MVT::nxv8i16, 28},
-    {Intrinsic::vp_ctlz, MVT::nxv16i16, 28},
-    {Intrinsic::vp_ctlz, MVT::nxv32i16, 28},
-    {Intrinsic::vp_ctlz, MVT::v2i32, 31},
-    {Intrinsic::vp_ctlz, MVT::v4i32, 31},
-    {Intrinsic::vp_ctlz, MVT::v8i32, 31},
-    {Intrinsic::vp_ctlz, MVT::v16i32, 31},
-    {Intrinsic::vp_ctlz, MVT::nxv1i32, 31},
-    {Intrinsic::vp_ctlz, MVT::nxv2i32, 31},
-    {Intrinsic::vp_ctlz, MVT::nxv4i32, 31},
-    {Intrinsic::vp_ctlz, MVT::nxv8i32, 31},
-    {Intrinsic::vp_ctlz, MVT::nxv16i32, 31},
-    {Intrinsic::vp_ctlz, MVT::v2i64, 35},
-    {Intrinsic::vp_ctlz, MVT::v4i64, 35},
-    {Intrinsic::vp_ctlz, MVT::v8i64, 35},
-    {Intrinsic::vp_ctlz, MVT::v16i64, 35},
-    {Intrinsic::vp_ctlz, MVT::nxv1i64, 35},
-    {Intrinsic::vp_ctlz, MVT::nxv2i64, 35},
-    {Intrinsic::vp_ctlz, MVT::nxv4i64, 35},
-    {Intrinsic::vp_ctlz, MVT::nxv8i64, 35},
-    {Intrinsic::vp_cttz, MVT::v2i8, 16},
-    {Intrinsic::vp_cttz, MVT::v4i8, 16},
-    {Intrinsic::vp_cttz, MVT::v8i8, 16},
-    {Intrinsic::vp_cttz, MVT::v16i8, 16},
-    {Intrinsic::vp_cttz, MVT::nxv1i8, 16},
-    {Intrinsic::vp_cttz, MVT::nxv2i8, 16},
-    {Intrinsic::vp_cttz, MVT::nxv4i8, 16},
-    {Intrinsic::vp_cttz, MVT::nxv8i8, 16},
-    {Intrinsic::vp_cttz, MVT::nxv16i8, 16},
-    {Intrinsic::vp_cttz, MVT::nxv32i8, 16},
-    {Intrinsic::vp_cttz, MVT::nxv64i8, 16},
-    {Intrinsic::vp_cttz, MVT::v2i16, 23},
-    {Intrinsic::vp_cttz, MVT::v4i16, 23},
-    {Intrinsic::vp_cttz, MVT::v8i16, 23},
-    {Intrinsic::vp_cttz, MVT::v16i16, 23},
-    {Intrinsic::vp_cttz, MVT::nxv1i16, 23},
-    {Intrinsic::vp_cttz, MVT::nxv2i16, 23},
-    {Intrinsic::vp_cttz, MVT::nxv4i16, 23},
-    {Intrinsic::vp_cttz, MVT::nxv8i16, 23},
-    {Intrinsic::vp_cttz, MVT::nxv16i16, 23},
-    {Intrinsic::vp_cttz, MVT::nxv32i16, 23},
-    {Intrinsic::vp_cttz, MVT::v2i32, 24},
-    {Intrinsic::vp_cttz, MVT::v4i32, 24},
-    {Intrinsic::vp_cttz, MVT::v8i32, 24},
-    {Intrinsic::vp_cttz, MVT::v16i32, 24},
-    {Intrinsic::vp_cttz, MVT::nxv1i32, 24},
-    {Intrinsic::vp_cttz, MVT::nxv2i32, 24},
-    {Intrinsic::vp_cttz, MVT::nxv4i32, 24},
-    {Intrinsic::vp_cttz, MVT::nxv8i32, 24},
-    {Intrinsic::vp_cttz, MVT::nxv16i32, 24},
-    {Intrinsic::vp_cttz, MVT::v2i64, 25},
-    {Intrinsic::vp_cttz, MVT::v4i64, 25},
-    {Intrinsic::vp_cttz, MVT::v8i64, 25},
-    {Intrinsic::vp_cttz, MVT::v16i64, 25},
-    {Intrinsic::vp_cttz, MVT::nxv1i64, 25},
-    {Intrinsic::vp_cttz, MVT::nxv2i64, 25},
-    {Intrinsic::vp_cttz, MVT::nxv4i64, 25},
-    {Intrinsic::vp_cttz, MVT::nxv8i64, 25},
+    {Intrinsic::floor, MVT::f32, 9},
+    {Intrinsic::floor, MVT::f64, 9},
+    {Intrinsic::ceil, MVT::f32, 9},
+    {Intrinsic::ceil, MVT::f64, 9},
+    {Intrinsic::trunc, MVT::f32, 7},
+    {Intrinsic::trunc, MVT::f64, 7},
+    {Intrinsic::round, MVT::f32, 9},
+    {Intrinsic::round, MVT::f64, 9},
+    {Intrinsic::roundeven, MVT::f32, 9},
+    {Intrinsic::roundeven, MVT::f64, 9},
+    {Intrinsic::rint, MVT::f32, 7},
+    {Intrinsic::rint, MVT::f64, 7},
+    {Intrinsic::lrint, MVT::i32, 1},
+    {Intrinsic::lrint, MVT::i64, 1},
+    {Intrinsic::llrint, MVT::i64, 1},
+    {Intrinsic::nearbyint, MVT::f32, 9},
+    {Intrinsic::nearbyint, MVT::f64, 9},
+    {Intrinsic::bswap, MVT::i16, 3},
+    {Intrinsic::bswap, MVT::i32, 12},
+    {Intrinsic::bswap, MVT::i64, 31},
+    {Intrinsic::vp_bswap, MVT::i16, 3},
+    {Intrinsic::vp_bswap, MVT::i32, 12},
+    {Intrinsic::vp_bswap, MVT::i64, 31},
+    {Intrinsic::vp_fshl, MVT::i8, 7},
+    {Intrinsic::vp_fshl, MVT::i16, 7},
+    {Intrinsic::vp_fshl, MVT::i32, 7},
+    {Intrinsic::vp_fshl, MVT::i64, 7},
+    {Intrinsic::vp_fshr, MVT::i8, 7},
+    {Intrinsic::vp_fshr, MVT::i16, 7},
+    {Intrinsic::vp_fshr, MVT::i32, 7},
+    {Intrinsic::vp_fshr, MVT::i64, 7},
+    {Intrinsic::bitreverse, MVT::i8, 17},
+    {Intrinsic::bitreverse, MVT::i16, 24},
+    {Intrinsic::bitreverse, MVT::i32, 33},
+    {Intrinsic::bitreverse, MVT::i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::i64, 52},
+    {Intrinsic::ctpop, MVT::i8, 12},
+    {Intrinsic::ctpop, MVT::i16, 19},
+    {Intrinsic::ctpop, MVT::i32, 20},
+    {Intrinsic::ctpop, MVT::i64, 21},
+    {Intrinsic::vp_ctpop, MVT::i8, 12},
+    {Intrinsic::vp_ctpop, MVT::i16, 19},
+    {Intrinsic::vp_ctpop, MVT::i32, 20},
+    {Intrinsic::vp_ctpop, MVT::i64, 21},
+    {Intrinsic::vp_ctlz, MVT::i8, 19},
+    {Intrinsic::vp_ctlz, MVT::i16, 28},
+    {Intrinsic::vp_ctlz, MVT::i32, 31},
+    {Intrinsic::vp_ctlz, MVT::i64, 35},
+    {Intrinsic::vp_cttz, MVT::i8, 16},
+    {Intrinsic::vp_cttz, MVT::i16, 23},
+    {Intrinsic::vp_cttz, MVT::i32, 24},
+    {Intrinsic::vp_cttz, MVT::i64, 25},
 };
 
 static unsigned getISDForVPIntrinsicID(Intrinsic::ID ID) {
@@ -1250,10 +825,13 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
-    auto LT = getTypeLegalizationCost(RetTy);
-    if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
-                                            ICA.getID(), LT.second))
-      return LT.first * Entry->Cost;
+    if (auto LT = getTypeLegalizationCost(RetTy);
+        LT.second.isVector()) {
+      MVT EltTy = LT.second.getVectorElementType();
+      if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
+                                              ICA.getID(), EltTy))
+        return LT.first * Entry->Cost;
+    }
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
@@ -1358,19 +936,53 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  if (Ty->getElementType()->isIntegerTy(1))
-    // vcpop sequences, see vreduction-mask.ll.  umax, smin actually only
-    // cost 2, but we don't have enough info here so we slightly over cost.
-    return (LT.first - 1) + 3;
+  if (Ty->getElementType()->isIntegerTy(1)) {
+    // SelectionDAGBuilder does following transforms:
+    //   vector_reduce_{smin,umax}(<n x i1>) --> vector_reduce_or(<n x i1>)
+    //   vector_reduce_{smax,umin}(<n x i1>) --> vector_reduce_and(<n x i1>)
+    if (IID == Intrinsic::umax || IID == Intrinsic::smin)
+      return getArithmeticReductionCost(Instruction::Or, Ty, FMF, CostKind);
+    else
+      return getArithmeticReductionCost(Instruction::And, Ty, FMF, CostKind);
+  }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
-  InstructionCost BaseCost = 2;
-
-  if (CostKind == TTI::TCK_CodeSize)
-    return (LT.first - 1) + BaseCost;
-
-  unsigned VL = getEstimatedVLFor(Ty);
-  return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
+  unsigned SplitOp;
+  SmallVector<unsigned, 3> Opcodes;
+  switch (IID) {
+  default:
+    llvm_unreachable("Unsupported intrinsic");
+  case Intrinsic::smax:
+    SplitOp = RISCV::VMAX_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAX_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::smin:
+    SplitOp = RISCV::VMIN_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMIN_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::umax:
+    SplitOp = RISCV::VMAXU_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::umin:
+    SplitOp = RISCV::VMINU_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMINU_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::maxnum:
+    SplitOp = RISCV::VFMAX_VV;
+    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
+    break;
+  case Intrinsic::minnum:
+    SplitOp = RISCV::VFMIN_VV;
+    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
+    break;
+  }
+  // Add a cost for data larger than LMUL8
+  InstructionCost SplitCost =
+      (LT.first > 1) ? (LT.first - 1) *
+                           getRISCVInstructionCost(SplitOp, LT.second, CostKind)
+                     : 0;
+  return SplitCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
 }
 
 InstructionCost
@@ -1392,20 +1004,70 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  if (Ty->getElementType()->isIntegerTy(1))
-    // vcpop sequences, see vreduction-mask.ll
-    return (LT.first - 1) + (ISD == ISD::AND ? 3 : 2);
+  SmallVector<unsigned, 3> Opcodes;
+  Type *ElementTy = Ty->getElementType();
+  if (ElementTy->isIntegerTy(1)) {
+    if (ISD == ISD::AND) {
+      // Example sequences:
+      //   vsetvli a0, zero, e8, mf8, ta, ma
+      //   vmnot.m v8, v0
+      //   vcpop.m a0, v8
+      //   seqz a0, a0
+      Opcodes = {RISCV::VMNAND_MM, RISCV::VCPOP_M};
+      return (LT.first - 1) +
+             getRISCVInstructionCost(Opcodes, LT.second, CostKind) +
+             getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
+                                CmpInst::ICMP_EQ, CostKind);
+    } else {
+      // Example sequences:
+      //   vsetvli a0, zero, e8, mf8, ta, ma
+      //   vcpop.m a0, v0
+      //   snez a0, a0
+      Opcodes = {RISCV::VCPOP_M};
+      return (LT.first - 1) +
+             getRISCVInstructionCost(Opcodes, LT.second, CostKind) +
+             getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
+                                CmpInst::ICMP_NE, CostKind);
+    }
+  }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
-  InstructionCost BaseCost = 2;
-
-  if (CostKind == TTI::TCK_CodeSize)
-    return (LT.first - 1) + BaseCost;
-
-  unsigned VL = getEstimatedVLFor(Ty);
-  if (TTI::requiresOrderedReduction(FMF))
-    return (LT.first - 1) + BaseCost + VL;
-  return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
+  if (TTI::requiresOrderedReduction(FMF)) {
+    Opcodes.push_back(RISCV::VFMV_S_F);
+    for (unsigned i = 0; i < LT.first.getValue(); i++)
+      Opcodes.push_back(RISCV::VFREDOSUM_VS);
+    Opcodes.push_back(RISCV::VFMV_F_S);
+    return getRISCVInstructionCost(Opcodes, LT.second, CostKind);
+  }
+  unsigned SplitOp;
+  switch (ISD) {
+  case ISD::ADD:
+    SplitOp = RISCV::VADD_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDSUM_VS, RISCV::VMV_X_S};
+    break;
+  case ISD::OR:
+    SplitOp = RISCV::VOR_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDOR_VS, RISCV::VMV_X_S};
+    break;
+  case ISD::XOR:
+    SplitOp = RISCV::VXOR_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDXOR_VS, RISCV::VMV_X_S};
+    break;
+  case ISD::AND:
+    SplitOp = RISCV::VAND_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
+    break;
+  case ISD::FADD:
+    SplitOp = RISCV::VFADD_VV;
+    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDUSUM_VS, RISCV::VFMV_F_S};
+    break;
+  }
+  // Add a cost for data larger than LMUL8
+  InstructionCost SplitCost =
+      (LT.first > 1) ? (LT.first - 1) *
+                           getRISCVInstructionCost(SplitOp, LT.second, CostKind)
+                     : 0;
+  return SplitCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
 }
 
 InstructionCost RISCVTTIImpl::getExtendedReductionCost(
@@ -1476,7 +1138,7 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // possible accessed by the instruction.  Note that BasicTTI already
   // handles the LT.first term for us.
   if (std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
-      LT.second.isVector())
+      LT.second.isVector() && CostKind != TTI::TCK_CodeSize)
     BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
 

@@ -168,19 +168,57 @@ static int initLibrary(DeviceTy &Device) {
         Rc = OFFLOAD_FAIL;
         break;
       }
-      // 2) load image into the target table.
-      __tgt_target_table *TargetTable = TransTable->TargetsTable[DeviceId] =
-          Device.loadBinary(Img);
-      // Unable to get table for this image: invalidate image and fail.
-      if (!TargetTable) {
-        REPORT("Unable to generate entries table for device id %d.\n",
-               DeviceId);
-        TransTable->TargetsImages[DeviceId] = 0;
+
+      // 2) Load the image onto the given device.
+      auto BinaryOrErr = Device.loadBinary(Img);
+      if (llvm::Error Err = BinaryOrErr.takeError()) {
+        REPORT("Failed to load image %s\n",
+               llvm::toString(std::move(Err)).c_str());
         Rc = OFFLOAD_FAIL;
         break;
       }
 
-      // Verify whether the two table sizes match.
+      // 3) Create the translation table.
+      llvm::SmallVector<__tgt_offload_entry> &DeviceEntries =
+          TransTable->TargetsEntries[DeviceId];
+      for (__tgt_offload_entry &Entry :
+           llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
+        __tgt_device_binary &Binary = *BinaryOrErr;
+
+        __tgt_offload_entry DeviceEntry = Entry;
+        if (Entry.size) {
+          if (Device.RTL->get_global(Binary, Entry.size, Entry.name,
+                                     &DeviceEntry.addr) != OFFLOAD_SUCCESS)
+            REPORT("Failed to load symbol %s\n", Entry.name);
+
+          // If unified memory is active, the corresponding global is a device
+          // reference to the host global. We need to initialize the pointer on
+          // the deive to point to the memory on the host.
+          if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+            if (Device.RTL->data_submit(DeviceId, DeviceEntry.addr, Entry.addr,
+                                        Entry.size) != OFFLOAD_SUCCESS)
+              REPORT("Failed to write symbol for USM %s\n", Entry.name);
+          }
+        } else {
+          if (Device.RTL->get_function(Binary, Entry.name, &DeviceEntry.addr) !=
+              OFFLOAD_SUCCESS)
+            REPORT("Failed to load kernel %s\n", Entry.name);
+        }
+        DP("Entry point " DPxMOD " maps to%s %s (" DPxMOD ")\n",
+           DPxPTR(Entry.addr), (Entry.size) ? " global" : "", Entry.name,
+           DPxPTR(DeviceEntry.addr));
+
+        DeviceEntries.emplace_back(DeviceEntry);
+      }
+
+      // Set the storage for the table and get a pointer to it.
+      __tgt_target_table DeviceTable{&DeviceEntries[0],
+                                     &DeviceEntries[0] + DeviceEntries.size()};
+      TransTable->DeviceTables[DeviceId] = DeviceTable;
+      __tgt_target_table *TargetTable = TransTable->TargetsTable[DeviceId] =
+          &TransTable->DeviceTables[DeviceId];
+
+      // 4) Verify whether the two table sizes match.
       size_t Hsize =
           TransTable->HostTable.EntriesEnd - TransTable->HostTable.EntriesBegin;
       size_t Tsize = TargetTable->EntriesEnd - TargetTable->EntriesBegin;

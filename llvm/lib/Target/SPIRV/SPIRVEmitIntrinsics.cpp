@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVMetadata.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/IR/IRBuilder.h"
@@ -148,6 +149,13 @@ static bool requireAssignType(Instruction *I) {
   return true;
 }
 
+static inline void reportFatalOnTokenType(const Instruction *I) {
+  if (I->getType()->isTokenTy())
+    report_fatal_error("A token is encountered but SPIR-V without extensions "
+                       "does not support token type",
+                       false);
+}
+
 void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
                                               Instruction *New) {
   while (!Old->user_empty()) {
@@ -282,7 +290,26 @@ void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
   Value *Pointer;
   Type *ExpectedElementType;
   unsigned OperandToReplace;
-  if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+  bool AllowCastingToChar = false;
+
+  StoreInst *SI = dyn_cast<StoreInst>(I);
+  if (SI && F->getCallingConv() == CallingConv::SPIR_KERNEL &&
+      SI->getValueOperand()->getType()->isPointerTy() &&
+      isa<Argument>(SI->getValueOperand())) {
+    Argument *Arg = cast<Argument>(SI->getValueOperand());
+    MDString *ArgType = getOCLKernelArgType(*Arg->getParent(), Arg->getArgNo());
+    if (!ArgType || ArgType->getString().starts_with("uchar*"))
+      return;
+
+    // Handle special case when StoreInst's value operand is a kernel argument
+    // of a pointer type. Since these arguments could have either a basic
+    // element type (e.g. float*) or OpenCL builtin type (sampler_t), bitcast
+    // the StoreInst's value operand to default pointer element type (i8).
+    Pointer = Arg;
+    ExpectedElementType = IntegerType::getInt8Ty(F->getContext());
+    OperandToReplace = 0;
+    AllowCastingToChar = true;
+  } else if (SI) {
     Pointer = SI->getPointerOperand();
     ExpectedElementType = SI->getValueOperand()->getType();
     OperandToReplace = 1;
@@ -364,13 +391,15 @@ void SPIRVEmitIntrinsics::insertPtrCastInstr(Instruction *I) {
 
   // Do not emit spv_ptrcast if it would cast to the default pointer element
   // type (i8) of the same address space.
-  if (ExpectedElementType->isIntegerTy(8))
+  if (ExpectedElementType->isIntegerTy(8) && !AllowCastingToChar)
     return;
 
-  // If this would be the first spv_ptrcast and there is no spv_assign_ptr_type
-  // for this pointer before, do not emit spv_ptrcast but emit
-  // spv_assign_ptr_type instead.
-  if (FirstPtrCastOrAssignPtrType && isa<Instruction>(Pointer)) {
+  // If this would be the first spv_ptrcast, the pointer's defining instruction
+  // requires spv_assign_ptr_type and does not already have one, do not emit
+  // spv_ptrcast and emit spv_assign_ptr_type instead.
+  Instruction *PointerDefInst = dyn_cast<Instruction>(Pointer);
+  if (FirstPtrCastOrAssignPtrType && PointerDefInst &&
+      requireAssignPtrType(PointerDefInst)) {
     buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {Pointer->getType()},
                     ExpectedElementTypeConst, Pointer,
                     {IRB->getInt32(AddressSpace)});
@@ -522,6 +551,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV) {
 }
 
 void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
   if (I->getType()->isVoidTy() || !requireAssignPtrType(I))
     return;
 
@@ -544,6 +574,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I) {
 }
 
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
+  reportFatalOnTokenType(I);
   Type *Ty = I->getType();
   if (!Ty->isVoidTy() && requireAssignType(I) && !requireAssignPtrType(I)) {
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
@@ -603,6 +634,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I) {
     }
   }
   if (I->hasName()) {
+    reportFatalOnTokenType(I);
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     std::vector<Value *> Args = {I};
     addStringImm(I->getName(), *IRB, Args);

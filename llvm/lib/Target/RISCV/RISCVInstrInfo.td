@@ -1248,6 +1248,8 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  if (N->getFlags().hasDisjoint())
+    return true;
   KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
   KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
   return KnownBits::haveNoCommonBitsSet(Known0, Known1);
@@ -1741,6 +1743,35 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32, isCodeGenOnly = 0 in
+def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                             "la.tlsdesc", "$dst, $src">;
+
+def TLSDESCCallSymbol : AsmOperandClass {
+  let Name = "TLSDESCCallSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTLSDESCCallSymbol";
+  let ParserMethod = "parseOperandWithModifier";
+}
+
+// A bare symbol with the %tlsdesc_call variant.
+def tlsdesc_call_symbol : Operand<XLenVT> {
+  let ParserMatchClass = TLSDESCCallSymbol;
+}
+// This is a special case of the JALR instruction used to facilitate the use of a
+// fourth operand to emit a relocation on a symbol relating to this instruction.
+// The relocation does not affect any bits of the instruction itself but is used
+// as a hint to the linker.
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
+                         (ins GPR:$rs1, simm12:$imm12, tlsdesc_call_symbol:$src), [],
+                         "jalr", "$rd, ${imm12}(${rs1}), $src">,
+                         Sched<[WriteJalr, ReadJalr]> {
+  let Defs = [X10];
+  let Uses = [X10];
+}
 
 
 /// Sign/Zero Extends

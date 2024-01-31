@@ -963,7 +963,7 @@ static void cacheDIVar(FrameDataInfo &FrameData,
     if (DIVarCache.contains(V))
       continue;
 
-    auto CacheIt = [&DIVarCache, V](auto Container) {
+    auto CacheIt = [&DIVarCache, V](const auto &Container) {
       auto *I = llvm::find_if(Container, [](auto *DDI) {
         return DDI->getExpression()->getNumElements() == 0;
       });
@@ -1289,8 +1289,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 //   struct f.frame {
 //     ResumeFnTy ResumeFnAddr;
 //     ResumeFnTy DestroyFnAddr;
-//     int ResumeIndex;
 //     ... promise (if present) ...
+//     int ResumeIndex;
 //     ... spills ...
 //   };
 static StructType *buildFrameType(Function &F, coro::Shape &Shape,
@@ -1868,7 +1868,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         // alias.
         if (F->getSubprogram()) {
           auto *CurDef = Def;
-          while (DIs.empty() && isa<LoadInst>(CurDef)) {
+          while (DIs.empty() && DPVs.empty() && isa<LoadInst>(CurDef)) {
             auto *LdInst = cast<LoadInst>(CurDef);
             // Only consider ptr to ptr same type load.
             if (LdInst->getPointerOperandType() != LdInst->getType())
@@ -2966,7 +2966,7 @@ void coro::salvageDebugInfo(
   Function *F = DPV.getFunction();
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
-  bool SkipOutermostLoad = DPV.getType() == DPValue::LocationType::Declare;
+  bool SkipOutermostLoad = DPV.isDbgDeclare();
   Value *OriginalStorage = DPV.getVariableLocationOp(0);
 
   auto SalvagedInfo = ::salvageDebugInfoImpl(

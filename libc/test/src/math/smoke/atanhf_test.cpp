@@ -19,6 +19,7 @@
 using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
   libc_errno = 0;
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
@@ -44,13 +45,13 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(ERANGE);
 
   auto bt = FPBits(1.0f);
-  bt.bits += 1;
+  bt.set_uintval(bt.uintval() + 1);
 
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::atanhf(bt.get_val()),
                                   FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
-  bt.set_sign(true);
+  bt.set_sign(Sign::NEG);
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::atanhf(bt.get_val()),
                                   FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
@@ -64,7 +65,7 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::atanhf(inf), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
-  bt.set_sign(true);
+  bt.set_sign(Sign::NEG);
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::atanhf(neg_inf), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 }

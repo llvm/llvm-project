@@ -512,12 +512,18 @@ Error RewriteInstance::discoverStorage() {
                                                      Phdr.p_offset,
                                                      Phdr.p_filesz,
                                                      Phdr.p_align};
+      if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
+          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
+        BC->IsLinuxKernel = true;
       break;
     case ELF::PT_INTERP:
       BC->HasInterpHeader = true;
       break;
     }
   }
+
+  if (BC->IsLinuxKernel)
+    outs() << "BOLT-INFO: Linux kernel binary detected\n";
 
   for (const SectionRef &Section : InputFile->sections()) {
     Expected<StringRef> SectionNameOrErr = Section.getName();
@@ -562,7 +568,7 @@ Error RewriteInstance::discoverStorage() {
   if (opts::Hugify && !BC->HasFixedLoadAddress)
     NextAvailableAddress += BC->PageAlign;
 
-  if (!opts::UseGnuStack) {
+  if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
     // other than that containing ELF header is tricky. Some loaders and/or
     // parts of loaders will apply e_phoff from ELF header assuming both are in
@@ -742,6 +748,8 @@ Error RewriteInstance::run() {
 
   runOptimizationPasses();
 
+  finalizeMetadataPreEmit();
+
   emitAndLink();
 
   updateMetadata();
@@ -749,7 +757,7 @@ Error RewriteInstance::run() {
   if (opts::Instrument && !BC->IsStaticExecutable)
     updateRtFiniReloc();
 
-  if (opts::LinuxKernelMode) {
+  if (BC->IsLinuxKernel) {
     errs() << "BOLT-WARNING: not writing the output file for Linux Kernel\n";
     return Error::success();
   } else if (opts::OutputFilename == "/dev/null") {
@@ -1282,7 +1290,7 @@ void RewriteInstance::discoverFileObjects() {
     }
   }
 
-  if (!opts::LinuxKernelMode) {
+  if (!BC->IsLinuxKernel) {
     // Read all relocations now that we have binary functions mapped.
     processRelocations();
   }
@@ -1811,8 +1819,6 @@ Error RewriteInstance::readSpecialSections() {
                << "\n");
     if (isDebugSection(SectionName))
       HasDebugInfo = true;
-    if (isKSymtabSection(SectionName))
-      opts::LinuxKernelMode = true;
   }
 
   // Set IsRelro section attribute based on PT_GNU_RELRO segment.
@@ -3035,7 +3041,7 @@ void RewriteInstance::preprocessProfileData() {
 }
 
 void RewriteInstance::initializeMetadataManager() {
-  if (opts::LinuxKernelMode)
+  if (BC->IsLinuxKernel)
     MetadataManager.registerRewriter(createLinuxKernelRewriter(*BC));
 
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
@@ -3414,6 +3420,10 @@ void RewriteInstance::emitAndLink() {
     outs() << "BOLT-INFO: cache metrics after emitting functions:\n";
     CacheMetrics::printAll(BC->getSortedFunctions());
   }
+}
+
+void RewriteInstance::finalizeMetadataPreEmit() {
+  MetadataManager.runFinalizersPreEmit();
 }
 
 void RewriteInstance::updateMetadata() {

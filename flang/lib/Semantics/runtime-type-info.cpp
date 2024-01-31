@@ -788,20 +788,23 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const DerivedTypeSpec &spec{dyType.GetDerivedTypeSpec()};
     Scope *derivedScope{const_cast<Scope *>(
         spec.scope() ? spec.scope() : spec.typeSymbol().scope())};
-    const Symbol *derivedDescription{DescribeType(DEREF(derivedScope))};
-    AddValue(values, componentSchema_, "derived"s,
-        evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Designator<evaluate::SomeDerived>{
-                DEREF(derivedDescription)}}));
-    // Package values of LEN parameters, if any
-    if (const SymbolVector * specParams{GetTypeParameters(spec.typeSymbol())}) {
-      for (SymbolRef ref : *specParams) {
-        const auto &tpd{ref->get<TypeParamDetails>()};
-        if (tpd.attr() == common::TypeParamAttr::Len) {
-          if (const ParamValue * paramValue{spec.FindParameter(ref->name())}) {
-            lenParams.emplace_back(GetValue(*paramValue, parameters));
-          } else {
-            lenParams.emplace_back(GetValue(tpd.init(), parameters));
+    if (const Symbol * derivedDescription{DescribeType(DEREF(derivedScope))}) {
+      AddValue(values, componentSchema_, "derived"s,
+          evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
+              evaluate::Designator<evaluate::SomeDerived>{
+                  DEREF(derivedDescription)}}));
+      // Package values of LEN parameters, if any
+      if (const SymbolVector *
+          specParams{GetTypeParameters(spec.typeSymbol())}) {
+        for (SymbolRef ref : *specParams) {
+          const auto &tpd{ref->get<TypeParamDetails>()};
+          if (tpd.attr() == common::TypeParamAttr::Len) {
+            if (const ParamValue *
+                paramValue{spec.FindParameter(ref->name())}) {
+              lenParams.emplace_back(GetValue(*paramValue, parameters));
+            } else {
+              lenParams.emplace_back(GetValue(tpd.init(), parameters));
+            }
           }
         }
       }

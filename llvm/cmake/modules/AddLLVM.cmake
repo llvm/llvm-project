@@ -211,10 +211,10 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     )
 
   if(APPLE)
-    if("${stderr}" MATCHES "PROJECT:ld64")
+    if("${stderr}" MATCHES "PROGRAM:ld")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")
-      set(LLVM_LINKER_IS_LD64 YES CACHE INTERNAL "")
-      message(STATUS "Linker detection: ld64")
+      set(LLVM_LINKER_IS_APPLE YES CACHE INTERNAL "")
+      message(STATUS "Linker detection: Apple")
     elseif("${stderr}" MATCHES "^LLD" OR
            "${stdout}" MATCHES "^LLD")
       set(LLVM_LINKER_DETECTED YES CACHE INTERNAL "")

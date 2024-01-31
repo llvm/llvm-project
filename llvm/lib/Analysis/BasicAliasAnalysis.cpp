@@ -215,7 +215,7 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   auto Iter = EarliestEscapes.insert({Object, nullptr});
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
-        Object, *const_cast<Function *>(I->getFunction()),
+        Object, *const_cast<Function *>(DT.getRoot()->getParent()),
         /*ReturnCaptures=*/false, /*StoreCaptures=*/true, DT);
     if (EarliestCapture) {
       auto Ins = Inst2Obj.insert({EarliestCapture, {}});
@@ -227,6 +227,10 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   // No capturing instruction.
   if (!Iter.first->second)
     return true;
+
+  // No context instruction means any use is capturing.
+  if (!I)
+    return false;
 
   if (I == Iter.first->second) {
     if (OrAt)
@@ -1502,11 +1506,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     if (isIdentifiedObject(O1) && isIdentifiedObject(O2))
       return AliasResult::NoAlias;
 
-    // Constant pointers can't alias with non-const isIdentifiedObject objects.
-    if ((isa<Constant>(O1) && isIdentifiedObject(O2) && !isa<Constant>(O2)) ||
-        (isa<Constant>(O2) && isIdentifiedObject(O1) && !isa<Constant>(O1)))
-      return AliasResult::NoAlias;
-
     // Function arguments can't alias with things that are known to be
     // unambigously identified at the function level.
     if ((isa<Argument>(O1) && isIdentifiedFunctionLocal(O2)) ||
@@ -1522,11 +1521,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) &&
-        AAQI.CI->isNotCapturedBefore(O2, cast<Instruction>(O1), /*OrAt*/ true))
+    if (isEscapeSource(O1) && AAQI.CI->isNotCapturedBefore(
+                                  O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) &&
-        AAQI.CI->isNotCapturedBefore(O1, cast<Instruction>(O2), /*OrAt*/ true))
+    if (isEscapeSource(O2) && AAQI.CI->isNotCapturedBefore(
+                                  O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
       return AliasResult::NoAlias;
   }
 
