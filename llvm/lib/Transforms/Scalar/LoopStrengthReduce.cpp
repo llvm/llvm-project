@@ -6761,8 +6761,8 @@ static llvm::PHINode *GetInductionVariable(const Loop &L, ScalarEvolution &SE,
 }
 
 static std::optional<std::tuple<PHINode *, PHINode *, const SCEV *, bool>>
-canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-                      const LoopInfo &LI) {
+canFoldTermCondOfLoop(Loop *L, SCEVExpander &Expander, ScalarEvolution &SE,
+                      DominatorTree &DT) {
   if (!L->isInnermost()) {
     LLVM_DEBUG(dbgs() << "Cannot fold on non-innermost loop\n");
     return std::nullopt;
@@ -6814,8 +6814,6 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return std::nullopt;
 
   const SCEV *BECount = SE.getBackedgeTakenCount(L);
-  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-  SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
 
   PHINode *ToHelpFold = nullptr;
   const SCEV *TermValueS = nullptr;
@@ -6986,7 +6984,15 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   }();
 
   if (EnableFormTerm) {
-    if (auto Opt = canFoldTermCondOfLoop(L, SE, DT, LI)) {
+    // SCEVExpander for both use in preheader and latch
+    const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+    SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
+#ifndef NDEBUG
+    Expander.setDebugType(DEBUG_TYPE);
+#endif
+    Expander.disableCanonicalMode();
+    Expander.enableLSRMode();
+    if (auto Opt = canFoldTermCondOfLoop(L, Expander, SE, DT)) {
       auto [ToFold, ToHelpFold, TermValueS, MustDrop] = *Opt;
 
       Changed = true;
@@ -7008,11 +7014,6 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       // See comment in canFoldTermCondOfLoop on why this is sufficient.
       if (MustDrop)
         cast<Instruction>(LoopValue)->dropPoisonGeneratingFlags();
-
-      // SCEVExpander for both use in preheader and latch
-      const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-      SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
-      SCEVExpanderCleaner ExpCleaner(Expander);
 
       assert(Expander.isSafeToExpand(TermValueS) &&
              "Terminating value was checked safe in canFoldTerminatingCondition");
@@ -7045,8 +7046,6 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
 
       OldTermCond->eraseFromParent();
       DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
-
-      ExpCleaner.markResultUsed();
     }
   }
 
