@@ -15,4 +15,4 @@ unsigned stdc_leading_ones_ui(unsigned value);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDBIT_STDC_LEADING_ONES_Ui_H
+#endif // LLVM_LIBC_SRC_STDBIT_STDC_LEADING_ONES_UI_H
