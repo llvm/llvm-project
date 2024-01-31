@@ -2992,6 +2992,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     // char *realpath(const char *restrict file_name,
     //                char *restrict resolved_name);
+    // FIXME: If the argument 'resolved_name' is not NULL, macro 'PATH_MAX'
+    //        should be defined in "limits.h" to guarrantee a success.
     addToFunctionSummaryMap(
         "realpath",
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy},
