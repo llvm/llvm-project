@@ -456,8 +456,8 @@ feature_test_macros = [
             "name": "__cpp_lib_filesystem",
             "values": {"c++17": 201703},
             "headers": ["filesystem"],
-            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
-            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
         },
         {
             "name": "__cpp_lib_format",
@@ -571,6 +571,8 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -875,11 +877,14 @@ feature_test_macros = [
             "name": "__cpp_lib_print",
             "values": {"c++23": 202207},
             "headers": ["ostream", "print"],
+            # TODO: Are we missing something here?
         },
         {
             "name": "__cpp_lib_quoted_string_io",
             "values": {"c++14": 201304},
             "headers": ["iomanip"],
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
         },
         {
             "name": "__cpp_lib_ranges",
@@ -1017,6 +1022,8 @@ feature_test_macros = [
             "name": "__cpp_lib_scoped_lock",
             "values": {"c++17": 201703},
             "headers": ["mutex"],
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
         },
         {
             "name": "__cpp_lib_semaphore",
