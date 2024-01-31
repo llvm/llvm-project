@@ -1248,6 +1248,8 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  if (N->getFlags().hasDisjoint())
+    return true;
   KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
   KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
   return KnownBits::haveNoCommonBitsSet(Known0, Known1);

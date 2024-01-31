@@ -4620,6 +4620,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
       // We don't have any information about vendor or OS.
       arch_to_use.SetTriple(llvm::StringSwitch<std::string>(target_info.arch)
                                 .Case("i386:x86-64", "x86_64")
+                                .Case("riscv:rv64", "riscv64")
+                                .Case("riscv:rv32", "riscv32")
                                 .Default(target_info.arch) +
                             "--");
 

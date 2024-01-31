@@ -12880,10 +12880,12 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":BufferizationDialect",
         ":FuncDialect",
         ":IR",
         ":MLProgramDialect",
         ":MLProgramPassIncGen",
+        ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
     ],

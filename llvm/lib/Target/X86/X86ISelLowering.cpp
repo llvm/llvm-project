@@ -48331,14 +48331,8 @@ static SDValue getIndexFromUnindexedLoad(LoadSDNode *Ld) {
 }
 
 static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
-  if (Subtarget.hasBMI2() && VT.isScalarInteger()) {
-    switch (VT.getSizeInBits()) {
-    default: return false;
-    case 64: return Subtarget.is64Bit() ? true : false;
-    case 32: return true;
-    }
-  }
-  return false;
+  return Subtarget.hasBMI2() &&
+         (VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit()));
 }
 
 // This function recognizes cases where X86 bzhi instruction can replace and
