@@ -275,14 +275,15 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__R600__");
 
   // Legacy HIP host code relies on these default attributes to be defined.
-  if (GPUKind == llvm::AMDGPU::GK_NONE && !(Opts.HIP && !Opts.CUDAIsDevice))
+  bool IsHIPHost = Opts.HIP && !Opts.CUDAIsDevice;
+  if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
     return;
 
   StringRef CanonName = isAMDGCN(getTriple()) ? getArchNameAMDGCN(GPUKind)
                                               : getArchNameR600(GPUKind);
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___
-  if (isAMDGCN(getTriple()) && Opts.CUDAIsDevice) {
+  if (isAMDGCN(getTriple()) && !IsHIPHost) {
     assert(CanonName.starts_with("gfx") && "Invalid amdgcn canonical name");
     Builder.defineMacro(Twine("__") + Twine(CanonName.drop_back(2).upper()) +
                         Twine("__"));
