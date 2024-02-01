@@ -96,8 +96,7 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   for (const MCPhysReg *I = CSR; *I; ++I)
     for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
       CSRHintsForAllocOrder[*AI] = STI.ignoreCSRForAllocationOrder(mf, *AI);
-  if (IgnoreCSRForAllocOrder.size() != CSRHintsForAllocOrder.size() ||
-      IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
+  if (IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
     Update = true;
     IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;
   }
@@ -106,7 +105,7 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
 
   // Different reserved registers?
   const BitVector &RR = MF->getRegInfo().getReservedRegs();
-  if (Reserved.size() != RR.size() || RR != Reserved) {
+  if (RR != Reserved) {
     Update = true;
     Reserved = RR;
   }
