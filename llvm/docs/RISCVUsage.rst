@@ -232,6 +232,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zacas``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
 
+``experimental-zalasr``
+  LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`_.
+
 ``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
   LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`_.
 
