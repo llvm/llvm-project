@@ -66,10 +66,9 @@ static llvm::cl::opt<std::string> OutOfProcessExecutorConnect(
     "oop-executor-connect",
     llvm::cl::desc("Connect to an out-of-process executor via TCP"),
     llvm::cl::cat(OOPCategory));
-static llvm::cl::opt<std::string> OrcRuntimePath(
-    "orc-runtime",
-    llvm::cl::desc("Path to the ORC runtime"),
-    llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<std::string>
+    OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
+                   llvm::cl::cat(OOPCategory));
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
@@ -197,13 +196,17 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
     OutOfProcessExecutor = OOPExecutorPath.str().str();
   }
 
-  // Out-of-process executors must run with the ORC runtime for destructor support.
-  if (OrcRuntimePath.empty() && (OutOfProcessExecutor.getNumOccurrences() || OutOfProcessExecutorConnect.getNumOccurrences())) {
+  // Out-of-process executors must run with the ORC runtime for destructor
+  // support.
+  if (OrcRuntimePath.empty() &&
+      (OutOfProcessExecutor.getNumOccurrences() ||
+       OutOfProcessExecutorConnect.getNumOccurrences())) {
     llvm::SmallString<256> OrcPath(llvm::sys::fs::getMainExecutable(
         ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
     llvm::sys::path::remove_filename(OrcPath); // Remove clang-repl filename.
     llvm::sys::path::remove_filename(OrcPath); // Remove ./bin directory.
-    llvm::sys::path::append(OrcPath, "lib/clang/18/lib/x86_64-unknown-linux-gnu/liborc_rt.a");
+    llvm::sys::path::append(
+        OrcPath, "lib/clang/18/lib/x86_64-unknown-linux-gnu/liborc_rt.a");
     OrcRuntimePath = OrcPath.str().str();
   }
 
@@ -212,6 +215,18 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
 
 static llvm::Expected<std::unique_ptr<llvm::orc::ExecutorProcessControl>>
 launchExecutor() {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add support for Windows.
+  return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  return make_error<StringError>(
+      "-" + OutOfProcessExecutor.ArgStr +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
+      inconvertibleErrorCode());
+#else
   constexpr int ReadEnd = 0;
   constexpr int WriteEnd = 1;
 
@@ -269,6 +284,7 @@ launchExecutor() {
       llvm::orc::FDSimpleRemoteEPCTransport>(
       std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(),
       std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+#endif
 }
 
 #if LLVM_ON_UNIX && LLVM_ENABLE_THREADS

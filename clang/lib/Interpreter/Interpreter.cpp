@@ -325,11 +325,11 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   return Interp;
 }
 
-
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::createWithOutOfProcessExecutor(
     std::unique_ptr<CompilerInstance> CI,
-    std::unique_ptr<llvm::orc::ExecutorProcessControl> EI, llvm::StringRef OrcRuntimePath) {
+    std::unique_ptr<llvm::orc::ExecutorProcessControl> EI,
+    llvm::StringRef OrcRuntimePath) {
   auto Interp = create(std::move(CI));
   if (auto E = Interp.takeError()) {
     return std::move(E);
@@ -389,8 +389,8 @@ llvm::Error Interpreter::CreateExecutor() {
   llvm::Error Err = llvm::Error::success();
   std::unique_ptr<IncrementalExecutor> Executor;
   if (EPC) {
-    Executor =
-        std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI, std::move(EPC), OrcRuntimePath);
+    Executor = std::make_unique<IncrementalExecutor>(
+        *TSCtx, Err, TI, std::move(EPC), OrcRuntimePath);
   } else {
     Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
   }

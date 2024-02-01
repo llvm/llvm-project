@@ -83,7 +83,8 @@ IncrementalExecutor::IncrementalExecutor(
     return llvm::Error::success();
   });
   Builder.setExecutorProcessControl(std::move(EPC));
-  Builder.setPlatformSetUp(llvm::orc::ExecutorNativePlatform(OrcRuntimePath.str()));
+  Builder.setPlatformSetUp(
+      llvm::orc::ExecutorNativePlatform(OrcRuntimePath.str()));
 
   if (auto JitOrErr = Builder.create()) {
     Jit = std::move(*JitOrErr);
