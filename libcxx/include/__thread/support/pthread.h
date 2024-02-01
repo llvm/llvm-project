@@ -15,8 +15,8 @@
 #include <__chrono/duration.h>
 #include <__config>
 #include <__fwd/hash.h>
+#include <cerrno>
 #include <ctime>
-#include <errno.h>
 #include <pthread.h>
 #include <sched.h>
 

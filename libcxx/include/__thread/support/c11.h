@@ -13,6 +13,7 @@
 #include <__chrono/convert_to_timespec.h>
 #include <__chrono/duration.h>
 #include <__config>
+#include <cerrno>
 #include <ctime>
 #include <threads.h>
 
