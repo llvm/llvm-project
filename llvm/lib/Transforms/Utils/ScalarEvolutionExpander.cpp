@@ -1611,8 +1611,6 @@ void SCEVExpander::replaceCongruentIVInc(
   bool BothHaveNSW = false;
   auto *OBOIncV = dyn_cast<OverflowingBinaryOperator>(OrigInc);
   auto *OBOIsomorphic = dyn_cast<OverflowingBinaryOperator>(IsomorphicInc);
-  assert(OrigInc->getType()->getScalarSizeInBits() >=
-         IsomorphicInc->getType()->getScalarSizeInBits()) && "Should only replace an increment with a wider one.");
   if (OBOIncV && OBOIsomorphic) {
     BothHaveNUW =
         OBOIncV->hasNoUnsignedWrap() && OBOIsomorphic->hasNoUnsignedWrap();
@@ -1628,6 +1626,9 @@ void SCEVExpander::replaceCongruentIVInc(
   // are NUW/NSW, then we can preserve them on the wider increment; the narrower
   // IsomorphicInc would wrap before the wider OrigInc, so the replacement won't
   // make IsomorphicInc's uses more poisonous.
+  assert(OrigInc->getType()->getScalarSizeInBits() >=
+             IsomorphicInc->getType()->getScalarSizeInBits() &&
+         "Should only replace an increment with a wider one.");
   if (BothHaveNUW || BothHaveNSW) {
     OrigInc->setHasNoUnsignedWrap(OBOIncV->hasNoUnsignedWrap() || BothHaveNUW);
     OrigInc->setHasNoSignedWrap(OBOIncV->hasNoSignedWrap() || BothHaveNSW);
