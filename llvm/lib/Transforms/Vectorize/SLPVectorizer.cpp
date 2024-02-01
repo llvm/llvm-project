@@ -3852,12 +3852,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
 
 namespace {
 /// Tracks the state we can represent the loads in the given sequence.
-enum class LoadsState {
-  Gather,
-  Vectorize,
-  ScatterVectorize,
-  StridedVectorize
-};
+enum class LoadsState { Gather, Vectorize, ScatterVectorize, StridedVectorize };
 } // anonymous namespace
 
 static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
