@@ -124,7 +124,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     }
 
     uint32_t SymbolIndex = 0;
-    for (const auto &Sym : Obj.symbols()) {
+    for (const object::SymbolRef &Sym : Obj.symbols()) {
       const wasm::WasmSymbolInfo& Symbol = Obj.getWasmSymbol(Sym).Info;
       WasmYAML::SymbolInfo Info;
       Info.Index = SymbolIndex++;

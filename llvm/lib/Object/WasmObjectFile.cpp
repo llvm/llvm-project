@@ -842,7 +842,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       return make_error<GenericBinaryError>("duplicate symbol name " +
                                                 Twine(Info.Name),
                                             object_error::parse_failed);
-    Symbols.emplace_back(std::move(Info), GlobalType, TableType,
+    Symbols.emplace_back(Info, GlobalType, TableType,
                          Signature);
     LLVM_DEBUG(dbgs() << "Adding symbol: " << Symbols.back() << "\n");
   }
@@ -1451,7 +1451,7 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     }
     Exports.push_back(Ex);
     if (Ex.Kind != wasm::WASM_EXTERNAL_MEMORY) {
-      Symbols.emplace_back(std::move(Info), GlobalType,
+      Symbols.emplace_back(Info, GlobalType,
                            TableType, Signature);
       LLVM_DEBUG(dbgs() << "Adding symbol: " << Symbols.back() << "\n");
     }

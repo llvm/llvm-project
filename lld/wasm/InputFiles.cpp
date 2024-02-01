@@ -335,7 +335,7 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   const WasmGlobalType *globalType = nullptr;
   const WasmSignature *signature = nullptr;
   auto *wasmSym =
-      make<WasmSymbol>(std::move(info), globalType, &tableImport->Table, signature);
+      make<WasmSymbol>(info, globalType, &tableImport->Table, signature);
   Symbol *sym = createUndefined(*wasmSym, false);
   // We're only sure it's a TableSymbol if the createUndefined succeeded.
   if (errorCount())
