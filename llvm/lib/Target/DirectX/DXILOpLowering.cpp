@@ -45,6 +45,8 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
     Args.append(CI->arg_begin(), CI->arg_end());
     B.SetInsertPoint(CI);
     CallInst *DXILCI = DXILB.createDXILOpCall(DXILOp, OverloadTy, CI->args());
+    // Retain tail call property
+    DXILCI->setTailCall(CI->isTailCall());
 
     CI->replaceAllUsesWith(DXILCI);
     CI->eraseFromParent();

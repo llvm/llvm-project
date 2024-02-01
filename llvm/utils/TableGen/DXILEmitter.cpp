@@ -19,6 +19,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -431,7 +432,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
 }
 
 static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
-  std::vector<Record *> Ops = Records.getAllDerivedDefinitions("dxil_op");
+  std::vector<Record *> Ops = Records.getAllDerivedDefinitions("dxil_inst");
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
 
