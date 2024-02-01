@@ -20,6 +20,14 @@
 // RUN: %clang --offload-arch=gfx906 -nogpulib -### -S -x hip -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-KERNEL-WARNING %s
 // RUN: %clang --offload-arch=gfx906 -nogpulib -### -c -x hip -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-MEDIUM %s
 // RUN: %clang --offload-arch=gfx906 -nogpulib -### -S -x hip -mcmodel=large %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-LARGE %s
+// RUN: %clang --target=loongarch64 -### -S -mcmodel=normal %s 2>&1 | FileCheck --check-prefix=SMALL %s
+// RUN: %clang --target=loongarch64 -### -S -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=MEDIUM %s
+// RUN: %clang --target=loongarch64 -### -S -mcmodel=extreme %s 2>&1 | FileCheck --check-prefix=LARGE %s
+// RUN: not %clang --target=loongarch64 -### -S -mcmodel=tiny %s 2>&1 | FileCheck --check-prefix=ERR-TINY %s
+// RUN: not %clang --target=loongarch64 -### -S -mcmodel=small %s 2>&1 | FileCheck --check-prefix=ERR-SMALL %s
+// RUN: not %clang --target=loongarch64 -### -S -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=ERR-KERNEL %s
+// RUN: not %clang --target=loongarch64 -### -S -mcmodel=large %s 2>&1 | FileCheck --check-prefix=ERR-LARGE %s
+// RUN: not %clang --target=loongarch64 -### -S -mcmodel=extreme -fplt %s 2>&1 | FileCheck --check-prefix=ERR-LOONGARCH64-PLT-EXTREME %s
 
 // TINY: "-mcmodel=tiny"
 // SMALL: "-mcmodel=small"
@@ -30,6 +38,8 @@
 
 // INVALID: error: unsupported argument 'lager' to option '-mcmodel=' for target '{{.*}}'
 
+// ERR-TINY:   error: unsupported argument 'tiny' to option '-mcmodel=' for target '{{.*}}'
+// ERR-SMALL:  error: unsupported argument 'small' to option '-mcmodel=' for target '{{.*}}'
 // ERR-MEDIUM: error: unsupported argument 'medium' to option '-mcmodel=' for target '{{.*}}'
 // ERR-KERNEL: error: unsupported argument 'kernel' to option '-mcmodel=' for target '{{.*}}'
 // ERR-LARGE:  error: unsupported argument 'large' to option '-mcmodel=' for target '{{.*}}'
@@ -41,3 +51,6 @@
 // AMDGPU-MCMODEL-KERNEL-WARNING: warning: the flag '-mcmodel=' has been deprecated and will be ignored
 // AMDGPU-MCMODEL-MEDIUM: "-mcmodel=medium"
 // AMDGPU-MCMODEL-LARGE: "-mcmodel=large"
+
+// ERR-LOONGARCH64-PLT-LARGE: error: invalid argument '-mcmodel=large' not allowed with '-fplt'
+// ERR-LOONGARCH64-PLT-EXTREME: error: invalid argument '-mcmodel=extreme' not allowed with '-fplt'

@@ -7,9 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFDeclContext.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+
+/// Returns the name of `entry` if it has one, or the appropriate "anonymous
+/// {namespace, class, struct, union}".
+static const char *GetName(DWARFDeclContext::Entry entry) {
+  if (entry.name != nullptr)
+    return entry.name;
+  if (entry.tag == DW_TAG_namespace)
+    return "(anonymous namespace)";
+  if (entry.tag == DW_TAG_class_type)
+    return "(anonymous class)";
+  if (entry.tag == DW_TAG_structure_type)
+    return "(anonymous struct)";
+  if (entry.tag == DW_TAG_union_type)
+    return "(anonymous union)";
+  return "(anonymous)";
+}
 
 const char *DWARFDeclContext::GetQualifiedName() const {
   if (m_qualified_name.empty()) {
@@ -26,26 +43,10 @@ const char *DWARFDeclContext::GetQualifiedName() const {
           m_qualified_name.append(m_entries[0].name);
         }
       } else {
-        collection::const_reverse_iterator pos;
-        collection::const_reverse_iterator begin = m_entries.rbegin();
-        collection::const_reverse_iterator end = m_entries.rend();
-        for (pos = begin; pos != end; ++pos) {
-          if (pos != begin)
-            m_qualified_name.append("::");
-          if (pos->name == nullptr) {
-            if (pos->tag == DW_TAG_namespace)
-              m_qualified_name.append("(anonymous namespace)");
-            else if (pos->tag == DW_TAG_class_type)
-              m_qualified_name.append("(anonymous class)");
-            else if (pos->tag == DW_TAG_structure_type)
-              m_qualified_name.append("(anonymous struct)");
-            else if (pos->tag == DW_TAG_union_type)
-              m_qualified_name.append("(anonymous union)");
-            else
-              m_qualified_name.append("(anonymous)");
-          } else
-            m_qualified_name.append(pos->name);
-        }
+        llvm::raw_string_ostream string_stream(m_qualified_name);
+        llvm::interleave(
+            llvm::reverse(m_entries), string_stream,
+            [&](auto entry) { string_stream << GetName(entry); }, "::");
       }
     }
   }

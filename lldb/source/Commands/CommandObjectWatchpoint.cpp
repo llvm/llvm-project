@@ -918,9 +918,9 @@ protected:
       if (addr_type == eAddressTypeLoad) {
         // We're in business.
         // Find out the size of this variable.
-        size = m_option_watchpoint.watch_size == 0
+        size = m_option_watchpoint.watch_size.GetCurrentValue() == 0
                    ? valobj_sp->GetByteSize().value_or(0)
-                   : m_option_watchpoint.watch_size;
+                   : m_option_watchpoint.watch_size.GetCurrentValue();
       }
       compiler_type = valobj_sp->GetCompilerType();
     } else {
@@ -1113,8 +1113,8 @@ protected:
       return;
     }
 
-    if (m_option_watchpoint.watch_size != 0)
-      size = m_option_watchpoint.watch_size;
+    if (m_option_watchpoint.watch_size.GetCurrentValue() != 0)
+      size = m_option_watchpoint.watch_size.GetCurrentValue();
     else
       size = target->GetArchitecture().GetAddressByteSize();
 
@@ -1139,8 +1139,21 @@ protected:
 
     // Fetch the type from the value object, the type of the watched object is
     // the pointee type
-    /// of the expression, so convert to that if we  found a valid type.
+    /// of the expression, so convert to that if we found a valid type.
     CompilerType compiler_type(valobj_sp->GetCompilerType());
+
+    std::optional<uint64_t> valobj_size = valobj_sp->GetByteSize();
+    // Set the type as a uint8_t array if the size being watched is
+    // larger than the ValueObject's size (which is probably the size
+    // of a pointer).
+    if (valobj_size && size > *valobj_size) {
+      auto type_system = compiler_type.GetTypeSystem();
+      if (type_system) {
+        CompilerType clang_uint8_type =
+            type_system->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8);
+        compiler_type = clang_uint8_type.GetArrayType(size);
+      }
+    }
 
     Status error;
     WatchpointSP watch_sp =

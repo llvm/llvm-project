@@ -47,7 +47,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -56,6 +55,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -1176,6 +1176,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setTruncStoreAction(MVT::f128, MVT::f32, Expand);
 
       // No implementation for these ops for PowerPC.
+      setOperationAction(ISD::FSINCOS, MVT::f128, Expand);
       setOperationAction(ISD::FSIN, MVT::f128, Expand);
       setOperationAction(ISD::FCOS, MVT::f128, Expand);
       setOperationAction(ISD::FPOW, MVT::f128, Expand);
@@ -1411,6 +1412,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setLibcallName(RTLIB::EXP2_F128, "exp2f128");
   setLibcallName(RTLIB::SIN_F128, "sinf128");
   setLibcallName(RTLIB::COS_F128, "cosf128");
+  setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
   setLibcallName(RTLIB::POW_F128, "powf128");
   setLibcallName(RTLIB::FMIN_F128, "fminf128");
   setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
@@ -2564,7 +2566,7 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
     if (LeadingZero) {
       if (!UniquedVals[Multiple-1].getNode())
         return DAG.getTargetConstant(0, SDLoc(N), MVT::i32);  // 0,0,0,undef
-      int Val = cast<ConstantSDNode>(UniquedVals[Multiple-1])->getZExtValue();
+      int Val = UniquedVals[Multiple - 1]->getAsZExtVal();
       if (Val < 16)                                   // 0,0,0,4 -> vspltisw(4)
         return DAG.getTargetConstant(Val, SDLoc(N), MVT::i32);
     }
@@ -2633,11 +2635,11 @@ bool llvm::isIntS16Immediate(SDNode *N, int16_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int16_t)cast<ConstantSDNode>(N)->getZExtValue();
+  Imm = (int16_t)N->getAsZExtVal();
   if (N->getValueType(0) == MVT::i32)
-    return Imm == (int32_t)cast<ConstantSDNode>(N)->getZExtValue();
+    return Imm == (int32_t)N->getAsZExtVal();
   else
-    return Imm == (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
+    return Imm == (int64_t)N->getAsZExtVal();
 }
 bool llvm::isIntS16Immediate(SDValue Op, int16_t &Imm) {
   return isIntS16Immediate(Op.getNode(), Imm);
@@ -2682,7 +2684,7 @@ bool llvm::isIntS34Immediate(SDNode *N, int64_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
+  Imm = (int64_t)N->getAsZExtVal();
   return isInt<34>(Imm);
 }
 bool llvm::isIntS34Immediate(SDValue Op, int64_t &Imm) {
@@ -2815,8 +2817,8 @@ bool PPCTargetLowering::SelectAddressRegImm(
       return true; // [r+i]
     } else if (N.getOperand(1).getOpcode() == PPCISD::Lo) {
       // Match LOAD (ADD (X, Lo(G))).
-      assert(!cast<ConstantSDNode>(N.getOperand(1).getOperand(1))->getZExtValue()
-             && "Cannot handle constant offsets yet!");
+      assert(!N.getOperand(1).getConstantOperandVal(1) &&
+             "Cannot handle constant offsets yet!");
       Disp = N.getOperand(1).getOperand(0);  // The global address.
       assert(Disp.getOpcode() == ISD::TargetGlobalAddress ||
              Disp.getOpcode() == ISD::TargetGlobalTLSAddress ||
@@ -2972,7 +2974,7 @@ bool PPCTargetLowering::SelectAddressRegRegOnly(SDValue N, SDValue &Base,
 
 template <typename Ty> static bool isValidPCRelNode(SDValue N) {
   Ty *PCRelCand = dyn_cast<Ty>(N);
-  return PCRelCand && (PCRelCand->getTargetFlags() & PPCII::MO_PCREL_FLAG);
+  return PCRelCand && (PPCInstrInfo::hasPCRelFlag(PCRelCand->getTargetFlags()));
 }
 
 /// Returns true if this address is a PC Relative address.
@@ -3133,8 +3135,8 @@ static void getLabelAccessInfo(bool IsPIC, const PPCSubtarget &Subtarget,
 
   // Don't use the pic base if not in PIC relocation model.
   if (IsPIC) {
-    HiOpFlags |= PPCII::MO_PIC_FLAG;
-    LoOpFlags |= PPCII::MO_PIC_FLAG;
+    HiOpFlags = PPCII::MO_PIC_HA_FLAG;
+    LoOpFlags = PPCII::MO_PIC_LO_FLAG;
   }
 }
 
@@ -3453,8 +3455,8 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressLinux(SDValue Op,
   if (Model == TLSModel::LocalExec) {
     if (Subtarget.isUsingPCRelativeCalls()) {
       SDValue TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
-      SDValue TGA = DAG.getTargetGlobalAddress(
-          GV, dl, PtrVT, 0, (PPCII::MO_PCREL_FLAG | PPCII::MO_TPREL_FLAG));
+      SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                               PPCII::MO_TPREL_PCREL_FLAG);
       SDValue MatAddr =
           DAG.getNode(PPCISD::TLS_LOCAL_EXEC_MAT_ADDR, dl, PtrVT, TGA);
       return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, MatAddr);
@@ -3476,8 +3478,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressLinux(SDValue Op,
     SDValue TGA = DAG.getTargetGlobalAddress(
         GV, dl, PtrVT, 0, IsPCRel ? PPCII::MO_GOT_TPREL_PCREL_FLAG : 0);
     SDValue TGATLS = DAG.getTargetGlobalAddress(
-        GV, dl, PtrVT, 0,
-        IsPCRel ? (PPCII::MO_TLS | PPCII::MO_PCREL_FLAG) : PPCII::MO_TLS);
+        GV, dl, PtrVT, 0, IsPCRel ? PPCII::MO_TLS_PCREL_FLAG : PPCII::MO_TLS);
     SDValue TPOffset;
     if (IsPCRel) {
       SDValue MatPCRel = DAG.getNode(PPCISD::MAT_PCREL_ADDR, dl, PtrVT, TGA);
@@ -3573,8 +3574,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
       EVT Ty = getPointerTy(DAG.getDataLayout());
       if (isAccessedAsGotIndirect(Op)) {
         SDValue GA = DAG.getTargetGlobalAddress(GV, DL, Ty, GSDN->getOffset(),
-                                                PPCII::MO_PCREL_FLAG |
-                                                    PPCII::MO_GOT_FLAG);
+                                                PPCII::MO_GOT_PCREL_FLAG);
         SDValue MatPCRel = DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, Ty, GA);
         SDValue Load = DAG.getLoad(MVT::i64, DL, DAG.getEntryNode(), MatPCRel,
                                    MachinePointerInfo());
@@ -3824,8 +3824,7 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
   // Check all operands that may contain the LR.
   for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-    const InlineAsm::Flag Flags(
-        cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue());
+    const InlineAsm::Flag Flags(Op.getConstantOperandVal(i));
     unsigned NumVals = Flags.getNumOperandRegisters();
     ++i; // Skip the ID value.
 
@@ -10442,8 +10441,7 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
 /// information about the intrinsic.
 static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
                                  bool &isDot, const PPCSubtarget &Subtarget) {
-  unsigned IntrinsicID =
-      cast<ConstantSDNode>(Intrin.getOperand(0))->getZExtValue();
+  unsigned IntrinsicID = Intrin.getConstantOperandVal(0);
   CompareOpc = -1;
   isDot = false;
   switch (IntrinsicID) {
@@ -10728,8 +10726,7 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
 /// lower, do it, otherwise return null.
 SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  unsigned IntrinsicID =
-    cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned IntrinsicID = Op.getConstantOperandVal(0);
 
   SDLoc dl(Op);
 
@@ -10947,7 +10944,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   // Unpack the result based on how the target uses it.
   unsigned BitNo;   // Bit # of CR6.
   bool InvertBit;   // Invert result?
-  switch (cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue()) {
+  switch (Op.getConstantOperandVal(1)) {
   default:  // Can't happen, don't crash on invalid number though.
   case 0:   // Return the value of the EQ bit of CR6.
     BitNo = 0; InvertBit = false;
@@ -10983,10 +10980,9 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   // the beginning of the argument list.
   int ArgStart = isa<ConstantSDNode>(Op.getOperand(0)) ? 0 : 1;
   SDLoc DL(Op);
-  switch (cast<ConstantSDNode>(Op.getOperand(ArgStart))->getZExtValue()) {
+  switch (Op.getConstantOperandVal(ArgStart)) {
   case Intrinsic::ppc_cfence: {
     assert(ArgStart == 1 && "llvm.ppc.cfence must carry a chain argument.");
-    assert(Subtarget.isPPC64() && "Only 64-bit is supported for now.");
     SDValue Val = Op.getOperand(ArgStart + 1);
     EVT Ty = Val.getValueType();
     if (Ty == MVT::i128) {
@@ -10994,9 +10990,11 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       // ordering?
       Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Val);
     }
+    unsigned Opcode = Subtarget.isPPC64() ? PPC::CFENCE8 : PPC::CFENCE;
+    EVT FTy = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
     return SDValue(
-        DAG.getMachineNode(PPC::CFENCE8, DL, MVT::Other,
-                           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Val),
+        DAG.getMachineNode(Opcode, DL, MVT::Other,
+                           DAG.getNode(ISD::ANY_EXTEND, DL, FTy, Val),
                            Op.getOperand(0)),
         0);
   }
@@ -11255,9 +11253,9 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
                                            SelectionDAG &DAG) const {
   assert(Subtarget.hasP9Vector() && "Test data class requires Power9");
   SDValue LHS = Op.getOperand(0);
-  const auto *RHS = cast<ConstantSDNode>(Op.getOperand(1));
+  uint64_t RHSC = Op.getConstantOperandVal(1);
   SDLoc Dl(Op);
-  FPClassTest Category = static_cast<FPClassTest>(RHS->getZExtValue());
+  FPClassTest Category = static_cast<FPClassTest>(RHSC);
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
@@ -11547,7 +11545,7 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
 
     // Custom lower is only done for high or low doubleword.
-    int Idx = cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue();
+    int Idx = Op0.getConstantOperandVal(1);
     if (Idx % 2 != 0)
       return SDValue();
 
@@ -11716,8 +11714,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    if (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue() !=
-        Intrinsic::loop_decrement)
+    if (N->getConstantOperandVal(1) != Intrinsic::loop_decrement)
       break;
 
     assert(N->getValueType(0) == MVT::i1 &&
@@ -11733,7 +11730,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    switch (cast<ConstantSDNode>(N->getOperand(0))->getZExtValue()) {
+    switch (N->getConstantOperandVal(0)) {
     case Intrinsic::ppc_pack_longdouble:
       Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::ppcf128,
                                     N->getOperand(2), N->getOperand(1)));
@@ -11827,7 +11824,7 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     // See http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html and
     // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
     // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
-    if (isa<LoadInst>(Inst) && Subtarget.isPPC64())
+    if (isa<LoadInst>(Inst))
       return Builder.CreateCall(
           Intrinsic::getDeclaration(
               Builder.GetInsertBlock()->getParent()->getParent(),
@@ -13653,7 +13650,7 @@ static bool isConsecutiveLS(SDNode *N, LSBaseSDNode *Base,
 
   if (N->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
     EVT VT;
-    switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
+    switch (N->getConstantOperandVal(1)) {
     default: return false;
     case Intrinsic::ppc_altivec_lvx:
     case Intrinsic::ppc_altivec_lvxl:
@@ -13681,7 +13678,7 @@ static bool isConsecutiveLS(SDNode *N, LSBaseSDNode *Base,
 
   if (N->getOpcode() == ISD::INTRINSIC_VOID) {
     EVT VT;
-    switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
+    switch (N->getConstantOperandVal(1)) {
     default: return false;
     case Intrinsic::ppc_altivec_stvx:
     case Intrinsic::ppc_altivec_stvxl:
@@ -15433,7 +15430,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 1, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = (ShuffV[i - 1] + NumElts);
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = (ShuffV[i - 1] >= 0 ? ShuffV[i - 1] : 0) + NumElts;
       }
     // Example (odd elements from first vector):
     // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> t1, <zero>
@@ -15441,7 +15439,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 0, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = (ShuffV[i + 1] + NumElts);
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = (ShuffV[i + 1] >= 0 ? ShuffV[i + 1] : 0) + NumElts;
       }
   } else {
     // Example (even elements from first vector):
@@ -15450,7 +15449,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 0, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = ShuffV[i + 1] - NumElts;
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = ShuffV[i + 1] >= 0 ? ShuffV[i + 1] - NumElts : 0;
       }
     // Example (odd elements from first vector):
     // vector_shuffle<16,0,17,1,18,2,19,3,20,4,21,5,22,6,23,7> <zero>, t1
@@ -15458,7 +15458,8 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       for (int i = 1, e = Mask.size(); i < e; i += 2) {
         if (ShuffV[i] < 0)
           continue;
-        ShuffV[i] = ShuffV[i - 1] - NumElts;
+        // If element from non-splat is undef, pick first element from splat.
+        ShuffV[i] = ShuffV[i - 1] >= 0 ? ShuffV[i - 1] - NumElts : 0;
       }
   }
 
@@ -15545,8 +15546,7 @@ SDValue PPCTargetLowering::combineVReverseMemOP(ShuffleVectorSDNode *SVN,
 }
 
 static bool isStoreConditional(SDValue Intrin, unsigned &StoreWidth) {
-  unsigned IntrinsicID =
-      cast<ConstantSDNode>(Intrin.getOperand(1))->getZExtValue();
+  unsigned IntrinsicID = Intrin.getConstantOperandVal(1);
   if (IntrinsicID == Intrinsic::ppc_stdcx)
     StoreWidth = 8;
   else if (IntrinsicID == Intrinsic::ppc_stwcx)
@@ -15584,7 +15584,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         NarrowOp.getOpcode() != ISD::ROTL && NarrowOp.getOpcode() != ISD::ROTR)
       break;
 
-    uint64_t Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    uint64_t Imm = Op2->getAsZExtVal();
     // Make sure that the constant is narrow enough to fit in the narrow type.
     if (!isUInt<32>(Imm))
       break;
@@ -15978,7 +15978,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     break;
     case ISD::INTRINSIC_WO_CHAIN: {
       bool isLittleEndian = Subtarget.isLittleEndian();
-      unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+      unsigned IID = N->getConstantOperandVal(0);
       Intrinsic::ID Intr = (isLittleEndian ? Intrinsic::ppc_altivec_lvsr
                                            : Intrinsic::ppc_altivec_lvsl);
       if (IID == Intr && N->getOperand(1)->getOpcode() == ISD::ADD) {
@@ -15991,35 +15991,33 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                       .zext(Add.getScalarValueSizeInBits()))) {
           SDNode *BasePtr = Add->getOperand(0).getNode();
           for (SDNode *U : BasePtr->uses()) {
-            if (U->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-                cast<ConstantSDNode>(U->getOperand(0))->getZExtValue() == IID) {
-              // We've found another LVSL/LVSR, and this address is an aligned
-              // multiple of that one. The results will be the same, so use the
-              // one we've just found instead.
+          if (U->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+              U->getConstantOperandVal(0) == IID) {
+            // We've found another LVSL/LVSR, and this address is an aligned
+            // multiple of that one. The results will be the same, so use the
+            // one we've just found instead.
 
-              return SDValue(U, 0);
-            }
+            return SDValue(U, 0);
+          }
           }
         }
 
         if (isa<ConstantSDNode>(Add->getOperand(1))) {
           SDNode *BasePtr = Add->getOperand(0).getNode();
           for (SDNode *U : BasePtr->uses()) {
-            if (U->getOpcode() == ISD::ADD &&
-                isa<ConstantSDNode>(U->getOperand(1)) &&
-                (cast<ConstantSDNode>(Add->getOperand(1))->getZExtValue() -
-                 cast<ConstantSDNode>(U->getOperand(1))->getZExtValue()) %
-                        (1ULL << Bits) ==
-                    0) {
-              SDNode *OtherAdd = U;
-              for (SDNode *V : OtherAdd->uses()) {
-                if (V->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-                    cast<ConstantSDNode>(V->getOperand(0))->getZExtValue() ==
-                        IID) {
-                  return SDValue(V, 0);
-                }
+          if (U->getOpcode() == ISD::ADD &&
+              isa<ConstantSDNode>(U->getOperand(1)) &&
+              (Add->getConstantOperandVal(1) - U->getConstantOperandVal(1)) %
+                      (1ULL << Bits) ==
+                  0) {
+            SDNode *OtherAdd = U;
+            for (SDNode *V : OtherAdd->uses()) {
+              if (V->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+                  V->getConstantOperandVal(0) == IID) {
+                return SDValue(V, 0);
               }
             }
+          }
           }
         }
       }
@@ -16060,30 +16058,30 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   case ISD::INTRINSIC_W_CHAIN:
-    switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
-    default:
-      break;
-    case Intrinsic::ppc_altivec_vsum4sbs:
-    case Intrinsic::ppc_altivec_vsum4shs:
-    case Intrinsic::ppc_altivec_vsum4ubs: {
-      // These sum-across intrinsics only have a chain due to the side effect
-      // that they may set the SAT bit. If we know the SAT bit will not be set
-      // for some inputs, we can replace any uses of their chain with the input
-      // chain.
-      if (BuildVectorSDNode *BVN =
-              dyn_cast<BuildVectorSDNode>(N->getOperand(3))) {
-        APInt APSplatBits, APSplatUndef;
-        unsigned SplatBitSize;
-        bool HasAnyUndefs;
-        bool BVNIsConstantSplat = BVN->isConstantSplat(
-            APSplatBits, APSplatUndef, SplatBitSize, HasAnyUndefs, 0,
-            !Subtarget.isLittleEndian());
-        // If the constant splat vector is 0, the SAT bit will not be set.
-        if (BVNIsConstantSplat && APSplatBits == 0)
-          DAG.ReplaceAllUsesOfValueWith(SDValue(N, 1), N->getOperand(0));
+      switch (N->getConstantOperandVal(1)) {
+      default:
+        break;
+      case Intrinsic::ppc_altivec_vsum4sbs:
+      case Intrinsic::ppc_altivec_vsum4shs:
+      case Intrinsic::ppc_altivec_vsum4ubs: {
+        // These sum-across intrinsics only have a chain due to the side effect
+        // that they may set the SAT bit. If we know the SAT bit will not be set
+        // for some inputs, we can replace any uses of their chain with the
+        // input chain.
+        if (BuildVectorSDNode *BVN =
+                dyn_cast<BuildVectorSDNode>(N->getOperand(3))) {
+          APInt APSplatBits, APSplatUndef;
+          unsigned SplatBitSize;
+          bool HasAnyUndefs;
+          bool BVNIsConstantSplat = BVN->isConstantSplat(
+              APSplatBits, APSplatUndef, SplatBitSize, HasAnyUndefs, 0,
+              !Subtarget.isLittleEndian());
+          // If the constant splat vector is 0, the SAT bit will not be set.
+          if (BVNIsConstantSplat && APSplatBits == 0)
+            DAG.ReplaceAllUsesOfValueWith(SDValue(N, 1), N->getOperand(0));
+        }
+        return SDValue();
       }
-      return SDValue();
-    }
     case Intrinsic::ppc_vsx_lxvw4x:
     case Intrinsic::ppc_vsx_lxvd2x:
       // For little endian, VSX loads require generating lxvd2x/xxswapd.
@@ -16097,7 +16095,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     // For little endian, VSX stores require generating xxswapd/stxvd2x.
     // Not needed on ISA 3.0 based CPUs since we have a non-permuting store.
     if (Subtarget.needsSwapsForVSXMemOps()) {
-      switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
+      switch (N->getConstantOperandVal(1)) {
       default:
         break;
       case Intrinsic::ppc_vsx_stxvw4x:
@@ -16247,7 +16245,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     // Since we are doing this pre-legalize, the RHS can be a constant of
     // arbitrary bitwidth which may cause issues when trying to get the value
     // from the underlying APInt.
-    auto RHSAPInt = cast<ConstantSDNode>(RHS)->getAPIntValue();
+    auto RHSAPInt = RHS->getAsAPIntVal();
     if (!RHSAPInt.isIntN(64))
       break;
 
@@ -16326,7 +16324,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
       // Unpack the result based on how the target uses it.
       PPC::Predicate CompOpc;
-      switch (cast<ConstantSDNode>(LHS.getOperand(1))->getZExtValue()) {
+      switch (LHS.getConstantOperandVal(1)) {
       default:  // Can't happen, don't crash on invalid number though.
       case 0:   // Branch on the value of the EQ bit of CR6.
         CompOpc = BranchOnWhenPredTrue ? PPC::PRED_EQ : PPC::PRED_NE;
@@ -16405,7 +16403,7 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
-    switch (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue()) {
+    switch (Op.getConstantOperandVal(0)) {
     default: break;
     case Intrinsic::ppc_altivec_vcmpbfp_p:
     case Intrinsic::ppc_altivec_vcmpeqfp_p:
@@ -16432,7 +16430,7 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    switch (cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue()) {
+    switch (Op.getConstantOperandVal(1)) {
     default:
       break;
     case Intrinsic::ppc_load2r:
@@ -16801,15 +16799,13 @@ void PPCTargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
     return;
   if (!isa<ConstantSDNode>(Ops[1].getNode()))
     return;
-  auto IntrinsicID = cast<ConstantSDNode>(Ops[1].getNode())->getZExtValue();
+  auto IntrinsicID = Ops[1].getNode()->getAsZExtVal();
   if (IntrinsicID != Intrinsic::ppc_tdw && IntrinsicID != Intrinsic::ppc_tw &&
       IntrinsicID != Intrinsic::ppc_trapd && IntrinsicID != Intrinsic::ppc_trap)
     return;
 
-  if (I.hasMetadata("annotation")) {
-    MDNode *MDN = I.getMetadata("annotation");
+  if (MDNode *MDN = I.getMetadata(LLVMContext::MD_annotation))
     Ops.push_back(DAG.getMDNode(MDN));
-  }
 }
 
 // isLegalAddressingMode - Return true if the addressing mode represented
@@ -16867,7 +16863,7 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
     return SDValue();
 
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
 
   // Make sure the function does not optimize away the store of the RA to
   // the stack.
@@ -16900,7 +16896,7 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
 SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc dl(Op);
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  unsigned Depth = Op.getConstantOperandVal(0);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -18085,8 +18081,7 @@ static void computeFlagsForAddressComputation(SDValue N, unsigned &FlagSet,
         FlagSet |= PPC::MOF_RPlusSImm34; // Signed 34-bit immediates.
       else
         FlagSet |= PPC::MOF_RPlusR; // Register.
-    } else if (RHS.getOpcode() == PPCISD::Lo &&
-               !cast<ConstantSDNode>(RHS.getOperand(1))->getZExtValue())
+    } else if (RHS.getOpcode() == PPCISD::Lo && !RHS.getConstantOperandVal(1))
       FlagSet |= PPC::MOF_RPlusLo; // PPCISD::Lo.
     else
       FlagSet |= PPC::MOF_RPlusR;
@@ -18130,7 +18125,7 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   unsigned ParentOp = Parent->getOpcode();
   if (Subtarget.isISA3_1() && ((ParentOp == ISD::INTRINSIC_W_CHAIN) ||
                                (ParentOp == ISD::INTRINSIC_VOID))) {
-    unsigned ID = cast<ConstantSDNode>(Parent->getOperand(1))->getZExtValue();
+    unsigned ID = Parent->getConstantOperandVal(1);
     if ((ID == Intrinsic::ppc_vsx_lxvp) || (ID == Intrinsic::ppc_vsx_stxvp)) {
       SDValue IntrinOp = (ID == Intrinsic::ppc_vsx_lxvp)
                              ? Parent->getOperand(2)
@@ -18437,7 +18432,7 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
     if (Flags & PPC::MOF_RPlusSImm16) {
       SDValue Op0 = N.getOperand(0);
       SDValue Op1 = N.getOperand(1);
-      int16_t Imm = cast<ConstantSDNode>(Op1)->getZExtValue();
+      int16_t Imm = Op1->getAsZExtVal();
       if (!Align || isAligned(*Align, Imm)) {
         Disp = DAG.getTargetConstant(Imm, DL, N.getValueType());
         Base = Op0;

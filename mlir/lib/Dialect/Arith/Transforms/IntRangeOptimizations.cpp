@@ -32,14 +32,14 @@ static bool intersects(const ConstantIntRanges &lhs,
 }
 
 static FailureOr<bool> handleEq(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (!intersects(std::move(lhs), std::move(rhs)))
+  if (!intersects(lhs, rhs))
     return false;
 
   return failure();
 }
 
 static FailureOr<bool> handleNe(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (!intersects(std::move(lhs), std::move(rhs)))
+  if (!intersects(lhs, rhs))
     return true;
 
   return failure();

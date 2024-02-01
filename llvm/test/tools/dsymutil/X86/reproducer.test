@@ -33,16 +33,16 @@ RUN: ls %t.diags | grep 'dsymutil-' | count 1
 RUN: rm -rf %t
 RUN: not dsymutil -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
 
-RUN: not dsymutil --linker llvm -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
+RUN: not dsymutil --linker parallel -f -o %t.error -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 2>&1 | FileCheck %s --check-prefix=ERROR
 
 # Use the reproducer.
 RUN: dsymutil -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
-RUN: dsymutil --linker llvm -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker parallel -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
 # Using a reproducer takes precedence.
 RUN: dsymutil -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
-RUN: dsymutil --linker llvm -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker parallel -gen-reproducer -use-reproducer %t.repro -f -o - -oso-prepend-path=%t %t/Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
 
 CHECK: .debug_info
 CHECK:  DW_TAG_compile_unit

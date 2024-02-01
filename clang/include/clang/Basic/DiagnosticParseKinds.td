@@ -1035,7 +1035,7 @@ def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
   "%select{an attribute specifier sequence|%0}1 in this position "
-  "is a C++23 extension">, InGroup<CXX23>;
+  "is a C++23 extension">, InGroup<CXX23AttrsOnLambda>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
   InGroup<CXX23>;
@@ -1358,14 +1358,23 @@ def err_acc_unexpected_directive
 def warn_pragma_acc_unimplemented
     : Warning<"OpenACC directives not yet implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
-def warn_pragma_acc_unimplemented_clause_parsing
-    : Warning<"OpenACC clause parsing not yet implemented">,
-      InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
-    : Error<"invalid OpenACC directive '%select{%1|%1 %2}0'">;
+    : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
+def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 def err_acc_invalid_open_paren
     : Error<"expected clause-list or newline in OpenACC directive">;
+def err_acc_invalid_default_clause_kind
+    : Error<"invalid value for 'default' clause; expected 'present' or 'none'">;
+def err_acc_invalid_tag_kind
+    : Error<"invalid tag %0 on '%1' %select{directive|clause}2">;
+def err_acc_expected_reduction_operator
+    : Error<"missing reduction operator, expected '+', '*', 'max', 'min', '&', "
+            "'|', '^', '&&', or '||', follwed by a ':'">;
+def err_acc_invalid_reduction_operator
+    : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
+            "'&', '|', '^', '&&', or '||'">;
+def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
@@ -1608,6 +1617,9 @@ def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
 def err_pragma_pipeline_invalid_keyword : Error<
     "invalid argument; expected 'disable'">;
+
+// API notes.
+def err_type_unparsed : Error<"unparsed tokens following type">;
 
 // Pragma unroll support.
 def warn_pragma_unroll_cuda_value_in_parens : Warning<

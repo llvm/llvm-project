@@ -548,7 +548,7 @@ public:
     assert(!ContextStr.empty());
     // Note that `[]` wrapped input indicates a full context string, otherwise
     // it's treated as context-less function name only.
-    bool HasContext = ContextStr.startswith("[");
+    bool HasContext = ContextStr.starts_with("[");
     if (!HasContext) {
       State = UnknownContext;
       Func = FunctionId(ContextStr);
@@ -883,7 +883,7 @@ public:
   /// Returns the call target map collected at a given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
-  ErrorOr<SampleRecord::CallTargetMap>
+  ErrorOr<const SampleRecord::CallTargetMap &>
   findCallTargetMapAt(uint32_t LineOffset, uint32_t Discriminator) const {
     const auto &ret = BodySamples.find(
         mapIRLocToProfileLoc(LineLocation(LineOffset, Discriminator)));
@@ -894,7 +894,7 @@ public:
 
   /// Returns the call target map collected at a given location specified by \p
   /// CallSite. If the location is not found in profile, return error.
-  ErrorOr<SampleRecord::CallTargetMap>
+  ErrorOr<const SampleRecord::CallTargetMap &>
   findCallTargetMapAt(const LineLocation &CallSite) const {
     const auto &Ret = BodySamples.find(mapIRLocToProfileLoc(CallSite));
     if (Ret == BodySamples.end())
@@ -1330,6 +1330,8 @@ public:
   }
 
   size_t erase(const key_type &Key) { return base_type::erase(Key); }
+
+  iterator erase(iterator It) { return base_type::erase(It); }
 };
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
@@ -1561,7 +1563,7 @@ template <> struct DenseMapInfo<SampleContext> {
 // Prepend "__uniq" before the hash for tools like profilers to understand
 // that this symbol is of internal linkage type.  The "__uniq" is the
 // pre-determined prefix that is used to tell tools that this symbol was
-// created with -funique-internal-linakge-symbols and the tools can strip or
+// created with -funique-internal-linkage-symbols and the tools can strip or
 // keep the prefix as needed.
 inline std::string getUniqueInternalLinkagePostfix(const StringRef &FName) {
   llvm::MD5 Md5;

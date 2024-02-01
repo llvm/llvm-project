@@ -89,6 +89,8 @@ FEATURE(blocks, LangOpts.Blocks)
 FEATURE(c_thread_safety_attributes, true)
 FEATURE(cxx_exceptions, LangOpts.CXXExceptions)
 FEATURE(cxx_rtti, LangOpts.RTTI &&LangOpts.RTTIData)
+EXTENSION(define_target_os_macros,
+          PP.getPreprocessorOpts().DefineTargetOSMacros)
 FEATURE(enumerator_attributes, true)
 FEATURE(nullability, true)
 FEATURE(nullability_on_arrays, true)
@@ -102,6 +104,7 @@ FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)
+FEATURE(pragma_stdc_cx_limited_range, true)
 // Objective-C features
 FEATURE(objc_arr, LangOpts.ObjCAutoRefCount) // FIXME: REMOVE?
 FEATURE(objc_arc, LangOpts.ObjCAutoRefCount)
@@ -266,6 +269,10 @@ EXTENSION(cxx_fixed_enum, true)
 EXTENSION(cxx_binary_literals, true)
 EXTENSION(cxx_init_captures, LangOpts.CPlusPlus11)
 EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
+//C++20
+EXTENSION(cxx_generalized_nttp, LangOpts.CPlusPlus20)
+//C++23
+EXTENSION(cxx_explicit_this_parameter, LangOpts.CPlusPlus23)
 // Miscellaneous language extensions
 EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)
@@ -279,7 +286,6 @@ EXTENSION(matrix_types_scalar_division, true)
 EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
 EXTENSION(datasizeof, LangOpts.CPlusPlus)
 
-FEATURE(builtin_headers_in_system_modules, LangOpts.BuiltinHeadersInSystemModules)
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
 
 // CUDA/HIP Features

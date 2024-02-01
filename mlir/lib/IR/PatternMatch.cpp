@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Config/mlir-config.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/RegionKindInterface.h"
@@ -96,124 +97,6 @@ LogicalResult RewritePattern::match(Operation *op) const {
 
 /// Out-of-line vtable anchor.
 void RewritePattern::anchor() {}
-
-//===----------------------------------------------------------------------===//
-// PDLValue
-//===----------------------------------------------------------------------===//
-
-void PDLValue::print(raw_ostream &os) const {
-  if (!value) {
-    os << "<NULL-PDLValue>";
-    return;
-  }
-  switch (kind) {
-  case Kind::Attribute:
-    os << cast<Attribute>();
-    break;
-  case Kind::Operation:
-    os << *cast<Operation *>();
-    break;
-  case Kind::Type:
-    os << cast<Type>();
-    break;
-  case Kind::TypeRange:
-    llvm::interleaveComma(cast<TypeRange>(), os);
-    break;
-  case Kind::Value:
-    os << cast<Value>();
-    break;
-  case Kind::ValueRange:
-    llvm::interleaveComma(cast<ValueRange>(), os);
-    break;
-  }
-}
-
-void PDLValue::print(raw_ostream &os, Kind kind) {
-  switch (kind) {
-  case Kind::Attribute:
-    os << "Attribute";
-    break;
-  case Kind::Operation:
-    os << "Operation";
-    break;
-  case Kind::Type:
-    os << "Type";
-    break;
-  case Kind::TypeRange:
-    os << "TypeRange";
-    break;
-  case Kind::Value:
-    os << "Value";
-    break;
-  case Kind::ValueRange:
-    os << "ValueRange";
-    break;
-  }
-}
-
-//===----------------------------------------------------------------------===//
-// PDLPatternModule
-//===----------------------------------------------------------------------===//
-
-void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
-  // Ignore the other module if it has no patterns.
-  if (!other.pdlModule)
-    return;
-
-  // Steal the functions and config of the other module.
-  for (auto &it : other.constraintFunctions)
-    registerConstraintFunction(it.first(), std::move(it.second));
-  for (auto &it : other.rewriteFunctions)
-    registerRewriteFunction(it.first(), std::move(it.second));
-  for (auto &it : other.configs)
-    configs.emplace_back(std::move(it));
-  for (auto &it : other.configMap)
-    configMap.insert(it);
-
-  // Steal the other state if we have no patterns.
-  if (!pdlModule) {
-    pdlModule = std::move(other.pdlModule);
-    return;
-  }
-
-  // Merge the pattern operations from the other module into this one.
-  Block *block = pdlModule->getBody();
-  block->getOperations().splice(block->end(),
-                                other.pdlModule->getBody()->getOperations());
-}
-
-void PDLPatternModule::attachConfigToPatterns(ModuleOp module,
-                                              PDLPatternConfigSet &configSet) {
-  // Attach the configuration to the symbols within the module. We only add
-  // to symbols to avoid hardcoding any specific operation names here (given
-  // that we don't depend on any PDL dialect). We can't use
-  // cast<SymbolOpInterface> here because patterns may be optional symbols.
-  module->walk([&](Operation *op) {
-    if (op->hasTrait<SymbolOpInterface::Trait>())
-      configMap[op] = &configSet;
-  });
-}
-
-//===----------------------------------------------------------------------===//
-// Function Registry
-
-void PDLPatternModule::registerConstraintFunction(
-    StringRef name, PDLConstraintFunction constraintFn) {
-  // TODO: Is it possible to diagnose when `name` is already registered to
-  // a function that is not equivalent to `constraintFn`?
-  // Allow existing mappings in the case multiple patterns depend on the same
-  // constraint.
-  constraintFunctions.try_emplace(name, std::move(constraintFn));
-}
-
-void PDLPatternModule::registerRewriteFunction(StringRef name,
-                                               PDLRewriteFunction rewriteFn) {
-  // TODO: Is it possible to diagnose when `name` is already registered to
-  // a function that is not equivalent to `rewriteFn`?
-  // Allow existing mappings in the case multiple patterns depend on the same
-  // rewrite.
-  rewriteFunctions.try_emplace(name, std::move(rewriteFn));
-}
 
 //===----------------------------------------------------------------------===//
 // RewriterBase
@@ -361,7 +244,7 @@ void RewriterBase::eraseOp(Operation *op) {
           for (BlockArgument bbArg : b->getArguments())
             bbArg.dropAllUses();
           b->dropAllUses();
-          b->erase();
+          eraseBlock(b);
         }
       }
     }
@@ -373,14 +256,21 @@ void RewriterBase::eraseOp(Operation *op) {
 }
 
 void RewriterBase::eraseBlock(Block *block) {
+  assert(block->use_empty() && "expected 'block' to have no uses");
+
   for (auto &op : llvm::make_early_inc_range(llvm::reverse(*block))) {
     assert(op.use_empty() && "expected 'op' to have no uses");
     eraseOp(&op);
   }
+
+  // Notify the listener that the block is about to be removed.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyBlockRemoved(block);
+
   block->erase();
 }
 
-void RewriterBase::finalizeRootUpdate(Operation *op) {
+void RewriterBase::finalizeOpModification(Operation *op) {
   // Notify the listener that the operation was modified.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
     rewriteListener->notifyOperationModified(op);
@@ -393,7 +283,7 @@ void RewriterBase::replaceUsesWithIf(Value from, Value to,
                                      function_ref<bool(OpOperand &)> functor) {
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
     if (functor(operand))
-      updateRootInPlace(operand.getOwner(), [&]() { operand.set(to); });
+      modifyOpInPlace(operand.getOwner(), [&]() { operand.set(to); });
   }
 }
 
@@ -427,8 +317,17 @@ void RewriterBase::inlineBlockBefore(Block *source, Block *dest,
 
   // Move operations from the source block to the dest block and erase the
   // source block.
-  dest->getOperations().splice(before, source->getOperations());
-  source->erase();
+  if (!listener) {
+    // Fast path: If no listener is attached, move all operations at once.
+    dest->getOperations().splice(before, source->getOperations());
+  } else {
+    while (!source->empty())
+      moveOpBefore(&source->front(), dest, before);
+  }
+
+  // Erase the source block.
+  assert(source->empty() && "expected 'source' to be empty");
+  eraseBlock(source);
 }
 
 void RewriterBase::inlineBlockBefore(Block *source, Operation *op,
@@ -444,7 +343,25 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
 /// Split the operations starting at "before" (inclusive) out of the given
 /// block into a new block, and return it.
 Block *RewriterBase::splitBlock(Block *block, Block::iterator before) {
-  return block->splitBlock(before);
+  // Fast path: If no listener is attached, split the block directly.
+  if (!listener)
+    return block->splitBlock(before);
+
+  // `createBlock` sets the insertion point at the beginning of the new block.
+  InsertionGuard g(*this);
+  Block *newBlock =
+      createBlock(block->getParent(), std::next(block->getIterator()));
+
+  // If `before` points to end of the block, no ops should be moved.
+  if (before == block->end())
+    return newBlock;
+
+  // Move ops one-by-one from the end of `block` to the beginning of `newBlock`.
+  // Stop when the operation pointed to by `before` has been moved.
+  while (before->getBlock() != newBlock)
+    moveOpBefore(&block->back(), newBlock, newBlock->begin());
+
+  return newBlock;
 }
 
 /// Move the blocks that belong to "region" before the given position in
@@ -453,7 +370,15 @@ Block *RewriterBase::splitBlock(Block *block, Block::iterator before) {
 /// region and pass it the correct block arguments.
 void RewriterBase::inlineRegionBefore(Region &region, Region &parent,
                                       Region::iterator before) {
-  parent.getBlocks().splice(before, region.getBlocks());
+  // Fast path: If no listener is attached, move all blocks at once.
+  if (!listener) {
+    parent.getBlocks().splice(before, region.getBlocks());
+    return;
+  }
+
+  // Move blocks from the beginning of the region one-by-one.
+  while (!region.empty())
+    moveBlockBefore(&region.front(), &parent, before);
 }
 void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
   inlineRegionBefore(region, *before->getParent(), before->getIterator());
@@ -475,4 +400,43 @@ void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
 }
 void RewriterBase::cloneRegionBefore(Region &region, Block *before) {
   cloneRegionBefore(region, *before->getParent(), before->getIterator());
+}
+
+void RewriterBase::moveBlockBefore(Block *block, Block *anotherBlock) {
+  moveBlockBefore(block, anotherBlock->getParent(),
+                  anotherBlock->getIterator());
+}
+
+void RewriterBase::moveBlockBefore(Block *block, Region *region,
+                                   Region::iterator iterator) {
+  Region *currentRegion = block->getParent();
+  Region::iterator nextIterator = std::next(block->getIterator());
+  block->moveBefore(region, iterator);
+  if (listener)
+    listener->notifyBlockInserted(block, /*previous=*/currentRegion,
+                                  /*previousIt=*/nextIterator);
+}
+
+void RewriterBase::moveOpBefore(Operation *op, Operation *existingOp) {
+  moveOpBefore(op, existingOp->getBlock(), existingOp->getIterator());
+}
+
+void RewriterBase::moveOpBefore(Operation *op, Block *block,
+                                Block::iterator iterator) {
+  Block *currentBlock = op->getBlock();
+  Block::iterator nextIterator = std::next(op->getIterator());
+  op->moveBefore(block, iterator);
+  if (listener)
+    listener->notifyOperationInserted(
+        op, /*previous=*/InsertPoint(currentBlock, nextIterator));
+}
+
+void RewriterBase::moveOpAfter(Operation *op, Operation *existingOp) {
+  moveOpAfter(op, existingOp->getBlock(), existingOp->getIterator());
+}
+
+void RewriterBase::moveOpAfter(Operation *op, Block *block,
+                               Block::iterator iterator) {
+  assert(iterator != block->end() && "cannot move after end of block");
+  moveOpBefore(op, block, std::next(iterator));
 }

@@ -985,7 +985,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
   bool IsIsolatedToken = true;
   for (size_t i = 0, e = String.size(); i != e; ++i) {
     char Char = String[i];
-    if (Variant.BreakCharacters.find(Char) != std::string::npos) {
+    if (Variant.BreakCharacters.contains(Char)) {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), false);
         Prev = i;
@@ -994,7 +994,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       InTok = true;
       continue;
     }
-    if (Variant.TokenizingCharacters.find(Char) != std::string::npos) {
+    if (Variant.TokenizingCharacters.contains(Char)) {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
         InTok = false;
@@ -1005,7 +1005,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
       IsIsolatedToken = true;
       continue;
     }
-    if (Variant.SeparatorCharacters.find(Char) != std::string::npos) {
+    if (Variant.SeparatorCharacters.contains(Char)) {
       if (InTok) {
         addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
         InTok = false;
@@ -2863,8 +2863,11 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
                << " Mnemonic;\n";
   OS << "    " << getMinimalTypeForRange(MaxMask)
                << " OperandMask;\n";
-  OS << "    " << getMinimalTypeForRange(std::distance(
-                      Info.Classes.begin(), Info.Classes.end())) << " Class;\n";
+  OS << "    "
+     << getMinimalTypeForRange(
+            std::distance(Info.Classes.begin(), Info.Classes.end()) +
+            2 /* Include 'InvalidMatchClass' and 'OptionalMatchClass' */)
+     << " Class;\n";
   OS << "    " << getMinimalTypeForRange(MaxFeaturesIndex)
                << " RequiredFeaturesIdx;\n\n";
   OS << "    StringRef getMnemonic() const {\n";
@@ -3317,7 +3320,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    unsigned MCK);\n\n";
   }
 
-  OS << "#endif // GET_ASSEMBLER_HEADER_INFO\n\n";
+  OS << "#endif // GET_ASSEMBLER_HEADER\n\n";
 
   // Emit the operand match diagnostic enum names.
   OS << "\n#ifdef GET_OPERAND_DIAGNOSTIC_TYPES\n";
@@ -3480,8 +3483,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                << " ConvertFn;\n";
   OS << "    " << getMinimalTypeForRange(FeatureBitsets.size())
                << " RequiredFeaturesIdx;\n";
-  OS << "    " << getMinimalTypeForRange(
-                      std::distance(Info.Classes.begin(), Info.Classes.end()))
+  OS << "    "
+     << getMinimalTypeForRange(
+            std::distance(Info.Classes.begin(), Info.Classes.end()) +
+            2 /* Include 'InvalidMatchClass' and 'OptionalMatchClass' */)
      << " Classes[" << MaxNumOperands << "];\n";
   OS << "    StringRef getMnemonic() const {\n";
   OS << "      return StringRef(MnemonicTable + Mnemonic + 1,\n";

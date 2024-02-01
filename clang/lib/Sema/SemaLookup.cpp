@@ -2982,6 +2982,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     case TemplateArgument::Integral:
     case TemplateArgument::Expression:
     case TemplateArgument::NullPtr:
+    case TemplateArgument::StructuralValue:
       // [Note: non-type template arguments do not contribute to the set of
       //  associated namespaces. ]
       break;
@@ -5711,6 +5712,11 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
                                  ArrayRef<Module *> Modules,
                                  MissingImportKind MIK, bool Recover) {
   assert(!Modules.empty());
+
+  // See https://github.com/llvm/llvm-project/issues/73893. It is generally
+  // confusing than helpful to show the namespace is not visible.
+  if (isa<NamespaceDecl>(Decl))
+    return;
 
   auto NotePrevious = [&] {
     // FIXME: Suppress the note backtrace even under

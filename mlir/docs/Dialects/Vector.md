@@ -247,7 +247,19 @@ which conveys higher-D meaning. But it also is one of the most overloaded terms
 in compilers and hardware. For now, we generally use the `n-D` `vector` name and
 are open to better suggestions.
 
-## DeeperDive
+## 0D Vectors
+
+Vectors of dimension 0 (or _0-D vectors_ or _0D vectors_) are allowed inside
+MLIR. For instance, a `f32` vector containing one scalar can be denoted as
+`vector<f32>`. This is similar to the `tensor<f32>` type that is available in
+TensorFlow or the `memref<f32>` type that is available in MLIR.
+
+Generally, a 0D `vector` can be interpreted as a scalar. The benefit of 0D
+`vector`s, `tensor`s, and `memref`s is that they make it easier to lower code
+from various frontends such as TensorFlow and make it easier to handle corner
+cases such as unrolling a loop from 1D to 0D.
+
+## LLVM Lowering Tradeoffs
 
 This section describes the tradeoffs involved in lowering the MLIR n-D vector
 type and operations on it to LLVM-IR. Putting aside the

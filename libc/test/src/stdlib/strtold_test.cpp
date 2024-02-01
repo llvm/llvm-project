@@ -13,12 +13,11 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
 #include <stddef.h>
 
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_CONST(val, _, __) val
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_CONST(_, val, __) val
 #else
 #define SELECT_CONST(_, __, val) val
@@ -26,7 +25,7 @@
 
 class LlvmLibcStrToLDTest : public LIBC_NAMESPACE::testing::Test {
 public:
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
   void run_test(const char *inputString, const ptrdiff_t expectedStrLen,
                 const uint64_t expectedRawData, const int expectedErrno = 0)
 #else
@@ -87,11 +86,11 @@ public:
 
     EXPECT_EQ(str_end - inputString, expectedStrLen);
 
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
-    EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
+    EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
+    EXPECT_EQ(actual_fp.is_neg(), expected_fp.is_neg());
     EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
     EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
-    EXPECT_EQ(libc_errno, expected_errno);
+    ASSERT_ERRNO_EQ(expected_errno);
   }
 };
 

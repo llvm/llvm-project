@@ -33,7 +33,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -61,6 +61,11 @@ std::ostream &operator<<(std::ostream &OS,
 }
 
 namespace test {
+
+// Caps the number of block visits in any individual analysis. Given that test
+// code is typically quite small, we set a low number to help catch any problems
+// early. But, the choice is arbitrary.
+constexpr std::int32_t MaxBlockVisitsInAnalysis = 2'000;
 
 /// Returns the environment at the program point marked with `Annotation` from
 /// the mapping of annotated program points to analysis state.
@@ -277,8 +282,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     // If successful, the dataflow analysis returns a mapping from block IDs to
     // the post-analysis states for the CFG blocks that have been evaluated.
     llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
-        MaybeBlockStates = runTypeErasedDataflowAnalysis(
-            CFCtx, Analysis, InitEnv, TypeErasedPostVisitCFG);
+        MaybeBlockStates =
+            runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv,
+                                          TypeErasedPostVisitCFG,
+                                          MaxBlockVisitsInAnalysis);
     if (!MaybeBlockStates) return MaybeBlockStates.takeError();
     AO.BlockStates = *MaybeBlockStates;
 
@@ -420,7 +427,9 @@ llvm::Error checkDataflowWithNoopAnalysis(
              ASTContext &)>
         VerifyResults = [](const auto &, auto &) {},
     DataflowAnalysisOptions Options = {BuiltinOptions()},
-    LangStandard::Kind Std = LangStandard::lang_cxx17);
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback =
+        {});
 
 /// Returns the `ValueDecl` for the given identifier.
 ///

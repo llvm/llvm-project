@@ -85,6 +85,18 @@ struct GCNRegPressure {
     return !(*this == O);
   }
 
+  GCNRegPressure &operator+=(const GCNRegPressure &RHS) {
+    for (unsigned I = 0; I < TOTAL_KINDS; ++I)
+      Value[I] += RHS.Value[I];
+    return *this;
+  }
+
+  GCNRegPressure &operator-=(const GCNRegPressure &RHS) {
+    for (unsigned I = 0; I < TOTAL_KINDS; ++I)
+      Value[I] -= RHS.Value[I];
+    return *this;
+  }
+
   void dump() const;
 
 private:
@@ -103,6 +115,20 @@ inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
   for (unsigned I = 0; I < GCNRegPressure::TOTAL_KINDS; ++I)
     Res.Value[I] = std::max(P1.Value[I], P2.Value[I]);
   return Res;
+}
+
+inline GCNRegPressure operator+(const GCNRegPressure &P1,
+                                const GCNRegPressure &P2) {
+  GCNRegPressure Sum = P1;
+  Sum += P2;
+  return Sum;
+}
+
+inline GCNRegPressure operator-(const GCNRegPressure &P1,
+                                const GCNRegPressure &P2) {
+  GCNRegPressure Diff = P1;
+  Diff -= P2;
+  return Diff;
 }
 
 class GCNRPTracker {

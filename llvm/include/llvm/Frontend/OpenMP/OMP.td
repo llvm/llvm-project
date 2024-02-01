@@ -215,6 +215,7 @@ def OMPC_AcqRel : Clause<"acq_rel"> { let clangClass = "OMPAcqRelClause"; }
 def OMPC_Acquire : Clause<"acquire"> { let clangClass = "OMPAcquireClause"; }
 def OMPC_Release : Clause<"release"> { let clangClass = "OMPReleaseClause"; }
 def OMPC_Relaxed : Clause<"relaxed"> { let clangClass = "OMPRelaxedClause"; }
+def OMPC_Weak : Clause<"weak"> { let clangClass = "OMPWeakClause"; }
 def OMPC_Depend : Clause<"depend"> {
   let clangClass = "OMPDependClause";
   let flangClass = "OmpDependClause";
@@ -642,7 +643,8 @@ def OMP_Atomic : Directive<"atomic"> {
     VersionedClause<OMPC_Release, 50>,
     VersionedClause<OMPC_Relaxed, 50>,
     VersionedClause<OMPC_Hint, 50>,
-    VersionedClause<OMPC_Fail, 51>
+    VersionedClause<OMPC_Fail, 51>,
+    VersionedClause<OMPC_Weak, 51>
   ];
 }
 def OMP_Target : Directive<"target"> {
@@ -2018,8 +2020,16 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   ];
 }
 def OMP_Workshare : Directive<"workshare"> {}
-def OMP_EndDo : Directive<"end do"> {}
-def OMP_EndDoSimd : Directive<"end do simd"> {}
+def OMP_EndDo : Directive<"end do"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_EndDoSimd : Directive<"end do simd"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
+}
 def OMP_EndSections : Directive<"end sections"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>

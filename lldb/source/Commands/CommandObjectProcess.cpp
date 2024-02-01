@@ -519,10 +519,10 @@ protected:
             BreakpointSiteSP bp_site_sp(
                 process->GetBreakpointSiteList().FindByID(bp_site_id));
             if (bp_site_sp) {
-              const size_t num_owners = bp_site_sp->GetNumberOfOwners();
+              const size_t num_owners = bp_site_sp->GetNumberOfConstituents();
               for (size_t i = 0; i < num_owners; i++) {
                 Breakpoint &bp_ref =
-                    bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
+                    bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint();
                 if (!bp_ref.IsInternal()) {
                   bp_ref.SetIgnoreCount(m_options.m_ignore);
                 }
@@ -646,9 +646,7 @@ protected:
           for (size_t loc_idx = 0; loc_idx < num_locations; loc_idx++) {
             BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
             tmp_id.SetBreakpointLocationID(loc_idx);
-            size_t position = 0;
-            if (!with_locs.FindBreakpointID(tmp_id, &position)
-                && loc_sp->IsEnabled()) {
+            if (!with_locs.Contains(tmp_id) && loc_sp->IsEnabled()) {
               locs_disabled.push_back(tmp_id);
               loc_sp->SetEnabled(false);
             }

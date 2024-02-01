@@ -43,17 +43,17 @@ entry:
 ; CTOR-NEXT:	.quad	j
 ; CTOR-NEXT:	.quad	i
 ; CTOR-NEXT:	.quad	f
-; CTOR-NEXT:	.section	.ctors.09980,"aGw",@progbits,v,comdat
+; CTOR-NEXT:	.section	.ctors.09980,"awG",@progbits,v,comdat
 ; CTOR-NEXT:	.p2align	3
 ; CTOR-NEXT:	.quad	h
-; CTOR-NEXT:	.section	.ctors.65520,"aGw",@progbits,v,comdat
+; CTOR-NEXT:	.section	.ctors.65520,"awG",@progbits,v,comdat
 ; CTOR-NEXT:	.p2align	3
 ; CTOR-NEXT:	.quad	g
 
-; INIT-ARRAY:		.section	.init_array.15,"aGw",@init_array,v,comdat
+; INIT-ARRAY:		.section	.init_array.15,"awG",@init_array,v,comdat
 ; INIT-ARRAY-NEXT:	.p2align	3
 ; INIT-ARRAY-NEXT:	.quad	g
-; INIT-ARRAY-NEXT:	.section	.init_array.55555,"aGw",@init_array,v,comdat
+; INIT-ARRAY-NEXT:	.section	.init_array.55555,"awG",@init_array,v,comdat
 ; INIT-ARRAY-NEXT:	.p2align	3
 ; INIT-ARRAY-NEXT:	.quad	h
 ; INIT-ARRAY-NEXT:	.section	.init_array,"aw",@init_array
@@ -62,10 +62,10 @@ entry:
 ; INIT-ARRAY-NEXT:	.quad	i
 ; INIT-ARRAY-NEXT:	.quad	j
 
-; NACL:		.section	.init_array.15,"aGw",@init_array,v,comdat
+; NACL:		.section	.init_array.15,"awG",@init_array,v,comdat
 ; NACL-NEXT:	.p2align	2
 ; NACL-NEXT:	.long	g
-; NACL-NEXT:	.section	.init_array.55555,"aGw",@init_array,v,comdat
+; NACL-NEXT:	.section	.init_array.55555,"awG",@init_array,v,comdat
 ; NACL-NEXT:	.p2align	2
 ; NACL-NEXT:	.long	h
 ; NACL-NEXT:	.section	.init_array,"aw",@init_array

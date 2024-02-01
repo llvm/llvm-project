@@ -30,13 +30,22 @@ public:
 
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
+  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const F zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::zero());
-  const F neg_zero = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_zero());
-  const F inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::inf());
-  const F neg_inf = F(LIBC_NAMESPACE::fputil::FPBits<F>::neg_inf());
-  const F nan = F(LIBC_NAMESPACE::fputil::FPBits<F>::build_quiet_nan(1));
+  const F zero = FPBits::zero().get_val();
+  const F neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const F inf = FPBits::inf().get_val();
+  const F neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const F nan = FPBits::quiet_nan().get_val();
+
+  static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
+  static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+  static constexpr StorageType MAX_SUBNORMAL =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType MIN_SUBNORMAL =
+      FPBits::min_subnormal().uintval();
+
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
 
@@ -126,11 +135,11 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.set_unbiased_exponent(EXPONENT_LIMIT + FPBits::EXPONENT_BIAS);
-    bits.set_sign(1);
+    bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
+    bits.set_sign(Sign::NEG);
     bits.set_mantissa(0);
 
-    F x = F(bits);
+    F x = bits.get_val();
     long mpfr_result;
     bool erangeflag = mpfr::round_to_long(x, mpfr_result);
     ASSERT_FALSE(erangeflag);
@@ -190,12 +199,11 @@ public:
     // We start with 1.0 so that the implicit bit for x86 long doubles
     // is set.
     FPBits bits(F(1.0));
-    bits.set_unbiased_exponent(EXPONENT_LIMIT + FPBits::EXPONENT_BIAS);
-    bits.set_sign(1);
-    bits.set_mantissa(UIntType(0x1)
-                      << (LIBC_NAMESPACE::fputil::MantissaWidth<F>::VALUE - 1));
+    bits.set_biased_exponent(EXPONENT_LIMIT + FPBits::EXP_BIAS);
+    bits.set_sign(Sign::NEG);
+    bits.set_mantissa(FPBits::FRACTION_MASK);
 
-    F x = F(bits);
+    F x = bits.get_val();
     if (TestModes) {
       for (int m : ROUNDING_MODES) {
         LIBC_NAMESPACE::fputil::set_round(m);
@@ -214,13 +222,10 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr UIntType COUNT = 1'000'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_SUBNORMAL) - UIntType(FPBits::MIN_SUBNORMAL)) /
-        COUNT;
-    for (UIntType i = FPBits::MIN_SUBNORMAL; i <= FPBits::MAX_SUBNORMAL;
-         i += STEP) {
-      F x = F(FPBits(i));
+    constexpr StorageType COUNT = 1'000'001;
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
+      F x = FPBits(i).get_val();
       if (x == F(0.0))
         continue;
       // All subnormal numbers should round to zero.
@@ -259,11 +264,10 @@ public:
     if (sizeof(I) > sizeof(long))
       return;
 
-    constexpr UIntType COUNT = 1'000'001;
-    constexpr UIntType STEP =
-        (UIntType(FPBits::MAX_NORMAL) - UIntType(FPBits::MIN_NORMAL)) / COUNT;
-    for (UIntType i = FPBits::MIN_NORMAL; i <= FPBits::MAX_NORMAL; i += STEP) {
-      F x = F(FPBits(i));
+    constexpr StorageType COUNT = 1'000'001;
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (StorageType i = MIN_NORMAL; i <= MAX_NORMAL; i += STEP) {
+      F x = FPBits(i).get_val();
       // In normal range on x86 platforms, the long double implicit 1 bit can be
       // zero making the numbers NaN. We will skip them.
       if (isnan(x)) {

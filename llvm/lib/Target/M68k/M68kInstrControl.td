@@ -327,6 +327,10 @@ def RTS : MxInst<(outs), (ins), "rts", []> {
   let Inst = (descend 0b0100, 0b1110, 0b0111, 0b0101);
 }
 
+def RTE: MxInst<(outs), (ins), "rte", []> {
+  let Inst = (descend 0b0100, 0b1110, 0b0111, 0b0011);
+}
+
 let isCodeGenOnly = 1 in
 def RET : MxPseudo<(outs), (ins i32imm:$adj, variable_ops),
                    [(MxRet timm:$adj)]>;

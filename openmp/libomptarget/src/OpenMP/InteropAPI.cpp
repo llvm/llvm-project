@@ -10,8 +10,12 @@
 #include "OpenMP/InternalTypes.h"
 #include "OpenMP/omp.h"
 
+#include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
+#include "llvm/Support/Error.h"
+#include <cstdlib>
+#include <cstring>
 
 extern "C" {
 
@@ -189,6 +193,14 @@ __OMP_GET_INTEROP_TY3(const char *, type_desc)
 __OMP_GET_INTEROP_TY3(const char *, rc_desc)
 #undef __OMP_GET_INTEROP_TY3
 
+static const char *copyErrorString(llvm::Error &&Err) {
+  // TODO: Use the error string while avoiding leaks.
+  std::string ErrMsg = llvm::toString(std::move(Err));
+  char *UsrMsg = reinterpret_cast<char *>(malloc(ErrMsg.size() + 1));
+  strcpy(UsrMsg, ErrMsg.c_str());
+  return UsrMsg;
+}
+
 extern "C" {
 
 void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
@@ -210,12 +222,14 @@ void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
   }
 
   InteropPtr = new omp_interop_val_t(DeviceId, InteropType);
-  if (!deviceIsReady(DeviceId)) {
-    InteropPtr->err_str = "Device not ready!";
+
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr) {
+    InteropPtr->err_str = copyErrorString(DeviceOrErr.takeError());
     return;
   }
 
-  DeviceTy &Device = *PM->Devices[DeviceId];
+  DeviceTy &Device = *DeviceOrErr;
   if (!Device.RTL || !Device.RTL->init_device_info ||
       Device.RTL->init_device_info(DeviceId, &(InteropPtr)->device_info,
                                    &(InteropPtr)->err_str)) {
@@ -247,8 +261,9 @@ void __tgt_interop_use(ident_t *LocRef, int32_t Gtid,
   assert((DeviceId == -1 || InteropVal->device_id == DeviceId) &&
          "Inconsistent device-id usage!");
 
-  if (!deviceIsReady(DeviceId)) {
-    InteropPtr->err_str = "Device not ready!";
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr) {
+    InteropPtr->err_str = copyErrorString(DeviceOrErr.takeError());
     return;
   }
 
@@ -276,8 +291,9 @@ void __tgt_interop_destroy(ident_t *LocRef, int32_t Gtid,
 
   assert((DeviceId == -1 || InteropVal->device_id == DeviceId) &&
          "Inconsistent device-id usage!");
-  if (!deviceIsReady(DeviceId)) {
-    InteropPtr->err_str = "Device not ready!";
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr) {
+    InteropPtr->err_str = copyErrorString(DeviceOrErr.takeError());
     return;
   }
 

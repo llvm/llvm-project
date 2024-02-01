@@ -25,6 +25,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #define GET_TYPEDEF_CLASSES
@@ -46,14 +47,22 @@
       mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
       mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp,            \
       mlir::acc::CacheOp
+#define ACC_DATA_EXIT_OPS                                                      \
+  mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
+      mlir::acc::UpdateHostOp
+#define ACC_DATA_CLAUSE_OPS ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS
 #define ACC_COMPUTE_CONSTRUCT_OPS                                              \
   mlir::acc::ParallelOp, mlir::acc::KernelsOp, mlir::acc::SerialOp
 #define ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::LoopOp
+#define OPENACC_DATA_CONSTRUCT_STRUCTURED_OPS                                  \
+  mlir::acc::DataOp, mlir::acc::DeclareOp
+#define ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS                                    \
+  mlir::acc::EnterDataOp, mlir::acc::ExitDataOp, mlir::acc::UpdateOp,          \
+      mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,                        \
+      mlir::acc::DeclareExitOp
 #define ACC_DATA_CONSTRUCT_OPS                                                 \
-  mlir::acc::DataOp, mlir::acc::EnterDataOp, mlir::acc::ExitDataOp,            \
-      mlir::acc::UpdateOp, mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,   \
-      mlir::acc::DeclareExitOp, mlir::acc::DeclareOp
+  OPENACC_DATA_CONSTRUCT_STRUCTURED_OPS, ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS
 #define ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_OPS
 #define ACC_COMPUTE_LOOP_AND_DATA_CONSTRUCT_OPS                                \
@@ -73,9 +82,27 @@ namespace acc {
 /// combined and the final mapping value would be 5 (4 | 1).
 enum OpenACCExecMapping { NONE = 0, VECTOR = 1, WORKER = 2, GANG = 4 };
 
-/// Used to obtain the `varPtr` from a data entry operation.
-/// Returns empty value if not a data entry operation.
-mlir::Value getVarPtr(mlir::Operation *accDataEntryOp);
+/// Used to obtain the `varPtr` from a data clause operation.
+/// Returns empty value if not a data clause operation or is a data exit
+/// operation with no `varPtr`.
+mlir::Value getVarPtr(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain the `accPtr` from a data clause operation.
+/// When a data entry operation, it obtains its result `accPtr` value.
+/// If a data exit operation, it obtains its operand `accPtr` value.
+/// Returns empty value if not a data clause operation.
+mlir::Value getAccPtr(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain the `varPtrPtr` from a data clause operation.
+/// Returns empty value if not a data clause operation.
+mlir::Value getVarPtrPtr(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain `bounds` from an acc data clause operation.
+/// Returns an empty vector if there are no bounds.
+mlir::SmallVector<mlir::Value> getBounds(mlir::Operation *accDataClauseOp);
+
+/// Used to obtain the `name` from an acc operation.
+std::optional<llvm::StringRef> getVarName(mlir::Operation *accOp);
 
 /// Used to obtain the `dataClause` from a data entry operation.
 /// Returns empty optional if not a data entry operation.
@@ -86,6 +113,12 @@ getDataClause(mlir::Operation *accDataEntryOp);
 /// Returns false if not a data operation or if it is a data operation without
 /// implicit flag.
 bool getImplicitFlag(mlir::Operation *accDataEntryOp);
+
+/// Used to get an immutable range iterating over the data operands.
+mlir::ValueRange getDataOperands(mlir::Operation *accOp);
+
+/// Used to get a mutable range iterating over the data operands.
+mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
 /// Used to obtain the attribute name for declare.
 static constexpr StringLiteral getDeclareAttrName() {
@@ -99,6 +132,16 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
 }
+
+struct RuntimeCounters
+    : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
+  mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+};
+
+struct ConstructResource
+    : public mlir::SideEffects::Resource::Base<ConstructResource> {
+  mlir::StringRef getName() final { return "AccConstructResource"; }
+};
 
 } // namespace acc
 } // namespace mlir

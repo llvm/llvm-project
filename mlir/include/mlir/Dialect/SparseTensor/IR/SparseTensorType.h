@@ -60,6 +60,12 @@ public:
       : SparseTensorType(
             RankedTensorType::get(stp.getShape(), stp.getElementType(), enc)) {}
 
+  // TODO: remove?
+  SparseTensorType(SparseTensorEncodingAttr enc)
+      : SparseTensorType(RankedTensorType::get(
+            SmallVector<Size>(enc.getDimRank(), ShapedType::kDynamic),
+            Float32Type::get(enc.getContext()), enc)) {}
+
   SparseTensorType &operator=(const SparseTensorType &) = delete;
   SparseTensorType(const SparseTensorType &) = default;
 
@@ -234,9 +240,9 @@ public:
                                        CrdTransDirectionKind::dim2lvl);
   }
 
+  /// Returns the type with an identity mapping.
   RankedTensorType getDemappedType() const {
-    auto lvlShape = getLvlShape();
-    return RankedTensorType::get(lvlShape, rtp.getElementType(),
+    return RankedTensorType::get(getLvlShape(), getElementType(),
                                  enc.withoutDimToLvl());
   }
 
@@ -310,6 +316,16 @@ public:
       return IntegerType::get(getContext(), getPosWidth());
     return IndexType::get(getContext());
   }
+
+  /// Returns true iff this sparse tensor type has a trailing
+  /// COO region starting at the given level. By default, it
+  /// tests for a unique COO type at top level.
+  bool isCOOType(Level startLvl = 0, bool isUnique = true) const;
+
+  /// Returns the starting level of this sparse tensor type for a
+  /// trailing COO region that spans **at least** two levels. If
+  /// no such COO region is found, then returns the level-rank.
+  Level getCOOStart() const;
 
   /// Returns [un]ordered COO type for this sparse tensor type.
   RankedTensorType getCOOType(bool ordered) const;

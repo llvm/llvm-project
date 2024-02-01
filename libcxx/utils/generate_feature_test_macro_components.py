@@ -467,6 +467,7 @@ feature_test_macros = [
                 # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
                 "c++20": 202106,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
+                # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
@@ -486,8 +487,9 @@ feature_test_macros = [
             "values": {
                 "c++20": 202311  # DR P2909R4 Fix formatting of code units as integers
             },
-            "headers": [""],  # Note not in format
-            "unimplemented": True,
+            "headers": [
+                "format"  # TODO verify this entry since the paper was underspecified.
+            ],
         },
         {
             "name": "__cpp_lib_formatters",
@@ -569,7 +571,6 @@ feature_test_macros = [
             "name": "__cpp_lib_fstream_native_handle",
             "values": {"c++26": 202306},  # P1759R6 Native handles and file streams
             "headers": ["fstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_function_ref",
@@ -597,7 +598,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_hardware_interference_size",
             "values": {"c++17": 201703},
-            "test_suite_guard": "defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || (defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE))",
             "libcxx_guard": "defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)",
             "headers": ["new"],
         },
@@ -661,7 +662,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ios_noreplace",
-            "values": { "c++23": 202207 },
+            "values": {"c++23": 202207},
             "headers": ["ios"],
         },
         {
@@ -720,14 +721,14 @@ feature_test_macros = [
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
             "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_latch",
             "values": {"c++20": 201907},
             "headers": ["latch"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
             "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
@@ -874,7 +875,6 @@ feature_test_macros = [
             "name": "__cpp_lib_print",
             "values": {"c++23": 202207},
             "headers": ["ostream", "print"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_quoted_string_io",
@@ -1011,8 +1011,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_saturation_arithmetic",
             "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
-            "headers": [""],  # Note not in <numerics>
-            "unimplemented": True,
+            "headers": ["numeric"],
         },
         {
             "name": "__cpp_lib_scoped_lock",
@@ -1023,7 +1022,7 @@ feature_test_macros = [
             "name": "__cpp_lib_semaphore",
             "values": {"c++20": 201907},
             "headers": ["semaphore"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
             "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
@@ -1073,8 +1072,6 @@ feature_test_macros = [
             "name": "__cpp_lib_source_location",
             "values": {"c++20": 201907},
             "headers": ["source_location"],
-            "test_suite_guard": "__has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)",
-            "libcxx_guard": "__has_builtin(__builtin_source_location) && !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER <= 1403)",
         },
         {
             "name": "__cpp_lib_span",
@@ -1086,10 +1083,14 @@ feature_test_macros = [
             "headers": ["span"],
         },
         {
+            "name": "__cpp_lib_span_at",
+            "values": {"c++26": 202311},  # P2821R3 span.at()
+            "headers": ["span"],
+        },
+        {
             "name": "__cpp_lib_span_initializer_list",
             "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_spanstream",
@@ -1264,7 +1265,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_variant",
-            "values": {"c++17": 202102},
+            "values": {
+                "c++17": 202102,  # std::visit for classes derived from std::variant
+                # "c++20": 202106,  # Fully constexpr std::variant
+                # "c++26": 202306,  # Member visit (implemented)
+            },
             "headers": ["variant"],
         },
         {

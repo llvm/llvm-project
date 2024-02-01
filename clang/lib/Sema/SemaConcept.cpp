@@ -612,8 +612,12 @@ bool Sema::SetupConstraintScope(
 
     // If this is a member function, make sure we get the parameters that
     // reference the original primary template.
-    if (const auto *FromMemTempl =
-            PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
+    // We walk up the instantiated template chain so that nested lambdas get
+    // handled properly.
+    for (FunctionTemplateDecl *FromMemTempl =
+             PrimaryTemplate->getInstantiatedFromMemberTemplate();
+         FromMemTempl;
+         FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate()) {
       if (addInstantiatedParametersToScope(FD, FromMemTempl->getTemplatedDecl(),
                                            Scope, MLTAL))
         return true;
@@ -771,10 +775,9 @@ namespace {
   };
 } // namespace
 
-static const Expr *
-SubstituteConstraintExpression(Sema &S,
-                               const Sema::TemplateCompareNewDeclInfo &DeclInfo,
-                               const Expr *ConstrExpr) {
+static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
+    Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
+    const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
       /*Innermost=*/nullptr,
@@ -794,11 +797,32 @@ SubstituteConstraintExpression(Sema &S,
   if (Inst.isInvalid())
     return nullptr;
 
+  // Set up a dummy 'instantiation' scope in the case of reference to function
+  // parameters that the surrounding function hasn't been instantiated yet. Note
+  // this may happen while we're comparing two templates' constraint
+  // equivalence.
+  LocalInstantiationScope ScopeForParameters(S);
+  if (auto *FD = llvm::dyn_cast<FunctionDecl>(DeclInfo.getDecl()))
+    for (auto *PVD : FD->parameters())
+      ScopeForParameters.InstantiatedLocal(PVD, PVD);
+
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
-  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext()))
+
+  // See TreeTransform::RebuildTemplateSpecializationType. A context scope is
+  // essential for having an injected class as the canonical type for a template
+  // specialization type at the rebuilding stage. This guarantees that, for
+  // out-of-line definitions, injected class name types and their equivalent
+  // template specializations can be profiled to the same value, which makes it
+  // possible that e.g. constraints involving C<Class<T>> and C<Class> are
+  // perceived identical.
+  std::optional<Sema::ContextRAII> ContextScope;
+  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext())) {
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
-  ExprResult SubstConstr =
-      S.SubstConstraintExpr(const_cast<clang::Expr *>(ConstrExpr), MLTAL);
+    ContextScope.emplace(S, const_cast<DeclContext *>(cast<DeclContext>(RD)),
+                         /*NewThisContext=*/false);
+  }
+  ExprResult SubstConstr = S.SubstConstraintExprWithoutSatisfaction(
+      const_cast<clang::Expr *>(ConstrExpr), MLTAL);
   if (SFINAE.hasErrorOccurred() || !SubstConstr.isUsable())
     return nullptr;
   return SubstConstr.get();
@@ -814,12 +838,14 @@ bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
   if (Old && !New.isInvalid() && !New.ContainsDecl(Old) &&
       Old->getLexicalDeclContext() != New.getLexicalDeclContext()) {
     if (const Expr *SubstConstr =
-            SubstituteConstraintExpression(*this, Old, OldConstr))
+            SubstituteConstraintExpressionWithoutSatisfaction(*this, Old,
+                                                              OldConstr))
       OldConstr = SubstConstr;
     else
       return false;
     if (const Expr *SubstConstr =
-            SubstituteConstraintExpression(*this, New, NewConstr))
+            SubstituteConstraintExpressionWithoutSatisfaction(*this, New,
+                                                              NewConstr))
       NewConstr = SubstConstr;
     else
       return false;

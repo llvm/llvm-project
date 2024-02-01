@@ -58,18 +58,19 @@ namespace LLVM {
 //===----------------------------------------------------------------------===//
 
 // Batch-define trivial types.
-#define DEFINE_TRIVIAL_LLVM_TYPE(ClassName)                                    \
+#define DEFINE_TRIVIAL_LLVM_TYPE(ClassName, TypeName)                          \
   class ClassName : public Type::TypeBase<ClassName, Type, TypeStorage> {      \
   public:                                                                      \
     using Base::Base;                                                          \
+    static constexpr StringLiteral name = TypeName;                            \
   }
 
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86MMXType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type, "llvm.ppc_fp128");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86MMXType, "llvm.x86_mmx");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
+DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
 
 #undef DEFINE_TRIVIAL_LLVM_TYPE
 
@@ -109,6 +110,8 @@ class LLVMStructType
 public:
   /// Inherit base constructors.
   using Base::Base;
+
+  static constexpr StringLiteral name = "llvm.struct";
 
   /// Checks if the given type can be contained in a structure type.
   static bool isValidElementType(Type type);

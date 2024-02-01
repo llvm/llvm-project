@@ -150,8 +150,8 @@ public:
       pm.addPass(
           createSparseReinterpretMapPass(ReinterpretMapScope::kExceptGeneric));
       pm.addNestedPass<func::FuncOp>(createLowerForeachToSCFPass());
+      pm.addPass(mlir::createLoopInvariantCodeMotionPass());
       if (vectorLength > 0) {
-        pm.addPass(mlir::createLoopInvariantCodeMotionPass());
         pm.addPass(createSparseVectorizationPass(
             vectorLength, enableVLAVectorization, enableSIMDIndex32));
       }
@@ -201,6 +201,12 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
     options.testAnalysisOnly = true;
     options.printConflicts = true;
   }
+  // Since this mini-pipeline may be used in alternative pipelines (viz.
+  // different from the default "sparsifier" pipeline) where unknown ops
+  // are handled by alternative bufferization methods that are downstream
+  // of this mini-pipeline, we allow unknown ops by default (failure to
+  // bufferize is eventually apparent by failing to convert to LLVM IR).
+  options.allowUnknownOps = true;
   return options;
 }
 

@@ -1,4 +1,5 @@
 ; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=-1 -S %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=hotcoldsplit -hotcoldsplit-threshold=-1 -S %s | FileCheck %s
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 ; CHECK: define void @foo

@@ -106,6 +106,7 @@ tools = [
     "mlir-capi-quant-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
+    "mlir-capi-translation-test",
     "mlir-cpu-runner",
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
@@ -131,6 +132,12 @@ if config.enable_rocm_runner:
 if config.enable_cuda_runner:
     tools.extend([add_runtime("mlir_cuda_runtime")])
 
+if config.enable_sycl_runner:
+    tools.extend([add_runtime("mlir_sycl_runtime")])
+
+if config.mlir_run_arm_sve_tests or config.mlir_run_arm_sme_tests:
+    tools.extend([add_runtime("mlir_arm_runner_utils")])
+
 if config.mlir_run_arm_sme_tests:
     config.substitutions.append(
         (
@@ -150,8 +157,9 @@ tools.extend(
         ToolSubst("toyc-ch5", unresolved="ignore"),
         ToolSubst("toyc-ch6", unresolved="ignore"),
         ToolSubst("toyc-ch7", unresolved="ignore"),
-        ToolSubst('transform-opt-ch2', unresolved='ignore'),
-        ToolSubst('transform-opt-ch3', unresolved='ignore'),
+        ToolSubst("transform-opt-ch2", unresolved="ignore"),
+        ToolSubst("transform-opt-ch3", unresolved="ignore"),
+        ToolSubst("transform-opt-ch4", unresolved="ignore"),
         ToolSubst("%mlir_lib_dir", config.mlir_lib_dir, unresolved="ignore"),
         ToolSubst("%mlir_src_dir", config.mlir_src_root, unresolved="ignore"),
     ]

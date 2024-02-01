@@ -389,7 +389,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   will limit code coverage summaries to just the listed directories. If unset,
   coverage reports will include all sources identified by the tooling.
 
- **LLVM_INDIVIDUAL_TEST_COVERAGE**: BOOL
+**LLVM_INDIVIDUAL_TEST_COVERAGE**:BOOL
   Enable individual test case coverage. When set to ON, code coverage data for
   each test case will be generated and stored in a separate directory under the
   config.test_exec_root path. This feature allows code coverage analysis of each
@@ -1118,10 +1118,10 @@ And then changing ``<project dir>/<pass name>/CMakeLists.txt`` to
 When you are done developing your pass, you may wish to integrate it
 into the LLVM source tree. You can achieve it in two easy steps:
 
-#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transform`` directory.
+#. Copying ``<pass name>`` folder into ``<LLVM root>/lib/Transforms`` directory.
 
 #. Adding ``add_subdirectory(<pass name>)`` line into
-   ``<LLVM root>/lib/Transform/CMakeLists.txt``.
+   ``<LLVM root>/lib/Transforms/CMakeLists.txt``.
 
 Compiler/Platform-specific topics
 =================================

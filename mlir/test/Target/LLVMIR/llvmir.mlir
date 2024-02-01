@@ -66,7 +66,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
 // CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
-  %_c0 = llvm.mlir.constant(2: i32) :i32
+  %_c0 = llvm.mlir.constant(2: i32) : i32
   %gepinit = llvm.getelementptr %addr[%_c0] : (!llvm.ptr, i32) -> !llvm.ptr, i32
   llvm.return %gepinit : !llvm.ptr
 }
@@ -100,6 +100,19 @@ llvm.mlir.global internal @dense_float_vector_3d(dense<[[[1.0, 2.0], [3.0, 4.0]]
 
 // CHECK{LITERAL}: @splat_float_vector_3d = internal global [2 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float 4.200000e+01, float 4.200000e+01>], [2 x <2 x float>] [<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float 4.200000e+01, float 4.200000e+01>]]
 llvm.mlir.global internal @splat_float_vector_3d(dense<42.0> : vector<2x2x2xf32>) : !llvm.array<2 x !llvm.array<2 x vector<2xf32>>>
+
+// CHECK{LITERAL}: @dense_resource_tensor_constant = internal constant [5 x float] [float 0x3FCA034080000000, float 0xBFD0466300000000, float 0xBFD75DDF80000000, float 0xBFDE074F40000000, float 0x3FDDD3A1C0000000]
+llvm.mlir.global internal constant @dense_resource_tensor_constant(dense_resource<dense_resource_test_5xf32> : tensor<5xf32>) : !llvm.array<5 x f32>
+
+// CHECK{LITERAL}: @dense_resource_vector_constant = internal constant <5 x float> <float 0x3FCA034080000000, float 0xBFD0466300000000, float 0xBFD75DDF80000000, float 0xBFDE074F40000000, float 0x3FDDD3A1C0000000>
+llvm.mlir.global internal constant @dense_resource_vector_constant(dense_resource<dense_resource_test_5xf32> : vector<5xf32>) : vector<5xf32>
+
+
+// CHECK{LITERAL}: @dense_resource_multidim_tensor_constant = internal constant [1 x [2 x [2 x float]]] [[2 x [2 x float]] [[2 x float] [float 0x3FD6B46A80000000, float 0x3FD6781AC0000000], [2 x float] [float 0xBFB45A2AA0000000, float 0x3FD77A5CA0000000]]]
+llvm.mlir.global internal constant @dense_resource_multidim_tensor_constant(dense_resource<dense_resource_test_2x2xf32> : tensor<1x2x2xf32>) : !llvm.array<1 x !llvm.array<2 x !llvm.array<2 x f32>>>
+
+// CHECK{LITERAL}: @dense_resource_multidim_vector_constant = internal constant [1 x [2 x <2 x float>]] [[2 x <2 x float>] [<2 x float> <float 0x3FD6B46A80000000, float 0x3FD6781AC0000000>, <2 x float> <float 0xBFB45A2AA0000000, float 0x3FD77A5CA0000000>]]
+llvm.mlir.global internal constant @dense_resource_multidim_vector_constant(dense_resource<dense_resource_test_2x2xf32> : vector<1x2x2xf32>) : !llvm.array<1 x !llvm.array<2 x vector<2 x f32>>>
 
 //
 // Linkage attribute.
@@ -1223,19 +1236,23 @@ llvm.func @dereferenceableornullattr_ret_decl() -> (!llvm.ptr {llvm.dereferencea
 llvm.func @inregattr_ret_decl() -> (!llvm.ptr {llvm.inreg})
 
 // CHECK-LABEL: @varargs(...)
-llvm.func @varargs(...)
+llvm.func @varargs(...) -> f32
 
 // CHECK-LABEL: define void @varargs_call
 llvm.func @varargs_call(%arg0 : i32) {
-// CHECK:  call void (...) @varargs(i32 %{{.*}})
-  llvm.call @varargs(%arg0) vararg(!llvm.func<void (...)>) : (i32) -> ()
+// CHECK:  call float (...) @varargs(i32 %{{.*}})
+// CHECK:  call nnan float (...) @varargs(i32 %{{.*}})
+  llvm.call @varargs(%arg0) vararg(!llvm.func<f32 (...)>) : (i32) -> (f32)
+  llvm.call @varargs(%arg0) vararg(!llvm.func<f32 (...)>) {fastmathFlags = #llvm.fastmath<nnan>} : (i32) -> (f32)
   llvm.return
 }
 
 // CHECK-LABEL: define void @indirect_varargs_call(ptr %0, i32 %1)
 llvm.func @indirect_varargs_call(%arg0 : !llvm.ptr, %arg1 : i32) {
-// CHECK:  call void (...) %0(i32 %1)
-  llvm.call %arg0(%arg1) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
+// CHECK:  call float (...) %0(i32 %1)
+// CHECK:  call nnan float (...) %0(i32 %1)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<f32 (...)>) : !llvm.ptr, (i32) -> (f32)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<f32 (...)>) {fastmathFlags = #llvm.fastmath<nnan>} : !llvm.ptr, (i32) -> (f32)
   llvm.return
 }
 
@@ -1573,6 +1590,16 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   llvm.invoke %9(%6, %0) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (ptr, ...)>) : !llvm.ptr, (!llvm.ptr, i32) -> ()
 }
 
+// Resources are kept at end of file. New tests should be added above this.
+{-#
+  dialect_resources: {
+    builtin: {
+      dense_resource_test_5xf32: "0x08000000041A503E183382BEFCEEBABE7A3AF0BE0E9DEE3E",
+      dense_resource_test_2x2xf32: "0x0800000054A3B53ED6C0B33E55D1A2BDE5D2BB3E"
+    }
+  }
+#-}
+
 // -----
 
 llvm.func @foo() -> i8
@@ -1904,6 +1931,17 @@ llvm.func @nontemporal_store_and_load() {
 }
 
 // CHECK: ![[NODE]] = !{i32 1}
+
+// -----
+
+// Check that invariantLoad attribute is exported as metadata node.
+llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: !invariant.load ![[NODE:[0-9]+]]
+  %1 = llvm.load %ptr invariant : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
 
 // -----
 
@@ -2298,6 +2336,43 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 }
 
 // CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }
+
+// -----
+
+//
+// arm_streaming_compatible attribute.
+//
+
+// CHECK-LABEL: @streaming_compatible_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_compatible" }
+
+// -----
+
+// CHECK-LABEL: @new_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @new_za_func() attributes {arm_new_za} {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_pstate_za_new" }
+
+// CHECK-LABEL: @shared_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @shared_za_func() attributes {arm_shared_za } {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_pstate_za_shared" }
+
+// CHECK-LABEL: @preserves_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @preserves_za_func() attributes {arm_preserves_za} {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_pstate_za_preserved" }
 
 // -----
 

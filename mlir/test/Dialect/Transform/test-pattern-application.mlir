@@ -36,6 +36,7 @@ func.func @replacement_op_not_found() {
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  // expected-note @below {{replacement is required because this handle must be updated}}
   %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{tracking listener failed to find replacement op during application of this transform op}}
   // expected-note @below {{ran out of suitable replacement values}}
@@ -44,7 +45,6 @@ transform.sequence failures(propagate) {
   } : !transform.any_op
   // %1 must be used in some way. If no replacement payload op could be found,
   // an error is thrown only if the handle is not dead.
-  // expected-note @below {{replacement is required because alive handle(s) exist (first use in this op as operand number 0)}}
   transform.annotate %1 "annotated" : !transform.any_op
 }
 
@@ -129,12 +129,12 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = transform.structured.match ops{["test.erase_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.test_print_remark_at_operand %1, "matched op" : !transform.any_op
+  transform.debug.emit_remark_at %1, "matched op" : !transform.any_op
   transform.apply_patterns to %0 {
     transform.apply_patterns.transform.test_patterns
   } : !transform.any_op
   // No marker should be printed.
-  transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+  transform.debug.emit_remark_at %1, "op was deleted" : !transform.any_op
 }
 
 // -----
@@ -164,10 +164,10 @@ module {
     ^bb1(%arg1: !transform.any_op):
       %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
       %1 = transform.structured.match ops{["test.erase_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      transform.test_print_remark_at_operand %1, "matched op" : !transform.any_op
+      transform.debug.emit_remark_at %1, "matched op" : !transform.any_op
       include @foo failures(propagate) (%0) : (!transform.any_op) -> ()
       // No marker should be printed.
-      transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+      transform.debug.emit_remark_at %1, "op was deleted" : !transform.any_op
     }
   }
 }
@@ -179,7 +179,6 @@ module {
 //       CHECK:   return %[[c5]]
 func.func @canonicalization(%t: tensor<5xf32>) -> index {
   %c0 = arith.constant 0 : index
-  // expected-remark @below {{op was replaced}}
   %dim = tensor.dim %t, %c0 : tensor<5xf32>
   return %dim : index
 }
@@ -191,7 +190,6 @@ transform.sequence failures(propagate) {
   transform.apply_patterns to %1 {
     transform.apply_patterns.canonicalization
   } : !transform.any_op
-  transform.test_print_remark_at_operand %0, "op was replaced" : !transform.any_op
 }
 
 // -----
@@ -362,4 +360,32 @@ transform.sequence failures(propagate) {
   } {illegal_ops = ["test.foo"],
      legal_ops = ["func.func", "func.return", "test.new_op"]}
       : !transform.any_op
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+func.func @replacement_op_not_found() {
+  // No op replacement can be found, but there are no handles that must be
+  // updated. No error should be reported.
+  "test.container"() ({
+    %0 = "test.foo"() {replace_with_new_op = "test.bar"} : () -> (i32)
+  }) : () -> ()
+  return
+}
+
+transform.named_sequence @patterns(%container: !transform.any_op {transform.readonly}) {
+  transform.apply_patterns to %container {
+    transform.apply_patterns.transform.test_patterns
+  } : !transform.any_op
+  transform.yield
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["test.foo"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.annotate %1 "annotated" : !transform.any_op
+  transform.include @patterns failures(propagate) (%0) : (!transform.any_op) -> ()
+}
 }

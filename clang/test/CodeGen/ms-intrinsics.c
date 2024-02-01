@@ -156,7 +156,7 @@ unsigned char test_BitScanForward(unsigned long *Index, unsigned long Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i32, ptr %Index, {{i64|i32}} 1
+// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr %Index, {{i64|i32}} 4
 // CHECK:   [[INDEX:%[0-9]+]] = tail call i32 @llvm.cttz.i32(i32 %Mask, i1 true)
 // CHECK:   store i32 [[INDEX]], ptr [[IDXGEP]], align 4
 // CHECK:   br label %[[END_LABEL]]
@@ -171,7 +171,7 @@ unsigned char test_BitScanReverse(unsigned long *Index, unsigned long Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i32, ptr %Index, {{i64|i32}} 1
+// CHECK:   [[IDXGEP:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr %Index, {{i64|i32}} 4
 // CHECK:   [[REVINDEX:%[0-9]+]] = tail call i32 @llvm.ctlz.i32(i32 %Mask, i1 true)
 // CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[REVINDEX]], 31
 // CHECK:   store i32 [[INDEX]], ptr [[IDXGEP]], align 4
@@ -437,18 +437,18 @@ unsigned char test_InterlockedCompareExchange128(
                                         ++ExchangeLow, ++ComparandResult);
 }
 // CHECK-64: define{{.*}}i8 @test_InterlockedCompareExchange128(ptr{{[a-z_ ]*}}%Destination, i64{{[a-z_ ]*}}%ExchangeHigh, i64{{[a-z_ ]*}}%ExchangeLow, ptr{{[a-z_ ]*}}%ComparandResult){{.*}}{
-// CHECK-64: %incdec.ptr = getelementptr inbounds i64, ptr %Destination, i64 1
+// CHECK-64: %incdec.ptr = getelementptr inbounds i8, ptr %Destination, i64 8
 // CHECK-64: %inc = add nsw i64 %ExchangeHigh, 1
 // CHECK-64: %inc1 = add nsw i64 %ExchangeLow, 1
-// CHECK-64: %incdec.ptr2 = getelementptr inbounds i64, ptr %ComparandResult, i64 1
+// CHECK-64: %incdec.ptr2 = getelementptr inbounds i8, ptr %ComparandResult, i64 8
 // CHECK-64: [[EH:%[0-9]+]] = zext i64 %inc to i128
 // CHECK-64: [[EL:%[0-9]+]] = zext i64 %inc1 to i128
 // CHECK-64: [[EHS:%[0-9]+]] = shl nuw i128 [[EH]], 64
 // CHECK-64: [[EXP:%[0-9]+]] = or disjoint i128 [[EHS]], [[EL]]
-// CHECK-64: [[ORG:%[0-9]+]] = load i128, ptr %incdec.ptr2, align 16
+// CHECK-64: [[ORG:%[0-9]+]] = load i128, ptr %incdec.ptr2, align 8
 // CHECK-64: [[RES:%[0-9]+]] = cmpxchg volatile ptr %incdec.ptr, i128 [[ORG]], i128 [[EXP]] seq_cst seq_cst, align 16
 // CHECK-64: [[OLD:%[0-9]+]] = extractvalue { i128, i1 } [[RES]], 0
-// CHECK-64: store i128 [[OLD]], ptr %incdec.ptr2, align 16
+// CHECK-64: store i128 [[OLD]], ptr %incdec.ptr2, align 8
 // CHECK-64: [[SUC1:%[0-9]+]] = extractvalue { i128, i1 } [[RES]], 1
 // CHECK-64: [[SUC8:%[0-9]+]] = zext i1 [[SUC1]] to i8
 // CHECK-64: ret i8 [[SUC8]]
@@ -486,7 +486,7 @@ short test_InterlockedIncrement16(short volatile *Addend) {
   return _InterlockedIncrement16(++Addend);
 }
 // CHECK: define{{.*}}i16 @test_InterlockedIncrement16(ptr{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: %incdec.ptr = getelementptr inbounds i16, ptr %Addend, {{i64|i32}} 1
+// CHECK: %incdec.ptr = getelementptr inbounds i8, ptr %Addend, {{i64|i32}} 2
 // CHECK: [[TMP:%[0-9]+]] = atomicrmw add ptr %incdec.ptr, i16 1 seq_cst, align 2
 // CHECK: [[RESULT:%[0-9]+]] = add i16 [[TMP]], 1
 // CHECK: ret i16 [[RESULT]]
@@ -496,7 +496,7 @@ long test_InterlockedIncrement(long volatile *Addend) {
   return _InterlockedIncrement(++Addend);
 }
 // CHECK: define{{.*}}i32 @test_InterlockedIncrement(ptr{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: %incdec.ptr = getelementptr inbounds i32, ptr %Addend, {{i64|i32}} 1
+// CHECK: %incdec.ptr = getelementptr inbounds i8, ptr %Addend, {{i64|i32}} 4
 // CHECK: [[TMP:%[0-9]+]] = atomicrmw add ptr %incdec.ptr, i32 1 seq_cst, align 4
 // CHECK: [[RESULT:%[0-9]+]] = add i32 [[TMP]], 1
 // CHECK: ret i32 [[RESULT]]

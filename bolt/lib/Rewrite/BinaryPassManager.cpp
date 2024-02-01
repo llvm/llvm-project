@@ -430,6 +430,13 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(
       std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
 
+  // This is the second run of the SplitFunctions pass required by certain
+  // splitting strategies (e.g. cdsplit). Running the SplitFunctions pass again
+  // after ReorderFunctions allows the finalized function order to be utilized
+  // to make more sophisticated splitting decisions, like hot-warm-cold
+  // splitting.
+  Manager.registerPass(std::make_unique<SplitFunctions>(PrintSplit));
+
   // Print final dyno stats right while CFG and instruction analysis are intact.
   Manager.registerPass(
       std::make_unique<DynoStatsPrintPass>(

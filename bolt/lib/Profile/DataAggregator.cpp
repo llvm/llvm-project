@@ -524,7 +524,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       ErrorCallback(ReturnCode, ErrBuf);
   };
 
-  if (opts::LinuxKernelMode) {
+  if (BC.IsLinuxKernel) {
     // Current MMap parsing logic does not work with linux kernel.
     // MMap entries for linux kernel uses PERF_RECORD_MMAP
     // format instead of typical PERF_RECORD_MMAP2 format.
@@ -1056,7 +1056,7 @@ ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
   if (std::error_code EC = PIDRes.getError())
     return EC;
   auto MMapInfoIter = BinaryMMapInfo.find(*PIDRes);
-  if (!opts::LinuxKernelMode && MMapInfoIter == BinaryMMapInfo.end()) {
+  if (!BC->IsLinuxKernel && MMapInfoIter == BinaryMMapInfo.end()) {
     consumeRestOfLine();
     return make_error_code(errc::no_such_process);
   }
@@ -1277,7 +1277,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
-  if (opts::LinuxKernelMode) {
+  if (BC->IsLinuxKernel) {
     opts::HeatmapMaxAddress = 0xffffffffffffffff;
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
@@ -1915,7 +1915,7 @@ DataAggregator::parseMMapEvent() {
   //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) .*]: .* <file_name>
 
   StringRef FileName = Line.rsplit(FieldSeparator).second;
-  if (FileName.startswith("//") || FileName.startswith("[")) {
+  if (FileName.starts_with("//") || FileName.starts_with("[")) {
     consumeRestOfLine();
     return std::make_pair(StringRef(), ParsedInfo);
   }
@@ -2168,7 +2168,7 @@ DataAggregator::getFileNameForBuildID(StringRef FileBuildID) {
       continue;
     }
 
-    if (IDPair->second.startswith(FileBuildID)) {
+    if (IDPair->second.starts_with(FileBuildID)) {
       FileName = sys::path::filename(IDPair->first);
       break;
     }

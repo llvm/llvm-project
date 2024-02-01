@@ -17,6 +17,7 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
+#include "src/__support/CPP/type_traits.h" // cpp::always_false
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_generic.h"
 
@@ -105,7 +106,7 @@ template <size_t Size> struct Bcmp {
         if (auto value = Bcmp<BlockSize>::block(p1 + offset, p2 + offset))
           return value;
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
     return BcmpReturnType::ZERO();
   }
@@ -151,7 +152,7 @@ template <size_t Size> struct Bcmp {
       uint32x2_t abnocpdq_reduced = vqmovn_u64(abnocpdq);
       return vmaxv_u32(abnocpdq_reduced);
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
     return BcmpReturnType::ZERO();
   }

@@ -584,3 +584,119 @@ class MemoryQueue<ProcResourceKind PR> {
 
 class LoadQueue<ProcResourceKind LDQueue> : MemoryQueue<LDQueue>;
 class StoreQueue<ProcResourceKind STQueue> : MemoryQueue<STQueue>;
+
+// The target instruction that FusionPredicate will be evaluated on.
+class FusionTarget;
+def first_fusion_target : FusionTarget;
+def second_fusion_target : FusionTarget;
+def both_fusion_target : FusionTarget;
+
+// Base class of FusionPredicate, etc. The avaliable variables are:
+// * const TargetInstrInfo &TII
+// * const TargetSubtargetInfo &STI
+// * const MachineRegisterInfo &MRI
+// * const MachineInstr *FirstMI
+// * const MachineInstr &SecondMI
+class FusionPredicate<FusionTarget target> {
+  FusionTarget Target = target;
+}
+class FirstFusionPredicate: FusionPredicate<first_fusion_target>;
+class SecondFusionPredicate: FusionPredicate<second_fusion_target>;
+class BothFusionPredicate: FusionPredicate<both_fusion_target>;
+
+// FusionPredicate with raw code predicate.
+class FusionPredicateWithCode<code pred> : FusionPredicate<both_fusion_target> {
+  code Predicate = pred;
+}
+
+// FusionPredicate with MCInstPredicate.
+class FusionPredicateWithMCInstPredicate<FusionTarget target, MCInstPredicate pred>
+  : FusionPredicate<target> {
+  MCInstPredicate Predicate = pred;
+}
+class FirstFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
+  : FusionPredicateWithMCInstPredicate<first_fusion_target, pred>;
+class SecondFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
+  : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
+// The pred will be applied on both firstMI and secondMI.
+class BothFusionPredicateWithMCInstPredicate<MCInstPredicate pred>
+  : FusionPredicateWithMCInstPredicate<second_fusion_target, pred>;
+
+// Tie firstOpIdx and secondOpIdx. The operand of `FirstMI` at position
+// `firstOpIdx` should be the same as the operand of `SecondMI` at position
+// `secondOpIdx`.
+class TieReg<int firstOpIdx, int secondOpIdx> : BothFusionPredicate {
+  int FirstOpIdx = firstOpIdx;
+  int SecondOpIdx = secondOpIdx;
+}
+
+// A predicate for wildcard. The generated code will be like:
+// ```
+// if (!FirstMI)
+//   return ReturnValue;
+// ```
+class WildcardPred<bit ret> : FirstFusionPredicate {
+  bit ReturnValue = ret;
+}
+def WildcardFalse : WildcardPred<0>;
+def WildcardTrue : WildcardPred<1>;
+
+// Indicates that the destination register of `FirstMI` should have one use if
+// it is a virtual register.
+class OneUsePred : FirstFusionPredicate;
+def OneUse : OneUsePred;
+
+// Handled by MacroFusionPredicatorEmitter backend.
+// The generated predicator will be like:
+// ```
+// bool isNAME(const TargetInstrInfo &TII,
+//             const TargetSubtargetInfo &STI,
+//             const MachineInstr *FirstMI,
+//             const MachineInstr &SecondMI) {
+//   auto &MRI = SecondMI.getMF()->getRegInfo();
+//   /* Predicates */
+//   return true;
+// }
+// ```
+class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
+  : SubtargetFeature<name, fieldName, "true", desc> {
+  list<FusionPredicate> Predicates = predicates;
+}
+
+// The generated predicator will be like:
+// ```
+// bool isNAME(const TargetInstrInfo &TII,
+//             const TargetSubtargetInfo &STI,
+//             const MachineInstr *FirstMI,
+//             const MachineInstr &SecondMI) {
+//   auto &MRI = SecondMI.getMF()->getRegInfo();
+//   /* Prolog */
+//   /* Predicate for `SecondMI` */
+//   /* Wildcard */
+//   /* Predicate for `FirstMI` */
+//   /* Check One Use */
+//   /* Tie registers */
+//   /* Epilog */
+//   return true;
+// }
+// ```
+class SimpleFusion<string name, string fieldName, string desc,
+                   MCInstPredicate firstPred, MCInstPredicate secondPred,
+                   list<FusionPredicate> prolog = [],
+                   list<FusionPredicate> epilog = []>
+  : Fusion<name, fieldName, desc,
+           !listconcat(
+              prolog,
+              [
+                SecondFusionPredicateWithMCInstPredicate<secondPred>,
+                WildcardTrue,
+                FirstFusionPredicateWithMCInstPredicate<firstPred>,
+                SecondFusionPredicateWithMCInstPredicate<
+                  CheckAny<[
+                    CheckIsVRegOperand<0>,
+                    CheckSameRegOperand<0, 1>
+                  ]>>,
+                OneUse,
+                TieReg<0, 1>,
+              ],
+              epilog)>;

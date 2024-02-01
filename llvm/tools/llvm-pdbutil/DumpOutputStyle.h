@@ -17,8 +17,6 @@
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 
-#include <string>
-
 namespace llvm {
 namespace object {
 class COFFObjectFile;

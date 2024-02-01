@@ -429,6 +429,29 @@ def DISubprogramFlags : I32BitEnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// IntegerOverflowFlags
+//===----------------------------------------------------------------------===//
+
+def IOFnone : I32BitEnumAttrCaseNone<"none">;
+def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
+def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+
+def IntegerOverflowFlags : I32BitEnumAttr<
+    "IntegerOverflowFlags",
+    "LLVM integer overflow flags",
+    [IOFnone, IOFnsw, IOFnuw]> {
+  let separator = ", ";
+  let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def LLVM_IntegerOverflowFlagsAttr :
+    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // FastmathFlags
 //===----------------------------------------------------------------------===//
 
@@ -587,7 +610,6 @@ def Linkage : DialectAttr<
           "::mlir::LLVM::LinkageAttr::get($_builder.getContext(), $0)";
 }
 
-
 //===----------------------------------------------------------------------===//
 // Comdat
 //===----------------------------------------------------------------------===//
@@ -662,6 +684,25 @@ def ModRefInfoEnum : LLVM_EnumAttr<
     "LLVM ModRefInfo",
     [ModRefInfoNoModRef, ModRefInfoRef, ModRefInfoMod, ModRefInfoModRef]> {
   let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// FramePointerKind
+//===----------------------------------------------------------------------===//
+
+def FramePointerKindNone
+    : LLVM_EnumAttrCase<"None", "none", "None", 0>;
+def FramePointerKindNonLeaf
+    : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
+def FramePointerKindAll
+    : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+
+def FramePointerKindEnum : LLVM_EnumAttr<
+    "FramePointerKind",
+    "::llvm::FramePointerKind",
+    "LLVM FramePointerKind",
+    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+  let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 
 #endif // LLVMIR_ENUMS

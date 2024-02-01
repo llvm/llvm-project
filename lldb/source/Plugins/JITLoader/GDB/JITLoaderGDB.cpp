@@ -35,6 +35,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(JITLoaderGDB)
 
+namespace {
 // Debug Interface Structures
 enum jit_actions_t { JIT_NOACTION = 0, JIT_REGISTER_FN, JIT_UNREGISTER_FN };
 
@@ -52,7 +53,6 @@ template <typename ptr_t> struct jit_descriptor {
   ptr_t first_entry;    // pointer
 };
 
-namespace {
 enum EnableJITLoaderGDB {
   eEnableJITLoaderGDBDefault,
   eEnableJITLoaderGDBOn,

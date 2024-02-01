@@ -390,7 +390,7 @@ define <2 x i32> @constant_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; AVX512VBMI2:       # %bb.0:
 ; AVX512VBMI2-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512VBMI2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [4,5,4,5]
+; AVX512VBMI2-NEXT:    vmovq {{.*#+}} xmm2 = [4,5,0,0]
 ; AVX512VBMI2-NEXT:    vpshldvd %zmm2, %zmm1, %zmm0
 ; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    vzeroupper

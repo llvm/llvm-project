@@ -43,7 +43,7 @@ typedef unsigned long long uint64_t;
 // CHECK-NEXT:    br i1 [[OR_COND_I]], label [[IF_THEN_I:%.*]], label [[CLEANUP_I]]
 // CHECK:       if.then.i:
 // CHECK-NEXT:    [[MUL_I:%.*]] = shl i64 [[__R_0_I]], 3
-// CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[TMP0]] to i64
+// CHECK-NEXT:    [[CONV5_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // CHECK-NEXT:    [[SUB_I:%.*]] = add i64 [[ADD_I]], [[CONV5_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I]], i64 1
@@ -75,7 +75,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base8(const char *p) {
 // CHECK-NEXT:    br i1 [[OR_COND_I]], label [[IF_THEN_I:%.*]], label [[CLEANUP_I]]
 // CHECK:       if.then.i:
 // CHECK-NEXT:    [[MUL_I:%.*]] = mul i64 [[__R_0_I]], 10
-// CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[TMP0]] to i64
+// CHECK-NEXT:    [[CONV5_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD_I:%.*]] = add i64 [[MUL_I]], -48
 // CHECK-NEXT:    [[SUB_I:%.*]] = add i64 [[ADD_I]], [[CONV5_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I]], i64 1
@@ -116,7 +116,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base10(const char *p) {
 // CHECK:       if.end31.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I]] ], [ -87, [[IF_ELSE_I]] ], [ -55, [[IF_ELSE17_I]] ]
 // CHECK-NEXT:    [[MUL24_I:%.*]] = shl i64 [[__R_0_I]], 4
-// CHECK-NEXT:    [[CONV25_I:%.*]] = sext i8 [[TMP0]] to i64
+// CHECK-NEXT:    [[CONV25_I:%.*]] = zext nneg i8 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD26_I:%.*]] = add i64 [[MUL24_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I:%.*]] = add i64 [[ADD26_I]], [[CONV25_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I]], i64 1
@@ -169,7 +169,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK:       if.end31.i.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I]] ], [ -87, [[IF_ELSE_I_I]] ], [ -55, [[IF_ELSE17_I_I]] ]
 // CHECK-NEXT:    [[MUL24_I_I:%.*]] = shl i64 [[__R_0_I32_I]], 4
-// CHECK-NEXT:    [[CONV25_I_I:%.*]] = sext i8 [[TMP2]] to i64
+// CHECK-NEXT:    [[CONV25_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD26_I_I:%.*]] = add i64 [[MUL24_I_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I_I:%.*]] = add i64 [[ADD26_I_I]], [[CONV25_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I40_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I31_I]], i64 1
@@ -191,7 +191,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    br i1 [[OR_COND_I_I]], label [[IF_THEN_I_I:%.*]], label [[CLEANUP_I_I]]
 // CHECK:       if.then.i.i:
 // CHECK-NEXT:    [[MUL_I_I:%.*]] = shl i64 [[__R_0_I_I]], 3
-// CHECK-NEXT:    [[CONV5_I_I:%.*]] = sext i8 [[TMP6]] to i64
+// CHECK-NEXT:    [[CONV5_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // CHECK-NEXT:    [[ADD_I_I:%.*]] = add i64 [[MUL_I_I]], -48
 // CHECK-NEXT:    [[SUB_I_I:%.*]] = add i64 [[ADD_I_I]], [[CONV5_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I_I]], i64 1
@@ -212,7 +212,7 @@ extern "C" __device__ uint64_t test___make_mantissa_base16(const char *p) {
 // CHECK-NEXT:    br i1 [[OR_COND_I19_I]], label [[IF_THEN_I24_I:%.*]], label [[CLEANUP_I20_I]]
 // CHECK:       if.then.i24.i:
 // CHECK-NEXT:    [[MUL_I25_I:%.*]] = mul i64 [[__R_0_I16_I]], 10
-// CHECK-NEXT:    [[CONV5_I26_I:%.*]] = sext i8 [[TMP8]] to i64
+// CHECK-NEXT:    [[CONV5_I26_I:%.*]] = zext nneg i8 [[TMP8]] to i64
 // CHECK-NEXT:    [[ADD_I27_I:%.*]] = add i64 [[MUL_I25_I]], -48
 // CHECK-NEXT:    [[SUB_I28_I:%.*]] = add i64 [[ADD_I27_I]], [[CONV5_I26_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I29_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I15_I]], i64 1
@@ -2395,7 +2395,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK:       if.end31.i.i.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
 // CHECK-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I32_I_I]], 4
-// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = sext i8 [[TMP2]] to i64
+// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I40_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
@@ -2417,7 +2417,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[CLEANUP_I_I_I]]
 // CHECK:       if.then.i.i.i:
 // CHECK-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = sext i8 [[TMP6]] to i64
+// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // CHECK-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // CHECK-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I_I_I]], i64 1
@@ -2438,7 +2438,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[IF_THEN_I24_I_I:%.*]], label [[CLEANUP_I20_I_I]]
 // CHECK:       if.then.i24.i.i:
 // CHECK-NEXT:    [[MUL_I25_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = sext i8 [[TMP8]] to i64
+// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
 // CHECK-NEXT:    [[ADD_I27_I_I:%.*]] = add i64 [[MUL_I25_I_I]], -48
 // CHECK-NEXT:    [[SUB_I28_I_I:%.*]] = add i64 [[ADD_I27_I_I]], [[CONV5_I26_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I29_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I15_I_I]], i64 1
@@ -2451,7 +2451,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ], [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
 // CHECK-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // CHECK-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
-// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or i32 [[BF_VALUE_I]], 2143289344
+// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32 [[BF_SET9_I]] to float
 // CHECK-NEXT:    ret float [[TMP10]]
 //
@@ -2494,7 +2494,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK:       if.end31.i.i.i:
 // CHECK-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
 // CHECK-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I32_I_I]], 4
-// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = sext i8 [[TMP2]] to i64
+// CHECK-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // CHECK-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I40_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
@@ -2516,7 +2516,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[CLEANUP_I_I_I]]
 // CHECK:       if.then.i.i.i:
 // CHECK-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = sext i8 [[TMP6]] to i64
+// CHECK-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // CHECK-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
 // CHECK-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I_I_I]], i64 1
@@ -2537,7 +2537,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[IF_THEN_I24_I_I:%.*]], label [[CLEANUP_I20_I_I]]
 // CHECK:       if.then.i24.i.i:
 // CHECK-NEXT:    [[MUL_I25_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = sext i8 [[TMP8]] to i64
+// CHECK-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
 // CHECK-NEXT:    [[ADD_I27_I_I:%.*]] = add i64 [[MUL_I25_I_I]], -48
 // CHECK-NEXT:    [[SUB_I28_I_I:%.*]] = add i64 [[ADD_I27_I_I]], [[CONV5_I26_I_I]]
 // CHECK-NEXT:    [[INCDEC_PTR_I29_I_I:%.*]] = getelementptr inbounds i8, ptr [[__TAGP_ADDR_0_I15_I_I]], i64 1
@@ -2549,7 +2549,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK:       _ZL3nanPKc.exit:
 // CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ], [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
 // CHECK-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
-// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or i64 [[BF_VALUE_I]], 9221120237041090560
+// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[BF_SET9_I]] to double
 // CHECK-NEXT:    ret double [[TMP10]]
 //
@@ -2829,7 +2829,7 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA16]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds float, ptr [[__A_ADDR_0_I3]], i64 1
+// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 4
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // DEFAULT:       _ZL5normfiPKf.exit:
@@ -2849,7 +2849,7 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA16]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract float [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract float [[__R_0_I4]], [[MUL_I]]
-// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds float, ptr [[__A_ADDR_0_I3]], i64 1
+// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 4
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // FINITEONLY:       _ZL5normfiPKf.exit:
@@ -2869,7 +2869,7 @@ extern "C" __device__ double test_normcdfinv(double x) {
 // APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA16]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds float, ptr [[__A_ADDR_0_I3]], i64 1
+// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 4
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP20:![0-9]+]]
 // APPROX:       _ZL5normfiPKf.exit:
@@ -2893,7 +2893,7 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA18]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds double, ptr [[__A_ADDR_0_I3]], i64 1
+// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 8
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // DEFAULT:       _ZL4normiPKd.exit:
@@ -2913,7 +2913,7 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA18]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract double [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract double [[__R_0_I4]], [[MUL_I]]
-// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds double, ptr [[__A_ADDR_0_I3]], i64 1
+// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 8
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // FINITEONLY:       _ZL4normiPKd.exit:
@@ -2933,7 +2933,7 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 // APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA18]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds double, ptr [[__A_ADDR_0_I3]], i64 1
+// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 8
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // APPROX:       _ZL4normiPKd.exit:
@@ -3253,7 +3253,7 @@ extern "C" __device__ double test_rint(double x) {
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA16]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds float, ptr [[__A_ADDR_0_I3]], i64 1
+// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 4
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // DEFAULT:       _ZL6rnormfiPKf.exit:
@@ -3273,7 +3273,7 @@ extern "C" __device__ double test_rint(double x) {
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA16]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract float [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract float [[__R_0_I4]], [[MUL_I]]
-// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds float, ptr [[__A_ADDR_0_I3]], i64 1
+// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 4
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // FINITEONLY:       _ZL6rnormfiPKf.exit:
@@ -3293,7 +3293,7 @@ extern "C" __device__ double test_rint(double x) {
 // APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA16]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds float, ptr [[__A_ADDR_0_I3]], i64 1
+// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 4
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP22:![0-9]+]]
 // APPROX:       _ZL6rnormfiPKf.exit:
@@ -3317,7 +3317,7 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA18]]
 // DEFAULT-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // DEFAULT-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds double, ptr [[__A_ADDR_0_I3]], i64 1
+// DEFAULT-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 8
 // DEFAULT-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // DEFAULT-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // DEFAULT:       _ZL5rnormiPKd.exit:
@@ -3337,7 +3337,7 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA18]]
 // FINITEONLY-NEXT:    [[MUL_I:%.*]] = fmul nnan ninf contract double [[TMP0]], [[TMP0]]
 // FINITEONLY-NEXT:    [[ADD_I]] = fadd nnan ninf contract double [[__R_0_I4]], [[MUL_I]]
-// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds double, ptr [[__A_ADDR_0_I3]], i64 1
+// FINITEONLY-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 8
 // FINITEONLY-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // FINITEONLY-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // FINITEONLY:       _ZL5rnormiPKd.exit:
@@ -3357,7 +3357,7 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 // APPROX-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA18]]
 // APPROX-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
 // APPROX-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds double, ptr [[__A_ADDR_0_I3]], i64 1
+// APPROX-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[__A_ADDR_0_I3]], i64 8
 // APPROX-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // APPROX-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // APPROX:       _ZL5rnormiPKd.exit:

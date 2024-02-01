@@ -1196,6 +1196,93 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   PP.AnnotateCachedTokens(Tok);
 }
 
+SourceLocation Parser::ParsePackIndexingType(DeclSpec &DS) {
+  assert(Tok.isOneOf(tok::annot_pack_indexing_type, tok::identifier) &&
+         "Expected an identifier");
+
+  TypeResult Type;
+  SourceLocation StartLoc;
+  SourceLocation EllipsisLoc;
+  const char *PrevSpec;
+  unsigned DiagID;
+  const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
+
+  if (Tok.is(tok::annot_pack_indexing_type)) {
+    StartLoc = Tok.getLocation();
+    SourceLocation EndLoc;
+    Type = getTypeAnnotation(Tok);
+    EndLoc = Tok.getAnnotationEndLoc();
+    // Unfortunately, we don't know the LParen source location as the annotated
+    // token doesn't have it.
+    DS.setTypeArgumentRange(SourceRange(SourceLocation(), EndLoc));
+    ConsumeAnnotationToken();
+    if (Type.isInvalid()) {
+      DS.SetTypeSpecError();
+      return EndLoc;
+    }
+    DS.SetTypeSpecType(DeclSpec::TST_typename_pack_indexing, StartLoc, PrevSpec,
+                       DiagID, Type, Policy);
+    return EndLoc;
+  }
+  if (!NextToken().is(tok::ellipsis) ||
+      !GetLookAheadToken(2).is(tok::l_square)) {
+    DS.SetTypeSpecError();
+    return Tok.getEndLoc();
+  }
+
+  ParsedType Ty = Actions.getTypeName(*Tok.getIdentifierInfo(),
+                                      Tok.getLocation(), getCurScope());
+  if (!Ty) {
+    DS.SetTypeSpecError();
+    return Tok.getEndLoc();
+  }
+  Type = Ty;
+
+  StartLoc = ConsumeToken();
+  EllipsisLoc = ConsumeToken();
+  BalancedDelimiterTracker T(*this, tok::l_square);
+  T.consumeOpen();
+  ExprResult IndexExpr = ParseConstantExpression();
+  T.consumeClose();
+
+  DS.SetRangeStart(StartLoc);
+  DS.SetRangeEnd(T.getCloseLocation());
+
+  if (!IndexExpr.isUsable()) {
+    ASTContext &C = Actions.getASTContext();
+    IndexExpr = IntegerLiteral::Create(C, C.MakeIntValue(0, C.getSizeType()),
+                                       C.getSizeType(), SourceLocation());
+  }
+
+  DS.SetTypeSpecType(DeclSpec::TST_typename, StartLoc, PrevSpec, DiagID, Type,
+                     Policy);
+  DS.SetPackIndexingExpr(EllipsisLoc, IndexExpr.get());
+  return T.getCloseLocation();
+}
+
+void Parser::AnnotateExistingIndexedTypeNamePack(ParsedType T,
+                                                 SourceLocation StartLoc,
+                                                 SourceLocation EndLoc) {
+  // make sure we have a token we can turn into an annotation token
+  if (PP.isBacktrackEnabled()) {
+    PP.RevertCachedTokens(1);
+    if (!T) {
+      // We encountered an error in parsing 'decltype(...)' so lets annotate all
+      // the tokens in the backtracking cache - that we likely had to skip over
+      // to get to a token that allows us to resume parsing, such as a
+      // semi-colon.
+      EndLoc = PP.getLastCachedTokenLocation();
+    }
+  } else
+    PP.EnterToken(Tok, /*IsReinject*/ true);
+
+  Tok.setKind(tok::annot_pack_indexing_type);
+  setTypeAnnotation(Tok, T);
+  Tok.setAnnotationEndLoc(EndLoc);
+  Tok.setLocation(StartLoc);
+  PP.AnnotateCachedTokens(Tok);
+}
+
 DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
   switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
@@ -1290,7 +1377,15 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                               DeclaratorContext::TypeName);
-    return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+    return Actions.ActOnTypeName(DeclaratorInfo);
+  }
+
+  if (Tok.is(tok::annot_pack_indexing_type)) {
+    DeclSpec DS(AttrFactory);
+    ParsePackIndexingType(DS);
+    Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
+                              DeclaratorContext::TypeName);
+    return Actions.ActOnTypeName(DeclaratorInfo);
   }
 
   // Check whether we have a template-id that names a type.
@@ -1385,7 +1480,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
   Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                             DeclaratorContext::TypeName);
-  return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
+  return Actions.ActOnTypeName(DeclaratorInfo);
 }
 
 void Parser::ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs) {
@@ -1890,7 +1985,13 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         if (!SkipUntil(tok::r_paren, StopAtSemi))
           break;
       } else if (Tok.isRegularKeywordAttribute()) {
+        bool TakesArgs = doesKeywordAttributeTakeArgs(Tok.getKind());
         ConsumeToken();
+        if (TakesArgs) {
+          BalancedDelimiterTracker T(*this, tok::l_paren);
+          if (!T.consumeOpen())
+            T.skipToEnd();
+        }
       } else {
         break;
       }
@@ -2356,7 +2457,7 @@ void Parser::HandleMemberFunctionDeclDelays(Declarator &DeclaratorInfo,
   if (!NeedLateParse) {
     // Look ahead to see if there are any default args
     for (unsigned ParamIdx = 0; ParamIdx < FTI.NumParams; ++ParamIdx) {
-      auto Param = cast<ParmVarDecl>(FTI.Params[ParamIdx].Param);
+      const auto *Param = cast<ParmVarDecl>(FTI.Params[ParamIdx].Param);
       if (Param->hasUnparsedDefaultArg()) {
         NeedLateParse = true;
         break;
@@ -2398,7 +2499,7 @@ VirtSpecifiers::Specifier Parser::isCXX11VirtSpecifier(const Token &Tok) const {
   if (!getLangOpts().CPlusPlus || Tok.isNot(tok::identifier))
     return VirtSpecifiers::VS_None;
 
-  IdentifierInfo *II = Tok.getIdentifierInfo();
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
 
   // Initialize the contextual keywords.
   if (!Ident_final) {
@@ -2679,6 +2780,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
                                        ParsedAttributes &AccessAttrs,
                                        const ParsedTemplateInfo &TemplateInfo,
                                        ParsingDeclRAIIObject *TemplateDiags) {
+  assert(getLangOpts().CPlusPlus &&
+         "ParseCXXClassMemberDeclaration should only be called in C++ mode");
   if (Tok.is(tok::at)) {
     if (getLangOpts().ObjC && NextToken().isObjCAtKeyword(tok::objc_defs))
       Diag(Tok, diag::err_at_defs_cxx);
@@ -3828,6 +3931,10 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     // ParseOptionalCXXScopeSpecifier at this point.
     // FIXME: Can we get here with a scope specifier?
     ParseDecltypeSpecifier(DS);
+  } else if (Tok.is(tok::annot_pack_indexing_type)) {
+    // Uses of T...[N] will already have been converted to
+    // annot_pack_indexing_type by ParseOptionalCXXScopeSpecifier at this point.
+    ParsePackIndexingType(DS);
   } else {
     TemplateIdAnnotation *TemplateId = Tok.is(tok::annot_template_id)
                                            ? takeTemplateIdAnnotation(Tok)
@@ -4537,8 +4644,18 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
   if (Tok.isRegularKeywordAttribute()) {
     SourceLocation Loc = Tok.getLocation();
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
-    Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Tok.getKind());
+    ParsedAttr::Form Form = ParsedAttr::Form(Tok.getKind());
+    bool TakesArgs = doesKeywordAttributeTakeArgs(Tok.getKind());
     ConsumeToken();
+    if (TakesArgs) {
+      if (!Tok.is(tok::l_paren))
+        Diag(Tok.getLocation(), diag::err_expected_lparen_after) << AttrName;
+      else
+        ParseAttributeArgsCommon(AttrName, Loc, Attrs, EndLoc,
+                                 /*ScopeName*/ nullptr,
+                                 /*ScopeLoc*/ Loc, Form);
+    } else
+      Attrs.addNew(AttrName, Loc, nullptr, Loc, nullptr, 0, Form);
     return;
   }
 
@@ -4704,11 +4821,13 @@ SourceLocation Parser::SkipCXX11Attributes() {
       T.consumeOpen();
       T.skipToEnd();
       EndLoc = T.getCloseLocation();
-    } else if (Tok.isRegularKeywordAttribute()) {
+    } else if (Tok.isRegularKeywordAttribute() &&
+               !doesKeywordAttributeTakeArgs(Tok.getKind())) {
       EndLoc = Tok.getLocation();
       ConsumeToken();
     } else {
-      assert(Tok.is(tok::kw_alignas) && "not an attribute specifier");
+      assert((Tok.is(tok::kw_alignas) || Tok.isRegularKeywordAttribute()) &&
+             "not an attribute specifier");
       ConsumeToken();
       BalancedDelimiterTracker T(*this, tok::l_paren);
       if (!T.consumeOpen())

@@ -4,9 +4,10 @@
 // RUN:   -lower-vector-mask \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
 // RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
+// RUN:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
+// RUN:   -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
 // RUN:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// RUN:   -allocate-arm-sme-tiles -test-lower-to-llvm | \
+// RUN:   -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=entry -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
@@ -20,12 +21,9 @@ func.func @entry() {
 
   %c123_f32 = arith.constant 123.0 : f32
 
-  %min_elts_s = arith.constant 4 : index
-  %vscale = vector.vscale
-
   // "svl" refers to the Streaming Vector Length and "svl_s" the number of
   // 32-bit elements in a vector of SVL bits.
-  %svl_s = arith.muli %min_elts_s, %vscale : index
+  %svl_s = arm_sme.streaming_vl <word>
 
   %tile_init = bufferization.alloc_tensor(%svl_s, %svl_s) : tensor<?x?xf32>
 

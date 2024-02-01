@@ -715,25 +715,11 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
   }
 }
 
-static bool hasTLSFlag(const MachineOperand &MO) {
-  unsigned Flags = MO.getTargetFlags();
-  if (Flags & PPCII::MO_TLSGD_FLAG || Flags & PPCII::MO_TPREL_FLAG ||
-      Flags & PPCII::MO_TLSLD_FLAG || Flags & PPCII::MO_TLSGDM_FLAG)
-    return true;
-
-  if (Flags == PPCII::MO_TPREL_LO || Flags == PPCII::MO_TPREL_HA ||
-      Flags == PPCII::MO_DTPREL_LO || Flags == PPCII::MO_TLSLD_LO ||
-      Flags == PPCII::MO_TLS)
-    return true;
-
-  return false;
-}
-
 static PPCAsmPrinter::TOCEntryType
 getTOCEntryTypeForMO(const MachineOperand &MO) {
   // Use the target flags to determine if this MO is Thread Local.
   // If we don't do this it comes out as Global.
-  if (hasTLSFlag(MO))
+  if (PPCInstrInfo::hasTLSFlag(MO.getTargetFlags()))
     return PPCAsmPrinter::TOCType_ThreadLocal;
 
   switch (MO.getType()) {
@@ -830,7 +816,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // For TLS initial-exec and local-exec accesses on AIX, we have one TOC
     // entry for the symbol (with the variable offset), which is differentiated
     // by MO_TPREL_FLAG.
-    if (MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) {
+    unsigned Flag = MO.getTargetFlags();
+    if (Flag == PPCII::MO_TPREL_FLAG ||
+        Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
       assert(MO.isGlobal() && "Only expecting a global MachineOperand here!\n");
       TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
       if (Model == TLSModel::LocalExec)
@@ -842,9 +831,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
     // the variable offset and the other for the region handle). They are
     // differentiated by MO_TLSGD_FLAG and MO_TLSGDM_FLAG.
-    if (MO.getTargetFlags() & PPCII::MO_TLSGDM_FLAG)
+    if (Flag == PPCII::MO_TLSGDM_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
-    if (MO.getTargetFlags() & PPCII::MO_TLSGD_FLAG)
+    if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
     return MCSymbolRefExpr::VariantKind::VK_None;
   };
@@ -1538,8 +1527,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // The faster non-TOC-based local-exec sequence is represented by `addi`
     // with an immediate operand having the MO_TPREL_FLAG. Such an instruction
     // does not otherwise arise.
-    const MachineOperand &MO = MI->getOperand(2);
-    if ((MO.getTargetFlags() & PPCII::MO_TPREL_FLAG) != 0) {
+    unsigned Flag = MI->getOperand(2).getTargetFlags();
+    if (Flag == PPCII::MO_TPREL_FLAG ||
+        Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
+        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
       assert(
           Subtarget->hasAIXSmallLocalExecTLS() &&
           "addi with thread-pointer only expected with local-exec small TLS");
@@ -1830,6 +1821,14 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
+  // If we are using any values provided by Glibc at fixed addresses,
+  // we need to ensure that the Glibc used at link time actually provides
+  // those values. All versions of Glibc that do will define the symbol
+  // named "__parse_hwcap_and_convert_at_platform".
+  if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
+    OutStreamer->emitSymbolValue(
+        GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
+        MAI->getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {
@@ -2528,7 +2527,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
-  assert(!GV->getName().startswith("llvm.") &&
+  assert(!GV->getName().starts_with("llvm.") &&
          "Unhandled intrinsic global variable.");
 
   if (GV->hasComdat())
@@ -2572,12 +2571,18 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     GVSym->setStorageClass(
         TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
-    if (GVKind.isBSSLocal() || GVKind.isThreadBSSLocal())
+    if (GVKind.isBSSLocal() && Csect->getMappingClass() == XCOFF::XMC_TD) {
+      OutStreamer->emitZeros(Size);
+    } else if (GVKind.isBSSLocal() || GVKind.isThreadBSSLocal()) {
+      assert(Csect->getMappingClass() != XCOFF::XMC_TD &&
+             "BSS local toc-data already handled and TLS variables "
+             "incompatible with XMC_TD");
       OutStreamer->emitXCOFFLocalCommonSymbol(
           OutContext.getOrCreateSymbol(GVSym->getSymbolTableName()), Size,
           GVSym, Alignment);
-    else
+    } else {
       OutStreamer->emitCommonSymbol(GVSym, Size, Alignment);
+    }
     return;
   }
 
@@ -2738,8 +2743,17 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     TS->emitTCEntry(*I.first.first, I.first.second);
   }
 
-  for (const auto *GV : TOCDataGlobalVars)
-    emitGlobalVariableHelper(GV);
+  // Traverse the list of global variables twice, emitting all of the
+  // non-common global variables before the common ones, as emitting a
+  // .comm directive changes the scope from .toc to the common symbol.
+  for (const auto *GV : TOCDataGlobalVars) {
+    if (!GV->hasCommonLinkage())
+      emitGlobalVariableHelper(GV);
+  }
+  for (const auto *GV : TOCDataGlobalVars) {
+    if (GV->hasCommonLinkage())
+      emitGlobalVariableHelper(GV);
+  }
 }
 
 bool PPCAIXAsmPrinter::doInitialization(Module &M) {

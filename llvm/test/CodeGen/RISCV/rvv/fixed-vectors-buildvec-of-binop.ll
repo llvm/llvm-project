@@ -560,18 +560,8 @@ define <8 x i32> @add_constant_rhs_8xi32_vector_in3(<8 x i32> %vin, i32 %a, i32 
 define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: add_constant_rhs_8xi32_partial:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a4, %hi(.LCPI19_0)
-; CHECK-NEXT:    addi a4, a4, %lo(.LCPI19_0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a4)
-; CHECK-NEXT:    vadd.vv v8, v8, v10
-; CHECK-NEXT:    addi a0, a0, 23
-; CHECK-NEXT:    addi a1, a1, 25
-; CHECK-NEXT:    addi a2, a2, 1
-; CHECK-NEXT:    addi a3, a3, 2047
-; CHECK-NEXT:    addi a3, a3, 308
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 4
 ; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
@@ -581,7 +571,11 @@ define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b,
 ; CHECK-NEXT:    vslideup.vi v8, v10, 6
 ; CHECK-NEXT:    vmv.s.x v10, a3
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    lui a0, %hi(.LCPI19_0)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI19_0)
+; CHECK-NEXT:    vle32.v v12, (a0)
 ; CHECK-NEXT:    vslideup.vi v8, v10, 7
+; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %vadd = add <8 x i32> %vin, <i32 1, i32 2, i32 3, i32 5, i32 undef, i32 undef, i32 undef, i32 undef>
   %e0 = add i32 %a, 23

@@ -458,7 +458,7 @@ define i8 @shl_lshr_demand3(i8 %x) {
 ; CHECK-LABEL: @shl_lshr_demand3(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 40, [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i8 [[SHL]], 3
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[LSHR]], -64
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[LSHR]], -64
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shl = shl i8 40, %x ; 0b0010_1000
@@ -473,7 +473,7 @@ define i8 @shl_lshr_demand4(i8 %x) {
 ; CHECK-LABEL: @shl_lshr_demand4(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 44, [[X:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[SHL]], 3
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[LSHR]], -32
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[LSHR]], -32
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shl = shl i8 44, %x ; 0b0010_1100
@@ -621,7 +621,7 @@ define i8 @lshr_shl_demand3(i8 %x) {
 ; CHECK-LABEL: @lshr_shl_demand3(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 28, [[X:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[SHR]], 3
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], 3
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SHL]], 3
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shr = lshr i8 28, %x ; 0b0001_1100
@@ -636,7 +636,7 @@ define i8 @lshr_shl_demand4(i8 %x) {
 ; CHECK-LABEL: @lshr_shl_demand4(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 60, [[X:%.*]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[SHR]], 3
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], 7
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SHL]], 7
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shr = lshr i8 60, %x ; 0b0011_1100

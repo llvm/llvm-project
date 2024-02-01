@@ -70,6 +70,11 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   PP.addCommentHandler(CommentSemaHandler.get());
 
   PP.setCodeCompletionHandler(*this);
+
+  Actions.ParseTypeFromStringCallback =
+      [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
+        return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
+      };
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -843,6 +848,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     return nullptr;
   case tok::annot_pragma_fenv_round:
     HandlePragmaFEnvRound();
+    return nullptr;
+  case tok::annot_pragma_cx_limited_range:
+    HandlePragmaCXLimitedRange();
     return nullptr;
   case tok::annot_pragma_float_control:
     HandlePragmaFloatControl();
@@ -1984,7 +1992,8 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
-          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto)) &&
+          Tok.is(tok::kw___super) || Tok.is(tok::kw_auto) ||
+          Tok.is(tok::annot_pack_indexing_type)) &&
          "Cannot be a type or scope token!");
 
   if (Tok.is(tok::kw_typename)) {
@@ -2642,7 +2651,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     auto &SrcMgr = PP.getSourceManager();
     auto FE = SrcMgr.getFileEntryRefForID(SrcMgr.getFileID(AtLoc));
     if (FE && llvm::sys::path::parent_path(FE->getDir().getName())
-                  .endswith(".framework"))
+                  .ends_with(".framework"))
       Diags.Report(AtLoc, diag::warn_atimport_in_framework_header);
   }
 

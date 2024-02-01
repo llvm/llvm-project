@@ -106,9 +106,8 @@ public:
 
 /// Registration for a single dependent dialect: to be inserted in the ctor
 /// above for each dependent dialect.
-const char *const dialectRegistrationTemplate = R"(
-    getContext()->loadDialect<{0}>();
-)";
+const char *const dialectRegistrationTemplate =
+    "getContext()->loadDialect<{0}>();";
 
 /// The code block for the attribute parser/printer hooks.
 static const char *const attrParserDecl = R"(
@@ -250,8 +249,8 @@ static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
 /// The code block to generate a dialect constructor definition.
 ///
 /// {0}: The name of the dialect class.
-/// {1}: initialization code that is emitted in the ctor body before calling
-///      initialize().
+/// {1}: Initialization code that is emitted in the ctor body before calling
+///      initialize(), such as dependent dialect registration.
 /// {2}: The dialect parent class.
 static const char *const dialectConstructorStr = R"(
 {0}::{0}(::mlir::MLIRContext *context)
@@ -261,7 +260,7 @@ static const char *const dialectConstructorStr = R"(
 }
 )";
 
-/// The code block to generate a default desturctor definition.
+/// The code block to generate a default destructor definition.
 ///
 /// {0}: The name of the dialect class.
 static const char *const dialectDestructorStr = R"(
@@ -284,9 +283,13 @@ static void emitDialectDef(Dialect &dialect, raw_ostream &os) {
   std::string dependentDialectRegistrations;
   {
     llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
-    for (StringRef dependentDialect : dialect.getDependentDialects())
-      dialectsOs << llvm::formatv(dialectRegistrationTemplate,
-                                  dependentDialect);
+    llvm::interleave(
+        dialect.getDependentDialects(), dialectsOs,
+        [&](StringRef dependentDialect) {
+          dialectsOs << llvm::formatv(dialectRegistrationTemplate,
+                                      dependentDialect);
+        },
+        "\n  ");
   }
 
   // Emit the constructor and destructor.
