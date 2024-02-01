@@ -171,6 +171,7 @@ public:
   // Forwards the iterator to the next element.
   ValueRange forward(OpBuilder &b, Location l);
 
+  // Locate the iterator to the position specified by *crd*, this can only
   // be done on an iterator that supports randm access.
   void locate(OpBuilder &b, Location l, Value crd);
 
