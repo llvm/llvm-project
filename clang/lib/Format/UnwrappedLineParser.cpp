@@ -3446,11 +3446,6 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
         return false;
       }
       break;
-    case tok::r_paren:
-    case tok::pipepipe:
-      FormatTok = Tokens->setPosition(StoredPosition);
-      parseRequiresClause(RequiresToken);
-      return true;
     case tok::eof:
       // Break out of the loop.
       Lookahead = 50;
@@ -3458,6 +3453,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     case tok::coloncolon:
       LastWasColonColon = true;
       break;
+    case tok::kw_decltype:
     case tok::identifier:
       if (FoundType && !LastWasColonColon && OpenAngles == 0) {
         FormatTok = Tokens->setPosition(StoredPosition);
