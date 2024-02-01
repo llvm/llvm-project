@@ -1662,6 +1662,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
              const Fortran::parser::DoConstruct &outerDoConstruct,
              Fortran::lower::pft::Evaluation &eval,
              const Fortran::parser::AccClauseList &accClauseList,
+             std::optional<mlir::acc::CombinedConstructsType> combinedConstructs,
              bool needEarlyReturnHandling = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   llvm::SmallVector<mlir::Value> tileOperands, privateOperands, ivPrivate,
@@ -2002,6 +2003,11 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   if (!collapseDeviceTypes.empty())
     loopOp.setCollapseDeviceTypeAttr(builder.getArrayAttr(collapseDeviceTypes));
 
+  if (combinedConstructs) {
+    loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
+        builder.getContext(), combinedConstructs.value()));
+  }
+
   return loopOp;
 }
 
@@ -2047,7 +2053,7 @@ genACC(Fortran::lower::AbstractConverter &converter,
       std::get<std::optional<Fortran::parser::DoConstruct>>(loopConstruct.t);
   auto loopOp = createLoopOp(converter, currentLocation, semanticsContext,
                              stmtCtx, *outerDoConstruct, eval, accClauseList,
-                             needEarlyExitHandling);
+                             {}, needEarlyExitHandling);
   if (needEarlyExitHandling)
     return loopOp.getResult(0);
 
@@ -2079,14 +2085,13 @@ static void genDataOperandOperationsWithModifier(
 }
 
 template <typename Op>
-static Op
-createComputeOp(Fortran::lower::AbstractConverter &converter,
-                mlir::Location currentLocation,
-                Fortran::lower::pft::Evaluation &eval,
-                Fortran::semantics::SemanticsContext &semanticsContext,
-                Fortran::lower::StatementContext &stmtCtx,
-                const Fortran::parser::AccClauseList &accClauseList,
-                bool outerCombined = false) {
+static Op createComputeOp(
+    Fortran::lower::AbstractConverter &converter,
+    mlir::Location currentLocation, Fortran::lower::pft::Evaluation &eval,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &stmtCtx,
+    const Fortran::parser::AccClauseList &accClauseList,
+    std::optional<mlir::acc::CombinedConstructsType> combinedConstructs) {
 
   // Parallel operation operands
   mlir::Value ifCond;
@@ -2279,7 +2284,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *privateClause =
                    std::get_if<Fortran::parser::AccClause::Private>(
                        &clause.u)) {
-      if (!outerCombined)
+      if (!combinedConstructs)
         genPrivatizations<mlir::acc::PrivateRecipeOp>(
             privateClause->v, converter, semanticsContext, stmtCtx,
             privateOperands, privatizations);
@@ -2297,7 +2302,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
       // combined - delay it to the loop. However, a reduction clause on a
       // combined construct implies a copy clause so issue an implicit copy
       // instead.
-      if (!outerCombined) {
+      if (!combinedConstructs) {
         genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                       reductionOperands, reductionRecipes);
       } else {
@@ -2349,11 +2354,11 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   if constexpr (std::is_same_v<Op, mlir::acc::KernelsOp>)
     computeOp = createRegionOp<Op, mlir::acc::TerminatorOp>(
         builder, currentLocation, currentLocation, eval, operands,
-        operandSegments, outerCombined);
+        operandSegments, combinedConstructs.has_value());
   else
     computeOp = createRegionOp<Op, mlir::acc::YieldOp>(
         builder, currentLocation, currentLocation, eval, operands,
-        operandSegments, outerCombined);
+        operandSegments, combinedConstructs.has_value());
 
   if (addSelfAttr)
     computeOp.setSelfAttrAttr(builder.getUnitAttr());
@@ -2404,6 +2409,11 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     if (!firstPrivatizations.empty())
       computeOp.setFirstprivatizationsAttr(
           mlir::ArrayAttr::get(builder.getContext(), firstPrivatizations));
+  }
+
+  if (combinedConstructs) {
+    computeOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
+        builder.getContext(), combinedConstructs.value()));
   }
 
   auto insPt = builder.saveInsertionPoint();
@@ -2681,18 +2691,18 @@ genACC(Fortran::lower::AbstractConverter &converter,
   if (blockDirective.v == llvm::acc::ACCD_parallel) {
     createComputeOp<mlir::acc::ParallelOp>(converter, currentLocation, eval,
                                            semanticsContext, stmtCtx,
-                                           accClauseList);
+                                           accClauseList, {});
   } else if (blockDirective.v == llvm::acc::ACCD_data) {
     genACCDataOp(converter, currentLocation, eval, semanticsContext, stmtCtx,
                  accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_serial) {
     createComputeOp<mlir::acc::SerialOp>(converter, currentLocation, eval,
                                          semanticsContext, stmtCtx,
-                                         accClauseList);
+                                         accClauseList, {});
   } else if (blockDirective.v == llvm::acc::ACCD_kernels) {
     createComputeOp<mlir::acc::KernelsOp>(converter, currentLocation, eval,
                                           semanticsContext, stmtCtx,
-                                          accClauseList);
+                                          accClauseList, {});
   } else if (blockDirective.v == llvm::acc::ACCD_host_data) {
     genACCHostDataOp(converter, currentLocation, eval, semanticsContext,
                      stmtCtx, accClauseList);
@@ -2721,21 +2731,24 @@ genACC(Fortran::lower::AbstractConverter &converter,
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
     createComputeOp<mlir::acc::KernelsOp>(
         converter, currentLocation, eval, semanticsContext, stmtCtx,
-        accClauseList, /*outerCombined=*/true);
+        accClauseList, mlir::acc::CombinedConstructsType::KernelsLoop);
     createLoopOp(converter, currentLocation, semanticsContext, stmtCtx,
-                 *outerDoConstruct, eval, accClauseList);
+                 *outerDoConstruct, eval, accClauseList,
+                 mlir::acc::CombinedConstructsType::KernelsLoop);
   } else if (combinedDirective.v == llvm::acc::ACCD_parallel_loop) {
     createComputeOp<mlir::acc::ParallelOp>(
         converter, currentLocation, eval, semanticsContext, stmtCtx,
-        accClauseList, /*outerCombined=*/true);
+        accClauseList, mlir::acc::CombinedConstructsType::ParallelLoop);
     createLoopOp(converter, currentLocation, semanticsContext, stmtCtx,
-                 *outerDoConstruct, eval, accClauseList);
+                 *outerDoConstruct, eval, accClauseList,
+                 mlir::acc::CombinedConstructsType::ParallelLoop);
   } else if (combinedDirective.v == llvm::acc::ACCD_serial_loop) {
-    createComputeOp<mlir::acc::SerialOp>(converter, currentLocation, eval,
-                                         semanticsContext, stmtCtx,
-                                         accClauseList, /*outerCombined=*/true);
+    createComputeOp<mlir::acc::SerialOp>(
+        converter, currentLocation, eval, semanticsContext, stmtCtx,
+        accClauseList, mlir::acc::CombinedConstructsType::SerialLoop);
     createLoopOp(converter, currentLocation, semanticsContext, stmtCtx,
-                 *outerDoConstruct, eval, accClauseList);
+                 *outerDoConstruct, eval, accClauseList,
+                 mlir::acc::CombinedConstructsType::SerialLoop);
   } else {
     llvm::report_fatal_error("Unknown combined construct encountered");
   }
