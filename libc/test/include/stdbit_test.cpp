@@ -33,6 +33,11 @@ unsigned stdc_leading_ones_us(unsigned short) noexcept { return 0xBBU; }
 unsigned stdc_leading_ones_ui(unsigned) noexcept { return 0xBCU; }
 unsigned stdc_leading_ones_ul(unsigned long) noexcept { return 0xBDU; }
 unsigned stdc_leading_ones_ull(unsigned long long) noexcept { return 0xBFU; }
+unsigned stdc_trailing_zeros_uc(unsigned char) noexcept { return 0xCAU; }
+unsigned stdc_trailing_zeros_us(unsigned short) noexcept { return 0xCBU; }
+unsigned stdc_trailing_zeros_ui(unsigned) noexcept { return 0xCCU; }
+unsigned stdc_trailing_zeros_ul(unsigned long) noexcept { return 0xCDU; }
+unsigned stdc_trailing_zeros_ull(unsigned long long) noexcept { return 0xCFU; }
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"
@@ -51,4 +56,12 @@ TEST(LlvmLibcStdbitTest, TypeGenericMacroLeadingOnes) {
   EXPECT_EQ(stdc_leading_ones(0U), 0xBCU);
   EXPECT_EQ(stdc_leading_ones(0UL), 0xBDU);
   EXPECT_EQ(stdc_leading_ones(0ULL), 0xBFU);
+}
+
+TEST(LlvmLibcStdbitTest, TypeGenericMacroTrailingZeros) {
+  EXPECT_EQ(stdc_trailing_zeros(static_cast<unsigned char>(0U)), 0xCAU);
+  EXPECT_EQ(stdc_trailing_zeros(static_cast<unsigned short>(0U)), 0xCBU);
+  EXPECT_EQ(stdc_trailing_zeros(0U), 0xCCU);
+  EXPECT_EQ(stdc_trailing_zeros(0UL), 0xCDU);
+  EXPECT_EQ(stdc_trailing_zeros(0ULL), 0xCFU);
 }
