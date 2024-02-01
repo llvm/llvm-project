@@ -66,76 +66,91 @@
 ; CHECK:    .registers:      {}
 ; CHECK-NEXT:    .shader_functions:
 ; CHECK-NEXT:      dynamic_stack:
+; CHECK-NEXT:        .backend_stack_size: 0x10
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x22
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
 ; CHECK-NEXT:        .vgpr_count:     0x2
 ; CHECK-NEXT:      dynamic_stack_loop:
+; CHECK-NEXT:        .backend_stack_size: 0x10
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x22
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
 ; CHECK-NEXT:        .vgpr_count:     0x3
 ; CHECK-NEXT:      multiple_stack:
+; CHECK-NEXT:        .backend_stack_size: 0x24
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x21
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x24
 ; CHECK-NEXT:        .vgpr_count:     0x3
 ; CHECK-NEXT:      no_stack:
+; CHECK-NEXT:        .backend_stack_size: 0
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x20
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:      no_stack_call:
+; CHECK-NEXT:        .backend_stack_size: 0x10
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x22
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
 ; CHECK-NEXT:        .vgpr_count:     0x3
 ; CHECK-NEXT:      no_stack_extern_call:
+; CHECK-NEXT:        .backend_stack_size: 0x10
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x29
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
 ; CHECK-NEXT:        .vgpr_count:     0x58
 ; CHECK-NEXT:      no_stack_extern_call_many_args:
+; CHECK-NEXT:        .backend_stack_size: 0x90
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x29
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x90
 ; CHECK-NEXT:        .vgpr_count:     0x58
 ; CHECK-NEXT:      no_stack_indirect_call:
+; CHECK-NEXT:        .backend_stack_size: 0x10
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x29
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
 ; CHECK-NEXT:        .vgpr_count:     0x58
 ; CHECK-NEXT:      simple_lds:
+; CHECK-NEXT:        .backend_stack_size: 0
 ; CHECK-NEXT:        .lds_size:       0x100
 ; CHECK-NEXT:        .sgpr_count:     0x20
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:      simple_lds_recurse:
+; CHECK-NEXT:        .backend_stack_size: 0x10
 ; CHECK-NEXT:        .lds_size:       0x100
 ; CHECK-NEXT:        .sgpr_count:     0x24
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
 ; CHECK-NEXT:        .vgpr_count:     0x29
 ; CHECK-NEXT:      simple_stack:
+; CHECK-NEXT:        .backend_stack_size: 0x14
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x21
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x14
 ; CHECK-NEXT:        .vgpr_count:     0x2
 ; CHECK-NEXT:      simple_stack_call:
+; CHECK-NEXT:        .backend_stack_size: 0x20
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x22
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x20
 ; CHECK-NEXT:        .vgpr_count:     0x4
 ; CHECK-NEXT:      simple_stack_extern_call:
+; CHECK-NEXT:        .backend_stack_size: 0x20
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x29
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x20
 ; CHECK-NEXT:        .vgpr_count:     0x58
 ; CHECK-NEXT:      simple_stack_indirect_call:
+; CHECK-NEXT:        .backend_stack_size: 0x20
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x29
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x20
 ; CHECK-NEXT:        .vgpr_count:     0x58
 ; CHECK-NEXT:      simple_stack_recurse:
+; CHECK-NEXT:        .backend_stack_size: 0x20
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x24
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x20
