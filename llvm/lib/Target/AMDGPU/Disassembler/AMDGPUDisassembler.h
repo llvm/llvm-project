@@ -100,11 +100,14 @@ private:
   mutable uint64_t Literal64;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
+  unsigned CodeObjectVersion;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                      MCInstrInfo const *MCII);
   ~AMDGPUDisassembler() override = default;
+
+  void setABIVersion(unsigned Version) override;
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
