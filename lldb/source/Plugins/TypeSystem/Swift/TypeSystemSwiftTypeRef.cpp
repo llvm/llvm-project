@@ -2830,7 +2830,8 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       // pointer instead of the underlying object.
       if (Flags(clang_type.GetTypeInfo()).AllSet(eTypeIsObjC | eTypeIsClass))
         return GetPointerByteSize() * 8;
-      return clang_type.GetBitSize(exe_scope);
+      if (auto clang_size = clang_type.GetBitSize(exe_scope))
+        return clang_size;
     }
     if (!exe_scope) {
       LLDB_LOGF(GetLog(LLDBLog::Types),
@@ -4253,7 +4254,8 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
     // object pointer instead of the underlying object.
     if (Flags(clang_type.GetTypeInfo()).AllSet(eTypeIsObjC | eTypeIsClass))
       return GetPointerByteSize() * 8;
-    return clang_type.GetTypeBitAlign(exe_scope);
+    if (auto clang_align = clang_type.GetTypeBitAlign(exe_scope))
+      return clang_align;
   }
   if (!exe_scope) {
     LLDB_LOGF(GetLog(LLDBLog::Types),
@@ -4264,7 +4266,8 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
   }
   if (auto *runtime =
           SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
-    if (auto result = runtime->GetBitAlignment({weak_from_this(), type}, exe_scope))
+    if (auto result =
+            runtime->GetBitAlignment({weak_from_this(), type}, exe_scope))
       return result;
     // If this is an expression context, perhaps the type was
     // defined in the expression. In that case we don't have debug
