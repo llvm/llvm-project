@@ -59,6 +59,26 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
   return false;
 }
 
+QualType getNonTemplateAlias(QualType QT) {
+  while (true) {
+    // cast to a TypedefType
+    if (const TypedefType *TT = dyn_cast<TypedefType>(QT)) {
+      // check if the typedef is a template and if it is dependent
+      if (!TT->getDecl()->getDescribedTemplate() &&
+          !TT->getDecl()->getDeclContext()->isDependentContext())
+        return QT;
+      QT = TT->getDecl()->getUnderlyingType();
+    }
+    // cast to elaborated type
+    else if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(QT)) {
+      QT = ET->getNamedType();
+    } else {
+      break;
+    }
+  }
+  return QT;
+}
+
 static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
                                      const Expr *AssignLhs,
                                      const SourceManager &Source,
@@ -82,13 +102,12 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
                                 .getNonReferenceType()
                                 .getUnqualifiedType();
   if (LhsType != RhsType) {
-    GlobalImplicitCastType = BO->getLHS()->getType();
+    GlobalImplicitCastType = getNonTemplateAlias(BO->getLHS()->getType());
   }
 
   return (AssignLhsStr + " = " + FunctionName +
           (!GlobalImplicitCastType.isNull()
-               ? "<" + GlobalImplicitCastType.getCanonicalType().getAsString() +
-                     ">("
+               ? "<" + GlobalImplicitCastType.getAsString() + ">("
                : "(") +
           CondLhsStr + ", " + CondRhsStr + ");")
       .str();

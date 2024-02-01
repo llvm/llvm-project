@@ -228,3 +228,27 @@ void foo(T value7) {
   if(value9<value1)
     value1 = value9;
 }
+
+using my_size = unsigned long long;
+
+template<typename T>
+struct MyVector
+{
+    using size_type = my_size;
+    size_type size() const;
+};
+
+void testVectorSizeType() {
+  MyVector<int> v;
+  unsigned int value;
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: value = std::max<my_size>(v.size(), value);
+  if (v.size() > value)
+    value = v.size();
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+  // CHECK-FIXES: value = std::max<my_size>(value, v.size());
+  if (value < v.size())
+    value = v.size();
+}
