@@ -27,14 +27,12 @@ unsigned stdc_leading_zeros_uc(unsigned char) noexcept { return 0xAAU; }
 unsigned stdc_leading_zeros_us(unsigned short) noexcept { return 0xABU; }
 unsigned stdc_leading_zeros_ui(unsigned) noexcept { return 0xACU; }
 unsigned stdc_leading_zeros_ul(unsigned long) noexcept { return 0xADU; }
-unsigned stdc_leading_zeros_ull(unsigned long long) noexcept { return 0xAFU;
-}
+unsigned stdc_leading_zeros_ull(unsigned long long) noexcept { return 0xAFU; }
 unsigned stdc_leading_ones_uc(unsigned char) noexcept { return 0xBAU; }
 unsigned stdc_leading_ones_us(unsigned short) noexcept { return 0xBBU; }
 unsigned stdc_leading_ones_ui(unsigned) noexcept { return 0xBCU; }
 unsigned stdc_leading_ones_ul(unsigned long) noexcept { return 0xBDU; }
-unsigned stdc_leading_ones_ull(unsigned long long) noexcept { return 0xBFU;
-}
+unsigned stdc_leading_ones_ull(unsigned long long) noexcept { return 0xBFU; }
 }
 
 #include "include/llvm-libc-macros/stdbit-macros.h"

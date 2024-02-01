@@ -11,7 +11,8 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStdcLeadingZerosUcTest, Zero) {
-  EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_uc(0U), static_cast<unsigned>(UCHAR_WIDTH));
+  EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_uc(0U),
+            static_cast<unsigned>(UCHAR_WIDTH));
 }
 
 TEST(LlvmLibcStdcLeadingZerosUcTest, OneHot) {
