@@ -8768,8 +8768,10 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
   if (Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_gfx12 ||
-      Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_gfx12) {
-    Inst.addOperand(MCOperand::createImm(0)); // Placeholder for src2_mods
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_gfx12 ||
+      Opc == AMDGPU::V_CVT_F16_BF8_e64_gfx1210) {
+    // Placeholder for src1_mods or src2_mods
+    Inst.addOperand(MCOperand::createImm(0));
     Inst.addOperand(Inst.getOperand(0));
   }
 
@@ -8779,7 +8781,9 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
       !(Opc == AMDGPU::V_CVT_PK_BF8_F32_e64_dpp_gfx12 ||
         Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp_gfx12 ||
         Opc == AMDGPU::V_CVT_PK_BF8_F32_e64_dpp8_gfx12 ||
-        Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp8_gfx12)) {
+        Opc == AMDGPU::V_CVT_PK_FP8_F32_e64_dpp8_gfx12 ||
+        Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp_gfx1210 ||
+        Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp8_gfx1210)) {
     assert(!IsPacked);
     Inst.addOperand(Inst.getOperand(0));
   }
@@ -9291,6 +9295,8 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   // operand which is not tied to dst (but assumed to be).
   // They also have dummy unused src2_modifiers.
   int OldIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::old);
+  int Src1ModIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers);
   int Src2ModIdx =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
   bool IsMAC = OldIdx != -1 && Src2ModIdx != -1 &&
@@ -9325,11 +9331,14 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
                           Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
                           Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
                           Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12;
-    if (IsVOP3CvtSrDpp) {
-      if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
-        Inst.addOperand(MCOperand::createImm(0));
-        Inst.addOperand(MCOperand::createReg(0));
-      }
+    bool IsVOP3CvtFP8Dpp = Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp_gfx1210 ||
+                           Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp8_gfx1210;
+    if ((IsVOP3CvtSrDpp &&
+         Src2ModIdx == static_cast<int>(Inst.getNumOperands())) ||
+        (IsVOP3CvtFP8Dpp &&
+         Src1ModIdx == static_cast<int>(Inst.getNumOperands()))) {
+      Inst.addOperand(MCOperand::createImm(0));
+      Inst.addOperand(MCOperand::createReg(0));
     }
 
     auto TiedTo = Desc.getOperandConstraint(Inst.getNumOperands(),
@@ -9421,8 +9430,10 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
         Op.addRegWithFPInputModsOperands(Inst, 2);
         if (Opc == AMDGPU::V_CVT_F32_BF8_dpp_gfx12 ||
             Opc == AMDGPU::V_CVT_F32_FP8_dpp_gfx12 ||
+            Opc == AMDGPU::V_CVT_F16_BF8_dpp_gfx1210 ||
             Opc == AMDGPU::V_CVT_F32_BF8_dpp8_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12) {
+            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12 ||
+            Opc == AMDGPU::V_CVT_F16_BF8_dpp8_gfx1210) {
           // Add dummy src1
           Inst.addOperand(MCOperand::createImm(0));
           Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
@@ -9439,8 +9450,10 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
         Op.addRegWithFPInputModsOperands(Inst, 2);
         if (Opc == AMDGPU::V_CVT_F32_BF8_dpp_gfx12 ||
             Opc == AMDGPU::V_CVT_F32_FP8_dpp_gfx12 ||
+            Opc == AMDGPU::V_CVT_F16_BF8_dpp_gfx1210 ||
             Opc == AMDGPU::V_CVT_F32_BF8_dpp8_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12) {
+            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12 ||
+            Opc == AMDGPU::V_CVT_F16_BF8_dpp8_gfx1210) {
           // Add dummy src1
           Inst.addOperand(MCOperand::createImm(0));
           Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));

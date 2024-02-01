@@ -305,9 +305,9 @@ class VOP3OpSel_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
 }
 
 class VOP3OpSel_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
-  let Inst{11} = !if(p.HasSrc0, src0_modifiers{2}, 0);
-  let Inst{12} = !if(p.HasSrc1, src1_modifiers{2}, 0);
-  let Inst{13} = !if(p.HasSrc2, src2_modifiers{2}, 0);
+  let Inst{11} = !if(!or(p.HasSrc0, p.HasSrc0Mods), src0_modifiers{2}, 0);
+  let Inst{12} = !if(!or(p.HasSrc1, p.HasSrc1Mods), src1_modifiers{2}, 0);
+  let Inst{13} = !if(!or(p.HasSrc2, p.HasSrc2Mods), src2_modifiers{2}, 0);
   let Inst{14} = !if(p.HasDst,  src0_modifiers{3}, 0);
 }
 

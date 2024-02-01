@@ -180,3 +180,31 @@ v_cvt_f32_bf16_e64_dpp v5, v1 mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_cvt_f32_bf16_e64_dpp v255, -|v255| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX1210: v_cvt_f32_bf16_e64_dpp v255, -|v255| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x81,0xf2,0xd5,0xe9,0x00,0x00,0x38,0xff,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_f16_bf8 v150, v2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_cvt_f16_bf8_e64_dpp v150, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x96,0x00,0xf8,0xd5,0xe9,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_f16_bf8 v1, v2 op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_cvt_f16_bf8_e64_dpp v1, v2 op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x01,0x58,0xf8,0xd5,0xe9,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_f16_bf8 v1, v2 op_sel:[1,0,0] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_cvt_f16_bf8_e64_dpp v1, v2 op_sel:[1,0,0] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x01,0x08,0xf8,0xd5,0xe9,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_f16_bf8 v1, v2 op_sel:[0,1,0] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_cvt_f16_bf8_e64_dpp v1, v2 op_sel:[0,1,0] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x01,0x10,0xf8,0xd5,0xe9,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_f16_bf8 v1, v2 op_sel:[0,0,1] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_cvt_f16_bf8_e64_dpp v1, v2 op_sel:[0,0,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x01,0x40,0xf8,0xd5,0xe9,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_f16_bf8 v150, v2 op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1210: v_cvt_f16_bf8_e64_dpp v150, v2 op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x96,0x58,0xf8,0xd5,0xe9,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_cvt_f16_bf8 v150, v2 op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX1210: v_cvt_f16_bf8_e64_dpp v150, v2 op_sel:[1,1,1] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x96,0x58,0xf8,0xd5,0xea,0x00,0x00,0x00,0x02,0x77,0x39,0x05]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
