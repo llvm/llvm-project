@@ -757,12 +757,11 @@ Error RewriteInstance::run() {
   if (opts::Instrument && !BC->IsStaticExecutable)
     updateRtFiniReloc();
 
-  if (BC->IsLinuxKernel) {
-    errs() << "BOLT-WARNING: not writing the output file for Linux Kernel\n";
-    return Error::success();
-  } else if (opts::OutputFilename == "/dev/null") {
+  if (opts::OutputFilename == "/dev/null") {
     outs() << "BOLT-INFO: skipping writing final binary to disk\n";
     return Error::success();
+  } else if (BC->IsLinuxKernel) {
+    errs() << "BOLT-WARNING: Linux kernel support is experimental\n";
   }
 
   // Rewrite allocatable contents and copy non-allocatable parts with mods.
@@ -1847,6 +1846,11 @@ Error RewriteInstance::readSpecialSections() {
 
   BC->HasRelocations =
       HasTextRelocations && (opts::RelocationMode != cl::BOU_FALSE);
+
+  if (BC->IsLinuxKernel && BC->HasRelocations) {
+    outs() << "BOLT-INFO: disabling relocation mode for Linux kernel\n";
+    BC->HasRelocations = false;
+  }
 
   BC->IsStripped = !HasSymbolTable;
 
@@ -4357,8 +4361,10 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
     assert((NewEhdr.e_entry || !Obj.getHeader().e_entry) &&
            "cannot find new address for entry point");
   }
-  NewEhdr.e_phoff = PHDRTableOffset;
-  NewEhdr.e_phnum = Phnum;
+  if (PHDRTableOffset) {
+    NewEhdr.e_phoff = PHDRTableOffset;
+    NewEhdr.e_phnum = Phnum;
+  }
   NewEhdr.e_shoff = SHTOffset;
   NewEhdr.e_shnum = OutputSections.size();
   NewEhdr.e_shstrndx = NewSectionIndex[NewEhdr.e_shstrndx];
@@ -5493,7 +5499,8 @@ void RewriteInstance::rewriteFile() {
     addBATSection();
 
   // Patch program header table.
-  patchELFPHDRTable();
+  if (!BC->IsLinuxKernel)
+    patchELFPHDRTable();
 
   // Finalize memory image of section string table.
   finalizeSectionStringTable();
