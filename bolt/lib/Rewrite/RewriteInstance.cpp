@@ -4141,10 +4141,10 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
 
   // Keep track of section header entries attached to the corresponding section.
   std::vector<std::pair<BinarySection *, ELFShdrTy>> OutputSections;
-  auto addSection = [&](const ELFShdrTy &Section, BinarySection *BinSec) {
+  auto addSection = [&](const ELFShdrTy &Section, BinarySection &BinSec) {
     ELFShdrTy NewSection = Section;
-    NewSection.sh_name = SHStrTab.getOffset(BinSec->getOutputName());
-    OutputSections.emplace_back(BinSec, std::move(NewSection));
+    NewSection.sh_name = SHStrTab.getOffset(BinSec.getOutputName());
+    OutputSections.emplace_back(&BinSec, std::move(NewSection));
   };
 
   // Copy over entries for original allocatable sections using modified name.
@@ -4162,7 +4162,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     BinarySection *BinSec = BC->getSectionForSectionRef(SecRef);
     assert(BinSec && "Matching BinarySection should exist.");
 
-    addSection(Section, BinSec);
+    addSection(Section, *BinSec);
   }
 
   for (BinarySection &Section : BC->allocatableSections()) {
@@ -4189,7 +4189,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     NewSection.sh_link = 0;
     NewSection.sh_info = 0;
     NewSection.sh_addralign = Section.getAlignment();
-    addSection(NewSection, &Section);
+    addSection(NewSection, Section);
   }
 
   // Sort all allocatable sections by their offset.
@@ -4203,19 +4203,19 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   for (auto &SectionKV : OutputSections) {
     ELFShdrTy &Section = SectionKV.second;
 
-    // TBSS section does not take file or memory space. Ignore it for layout
-    // purposes.
-    if (Section.sh_type == ELF::SHT_NOBITS && (Section.sh_flags & ELF::SHF_TLS))
+    // Ignore TLS sections as they don't take any space in the file.
+    if (Section.sh_type == ELF::SHT_NOBITS)
       continue;
 
+    // Note that address continuity is not guaranteed as sections could be
+    // placed in different loadable segments.
     if (PrevSection &&
-        PrevSection->sh_addr + PrevSection->sh_size > Section.sh_addr) {
-      if (opts::Verbosity > 1)
+        PrevSection->sh_offset + PrevSection->sh_size > Section.sh_offset) {
+      if (opts::Verbosity > 1) {
         outs() << "BOLT-INFO: adjusting size for section "
                << PrevBinSec->getOutputName() << '\n';
-      PrevSection->sh_size = Section.sh_addr > PrevSection->sh_addr
-                                 ? Section.sh_addr - PrevSection->sh_addr
-                                 : 0;
+      }
+      PrevSection->sh_size = Section.sh_offset - PrevSection->sh_offset;
     }
 
     PrevSection = &Section;
@@ -4249,7 +4249,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     if (NewSection.sh_type == ELF::SHT_SYMTAB)
       NewSection.sh_info = NumLocalSymbols;
 
-    addSection(NewSection, BinSec);
+    addSection(NewSection, *BinSec);
 
     LastFileOffset = BinSec->getOutputFileOffset();
   }
@@ -4274,7 +4274,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     NewSection.sh_info = 0;
     NewSection.sh_addralign = Section.getAlignment();
 
-    addSection(NewSection, &Section);
+    addSection(NewSection, Section);
   }
 
   // Assign indices to sections.
