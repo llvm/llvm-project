@@ -325,6 +325,11 @@
 // clang-format on
 
 #  ifndef _LIBCPP_HARDENING_MODE
+
+#    ifndef _LIBCPP_HARDENING_MODE_DEFAULT
+#      error _LIBCPP_HARDENING_MODE_DEFAULT is not defined.
+#    endif
+
 #    define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_DEFAULT
 #  endif
 
