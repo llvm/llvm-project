@@ -32,7 +32,7 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   void *addr = LIBC_NAMESPACE::mmap(nullptr, 0, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   ASSERT_TRUE(addr == MAP_FAILED);
-  ASSERT_ERRNO_SUCCESS();
+  ASSERT_ERRNO_EQ(EINVAL);
 
   return 0;
 }
