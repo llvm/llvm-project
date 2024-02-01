@@ -139,6 +139,8 @@ enum ProcessorFeatures {
   FEATURE_AVX512BITALG,
   FEATURE_AVX512BF16,
   FEATURE_AVX512VP2INTERSECT,
+  // Below Features has many missings comparing to gcc, it's because gcc has
+  // some LLVM doesn't include, e.g. FEATURE_ABM, FEATURE_HLE, ...
   FEATURE_3DNOW,
   FEATURE_ADX = 40,
   FEATURE_CLDEMOTE = 42,
