@@ -524,7 +524,9 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
 
   // We can only do this on CodeGenInstructions that aren't intrinsics. Other
   // InstructionPatterns have no type inference information associated with
-  // them. Intrinsics also don't have any constraints to guide inference.
+  // them.
+  // TODO: We could try to extract some info from CodeGenIntrinsic to
+  //       guide inference.
 
   // TODO: Could we add some inference information to builtins at least? e.g.
   // ReplaceReg should always replace with a reg of the same type, for instance.
