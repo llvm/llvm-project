@@ -14,6 +14,7 @@
 #include <type_traits>
 
 #include "__iterator/concepts.h"
+#include "__ranges/common_view.h"
 #include "test_iterators.h"
 #include "test_range.h"
 
@@ -68,6 +69,25 @@ struct SizedInputIterator : InputIterBase<SizedInputIterator, int*, true> {
 };
 static_assert(std::input_iterator<SizedInputIterator>);
 static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
+
+// Don't move/hold the iterator itself, copy/hold the base
+// of that iterator and reconstruct the iterator on demand.
+// May result in aliasing (if, e.g., Iterator is an iterator
+// over int *).
+template <class Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>>
+struct ViewOverNonCopyableIterator : std::ranges::view_base {
+  constexpr explicit ViewOverNonCopyableIterator(Iter it, Sent sent) : it_(base(it)), sent_(base(sent)) {}
+
+  ViewOverNonCopyableIterator(ViewOverNonCopyableIterator&&)            = default;
+  ViewOverNonCopyableIterator& operator=(ViewOverNonCopyableIterator&&) = default;
+
+  constexpr Iter begin() const { return Iter(it_); }
+  constexpr Sent end() const { return Sent(sent_); }
+
+private:
+  decltype(base(std::declval<Iter>())) it_;
+  decltype(base(std::declval<Sent>())) sent_;
+};
 
 // Put IterMoveIterSwapTestRangeIterator in a namespace to test ADL of CPOs iter_swap and iter_move
 // (see iter_swap.pass.cpp and iter_move.pass.cpp).
@@ -203,24 +223,32 @@ template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrap
 using MoveOnlyView = MaybeCopyableAlwaysMoveableView<Iter, Sent, false>;
 static_assert(!std::copyable<MoveOnlyView<cpp17_input_iterator<int*>>>);
 
-// Don't move/hold the iterator itself, copy/hold the base
-// of that iterator and reconstruct the iterator on demand.
-// May result in aliasing (if, e.g., Iterator is an iterator
-// over int *).
-template <class Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>>
-struct ViewOverNonCopyableIterator : std::ranges::view_base {
-  constexpr explicit ViewOverNonCopyableIterator(Iter it, Sent sent) : it_(base(it)), sent_(base(sent)) {}
+template <bool IsSimple, bool IsConst = IsSimple, bool IsCommon = true>
+struct MaybeConstCommonSimpleView : std::ranges::view_base {
+  int* begin();
+  int* begin() const
+    requires(IsConst && IsSimple);
+  double* begin() const
+    requires(IsConst && !IsSimple);
 
-  ViewOverNonCopyableIterator(ViewOverNonCopyableIterator&&)            = default;
-  ViewOverNonCopyableIterator& operator=(ViewOverNonCopyableIterator&&) = default;
+  int* end()
+    requires(IsCommon);
+  void* end()
+    requires(!IsCommon);
 
-  constexpr Iter begin() const { return Iter(it_); }
-  constexpr Sent end() const { return Sent(sent_); }
+  int* end() const
+    requires(IsConst && IsCommon && IsSimple);
+  double* end() const
+    requires(IsConst && IsCommon && !IsSimple);
 
-private:
-  decltype(base(std::declval<Iter>())) it_;
-  decltype(base(std::declval<Sent>())) sent_;
+  void* end() const
+    requires(IsConst && !IsCommon);
 };
+
+using UnSimpleNoConstCommonView = MaybeConstCommonSimpleView<false, false, true>;
+using UnsimpleConstView         = MaybeConstCommonSimpleView<false, true, true>;
+using UnsimpleUnCommonConstView = MaybeConstCommonSimpleView<false, true, false>;
+using SimpleUnCommonConstView   = MaybeConstCommonSimpleView<true, true, false>;
 
 // Ranges
 

@@ -34,38 +34,12 @@ concept HasOnlyNonConstEnd = HasEnd<T> && !HasConstEnd<T>;
 template <class T>
 concept HasOnlyConstEnd = HasConstEnd<T> && !HasConstAndNonConstEnd<T>;
 
-struct NoConstView : std::ranges::view_base {
-  int* begin();
-  int* end();
-};
-
-struct UnsimpleConstView : std::ranges::view_base {
-  double* begin();
-  int* begin() const;
-
-  double* end();
-  int* end() const;
-};
-
-struct UnsimpleUnCommonView : std::ranges::view_base {
-  double* begin();
-  char* begin() const;
-
-  void* end();
-  void* end() const;
-};
-
-struct SimpleUnCommonView : std::ranges::view_base {
-  int* begin();
-  int* begin() const;
-
-  void* end();
-  void* end() const;
-};
-
-static_assert(HasOnlyNonConstEnd<std::ranges::stride_view<NoConstView>>);
+static_assert(HasOnlyNonConstEnd<std::ranges::stride_view<UnSimpleNoConstCommonView>>);
 static_assert(HasOnlyConstEnd<std::ranges::stride_view<BasicTestView<int*, int*>>>);
 static_assert(HasConstAndNonConstEnd<std::ranges::stride_view<UnsimpleConstView>>);
+
+static_assert(simple_view<SimpleUnCommonConstView>);
+static_assert(!std::ranges::common_range<SimpleUnCommonConstView>);
 
 constexpr bool test_non_default_sentinel() {
   {
@@ -80,13 +54,13 @@ constexpr bool test_non_default_sentinel() {
   }
 
   {
-    static_assert(!simple_view<NoConstView>);
-    static_assert(std::ranges::common_range<NoConstView>);
-    static_assert(std::ranges::sized_range<NoConstView>);
-    static_assert(std::ranges::forward_range<NoConstView>);
+    static_assert(!simple_view<UnSimpleNoConstCommonView>);
+    static_assert(std::ranges::common_range<UnSimpleNoConstCommonView>);
+    static_assert(std::ranges::sized_range<UnSimpleNoConstCommonView>);
+    static_assert(std::ranges::forward_range<UnSimpleNoConstCommonView>);
 
-    auto v  = NoConstView{};
-    auto sv = std::ranges::stride_view<NoConstView>(v, 1);
+    auto v  = UnSimpleNoConstCommonView{};
+    auto sv = std::ranges::stride_view<UnSimpleNoConstCommonView>(v, 1);
     static_assert(!std::is_same_v<std::default_sentinel_t, decltype(sv.end())>);
   }
   return true;
@@ -94,22 +68,22 @@ constexpr bool test_non_default_sentinel() {
 
 constexpr bool test_default_sentinel() {
   {
-    static_assert(!simple_view<UnsimpleUnCommonView>);
-    static_assert(!std::ranges::common_range<UnsimpleUnCommonView>);
+    static_assert(!simple_view<UnsimpleUnCommonConstView>);
+    static_assert(!std::ranges::common_range<UnsimpleUnCommonConstView>);
     static_assert(std::ranges::sized_range<UnsimpleConstView>);
     static_assert(std::ranges::forward_range<UnsimpleConstView>);
 
-    auto v  = UnsimpleUnCommonView{};
-    auto sv = std::ranges::stride_view<UnsimpleUnCommonView>(v, 1);
+    auto v  = UnsimpleUnCommonConstView{};
+    auto sv = std::ranges::stride_view<UnsimpleUnCommonConstView>(v, 1);
     ASSERT_SAME_TYPE(std::default_sentinel_t, decltype(sv.end()));
   }
 
   {
-    static_assert(simple_view<SimpleUnCommonView>);
-    static_assert(!std::ranges::common_range<SimpleUnCommonView>);
+    static_assert(simple_view<SimpleUnCommonConstView>);
+    static_assert(!std::ranges::common_range<SimpleUnCommonConstView>);
 
-    auto v  = SimpleUnCommonView{};
-    auto sv = std::ranges::stride_view<SimpleUnCommonView>(v, 1);
+    auto v  = SimpleUnCommonConstView{};
+    auto sv = std::ranges::stride_view<SimpleUnCommonConstView>(v, 1);
 
     ASSERT_SAME_TYPE(std::default_sentinel_t, decltype(sv.end()));
   }
