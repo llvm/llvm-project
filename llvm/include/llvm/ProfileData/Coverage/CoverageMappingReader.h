@@ -203,10 +203,8 @@ public:
   BinaryCoverageReader &operator=(const BinaryCoverageReader &) = delete;
 
   static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
-  create(MemoryBufferRef ObjectBuffer,
-         StringRef Arch,
+  create(MemoryBufferRef ObjectBuffer, StringRef Arch,
          SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-         InstrProfSymtab& IndexedProfSymTab,
          StringRef CompilationDir = "",
          SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);
 
@@ -215,7 +213,7 @@ public:
                                  FuncRecordsStorage &&FuncRecords,
                                  InstrProfSymtab &&ProfileNames,
                                  uint8_t BytesInAddress,
-                                 support::endianness Endian,
+                                 llvm::endianness Endian,
                                  StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;

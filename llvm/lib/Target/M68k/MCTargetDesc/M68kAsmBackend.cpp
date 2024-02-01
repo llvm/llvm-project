@@ -41,7 +41,7 @@ namespace {
 class M68kAsmBackend : public MCAsmBackend {
 
 public:
-  M68kAsmBackend(const Target &T) : MCAsmBackend(support::big) {}
+  M68kAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::big) {}
 
   unsigned getNumFixupKinds() const override { return 0; }
 

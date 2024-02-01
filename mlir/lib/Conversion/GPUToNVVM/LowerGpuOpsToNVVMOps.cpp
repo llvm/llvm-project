@@ -21,6 +21,7 @@
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -65,17 +66,28 @@ convertReduxKind(gpu::AllReduceOperation mode) {
   switch (mode) {
   case gpu::AllReduceOperation::ADD:
     return NVVM::ReduxKind::ADD;
+  case gpu::AllReduceOperation::MUL:
+    return std::nullopt;
+  case gpu::AllReduceOperation::MINSI:
+    return NVVM::ReduxKind::MIN;
+  case gpu::AllReduceOperation::MINUI:
+    return std::nullopt;
+  case gpu::AllReduceOperation::MINNUMF:
+    return NVVM::ReduxKind::MIN;
+  case gpu::AllReduceOperation::MAXSI:
+    return NVVM::ReduxKind::MAX;
+  case gpu::AllReduceOperation::MAXUI:
+    return std::nullopt;
+  case gpu::AllReduceOperation::MAXNUMF:
+    return NVVM::ReduxKind::MAX;
   case gpu::AllReduceOperation::AND:
     return NVVM::ReduxKind::AND;
-  case gpu::AllReduceOperation::MAX:
-    return NVVM::ReduxKind::MAX;
-  case gpu::AllReduceOperation::MIN:
-    return NVVM::ReduxKind::MIN;
   case gpu::AllReduceOperation::OR:
     return NVVM::ReduxKind::OR;
   case gpu::AllReduceOperation::XOR:
     return NVVM::ReduxKind::XOR;
-  case gpu::AllReduceOperation::MUL:
+  case gpu::AllReduceOperation::MINIMUMF:
+  case gpu::AllReduceOperation::MAXIMUMF:
     return std::nullopt;
   }
   return std::nullopt;
@@ -227,7 +239,6 @@ struct LowerGpuOpsToNVVMOpsPass
         DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    options.useOpaquePointers = useOpaquePointers;
     options.useBarePtrCallConv = useBarePtrCallConv;
 
     // Apply in-dialect lowering. In-dialect lowering will replace
@@ -272,6 +283,7 @@ struct LowerGpuOpsToNVVMOpsPass
     populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
+    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     if (this->hasRedux)
       populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
     LLVMConversionTarget target(getContext());
@@ -314,17 +326,23 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
   patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
-  patterns
-      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
-                                       NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
-                                       NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
-                                       NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
-                                       NVVM::GridDimYOp, NVVM::GridDimZOp>,
-           GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
-          converter);
+  patterns.add<
+      GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
+                                  NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
+                                  NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::ClusterIdOp, NVVM::ClusterIdXOp,
+                                  NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
+                                  NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
+                                  NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
+                                  NVVM::GridDimYOp, NVVM::GridDimZOp>,
+      GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+
+  patterns.add<GPUDynamicSharedMemoryOpLowering>(
+      converter, NVVM::kSharedMemoryAlignmentBit);
 
   // Explicitly drop memory space when lowering private memory
   // attributions since NVVM models it as `alloca`s in the default
@@ -334,7 +352,9 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       /*workgroupAddrSpace=*/
       static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
       StringAttr::get(&converter.getContext(),
-                      NVVM::NVVMDialect::getKernelFuncAttrName()));
+                      NVVM::NVVMDialect::getKernelFuncAttrName()),
+      StringAttr::get(&converter.getContext(),
+                      NVVM::NVVMDialect::getMaxntidAttrName()));
 
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
                                    "__nv_fabs");
@@ -347,6 +367,7 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   populateOpPatterns<math::CeilOp>(converter, patterns, "__nv_ceilf",
                                    "__nv_ceil");
   populateOpPatterns<math::CosOp>(converter, patterns, "__nv_cosf", "__nv_cos");
+  populateOpPatterns<math::ErfOp>(converter, patterns, "__nv_erff", "__nv_erf");
   populateOpPatterns<math::ExpOp>(converter, patterns, "__nv_expf", "__nv_exp");
   populateOpPatterns<math::Exp2Op>(converter, patterns, "__nv_exp2f",
                                    "__nv_exp2");

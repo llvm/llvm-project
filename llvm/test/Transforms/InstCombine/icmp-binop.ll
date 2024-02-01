@@ -132,8 +132,7 @@ define i1 @mul_broddV_unkV_eq(i16 %v, i16 %v2) {
 ; CHECK-NEXT:    [[ODD_NOT:%.*]] = icmp eq i16 [[LB]], 0
 ; CHECK-NEXT:    br i1 [[ODD_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[V:%.*]], [[V2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[MUL]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[V:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @use64(i16 [[V]])

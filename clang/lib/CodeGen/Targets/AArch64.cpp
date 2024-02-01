@@ -136,6 +136,10 @@ public:
 
     Fn->addFnAttr("branch-target-enforcement",
                   BPI.BranchTargetEnforcement ? "true" : "false");
+    Fn->addFnAttr("branch-protection-pauth-lr",
+                  BPI.BranchProtectionPAuthLR ? "true" : "false");
+    Fn->addFnAttr("guarded-control-stack",
+                  BPI.GuardedControlStack ? "true" : "false");
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -185,7 +189,7 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty) const {
   assert(Ty->isVectorType() && "expected vector type!");
 
   const auto *VT = Ty->castAs<VectorType>();
-  if (VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
+  if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
     assert(VT->getElementType()->castAs<BuiltinType>()->getKind() ==
                BuiltinType::UChar &&
@@ -194,7 +198,7 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty) const {
         llvm::Type::getInt1Ty(getVMContext()), 16));
   }
 
-  if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector) {
+  if (VT->getVectorKind() == VectorKind::SveFixedLengthData) {
     assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
     const auto *BT = VT->getElementType()->castAs<BuiltinType>();
@@ -368,8 +372,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     return ABIArgInfo::getIgnore();
 
   if (const auto *VT = RetTy->getAs<VectorType>()) {
-    if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector ||
-        VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
+        VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       return coerceIllegalVector(RetTy);
   }
 
@@ -443,8 +447,8 @@ bool AArch64ABIInfo::isIllegalVectorType(QualType Ty) const {
     // Check whether VT is a fixed-length SVE vector. These types are
     // represented as scalable vectors in function args/return and must be
     // coerced from fixed vectors.
-    if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector ||
-        VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+    if (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
+        VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       return true;
 
     // Check whether VT is legal.

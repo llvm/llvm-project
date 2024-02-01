@@ -18,6 +18,6 @@
 #include <mdspan>
 
 void not_extents() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}mdspan: Extents template parameter must be a specialization of extents.}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}mdspan: Extents template parameter must be a specialization of extents.}}
   [[maybe_unused]] std::mdspan<int, int> m;
 }

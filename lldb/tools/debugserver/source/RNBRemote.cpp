@@ -777,26 +777,28 @@ rnb_err_t RNBRemote::GetPacketPayload(std::string &return_packet) {
   // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s called",
   // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
-  PThreadMutex::Locker locker(m_mutex);
-  if (m_rx_packets.empty()) {
-    // Only reset the remote command available event if we have no more packets
-    m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
-    // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s error: no packets
-    // available...", (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-    // __FUNCTION__);
-    return rnb_err;
-  }
+  {
+    PThreadMutex::Locker locker(m_mutex);
+    if (m_rx_packets.empty()) {
+      // Only reset the remote command available event if we have no more
+      // packets
+      m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
+      // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s error: no packets
+      // available...", (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+      // __FUNCTION__);
+      return rnb_err;
+    }
 
-  // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s has %u queued packets",
-  // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__,
-  // m_rx_packets.size());
-  return_packet.swap(m_rx_packets.front());
-  m_rx_packets.pop_front();
-  locker.Reset(); // Release our lock on the mutex
+    // DNBLogThreadedIf (LOG_RNB_MAX, "%8u RNBRemote::%s has %u queued packets",
+    // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__,
+    // m_rx_packets.size());
+    return_packet.swap(m_rx_packets.front());
+    m_rx_packets.pop_front();
 
-  if (m_rx_packets.empty()) {
-    // Reset the remote command available event if we have no more packets
-    m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
+    if (m_rx_packets.empty()) {
+      // Reset the remote command available event if we have no more packets
+      m_ctx.Events().ResetEvents(RNBContext::event_read_packet_available);
+    }
   }
 
   // DNBLogThreadedIf (LOG_RNB_MEDIUM, "%8u RNBRemote::%s: '%s'",
@@ -3563,10 +3565,11 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   bool enable_compression = false;
   (void)enable_compression;
 
-#if (defined (TARGET_OS_WATCH) && TARGET_OS_WATCH == 1) \
-    || (defined (TARGET_OS_IOS) && TARGET_OS_IOS == 1) \
-    || (defined (TARGET_OS_TV) && TARGET_OS_TV == 1) \
-    || (defined (TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1)
+#if (defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1) ||                      \
+    (defined(TARGET_OS_IOS) && TARGET_OS_IOS == 1) ||                          \
+    (defined(TARGET_OS_TV) && TARGET_OS_TV == 1) ||                            \
+    (defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1) ||                    \
+    (defined(TARGET_OS_XR) && TARGET_OS_XR == 1)
   enable_compression = true;
 #endif
 
@@ -4864,6 +4867,8 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
     strm << "ostype:bridgeos;";
 #elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
     strm << "ostype:macosx;";
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+    strm << "ostype:xros;";
 #else
     strm << "ostype:ios;";
 #endif

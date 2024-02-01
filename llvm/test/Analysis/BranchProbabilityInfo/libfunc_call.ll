@@ -18,16 +18,16 @@ entry:
   %val = call i32 @strcmp(ptr %p, ptr %q)
   %cond = icmp eq i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge entry -> else probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %else probability is 0x50000000 / 0x80000000 = 62.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -40,16 +40,16 @@ entry:
   %val = call i32 @strcmp(ptr %p, ptr %q)
   %cond = icmp eq i32 %val, 5
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge entry -> else probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %else probability is 0x50000000 / 0x80000000 = 62.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -62,16 +62,16 @@ entry:
   %val = call i32 @strcmp(ptr %p, ptr %q)
   %cond = icmp ne i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK: edge entry -> else probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %else probability is 0x30000000 / 0x80000000 = 37.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -84,16 +84,16 @@ entry:
   %val = call i32 @strcmp(ptr %p, ptr %q)
   %cond = icmp sgt i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %else probability is 0x40000000 / 0x80000000 = 50.00%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -106,16 +106,16 @@ entry:
   %val = call i32 @strcmp(ptr %p, ptr %q)
   %cond = icmp slt i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %else probability is 0x40000000 / 0x80000000 = 50.00%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -131,16 +131,16 @@ entry:
   %val = call i32 @strncmp(ptr %p, ptr %q, i32 4)
   %cond = icmp sgt i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %else probability is 0x40000000 / 0x80000000 = 50.00%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -153,16 +153,16 @@ entry:
   %val = call i32 @strcasecmp(ptr %p, ptr %q)
   %cond = icmp sgt i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %else probability is 0x40000000 / 0x80000000 = 50.00%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -175,16 +175,16 @@ entry:
   %val = call i32 @strncasecmp(ptr %p, ptr %q, i32 4)
   %cond = icmp sgt i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %else probability is 0x40000000 / 0x80000000 = 50.00%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -197,16 +197,16 @@ entry:
   %val = call i32 @memcmp(ptr %p, ptr %q)
   %cond = icmp sgt i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> else probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %else probability is 0x40000000 / 0x80000000 = 50.00%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -224,16 +224,16 @@ entry:
   %val = call i32 @nonstrcmp(ptr %p, ptr %q)
   %cond = icmp eq i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge entry -> else probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %else probability is 0x50000000 / 0x80000000 = 62.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -246,16 +246,16 @@ entry:
   %val = call i32 @nonstrcmp(ptr %p, ptr %q)
   %cond = icmp ne i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK: edge entry -> else probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %else probability is 0x30000000 / 0x80000000 = 37.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -268,16 +268,16 @@ entry:
   %val = call i32 @nonstrcmp(ptr %p, ptr %q)
   %cond = icmp sgt i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK: edge entry -> else probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %else probability is 0x30000000 / 0x80000000 = 37.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -291,16 +291,16 @@ entry:
   %val = call i32 @bcmp(ptr %p, ptr %q)
   %cond = icmp eq i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge entry -> else probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %else probability is 0x50000000 / 0x80000000 = 62.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -313,16 +313,16 @@ entry:
   %val = call i32 @bcmp(ptr %p, ptr %q)
   %cond = icmp eq i32 %val, 5
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge entry -> else probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %else probability is 0x50000000 / 0x80000000 = 62.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]
@@ -337,16 +337,16 @@ entry:
   %val = call i32 @bcmp(ptr %p, ptr %q)
   %cond = icmp ne i32 %val, 0
   br i1 %cond, label %then, label %else
-; CHECK: edge entry -> then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK: edge entry -> else probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %entry -> %then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %entry -> %else probability is 0x30000000 / 0x80000000 = 37.50%
 
 then:
   br label %exit
-; CHECK: edge then -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %then -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 else:
   br label %exit
-; CHECK: edge else -> exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge %else -> %exit probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 exit:
   %result = phi i32 [ 0, %then ], [ 1, %else ]

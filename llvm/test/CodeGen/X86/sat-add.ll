@@ -472,12 +472,13 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_min(<4 x i32> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483605,2147483605,2147483605,2147483605]
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: unsigned_sat_constant_v4i32_using_min:
@@ -644,24 +645,19 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE42-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm1
-; SSE42-NEXT:    movapd {{.*#+}} xmm2 = [18446744073709551573,18446744073709551573]
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    pxor %xmm0, %xmm3
-; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [9223372036854775765,9223372036854775765]
-; SSE42-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE42-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    movdqa {{.*#+}} xmm0 = [9223372036854775808,9223372036854775808]
+; SSE42-NEXT:    pxor %xmm1, %xmm0
+; SSE42-NEXT:    pcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE42-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE42-NEXT:    movdqa %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovddup {{.*#+}} xmm1 = [18446744073709551573,18446744073709551573]
-; AVX2-NEXT:    # xmm1 = mem[0,0]
-; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [9223372036854775765,9223372036854775765]
-; AVX2-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vblendvpd %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;

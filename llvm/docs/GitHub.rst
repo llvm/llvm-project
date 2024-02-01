@@ -17,10 +17,11 @@ participate in the project using GitHub.
 
 Branches
 ========
-Do not create any branches in the llvm/llvm-project repository.  This repository
-is reserved for official project branches only.  We may relax this rule in
-the future if needed to support "stacked" pull request, but in that case only
-branches being used for "stacked" pull requests will be allowed.
+
+It is possible to create branches that starts with `users/<username>/`, however this is
+intended to be able to support "stacked" pull-request. Do not create any branches in the
+llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
+aren't associated with a pull-request **will be deleted**.
 
 Pull Requests
 =============
@@ -50,6 +51,9 @@ Create a local branch per commit you want to submit and then push that branch
 to your `fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks>`_
 of the llvm-project and
 `create a pull request from the fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_.
+As GitHub uses the first line of the commit message truncated to 72 characters
+as the pull request title, you may have to edit to reword or to undo this
+truncation.
 
 Creating Pull Requests with GitHub CLI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -156,7 +160,7 @@ merge:
 ::
 
   git push -f
-  gh pr merge --squash --delete branch
+  gh pr merge --squash --delete-branch
 
 This force push may ask if you intend to push hundreds, or potentially
 thousands of patches (depending on how long it's been since your pull request
@@ -164,6 +168,17 @@ was initially authored vs. when you intended to merge it). Since you're pushing
 to a branch in your fork, this is ok and expected. Github's UI for the pull
 request will understand that you're rebasing just your patches, and display
 this result correctly with a note that a force push did occur.
+
+
+Problems After Landing Your Change
+==================================
+
+Even though your PR passed the pre-commit checks and is approved by reviewers, it
+may cause problems for some configurations after it lands. You will be notified
+if this happens and the community is ready to help you fix the problems.
+
+This process is described in detail
+:ref:`here <MyFirstTypoFix Issues After Landing Your PR>`.
 
 
 Checking out another PR locally
@@ -248,7 +263,7 @@ checks:
   git push origin my_change -f
 
   # Now merge it
-  gh pr merge --squash --delete
+  gh pr merge --squash --delete-branch
 
 
 See more in-depth information about how to contribute in the following documentation:
@@ -356,8 +371,8 @@ Releases
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues to make backport requests for the
-release branches.  This is done by making a comment containing one of the
-following commands on any issue that has been added to one of the "X.Y.Z Release"
+release branches.  This is done by making a comment containing the following
+command on any issue that has been added to one of the "X.Y.Z Release"
 milestones.
 
 ::
@@ -370,10 +385,6 @@ apply cleanly, then a comment with a link to the failing job will be added to
 the issue.  If the commit(s) do apply cleanly, then a pull request will
 be created with the specified commits.
 
-::
-
-  /branch <owner>/<repo>/<branch>
-
-This command will create a pull request against the latest release branch using
-the <branch> from the <owner>/<repo> repository.  <branch> cannot contain any
-forward slash '/' characters.
+If a commit you want to backport does not apply cleanly, you may resolve
+the conflicts locally and then create a pull request against the release
+branch.  Just make sure to add the release milestone to the pull request.

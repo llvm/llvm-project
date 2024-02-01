@@ -33,7 +33,6 @@ namespace {
 
 using testing::DoDefault;
 using testing::Return;
-using testing::Expectation;
 using testing::Invoke;
 using testing::InvokeWithoutArgs;
 using testing::_;

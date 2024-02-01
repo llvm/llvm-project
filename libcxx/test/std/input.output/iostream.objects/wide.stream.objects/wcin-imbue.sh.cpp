@@ -9,9 +9,9 @@
 // TODO: Investigate
 // UNSUPPORTED: LIBCXX-AIX-FIXME
 
-// TODO: Make it possible to run this test when cross-compiling and running via a SSH executor
-//       This is a workaround to silence issues reported in https://github.com/llvm/llvm-project/pull/66842#issuecomment-1728701639
-// XFAIL: buildhost=windows && target={{.+}}-linux-{{.+}}
+// This test hangs on Android devices that lack shell_v2, which was added in
+// Android N (API 24).
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && android-device-api={{2[1-3]}}
 
 // <iostream>
 

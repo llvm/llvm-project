@@ -14,9 +14,9 @@
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
@@ -41,6 +41,11 @@ DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
     : Variable(DII->getVariable()),
       Fragment(DII->getExpression()->getFragmentInfo()),
       InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
+
+DebugVariable::DebugVariable(const DPValue *DPV)
+    : Variable(DPV->getVariable()),
+      Fragment(DPV->getExpression()->getFragmentInfo()),
+      InlinedAt(DPV->getDebugLoc().getInlinedAt()) {}
 
 DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
     : DebugVariable(DVI->getVariable(), std::nullopt,
@@ -712,7 +717,9 @@ Constant *DIDerivedType::getStorageOffsetInBits() const {
 }
 
 Constant *DIDerivedType::getConstant() const {
-  assert(getTag() == dwarf::DW_TAG_member && isStaticMember());
+  assert((getTag() == dwarf::DW_TAG_member ||
+          getTag() == dwarf::DW_TAG_variable) &&
+         isStaticMember());
   if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
     return C->getValue();
   return nullptr;
@@ -914,11 +921,11 @@ DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
                              bool DebugInfoForProfiling, unsigned NameTableKind,
                              bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
     : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
-      SourceLanguage(SourceLanguage), IsOptimized(IsOptimized),
-      RuntimeVersion(RuntimeVersion), EmissionKind(EmissionKind), DWOId(DWOId),
-      SplitDebugInlining(SplitDebugInlining),
+      SourceLanguage(SourceLanguage), RuntimeVersion(RuntimeVersion),
+      DWOId(DWOId), EmissionKind(EmissionKind), NameTableKind(NameTableKind),
+      IsOptimized(IsOptimized), SplitDebugInlining(SplitDebugInlining),
       DebugInfoForProfiling(DebugInfoForProfiling),
-      NameTableKind(NameTableKind), RangesBaseAddress(RangesBaseAddress) {
+      RangesBaseAddress(RangesBaseAddress) {
   assert(Storage != Uniqued);
 }
 
@@ -1180,8 +1187,9 @@ DILexicalBlockFile *DILexicalBlockFile::getImpl(LLVMContext &Context,
 
 DINamespace::DINamespace(LLVMContext &Context, StorageType Storage,
                          bool ExportSymbols, ArrayRef<Metadata *> Ops)
-    : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace, Ops),
-      ExportSymbols(ExportSymbols) {}
+    : DIScope(Context, DINamespaceKind, Storage, dwarf::DW_TAG_namespace, Ops) {
+  SubclassData1 = ExportSymbols;
+}
 DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
                                   MDString *Name, bool ExportSymbols,
                                   StorageType Storage, bool ShouldCreate) {
@@ -1195,8 +1203,9 @@ DINamespace *DINamespace::getImpl(LLVMContext &Context, Metadata *Scope,
 DICommonBlock::DICommonBlock(LLVMContext &Context, StorageType Storage,
                              unsigned LineNo, ArrayRef<Metadata *> Ops)
     : DIScope(Context, DICommonBlockKind, Storage, dwarf::DW_TAG_common_block,
-              Ops),
-      LineNo(LineNo) {}
+              Ops) {
+  SubclassData32 = LineNo;
+}
 DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
                                       Metadata *Decl, MDString *Name,
                                       Metadata *File, unsigned LineNo,
@@ -1210,8 +1219,10 @@ DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
 
 DIModule::DIModule(LLVMContext &Context, StorageType Storage, unsigned LineNo,
                    bool IsDecl, ArrayRef<Metadata *> Ops)
-    : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops),
-      LineNo(LineNo), IsDecl(IsDecl) {}
+    : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops) {
+  SubclassData1 = IsDecl;
+  SubclassData32 = LineNo;
+}
 DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *File,
                             Metadata *Scope, MDString *Name,
                             MDString *ConfigurationMacros,
@@ -1300,8 +1311,9 @@ DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
 DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                        signed Line, ArrayRef<Metadata *> Ops,
                        uint32_t AlignInBits)
-    : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
-      AlignInBits(AlignInBits) {}
+    : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line) {
+  SubclassData32 = AlignInBits;
+}
 std::optional<uint64_t> DIVariable::getSizeInBits() const {
   // This is used by the Verifier so be mindful of broken types.
   const Metadata *RawType = getRawType();
@@ -1327,7 +1339,9 @@ std::optional<uint64_t> DIVariable::getSizeInBits() const {
 
 DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
                  ArrayRef<Metadata *> Ops)
-    : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops), Line(Line) {}
+    : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops) {
+  SubclassData32 = Line;
+}
 DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           Metadata *File, unsigned Line, StorageType Storage,
                           bool ShouldCreate) {
@@ -1498,7 +1512,6 @@ bool DIExpression::isImplicit() const {
     default:
       break;
     case dwarf::DW_OP_stack_value:
-    case dwarf::DW_OP_LLVM_tag_offset:
       return true;
     }
   }
@@ -2107,11 +2120,14 @@ DIMacroFile *DIMacroFile::getImpl(LLVMContext &Context, unsigned MIType,
   DEFINE_GETIMPL_STORE(DIMacroFile, (MIType, Line), Ops);
 }
 
-DIArgList *DIArgList::getImpl(LLVMContext &Context,
-                              ArrayRef<ValueAsMetadata *> Args,
-                              StorageType Storage, bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DIArgList, (Args));
-  DEFINE_GETIMPL_STORE_NO_OPS(DIArgList, (Args));
+DIArgList *DIArgList::get(LLVMContext &Context,
+                          ArrayRef<ValueAsMetadata *> Args) {
+  auto ExistingIt = Context.pImpl->DIArgLists.find_as(DIArgListKeyInfo(Args));
+  if (ExistingIt != Context.pImpl->DIArgLists.end())
+    return *ExistingIt;
+  DIArgList *NewArgList = new DIArgList(Context, Args);
+  Context.pImpl->DIArgLists.insert(NewArgList);
+  return NewArgList;
 }
 
 void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
@@ -2119,12 +2135,9 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
   assert((!New || isa<ValueAsMetadata>(New)) &&
          "DIArgList must be passed a ValueAsMetadata");
   untrack();
-  bool Uniq = isUniqued();
-  if (Uniq) {
-    // We need to update the uniqueness once the Args are updated since they
-    // form the key to the DIArgLists store.
-    eraseFromStore();
-  }
+  // We need to update the set storage once the Args are updated since they
+  // form the key to the DIArgLists store.
+  getContext().pImpl->DIArgLists.erase(this);
   ValueAsMetadata *NewVM = cast_or_null<ValueAsMetadata>(New);
   for (ValueAsMetadata *&VM : Args) {
     if (&VM == OldVMPtr) {
@@ -2134,10 +2147,19 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
         VM = ValueAsMetadata::get(PoisonValue::get(VM->getValue()->getType()));
     }
   }
-  if (Uniq) {
-    if (uniquify() != this)
-      storeDistinctInContext();
+  // We've changed the contents of this DIArgList, and the set storage may
+  // already contain a DIArgList with our new set of args; if it does, then we
+  // must RAUW this with the existing DIArgList, otherwise we simply insert this
+  // back into the set storage.
+  DIArgList *ExistingArgList = getUniqued(getContext().pImpl->DIArgLists, this);
+  if (ExistingArgList) {
+    replaceAllUsesWith(ExistingArgList);
+    // Clear this here so we don't try to untrack in the destructor.
+    Args.clear();
+    delete this;
+    return;
   }
+  getContext().pImpl->DIArgLists.insert(this);
   track();
 }
 void DIArgList::track() {
@@ -2150,8 +2172,9 @@ void DIArgList::untrack() {
     if (VAM)
       MetadataTracking::untrack(&VAM, *VAM);
 }
-void DIArgList::dropAllReferences() {
-  untrack();
+void DIArgList::dropAllReferences(bool Untrack) {
+  if (Untrack)
+    untrack();
   Args.clear();
-  MDNode::dropAllReferences();
+  ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
 }

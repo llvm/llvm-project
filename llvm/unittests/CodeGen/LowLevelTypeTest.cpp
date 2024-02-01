@@ -84,7 +84,7 @@ TEST(LowLevelTypeTest, Vector) {
       if (!EC.isScalable())
         EXPECT_EQ(S * EC.getFixedValue(), VTy.getSizeInBits());
       else
-        EXPECT_EQ(TypeSize::Scalable(S * EC.getKnownMinValue()),
+        EXPECT_EQ(TypeSize::getScalable(S * EC.getKnownMinValue()),
                   VTy.getSizeInBits());
 
       // Test equality operators.
@@ -411,5 +411,19 @@ TEST(LowLevelTypeTest, ConstExpr) {
   EXPECT_EQ(LLT::fixed_vector(2, 32), CEV2S32);
   EXPECT_EQ(LLT::pointer(0, 32), CEP0);
   EXPECT_EQ(LLT::scalable_vector(2, 32), CESV2S32);
+}
+
+TEST(LowLevelTypeTest, IsFixedVector) {
+  EXPECT_FALSE(LLT::scalar(32).isFixedVector());
+  EXPECT_TRUE(LLT::fixed_vector(2, 32).isFixedVector());
+  EXPECT_FALSE(LLT::scalable_vector(2, 32).isFixedVector());
+  EXPECT_FALSE(LLT::scalable_vector(1, 32).isFixedVector());
+}
+
+TEST(LowLevelTypeTest, IsScalableVector) {
+  EXPECT_FALSE(LLT::scalar(32).isScalableVector());
+  EXPECT_FALSE(LLT::fixed_vector(2, 32).isScalableVector());
+  EXPECT_TRUE(LLT::scalable_vector(2, 32).isScalableVector());
+  EXPECT_TRUE(LLT::scalable_vector(1, 32).isScalableVector());
 }
 }

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-enum-usage %t -- -config="{CheckOptions: {bugprone-suspicious-enum-usage.StrictMode: true}}" --
+// RUN: %check_clang_tidy -std=c++17 %s bugprone-suspicious-enum-usage %t -- -config="{CheckOptions: {bugprone-suspicious-enum-usage.StrictMode: true}}" --
 
 enum A {
   A = 1,
@@ -71,7 +71,7 @@ int trigger() {
   unsigned p = R;
   PP pp = Q;
   p |= pp;
-  
+
   enum X x = Z;
   p = x | Z;
   return 0;

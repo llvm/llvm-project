@@ -1148,7 +1148,7 @@ Value *LibCallSimplifier::optimizeStrCSpn(CallInst *CI, IRBuilderBase &B) {
 Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
   // fold strstr(x, x) -> x.
   if (CI->getArgOperand(0) == CI->getArgOperand(1))
-    return B.CreateBitCast(CI->getArgOperand(0), CI->getType());
+    return CI->getArgOperand(0);
 
   // fold strstr(a, b) == a -> strncmp(a, b, strlen(b)) == 0
   if (isOnlyUsedInEqualityComparison(CI, CI->getArgOperand(0))) {
@@ -1176,7 +1176,7 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
 
   // fold strstr(x, "") -> x.
   if (HasStr2 && ToFindStr.empty())
-    return B.CreateBitCast(CI->getArgOperand(0), CI->getType());
+    return CI->getArgOperand(0);
 
   // If both strings are known, constant fold it.
   if (HasStr1 && HasStr2) {
@@ -1186,16 +1186,13 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
       return Constant::getNullValue(CI->getType());
 
     // strstr("abcd", "bc") -> gep((char*)"abcd", 1)
-    Value *Result = CI->getArgOperand(0);
-    Result =
-        B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), Result, Offset, "strstr");
-    return B.CreateBitCast(Result, CI->getType());
+    return B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), CI->getArgOperand(0),
+                                        Offset, "strstr");
   }
 
   // fold strstr(x, "y") -> strchr(x, 'y').
   if (HasStr2 && ToFindStr.size() == 1) {
-    Value *StrChr = emitStrChr(CI->getArgOperand(0), ToFindStr[0], B, TLI);
-    return StrChr ? B.CreateBitCast(StrChr, CI->getType()) : nullptr;
+    return emitStrChr(CI->getArgOperand(0), ToFindStr[0], B, TLI);
   }
 
   annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
@@ -1843,7 +1840,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
     StringRef CallerName = CI->getFunction()->getName();
     if (!CallerName.empty() && CallerName.back() == 'f' &&
         CallerName.size() == (CalleeName.size() + 1) &&
-        CallerName.startswith(CalleeName))
+        CallerName.starts_with(CalleeName))
       return nullptr;
   }
 
@@ -2378,8 +2375,8 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   FMF.setNoSignedZeros();
   B.setFastMathFlags(FMF);
 
-  Intrinsic::ID IID = Callee->getName().startswith("fmin") ? Intrinsic::minnum
-                                                           : Intrinsic::maxnum;
+  Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
+                                                            : Intrinsic::maxnum;
   Function *F = Intrinsic::getDeclaration(CI->getModule(), IID, CI->getType());
   return copyFlags(
       *CI, B.CreateCall(F, {CI->getArgOperand(0), CI->getArgOperand(1)}));
@@ -2498,13 +2495,17 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
 
   // log(pow(x,y)) -> y*log(x)
   AttributeList NoAttrs;
-  if (ArgLb == PowLb || ArgID == Intrinsic::pow) {
+  if (ArgLb == PowLb || ArgID == Intrinsic::pow || ArgID == Intrinsic::powi) {
     Value *LogX =
         Log->doesNotAccessMemory()
             ? B.CreateCall(Intrinsic::getDeclaration(Mod, LogID, Ty),
                            Arg->getOperand(0), "log")
             : emitUnaryFloatFnCall(Arg->getOperand(0), TLI, LogNm, B, NoAttrs);
-    Value *MulY = B.CreateFMul(Arg->getArgOperand(1), LogX, "mul");
+    Value *Y = Arg->getArgOperand(1);
+    // Cast exponent to FP if integer.
+    if (ArgID == Intrinsic::powi)
+      Y = B.CreateSIToFP(Y, Ty, "cast");
+    Value *MulY = B.CreateFMul(Y, LogX, "mul");
     // Since pow() may have side effects, e.g. errno,
     // dead code elimination may not be trusted to remove it.
     substituteInParent(Arg, MulY);
@@ -3738,26 +3739,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
 
   // Also try to simplify calls to fortified library functions.
   if (Value *SimplifiedFortifiedCI =
-          FortifiedSimplifier.optimizeCall(CI, Builder)) {
-    // Try to further simplify the result.
-    CallInst *SimplifiedCI = dyn_cast<CallInst>(SimplifiedFortifiedCI);
-    if (SimplifiedCI && SimplifiedCI->getCalledFunction()) {
-      // Ensure that SimplifiedCI's uses are complete, since some calls have
-      // their uses analyzed.
-      replaceAllUsesWith(CI, SimplifiedCI);
-
-      // Set insertion point to SimplifiedCI to guarantee we reach all uses
-      // we might replace later on.
-      IRBuilderBase::InsertPointGuard Guard(Builder);
-      Builder.SetInsertPoint(SimplifiedCI);
-      if (Value *V = optimizeStringMemoryLibCall(SimplifiedCI, Builder)) {
-        // If we were able to further simplify, remove the now redundant call.
-        substituteInParent(SimplifiedCI, V);
-        return V;
-      }
-    }
+          FortifiedSimplifier.optimizeCall(CI, Builder))
     return SimplifiedFortifiedCI;
-  }
 
   // Then check for known library functions.
   if (TLI->getLibFunc(*Callee, Func) && isLibFuncEmittable(M, TLI, Func)) {

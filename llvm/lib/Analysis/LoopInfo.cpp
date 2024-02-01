@@ -816,20 +816,19 @@ Loop *UnloopUpdater::getNearestLoop(BasicBlock *BB, Loop *BBLoop) {
     NearLoop = SubloopParents.insert({Subloop, &Unloop}).first->second;
   }
 
-  succ_iterator I = succ_begin(BB), E = succ_end(BB);
-  if (I == E) {
+  if (succ_empty(BB)) {
     assert(!Subloop && "subloop blocks must have a successor");
     NearLoop = nullptr; // unloop blocks may now exit the function.
   }
-  for (; I != E; ++I) {
-    if (*I == BB)
+  for (BasicBlock *Succ : successors(BB)) {
+    if (Succ == BB)
       continue; // self loops are uninteresting
 
-    Loop *L = LI->getLoopFor(*I);
+    Loop *L = LI->getLoopFor(Succ);
     if (L == &Unloop) {
       // This successor has not been processed. This path must lead to an
       // irreducible backedge.
-      assert((FoundIB || !DFS.hasPostorder(*I)) && "should have seen IB");
+      assert((FoundIB || !DFS.hasPostorder(Succ)) && "should have seen IB");
       FoundIB = true;
     }
     if (L != &Unloop && Unloop.contains(L)) {
@@ -969,7 +968,9 @@ LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
 
 PreservedAnalyses LoopPrinterPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
-  AM.getResult<LoopAnalysis>(F).print(OS);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  OS << "Loop info for function '" << F.getName() << "':\n";
+  LI.print(OS);
   return PreservedAnalyses::all();
 }
 
@@ -1143,7 +1144,7 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
         if (S)
           IsVectorMetadata =
               llvm::any_of(RemovePrefixes, [S](StringRef Prefix) -> bool {
-                return S->getString().startswith(Prefix);
+                return S->getString().starts_with(Prefix);
               });
       }
       if (!IsVectorMetadata)
@@ -1218,7 +1219,7 @@ PreservedAnalyses LoopVerifierPass::run(Function &F,
 /// Traverse the loop blocks and store the DFS result.
 /// Useful for clients that just want the final DFS result and don't need to
 /// visit blocks during the initial traversal.
-void LoopBlocksDFS::perform(LoopInfo *LI) {
+void LoopBlocksDFS::perform(const LoopInfo *LI) {
   LoopBlocksTraversal Traversal(*this, LI);
   for (LoopBlocksTraversal::POTIterator POI = Traversal.begin(),
                                         POE = Traversal.end();

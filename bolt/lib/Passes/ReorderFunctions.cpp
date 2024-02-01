@@ -30,6 +30,7 @@ extern cl::opt<uint32_t> RandomSeed;
 
 extern size_t padFunction(const bolt::BinaryFunction &Function);
 
+extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
     "reorder-functions",
     cl::desc("reorder and cluster functions (works only with relocations)"),
@@ -41,8 +42,8 @@ cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
                clEnumValN(bolt::ReorderFunctions::RT_HFSORT, "hfsort",
                           "use hfsort algorithm"),
                clEnumValN(bolt::ReorderFunctions::RT_HFSORT_PLUS, "hfsort+",
-                          "use hfsort+ algorithm"),
-               clEnumValN(bolt::ReorderFunctions::RT_CDS, "cds",
+                          "use cache-directed sort"),
+               clEnumValN(bolt::ReorderFunctions::RT_CDSORT, "cdsort",
                           "use cache-directed sort"),
                clEnumValN(bolt::ReorderFunctions::RT_PETTIS_HANSEN,
                           "pettis-hansen", "use Pettis-Hansen algorithm"),
@@ -50,7 +51,14 @@ cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
                           "reorder functions randomly"),
                clEnumValN(bolt::ReorderFunctions::RT_USER, "user",
                           "use function order specified by -function-order")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::ZeroOrMore, cl::cat(BoltOptCategory),
+    cl::callback([](const bolt::ReorderFunctions::ReorderType &option) {
+      if (option == bolt::ReorderFunctions::RT_HFSORT_PLUS) {
+        errs() << "BOLT-WARNING: '-reorder-functions=hfsort+' is deprecated,"
+               << " please use '-reorder-functions=cdsort' instead\n";
+        ReorderFunctions = bolt::ReorderFunctions::RT_CDSORT;
+      }
+    }));
 
 static cl::opt<bool> ReorderFunctionsUseHotSize(
     "reorder-functions-use-hot-size",
@@ -319,10 +327,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   case RT_HFSORT:
     Clusters = clusterize(Cg);
     break;
-  case RT_HFSORT_PLUS:
-    Clusters = hfsortPlus(Cg);
-    break;
-  case RT_CDS: {
+  case RT_CDSORT: {
     // It is required that the sum of incoming arc weights is not greater
     // than the number of samples for every function. Ensuring the call graph
     // obeys the property before running the algorithm.
@@ -423,9 +428,14 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
       errs() << "BOLT-WARNING: Reorder functions: can't find functions for "
              << InvalidEntries << " entries in -function-order list\n";
   } break;
+
+  default:
+    llvm_unreachable("unexpected layout type");
   }
 
   reorder(std::move(Clusters), BFs);
+
+  BC.HasFinalizedFunctionOrder = true;
 
   std::unique_ptr<std::ofstream> FuncsFile;
   if (!opts::GenerateFunctionOrderFile.empty()) {

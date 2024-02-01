@@ -26,7 +26,7 @@
 
 constexpr bool test() {
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_insert_range<std::vector<int, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_insert_range<std::vector<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
       LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
     });

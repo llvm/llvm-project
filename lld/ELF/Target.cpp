@@ -112,7 +112,7 @@ ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
       std::string objLoc = isec->getLocation(loc - isecLoc);
       // Return object file location and source file location.
       // TODO: Refactor getSrcMsg not to take a variable.
-      Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
+      Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
       return {isec, objLoc + ": ",
               isec->file ? isec->getSrcMsg(dummy, loc - isecLoc) : ""};
     }
@@ -159,6 +159,8 @@ void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(

@@ -7,10 +7,24 @@ endif()
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
-# `llvm-project/llvm/CMakeLists.txt` adds the following directive
-# `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
-# We undo it to be able to precisely control what is getting included.
-set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "")
+if (LIBC_CMAKE_VERBOSE_LOGGING)
+  get_directory_property(LIBC_OLD_PREPROCESSOR_DEFS COMPILE_DEFINITIONS)
+  foreach(OLD_DEF ${LIBC_OLD_PREPROCESSOR_DEFS})
+    message(STATUS "Undefining ${OLD_DEF}")
+  endforeach()
+endif()
+set_directory_properties(PROPERTIES
+  # `llvm-project/llvm/CMakeLists.txt` adds the following directive
+  # `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})` We
+  # undo it to be able to precisely control what is getting included.
+  INCLUDE_DIRECTORIES ""
+  # `llvm/cmake/modules/HandleLLVMOptions.cmake` uses `add_compile_definitions`
+  # to set a few preprocessor defines which we do not want.
+  COMPILE_DEFINITIONS ""
+)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_definitions("-D_DEBUG")
+endif()
 
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -34,6 +48,10 @@ if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
     # We need to set up hdrgen first since other targets depend on it.
     add_subdirectory(utils/LibcTableGenUtil)
     add_subdirectory(utils/HdrGen)
+    # Calling add_tablegen sets variables like LIBC_TABLEGEN_EXE in
+    # PARENT_SCOPE which get lost until saved in the cache.
+    set(LIBC_TABLEGEN_EXE "${LIBC_TABLEGEN_EXE}" CACHE INTERNAL "")
+    set(LIBC_TABLEGEN_TARGET "${LIBC_TABLEGEN_TARGET}" CACHE INTERNAL "")
   else()
     message(STATUS "Will use ${LIBC_HDRGEN_EXE} for libc header generation.")
   endif()
@@ -103,11 +121,40 @@ option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
 set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
+option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
+
 set(LIBC_ENABLE_UNITTESTS ON)
 set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
+
+set(LIBC_CONFIG_JSON_FILE_LIST "")
+
+if(NOT LIBC_CONFIG_PATH)
+  list(APPEND LIBC_CONFIG_JSON_FILE_LIST "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}")
+  if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}")
+    list(APPEND LIBC_CONFIG_JSON_FILE_LIST "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}")
+    set(LIBC_CONFIG_PATH "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}")
+  elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}")
+    set(LIBC_CONFIG_PATH "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}")
+  endif()
+else()
+  list(APPEND LIBC_CONFIG_JSON_FILE_LIST "${LIBC_CONFIG_PATH}")
+endif()
+
+if(NOT LIBC_CONFIG_PATH)
+  message(FATAL_ERROR "Configs for the platform '${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}' do not exist and LIBC_CONFIG_PATH is not set.")
+elseif(LIBC_CMAKE_VERBOSE_LOGGING)
+  message(STATUS "Path for config files is: ${LIBC_CONFIG_PATH}")
+endif()
+
+# option(LIBC_ENABLE_WIDE_CHARACTERS 
+# "Whether to enable wide character functions on supported platforms. This may
+# also set flags to enable or disable wide character support within other
+# functions (e.g. printf)." ON)
+
+#TODO: Add carve-out specific config files to the list here.
 
 include(LibcConfig)
 # Config loading happens in three steps:
@@ -147,8 +194,14 @@ foreach(opt IN LISTS global_config)
   set(${opt_name} ${opt_value})
 endforeach()
 generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
-load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/config.json ${cmd_line_conf})
-load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/config.json ${cmd_line_conf})
+
+# Load each target specific config.
+foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Loading additional config: '${config_path}/config.json'")
+  endif()
+  load_libc_config(${config_path}/config.json ${cmd_line_conf})
+endforeach()
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -245,22 +298,43 @@ option(LIBC_INCLUDE_DOCS "Build the libc documentation." ${LLVM_INCLUDE_DOCS})
 
 include(CMakeParseArguments)
 include(LLVMLibCCheckCpuFeatures)
+include(CheckCompilerFeatures)
 include(LLVMLibCRules)
 
-if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
-  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
-elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
-  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
-else()
-  message(FATAL_ERROR "entrypoints.txt file for the target platform '${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}' not found.")
-endif()
-include(${entrypoint_file})
+set(TARGET_LLVMLIBC_ENTRYPOINTS "")
+set(TARGET_LIBC_ENTRYPOINTS "")
+set(TARGET_LIBM_ENTRYPOINTS "")
+set(TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS "")
 
-if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
-  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
-elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
-  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
+# Check entrypoints.txt
+if(EXISTS "${LIBC_CONFIG_PATH}/entrypoints.txt")
+    include("${LIBC_CONFIG_PATH}/entrypoints.txt")
+else()
+  message(FATAL_ERROR "${LIBC_CONFIG_PATH}/entrypoints.txt file not found.")
 endif()
+
+# Check headers.txt
+if(EXISTS "${LIBC_CONFIG_PATH}/headers.txt")
+    include("${LIBC_CONFIG_PATH}/headers.txt")
+elseif(LLVM_LIBC_FULL_BUILD)
+  message(FATAL_ERROR "${LIBC_CONFIG_PATH}/headers.txt file not found and fullbuild requested.")
+endif()
+
+# Check exclude.txt that appends to LIBC_EXCLUDE_ENTRYPOINTS list
+if(EXISTS "${LIBC_CONFIG_PATH}/exclude.txt")
+    include("${LIBC_CONFIG_PATH}/exclude.txt")
+endif()
+
+# #TODO: Set up support for premade configs adding their own exclude lists.
+
+foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Removing entrypoint ${removed_entrypoint}")
+  endif()
+  list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
+  list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
+  list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
+endforeach()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
 foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -273,19 +347,6 @@ foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(SUBSTRING ${entrypoint} ${name_loc} -1 entrypoint_name)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
-
-set(LIBC_INSTALL_DEPENDS)
-if(LLVM_LIBC_FULL_BUILD)
-  set(LIBC_INSTALL_DEPENDS "install-libc-static-archives;install-libc-headers")
-  if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
-    # For now we will disable libc-startup installation for baremetal. The
-    # correct way to do it would be to make a hookable startup for baremetal
-    # and install it as part of the libc installation.
-    list(APPEND LIBC_INSTALL_DEPENDS "libc-startup")
-  endif()
-else()
-  set(LIBC_INSTALL_DEPENDS install-libc-static-archives)
-endif()
 
 add_subdirectory(include)
 add_subdirectory(config)
@@ -314,18 +375,3 @@ endif()
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
-
-
-if(LLVM_LIBC_FULL_BUILD)
-  add_llvm_install_targets(
-    install-libc-headers
-    DEPENDS libc-headers
-    COMPONENT libc-headers
-  )
-endif()
-
-add_llvm_install_targets(
-  install-libc
-  DEPENDS ${LIBC_INSTALL_DEPENDS}
-  COMPONENT libc
-)

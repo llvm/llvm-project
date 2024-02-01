@@ -160,10 +160,23 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
 int FunctionComparator::cmpMetadata(const Metadata *L,
                                     const Metadata *R) const {
   // TODO: the following routine coerce the metadata contents into constants
-  // before comparison.
+  // or MDStrings before comparison.
   // It ignores any other cases, so that the metadata nodes are considered
   // equal even though this is not correct.
   // We should structurally compare the metadata nodes to be perfect here.
+
+  auto *MDStringL = dyn_cast<MDString>(L);
+  auto *MDStringR = dyn_cast<MDString>(R);
+  if (MDStringL && MDStringR) {
+    if (MDStringL == MDStringR)
+      return 0;
+    return MDStringL->getString().compare(MDStringR->getString());
+  }
+  if (MDStringR)
+    return -1;
+  if (MDStringL)
+    return 1;
+
   auto *CL = dyn_cast<ConstantAsMetadata>(L);
   auto *CR = dyn_cast<ConstantAsMetadata>(R);
   if (CL == CR)
@@ -392,6 +405,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   case Value::ConstantExprVal: {
     const ConstantExpr *LE = cast<ConstantExpr>(L);
     const ConstantExpr *RE = cast<ConstantExpr>(R);
+    if (int Res = cmpNumbers(LE->getOpcode(), RE->getOpcode()))
+      return Res;
     unsigned NumOperandsL = LE->getNumOperands();
     unsigned NumOperandsR = RE->getNumOperands();
     if (int Res = cmpNumbers(NumOperandsL, NumOperandsR))
@@ -399,6 +414,29 @@ int FunctionComparator::cmpConstants(const Constant *L,
     for (unsigned i = 0; i < NumOperandsL; ++i) {
       if (int Res = cmpConstants(cast<Constant>(LE->getOperand(i)),
                                  cast<Constant>(RE->getOperand(i))))
+        return Res;
+    }
+    if (LE->isCompare())
+      if (int Res = cmpNumbers(LE->getPredicate(), RE->getPredicate()))
+        return Res;
+    if (auto *GEPL = dyn_cast<GEPOperator>(LE)) {
+      auto *GEPR = cast<GEPOperator>(RE);
+      if (int Res = cmpTypes(GEPL->getSourceElementType(),
+                             GEPR->getSourceElementType()))
+        return Res;
+      if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
+        return Res;
+      if (int Res = cmpNumbers(GEPL->getInRangeIndex().value_or(unsigned(-1)),
+                               GEPR->getInRangeIndex().value_or(unsigned(-1))))
+        return Res;
+    }
+    if (auto *OBOL = dyn_cast<OverflowingBinaryOperator>(LE)) {
+      auto *OBOR = cast<OverflowingBinaryOperator>(RE);
+      if (int Res =
+              cmpNumbers(OBOL->hasNoUnsignedWrap(), OBOR->hasNoUnsignedWrap()))
+        return Res;
+      if (int Res =
+              cmpNumbers(OBOL->hasNoSignedWrap(), OBOR->hasNoSignedWrap()))
         return Res;
     }
     return 0;
@@ -818,6 +856,21 @@ int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   if (ConstL)
     return 1;
   if (ConstR)
+    return -1;
+
+  const MetadataAsValue *MetadataValueL = dyn_cast<MetadataAsValue>(L);
+  const MetadataAsValue *MetadataValueR = dyn_cast<MetadataAsValue>(R);
+  if (MetadataValueL && MetadataValueR) {
+    if (MetadataValueL == MetadataValueR)
+      return 0;
+
+    return cmpMetadata(MetadataValueL->getMetadata(),
+                       MetadataValueR->getMetadata());
+  }
+
+  if (MetadataValueL)
+    return 1;
+  if (MetadataValueR)
     return -1;
 
   const InlineAsm *InlineAsmL = dyn_cast<InlineAsm>(L);

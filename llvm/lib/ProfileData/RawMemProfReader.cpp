@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -87,7 +86,7 @@ llvm::SmallVector<SegmentEntry> readSegmentEntries(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   llvm::SmallVector<SegmentEntry> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     Items.push_back(*reinterpret_cast<const SegmentEntry *>(
@@ -101,10 +100,11 @@ readMemInfoBlocks(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
-    const uint64_t Id = endian::readNext<uint64_t, little, unaligned>(Ptr);
+    const uint64_t Id =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
     const MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
     Items.push_back({Id, MIB});
     // Only increment by size of MIB since readNext implicitly increments.
@@ -117,16 +117,19 @@ CallStackMap readStackInfo(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   CallStackMap Items;
 
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
-    const uint64_t StackId = endian::readNext<uint64_t, little, unaligned>(Ptr);
-    const uint64_t NumPCs = endian::readNext<uint64_t, little, unaligned>(Ptr);
+    const uint64_t StackId =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    const uint64_t NumPCs =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
 
     SmallVector<uint64_t> CallStack;
     for (uint64_t J = 0; J < NumPCs; J++) {
-      CallStack.push_back(endian::readNext<uint64_t, little, unaligned>(Ptr));
+      CallStack.push_back(
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr));
     }
 
     Items[StackId] = CallStack;
@@ -333,6 +336,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                                           inconvertibleErrorCode()),
                   FileName);
 
+  // Process the raw profile.
+  if (Error E = readRawProfile(std::move(DataBuffer)))
+    return E;
+
+  if (Error E = setupForSymbolization())
+    return E;
+
   auto *Object = cast<object::ObjectFile>(Binary.getBinary());
   std::unique_ptr<DIContext> Context = DWARFContext::create(
       *Object, DWARFContext::ProcessDebugRelocations::Process);
@@ -341,16 +351,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
       Object, std::move(Context), /*UntagAddresses=*/false);
   if (!SOFOr)
     return report(SOFOr.takeError(), FileName);
-  Symbolizer = std::move(SOFOr.get());
+  auto Symbolizer = std::move(SOFOr.get());
 
-  // Process the raw profile.
-  if (Error E = readRawProfile(std::move(DataBuffer)))
-    return E;
-
-  if (Error E = setupForSymbolization())
-    return E;
-
-  if (Error E = symbolizeAndFilterStackFrames())
+  // The symbolizer ownership is moved into symbolizeAndFilterStackFrames so
+  // that it is freed automatically at the end, when it is no longer used. This
+  // reduces peak memory since it won't be live while also mapping the raw
+  // profile into records afterwards.
+  if (Error E = symbolizeAndFilterStackFrames(std::move(Symbolizer)))
     return E;
 
   return mapRawProfileToRecords();
@@ -466,7 +473,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   return Error::success();
 }
 
-Error RawMemProfReader::symbolizeAndFilterStackFrames() {
+Error RawMemProfReader::symbolizeAndFilterStackFrames(
+    std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer) {
   // The specifier to use when symbolization is requested.
   const DILineInfoSpecifier Specifier(
       DILineInfoSpecifier::FileLineInfoKind::RawValue,

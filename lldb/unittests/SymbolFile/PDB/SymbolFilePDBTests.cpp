@@ -53,7 +53,7 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFilePECOFF::Initialize();
-    SymbolFileDWARF::Initialize();
+    plugin::dwarf::SymbolFileDWARF::Initialize();
     TypeSystemClang::Initialize();
     SymbolFilePDB::Initialize();
 
@@ -64,7 +64,7 @@ public:
   void TearDown() override {
     SymbolFilePDB::Terminate();
     TypeSystemClang::Initialize();
-    SymbolFileDWARF::Terminate();
+    plugin::dwarf::SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
@@ -362,10 +362,9 @@ TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  llvm::DenseSet<SymbolFile *> searched_files;
-  TypeMap results;
-  symfile->FindTypes(ConstString("Class"), CompilerDeclContext(), 0,
-                     searched_files, results);
+  TypeResults query_results;
+  symfile->FindTypes(TypeQuery("Class"), query_results);
+  TypeMap &results = query_results.GetTypeMap();
   EXPECT_EQ(1u, results.GetSize());
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
   EXPECT_EQ(ConstString("Class"), udt_type->GetName());
@@ -383,8 +382,6 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  llvm::DenseSet<SymbolFile *> searched_files;
-  TypeMap results;
 
   auto clang_ast_ctx_or_err =
       symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
@@ -394,8 +391,10 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
       llvm::dyn_cast_or_null<TypeSystemClang>(clang_ast_ctx_or_err->get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
-  symfile->FindTypes(ConstString("Class"), CompilerDeclContext(), 0,
-                     searched_files, results);
+  TypeResults query_results;
+  symfile->FindTypes(TypeQuery("Class"), query_results);
+  TypeMap &results = query_results.GetTypeMap();
+
   EXPECT_EQ(1u, results.GetSize());
 
   auto Class = results.GetTypeAtIndex(0);
@@ -413,10 +412,12 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   // compiler type for both, but `FindTypes` may return more than one type
   // (with the same compiler type) because the symbols have different IDs.
 
-  TypeMap more_results;
   auto ClassCompilerDeclCtx = CompilerDeclContext(clang_ast_ctx, ClassDeclCtx);
-  symfile->FindTypes(ConstString("NestedClass"), ClassCompilerDeclCtx, 0,
-                     searched_files, more_results);
+  TypeResults query_results_nested;
+  symfile->FindTypes(
+      TypeQuery(ClassCompilerDeclCtx, ConstString("NestedClass")),
+      query_results_nested);
+  TypeMap &more_results = query_results_nested.GetTypeMap();
   EXPECT_LE(1u, more_results.GetSize());
 
   lldb::TypeSP udt_type = more_results.GetTypeAtIndex(0);
@@ -437,9 +438,6 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  llvm::DenseSet<SymbolFile *> searched_files;
-  TypeMap results;
-
   auto clang_ast_ctx_or_err =
       symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
@@ -456,12 +454,14 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   symfile->ParseDeclsForContext(CompilerDeclContext(
       clang_ast_ctx, static_cast<clang::DeclContext *>(tu)));
 
-  auto ns_namespace =
+  auto ns_namespace_decl_ctx =
       symfile->FindNamespace(ConstString("NS"), CompilerDeclContext(), true);
-  EXPECT_TRUE(ns_namespace.IsValid());
+  EXPECT_TRUE(ns_namespace_decl_ctx.IsValid());
 
-  symfile->FindTypes(ConstString("NSClass"), ns_namespace, 0, searched_files,
-                     results);
+  TypeResults query_results;
+  symfile->FindTypes(TypeQuery(ns_namespace_decl_ctx, ConstString("NSClass")),
+                     query_results);
+  TypeMap &results = query_results.GetTypeMap();
   EXPECT_EQ(1u, results.GetSize());
 
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
@@ -482,12 +482,12 @@ TEST_F(SymbolFilePDBTests, TestEnumTypes) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  llvm::DenseSet<SymbolFile *> searched_files;
   const char *EnumsToCheck[] = {"Enum", "ShortEnum"};
   for (auto Enum : EnumsToCheck) {
-    TypeMap results;
-    symfile->FindTypes(ConstString(Enum), CompilerDeclContext(), 0,
-                       searched_files, results);
+
+    TypeResults query_results;
+    symfile->FindTypes(TypeQuery(Enum), query_results);
+    TypeMap &results = query_results.GetTypeMap();
     EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP enum_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Enum), enum_type->GetName());
@@ -527,16 +527,15 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
   const char *TypedefsToCheck[] = {"ClassTypedef", "NSClassTypedef",
                                    "FuncPointerTypedef",
                                    "VariadicFuncPointerTypedef"};
   for (auto Typedef : TypedefsToCheck) {
-    TypeMap results;
-    symfile->FindTypes(ConstString(Typedef), CompilerDeclContext(), 0,
-                       searched_files, results);
+    TypeResults query_results;
+    symfile->FindTypes(TypeQuery(Typedef), query_results);
+    TypeMap &results = query_results.GetTypeMap();
     EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP typedef_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Typedef), typedef_type->GetName());
@@ -578,22 +577,24 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
 
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
-  llvm::DenseSet<SymbolFile *> searched_files;
-  TypeMap results;
-  const ConstString name("ClassTypedef");
-  symfile->FindTypes(name, CompilerDeclContext(), 0, searched_files, results);
-  // Try to limit ourselves from 1 to 10 results, otherwise we could
-  // be doing this thousands of times.  The idea is just to make sure
-  // that for a variety of values, the number of limited results
-  // always comes out to the number we are expecting.
-  uint32_t num_results = results.GetSize();
-  uint32_t iterations = std::min(num_results, 10u);
-  for (uint32_t i = 1; i <= iterations; ++i) {
-    TypeMap more_results;
-    symfile->FindTypes(name, CompilerDeclContext(), i, searched_files,
-                       more_results);
-    uint32_t num_limited_results = more_results.GetSize();
-    EXPECT_EQ(i, num_limited_results);
+
+  // Make a type query object we can use for all types and for one type
+  TypeQuery query("NestedClass");
+  {
+    // Find all types that match
+    TypeResults query_results;
+    symfile->FindTypes(query, query_results);
+    TypeMap &results = query_results.GetTypeMap();
+    // We expect to find Class::NestedClass and ClassTypedef::NestedClass.
+    EXPECT_EQ(results.GetSize(), 2u);
+  }
+  {
+    // Find a single type that matches
+    query.SetFindOne(true);
+    TypeResults query_results;
+    symfile->FindTypes(query, query_results);
+    TypeMap &results = query_results.GetTypeMap();
+    EXPECT_EQ(results.GetSize(), 1u);
   }
 }
 
@@ -604,10 +605,10 @@ TEST_F(SymbolFilePDBTests, TestNullName) {
 
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
-  llvm::DenseSet<SymbolFile *> searched_files;
-  TypeMap results;
-  symfile->FindTypes(ConstString(), CompilerDeclContext(), 0, searched_files,
-                     results);
+
+  TypeResults query_results;
+  symfile->FindTypes(TypeQuery(llvm::StringRef()), query_results);
+  TypeMap &results = query_results.GetTypeMap();
   EXPECT_EQ(0u, results.GetSize());
 }
 

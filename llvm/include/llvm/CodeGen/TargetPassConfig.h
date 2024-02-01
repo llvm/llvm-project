@@ -15,6 +15,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <string>
 
@@ -130,6 +131,11 @@ protected:
   /// Default setting for -enable-tail-merge on this target.
   bool EnableTailMerge = true;
 
+  /// Enable sinking of instructions in MachineSink where a computation can be
+  /// folded into the addressing mode of a memory load/store instruction or
+  /// replace a copy.
+  bool EnableSinkAndFold = false;
+
   /// Require processing of functions such that callees are generated before
   /// callers.
   bool RequireCodeGenSCCOrder = false;
@@ -165,16 +171,32 @@ public:
   /// set.
   static bool willCompleteCodeGenPipeline();
 
-  /// If hasLimitedCodeGenPipeline is true, this method
-  /// returns a string with the name of the options, separated
-  /// by \p Separator that caused this pipeline to be limited.
-  static std::string
-  getLimitedCodeGenPipelineReason(const char *Separator = "/");
+  /// If hasLimitedCodeGenPipeline is true, this method returns
+  /// a string with the name of the options that caused this
+  /// pipeline to be limited.
+  static std::string getLimitedCodeGenPipelineReason();
+
+  struct StartStopInfo {
+    bool StartAfter;
+    bool StopAfter;
+    unsigned StartInstanceNum;
+    unsigned StopInstanceNum;
+    StringRef StartPass;
+    StringRef StopPass;
+  };
+
+  /// Returns pass name in `-stop-before` or `-stop-after`
+  /// NOTE: New pass manager migration only
+  static Expected<StartStopInfo>
+  getStartStopInfo(PassInstrumentationCallbacks &PIC);
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 
   bool getEnableTailMerge() const { return EnableTailMerge; }
   void setEnableTailMerge(bool Enable) { setOpt(EnableTailMerge, Enable); }
+
+  bool getEnableSinkAndFold() const { return EnableSinkAndFold; }
+  void setEnableSinkAndFold(bool Enable) { setOpt(EnableSinkAndFold, Enable); }
 
   bool requiresCodeGenSCCOrder() const { return RequireCodeGenSCCOrder; }
   void setRequiresCodeGenSCCOrder(bool Enable = true) {

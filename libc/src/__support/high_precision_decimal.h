@@ -13,7 +13,7 @@
 #include "src/__support/str_to_integer.h"
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 struct LShiftTableEntry {
@@ -344,8 +344,8 @@ public:
         int64_t temp_exponent = static_cast<int64_t>(this->decimal_point) +
                                 static_cast<int64_t>(add_to_exponent);
 
-        // Theoretically these numbers should be MAX_EXPONENT for long double,
-        // but that should be ~16,000 which is much less than 1 << 30.
+        // Theoretically these numbers should be MAX_BIASED_EXPONENT for long
+        // double, but that should be ~16,000 which is much less than 1 << 30.
         if (temp_exponent > (1 << 30)) {
           temp_exponent = (1 << 30);
         } else if (temp_exponent < -(1 << 30)) {
@@ -411,6 +411,6 @@ public:
 };
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_HIGH_PRECISION_DECIMAL_H

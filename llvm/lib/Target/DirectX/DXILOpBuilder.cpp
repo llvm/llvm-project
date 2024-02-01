@@ -13,7 +13,7 @@
 #include "DXILConstants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/DXILOperationCommon.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -183,7 +183,8 @@ static StructType *getResRetType(Type *OverloadTy, LLVMContext &Ctx) {
 }
 
 static StructType *getHandleType(LLVMContext &Ctx) {
-  return getOrCreateStructType("dx.types.Handle", Type::getInt8PtrTy(Ctx), Ctx);
+  return getOrCreateStructType("dx.types.Handle", PointerType::getUnqual(Ctx),
+                               Ctx);
 }
 
 static Type *getTypeFromParameterKind(ParameterKind Kind, Type *OverloadTy) {

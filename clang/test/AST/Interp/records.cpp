@@ -170,7 +170,6 @@ public:
                    // ref-error {{has incomplete type 'const Bar'}}
 };
 constexpr Bar B; // expected-error {{must be initialized by a constant expression}} \
-                 // expected-error {{failed to evaluate an expression}} \
                  // ref-error {{must be initialized by a constant expression}}
 constexpr Bar *pb = nullptr;
 
@@ -734,8 +733,6 @@ namespace VirtualDtors {
   }
 
   static_assert(foo());
-
-
 };
 
 namespace QualifiedCalls {
@@ -1042,13 +1039,10 @@ namespace TemporaryObjectExpr {
       F f{12};
     };
     constexpr int foo(S x) {
-      return x.a; // expected-note {{read of uninitialized object}} \
-                  // ref-note {{read of uninitialized object}}
+      return x.a; // expected-note {{read of uninitialized object}}
     }
     static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to}} \
-                                      // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to}}
+                                      // expected-note {{in call to}}
   };
 #endif
 }
@@ -1064,5 +1058,164 @@ namespace ParenInit {
   };
 
   constexpr B b(A(1),2);
+
+
+  struct O {
+    int &&j;
+  };
+
+  /// Not constexpr!
+  O o1(0);
+  constinit O o2(0); // ref-error {{variable does not have a constant initializer}} \
+                     // ref-note {{required by 'constinit' specifier}} \
+                     // ref-note {{reference to temporary is not a constant expression}} \
+                     // ref-note {{temporary created here}} \
+                     // expected-error {{variable does not have a constant initializer}} \
+                     // expected-note {{required by 'constinit' specifier}} \
+                     // expected-note {{reference to temporary is not a constant expression}} \
+                     // expected-note {{temporary created here}}
 }
 #endif
+
+namespace DelegatingConstructors {
+  struct S {
+    int a;
+    constexpr S() : S(10) {}
+    constexpr S(int a) : a(a) {}
+  };
+  constexpr S s = {};
+  static_assert(s.a == 10, "");
+
+  struct B {
+    int a;
+    int b;
+
+    constexpr B(int a) : a(a), b(a + 2) {}
+  };
+  struct A : B {
+    constexpr A() : B(10) {};
+  };
+  constexpr A d4 = {};
+  static_assert(d4.a == 10, "");
+  static_assert(d4.b == 12, "");
+}
+
+namespace AccessOnNullptr {
+  struct F {
+    int a;
+  };
+
+  constexpr int a() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    F *f = nullptr;
+
+    f->a = 0; // expected-note 2{{cannot access field of null pointer}} \
+              // ref-note 2{{cannot access field of null pointer}}
+    return f->a;
+  }
+  static_assert(a() == 0, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'a()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'a()'}}
+
+  constexpr int a2() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    F *f = nullptr;
+
+
+    const int *a = &(f->a); // expected-note 2{{cannot access field of null pointer}} \
+                            // ref-note 2{{cannot access field of null pointer}}
+    return f->a;
+  }
+  static_assert(a2() == 0, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'a2()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'a2()'}}
+}
+
+namespace IndirectFieldInit {
+#if __cplusplus >= 202002L
+  /// Primitive.
+  struct Nested1 {
+    struct {
+      int first;
+    };
+    int x;
+    constexpr Nested1(int x) : first(12), x() { x = 4; }
+    constexpr Nested1() : Nested1(42) {}
+  };
+  constexpr Nested1 N1{};
+  static_assert(N1.first == 12, "");
+
+  /// Composite.
+  struct Nested2 {
+    struct First { int x = 42; };
+    struct {
+      First first;
+    };
+    int x;
+    constexpr Nested2(int x) : first(12), x() { x = 4; }
+    constexpr Nested2() : Nested2(42) {}
+  };
+  constexpr Nested2 N2{};
+  static_assert(N2.first.x == 12, "");
+
+  /// Bitfield.
+  struct Nested3 {
+    struct {
+      unsigned first : 2;
+    };
+    int x;
+    constexpr Nested3(int x) : first(3), x() { x = 4; }
+    constexpr Nested3() : Nested3(42) {}
+  };
+
+  constexpr Nested3 N3{};
+  static_assert(N3.first == 3, "");
+
+  /// Test that we get the offset right if the
+  /// record has a base.
+  struct Nested4Base {
+    int a;
+    int b;
+    char c;
+  };
+  struct Nested4 : Nested4Base{
+    struct {
+      int first;
+    };
+    int x;
+    constexpr Nested4(int x) : first(123), x() { a = 1; b = 2; c = 3; x = 4; }
+    constexpr Nested4() : Nested4(42) {}
+  };
+  constexpr Nested4 N4{};
+  static_assert(N4.first == 123, "");
+
+  struct S {
+    struct {
+      int x, y;
+    };
+
+    constexpr S(int x_, int y_) : x(x_), y(y_) {}
+  };
+
+  constexpr S s(1, 2);
+  static_assert(s.x == 1 && s.y == 2);
+
+  struct S2 {
+    int a;
+    struct {
+      int b;
+      struct {
+        int x, y;
+      };
+    };
+
+    constexpr S2(int x_, int y_) : a(3), b(4), x(x_), y(y_) {}
+  };
+
+  constexpr S2 s2(1, 2);
+  static_assert(s2.x == 1 && s2.y == 2 && s2.a == 3 && s2.b == 4);
+
+#endif
+}

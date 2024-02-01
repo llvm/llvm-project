@@ -9,7 +9,7 @@
 #include "src/math/ceilf.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, ceilf, (float x)) {
   float y;
@@ -17,4 +17,4 @@ LLVM_LIBC_FUNCTION(float, ceilf, (float x)) {
   return y;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

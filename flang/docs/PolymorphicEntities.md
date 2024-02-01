@@ -75,7 +75,7 @@ end subroutine
 ```
 
 **FIR**
-```c
+```
 func.func @foo(%p : !fir.class<!fir.type<_QTpoint{x:f32,y:f32}>>)
 ```
 
@@ -93,7 +93,7 @@ end subroutine
 ```
 
 **FIR**
-```c
+```
 func.func @bar(%x : !fir.class<none>)
 ```
 
@@ -437,7 +437,7 @@ get_all_area = get_all_area + shapes(i)%item%get_area()
 ```
 
 **FIR**
-```c
+```
 %1 = fir.convert %0 : !fir.ref<!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>>
 %2 = fir.dispatch "get_area"(%1 : !fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>) -> f32
 ```
@@ -451,7 +451,7 @@ its ancestor types appear first.
 **LLVMIR**
 
 Representation of the derived type information with the bindings.
-```c
+```
 %_QM__fortran_type_infoTderivedtype = type { { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, { ptr, i64, i32, i8, i8, i8, i8 }, i64, { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, i32, i8, i8, i8, i8, [4 x i8] }
 %_QM__fortran_type_infoTbinding = type { %_QM__fortran_builtinsT__builtin_c_funptr, { ptr, i64, i32, i8, i8, i8, i8 } }
 %_QM__fortran_builtinsT__builtin_c_funptr = type { i64 }
@@ -463,7 +463,7 @@ correct function from the vtable and to perform the actual call. Here is
 what it can look like in pseudo LLVM IR code.
 
 **FIR**
-```c
+```
   %2 = fir.box_tdesc %arg0 : (!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>) -> !fir.tdesc<none>
   %3 = fir.box_tdesc %arg0 : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> !fir.tdesc<none>
   %4 = fir.convert %3 : (!fir.tdesc<none>) -> !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{}>>
@@ -483,7 +483,7 @@ what it can look like in pseudo LLVM IR code.
 ```
 
 **LLVMIR**
-```c
+```
 // Retrieve the derived type runtime information and the vtable.
 %14 = getelementptr %_QM__fortran_type_infoTderivedtype, ptr %13, i32 0, i32 0
 %15 = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %14
@@ -516,7 +516,7 @@ END TYPE
 2) Dummy argument is polymorphic and actual argument is fixed type. In these
    cases, the actual argument need to be boxed to be passed to the
    subroutine/function since those are expecting a descriptor.
-   ```c
+   ```
    func.func @_QMmod1Ps(%arg0: !fir.class<!fir.type<_QMmod1Tshape{x:i32,y:i32}>>)
    func.func @_QQmain() {
      %0 = fir.alloca !fir.type<_QMmod1Tshape{x:i32,y:i32}> {uniq_name = "_QFEsh"}
@@ -584,7 +584,7 @@ write(10), x
 ```
 
 **FIR**
-```c
+```
 %5 = fir.call @_FortranAioBeginUnformattedOutput(%c10_i32, %4, %c56_i32) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 %6 = fir.embox %2 : (!fir.ref<!fir.type<_QTt>>) -> !fir.class<!fir.type<_QTt>>
 %7 = fir.convert %6 : (!fir.class<!fir.type<_QTt>>) -> !fir.box<none>
@@ -608,7 +608,7 @@ finalization with a call the the `@_FortranADestroy` function
 (`flang/include/flang/Runtime/derived-api.h`).
 
 **FIR**
-```c
+```
 %5 = fir.call @_FortranADestroy(%desc) : (!fir.box<none>) -> none
 ```
 
@@ -671,7 +671,7 @@ end subroutine
 **FIR**
 
 The call to `get_area` in the `type is (triangle)` guard can be replaced.
-```c
+```
 %3 = fir.dispatch "get_area"(%desc)
 // Replaced by
 %3 = fir.call @get_area_triangle(%desc)
@@ -716,7 +716,7 @@ allocate(rectangle::shapes(2)%item)
 ```
 
 **FIR**
-```c
+```
 %0 = fir.address_of(@_QMgeometryE.dt.triangle) : !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype>>
 %1 = fir.convert %item1 : (!fir.ref<!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>>) -> !fir.ref<!fir.box<none>>
 %2 = fir.call @_FortranAAllocatableInitDerived(%1, %0)
@@ -742,7 +742,7 @@ deallocate(shapes(2)%item)
 ```
 
 **FIR**
-```c
+```
 %8 = fir.call @_FortranAAllocatableDeallocate(%desc1)
 %9 = fir.call @_FortranAAllocatableDeallocate(%desc2)
 ```
@@ -849,7 +849,7 @@ dynamic type of polymorphic entities.
   dynamic type of `a` must be copied when it is associated on `b`.
 
   **FIR**
-  ```c
+  ```
   // fir.load must copy the dynamic type from the pointer `a`
   %0 = fir.address_of(@_QMmod1Ea) : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmod1Tshape{x:i32,y:i32}>>>>
   %1 = fir.load %0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMmod1Tshape{x:i32,y:i32}>>>>

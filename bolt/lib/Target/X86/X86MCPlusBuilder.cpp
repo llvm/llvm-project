@@ -87,9 +87,7 @@ static InstructionListType createIncMemory(const MCSymbol *Target,
 
 class X86MCPlusBuilder : public MCPlusBuilder {
 public:
-  X86MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                   const MCRegisterInfo *RegInfo)
-      : MCPlusBuilder(Analysis, Info, RegInfo) {}
+  using MCPlusBuilder::MCPlusBuilder;
 
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
@@ -403,6 +401,7 @@ public:
     case ELF::R_X86_64_PC8:
     case ELF::R_X86_64_PC32:
     case ELF::R_X86_64_PC64:
+    case ELF::R_X86_64_GOTPC64:
     case ELF::R_X86_64_GOTPCRELX:
     case ELF::R_X86_64_REX_GOTPCRELX:
       return true;
@@ -3578,8 +3577,9 @@ namespace bolt {
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *Analysis,
                                       const MCInstrInfo *Info,
-                                      const MCRegisterInfo *RegInfo) {
-  return new X86MCPlusBuilder(Analysis, Info, RegInfo);
+                                      const MCRegisterInfo *RegInfo,
+                                      const MCSubtargetInfo *STI) {
+  return new X86MCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt

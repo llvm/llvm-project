@@ -13,7 +13,7 @@
 
 #include <errno.h> // For error macros
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(EPERM, "Operation not permitted"),
@@ -94,6 +94,6 @@ LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(ENOTRECOVERABLE, "State not recoverable"),
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_ERRORS_H

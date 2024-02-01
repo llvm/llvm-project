@@ -12,12 +12,12 @@
 #include "src/errno/libc_errno.h"
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fputc, (int c, ::FILE *stream)) {
   unsigned char uc = static_cast<unsigned char>(c);
 
-  auto result = reinterpret_cast<__llvm_libc::File *>(stream)->write(&uc, 1);
+  auto result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->write(&uc, 1);
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
@@ -29,4 +29,4 @@ LLVM_LIBC_FUNCTION(int, fputc, (int c, ::FILE *stream)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

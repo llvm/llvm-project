@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMUnwindOpAsm.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/ARMEHABI.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 
 using namespace llvm;

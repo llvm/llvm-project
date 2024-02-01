@@ -10,4 +10,4 @@
 
 #include "src/math/nextafterl.h"
 
-LIST_NEXTAFTER_TESTS(long double, __llvm_libc::nextafterl)
+LIST_NEXTAFTER_TESTS(long double, LIBC_NAMESPACE::nextafterl)

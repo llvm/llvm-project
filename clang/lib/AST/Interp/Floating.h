@@ -76,6 +76,12 @@ public:
     F.toString(Buffer);
     OS << Buffer;
   }
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    print(OS);
+    return NameStr;
+  }
 
   unsigned bitWidth() const { return F.semanticsSizeInBits(F.getSemantics()); }
 
@@ -87,6 +93,7 @@ public:
   bool isMin() const { return F.isSmallest(); }
   bool isMinusOne() const { return F.isExactlyValue(-1.0); }
   bool isNan() const { return F.isNaN(); }
+  bool isSignaling() const { return F.isSignaling(); }
   bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
   bool isNormal() const { return F.isNormal(); }

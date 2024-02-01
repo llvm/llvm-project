@@ -19,6 +19,6 @@
 #else
 #define assert(e)                                                              \
   ((e) ? (void)0                                                               \
-       : __llvm_libc::__assert_fail(#e, __FILE__, __LINE__,                    \
-                                    __PRETTY_FUNCTION__))
+       : LIBC_NAMESPACE::__assert_fail(#e, __FILE__, __LINE__,                 \
+                                       __PRETTY_FUNCTION__))
 #endif

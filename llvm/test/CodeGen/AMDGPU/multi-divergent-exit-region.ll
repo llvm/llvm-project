@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx600 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
-; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx600 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -S -lowerswitch -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Add an extra verifier runs. There were some cases where invalid IR
 ; was produced but happened to be fixed by the later passes.

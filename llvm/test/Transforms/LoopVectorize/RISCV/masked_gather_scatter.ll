@@ -22,14 +22,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 625, [[TMP2]]
 ; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; RV32:       vector.memcheck:
-; RV32-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
-; RV32-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
-; RV32-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
-; RV32-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[UGLYGEP1]]
-; RV32-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[UGLYGEP]]
+; RV32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 79880
+; RV32-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i32 39940
+; RV32-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i32 159752
+; RV32-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; RV32-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; RV32-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; RV32-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[UGLYGEP2]]
-; RV32-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[UGLYGEP]]
+; RV32-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
+; RV32-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; RV32-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; RV32-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV32-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -39,6 +39,8 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 625, [[TMP4]]
 ; RV32-NEXT:    [[N_VEC:%.*]] = sub i64 625, [[N_MOD_VF]]
 ; RV32-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 16
+; RV32-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
+; RV32-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
 ; RV32-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 ; RV32-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i64> [[TMP5]], zeroinitializer
 ; RV32-NEXT:    [[TMP7:%.*]] = mul <vscale x 2 x i64> [[TMP6]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 16, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
@@ -62,8 +64,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[TMP16:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP15]]
 ; RV32-NEXT:    [[TMP17:%.*]] = getelementptr inbounds double, ptr [[A]], <vscale x 2 x i64> [[VEC_IND]]
 ; RV32-NEXT:    call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> [[TMP16]], <vscale x 2 x ptr> [[TMP17]], i32 8, <vscale x 2 x i1> [[TMP12]]), !alias.scope !5, !noalias !7
-; RV32-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
 ; RV32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
 ; RV32-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; RV32-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -104,14 +104,14 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 625, [[TMP2]]
 ; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; RV64:       vector.memcheck:
-; RV64-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
-; RV64-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
-; RV64-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
-; RV64-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[UGLYGEP1]]
-; RV64-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[UGLYGEP]]
+; RV64-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 79880
+; RV64-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER:%.*]], i64 39940
+; RV64-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 159752
+; RV64-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; RV64-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; RV64-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; RV64-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[UGLYGEP2]]
-; RV64-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[UGLYGEP]]
+; RV64-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
+; RV64-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; RV64-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; RV64-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV64-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -121,6 +121,8 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 625, [[TMP4]]
 ; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 625, [[N_MOD_VF]]
 ; RV64-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 16
+; RV64-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
+; RV64-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
 ; RV64-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.experimental.stepvector.nxv2i64()
 ; RV64-NEXT:    [[TMP6:%.*]] = add <vscale x 2 x i64> [[TMP5]], zeroinitializer
 ; RV64-NEXT:    [[TMP7:%.*]] = mul <vscale x 2 x i64> [[TMP6]], shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 16, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
@@ -144,8 +146,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[TMP16:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP15]]
 ; RV64-NEXT:    [[TMP17:%.*]] = getelementptr inbounds double, ptr [[A]], <vscale x 2 x i64> [[VEC_IND]]
 ; RV64-NEXT:    call void @llvm.masked.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> [[TMP16]], <vscale x 2 x ptr> [[TMP17]], i32 8, <vscale x 2 x i1> [[TMP12]]), !alias.scope !5, !noalias !7
-; RV64-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
 ; RV64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
 ; RV64-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; RV64-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

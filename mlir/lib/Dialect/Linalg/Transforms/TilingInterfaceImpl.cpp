@@ -192,7 +192,7 @@ struct LinalgOpTilingInterface
     }
     for (const auto &resultExpr : llvm::enumerate(indexingMap.getResults())) {
       unsigned dimPosition =
-          resultExpr.value().template cast<AffineDimExpr>().getPosition();
+          cast<AffineDimExpr>(resultExpr.value()).getPosition();
       iterationTileOffsets[dimPosition] = offsets[resultExpr.index()];
       iterationTileSizes[dimPosition] = sizes[resultExpr.index()];
     }
@@ -212,7 +212,7 @@ struct LinalgOpTilingInterface
                                              Location loc,
                                              ValueRange ivs) const {
     auto linalgOp = cast<LinalgOp>(op);
-    if (!linalgOp.hasBufferSemantics())
+    if (!linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have buffer semantics");
 
     SmallVector<Value> indexedValues;
@@ -256,7 +256,7 @@ struct LinalgOpPartialReductionInterface
     auto linalgOp = cast<LinalgOp>(op);
     OpBuilder::InsertionGuard guard(b);
 
-    if (linalgOp.hasBufferSemantics())
+    if (linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have tensor semantics");
     // Insert the new parallel dimension based on the index of the reduction
     // loops. This could be controlled by user for more flexibility.

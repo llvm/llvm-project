@@ -14,8 +14,8 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -272,8 +272,8 @@ std::optional<Value *> ARMTTIImpl::simplifyDemandedVectorEltsIntrinsic(
                                        : APInt::getHighBitsSet(2, 1));
     SimplifyAndSetOp(&II, 0, OrigDemandedElts & DemandedElts, UndefElts);
     // The other lanes will be defined from the inserted elements.
-    UndefElts &= APInt::getSplat(NumElts, !IsTop ? APInt::getLowBitsSet(2, 1)
-                                                 : APInt::getHighBitsSet(2, 1));
+    UndefElts &= APInt::getSplat(NumElts, IsTop ? APInt::getLowBitsSet(2, 1)
+                                                : APInt::getHighBitsSet(2, 1));
     return std::nullopt;
   };
 
@@ -1984,7 +1984,7 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) {
     return BaseT::isLoweredToCall(F);
 
   // Assume all Arm-specific intrinsics map to an instruction.
-  if (F->getName().startswith("llvm.arm"))
+  if (F->getName().starts_with("llvm.arm"))
     return false;
 
   switch (F->getIntrinsicID()) {
@@ -2430,9 +2430,15 @@ ARMTTIImpl::getPreferredTailFoldingStyle(bool IVUpdateMayOverflow) const {
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
                                          OptimizationRemarkEmitter *ORE) {
-  // Enable Upper bound unrolling universally, not dependant upon the conditions
-  // below.
-  UP.UpperBound = true;
+  // Enable Upper bound unrolling universally, providing that we do not see an
+  // active lane mask, which will be better kept as a loop to become tail
+  // predicated than to be conditionally unrolled.
+  UP.UpperBound =
+      !ST->hasMVEIntegerOps() || !any_of(*L->getHeader(), [](Instruction &I) {
+        return isa<IntrinsicInst>(I) &&
+               cast<IntrinsicInst>(I).getIntrinsicID() ==
+                   Intrinsic::get_active_lane_mask;
+      });
 
   // Only currently enable these preferences for M-Class cores.
   if (!ST->isMClass())

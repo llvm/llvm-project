@@ -122,13 +122,15 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
-    "Causes lldb to export all symbols when building liblldb.")
-else()
-  # Windows doesn't support toggling this, so don't bother making it a
-  # cache variable.
-  set(LLDB_EXPORT_ALL_SYMBOLS 0)
+set(LLDB_EXPORT_ALL_SYMBOLS 0 CACHE BOOL
+  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
+
+set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
+  "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
+
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  set(LLDB_EXPORT_ALL_SYMBOLS_PLUGINS "" CACHE STRING
+    "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the plugins whose symbols should be exported.")
 endif()
 
 if ((NOT MSVC) OR MSVC12)
@@ -213,6 +215,7 @@ if( MSVC )
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
+    -wd4589 # Suppress 'warning C4589: Constructor of abstract class 'lldb_private::NativeRegisterContextDBReg_x86' ignores initializer for virtual base class 'lldb_private::NativeRegisterContextRegisterInfo''
   )
 endif()
 

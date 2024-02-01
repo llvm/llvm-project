@@ -7,7 +7,6 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined(offsetof) || __has_feature(modules)
-/* Always define offsetof when modules are available. */
+#ifndef offsetof
 #define offsetof(t, d) __builtin_offsetof(t, d)
 #endif

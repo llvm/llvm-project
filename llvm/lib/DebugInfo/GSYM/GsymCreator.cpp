@@ -55,15 +55,16 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
     return 0;
   const FileEntry SrcFE = SrcGC.Files[FileIdx];
   // Copy the strings for the file and then add the newly converted file entry.
-  uint32_t Dir = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
+  uint32_t Dir =
+      SrcFE.Dir == 0
+          ? 0
+          : StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
   uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
   FileEntry DstFE(Dir, Base);
   return insertFileEntry(DstFE);
 }
 
-
-llvm::Error GsymCreator::save(StringRef Path,
-                              llvm::support::endianness ByteOrder,
+llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
                               std::optional<uint64_t> SegmentSize) const {
   if (SegmentSize)
     return saveSegments(Path, ByteOrder, *SegmentSize);
@@ -478,7 +479,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
-                                      llvm::support::endianness ByteOrder,
+                                      llvm::endianness ByteOrder,
                                       uint64_t SegmentSize) const {
   if (SegmentSize == 0)
     return createStringError(std::errc::invalid_argument,

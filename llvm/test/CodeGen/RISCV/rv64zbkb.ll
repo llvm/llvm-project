@@ -247,6 +247,30 @@ define zeroext i16 @packh_i16_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2) {
   ret i16 %8
 }
 
+define void @packh_i16_3(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2, ptr %p) {
+; RV64I-LABEL: packh_i16_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    slli a0, a0, 8
+; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    sh a0, 0(a3)
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: packh_i16_3:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    add a0, a1, a0
+; RV64ZBKB-NEXT:    packh a0, a2, a0
+; RV64ZBKB-NEXT:    sh a0, 0(a3)
+; RV64ZBKB-NEXT:    ret
+  %4 = add i8 %1, %0
+  %5 = zext i8 %4 to i16
+  %6 = shl i16 %5, 8
+  %7 = zext i8 %2 to i16
+  %8 = or i16 %6, %7
+  store i16 %8, ptr %p
+  ret void
+}
+
 define i64 @pack_i64_allWUsers(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV64I-LABEL: pack_i64_allWUsers:
 ; RV64I:       # %bb.0:
@@ -303,7 +327,7 @@ define i64 @pack_i64_imm() {
 ; RV64ZBKB-LABEL: pack_i64_imm:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    lui a0, 65793
-; RV64ZBKB-NEXT:    addiw a0, a0, 16
+; RV64ZBKB-NEXT:    addi a0, a0, 16
 ; RV64ZBKB-NEXT:    pack a0, a0, a0
 ; RV64ZBKB-NEXT:    ret
   ret i64 1157442765409226768 ; 0x0101010101010101

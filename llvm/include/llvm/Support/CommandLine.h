@@ -243,6 +243,15 @@ extern ManagedStatic<SubCommand> TopLevelSubCommand;
 // A special subcommand that can be used to put an option into all subcommands.
 extern ManagedStatic<SubCommand> AllSubCommands;
 
+class SubCommandGroup {
+  SmallVector<SubCommand *, 4> Subs;
+
+public:
+  SubCommandGroup(std::initializer_list<SubCommand *> IL) : Subs(IL) {}
+
+  ArrayRef<SubCommand *> getSubCommands() const { return Subs; }
+};
+
 //===----------------------------------------------------------------------===//
 //
 class Option {
@@ -312,10 +321,6 @@ public:
 
   bool isConsumeAfter() const {
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
-  }
-
-  bool isInAllSubCommands() const {
-    return Subs.contains(&SubCommand::getAll());
   }
 
   //-------------------------------------------------------------------------===
@@ -477,11 +482,19 @@ struct cat {
 
 // Specify the subcommand that this option belongs to.
 struct sub {
-  SubCommand &Sub;
+  SubCommand *Sub = nullptr;
+  SubCommandGroup *Group = nullptr;
 
-  sub(SubCommand &S) : Sub(S) {}
+  sub(SubCommand &S) : Sub(&S) {}
+  sub(SubCommandGroup &G) : Group(&G) {}
 
-  template <class Opt> void apply(Opt &O) const { O.addSubCommand(Sub); }
+  template <class Opt> void apply(Opt &O) const {
+    if (Sub)
+      O.addSubCommand(*Sub);
+    else if (Group)
+      for (SubCommand *SC : Group->getSubCommands())
+        O.addSubCommand(*SC);
+  }
 };
 
 // Specify a callback function to be called when an option is seen.
@@ -863,7 +876,10 @@ public:
   ///
   template <class DT>
   void addLiteralOption(StringRef Name, const DT &V, StringRef HelpStr) {
-    assert(findOption(Name) == Values.size() && "Option already exists!");
+#ifndef NDEBUG
+    if (findOption(Name) != Values.size())
+      report_fatal_error("Option " + Name + " already exists!");
+#endif
     OptionInfo X(Name, static_cast<DataType>(V), HelpStr);
     Values.push_back(X);
     AddLiteralOption(Owner, Name);

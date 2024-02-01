@@ -10,7 +10,7 @@
 
 #include "src/__support/CPP/type_traits/type_identity.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // add_rvalue_reference
 namespace detail {
@@ -24,6 +24,6 @@ struct add_rvalue_reference : decltype(detail::try_add_rvalue_reference<T>(0)) {
 template <class T>
 using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_RVALUE_REFERENCE_H

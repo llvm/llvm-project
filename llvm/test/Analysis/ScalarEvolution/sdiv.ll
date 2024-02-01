@@ -35,7 +35,7 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-NEXT:  Loop %for.cond: symbolic max backedge-taken count is %width
 ; CHECK-NEXT:  Loop %for.cond: Predicated backedge-taken count is %width
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.cond: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.cond: Trip multiple is 1
 ;
 entry:
   %storage = alloca [2 x i32], align 4

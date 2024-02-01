@@ -65,7 +65,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
     visit(expr.getLHS());
     visit(expr.getRHS());
     if (expr.getKind() == mlir::AffineExprKind::Mul)
-      assert(expr.getRHS().cast<AffineConstantExpr>().getValue() > 0 &&
+      assert(cast<AffineConstantExpr>(expr.getRHS()).getValue() > 0 &&
              "nonpositive multiplying coefficient");
   }
   bool isTiled = false;
@@ -322,7 +322,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
          "expected as many entries for proc info as number of loops, even if "
          "they are null entries");
   SmallVector<Value> iterArgInitValues;
-  if (!linalgOp.hasBufferSemantics())
+  if (!linalgOp.hasPureBufferSemantics())
     llvm::append_range(iterArgInitValues, linalgOp.getDpsInits());
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
@@ -362,7 +362,7 @@ void GenerateLoopNest<AffineForOp>::doit(
         bodyBuilderFn,
     ArrayRef<linalg::ProcInfo> /*procInfo*/) {
   SmallVector<Value> iterArgInitValues;
-  if (!linalgOp.hasBufferSemantics())
+  if (!linalgOp.hasPureBufferSemantics())
     llvm::append_range(iterArgInitValues, linalgOp.getDpsInits());
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
@@ -529,7 +529,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
         bodyBuilderFn,
     ArrayRef<linalg::ProcInfo> procInfo) {
   SmallVector<Value> iterArgInitValues;
-  if (!linalgOp.hasBufferSemantics())
+  if (!linalgOp.hasPureBufferSemantics())
     llvm::append_range(iterArgInitValues, linalgOp.getDpsInits());
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
@@ -738,7 +738,7 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
 }
 
 SmallVector<Type> getTensorOutputTypes(LinalgOp op, ValueRange operands) {
-  if (op.hasBufferSemantics())
+  if (op.hasPureBufferSemantics())
     return {};
   return llvm::to_vector(
       llvm::map_range(op.getDpsInitsMutable(), [&](OpOperand &opOperand) {
@@ -749,7 +749,7 @@ SmallVector<Type> getTensorOutputTypes(LinalgOp op, ValueRange operands) {
 SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
                                     LinalgOp op, ValueRange operands,
                                     ValueRange results) {
-  if (op.hasBufferSemantics())
+  if (op.hasPureBufferSemantics())
     return {};
   SmallVector<Value> tensorResults;
   tensorResults.reserve(results.size());

@@ -658,7 +658,7 @@ LogicalResult {0}::fold(FoldAdaptor,
 }
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
-      if (hasTensorSemantics()) return;
+      if (hasPureTensorSemantics()) return;
       getGenericEffectsImpl(effects,
         getOperation()->getResults(), getDpsInputs(), getDpsInits());
 }
@@ -869,7 +869,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
           assert(arg.indexAttrMap);
           for (auto [idx, result] :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
-            if (auto symbol = result.dyn_cast<AffineSymbolExpr>()) {
+            if (auto symbol = dyn_cast<AffineSymbolExpr>(result)) {
               std::string argName = arg.name;
               argName[0] = toupper(argName[0]);
               symbolBindings[symbol.getPosition()] =
@@ -1029,13 +1029,13 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
       // {1}: attribute name
       // {2}: default type function name
       static const char attrDef[] = R"FMT(
-{0} {1}Val = {0}::{2};
-auto {1}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
-                              return attr.getName() == "{1}"; });
-if ({1}Iter != attrs.end()) {{
-  if (auto attr = llvm::dyn_cast<{0}Attr>({1}Iter->getValue()))
-    {1}Val = attr.getValue();
-}
+  {0} {1}Val = {0}::{2};
+  auto {1}Iter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {{
+                                return attr.getName() == "{1}"; });
+  if ({1}Iter != attrs.end()) {{
+    if (auto attr = llvm::dyn_cast<{0}Attr>({1}Iter->getValue()))
+      {1}Val = attr.getValue();
+  }
 )FMT";
       std::string enumName = convertOperandKindToEnumName(arg.kind);
       attrs.push_back(

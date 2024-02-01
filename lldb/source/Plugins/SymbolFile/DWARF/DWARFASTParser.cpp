@@ -9,6 +9,7 @@
 #include "DWARFASTParser.h"
 #include "DWARFAttribute.h"
 #include "DWARFDIE.h"
+#include "SymbolFileDWARF.h"
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -18,6 +19,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 std::optional<SymbolFile::ArrayInfo>
 DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
@@ -97,6 +99,30 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
     array_info.element_orders.push_back(num_elements);
   }
   return array_info;
+}
+
+Type *DWARFASTParser::GetTypeForDIE(const DWARFDIE &die) {
+  if (!die)
+    return nullptr;
+
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  if (!dwarf)
+    return nullptr;
+
+  DWARFAttributes attributes = die.GetAttributes();
+  if (attributes.Size() == 0)
+    return nullptr;
+
+  DWARFFormValue type_die_form;
+  for (size_t i = 0; i < attributes.Size(); ++i) {
+    dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
+
+    if (attr == DW_AT_type && attributes.ExtractFormValueAtIndex(i, form_value))
+      return dwarf->ResolveTypeUID(form_value.Reference(), true);
+  }
+
+  return nullptr;
 }
 
 AccessType

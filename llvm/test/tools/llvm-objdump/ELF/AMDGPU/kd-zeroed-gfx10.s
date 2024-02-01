@@ -26,10 +26,6 @@
 ; OBJDUMP-NEXT:         .amdhsa_private_segment_fixed_size 0
 ; OBJDUMP-NEXT:         .amdhsa_kernarg_size 0
 ; OBJDUMP-NEXT:         .amdhsa_shared_vgpr_count 0
-; OBJDUMP-NEXT:         ; INST_PREF_SIZE 0
-; OBJDUMP-NEXT:         ; TRAP_ON_START 0
-; OBJDUMP-NEXT:         ; TRAP_ON_END 0
-; OBJDUMP-NEXT:         ; IMAGE_OP 0
 ; OBJDUMP-NEXT:         .amdhsa_next_free_vgpr 8
 ; OBJDUMP-NEXT:         .amdhsa_reserve_vcc 0
 ; OBJDUMP-NEXT:         .amdhsa_reserve_flat_scratch 0
@@ -66,6 +62,7 @@
 ; OBJDUMP-NEXT:         .amdhsa_user_sgpr_flat_scratch_init 0
 ; OBJDUMP-NEXT:         .amdhsa_user_sgpr_private_segment_size 0
 ; OBJDUMP-NEXT:         .amdhsa_wavefront_size32 0
+; OBJDUMP-NEXT:         .amdhsa_uses_dynamic_stack 0
 ; OBJDUMP-NEXT: .end_amdhsa_kernel
 
 .amdhsa_kernel my_kernel

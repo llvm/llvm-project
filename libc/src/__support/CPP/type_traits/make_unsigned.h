@@ -10,7 +10,7 @@
 
 #include "src/__support/CPP/type_traits/type_identity.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // make_unsigned
 
@@ -37,6 +37,6 @@ template <> struct make_unsigned<__uint128_t> : type_identity<__uint128_t> {};
 #endif
 template <typename T> using make_unsigned_t = typename make_unsigned<T>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_UNSIGNED_H

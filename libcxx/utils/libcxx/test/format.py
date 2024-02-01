@@ -6,14 +6,11 @@
 #
 # ===----------------------------------------------------------------------===##
 
-import contextlib
-import io
 import lit
+import libcxx.test.config as config
 import lit.formats
 import os
-import pipes
 import re
-import shutil
 
 
 def _getTempPaths(test):
@@ -45,14 +42,23 @@ def _executeScriptInternal(test, litConfig, commands):
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
-    res = lit.TestRunner.executeScriptInternal(
-        test, litConfig, tmpBase, parsedCommands, execDir, debug=False
-    )
-    if isinstance(res, lit.Test.Result):  # Handle failure to parse the Lit test
-        res = ("", res.output, 127, None)
+    try:
+        res = lit.TestRunner.executeScriptInternal(
+            test, litConfig, tmpBase, parsedCommands, execDir, debug=False
+        )
+    except lit.TestRunner.ScriptFatal as e:
+        res = ("", str(e), 127, None)
     (out, err, exitCode, timeoutInfo) = res
 
     return (out, err, exitCode, timeoutInfo, parsedCommands)
+
+
+def _validateModuleDependencies(modules):
+    for m in modules:
+        if m not in ("std", "std.compat"):
+            raise RuntimeError(
+                f"Invalid module dependency '{m}', only 'std' and 'std.compat' are valid"
+            )
 
 
 def parseScript(test, preamble):
@@ -74,16 +80,28 @@ def parseScript(test, preamble):
     tmpDir, tmpBase = _getTempPaths(test)
     substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase)
 
-    # Check base substitutions and add the %{build} and %{run} convenience substitutions
+    # Check base substitutions and add the %{build}, %{verify} and %{run} convenience substitutions
+    #
+    # Note: We use -Wno-error with %{verify} to make sure that we don't treat all diagnostics as
+    #       errors, which doesn't make sense for clang-verify tests because we may want to check
+    #       for specific warning diagnostics.
     _checkBaseSubstitutions(substitutions)
     substitutions.append(
         ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
+    )
+    substitutions.append(
+        (
+            "%{verify}",
+            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+        )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
 
     # Parse the test file, including custom directives
     additionalCompileFlags = []
     fileDependencies = []
+    modules = []  # The enabled modules
+    moduleCompileFlags = []  # The compilation flags to use modules
     parsers = [
         lit.TestRunner.IntegratedTestKeywordParser(
             "FILE_DEPENDENCIES:",
@@ -92,8 +110,13 @@ def parseScript(test, preamble):
         ),
         lit.TestRunner.IntegratedTestKeywordParser(
             "ADDITIONAL_COMPILE_FLAGS:",
-            lit.TestRunner.ParserKind.LIST,
+            lit.TestRunner.ParserKind.SPACE_LIST,
             initial_value=additionalCompileFlags,
+        ),
+        lit.TestRunner.IntegratedTestKeywordParser(
+            "MODULE_DEPENDENCIES:",
+            lit.TestRunner.ParserKind.SPACE_LIST,
+            initial_value=modules,
         ),
     ]
 
@@ -103,7 +126,7 @@ def parseScript(test, preamble):
     for feature in test.config.available_features:
         parser = lit.TestRunner.IntegratedTestKeywordParser(
             "ADDITIONAL_COMPILE_FLAGS({}):".format(feature),
-            lit.TestRunner.ParserKind.LIST,
+            lit.TestRunner.ParserKind.SPACE_LIST,
             initial_value=additionalCompileFlags,
         )
         parsers.append(parser)
@@ -125,12 +148,54 @@ def parseScript(test, preamble):
     script += scriptInTest
 
     # Add compile flags specified with ADDITIONAL_COMPILE_FLAGS.
-    substitutions = [
-        (s, x + " " + " ".join(additionalCompileFlags))
-        if s == "%{compile_flags}"
-        else (s, x)
-        for (s, x) in substitutions
-    ]
+    # Modules need to be built with the same compilation flags as the
+    # test. So add these flags before adding the modules.
+    substitutions = config._appendToSubstitution(
+        substitutions, "%{compile_flags}", " ".join(additionalCompileFlags)
+    )
+
+    if modules:
+        _validateModuleDependencies(modules)
+
+        # The moduleCompileFlags are added to the %{compile_flags}, but
+        # the modules need to be built without these flags. So expand the
+        # %{compile_flags} eagerly and hardcode them in the build script.
+        compileFlags = config._getSubstitution("%{compile_flags}", test.config)
+
+        # Building the modules needs to happen before the other script
+        # commands are executed. Therefore the commands are added to the
+        # front of the list.
+        if "std.compat" in modules:
+            script.insert(
+                0,
+                "%dbg(MODULE std.compat) %{cxx} %{flags} "
+                f"{compileFlags} "
+                "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
+                "-fmodule-file=std=%T/std.pcm " # The std.compat module imports std.
+                "--precompile -o %T/std.compat.pcm -c %{module}/std.compat.cppm",
+            )
+            moduleCompileFlags.extend(
+                ["-fmodule-file=std.compat=%T/std.compat.pcm", "%T/std.compat.pcm"]
+            )
+
+        # Make sure the std module is built before std.compat. Libc++'s
+        # std.compat module depends on the std module. It is not
+        # known whether the compiler expects the modules in the order of
+        # their dependencies. However it's trivial to provide them in
+        # that order.
+        script.insert(
+            0,
+            "%dbg(MODULE std) %{cxx} %{flags} "
+            f"{compileFlags} "
+            "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
+            "--precompile -o %T/std.pcm -c %{module}/std.cppm",
+        )
+        moduleCompileFlags.extend(["-fmodule-file=std=%T/std.pcm", "%T/std.pcm"])
+
+        # Add compile flags required for the modules.
+        substitutions = config._appendToSubstitution(
+            substitutions, "%{compile_flags}", " ".join(moduleCompileFlags)
+        )
 
     # Perform substitutions in the script itself.
     script = lit.TestRunner.applySubstitutions(
@@ -144,38 +209,11 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     """
     Lit test format for the C++ Standard Library conformance test suite.
 
-    This test format is based on top of the ShTest format -- it basically
-    creates a shell script performing the right operations (compile/link/run)
-    based on the extension of the test file it encounters. It supports files
-    with the following extensions:
-
-    FOO.pass.cpp            - Compiles, links and runs successfully
-    FOO.pass.mm             - Same as .pass.cpp, but for Objective-C++
-
-    FOO.compile.pass.cpp    - Compiles successfully, link and run not attempted
-    FOO.compile.pass.mm     - Same as .compile.pass.cpp, but for Objective-C++
-    FOO.compile.fail.cpp    - Does not compile successfully
-
-    FOO.link.pass.cpp       - Compiles and links successfully, run not attempted
-    FOO.link.pass.mm        - Same as .link.pass.cpp, but for Objective-C++
-    FOO.link.fail.cpp       - Compiles successfully, but fails to link
-
-    FOO.sh.<anything>       - A builtin Lit Shell test
-
-    FOO.gen.<anything>      - A .sh test that generates one or more Lit tests on the
-                              fly. Executing this test must generate one or more files
-                              as expected by LLVM split-file, and each generated file
-                              leads to a separate Lit test that runs that file as
-                              defined by the test format. This can be used to generate
-                              multiple Lit tests from a single source file, which is
-                              useful for testing repetitive properties in the library.
-                              Be careful not to abuse this since this is not a replacement
-                              for usual code reuse techniques.
-
-    FOO.verify.cpp          - Compiles with clang-verify. This type of test is
-                              automatically marked as UNSUPPORTED if the compiler
-                              does not support Clang-verify.
-
+    Lit tests are contained in files that follow a certain pattern, which determines the semantics of the test.
+    Under the hood, we basically generate a builtin Lit shell test that follows the ShTest format, and perform
+    the appropriate operations (compile/link/run). See
+    https://libcxx.llvm.org/TestingLibcxx.html#test-names
+    for a complete description of those semantics.
 
     Substitution requirements
     ===============================
@@ -193,30 +231,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     in the same command line. In other words, the test format doesn't perform
     separate compilation and linking steps in this case.
 
-
-    Additional supported directives
-    ===============================
-    In addition to everything that's supported in Lit ShTests, this test format
-    also understands the following directives inside test files:
-
-        // FILE_DEPENDENCIES: file, directory, /path/to/file
-
-            This directive expresses that the test requires the provided files
-            or directories in order to run. An example is a test that requires
-            some test input stored in a data file. When a test file contains
-            such a directive, this test format will collect them and copy them
-            to the directory represented by %T. The intent is that %T contains
-            all the inputs necessary to run the test, such that e.g. execution
-            on a remote host can be done by simply copying %T to the host.
-
-        // ADDITIONAL_COMPILE_FLAGS: flag1, flag2, flag3
-
-            This directive will cause the provided flags to be added to the
-            %{compile_flags} substitution for the test that contains it. This
-            allows adding special compilation flags without having to use a
-            .sh.cpp test, which would be more powerful but perhaps overkill.
-
-
     Additional provided substitutions and features
     ==============================================
     The test format will define the following substitutions for use inside tests:
@@ -225,6 +239,13 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             Expands to a command-line that builds the current source
             file with the %{flags}, %{compile_flags} and %{link_flags}
             substitutions, and that produces an executable named %t.exe.
+
+        %{verify}
+            Expands to a command-line that builds the current source
+            file with the %{flags} and %{compile_flags} substitutions
+            and enables clang-verify. This can be used to write .sh.cpp
+            tests that use clang-verify. Note that this substitution can
+            only be used when the 'verify-support' feature is available.
 
         %{run}
             Equivalent to `%{exec} %t.exe`. This is intended to be used
@@ -264,9 +285,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             yield lit.Test.Test(testSuite, pathInSuite, localConfig)
 
     def execute(self, test, litConfig):
-        VERIFY_FLAGS = (
-            "-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0"
-        )
         supportsVerify = "verify-support" in test.config.available_features
         filename = test.path_in_suite[-1]
 
@@ -304,13 +322,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                         test.getFullName()
                     ),
                 )
-            steps = [
-                # Note: Use -Wno-error to make sure all diagnostics are not treated as errors,
-                #       which doesn't make sense for clang-verify tests.
-                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(
-                    VERIFY_FLAGS
-                )
-            ]
+            steps = ["%dbg(COMPILED WITH) %{verify}"]
             return self._executeShTest(test, litConfig, steps)
         # Make sure to check these ones last, since they will match other
         # suffixes above too.

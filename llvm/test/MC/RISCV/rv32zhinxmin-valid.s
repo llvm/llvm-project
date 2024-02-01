@@ -12,6 +12,9 @@
 # CHECK-ASM-AND-OBJ: fcvt.s.h a0, a1
 # CHECK-ASM: encoding: [0x53,0x85,0x25,0x40]
 fcvt.s.h a0, a1
+# CHECK-ASM-AND-OBJ: fcvt.s.h a0, a1, rup
+# CHECK-ASM: encoding: [0x53,0xb5,0x25,0x40]
+fcvt.s.h a0, a1, rup
 
 # CHECK-ASM-AND-OBJ: fcvt.h.s a0, a1, dyn
 # CHECK-ASM: encoding: [0x53,0xf5,0x05,0x44]

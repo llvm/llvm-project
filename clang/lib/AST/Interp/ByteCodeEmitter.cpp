@@ -7,22 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCodeEmitter.h"
+#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
+#include "IntegralAP.h"
 #include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/Builtins.h"
 #include <type_traits>
 
 using namespace clang;
 using namespace clang::interp;
 
-using APSInt = llvm::APSInt;
-using Error = llvm::Error;
-
-Expected<Function *>
-ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
@@ -46,7 +45,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isInstance()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
       ParamOffsets.push_back(ParamOffset);
@@ -62,12 +61,17 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
       MD->getParent()->getCaptureFields(LC, LTC);
 
       for (auto Cap : LC) {
+        // Static lambdas cannot have any captures. If this one does,
+        // it has already been diagnosed and we can only ignore it.
+        if (MD->isStatic())
+          return nullptr;
+
         unsigned Offset = R->getField(Cap.second)->Offset;
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      // FIXME: LambdaThisCapture
-      (void)LTC;
+      if (LTC)
+        this->LambdaThisCapture = R->getField(LTC)->Offset;
     }
   }
 
@@ -86,16 +90,26 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
-  if (!Func)
-    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                            std::move(ParamDescriptors),
-                            std::move(ParamOffsets), HasThisPointer, HasRVO);
+  if (!Func) {
+    bool IsUnevaluatedBuiltin = false;
+    if (unsigned BI = FuncDecl->getBuiltinID())
+      IsUnevaluatedBuiltin = Ctx.getASTContext().BuiltinInfo.isUnevaluated(BI);
+
+    Func =
+        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                         std::move(ParamDescriptors), std::move(ParamOffsets),
+                         HasThisPointer, HasRVO, IsUnevaluatedBuiltin);
+  }
 
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
   // compile their body later.
-  if (!FuncDecl->isDefined())
+  if (!FuncDecl->isDefined()) {
+    Func->setDefined(false);
     return Func;
+  }
+
+  Func->setDefined(true);
 
   // Lambda static invokers are a special case that we emit custom code for.
   bool IsEligibleForCompilation = false;
@@ -106,26 +120,21 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
   // Compile the function body.
   if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
-    // Return a dummy function if compilation failed.
-    if (BailLocation)
-      return llvm::make_error<ByteCodeGenError>(*BailLocation);
-    else {
-      Func->setIsFullyCompiled(true);
-      return Func;
-    }
-  } else {
-    // Create scopes from descriptors.
-    llvm::SmallVector<Scope, 2> Scopes;
-    for (auto &DS : Descriptors) {
-      Scopes.emplace_back(std::move(DS));
-    }
-
-    // Set the function's code.
-    Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
-                  std::move(Scopes), FuncDecl->hasBody());
     Func->setIsFullyCompiled(true);
     return Func;
   }
+
+  // Create scopes from descriptors.
+  llvm::SmallVector<Scope, 2> Scopes;
+  for (auto &DS : Descriptors) {
+    Scopes.emplace_back(std::move(DS));
+  }
+
+  // Set the function's code.
+  Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
+                std::move(Scopes), FuncDecl->hasBody());
+  Func->setIsFullyCompiled(true);
+  return Func;
 }
 
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
@@ -148,7 +157,7 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
-      endian::write<int32_t, endianness::native, 1>(Location, Offset);
+      endian::write<int32_t, llvm::endianness::native>(Location, Offset);
     }
     LabelRelocs.erase(It);
   }
@@ -168,12 +177,6 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   // Otherwise, record relocation and return dummy offset.
   LabelRelocs[Label].push_back(Position);
   return 0ull;
-}
-
-bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
-  if (!BailLocation)
-    BailLocation = Loc;
-  return false;
 }
 
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
@@ -207,9 +210,11 @@ static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
   }
 }
 
-template <>
-void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
-          bool &Success) {
+/// Emits a serializable value. These usually (potentially) contain
+/// heap-allocated memory and aren't trivially copyable.
+template <typename T>
+static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
+                           bool &Success) {
   size_t Size = Val.bytesToSerialize();
 
   if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
@@ -224,6 +229,24 @@ void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
   Code.resize(ValPos + Size);
 
   Val.serialize(Code.data() + ValPos);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code,
+          const IntegralAP<false> &Val, bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
 }
 
 template <typename... Tys>

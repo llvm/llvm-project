@@ -45,7 +45,7 @@
 #define LIBC_TARGET_ARCH_IS_AARCH64
 #endif
 
-#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_ARM))
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_ARM)
 #define LIBC_TARGET_ARCH_IS_ANY_ARM
 #endif
 
@@ -57,8 +57,7 @@
 #define LIBC_TARGET_ARCH_IS_RISCV32
 #endif
 
-#if (defined(LIBC_TARGET_ARCH_IS_RISCV64) ||                                   \
-     defined(LIBC_TARGET_ARCH_IS_RISCV32))
+#if defined(LIBC_TARGET_ARCH_IS_RISCV64) || defined(LIBC_TARGET_ARCH_IS_RISCV32)
 #define LIBC_TARGET_ARCH_IS_ANY_RISCV
 #endif
 

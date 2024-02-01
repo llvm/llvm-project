@@ -427,16 +427,16 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
 }
 
 // CHECK-LABEL: @masked_gather_scatter_intrinsics
-llvm.func @masked_gather_scatter_intrinsics(%M: !llvm.vec<7 x ptr<f32>>, %mask: vector<7xi1>) {
+llvm.func @masked_gather_scatter_intrinsics(%M: !llvm.vec<7 x ptr>, %mask: vector<7xi1>) {
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> poison)
   %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
-      (!llvm.vec<7 x ptr<f32>>, vector<7xi1>) -> vector<7xf32>
+      (!llvm.vec<7 x ptr>, vector<7xi1>) -> vector<7xf32>
   // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %b = llvm.intr.masked.gather %M, %mask, %a { alignment = 1: i32} :
-      (!llvm.vec<7 x ptr<f32>>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+      (!llvm.vec<7 x ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   // CHECK: call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %{{.*}}, <7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}})
   llvm.intr.masked.scatter %b, %M, %mask { alignment = 1: i32} :
-      vector<7xf32>, vector<7xi1> into !llvm.vec<7 x ptr<f32>>
+      vector<7xf32>, vector<7xi1> into !llvm.vec<7 x ptr>
   llvm.return
 }
 
@@ -640,14 +640,14 @@ llvm.func @ushl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: ve
 // CHECK-LABEL: @coro_id
 llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr) {
   // CHECK: call token @llvm.coro.id
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   llvm.return
 }
 
 // CHECK-LABEL: @coro_begin
 llvm.func @coro_begin(%arg0: i32, %arg1: !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.begin
   llvm.intr.coro.begin %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
@@ -681,7 +681,7 @@ llvm.func @coro_save(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @coro_suspend
 llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg2, %arg2, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call i8 @llvm.coro.suspend
   %0 = llvm.intr.coro.suspend %token, %arg1 : i8
@@ -698,7 +698,7 @@ llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
 
 // CHECK-LABEL: @coro_free
 llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr) {
-  %null = llvm.mlir.null : !llvm.ptr
+  %null = llvm.mlir.zero : !llvm.ptr
   %token = llvm.intr.coro.id %arg0, %arg1, %arg1, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
   // CHECK: call ptr @llvm.coro.free
   %0 = llvm.intr.coro.free %token, %arg1 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
@@ -709,6 +709,13 @@ llvm.func @coro_free(%arg0: i32, %arg1 : !llvm.ptr) {
 llvm.func @coro_resume(%arg0: !llvm.ptr) {
   // CHECK: call void @llvm.coro.resume
   llvm.intr.coro.resume %arg0 : !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: @coro_promise
+llvm.func @coro_promise(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : i1) {
+  // CHECK: call ptr @llvm.coro.promise
+  %0 = llvm.intr.coro.promise %arg0, %arg1, %arg2 : (!llvm.ptr, i32, i1) -> !llvm.ptr
   llvm.return
 }
 
@@ -941,6 +948,15 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant
+llvm.func @invariant(%p: !llvm.ptr) {
+  // CHECK: call ptr @llvm.invariant.start
+  %1 = llvm.intr.invariant.start 16, %p : !llvm.ptr
+  // CHECK: call void @llvm.invariant.end
+  llvm.intr.invariant.end %1, 16, %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @ssa_copy
 llvm.func @ssa_copy(%arg: f32) -> f32 {
   // CHECK: call float @llvm.ssa.copy
@@ -1047,6 +1063,7 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
+// CHECK-DAG: declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -1101,6 +1118,9 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+
 // CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
 // CHECK-DAG: declare ptr @llvm.stacksave.p0()
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()

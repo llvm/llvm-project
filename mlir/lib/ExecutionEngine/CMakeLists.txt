@@ -2,6 +2,8 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
+  ArmRunnerUtils.cpp
+  ArmSMEStubs.cpp
   AsyncRuntime.cpp
   CRunnerUtils.cpp
   CudaRuntimeWrappers.cpp
@@ -12,6 +14,7 @@ set(LLVM_OPTIONAL_SOURCES
   RunnerUtils.cpp
   OptUtils.cpp
   JitRunner.cpp
+  SyclRuntimeWrappers.cpp
   )
 
 # Use a separate library for OptUtils, to avoid pulling in the entire JIT and
@@ -155,6 +158,9 @@ if(LLVM_ENABLE_PIC)
     RunnerUtils.cpp
 
     EXCLUDE_FROM_LIBMLIR
+
+    LINK_LIBS PUBLIC
+    mlir_float16_utils
   )
   target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
 
@@ -175,6 +181,15 @@ if(LLVM_ENABLE_PIC)
     # FIXME: Add a similar fix for Windows.
     target_link_options(mlir_async_runtime PRIVATE "-Wl,-exclude-libs,ALL")
   endif()
+
+  add_mlir_library(mlir_arm_sme_abi_stubs
+    SHARED
+    ArmSMEStubs.cpp)
+  target_compile_definitions(mlir_arm_sme_abi_stubs PRIVATE mlir_arm_sme_abi_stubs_EXPORTS)
+
+  add_mlir_library(mlir_arm_runner_utils
+    SHARED
+    ArmRunnerUtils.cpp)
 
   if(MLIR_ENABLE_CUDA_RUNNER)
     # Configure CUDA support. Using check_language first allows us to give a
@@ -327,5 +342,40 @@ if(LLVM_ENABLE_PIC)
       PUBLIC
       hip::host hip::amdhip64
     )
+  endif()
+
+  if(MLIR_ENABLE_SYCL_RUNNER)
+    find_package(SyclRuntime)
+
+    if(NOT SyclRuntime_FOUND)
+      message(FATAL_ERROR "syclRuntime not found. Please set check oneapi installation and run setvars.sh.")
+    endif()
+
+    find_package(LevelZero)
+
+    if(NOT LevelZero_FOUND)
+      message(FATAL_ERROR "LevelZero not found. Please set LEVEL_ZERO_DIR.")
+    endif()
+
+    add_mlir_library(mlir_sycl_runtime
+      SHARED
+      SyclRuntimeWrappers.cpp
+
+      EXCLUDE_FROM_LIBMLIR
+    )
+
+    check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
+    if(NOT CXX_HAS_FRTTI_FLAG)
+      message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
+    endif()
+    target_compile_options (mlir_sycl_runtime PUBLIC -fexceptions -frtti)
+
+    target_include_directories(mlir_sycl_runtime PRIVATE
+      ${MLIR_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(mlir_sycl_runtime PRIVATE LevelZero::LevelZero SyclRuntime::SyclRuntime)
+
+    set_property(TARGET mlir_sycl_runtime APPEND PROPERTY BUILD_RPATH "${LevelZero_LIBRARIES_DIR}" "${SyclRuntime_LIBRARIES_DIR}")
   endif()
 endif()

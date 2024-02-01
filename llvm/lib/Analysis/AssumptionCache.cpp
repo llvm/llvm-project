@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -69,8 +70,7 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
 
       // Peek through unary operators to find the source of the condition.
       Value *Op;
-      if (match(I, m_BitCast(m_Value(Op))) ||
-          match(I, m_PtrToInt(m_Value(Op))) || match(I, m_Not(m_Value(Op)))) {
+      if (match(I, m_PtrToInt(m_Value(Op)))) {
         if (isa<Instruction>(Op) || isa<Argument>(Op))
           Affected.push_back({Op, Idx});
       }
@@ -78,13 +78,21 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
   };
 
   for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++) {
-    if (CI->getOperandBundleAt(Idx).Inputs.size() > ABA_WasOn &&
-        CI->getOperandBundleAt(Idx).getTagName() != IgnoreBundleTag)
-      AddAffected(CI->getOperandBundleAt(Idx).Inputs[ABA_WasOn], Idx);
+    OperandBundleUse Bundle = CI->getOperandBundleAt(Idx);
+    if (Bundle.getTagName() == "separate_storage") {
+      assert(Bundle.Inputs.size() == 2 &&
+             "separate_storage must have two args");
+      AddAffected(getUnderlyingObject(Bundle.Inputs[0]), Idx);
+      AddAffected(getUnderlyingObject(Bundle.Inputs[1]), Idx);
+    } else if (Bundle.Inputs.size() > ABA_WasOn &&
+               Bundle.getTagName() != IgnoreBundleTag)
+      AddAffected(Bundle.Inputs[ABA_WasOn], Idx);
   }
 
   Value *Cond = CI->getArgOperand(0), *A, *B;
   AddAffected(Cond);
+  if (match(Cond, m_Not(m_Value(A))))
+    AddAffected(A);
 
   CmpInst::Predicate Pred;
   if (match(Cond, m_Cmp(Pred, m_Value(A), m_Value(B)))) {
@@ -92,35 +100,19 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
     AddAffected(B);
 
     if (Pred == ICmpInst::ICMP_EQ) {
-      // For equality comparisons, we handle the case of bit inversion.
-      auto AddAffectedFromEq = [&AddAffected](Value *V) {
-        Value *A;
-        if (match(V, m_Not(m_Value(A)))) {
-          AddAffected(A);
-          V = A;
-        }
-
-        Value *B;
-        // (A & B) or (A | B) or (A ^ B).
-        if (match(V, m_BitwiseLogic(m_Value(A), m_Value(B)))) {
-          AddAffected(A);
-          AddAffected(B);
-          // (A << C) or (A >>_s C) or (A >>_u C) where C is some constant.
-        } else if (match(V, m_Shift(m_Value(A), m_ConstantInt()))) {
-          AddAffected(A);
-        }
-      };
-
-      AddAffectedFromEq(A);
-      AddAffectedFromEq(B);
-    } else if (Pred == ICmpInst::ICMP_NE) {
-      Value *X, *Y;
-      // Handle (a & b != 0). If a/b is a power of 2 we can use this
-      // information.
-      if (match(A, m_And(m_Value(X), m_Value(Y))) && match(B, m_Zero())) {
-        AddAffected(X);
-        AddAffected(Y);
+      if (match(B, m_ConstantInt())) {
+        Value *X;
+        // (X & C) or (X | C) or (X ^ C).
+        // (X << C) or (X >>_s C) or (X >>_u C).
+        if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
+            match(A, m_Shift(m_Value(X), m_ConstantInt())))
+          AddAffected(X);
       }
+    } else if (Pred == ICmpInst::ICMP_NE) {
+      Value *X;
+      // Handle (X & pow2 != 0).
+      if (match(A, m_And(m_Value(X), m_Power2())) && match(B, m_Zero()))
+        AddAffected(X);
     } else if (Pred == ICmpInst::ICMP_ULT) {
       Value *X;
       // Handle (A + C1) u< C2, which is the canonical form of A > C3 && A < C4,
@@ -188,7 +180,7 @@ void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
       AffectedValues.erase(AVI);
   }
 
-  erase_value(AssumeHandles, CI);
+  llvm::erase(AssumeHandles, CI);
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {

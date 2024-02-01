@@ -49,8 +49,8 @@ def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFmemcpy       : SDNode<"BPFISD::MEMCPY", SDT_BPFMEMCPY,
                              [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
                               SDNPMayStore, SDNPMayLoad]>;
-def BPFIsLittleEndian : Predicate<"CurDAG->getDataLayout().isLittleEndian()">;
-def BPFIsBigEndian    : Predicate<"!CurDAG->getDataLayout().isLittleEndian()">;
+def BPFIsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
+def BPFIsBigEndian    : Predicate<"!Subtarget->isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
 def BPFNoALU32 : Predicate<"!Subtarget->getHasAlu32()">;
 def BPFHasLdsx : Predicate<"Subtarget->hasLdsx()">;
@@ -61,13 +61,26 @@ def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
 def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
 def BPFHasStoreImm : Predicate<"Subtarget->hasStoreImm()">;
 
+class ImmediateAsmOperand<string name> : AsmOperandClass {
+  let Name = name;
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = !strconcat("Invalid", name);
+}
+
+def SImm16AsmOperand : ImmediateAsmOperand<"SImm16">;
+
 def brtarget : Operand<OtherVT> {
   let PrintMethod = "printBrTargetOperand";
+  let ParserMatchClass = ImmediateAsmOperand<"BrTarget">;
 }
 def calltarget : Operand<i64>;
 
 def u64imm   : Operand<i64> {
   let PrintMethod = "printImm64Operand";
+}
+
+def s16imm : Operand<i16> {
+  let ParserMatchClass = SImm16AsmOperand;
 }
 
 def gpr_or_imm : Operand<i64>;
@@ -92,7 +105,7 @@ def MEMri : Operand<i64> {
   let PrintMethod = "printMemOperand";
   let EncoderMethod = "getMemoryOpValue";
   let DecoderMethod = "decodeMemoryOpValue";
-  let MIOperandInfo = (ops GPR, i16imm);
+  let MIOperandInfo = (ops GPR, s16imm);
 }
 
 // Conditional code predicates - used for pattern matching for jump instructions
@@ -136,6 +149,7 @@ def BPF_CC_LTU_32 : PatLeaf<(i32 imm),
                          [{return (N->getZExtValue() == ISD::SETULT);}]>;
 def BPF_CC_LEU_32 : PatLeaf<(i32 imm),
                          [{return (N->getZExtValue() == ISD::SETULE);}]>;
+def NoCond : PatLeaf<(vt)> {}
 
 // For arithmetic and jump instructions the 8-bit 'code'
 // field is divided into three parts:
@@ -252,6 +266,7 @@ defm JULT : J<BPF_JLT, "<", BPF_CC_LTU, BPF_CC_LTU_32>;
 defm JULE : J<BPF_JLE, "<=", BPF_CC_LEU, BPF_CC_LEU_32>;
 defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT, BPF_CC_LT_32>;
 defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
+defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
 }
 
 // ALU instructions

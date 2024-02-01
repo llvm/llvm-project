@@ -16,16 +16,16 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, truncate, (const char *path, off_t len)) {
 #ifdef SYS_truncate
-  int ret = __llvm_libc::syscall_impl<int>(SYS_truncate, path, len);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_truncate, path, len);
 #elif defined(SYS_truncate64)
   // Same as truncate but can handle large offsets
   static_assert(sizeof(off_t) == 8);
-  int ret = __llvm_libc::syscall_impl<int>(SYS_truncate64, path, (long)len,
-                                           (long)(((uint64_t)(len)) >> 32));
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_truncate64, path, (long)len,
+                                              (long)(((uint64_t)(len)) >> 32));
 #else
 #error "truncate and truncate64 syscalls not available."
 #endif
@@ -36,4 +36,4 @@ LLVM_LIBC_FUNCTION(int, truncate, (const char *path, off_t len)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

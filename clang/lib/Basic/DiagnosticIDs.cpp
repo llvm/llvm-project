@@ -853,5 +853,5 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
 
 bool DiagnosticIDs::isARCDiagnostic(unsigned DiagID) {
   unsigned cat = getCategoryNumberForDiag(DiagID);
-  return DiagnosticIDs::getCategoryNameFromID(cat).startswith("ARC ");
+  return DiagnosticIDs::getCategoryNameFromID(cat).starts_with("ARC ");
 }

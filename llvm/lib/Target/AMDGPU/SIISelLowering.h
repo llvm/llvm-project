@@ -80,6 +80,7 @@ private:
   SDValue lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                         unsigned NewOpcode) const;
 
+  SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
 
@@ -146,6 +147,7 @@ private:
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
 
@@ -221,7 +223,8 @@ private:
   SDValue performClampCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
-  bool isLegalFlatAddressingMode(const AddrMode &AM) const;
+  bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace,
+                                 uint64_t FlatVariant) const;
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
 
   unsigned isCFIntrinsic(const SDNode *Intr) const;
@@ -271,7 +274,8 @@ private:
 
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
-                                     ArrayRef<SDValue> Ops, MemSDNode *M) const;
+                                     ArrayRef<SDValue> Ops,
+                                     MachineMemOperand *MMO) const;
 
   // Handle 8 bit and 16 bit buffer stores
   SDValue handleByteShortBufferStores(SelectionDAG &DAG, EVT VDataType,
@@ -415,6 +419,9 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
@@ -468,13 +475,11 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
-  void LowerAsmOperandForConstraint(SDValue Op,
-                                    std::string &Constraint,
+  void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
   bool getAsmOperandConstVal(SDValue Op, uint64_t &Val) const;
-  bool checkAsmConstraintVal(SDValue Op,
-                             const std::string &Constraint,
+  bool checkAsmConstraintVal(SDValue Op, StringRef Constraint,
                              uint64_t Val) const;
   bool checkAsmConstraintValA(SDValue Op,
                               uint64_t Val,
@@ -548,6 +553,17 @@ public:
                             const SIRegisterInfo &TRI,
                             SIMachineFunctionInfo &Info) const;
 
+  void allocatePreloadKernArgSGPRs(CCState &CCInfo,
+                                   SmallVectorImpl<CCValAssign> &ArgLocs,
+                                   const SmallVectorImpl<ISD::InputArg> &Ins,
+                                   MachineFunction &MF,
+                                   const SIRegisterInfo &TRI,
+                                   SIMachineFunctionInfo &Info) const;
+
+  void allocateLDSKernelId(CCState &CCInfo, MachineFunction &MF,
+                           const SIRegisterInfo &TRI,
+                           SIMachineFunctionInfo &Info) const;
+
   void allocateSystemSGPRs(CCState &CCInfo,
                            MachineFunction &MF,
                            SIMachineFunctionInfo &Info,
@@ -576,6 +592,10 @@ public:
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
 };
+
+// Returns true if argument is a boolean value which is not serialized into
+// memory or argument and does not require v_cndmask_b32 to be deserialized.
+bool isBoolSGPR(SDValue V);
 
 } // End namespace llvm
 

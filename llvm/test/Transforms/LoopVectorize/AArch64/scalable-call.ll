@@ -191,7 +191,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; Even though there are no function mappings attached to the call
 ; in the loop below we can still vectorize the loop because SVE has
 ; hardware support in the form of the 'fqsrt' instruction.
-define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) #0 {
+define void @vec_sqrt_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sqrt_no_mapping
 ; CHECK: call fast <vscale x 2 x float> @llvm.sqrt.nxv2f32
 entry:
@@ -224,9 +224,9 @@ declare <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr>)
 declare <vscale x 2 x double> @sin_vec_nxv2f64(<vscale x 2 x double>)
 declare <2 x double> @sin_vec_v2f64(<2 x double>)
 
-attributes #0 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_foo(foo_vec)" }
-attributes #1 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_bar(bar_vec)" }
-attributes #2 = { "vector-function-abi-variant"="_ZGV_LLVM_Nxv_llvm.sin.f64(sin_vec_nxv2f64)" }
+attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
+attributes #1 = { "vector-function-abi-variant"="_ZGVsNxv_bar(bar_vec)" }
+attributes #2 = { "vector-function-abi-variant"="_ZGVsNxv_llvm.sin.f64(sin_vec_nxv2f64)" }
 attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_vec_v2f64)" }
 
 !1 = distinct !{!1, !2, !3}

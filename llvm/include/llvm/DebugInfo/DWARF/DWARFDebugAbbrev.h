@@ -70,7 +70,7 @@ public:
   getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const;
 
   void dump(raw_ostream &OS) const;
-  void parse() const;
+  Error parse() const;
 
   DWARFAbbreviationDeclarationSetMap::const_iterator begin() const {
     assert(!Data && "Must call parse before iterating over DWARFDebugAbbrev");

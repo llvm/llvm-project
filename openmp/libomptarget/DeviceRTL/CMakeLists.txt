@@ -83,6 +83,7 @@ endif()
 list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
 
 set(include_files
+  ${include_directory}/Allocator.h
   ${include_directory}/Configuration.h
   ${include_directory}/Debug.h
   ${include_directory}/Interface.h
@@ -95,6 +96,7 @@ set(include_files
 )
 
 set(src_files
+  ${source_directory}/Allocator.cpp
   ${source_directory}/Configuration.cpp
   ${source_directory}/Debug.cpp
   ${source_directory}/Kernel.cpp
@@ -230,7 +232,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
   set(target_feature "")
   if("${target_triple}" STREQUAL "nvptx64-nvidia-cuda")
-    set(target_feature "feature=+ptx61")
+    set(target_feature "feature=+ptx63")
   endif()
 
   # Package the bitcode in the bitcode and embed it in an ELF for the static library
@@ -291,7 +293,7 @@ foreach(gpu_arch ${LIBOMPTARGET_DEVICE_ARCHITECTURES})
   if("${gpu_arch}" IN_LIST all_amdgpu_architectures)
     compileDeviceRTLLibrary(${gpu_arch} amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=none)
   elseif("${gpu_arch}" IN_LIST all_nvptx_architectures)
-    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx61)
+    compileDeviceRTLLibrary(${gpu_arch} nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)
   else()
     libomptarget_error_say("Unknown GPU architecture '${gpu_arch}'")
   endif()
@@ -299,7 +301,10 @@ endforeach()
 
 # Archive all the object files generated above into a static library
 add_library(omptarget.devicertl STATIC)
-set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(omptarget.devicertl PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY "${LIBOMPTARGET_LLVM_LIBRARY_INTDIR}"
+  LINKER_LANGUAGE CXX
+)
 target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 
 install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})

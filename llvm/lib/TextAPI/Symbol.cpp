@@ -28,16 +28,16 @@ LLVM_DUMP_METHOD void Symbol::dump(raw_ostream &OS) const {
   if (isThreadLocalValue())
     Result += "(tlv) ";
   switch (Kind) {
-  case SymbolKind::GlobalSymbol:
+  case EncodeKind::GlobalSymbol:
     Result += Name.str();
     break;
-  case SymbolKind::ObjectiveCClass:
+  case EncodeKind::ObjectiveCClass:
     Result += "(ObjC Class) " + Name.str();
     break;
-  case SymbolKind::ObjectiveCClassEHType:
+  case EncodeKind::ObjectiveCClassEHType:
     Result += "(ObjC Class EH) " + Name.str();
     break;
-  case SymbolKind::ObjectiveCInstanceVariable:
+  case EncodeKind::ObjectiveCInstanceVariable:
     Result += "(ObjC IVar) " + Name.str();
     break;
   }
@@ -70,6 +70,25 @@ bool Symbol::operator==(const Symbol &O) const {
   RemoveFlag(O, RHSFlags);
   return std::tie(Name, Kind, Targets, LHSFlags) ==
          std::tie(O.Name, O.Kind, O.Targets, RHSFlags);
+}
+
+SimpleSymbol parseSymbol(StringRef SymName) {
+  if (SymName.starts_with(ObjC1ClassNamePrefix))
+    return {SymName.drop_front(ObjC1ClassNamePrefix.size()),
+            EncodeKind::ObjectiveCClass, ObjCIFSymbolKind::Class};
+  if (SymName.starts_with(ObjC2ClassNamePrefix))
+    return {SymName.drop_front(ObjC2ClassNamePrefix.size()),
+            EncodeKind::ObjectiveCClass, ObjCIFSymbolKind::Class};
+  if (SymName.starts_with(ObjC2MetaClassNamePrefix))
+    return {SymName.drop_front(ObjC2MetaClassNamePrefix.size()),
+            EncodeKind::ObjectiveCClass, ObjCIFSymbolKind::MetaClass};
+  if (SymName.starts_with(ObjC2EHTypePrefix))
+    return {SymName.drop_front(ObjC2EHTypePrefix.size()),
+            EncodeKind::ObjectiveCClassEHType, ObjCIFSymbolKind::EHType};
+  if (SymName.starts_with(ObjC2IVarPrefix))
+    return {SymName.drop_front(ObjC2IVarPrefix.size()),
+            EncodeKind::ObjectiveCInstanceVariable, ObjCIFSymbolKind::None};
+  return {SymName, EncodeKind::GlobalSymbol, ObjCIFSymbolKind::None};
 }
 
 } // end namespace MachO.

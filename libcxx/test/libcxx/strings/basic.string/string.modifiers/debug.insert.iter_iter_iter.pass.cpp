@@ -18,13 +18,18 @@
 
 #include "check_assertion.h"
 
-int main(int, char**) {
-  std::string v;
-  std::string v2;
+template <class S>
+void test() {
+  S v;
+  S v2;
   char a[]    = "123";
   const int N = sizeof(a) / sizeof(a[0]);
   TEST_LIBCPP_ASSERT_FAILURE(
       v.insert(v2.cbegin() + 10, a, a + N), "Attempted to add/subtract an iterator outside its valid range");
+}
+
+int main(int, char**) {
+  test<std::string>();
 
   return 0;
 }

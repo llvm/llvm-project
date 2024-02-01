@@ -16,7 +16,7 @@
 define i1 @t0_const_after_fold_lshr_shl_ne(i32 %x, i64 %y, i32 %len) {
 ; CHECK-LABEL: @t0_const_after_fold_lshr_shl_ne(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[T5]]
@@ -39,7 +39,7 @@ define i1 @t0_const_after_fold_lshr_shl_ne(i32 %x, i64 %y, i32 %len) {
 define <2 x i1> @t1_vec_splat(<2 x i32> %x, <2 x i64> %y, <2 x i32> %len) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[T5]]
@@ -211,7 +211,7 @@ define i1 @t6_oneuse3(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T3:%.*]] = shl i64 [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    call void @use64(i64 [[T3]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[T5]]
@@ -243,7 +243,7 @@ define i1 @t7_oneuse4(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T3_TRUNC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[T5]]
@@ -400,7 +400,7 @@ define i1 @n13_overshift(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[LEN:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], 32
-; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext i32 [[T2]] to i64
+; CHECK-NEXT:    [[T2_WIDE:%.*]] = zext nneg i32 [[T2]] to i64
 ; CHECK-NEXT:    [[T3:%.*]] = shl i64 [[Y:%.*]], [[T2_WIDE]]
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T1]], [[T3_TRUNC]]
@@ -421,7 +421,7 @@ define i1 @n13_overshift(i32 %x, i64 %y, i32 %len) {
 define i1 @n14_trunc_of_lshr(i64 %x, i32 %y, i32 %len) {
 ; CHECK-LABEL: @n14_trunc_of_lshr(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[LEN:%.*]]
-; CHECK-NEXT:    [[T0_WIDE:%.*]] = zext i32 [[T0]] to i64
+; CHECK-NEXT:    [[T0_WIDE:%.*]] = zext nneg i32 [[T0]] to i64
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i64 [[X:%.*]], [[T0_WIDE]]
 ; CHECK-NEXT:    [[T1_TRUNC:%.*]] = trunc i64 [[T1]] to i32
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[LEN]], -1

@@ -42,6 +42,22 @@ entry:                                          ; preds = %if.then
   ret i64 %conv7
 }
 
+define i64 @lshr_lsh_nuw(i64 %tmp) {
+; CHECK-LABEL: @lshr_lsh_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV3:%.*]] = shl i64 [[TMP:%.*]], 32
+; CHECK-NEXT:    store i64 [[CONV3]], ptr @f, align 8
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[CONV3]], 32
+; CHECK-NEXT:    ret i64 [[LSHR]]
+;
+entry:
+  %conv3 = shl nuw i64 %tmp, 32
+  store i64 %conv3, i64* @f, align 8
+  %sext = shl i64 %tmp, 32
+  %lshr = lshr i64 %sext, 32
+  ret i64 %lshr
+}
+
 define i32 @udiv_exact_mul(i32 %x, i32 %y, i1 %arg2) {
 ; CHECK-LABEL: @udiv_exact_mul(
 ; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB2:%.*]], label [[BB1:%.*]]

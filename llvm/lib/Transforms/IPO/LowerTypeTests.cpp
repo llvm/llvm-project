@@ -381,8 +381,7 @@ struct ScopedSaveAliaseesAndUsed {
     appendToCompilerUsed(M, CompilerUsed);
 
     for (auto P : FunctionAliases)
-      P.first->setAliasee(
-          ConstantExpr::getBitCast(P.second, P.first->getType()));
+      P.first->setAliasee(P.second);
 
     for (auto P : ResolverIFuncs) {
       // This does not preserve pointer casts that may have been stripped by the
@@ -759,9 +758,9 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // also conveniently gives us a bit offset to use during the load from
   // the bitset.
   Value *OffsetSHR =
-      B.CreateLShr(PtrOffset, ConstantExpr::getZExt(TIL.AlignLog2, IntPtrTy));
+      B.CreateLShr(PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy));
   Value *OffsetSHL = B.CreateShl(
-      PtrOffset, ConstantExpr::getZExt(
+      PtrOffset, B.CreateZExt(
                      ConstantExpr::getSub(
                          ConstantInt::get(Int8Ty, DL.getPointerSizeInBits(0)),
                          TIL.AlignLog2),
@@ -966,7 +965,6 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
                                       Int8Arr0Ty);
     if (auto *GV = dyn_cast<GlobalVariable>(C))
       GV->setVisibility(GlobalValue::HiddenVisibility);
-    C = ConstantExpr::getBitCast(C, Int8PtrTy);
     return C;
   };
 
@@ -1111,8 +1109,6 @@ void LowerTypeTestsModule::importFunction(
 void LowerTypeTestsModule::lowerTypeTestCalls(
     ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
     const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
-  CombinedGlobalAddr = ConstantExpr::getBitCast(CombinedGlobalAddr, Int8PtrTy);
-
   // For each type identifier in this disjoint set...
   for (Metadata *TypeId : TypeIds) {
     // Build the bitset.
@@ -1200,6 +1196,7 @@ static const unsigned kARMJumpTableEntrySize = 4;
 static const unsigned kARMBTIJumpTableEntrySize = 8;
 static const unsigned kARMv6MJumpTableEntrySize = 16;
 static const unsigned kRISCVJumpTableEntrySize = 8;
+static const unsigned kLOONGARCH64JumpTableEntrySize = 8;
 
 bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
   if (HasBranchTargetEnforcement == -1) {
@@ -1240,6 +1237,8 @@ unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   case Triple::riscv32:
   case Triple::riscv64:
     return kRISCVJumpTableEntrySize;
+  case Triple::loongarch64:
+    return kLOONGARCH64JumpTableEntrySize;
   default:
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1304,6 +1303,9 @@ void LowerTypeTestsModule::createJumpTableEntry(
   } else if (JumpTableArch == Triple::riscv32 ||
              JumpTableArch == Triple::riscv64) {
     AsmOS << "tail $" << ArgIndex << "@plt\n";
+  } else if (JumpTableArch == Triple::loongarch64) {
+    AsmOS << "pcalau12i $$t0, %pc_hi20($" << ArgIndex << ")\n"
+          << "jirl $$r0, $$t0, %pc_lo12($" << ArgIndex << ")\n";
   } else {
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1322,7 +1324,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctions(
     ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalTypeMember *> Functions) {
   if (Arch == Triple::x86 || Arch == Triple::x86_64 || Arch == Triple::arm ||
       Arch == Triple::thumb || Arch == Triple::aarch64 ||
-      Arch == Triple::riscv32 || Arch == Triple::riscv64)
+      Arch == Triple::riscv32 || Arch == Triple::riscv64 ||
+      Arch == Triple::loongarch64)
     buildBitSetsFromFunctionsNative(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
     buildBitSetsFromFunctionsWASM(TypeIds, Functions);
@@ -1464,9 +1467,19 @@ void LowerTypeTestsModule::createJumpTable(
   SmallVector<Value *, 16> AsmArgs;
   AsmArgs.reserve(Functions.size() * 2);
 
-  for (GlobalTypeMember *GTM : Functions)
+  // Check if all entries have the NoUnwind attribute.
+  // If all entries have it, we can safely mark the
+  // cfi.jumptable as NoUnwind, otherwise, direct calls
+  // to the jump table will not handle exceptions properly
+  bool areAllEntriesNounwind = true;
+  for (GlobalTypeMember *GTM : Functions) {
+    if (!llvm::cast<llvm::Function>(GTM->getGlobal())
+             ->hasFnAttribute(llvm::Attribute::NoUnwind)) {
+      areAllEntriesNounwind = false;
+    }
     createJumpTableEntry(AsmOS, ConstraintOS, JumpTableArch, AsmArgs,
                          cast<Function>(GTM->getGlobal()));
+  }
 
   // Align the whole table by entry size.
   F->setAlignment(Align(getJumpTableEntrySize()));
@@ -1509,8 +1522,13 @@ void LowerTypeTestsModule::createJumpTable(
   // -fcf-protection=.
   if (JumpTableArch == Triple::x86 || JumpTableArch == Triple::x86_64)
     F->addFnAttr(Attribute::NoCfCheck);
-  // Make sure we don't emit .eh_frame for this function.
-  F->addFnAttr(Attribute::NoUnwind);
+
+  // Make sure we don't emit .eh_frame for this function if it isn't needed.
+  if (areAllEntriesNounwind)
+    F->addFnAttr(Attribute::NoUnwind);
+
+  // Make sure we do not inline any calls to the cfi.jumptable.
+  F->addFnAttr(Attribute::NoInline);
 
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
@@ -1642,12 +1660,10 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       Function *F = cast<Function>(Functions[I]->getGlobal());
       bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-      Constant *CombinedGlobalElemPtr = ConstantExpr::getBitCast(
-          ConstantExpr::getInBoundsGetElementPtr(
-              JumpTableType, JumpTable,
-              ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                                   ConstantInt::get(IntPtrTy, I)}),
-          F->getType());
+      Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
+          JumpTableType, JumpTable,
+          ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
+                               ConstantInt::get(IntPtrTy, I)});
 
       const bool IsExported = Functions[I]->isExported();
       if (!IsJumpTableCanonical) {

@@ -11,11 +11,11 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 size_t fread_unlocked(void *__restrict buffer, size_t size, size_t nmemb,
                       ::FILE *stream);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FREAD_UNLOCKED_H

@@ -16,7 +16,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toascii
     libc.src.ctype.tolower
     libc.src.ctype.toupper
-    
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -89,6 +89,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # stdbit.h entrypoints
+    libc.src.stdbit.stdc_leading_zeros_uc
+    libc.src.stdbit.stdc_leading_zeros_us
+    libc.src.stdbit.stdc_leading_zeros_ui
+    libc.src.stdbit.stdc_leading_zeros_ul
+    libc.src.stdbit.stdc_leading_zeros_ull
+
     # stdlib.h entrypoints
     libc.src.stdlib.abs
     libc.src.stdlib.atoi
@@ -126,6 +133,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vsnprintf
+    #libc.src.stdio.sscanf
+    #libc.src.stdio.scanf
+    #libc.src.stdio.fscanf
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -133,6 +143,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -161,6 +177,18 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
+
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
+
+    # sys/epoll.h entrypoints
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.src.sys.epoll.epoll_wait
+    # libc.src.sys.epoll.epoll_pwait
+    # libc.src.sys.epoll.epoll_pwait2
 
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
@@ -233,7 +261,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atanf
-    libc.src.math.atanhf    
+    libc.src.math.atanhf
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
@@ -249,6 +277,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
@@ -306,12 +335,19 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nan
+    libc.src.math.nanf
+    libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
     libc.src.math.nearbyintl
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
+    libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -340,8 +376,19 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.truncl
 )
 
+if(LIBC_COMPILER_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float128 entrypoints
+    # Temporarily disabled since float128 isn't working on the aarch64 buildbot
+    # libc.src.math.fabsf128
+  )
+endif()
+
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
+
     # network.h entrypoints
     libc.src.network.htonl
     libc.src.network.htons
@@ -442,6 +489,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigprocmask
     libc.src.signal.sigfillset
     libc.src.signal.signal
+
+    # search.h entrypoints
+    libc.src.search.hcreate
+    libc.src.search.hcreate_r
+    libc.src.search.hsearch
+    libc.src.search.hsearch_r
+    libc.src.search.hdestroy
+    libc.src.search.hdestroy_r
 
     # threads.h entrypoints
     libc.src.threads.call_once

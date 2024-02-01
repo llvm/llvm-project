@@ -17,6 +17,7 @@
 #include "SPIRVBuiltins.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVISelLowering.h"
+#include "SPIRVMetadata.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
@@ -117,64 +118,12 @@ static FunctionType *getOriginalFunctionType(const Function &F) {
   return FunctionType::get(RetTy, ArgTypes, F.isVarArg());
 }
 
-static MDString *getKernelArgAttribute(const Function &KernelFunction,
-                                       unsigned ArgIdx,
-                                       const StringRef AttributeName) {
-  assert(KernelFunction.getCallingConv() == CallingConv::SPIR_KERNEL &&
-         "Kernel attributes are attached/belong only to kernel functions");
-
-  // Lookup the argument attribute in metadata attached to the kernel function.
-  MDNode *Node = KernelFunction.getMetadata(AttributeName);
-  if (Node && ArgIdx < Node->getNumOperands())
-    return cast<MDString>(Node->getOperand(ArgIdx));
-
-  // Sometimes metadata containing kernel attributes is not attached to the
-  // function, but can be found in the named module-level metadata instead.
-  // For example:
-  //   !opencl.kernels = !{!0}
-  //   !0 = !{void ()* @someKernelFunction, !1, ...}
-  //   !1 = !{!"kernel_arg_addr_space", ...}
-  // In this case the actual index of searched argument attribute is ArgIdx + 1,
-  // since the first metadata node operand is occupied by attribute name
-  // ("kernel_arg_addr_space" in the example above).
-  unsigned MDArgIdx = ArgIdx + 1;
-  NamedMDNode *OpenCLKernelsMD =
-      KernelFunction.getParent()->getNamedMetadata("opencl.kernels");
-  if (!OpenCLKernelsMD || OpenCLKernelsMD->getNumOperands() == 0)
-    return nullptr;
-
-  // KernelToMDNodeList contains kernel function declarations followed by
-  // corresponding MDNodes for each attribute. Search only MDNodes "belonging"
-  // to the currently lowered kernel function.
-  MDNode *KernelToMDNodeList = OpenCLKernelsMD->getOperand(0);
-  bool FoundLoweredKernelFunction = false;
-  for (const MDOperand &Operand : KernelToMDNodeList->operands()) {
-    ValueAsMetadata *MaybeValue = dyn_cast<ValueAsMetadata>(Operand);
-    if (MaybeValue && dyn_cast<Function>(MaybeValue->getValue())->getName() ==
-                          KernelFunction.getName()) {
-      FoundLoweredKernelFunction = true;
-      continue;
-    }
-    if (MaybeValue && FoundLoweredKernelFunction)
-      return nullptr;
-
-    MDNode *MaybeNode = dyn_cast<MDNode>(Operand);
-    if (FoundLoweredKernelFunction && MaybeNode &&
-        cast<MDString>(MaybeNode->getOperand(0))->getString() ==
-            AttributeName &&
-        MDArgIdx < MaybeNode->getNumOperands())
-      return cast<MDString>(MaybeNode->getOperand(MDArgIdx));
-  }
-  return nullptr;
-}
-
 static SPIRV::AccessQualifier::AccessQualifier
 getArgAccessQual(const Function &F, unsigned ArgIdx) {
   if (F.getCallingConv() != CallingConv::SPIR_KERNEL)
     return SPIRV::AccessQualifier::ReadWrite;
 
-  MDString *ArgAttribute =
-      getKernelArgAttribute(F, ArgIdx, "kernel_arg_access_qual");
+  MDString *ArgAttribute = getOCLKernelArgAccessQual(F, ArgIdx);
   if (!ArgAttribute)
     return SPIRV::AccessQualifier::ReadWrite;
 
@@ -186,31 +135,44 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
 }
 
 static std::vector<SPIRV::Decoration::Decoration>
-getKernelArgTypeQual(const Function &KernelFunction, unsigned ArgIdx) {
-  MDString *ArgAttribute =
-      getKernelArgAttribute(KernelFunction, ArgIdx, "kernel_arg_type_qual");
+getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
+  MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
   if (ArgAttribute && ArgAttribute->getString().compare("volatile") == 0)
     return {SPIRV::Decoration::Volatile};
   return {};
 }
 
-static Type *getArgType(const Function &F, unsigned ArgIdx) {
+static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
+                                  SPIRVGlobalRegistry *GR,
+                                  MachineIRBuilder &MIRBuilder) {
+  // Read argument's access qualifier from metadata or default.
+  SPIRV::AccessQualifier::AccessQualifier ArgAccessQual =
+      getArgAccessQual(F, ArgIdx);
+
   Type *OriginalArgType = getOriginalFunctionType(F)->getParamType(ArgIdx);
+
+  // In case of non-kernel SPIR-V function or already TargetExtType, use the
+  // original IR type.
   if (F.getCallingConv() != CallingConv::SPIR_KERNEL ||
       isSpecialOpaqueType(OriginalArgType))
-    return OriginalArgType;
+    return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
-  MDString *MDKernelArgType =
-      getKernelArgAttribute(F, ArgIdx, "kernel_arg_type");
-  if (!MDKernelArgType || !MDKernelArgType->getString().endswith("_t"))
-    return OriginalArgType;
-
-  std::string KernelArgTypeStr = "opencl." + MDKernelArgType->getString().str();
-  Type *ExistingOpaqueType =
-      StructType::getTypeByName(F.getContext(), KernelArgTypeStr);
-  return ExistingOpaqueType
-             ? ExistingOpaqueType
-             : StructType::create(F.getContext(), KernelArgTypeStr);
+  SPIRVType *ResArgType = nullptr;
+  if (MDString *MDKernelArgType = getOCLKernelArgType(F, ArgIdx)) {
+    StringRef MDTypeStr = MDKernelArgType->getString();
+    if (MDTypeStr.ends_with("*"))
+      ResArgType = GR->getOrCreateSPIRVTypeByName(
+          MDTypeStr, MIRBuilder,
+          addressSpaceToStorageClass(
+              OriginalArgType->getPointerAddressSpace()));
+    else if (MDTypeStr.ends_with("_t"))
+      ResArgType = GR->getOrCreateSPIRVTypeByName(
+          "opencl." + MDTypeStr.str(), MIRBuilder,
+          SPIRV::StorageClass::Function, ArgAccessQual);
+  }
+  return ResArgType ? ResArgType
+                    : GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder,
+                                               ArgAccessQual);
 }
 
 static bool isEntryPoint(const Function &F) {
@@ -262,10 +224,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       // TODO: handle the case of multiple registers.
       if (VRegs[i].size() > 1)
         return false;
-      SPIRV::AccessQualifier::AccessQualifier ArgAccessQual =
-          getArgAccessQual(F, i);
-      auto *SpirvTy = GR->assignTypeToVReg(getArgType(F, i), VRegs[i][0],
-                                           MIRBuilder, ArgAccessQual);
+      auto *SpirvTy = getArgSPIRVType(F, i, GR, MIRBuilder);
+      GR->assignSPIRVTypeToVReg(SpirvTy, VRegs[i][0], MIRBuilder.getMF());
       ArgTypeVRegs.push_back(SpirvTy);
 
       if (Arg.hasName())
@@ -425,7 +385,8 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       assert(Arg.Regs.size() == 1 && "Call arg has multiple VRegs");
       ArgVRegs.push_back(Arg.Regs[0]);
       SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(Arg.Ty, MIRBuilder);
-      GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MIRBuilder.getMF());
+      if (!GR->getSPIRVTypeForVReg(Arg.Regs[0]))
+        GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MIRBuilder.getMF());
     }
     if (auto Res = SPIRV::lowerBuiltin(
             DemangledName, SPIRV::InstructionSet::OpenCL_std, MIRBuilder,

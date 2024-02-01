@@ -24,7 +24,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include <immintrin.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T>
@@ -50,6 +50,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FMA_H

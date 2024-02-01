@@ -24,6 +24,9 @@ class TestFirmwareCorefiles(TestBase):
         aout_exe_basename = "a.out"
         aout_exe = self.getBuildArtifact(aout_exe_basename)
         verstr_corefile = self.getBuildArtifact("verstr.core")
+        verstr_corefile_invalid_ident = self.getBuildArtifact(
+            "verstr-invalid-ident.core"
+        )
         verstr_corefile_addr = self.getBuildArtifact("verstr-addr.core")
         create_corefile = self.getBuildArtifact("create-empty-corefile")
         slide = 0x70000000000
@@ -34,6 +37,14 @@ class TestFirmwareCorefiles(TestBase):
             + " "
             + aout_exe
             + " 0xffffffffffffffff 0xffffffffffffffff",
+            shell=True,
+        )
+        call(
+            create_corefile
+            + " version-string "
+            + verstr_corefile_invalid_ident
+            + ' "" '
+            + "0xffffffffffffffff 0xffffffffffffffff",
             shell=True,
         )
         call(
@@ -71,7 +82,18 @@ class TestFirmwareCorefiles(TestBase):
         self.assertEqual(fspec.GetFilename(), aout_exe_basename)
         self.dbg.DeleteTarget(target)
 
-        # Second, try the "kern ver str" corefile where it loads at an address
+        # Second, try the "kern ver str" corefile which has an invalid ident,
+        # make sure we don't crash.
+        target = self.dbg.CreateTarget("")
+        err = lldb.SBError()
+        if self.TraceOn():
+            self.runCmd(
+                "script print('loading corefile %s')" % verstr_corefile_invalid_ident
+            )
+        process = target.LoadCore(verstr_corefile_invalid_ident)
+        self.assertEqual(process.IsValid(), True)
+
+        # Third, try the "kern ver str" corefile where it loads at an address
         target = self.dbg.CreateTarget("")
         err = lldb.SBError()
         if self.TraceOn():

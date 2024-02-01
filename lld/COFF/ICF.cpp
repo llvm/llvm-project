@@ -26,6 +26,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
@@ -93,7 +94,10 @@ bool ICF::isEligible(SectionChunk *c) {
     return true;
 
   // So are vtables.
-  if (c->sym && c->sym->getName().starts_with("??_7"))
+  const char *itaniumVtablePrefix =
+      ctx.config.machine == I386 ? "__ZTV" : "_ZTV";
+  if (c->sym && (c->sym->getName().starts_with("??_7") ||
+                 c->sym->getName().starts_with(itaniumVtablePrefix)))
     return true;
 
   // Anything else not in an address-significance table is eligible.
@@ -246,6 +250,7 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> fn) {
 // Two sections are considered the same if their section headers,
 // contents and relocations are all the same.
 void ICF::run() {
+  llvm::TimeTraceScope timeScope("ICF");
   ScopedTimer t(ctx.icfTimer);
 
   // Collect only mergeable sections and group by hash value.

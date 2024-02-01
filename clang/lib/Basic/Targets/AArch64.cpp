@@ -225,6 +225,8 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
+  BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
+  BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
 }
 
@@ -331,6 +333,12 @@ void AArch64TargetInfo::getTargetDefinesARMV94A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Armv9.4-A maps to Armv8.9-A
   getTargetDefinesARMV89A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.5-A does not have a v8.* equivalent, but is a superset of v9.4-A.
+  getTargetDefinesARMV94A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -458,6 +466,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuth)
     Builder.defineMacro("__ARM_FEATURE_PAUTH", "1");
 
+  if (HasPAuthLR)
+    Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
+
   if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
@@ -509,6 +520,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     // 0: Protection using the A key
     // 1: Protection using the B key
     // 2: Protection including leaf functions
+    // 3: Protection using PC as a diversifier
     unsigned Value = 0;
 
     if (Opts.isSignReturnAddressWithAKey())
@@ -519,11 +531,17 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     if (Opts.isSignReturnAddressScopeAll())
       Value |= (1 << 2);
 
+    if (Opts.BranchProtectionPAuthLR)
+      Value |= (1 << 3);
+
     Builder.defineMacro("__ARM_FEATURE_PAC_DEFAULT", std::to_string(Value));
   }
 
   if (Opts.BranchTargetEnforcement)
     Builder.defineMacro("__ARM_FEATURE_BTI_DEFAULT", "1");
+
+  if (Opts.GuardedControlStack)
+    Builder.defineMacro("__ARM_FEATURE_GCS_DEFAULT", "1");
 
   if (HasLS64)
     Builder.defineMacro("__ARM_FEATURE_LS64", "1");
@@ -536,6 +554,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasD128)
     Builder.defineMacro("__ARM_FEATURE_SYSREG128", "1");
+
+  if (HasGCS)
+    Builder.defineMacro("__ARM_FEATURE_GCS", "1");
 
   if (*ArchInfo == llvm::AArch64::ARMV8_1A)
     getTargetDefinesARMV81A(Opts, Builder);
@@ -565,12 +586,15 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV93A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_4A)
     getTargetDefinesARMV94A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
+    getTargetDefinesARMV95A(Opts, Builder);
 
-  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
+  // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16");
 
   // Allow detection of fast FMA support.
   Builder.defineMacro("__FP_FAST_FMA", "1");
@@ -605,9 +629,8 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (Name == E.Name)
-      return E.FmvPriority;
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->FmvPriority;
   return 0;
 }
 
@@ -617,24 +640,19 @@ unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions, [&](const auto &E) {
-    return Name == E.Name && !E.DependentFeatures.empty();
-  });
-  return F != std::end(llvm::AArch64::Extensions);
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return !Ext->DependentFeatures.empty();
+  return false;
 }
 
 StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  auto F = llvm::find_if(llvm::AArch64::Extensions,
-                         [&](const auto &E) { return Name == E.Name; });
-  return F != std::end(llvm::AArch64::Extensions) ? F->DependentFeatures
-                                                  : StringRef();
+  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
+    return Ext->DependentFeatures;
+  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  for (const auto &E : llvm::AArch64::Extensions)
-    if (FeatureStr == E.Name)
-      return true;
-  return false;
+  return llvm::AArch64::parseArchExtension(FeatureStr).has_value();
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -677,6 +695,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sme", HasSME)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
+      .Case("sme-fa64", HasSMEFA64)
       .Cases("memtag", "memtag2", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
@@ -806,6 +825,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
+    if (Feature == "+sme-fa64") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasSME = true;
+      HasSVE2 = true;
+      HasSMEFA64 = true;
+    }
     if (Feature == "+sb")
       HasSB = true;
     if (Feature == "+predres")
@@ -899,6 +925,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.4a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_4A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_4A;
+    if (Feature == "+v9.5a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_5A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -944,6 +973,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasGCS = true;
     if (Feature == "+rcpc3")
       HasRCPC3 = true;
+    if (Feature == "+pauth-lr") {
+      HasPAuthLR = true;
+      HasPAuth = true;
+    }
   }
 
   // Check features that are manually disabled by command line options.
@@ -1042,7 +1075,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       else
         // Pushing the original feature string to give a sema error later on
         // when they get checked.
-        if (Feature.startswith("no"))
+        if (Feature.starts_with("no"))
           Features.push_back("-" + Feature.drop_front(2).str());
         else
           Features.push_back("+" + Feature.str());
@@ -1051,22 +1084,21 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
-    if (Feature.startswith("fpmath="))
+    if (Feature.starts_with("fpmath="))
       continue;
 
-    if (Feature.startswith("branch-protection=")) {
+    if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
       continue;
     }
 
-    if (Feature.startswith("arch=")) {
+    if (Feature.starts_with("arch=")) {
       if (FoundArch)
         Ret.Duplicate = "arch=";
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const std::optional<llvm::AArch64::ArchInfo> AI =
-          llvm::AArch64::parseArch(Split.first);
+      const llvm::AArch64::ArchInfo *AI = llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
@@ -1075,7 +1107,7 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       Ret.Features.push_back(AI->ArchFeature.str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);
-    } else if (Feature.startswith("cpu=")) {
+    } else if (Feature.starts_with("cpu=")) {
       if (!Ret.CPU.empty())
         Ret.Duplicate = "cpu=";
       else {
@@ -1086,14 +1118,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
         Ret.CPU = Split.first;
         SplitAndAddFeatures(Split.second, Ret.Features);
       }
-    } else if (Feature.startswith("tune=")) {
+    } else if (Feature.starts_with("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("+")) {
+    } else if (Feature.starts_with("+")) {
       SplitAndAddFeatures(Feature, Ret.Features);
-    } else if (Feature.startswith("no-")) {
+    } else if (Feature.starts_with("no-")) {
       StringRef FeatureName =
           llvm::AArch64::getArchExtFeature(Feature.split("-").second);
       if (!FeatureName.empty())
@@ -1306,6 +1338,12 @@ bool AArch64TargetInfo::validateAsmConstraint(
       Name += 2;
       return true;
     }
+    if (Name[1] == 'c' && (Name[2] == 'i' || Name[2] == 'j')) {
+      // Gpr registers ("Uci"=w8-11, "Ucj"=w12-15)
+      Info.setAllowsRegister();
+      Name += 2;
+      return true;
+    }
     // Ump: A memory address suitable for ldp/stp in SI, DI, SF and DF modes.
     // Utf: A memory address suitable for ldp/stp in TF mode.
     // Usa: An absolute symbolic address.
@@ -1338,8 +1376,7 @@ bool AArch64TargetInfo::validateConstraintModifier(
     StringRef Constraint, char Modifier, unsigned Size,
     std::string &SuggestedModifier) const {
   // Strip off constraint modifiers.
-  while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
-    Constraint = Constraint.substr(1);
+  Constraint = Constraint.ltrim("=+&");
 
   switch (Constraint[0]) {
   default:
@@ -1491,8 +1528,10 @@ MicrosoftARM64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_MicrosoftWin64;
 }
 
-unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize) const {
-  unsigned Align = WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize);
+unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                                     bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
   // MSVC does size based alignment for arm64 based on alignment section in
   // below document, replicate that to keep alignment consistent with object

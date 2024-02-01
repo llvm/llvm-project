@@ -18,17 +18,17 @@ define void @test_00() {
 ; CHECK:       %sum4 = add i32 %sum3, %phi6
 ; CHECK-NEXT:  -->  {159,+,6}<%loop2>
 ; CHECK:       %s1 = add i32 %phi1, %phi4
-; CHECK-NEXT:  -->  {{{{}}73,+,1}<nuw><nsw><%loop1>,+,1}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}73,+,1}<nuw><nsw><%loop1>,+,1}<nw><%loop2>
 ; CHECK:       %s2 = add i32 %phi5, %phi2
-; CHECK-NEXT:  -->  {{{{}}57,+,2}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}57,+,2}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
 ; CHECK:       %s3 = add i32 %sum1, %sum3
-; CHECK-NEXT:  -->  {{{{}}130,+,3}<%loop1>,+,3}<%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}130,+,3}<%loop1>,+,3}<%loop2>
 ; CHECK:       %s4 = add i32 %sum4, %sum2
-; CHECK-NEXT:  -->  {{{{}}179,+,6}<%loop1>,+,6}<%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}179,+,6}<%loop1>,+,6}<%loop2>
 ; CHECK:       %s5 = add i32 %phi3, %sum3
-; CHECK-NEXT:  -->  {{{{}}122,+,3}<nuw><nsw><%loop1>,+,3}<%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}122,+,3}<nuw><nsw><%loop1>,+,3}<%loop2>
 ; CHECK:       %s6 = add i32 %sum2, %phi6
-; CHECK-NEXT:  -->  {{{{}}63,+,6}<%loop1>,+,3}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}63,+,6}<%loop1>,+,3}<nw><%loop2>
 
 entry:
   br label %loop1
@@ -359,17 +359,17 @@ define void @test_06() {
 
 ; CHECK-LABEL: Classifying expressions for: @test_06
 ; CHECK:       %s1 = add i32 %phi1, %phi2
-; CHECK-NEXT:  -->  {{{{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
 ; CHECK:       %s2 = add i32 %phi2, %phi1
-; CHECK-NEXT:  -->  {{{{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
 ; CHECK:       %s3 = add i32 %phi1, %phi3
-; CHECK-NEXT:  -->  {{{{}}40,+,1}<nuw><nsw><%loop1>,+,3}<nw><%loop3>
+; CHECK-NEXT:  -->  {{\{\{}}40,+,1}<nuw><nsw><%loop1>,+,3}<nw><%loop3>
 ; CHECK:       %s4 = add i32 %phi3, %phi1
-; CHECK-NEXT:  -->  {{{{}}40,+,1}<nuw><nsw><%loop1>,+,3}<nw><%loop3>
+; CHECK-NEXT:  -->  {{\{\{}}40,+,1}<nuw><nsw><%loop1>,+,3}<nw><%loop3>
 ; CHECK:       %s5 = add i32 %phi2, %phi3
-; CHECK-NEXT:  -->  {{{{}}50,+,2}<nuw><nsw><%loop2>,+,3}<nw><%loop3>
+; CHECK-NEXT:  -->  {{\{\{}}50,+,2}<nuw><nsw><%loop2>,+,3}<nw><%loop3>
 ; CHECK:       %s6 = add i32 %phi3, %phi2
-; CHECK-NEXT:  -->  {{{{}}50,+,2}<nuw><nsw><%loop2>,+,3}<nw><%loop3>
+; CHECK-NEXT:  -->  {{\{\{}}50,+,2}<nuw><nsw><%loop2>,+,3}<nw><%loop3>
 
 entry:
   br label %loop1
@@ -411,17 +411,17 @@ define void @test_07() {
 
 ; CHECK-LABEL: Classifying expressions for: @test_07
 ; CHECK:       %s1 = add i32 %phi1, %phi2
-; CHECK-NEXT:  -->  {{{{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
 ; CHECK:       %s2 = add i32 %phi2, %phi1
-; CHECK-NEXT:  -->  {{{{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2>
 ; CHECK:       %s3 = add i32 %phi1, %phi3
-; CHECK-NEXT:  -->  {{{{}}40,+,3}<nuw><nsw><%loop3>,+,1}<nw><%loop1>
+; CHECK-NEXT:  -->  {{\{\{}}40,+,3}<nuw><nsw><%loop3>,+,1}<nw><%loop1>
 ; CHECK:       %s4 = add i32 %phi3, %phi1
-; CHECK-NEXT:  -->  {{{{}}40,+,3}<nuw><nsw><%loop3>,+,1}<nw><%loop1>
+; CHECK-NEXT:  -->  {{\{\{}}40,+,3}<nuw><nsw><%loop3>,+,1}<nw><%loop1>
 ; CHECK:       %s5 = add i32 %phi2, %phi3
-; CHECK-NEXT:  -->  {{{{}}50,+,3}<nuw><nsw><%loop3>,+,2}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}50,+,3}<nuw><nsw><%loop3>,+,2}<nw><%loop2>
 ; CHECK:       %s6 = add i32 %phi3, %phi2
-; CHECK-NEXT:  -->  {{{{}}50,+,3}<nuw><nsw><%loop3>,+,2}<nw><%loop2>
+; CHECK-NEXT:  -->  {{\{\{}}50,+,3}<nuw><nsw><%loop3>,+,2}<nw><%loop2>
 
 entry:
   br label %loop3

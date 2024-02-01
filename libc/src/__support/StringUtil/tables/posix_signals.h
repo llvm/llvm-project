@@ -14,7 +14,7 @@
 
 #include <signal.h> // For signal numbers
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr MsgTable<22> POSIX_SIGNALS = {
     MsgMapping(SIGHUP, "Hangup"),
@@ -41,6 +41,6 @@ LIBC_INLINE_VAR constexpr MsgTable<22> POSIX_SIGNALS = {
     MsgMapping(SIGSYS, "Bad system call"),
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_POSIX_SIGNALS_H

@@ -22,12 +22,12 @@ public:
 };
 
 void not_abstract_class() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}default_accessor: template argument may not be an abstract class}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}default_accessor: template argument may not be an abstract class}}
   [[maybe_unused]] std::default_accessor<AbstractClass> acc;
 }
 
 void not_array_type() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}default_accessor: template argument may not be an array type}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}default_accessor: template argument may not be an array type}}
   [[maybe_unused]] std::default_accessor<int[5]> acc;
 }
 

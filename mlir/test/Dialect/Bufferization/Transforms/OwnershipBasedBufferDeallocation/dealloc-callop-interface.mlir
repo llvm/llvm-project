@@ -114,3 +114,20 @@ func.func @function_call_requries_merged_ownership_mid_block(%arg0: i1) {
 // two allocations was selected, either by checking aliasing of the result at
 // runtime or by extracting the select condition using an OpInterface or by
 // hardcoding the select op
+
+// -----
+
+func.func private @f(memref<f32>) -> memref<f32>
+
+func.func @g(%arg0: memref<f32>) -> memref<f32> {
+  %0 = call @f(%arg0) : (memref<f32>) -> memref<f32>
+  return %0 : memref<f32>
+}
+
+// CHECK-LABEL: func private @f
+//  CHECK-SAME: (memref<f32>) -> memref<f32>
+//       CHECK: call @f({{.*}}) : (memref<f32>) -> memref<f32>
+
+// CHECK-DYNAMIC-LABEL: func private @f
+//  CHECK-DYNAMIC-SAME: (memref<f32>) -> memref<f32>
+//       CHECK-DYNAMIC: call @f({{.*}}) : (memref<f32>) -> memref<f32>

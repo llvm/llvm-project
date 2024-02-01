@@ -16,19 +16,21 @@
 
 #include "test_macros.h"
 
+template <class S>
+constexpr void test_string() {
+  S s1{};
+  S s2{"abcde", 5};
+
+  ASSERT_NOEXCEPT(s1.ends_with('e'));
+
+  assert(!s1.ends_with('e'));
+  assert(!s1.ends_with('x'));
+  assert(s2.ends_with('e'));
+  assert(!s2.ends_with('x'));
+}
+
 constexpr bool test() {
-  {
-    typedef std::string S;
-    S s1{};
-    S s2{"abcde", 5};
-
-    ASSERT_NOEXCEPT(s1.ends_with('e'));
-
-    assert(!s1.ends_with('e'));
-    assert(!s1.ends_with('x'));
-    assert(s2.ends_with('e'));
-    assert(!s2.ends_with('x'));
-  }
+  test_string<std::string>();
 
   return true;
 }

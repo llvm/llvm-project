@@ -8,6 +8,7 @@
 
 #include "UnusedUsingDeclsCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -71,6 +72,10 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
                          templateArgument().bind("used")))),
                      this);
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
+  Finder->addMatcher(
+      loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
+                         hasUnqualifiedDesugaredType(type().bind("usedType")))),
+      this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
   // FIXME: cover more cases in this way, as the AST supports it.
@@ -112,8 +117,10 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
             /*SkipTrailingWhitespaceAndNewLine=*/true));
     for (const auto *UsingShadow : Using->shadows()) {
       const auto *TargetDecl = UsingShadow->getTargetDecl()->getCanonicalDecl();
-      if (shouldCheckDecl(TargetDecl))
+      if (shouldCheckDecl(TargetDecl)) {
         Context.UsingTargetDecls.insert(TargetDecl);
+        UsingTargetDeclsCache.insert(TargetDecl);
+      }
     }
     if (!Context.UsingTargetDecls.empty())
       Contexts.push_back(Context);
@@ -142,6 +149,12 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   // marked after a corresponding using decl has been found.
   if (const auto *Used = Result.Nodes.getNodeAs<NamedDecl>("used")) {
     RemoveNamedDecl(Used);
+    return;
+  }
+
+  if (const auto *T = Result.Nodes.getNodeAs<Type>("usedType")) {
+    if (const auto *ND = T->getAsTagDecl())
+      RemoveNamedDecl(ND);
     return;
   }
 
@@ -190,13 +203,16 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
   if (!D)
     return;
+  const Decl *CanonicalDecl = D->getCanonicalDecl();
+  if (!UsingTargetDeclsCache.contains(CanonicalDecl))
+    return;
   // FIXME: Currently, we don't handle the using-decls being used in different
   // scopes (such as different namespaces, different functions). Instead of
   // giving an incorrect message, we mark all of them as used.
-  //
-  // FIXME: Use a more efficient way to find a matching context.
   for (auto &Context : Contexts) {
-    if (Context.UsingTargetDecls.contains(D->getCanonicalDecl()))
+    if (Context.IsUsed)
+      continue;
+    if (Context.UsingTargetDecls.contains(CanonicalDecl))
       Context.IsUsed = true;
   }
 }
@@ -213,6 +229,7 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
     }
   }
   Contexts.clear();
+  UsingTargetDeclsCache.clear();
 }
 
 } // namespace clang::tidy::misc

@@ -68,20 +68,30 @@ struct CalleeInfo {
   // added to HotnessType enum.
   uint32_t Hotness : 3;
 
+  // True if at least one of the calls to the callee is a tail call.
+  bool HasTailCall : 1;
+
   /// The value stored in RelBlockFreq has to be interpreted as the digits of
   /// a scaled number with a scale of \p -ScaleShift.
-  uint32_t RelBlockFreq : 29;
+  static constexpr unsigned RelBlockFreqBits = 28;
+  uint32_t RelBlockFreq : RelBlockFreqBits;
   static constexpr int32_t ScaleShift = 8;
-  static constexpr uint64_t MaxRelBlockFreq = (1 << 29) - 1;
+  static constexpr uint64_t MaxRelBlockFreq = (1 << RelBlockFreqBits) - 1;
 
   CalleeInfo()
-      : Hotness(static_cast<uint32_t>(HotnessType::Unknown)), RelBlockFreq(0) {}
-  explicit CalleeInfo(HotnessType Hotness, uint64_t RelBF)
-      : Hotness(static_cast<uint32_t>(Hotness)), RelBlockFreq(RelBF) {}
+      : Hotness(static_cast<uint32_t>(HotnessType::Unknown)),
+        HasTailCall(false), RelBlockFreq(0) {}
+  explicit CalleeInfo(HotnessType Hotness, bool HasTC, uint64_t RelBF)
+      : Hotness(static_cast<uint32_t>(Hotness)), HasTailCall(HasTC),
+        RelBlockFreq(RelBF) {}
 
   void updateHotness(const HotnessType OtherHotness) {
     Hotness = std::max(Hotness, static_cast<uint32_t>(OtherHotness));
   }
+
+  bool hasTailCall() const { return HasTailCall; }
+
+  void setHasTailCall(const bool HasTC) { HasTailCall = HasTC; }
 
   HotnessType getHotness() const { return HotnessType(Hotness); }
 
@@ -1001,6 +1011,12 @@ public:
     return *Callsites;
   }
 
+  void addCallsite(CallsiteInfo &Callsite) {
+    if (!Callsites)
+      Callsites = std::make_unique<CallsitesTy>();
+    Callsites->push_back(Callsite);
+  }
+
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;
@@ -1699,7 +1715,7 @@ public:
     SmallString<256> NewName(Name);
     NewName += ".llvm.";
     NewName += Suffix;
-    return std::string(NewName.str());
+    return std::string(NewName);
   }
 
   /// Helper to obtain the unpromoted name for a global value (or the original

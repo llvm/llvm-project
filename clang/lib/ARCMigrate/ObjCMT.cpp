@@ -123,9 +123,7 @@ public:
         NSIntegerTypedefed(nullptr), NSUIntegerTypedefed(nullptr),
         Remapper(remapper), FileMgr(fileMgr), PPRec(PPRec), PP(PP),
         IsOutputFile(isOutputFile), FoundationIncluded(false) {
-    // FIXME: StringSet should have insert(iter, iter) to use here.
-    for (const std::string &Val : AllowList)
-      AllowListFilenames.insert(Val);
+    AllowListFilenames.insert(AllowList.begin(), AllowList.end());
   }
 
 protected:
@@ -564,7 +562,7 @@ static void rewriteToObjCProperty(const ObjCMethodDecl *Getter,
 static bool IsCategoryNameWithDeprecatedSuffix(ObjCContainerDecl *D) {
   if (ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(D)) {
     StringRef Name = CatDecl->getName();
-    return Name.endswith("Deprecated");
+    return Name.ends_with("Deprecated");
   }
   return false;
 }
@@ -638,7 +636,7 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
     for (const auto *MD : PDecl->methods()) {
       if (MD->isImplicit())
         continue;
-      if (MD->getImplementationControl() == ObjCMethodDecl::Optional)
+      if (MD->getImplementationControl() == ObjCImplementationControl::Optional)
         continue;
       DeclContext::lookup_result R = ImpDecl->lookup(MD->getDeclName());
       if (R.empty())
@@ -1178,12 +1176,12 @@ bool ObjCMigrateASTConsumer::migrateProperty(ASTContext &Ctx,
   if (!SetterMethod) {
     // try a different naming convention for getter: isXxxxx
     StringRef getterNameString = getterName->getName();
-    bool IsPrefix = getterNameString.startswith("is");
+    bool IsPrefix = getterNameString.starts_with("is");
     // Note that we don't want to change an isXXX method of retainable object
     // type to property (readonly or otherwise).
     if (IsPrefix && GRT->isObjCRetainableType())
       return false;
-    if (IsPrefix || getterNameString.startswith("get")) {
+    if (IsPrefix || getterNameString.starts_with("get")) {
       LengthOfPrefix = (IsPrefix ? 2 : 3);
       const char *CGetterName = getterNameString.data() + LengthOfPrefix;
       // Make sure that first character after "is" or "get" prefix can
@@ -1322,11 +1320,11 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
   if (OIT_Family == OIT_Singleton || OIT_Family == OIT_ReturnsSelf) {
     StringRef STRefMethodName(MethodName);
     size_t len = 0;
-    if (STRefMethodName.startswith("standard"))
+    if (STRefMethodName.starts_with("standard"))
       len = strlen("standard");
-    else if (STRefMethodName.startswith("shared"))
+    else if (STRefMethodName.starts_with("shared"))
       len = strlen("shared");
-    else if (STRefMethodName.startswith("default"))
+    else if (STRefMethodName.starts_with("default"))
       len = strlen("default");
     else
       return;
@@ -1343,7 +1341,7 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
   StringRef LoweredMethodName(MethodName);
   std::string StringLoweredMethodName = LoweredMethodName.lower();
   LoweredMethodName = StringLoweredMethodName;
-  if (!LoweredMethodName.startswith(ClassNamePostfix))
+  if (!LoweredMethodName.starts_with(ClassNamePostfix))
     return;
   if (OIT_Family == OIT_ReturnsSelf)
     ReplaceWithClasstype(*this, OM);
@@ -2203,7 +2201,7 @@ static std::string applyEditsToTemp(FileEntryRef FE,
   TmpOut.write(NewText.data(), NewText.size());
   TmpOut.close();
 
-  return std::string(TempPath.str());
+  return std::string(TempPath);
 }
 
 bool arcmt::getFileRemappingsFromFileList(

@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'A', Atomic
-// Instructions extension as well as the experimental 'Zacas' (Atomic
-// Compare-and-Swap) extension.
+// Instructions extension.
 //
 //===----------------------------------------------------------------------===//
 
@@ -48,10 +47,13 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtA] in {
+let Predicates = [HasStdExtAOrZalrsc], IsSignExtendingOpW = 1 in {
 defm LR_W       : LR_r_aq_rl<0b010, "lr.w">, Sched<[WriteAtomicLDW, ReadAtomicLDW]>;
 defm SC_W       : AMO_rr_aq_rl<0b00011, 0b010, "sc.w">,
                   Sched<[WriteAtomicSTW, ReadAtomicSTW, ReadAtomicSTW]>;
+} // Predicates = [HasStdExtAOrZalrsc], IsSignExtendingOpW = 1
+
+let Predicates = [HasStdExtAOrZaamo], IsSignExtendingOpW = 1 in {
 defm AMOSWAP_W  : AMO_rr_aq_rl<0b00001, 0b010, "amoswap.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
 defm AMOADD_W   : AMO_rr_aq_rl<0b00000, 0b010, "amoadd.w">,
@@ -70,12 +72,15 @@ defm AMOMINU_W  : AMO_rr_aq_rl<0b11000, 0b010, "amominu.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
 defm AMOMAXU_W  : AMO_rr_aq_rl<0b11100, 0b010, "amomaxu.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
-} // Predicates = [HasStdExtA]
+} // Predicates = [HasStdExtAOrZaamo], IsSignExtendingOpW = 1
 
-let Predicates = [HasStdExtA, IsRV64] in {
+let Predicates = [HasStdExtAOrZalrsc, IsRV64] in {
 defm LR_D       : LR_r_aq_rl<0b011, "lr.d">, Sched<[WriteAtomicLDD, ReadAtomicLDD]>;
 defm SC_D       : AMO_rr_aq_rl<0b00011, 0b011, "sc.d">,
                   Sched<[WriteAtomicSTD, ReadAtomicSTD, ReadAtomicSTD]>;
+} // Predicates = [HasStdExtAOrZalrsc, IsRV64]
+
+let Predicates = [HasStdExtAOrZaamo, IsRV64] in {
 defm AMOSWAP_D  : AMO_rr_aq_rl<0b00001, 0b011, "amoswap.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 defm AMOADD_D   : AMO_rr_aq_rl<0b00000, 0b011, "amoadd.d">,
@@ -94,16 +99,7 @@ defm AMOMINU_D  : AMO_rr_aq_rl<0b11000, 0b011, "amominu.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
-} // Predicates = [HasStdExtA, IsRV64]
-
-let Predicates = [HasStdExtZacas] in {
-defm AMOCAS_W : AMO_rr_aq_rl<0b00101, 0b010, "amocas.w">;
-defm AMOCAS_D : AMO_rr_aq_rl<0b00101, 0b011, "amocas.d">;
-} // Predicates = [HasStdExtZacas]
-
-let Predicates = [HasStdExtZacas, IsRV64] in {
-defm AMOCAS_Q : AMO_rr_aq_rl<0b00101, 0b100, "amocas.q">;
-} // Predicates = [HasStdExtZacas, IsRV64]
+} // Predicates = [HasStdExtAOrZaamo, IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
@@ -167,7 +163,16 @@ defm : AMOPat<"atomic_load_min_32", "AMOMIN_W">;
 defm : AMOPat<"atomic_load_umax_32", "AMOMAXU_W">;
 defm : AMOPat<"atomic_load_umin_32", "AMOMINU_W">;
 
-let Predicates = [HasStdExtA] in {
+defm : AMOPat<"atomic_swap_64", "AMOSWAP_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_add_64", "AMOADD_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_and_64", "AMOAND_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_or_64", "AMOOR_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_xor_64", "AMOXOR_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_max_64", "AMOMAX_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_min_64", "AMOMIN_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_umax_64", "AMOMAXU_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D", i64, [IsRV64]>;
+
 
 /// Pseudo AMOs
 
@@ -178,21 +183,6 @@ class PseudoAMO : Pseudo<(outs GPR:$res, GPR:$scratch),
   let mayStore = 1;
   let hasSideEffects = 0;
 }
-
-let Size = 20 in
-def PseudoAtomicLoadNand32 : PseudoAMO;
-// Ordering constants must be kept in sync with the AtomicOrdering enum in
-// AtomicOrdering.h.
-def : Pat<(XLenVT (atomic_load_nand_32_monotonic GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 2)>;
-def : Pat<(XLenVT (atomic_load_nand_32_acquire GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 4)>;
-def : Pat<(XLenVT (atomic_load_nand_32_release GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 5)>;
-def : Pat<(XLenVT (atomic_load_nand_32_acq_rel GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 6)>;
-def : Pat<(XLenVT (atomic_load_nand_32_seq_cst GPR:$addr, GPR:$incr)),
-          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 7)>;
 
 class PseudoMaskedAMO
     : Pseudo<(outs GPR:$res, GPR:$scratch),
@@ -234,6 +224,23 @@ class PseudoMaskedAMOMinMaxPat<Intrinsic intrin, Pseudo AMOInst>
           (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
            timm:$ordering)>;
 
+let Predicates = [HasStdExtA] in {
+
+let Size = 20 in
+def PseudoAtomicLoadNand32 : PseudoAMO;
+// Ordering constants must be kept in sync with the AtomicOrdering enum in
+// AtomicOrdering.h.
+def : Pat<(XLenVT (atomic_load_nand_32_monotonic GPR:$addr, GPR:$incr)),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 2)>;
+def : Pat<(XLenVT (atomic_load_nand_32_acquire GPR:$addr, GPR:$incr)),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 4)>;
+def : Pat<(XLenVT (atomic_load_nand_32_release GPR:$addr, GPR:$incr)),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 5)>;
+def : Pat<(XLenVT (atomic_load_nand_32_acq_rel GPR:$addr, GPR:$incr)),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 6)>;
+def : Pat<(XLenVT (atomic_load_nand_32_seq_cst GPR:$addr, GPR:$incr)),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 7)>;
+
 let Size = 28 in
 def PseudoMaskedAtomicSwap32 : PseudoMaskedAMO;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i32,
@@ -266,69 +273,9 @@ let Size = 36 in
 def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMOUMinUMax;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i32,
                          PseudoMaskedAtomicLoadUMin32>;
-
-/// Compare and exchange
-
-class PseudoCmpXchg
-    : Pseudo<(outs GPR:$res, GPR:$scratch),
-             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, ixlenimm:$ordering), []> {
-  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
-  let mayLoad = 1;
-  let mayStore = 1;
-  let hasSideEffects = 0;
-  let Size = 16;
-}
-
-// Ordering constants must be kept in sync with the AtomicOrdering enum in
-// AtomicOrdering.h.
-multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
-                            ValueType vt = XLenVT> {
-  def : Pat<(vt (!cast<PatFrag>(Op#"_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_release") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
-  def : Pat<(vt (!cast<PatFrag>(Op#"_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
-            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
-}
-
-def PseudoCmpXchg32 : PseudoCmpXchg;
-defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32>;
-
-def PseudoMaskedCmpXchg32
-    : Pseudo<(outs GPR:$res, GPR:$scratch),
-             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask,
-              ixlenimm:$ordering), []> {
-  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
-  let mayLoad = 1;
-  let mayStore = 1;
-  let hasSideEffects = 0;
-  let Size = 32;
-}
-
-def : Pat<(int_riscv_masked_cmpxchg_i32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
-          (PseudoMaskedCmpXchg32
-            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
-
 } // Predicates = [HasStdExtA]
 
-defm : AMOPat<"atomic_swap_64", "AMOSWAP_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_add_64", "AMOADD_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_and_64", "AMOAND_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_or_64", "AMOOR_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_xor_64", "AMOXOR_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_max_64", "AMOMAX_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_min_64", "AMOMIN_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_umax_64", "AMOMAXU_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D", i64, [IsRV64]>;
-
 let Predicates = [HasStdExtA, IsRV64] in {
-
-/// 64-bit pseudo AMOs
 
 let Size = 20 in
 def PseudoAtomicLoadNand64 : PseudoAMO;
@@ -361,14 +308,127 @@ def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umax_i64,
                          PseudoMaskedAtomicLoadUMax32>;
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i64,
                          PseudoMaskedAtomicLoadUMin32>;
+} // Predicates = [HasStdExtA, IsRV64]
 
-/// 64-bit compare and exchange
 
+/// Compare and exchange
+
+class PseudoCmpXchg
+    : Pseudo<(outs GPR:$res, GPR:$scratch),
+             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, ixlenimm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+  let Size = 16;
+}
+
+// Ordering constants must be kept in sync with the AtomicOrdering enum in
+// AtomicOrdering.h.
+multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
+                            ValueType vt = XLenVT> {
+  def : Pat<(vt (!cast<PatFrag>(Op#"_monotonic") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 2)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_acquire") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 4)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_release") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 5)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_acq_rel") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 6)>;
+  def : Pat<(vt (!cast<PatFrag>(Op#"_seq_cst") GPR:$addr, GPR:$cmp, GPR:$new)),
+            (CmpXchgInst GPR:$addr, GPR:$cmp, GPR:$new, 7)>;
+}
+
+let Predicates = [HasStdExtA, NoStdExtZacas] in {
+def PseudoCmpXchg32 : PseudoCmpXchg;
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32>;
+}
+
+let Predicates = [HasStdExtA, NoStdExtZacas, IsRV64] in {
 def PseudoCmpXchg64 : PseudoCmpXchg;
 defm : PseudoCmpXchgPat<"atomic_cmp_swap_64", PseudoCmpXchg64, i64>;
+}
 
+let Predicates = [HasStdExtA] in {
+def PseudoMaskedCmpXchg32
+    : Pseudo<(outs GPR:$res, GPR:$scratch),
+             (ins GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask,
+              ixlenimm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+  let Size = 32;
+}
+
+def : Pat<(int_riscv_masked_cmpxchg_i32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
+          (PseudoMaskedCmpXchg32
+            GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
+} // Predicates = [HasStdExtA]
+
+let Predicates = [HasStdExtA, IsRV64] in {
 def : Pat<(int_riscv_masked_cmpxchg_i64
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering),
           (PseudoMaskedCmpXchg32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 } // Predicates = [HasStdExtA, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// Experimental RV64 i32 legalization patterns.
+//===----------------------------------------------------------------------===//
+
+class PatGprGprA<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
+    : Pat<(vt (OpNode (XLenVT GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
+
+multiclass AMOPat2<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
+                   list<Predicate> ExtraPreds = []> {
+let Predicates = !listconcat([HasStdExtA, NotHasStdExtZtso], ExtraPreds) in {
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_monotonic"),
+                   !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_acquire"),
+                   !cast<RVInst>(BaseInst#"_AQ"), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_release"),
+                   !cast<RVInst>(BaseInst#"_RL"), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_acq_rel"),
+                   !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_seq_cst"),
+                   !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
+}
+let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_monotonic"),
+                   !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_acquire"),
+                   !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_release"),
+                   !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_acq_rel"),
+                   !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGprA<!cast<PatFrag>(AtomicOp#"_seq_cst"),
+                   !cast<RVInst>(BaseInst), vt>;
+}
+}
+
+defm : AMOPat2<"atomic_swap_32", "AMOSWAP_W", i32>;
+defm : AMOPat2<"atomic_load_add_32", "AMOADD_W", i32>;
+defm : AMOPat2<"atomic_load_and_32", "AMOAND_W", i32>;
+defm : AMOPat2<"atomic_load_or_32", "AMOOR_W", i32>;
+defm : AMOPat2<"atomic_load_xor_32", "AMOXOR_W", i32>;
+defm : AMOPat2<"atomic_load_max_32", "AMOMAX_W", i32>;
+defm : AMOPat2<"atomic_load_min_32", "AMOMIN_W", i32>;
+defm : AMOPat2<"atomic_load_umax_32", "AMOMAXU_W", i32>;
+defm : AMOPat2<"atomic_load_umin_32", "AMOMINU_W", i32>;
+
+let Predicates = [HasStdExtA, IsRV64] in
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32, i32>;
+
+let Predicates = [HasAtomicLdSt] in {
+  def : LdPat<atomic_load_8,  LB, i32>;
+  def : LdPat<atomic_load_16, LH, i32>;
+  def : LdPat<atomic_load_32, LW, i32>;
+
+  def : StPat<atomic_store_8,  SB, GPR, i32>;
+  def : StPat<atomic_store_16, SH, GPR, i32>;
+  def : StPat<atomic_store_32, SW, GPR, i32>;
+}
+

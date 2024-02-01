@@ -10,8 +10,8 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, toascii, (int c)) { return (c & 0x7f); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

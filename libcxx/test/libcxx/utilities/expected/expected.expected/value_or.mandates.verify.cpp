@@ -37,7 +37,7 @@ void test() {
   {
     const std::expected<NonCopyable, int> f1{5};
     f1.value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NonCopyable, int>::value_or<int>' requested here}}
-    // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}value_type has to be copy constructible}}
+    // expected-error-re@*:* {{static assertion failed {{.*}}value_type has to be copy constructible}}
   }
 
   // const & overload
@@ -45,7 +45,7 @@ void test() {
   {
     const std::expected<NotConvertibleFromInt, int> f1{std::in_place};
     f1.value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NotConvertibleFromInt, int>::value_or<int>' requested here}}
-    //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}argument has to be convertible to value_type}}
+    //expected-error-re@*:* {{static assertion failed {{.*}}argument has to be convertible to value_type}}
   }
 
   // && overload
@@ -53,7 +53,7 @@ void test() {
   {
     std::expected<NonMovable, int> f1{5};
     std::move(f1).value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NonMovable, int>::value_or<int>' requested here}}
-    //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}value_type has to be move constructible}}
+    //expected-error-re@*:* {{static assertion failed {{.*}}value_type has to be move constructible}}
   }
 
   // && overload
@@ -61,6 +61,6 @@ void test() {
   {
     std::expected<NotConvertibleFromInt, int> f1{std::in_place};
     std::move(f1).value_or(5); // expected-note{{in instantiation of function template specialization 'std::expected<NotConvertibleFromInt, int>::value_or<int>' requested here}}
-    //expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}argument has to be convertible to value_type}}
+    //expected-error-re@*:* {{static assertion failed {{.*}}argument has to be convertible to value_type}}
   }
 }

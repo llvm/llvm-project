@@ -27,8 +27,6 @@
 #include "YAMLOutputStyle.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -842,7 +840,7 @@ static void yamlToPdb(StringRef Path) {
       ExitOnErr(DbiBuilder.addModuleSourceFile(ModiBuilder, S));
     if (MI.Modi) {
       const auto &ModiStream = *MI.Modi;
-      for (auto Symbol : ModiStream.Symbols) {
+      for (const auto &Symbol : ModiStream.Symbols) {
         ModiBuilder.addSymbol(
             Symbol.toCodeViewSymbol(Allocator, CodeViewContainer::Pdb));
       }
@@ -1415,7 +1413,7 @@ static void exportStream() {
   SourceStream = File.createIndexedStream(Index);
   auto OutFile = ExitOnErr(
       FileOutputBuffer::create(OutFileName, SourceStream->getLength()));
-  FileBufferByteStream DestStream(std::move(OutFile), llvm::support::little);
+  FileBufferByteStream DestStream(std::move(OutFile), llvm::endianness::little);
   BinaryStreamWriter Writer(DestStream);
   ExitOnErr(Writer.writeStreamRef(*SourceStream));
   ExitOnErr(DestStream.commit());
@@ -1576,7 +1574,7 @@ int main(int Argc, const char **Argv) {
     if (opts::yaml2pdb::YamlPdbOutputFile.empty()) {
       SmallString<16> OutputFilename(opts::yaml2pdb::InputFilename.getValue());
       sys::path::replace_extension(OutputFilename, ".pdb");
-      opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename.str());
+      opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename);
     }
     yamlToPdb(opts::yaml2pdb::InputFilename);
   } else if (opts::DiaDumpSubcommand) {

@@ -16,10 +16,10 @@
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fchmod, (int fd, mode_t mode)) {
-  int ret = __llvm_libc::syscall_impl<int>(SYS_fchmod, fd, mode);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmod, fd, mode);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
@@ -27,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, fchmod, (int fd, mode_t mode)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

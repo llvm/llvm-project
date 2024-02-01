@@ -39,7 +39,11 @@ def collect_tests():
     test_cpp = os.path.join(dr_test_dir, test_cpp)
     found_any = False;
     for match in re.finditer(status_re, open(test_cpp, 'r').read()):
-      status_map[int(match.group(1))] = match.group(2)
+      dr_number = int(match.group(1))
+      if dr_number in status_map:
+        print("error: Comment for dr{} encountered more than once. Duplicate found in {}".format(dr_number, test_cpp))
+        sys.exit(1)
+      status_map[dr_number] = match.group(2)
       found_any = True
     if not found_any:
       print("warning:%s: no '// dr123: foo' comments in this file" % test_cpp, file=sys.stderr)
@@ -90,6 +94,7 @@ out_file.write('''\
   <link type="text/css" rel="stylesheet" href="content.css">
   <style type="text/css">
     .none { background-color: #FFCCCC }
+    .unknown { background-color: #EBCAFE }
     .partial { background-color: #FFE0B0 }
     .unreleased { background-color: #FFFF99 }
     .full { background-color: #CCFF99 }
@@ -122,7 +127,7 @@ out_file.write('''\
     <th>Available in Clang?</th>
   </tr>''')
 
-latest_release = 16
+latest_release = 17
 
 def availability(issue):
   status = status_map.get(issue, 'unknown')
@@ -153,7 +158,7 @@ def availability(issue):
     avail_suffix = ' (C++20 onwards)'
   if status == 'unknown':
     avail = 'Unknown'
-    avail_style = ' class="none"'
+    avail_style = ' class="unknown"'
   elif re.match('^[0-9]+\.?[0-9]*', status):
     avail = 'Clang %s' % status
     if float(status) > latest_release:

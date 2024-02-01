@@ -479,3 +479,26 @@ void DoSomething() {
                                                   // expected-note  {{undefined function 'operator++' cannot be used in a constant expression}}
 }
 }
+
+namespace GH64162 {
+struct S {
+    const std::strong_ordering& operator<=>(const S&) const = default;
+};
+bool test(S s) {
+    return s < s; // We expect this not to crash anymore
+}
+
+// Following example never crashed but worth adding in because it is related
+struct A {};
+bool operator<(A, int);
+
+struct B {
+    operator A();
+};
+
+struct C {
+    B operator<=>(C);
+};
+
+bool f(C c) { return c < c; }
+}

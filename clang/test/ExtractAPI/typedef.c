@@ -16,6 +16,12 @@
 //--- input.h
 typedef int MyInt;
 
+typedef struct Bar *BarPtr;
+
+void foo(BarPtr value);
+
+void baz(BarPtr *value);
+
 //--- reference.output.json.in
 {
   "metadata": {
@@ -43,6 +49,208 @@ typedef int MyInt;
   },
   "relationships": [],
   "symbols": [
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:v",
+          "spelling": "void"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "foo"
+        },
+        {
+          "kind": "text",
+          "spelling": "("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:input.h@T@BarPtr",
+          "spelling": "BarPtr"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "internalParam",
+          "spelling": "value"
+        },
+        {
+          "kind": "text",
+          "spelling": ");"
+        }
+      ],
+      "functionSignature": {
+        "parameters": [
+          {
+            "declarationFragments": [
+              {
+                "kind": "typeIdentifier",
+                "preciseIdentifier": "c:input.h@T@BarPtr",
+                "spelling": "BarPtr"
+              },
+              {
+                "kind": "text",
+                "spelling": " "
+              },
+              {
+                "kind": "internalParam",
+                "spelling": "value"
+              }
+            ],
+            "name": "value"
+          }
+        ],
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:@F@foo"
+      },
+      "kind": {
+        "displayName": "Function",
+        "identifier": "objective-c.func"
+      },
+      "location": {
+        "position": {
+          "character": 5,
+          "line": 4
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "foo"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "foo"
+          }
+        ],
+        "title": "foo"
+      },
+      "pathComponents": [
+        "foo"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:v",
+          "spelling": "void"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "baz"
+        },
+        {
+          "kind": "text",
+          "spelling": "("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:input.h@T@BarPtr",
+          "spelling": "BarPtr"
+        },
+        {
+          "kind": "text",
+          "spelling": " * "
+        },
+        {
+          "kind": "internalParam",
+          "spelling": "value"
+        },
+        {
+          "kind": "text",
+          "spelling": ");"
+        }
+      ],
+      "functionSignature": {
+        "parameters": [
+          {
+            "declarationFragments": [
+              {
+                "kind": "typeIdentifier",
+                "preciseIdentifier": "c:input.h@T@BarPtr",
+                "spelling": "BarPtr"
+              },
+              {
+                "kind": "text",
+                "spelling": " * "
+              },
+              {
+                "kind": "internalParam",
+                "spelling": "value"
+              }
+            ],
+            "name": "value"
+          }
+        ],
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          }
+        ]
+      },
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:@F@baz"
+      },
+      "kind": {
+        "displayName": "Function",
+        "identifier": "objective-c.func"
+      },
+      "location": {
+        "position": {
+          "character": 5,
+          "line": 6
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "baz"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "baz"
+          }
+        ],
+        "title": "baz"
+      },
+      "pathComponents": [
+        "baz"
+      ]
+    },
     {
       "accessLevel": "public",
       "declarationFragments": [
@@ -82,8 +290,8 @@ typedef int MyInt;
       },
       "location": {
         "position": {
-          "character": 13,
-          "line": 1
+          "character": 12,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -106,6 +314,78 @@ typedef int MyInt;
         "MyInt"
       ],
       "type": "c:I"
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "typedef"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "keyword",
+          "spelling": "struct"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:@S@Bar",
+          "spelling": "Bar"
+        },
+        {
+          "kind": "text",
+          "spelling": " * "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "BarPtr"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:input.h@T@BarPtr"
+      },
+      "kind": {
+        "displayName": "Type Alias",
+        "identifier": "objective-c.typealias"
+      },
+      "location": {
+        "position": {
+          "character": 20,
+          "line": 2
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "BarPtr"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "BarPtr"
+          }
+        ],
+        "title": "BarPtr"
+      },
+      "pathComponents": [
+        "BarPtr"
+      ],
+      "type": "c:*$@S@Bar"
     }
   ]
 }

@@ -12,7 +12,7 @@
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/macros/config.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // add_pointer
 namespace detail {
@@ -23,6 +23,6 @@ template <class T> auto try_add_pointer(...) -> cpp::type_identity<T>;
 template <class T>
 struct add_pointer : decltype(detail::try_add_pointer<T>(0)) {};
 template <class T> using add_pointer_t = typename add_pointer<T>::type;
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ADD_POINTER_H

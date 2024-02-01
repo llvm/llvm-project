@@ -11,10 +11,10 @@
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_key_delete(pthread_key_t key);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_KEY_DELETE_H

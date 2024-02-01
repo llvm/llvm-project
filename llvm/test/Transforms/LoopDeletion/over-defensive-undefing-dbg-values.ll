@@ -1,4 +1,5 @@
 ; RUN: opt -S %s -passes=loop-deletion | FileCheck %s
+; RUN: opt -S %s -passes=loop-deletion --try-experimental-debuginfo-iterators | FileCheck %s
 
 ;; static int foo(int Param) __attribute__((always_inline));
 ;; static int foo(int Param) { return Param * Param * 2; }

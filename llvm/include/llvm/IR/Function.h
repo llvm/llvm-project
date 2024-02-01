@@ -48,9 +48,11 @@ class AssemblyAnnotationWriter;
 class Constant;
 struct DenormalMode;
 class DISubprogram;
+enum LibFunc : unsigned;
 class LLVMContext;
 class Module;
 class raw_ostream;
+class TargetLibraryInfoImpl;
 class Type;
 class User;
 class BranchProbabilityInfo;
@@ -97,16 +99,38 @@ private:
 
   friend class SymbolTableListTraits<Function>;
 
+public:
+  /// Is this function using intrinsics to record the position of debugging
+  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
+  /// \ref BasicBlock.
+  bool IsNewDbgInfoFormat;
+
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
   /// hasn't been set up yet.
-public:
   bool hasLazyArguments() const {
     return getSubclassDataFromValue() & (1<<0);
   }
 
+  /// \see BasicBlock::convertToNewDbgValues.
+  void convertToNewDbgValues();
+
+  /// \see BasicBlock::convertFromNewDbgValues.
+  void convertFromNewDbgValues();
+
+  void setIsNewDbgInfoFormat(bool NewVal);
+
 private:
+  friend class TargetLibraryInfoImpl;
+
+  static constexpr LibFunc UnknownLibFunc = LibFunc(-1);
+
+  /// Cache for TLI::getLibFunc() result without prototype validation.
+  /// UnknownLibFunc if uninitialized. NotLibFunc if definitely not lib func.
+  /// Otherwise may be libfunc if prototype validation passes.
+  mutable LibFunc LibFuncCache = UnknownLibFunc;
+
   void CheckLazyArguments() const {
     if (hasLazyArguments())
       BuildLazyArguments();
@@ -226,12 +250,11 @@ public:
 
   static Intrinsic::ID lookupIntrinsicID(StringRef Name);
 
-  /// Recalculate the ID for this function if it is an Intrinsic defined
-  /// in llvm/Intrinsics.h.  Sets the intrinsic ID to Intrinsic::not_intrinsic
-  /// if the name of this function does not match an intrinsic in that header.
+  /// Update internal caches that depend on the function name (such as the
+  /// intrinsic ID and libcall cache).
   /// Note, this method does not need to be called directly, as it is called
   /// from Value::setName() whenever the name of this function changes.
-  void recalculateIntrinsicID();
+  void updateAfterNameChange();
 
   /// getCallingConv()/setCallingConv(CC) - These method get and set the
   /// calling convention of this function.  The enum values for the known
@@ -493,6 +516,13 @@ public:
   void setPresplitCoroutine() { addFnAttr(Attribute::PresplitCoroutine); }
   void setSplittedCoroutine() { removeFnAttr(Attribute::PresplitCoroutine); }
 
+  bool isCoroOnlyDestroyWhenComplete() const {
+    return hasFnAttribute(Attribute::CoroDestroyOnlyWhenComplete);
+  }
+  void setCoroDestroyOnlyWhenComplete() {
+    addFnAttr(Attribute::CoroDestroyOnlyWhenComplete);
+  }
+
   MemoryEffects getMemoryEffects() const;
   void setMemoryEffects(MemoryEffects ME);
 
@@ -692,7 +722,9 @@ public:
   /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
   /// to the newly inserted BB.
   Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
-    return BasicBlocks.insert(Position, BB);
+    Function::iterator FIt = BasicBlocks.insert(Position, BB);
+    BB->setIsNewDbgInfoFormat(IsNewDbgInfoFormat);
+    return FIt;
   }
 
   /// Transfer all blocks from \p FromF to this function at \p ToIt.

@@ -63,6 +63,7 @@ def BPF_JA   : BPFJumpOp<0x0>;
 def BPF_JEQ  : BPFJumpOp<0x1>;
 def BPF_JGT  : BPFJumpOp<0x2>;
 def BPF_JGE  : BPFJumpOp<0x3>;
+def BPF_JSET : BPFJumpOp<0x4>;
 def BPF_JNE  : BPFJumpOp<0x5>;
 def BPF_JSGT : BPFJumpOp<0x6>;
 def BPF_JSGE : BPFJumpOp<0x7>;

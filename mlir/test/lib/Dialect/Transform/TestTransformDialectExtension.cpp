@@ -136,7 +136,7 @@ DiagnosedSilenceableFailure
 mlir::test::TestProduceValueHandleToSelfOperand::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  results.setValues(llvm::cast<OpResult>(getOut()), getIn());
+  results.setValues(llvm::cast<OpResult>(getOut()), {getIn()});
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -243,49 +243,6 @@ mlir::test::TestSucceedIfOperandOfOpKind::matchOperation(
 void mlir::test::TestSucceedIfOperandOfOpKind::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getOperand(), effects);
-  transform::onlyReadsPayload(effects);
-}
-
-DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandOp::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  auto payload = state.getPayloadOps(getOperand());
-  for (Operation *op : payload)
-    op->emitRemark() << getMessage();
-
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintRemarkAtOperandOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getOperand(), effects);
-  transform::onlyReadsPayload(effects);
-}
-
-DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandValue::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  ArrayRef<Value> values = state.getPayloadValues(getIn());
-  for (Value value : values) {
-    std::string note;
-    llvm::raw_string_ostream os(note);
-    if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
-      os << "a block argument #" << arg.getArgNumber() << " in block #"
-         << std::distance(arg.getOwner()->getParent()->begin(),
-                          arg.getOwner()->getIterator())
-         << " in region #" << arg.getOwner()->getParent()->getRegionNumber();
-    } else {
-      os << "an op result #" << llvm::cast<OpResult>(value).getResultNumber();
-    }
-    InFlightDiagnostic diag = ::emitRemark(value.getLoc()) << getMessage();
-    diag.attachNote() << "value handle points to " << os.str();
-  }
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintRemarkAtOperandValue::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getIn(), effects);
   transform::onlyReadsPayload(effects);
 }
 
@@ -458,51 +415,6 @@ mlir::test::TestMixedSuccessAndSilenceableOp::applyToOne(
 }
 
 DiagnosedSilenceableFailure
-mlir::test::TestPrintNumberOfAssociatedPayloadIROps::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  if (!getHandle())
-    emitRemark() << 0;
-  emitRemark() << llvm::range_size(state.getPayloadOps(getHandle()));
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintNumberOfAssociatedPayloadIROps::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getHandle(), effects);
-}
-
-DiagnosedSilenceableFailure
-mlir::test::TestPrintNumberOfAssociatedPayloadIRValues::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  if (!getValueHandle())
-    emitRemark() << 0;
-  emitRemark() << llvm::range_size(state.getPayloadValues(getValueHandle()));
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintNumberOfAssociatedPayloadIRValues::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getValueHandle(), effects);
-}
-
-DiagnosedSilenceableFailure
-mlir::test::TestPrintNumberOfAssociatedPayloadIRParams::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  if (!getParam())
-    emitRemark() << 0;
-  emitRemark() << llvm::range_size(state.getParams(getParam()));
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintNumberOfAssociatedPayloadIRParams::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getParam(), effects);
-}
-
-DiagnosedSilenceableFailure
 mlir::test::TestCopyPayloadOp::apply(transform::TransformRewriter &rewriter,
                                      transform::TransformResults &results,
                                      transform::TransformState &state) {
@@ -564,32 +476,6 @@ mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::apply(
     });
   }
   emitRemark() << count << " handles nested under";
-  return DiagnosedSilenceableFailure::success();
-}
-
-void mlir::test::TestPrintParamOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getParam(), effects);
-  if (getAnchor())
-    transform::onlyReadsHandle(getAnchor(), effects);
-  transform::onlyReadsPayload(effects);
-}
-
-DiagnosedSilenceableFailure
-mlir::test::TestPrintParamOp::apply(transform::TransformRewriter &rewriter,
-                                    transform::TransformResults &results,
-                                    transform::TransformState &state) {
-  std::string str;
-  llvm::raw_string_ostream os(str);
-  if (getMessage())
-    os << *getMessage() << " ";
-  llvm::interleaveComma(state.getParams(getParam()), os);
-  if (!getAnchor()) {
-    emitRemark() << os.str();
-    return DiagnosedSilenceableFailure::success();
-  }
-  for (Operation *payload : state.getPayloadOps(getAnchor()))
-    ::mlir::emitRemark(payload->getLoc()) << os.str();
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -712,7 +598,7 @@ void mlir::test::TestProduceNullValueOp::getEffects(
 DiagnosedSilenceableFailure mlir::test::TestProduceNullValueOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  results.setValues(llvm::cast<OpResult>(getOut()), Value());
+  results.setValues(llvm::cast<OpResult>(getOut()), {Value()});
   return DiagnosedSilenceableFailure::success();
 }
 

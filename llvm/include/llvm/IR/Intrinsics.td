@@ -752,8 +752,7 @@ def int_objc_retainAutoreleaseReturnValue   : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty],
                                                         [Returned<ArgIndex<0>>]>;
 def int_objc_retainAutoreleasedReturnValue  : Intrinsic<[llvm_ptr_ty],
-                                                        [llvm_ptr_ty],
-                                                        [Returned<ArgIndex<0>>]>;
+                                                        [llvm_ptr_ty]>;
 def int_objc_retainBlock                    : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
 def int_objc_storeStrong                    : Intrinsic<[],
@@ -768,8 +767,7 @@ def int_objc_clang_arc_noop_use : DefaultAttrsIntrinsic<[],
                                                         [llvm_vararg_ty],
                                                         [IntrInaccessibleMemOnly]>;
 def int_objc_unsafeClaimAutoreleasedReturnValue : Intrinsic<[llvm_ptr_ty],
-                                                            [llvm_ptr_ty],
-                                                            [Returned<ArgIndex<0>>]>;
+                                                            [llvm_ptr_ty]>;
 def int_objc_retainedObject                 : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
 def int_objc_unretainedObject               : Intrinsic<[llvm_ptr_ty],
@@ -916,6 +914,21 @@ def int_instrprof_value_profile : Intrinsic<[],
                                             [llvm_ptr_ty, llvm_i64_ty,
                                              llvm_i64_ty, llvm_i32_ty,
                                              llvm_i32_ty]>;
+
+// A parameter configuration for instrumentation based MCDC profiling.
+def int_instrprof_mcdc_parameters : Intrinsic<[],
+                                              [llvm_ptr_ty, llvm_i64_ty,
+                                               llvm_i32_ty]>;
+
+// A test vector bitmap update for instrumentation based MCDC profiling.
+def int_instrprof_mcdc_tvbitmap_update : Intrinsic<[],
+                                        [llvm_ptr_ty, llvm_i64_ty,
+                                         llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty]>;
+
+// A condition bitmap value update for instrumentation based MCDC profiling.
+def int_instrprof_mcdc_condbitmap_update : Intrinsic<[],
+                                        [llvm_ptr_ty, llvm_i64_ty,
+                                         llvm_i32_ty, llvm_ptr_ty, llvm_i1_ty]>;
 
 def int_call_preallocated_setup : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty]>;
 def int_call_preallocated_arg : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
@@ -1697,7 +1710,7 @@ def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
                                             [Throws]>;
 
 // Support for speculative runtime guards
-def int_experimental_guard : DefaultAttrsIntrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
+def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
                                        [Throws]>;
 
 // Supports widenable conditions for guards represented as explicit branches.
@@ -1743,7 +1756,9 @@ def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 "llvm.is.constant">;
 
 // Intrinsic to mask out bits of a pointer.
-def int_ptrmask: DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_anyint_ty],
+// First argument must be pointer or vector of pointer. This is checked by the
+// verifier.
+def int_ptrmask: DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty],
                            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 // Intrinsic to wrap a thread local variable.
@@ -1976,6 +1991,16 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
+  def int_vp_minimum : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_maximum : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
   def int_vp_copysign : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
@@ -2173,6 +2198,11 @@ def int_experimental_get_vector_length:
                         [IntrNoMem, IntrNoSync, IntrWillReturn,
                          ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
+def int_experimental_cttz_elts:
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
+            [llvm_anyvector_ty, llvm_i1_ty],
+            [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+
 def int_experimental_vp_splice:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>,
@@ -2181,6 +2211,13 @@ def int_experimental_vp_splice:
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
              llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_experimental_vp_reverse:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                        [LLVMMatchType<0>,
+                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                         llvm_i32_ty],
+                        [IntrNoMem]>;
 
 def int_vp_is_fpclass:
       DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
@@ -2442,6 +2479,10 @@ def int_preserve_struct_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                                  [IntrNoMem,
                                                   ImmArg<ArgIndex<1>>,
                                                   ImmArg<ArgIndex<2>>]>;
+def int_preserve_static_offset : DefaultAttrsIntrinsic<[llvm_ptr_ty],
+                                                       [llvm_ptr_ty],
+                                                       [IntrNoMem, IntrSpeculatable,
+                                                        ReadNone <ArgIndex<0>>]>;
 
 //===------------ Intrinsics to perform common vector shuffles ------------===//
 

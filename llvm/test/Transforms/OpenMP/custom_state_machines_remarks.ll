@@ -37,7 +37,7 @@ target triple = "nvptx64"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @0 = private unnamed_addr constant [113 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;__omp_offloading_2a_d80d3d_test_fallback_l11;11;1;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
@@ -54,15 +54,15 @@ target triple = "nvptx64"
 @12 = private unnamed_addr constant [73 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;known;4;1;;\00", align 1
 @13 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @12 }, align 8
 @G = external global i32
-@__omp_offloading_2a_d80d3d_test_fallback_l11_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr null, ptr null }
-@__omp_offloading_2a_d80d3d_test_no_fallback_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr null, ptr null }
+@__omp_offloading_2a_d80d3d_test_fallback_l11_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+@__omp_offloading_2a_d80d3d_test_no_fallback_l20_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 
 
 ; Function Attrs: convergent norecurse nounwind
-define weak void @__omp_offloading_2a_d80d3d_test_fallback_l11() local_unnamed_addr #0 !dbg !15 {
+define weak void @__omp_offloading_2a_d80d3d_test_fallback_l11(ptr %dyn) local_unnamed_addr #0 !dbg !15 {
 entry:
   %captured_vars_addrs.i.i = alloca [0 x ptr], align 8
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_d80d3d_test_fallback_l11_kernel_environment) #3, !dbg !18
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_d80d3d_test_fallback_l11_kernel_environment, ptr %dyn) #3, !dbg !18
   %exec_user_code = icmp eq i32 %0, -1, !dbg !18
   br i1 %exec_user_code, label %user_code.entry, label %common.ret, !dbg !18
 
@@ -82,7 +82,7 @@ user_code.entry:                                  ; preds = %entry
 }
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
-define weak i32 @__kmpc_target_init(ptr) {
+define weak i32 @__kmpc_target_init(ptr, ptr) {
   ret i32 0
 }
 
@@ -104,10 +104,10 @@ declare i32 @__kmpc_global_thread_num(ptr) local_unnamed_addr #3
 declare void @__kmpc_target_deinit() local_unnamed_addr
 
 ; Function Attrs: norecurse nounwind
-define weak void @__omp_offloading_2a_d80d3d_test_no_fallback_l20() local_unnamed_addr #4 !dbg !32 {
+define weak void @__omp_offloading_2a_d80d3d_test_no_fallback_l20(ptr %dyn) local_unnamed_addr #4 !dbg !32 {
 entry:
   %captured_vars_addrs.i2.i = alloca [0 x ptr], align 8
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_d80d3d_test_no_fallback_l20_kernel_environment) #3, !dbg !33
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_2a_d80d3d_test_no_fallback_l20_kernel_environment, ptr %dyn) #3, !dbg !33
   %exec_user_code = icmp eq i32 %0, -1, !dbg !33
   br i1 %exec_user_code, label %user_code.entry, label %common.ret, !dbg !33
 

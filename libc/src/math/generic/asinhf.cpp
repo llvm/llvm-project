@@ -15,13 +15,13 @@
 #include "src/math/generic/common_constants.h"
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
   FPBits_t xbits(x);
   uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FPBits_t::FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.abs().uintval();
 
   // |x| <= 2^-3
   if (LIBC_UNLIKELY(x_abs <= 0x3e80'0000U)) {
@@ -104,4 +104,4 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
           x_d, x_sign, fputil::sqrt(fputil::multiply_add(x_d, x_d, 1.0)))));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

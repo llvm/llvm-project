@@ -1,7 +1,7 @@
 ! This test checks lowering of stop statement in OpenMP region.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_stop_in_region1() {
 ! CHECK:         omp.parallel   {

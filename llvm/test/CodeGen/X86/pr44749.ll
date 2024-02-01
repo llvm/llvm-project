@@ -15,10 +15,10 @@ define i32 @a() {
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+2,0.0E+0]
 ; CHECK-NEXT:    subsd %xmm2, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm3 = [1.0E+0,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [3.1400000000000001E+0,0.0E+0]
 ; CHECK-NEXT:    cmplesd %xmm1, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    andpd %xmm3, %xmm1

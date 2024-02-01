@@ -1,6 +1,7 @@
 """Test for the JITLoaderGDB interface"""
 
 
+import unittest2
 import os
 import lldb
 from lldbsuite.test import lldbutil
@@ -13,7 +14,7 @@ class JITLoaderGDBTestCase(TestBase):
         lambda: "Skipped because the test crashes the test runner",
         bugnumber="llvm.org/pr24702",
     )
-    @expectedFailure("llvm.org/pr24702")
+    @unittest2.expectedFailure  # llvm.org/pr24702
     def test_bogus_values(self):
         """Test that we handle inferior misusing the GDB JIT interface"""
         self.build()

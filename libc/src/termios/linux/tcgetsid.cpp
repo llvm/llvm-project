@@ -16,11 +16,11 @@
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(pid_t, tcgetsid, (int fd)) {
   pid_t sid;
-  int ret = __llvm_libc::syscall_impl<int>(SYS_ioctl, fd, TIOCGSID, &sid);
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, TIOCGSID, &sid);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(pid_t, tcgetsid, (int fd)) {
   return sid;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

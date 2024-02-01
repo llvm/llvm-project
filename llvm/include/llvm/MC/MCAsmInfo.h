@@ -240,6 +240,9 @@ protected:
   /// True if the target supports LEB128 directives.
   bool HasLEB128Directives = true;
 
+  /// True if full register names are printed.
+  bool PPCUseFullRegisterNames = false;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -710,6 +713,9 @@ public:
 
   bool hasLEB128Directives() const { return HasLEB128Directives; }
 
+  bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
+  void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
+
   const char *getZeroDirective() const { return ZeroDirective; }
   bool doesZeroDirectiveSupportNonZeroValue() const {
     return ZeroDirectiveSupportsNonZeroValue;
@@ -793,7 +799,8 @@ public:
   /// frame information to unwind.
   bool usesCFIForEH() const {
     return (ExceptionsType == ExceptionHandling::DwarfCFI ||
-            ExceptionsType == ExceptionHandling::ARM || usesWindowsCFI());
+            ExceptionsType == ExceptionHandling::ARM ||
+            ExceptionsType == ExceptionHandling::ZOS || usesWindowsCFI());
   }
 
   bool usesWindowsCFI() const {

@@ -12,7 +12,7 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(::FILE *, fopen,
                    (const char *__restrict path, const char *__restrict mode)) {
@@ -29,4 +29,4 @@ LLVM_LIBC_FUNCTION(::FILE *, fopen,
   return reinterpret_cast<FILE *>(file);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

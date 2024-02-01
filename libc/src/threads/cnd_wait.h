@@ -11,10 +11,10 @@
 
 #include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int cnd_wait(cnd_t *cond, mtx_t *mutex);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_CND_WAIT_H

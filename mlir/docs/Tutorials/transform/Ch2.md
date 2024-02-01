@@ -10,7 +10,7 @@ The Transform dialect uses the dialect extension mechanism to allow additional o
 // In MyExtension.cpp.
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 
-// Define a new transform dialect extension. This uses the CRTP idiom to identify
+// Define a new Transform dialect extension. This uses the CRTP idiom to identify
 // extensions.
 class MyExtension : public ::mlir::transform::TransformDialectExtension<MyExtension> {
 public:
@@ -200,7 +200,7 @@ must be modified with the provided rewriter.
 ```c++
 // In MyExtension.cpp
 
-// Implementation of our transform dialect operation.
+// Implementation of our Transform dialect operation.
 // This operation returns a tri-state result that can be one of:
 // - success when the transformation succeeded;
 // - definite failure when the transformation failed in such a way that
@@ -277,7 +277,7 @@ void registerMyExtension(::mlir::DialectRegistry &registry) {
 }
 ```
 
-After registering the extension, it becomes possible to use our new operation in the transform dialect interpreter. The upstream testing pass can be used as is.
+After registering the extension, it becomes possible to use our new operation in the Transform dialect interpreter. The upstream testing pass can be used as is.
 
 ```mlir
 transform.sequence failures(propagate) {
@@ -292,7 +292,7 @@ transform.sequence failures(propagate) {
 
   // The actual tiling transformation takes tile sizes as attributes. It produces a
   // handle to the loop generated during tiling.
-  %loop, %tiled = transform.structured.tile_to_forall_op %max tile_sizes [8, 32]
+  %loop, %tiled = transform.structured.tile_using_forall %max tile_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // We can now fuse the other operations into the loop. Here, we fuse
@@ -311,7 +311,7 @@ transform.sequence failures(propagate) {
   // "max" operation. This illustrates the precise targeting with the transform
   // dialect. Otherwise, it is difficult to differentiate "add" and "max", both
   // of which having the same kind.
-  %loop_2, %tiled_2 = transform.structured.tile_to_forall_op %add_fused tile_sizes [4, 4]
+  %loop_2, %tiled_2 = transform.structured.tile_using_forall %add_fused tile_sizes [4, 4]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   %matmul_fused_2 = transform.structured.fuse_into_containing_op %matmul_fused into %loop_2
       : (!transform.any_op, !transform.any_op) -> !transform.any_op
@@ -319,7 +319,7 @@ transform.sequence failures(propagate) {
   // Since outlining is currently only implemented for region-holding operations
   // such as loops, use tiling to size 1 to materialize the outer loop that is
   // going to be outlined.
-  %outline_target, %_ = transform.structured.tile_to_forall_op %tiled_2 tile_sizes [1]
+  %outline_target, %_ = transform.structured.tile_using_forall %tiled_2 tile_sizes [1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   transform.structured.fuse_into_containing_op %matmul_fused_2 into %outline_target
       : (!transform.any_op, !transform.any_op) -> !transform.any_op

@@ -1,4 +1,4 @@
-// RUN: %clang -x c++-header -c -Wunused-local-typedef %s -o %t.gch -Werror
+// RUN: %clang -x c++-header -c -Wunused-local-typedef %s -o %t.pch -Werror
 // RUN: %clang -DBE_THE_SOURCE -c -Wunused-local-typedef -include %t %s -o /dev/null 2>&1 | FileCheck %s
 // RUN: %clang -DBE_THE_SOURCE -c -Wunused-local-typedef -include %t %s -o /dev/null 2>&1 | FileCheck %s
 

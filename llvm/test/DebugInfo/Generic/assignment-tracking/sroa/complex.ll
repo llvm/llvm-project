@@ -1,5 +1,7 @@
 ; RUN: opt -passes=sroa -S -o - %s \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S -o - %s \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 ;
 ;; Based on llvm/test/DebugInfo/ARM/sroa-complex.ll
 ;; generated from:

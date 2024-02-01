@@ -7,9 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Older Clangs do not support the C++20 feature to constrain destructors
-// XFAIL: apple-clang-14
-
 // template<class G>
 //   constexpr expected& operator=(unexpected<G>&& e);
 //
@@ -175,6 +172,23 @@ constexpr bool test() {
     assert(e1.error().data_ == 10);
     assert(oldState.moveAssignCalled);
   }
+
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true, true> e;
+      std::unexpected<int> un(std::in_place, 42);
+      e = std::move(un);
+      assert(e.check());
+    }
+    {
+      CheckForInvalidWrites<false, true> e;
+      std::unexpected<bool> un(std::in_place, true);
+      e = std::move(un);
+      assert(e.check());
+    }
+  }
+
   return true;
 }
 

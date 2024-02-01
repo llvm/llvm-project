@@ -1281,7 +1281,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_00_00_00_24_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_00_00_00_00_00_00_00_24_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,24,0,0,0,0,0,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovq {{.*#+}} xmm1 = [0,0,0,0,0,0,0,24,0,0,0,0,0,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -1328,7 +1328,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_00_00_25_00_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_00_00_00_00_00_00_25_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovq {{.*#+}} xmm1 = [0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -1375,7 +1375,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_00_26_00_00_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_00_00_00_00_00_26_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,26,0,0,0,0,0,0,0,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovq {{.*#+}} xmm1 = [0,0,0,0,0,26,0,0,0,0,0,0,0,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -1422,7 +1422,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_27_00_00_00_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_00_00_00_00_27_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,27,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovq {{.*#+}} xmm1 = [0,0,0,0,27,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -1469,7 +1469,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_28_00_00_00_00_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_00_00_00_28_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,28,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovd {{.*#+}} xmm1 = [0,0,0,28,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -1516,7 +1516,7 @@ define <32 x i8> @shuffle_v32i8_00_00_29_00_00_00_00_00_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_00_00_29_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,29,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovd {{.*#+}} xmm1 = [0,0,29,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -1563,7 +1563,7 @@ define <32 x i8> @shuffle_v32i8_00_30_00_00_00_00_00_00_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_00_30_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovd {{.*#+}} xmm1 = [0,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -1610,7 +1610,7 @@ define <32 x i8> @shuffle_v32i8_31_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_31_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm1 = [31,0,0,0]
+; AVX512VLVBMI-NEXT:    vmovd {{.*#+}} xmm1 = [31,0,0,0]
 ; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
 ; AVX512VLVBMI-NEXT:    retq
 ;
@@ -2362,10 +2362,25 @@ define <32 x i8> @load_fold_pblendvb_commute(ptr %px, <32 x i8> %y) {
 }
 
 define <32 x i8> @shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31(<32 x i8> %a) {
-; ALL-LABEL: shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; ALL-NEXT:    retq
+; AVX1-LABEL: shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; XOP-NEXT:    retq
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 1, i32 34, i32 3, i32 36, i32 5, i32 38, i32 7, i32 40, i32 9, i32 42, i32 11, i32 44, i32 13, i32 46, i32 15, i32 48, i32 17, i32 50, i32 19, i32 52, i32 21, i32 54, i32 23, i32 56, i32 25, i32 58, i32 27, i32 60, i32 29, i32 62, i32 31>
   ret <32 x i8> %shuffle
 }
@@ -2550,12 +2565,10 @@ define <32 x i8> @shuffle_v32i8_39_38_37_36_35_34_33_32_15_14_13_12_11_10_09_08_
 ; AVX1-LABEL: shuffle_v32i8_39_38_37_36_35_34_33_32_15_14_13_12_11_10_09_08_55_54_53_52_51_50_49_48_31_30_29_28_27_26_25_24:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [15,14,13,12,11,10,9,8,15,14,13,12,11,10,9,8]
-; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm3 = [15,14,13,12,11,10,9,8,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm5 = [7,6,5,4,3,2,1,0,7,6,5,4,3,2,1,0]
-; AVX1-NEXT:    # xmm5 = mem[0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm5 = [7,6,5,4,3,2,1,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm4[0],xmm2[0]
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
@@ -2756,7 +2769,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_00_00_00_08_00_00_00_00_00_00_00_00_
 ; AVX1-LABEL: shuffle_v32i8_00_00_00_00_00_00_00_08_00_00_00_00_00_00_00_00_16_16_16_16_16_16_16_24_16_16_16_16_16_16_16_16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovq {{.*#+}} xmm2 = [0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -2770,7 +2783,7 @@ define <32 x i8> @shuffle_v32i8_00_00_00_00_00_00_00_08_00_00_00_00_00_00_00_00_
 ; XOPAVX1-LABEL: shuffle_v32i8_00_00_00_00_00_00_00_08_00_00_00_00_00_00_00_00_16_16_16_16_16_16_16_24_16_16_16_16_16_16_16_16:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0]
+; XOPAVX1-NEXT:    vmovq {{.*#+}} xmm2 = [0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0]
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -2788,7 +2801,7 @@ define <32 x i8> @shuffle_v32i8_00_14_00_00_00_00_00_00_00_00_00_00_00_00_00_00_
 ; AVX1-LABEL: shuffle_v32i8_00_14_00_00_00_00_00_00_00_00_00_00_00_00_00_00_16_30_16_16_16_16_16_16_16_16_16_16_16_16_16_16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -2802,7 +2815,7 @@ define <32 x i8> @shuffle_v32i8_00_14_00_00_00_00_00_00_00_00_00_00_00_00_00_00_
 ; XOPAVX1-LABEL: shuffle_v32i8_00_14_00_00_00_00_00_00_00_00_00_00_00_00_00_00_16_30_16_16_16_16_16_16_16_16_16_16_16_16_16_16:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; XOPAVX1-NEXT:    vmovd {{.*#+}} xmm2 = [0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -2820,7 +2833,7 @@ define <32 x i8> @shuffle_v32i8_15_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_
 ; AVX1-LABEL: shuffle_v32i8_15_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_31_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,0,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [15,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -2834,7 +2847,7 @@ define <32 x i8> @shuffle_v32i8_15_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_
 ; XOPAVX1-LABEL: shuffle_v32i8_15_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_31_16_16_16_16_16_16_16_16_16_16_16_16_16_16_16:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,0,0,0]
+; XOPAVX1-NEXT:    vmovd {{.*#+}} xmm2 = [15,0,0,0]
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -3396,7 +3409,7 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; AVX2-LABEL: shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_20_19_52_19_49_54_37_32_48_42_59_07_36_34_36_39:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,12,12,13,1,6,13,7,u,u,u,u,u,u,u,u,u,u,u,u,17,22,29,23,20,19,u,19,u,u,u,u]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,5,0,6,u,1,u>
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,u,5,0,6,u,1,u]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm1[10,13],zero,zero,ymm1[3,3],zero,ymm1[8],zero,zero,zero,ymm1[12,1],zero,zero,zero,zero,zero,ymm1[20],zero,ymm1[17,22],zero,zero,ymm1[16],zero,ymm1[27],zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
@@ -3409,7 +3422,7 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; AVX512VLBW-LABEL: shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_20_19_52_19_49_54_37_32_48_42_59_07_36_34_36_39:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,12,12,13,1,6,13,7,u,u,u,u,u,u,u,u,u,u,u,u,17,22,29,23,20,19,u,19,u,u,u,u]
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,5,0,6,u,1,u>
+; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,u,5,0,6,u,1,u]
 ; AVX512VLBW-NEXT:    vpermd %ymm0, %ymm2, %ymm2
 ; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm1[10,13],zero,zero,ymm1[3,3],zero,ymm1[8],zero,zero,zero,ymm1[12,1],zero,zero,zero,zero,zero,ymm1[20],zero,ymm1[17,22],zero,zero,ymm1[16],zero,ymm1[27],zero,zero,zero,zero,zero
 ; AVX512VLBW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
@@ -3445,7 +3458,7 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; XOPAVX2-LABEL: shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_20_19_52_19_49_54_37_32_48_42_59_07_36_34_36_39:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,12,12,13,1,6,13,7,u,u,u,u,u,u,u,u,u,u,u,u,17,22,29,23,20,19,u,19,u,u,u,u]
-; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,u,5,0,6,u,1,u>
+; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,u,5,0,6,u,1,u]
 ; XOPAVX2-NEXT:    vpermd %ymm0, %ymm2, %ymm0
 ; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm1[10,13],zero,zero,ymm1[3,3],zero,ymm1[8],zero,zero,zero,ymm1[12,1],zero,zero,zero,zero,zero,ymm1[20],zero,ymm1[17,22],zero,zero,ymm1[16],zero,ymm1[27],zero,zero,zero,zero,zero
 ; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,3,0,1]
@@ -5107,6 +5120,63 @@ define <32 x i8> @PR55066(<32 x i8> %a0) {
 ; XOPAVX2-NEXT:    retq
   %shuffle = shufflevector <32 x i8> %a0, <32 x i8> poison, <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
   ret <32 x i8> %shuffle
+}
+
+define <4 x i64> @PR66150(ptr %b) {
+; AVX1-LABEL: PR66150:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,1,1,4,5,6,7]
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,3,3,4,5,6,7]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,1,1,4,4,5,5]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR66150:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; AVX2-NEXT:    retq
+;
+; AVX512VLBW-LABEL: PR66150:
+; AVX512VLBW:       # %bb.0:
+; AVX512VLBW-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512VLBW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI-LABEL: PR66150:
+; AVX512VLVBMI:       # %bb.0:
+; AVX512VLVBMI-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3]
+; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
+; AVX512VLVBMI-NEXT:    retq
+;
+; XOPAVX1-LABEL: PR66150:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; XOPAVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,0,1,1,4,5,6,7]
+; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,3,3,4,5,6,7]
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; XOPAVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,1,1,4,4,5,5]
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: PR66150:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; XOPAVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; XOPAVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19]
+; XOPAVX2-NEXT:    retq
+  %tmp1 = load i32, ptr %b, align 4
+  %tmp2 = insertelement <8 x i32> undef, i32 %tmp1, i64 0
+  %tmp3 = shufflevector <8 x i32> %tmp2, <8 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 0, i32 poison, i32 poison, i32 poison>
+  %tmp4 = bitcast <8 x i32> %tmp3 to <32 x i8>
+  %tmp5 = shufflevector <32 x i8> %tmp4, <32 x i8> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19>
+  %tmp6 = bitcast <32 x i8> %tmp5 to <4 x i64>
+  ret <4 x i64> %tmp6
 }
 
 define <32 x i8> @insert_dup_mem_v32i8_i32(ptr %ptr) {

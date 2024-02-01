@@ -19,20 +19,18 @@
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Error.h"
 
-namespace lldb_private {
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFContext;
-}
 
 class DWARFDebugInfo {
 public:
-  typedef dw_offset_t (*Callback)(SymbolFileDWARF *dwarf2Data,
-                                  DWARFUnit *cu,
+  typedef dw_offset_t (*Callback)(SymbolFileDWARF *dwarf2Data, DWARFUnit *cu,
                                   DWARFDebugInfoEntry *die,
                                   const dw_offset_t next_offset,
                                   const uint32_t depth, void *userData);
 
-  explicit DWARFDebugInfo(SymbolFileDWARF &dwarf,
-                          lldb_private::DWARFContext &context);
+  explicit DWARFDebugInfo(SymbolFileDWARF &dwarf, DWARFContext &context);
 
   size_t GetNumUnits();
   DWARFUnit *GetUnitAtIndex(size_t idx);
@@ -44,6 +42,11 @@ public:
   DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
   bool ContainsTypeUnits();
   DWARFDIE GetDIE(const DIERef &die_ref);
+
+  /// Returns the AT_Name of this DIE, if it exists, without parsing the entire
+  /// compile unit. An empty is string is returned upon error or if the
+  /// attribute is not present.
+  llvm::StringRef PeekDIEName(const DIERef &die_ref);
 
   enum {
     eDumpFlag_Verbose = (1 << 0),  // Verbose dumping
@@ -58,7 +61,7 @@ protected:
   typedef std::vector<DWARFUnitSP> UnitColl;
 
   SymbolFileDWARF &m_dwarf;
-  lldb_private::DWARFContext &m_context;
+  DWARFContext &m_context;
 
   llvm::once_flag m_units_once_flag;
   UnitColl m_units;
@@ -80,5 +83,7 @@ private:
   DWARFDebugInfo(const DWARFDebugInfo &) = delete;
   const DWARFDebugInfo &operator=(const DWARFDebugInfo &) = delete;
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFO_H

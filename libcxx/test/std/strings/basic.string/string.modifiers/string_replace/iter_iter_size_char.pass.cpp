@@ -38,7 +38,7 @@ test(S s,
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test0() {
+TEST_CONSTEXPR_CXX20 bool test0() {
   test(S(""), 0, 0, 0, '3', S(""));
   test(S(""), 0, 0, 5, '3', S("33333"));
   test(S(""), 0, 0, 10, '3', S("3333333333"));
@@ -139,10 +139,11 @@ TEST_CONSTEXPR_CXX20 void test0() {
   test(S("abcdefghij"), 1, 1, 5, '3', S("a33333cdefghij"));
   test(S("abcdefghij"), 1, 1, 10, '3', S("a3333333333cdefghij"));
   test(S("abcdefghij"), 1, 1, 20, '3', S("a33333333333333333333cdefghij"));
+  return true;
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test1() {
+TEST_CONSTEXPR_CXX20 bool test1() {
   test(S("abcdefghij"), 1, 4, 0, '3', S("afghij"));
   test(S("abcdefghij"), 1, 4, 5, '3', S("a33333fghij"));
   test(S("abcdefghij"), 1, 4, 10, '3', S("a3333333333fghij"));
@@ -243,10 +244,11 @@ TEST_CONSTEXPR_CXX20 void test1() {
   test(S("abcdefghijklmnopqrst"), 10, 9, 5, '3', S("abcdefghij33333t"));
   test(S("abcdefghijklmnopqrst"), 10, 9, 10, '3', S("abcdefghij3333333333t"));
   test(S("abcdefghijklmnopqrst"), 10, 9, 20, '3', S("abcdefghij33333333333333333333t"));
+  return true;
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test2() {
+TEST_CONSTEXPR_CXX20 bool test2() {
   test(S("abcdefghijklmnopqrst"), 10, 10, 0, '3', S("abcdefghij"));
   test(S("abcdefghijklmnopqrst"), 10, 10, 5, '3', S("abcdefghij33333"));
   test(S("abcdefghijklmnopqrst"), 10, 10, 10, '3', S("abcdefghij3333333333"));
@@ -263,31 +265,26 @@ TEST_CONSTEXPR_CXX20 void test2() {
   test(S("abcdefghijklmnopqrst"), 20, 0, 5, '3', S("abcdefghijklmnopqrst33333"));
   test(S("abcdefghijklmnopqrst"), 20, 0, 10, '3', S("abcdefghijklmnopqrst3333333333"));
   test(S("abcdefghijklmnopqrst"), 20, 0, 20, '3', S("abcdefghijklmnopqrst33333333333333333333"));
-}
-
-TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-  }
-#endif
-
   return true;
 }
 
-int main(int, char**) {
-  test();
+template <class S>
+TEST_CONSTEXPR_CXX20 void test() {
+  test0<S>();
+  test1<S>();
+  test2<S>();
+
 #if TEST_STD_VER > 17
-  static_assert(test());
+  static_assert(test0<S>());
+  static_assert(test1<S>());
+  static_assert(test2<S>());
+#endif
+}
+
+int main(int, char**) {
+  test<std::string>();
+#if TEST_STD_VER >= 11
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return 0;

@@ -56,6 +56,14 @@ public:
     /// recorded in this Accelerator Entry.
     virtual std::optional<uint64_t> getCUOffset() const = 0;
 
+    /// Returns the Offset of the Type Unit associated with this
+    /// Accelerator Entry or std::nullopt if the Type Unit offset is not
+    /// recorded in this Accelerator Entry.
+    virtual std::optional<uint64_t> getLocalTUOffset() const {
+      // Default return for accelerator tables that don't support type units.
+      return std::nullopt;
+    }
+
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.
@@ -424,6 +432,7 @@ public:
 
   public:
     std::optional<uint64_t> getCUOffset() const override;
+    std::optional<uint64_t> getLocalTUOffset() const override;
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// Returns the Index into the Compilation Unit list of the owning Name
@@ -433,8 +442,16 @@ public:
     /// which will handle that check itself). Note that entries in NameIndexes
     /// which index just a single Compilation Unit are implicitly associated
     /// with that unit, so this function will return 0 even without an explicit
-    /// DW_IDX_compile_unit attribute.
+    /// DW_IDX_compile_unit attribute, unless there is a DW_IDX_type_unit
+    /// attribute.
     std::optional<uint64_t> getCUIndex() const;
+
+    /// Returns the Index into the Local Type Unit list of the owning Name
+    /// Index or std::nullopt if this Accelerator Entry does not have an
+    /// associated Type Unit. It is up to the user to verify that the
+    /// returned Index is valid in the owning NameIndex (or use
+    /// getLocalTUOffset(), which will handle that check itself).
+    std::optional<uint64_t> getLocalTUIndex() const;
 
     /// .debug_names-specific getter, which always succeeds (DWARF v5 index
     /// entries always have a tag).
@@ -442,6 +459,16 @@ public:
 
     /// Returns the Offset of the DIE within the containing CU or TU.
     std::optional<uint64_t> getDIEUnitOffset() const;
+
+    /// Returns true if this Entry has information about its parent DIE (i.e. if
+    /// it has an IDX_parent attribute)
+    bool hasParentInformation() const;
+
+    /// Returns the Entry corresponding to the parent of the DIE represented by
+    /// `this` Entry. If the parent is not in the table, nullopt is returned.
+    /// Precondition: hasParentInformation() == true.
+    /// An error is returned for ill-formed tables.
+    Expected<std::optional<DWARFDebugNames::Entry>> getParentDIEEntry() const;
 
     /// Return the Abbreviation that can be used to interpret the raw values of
     /// this Accelerator Entry.
@@ -452,6 +479,7 @@ public:
     std::optional<DWARFFormValue> lookup(dwarf::Index Index) const;
 
     void dump(ScopedPrinter &W) const;
+    void dumpParentIdx(ScopedPrinter &W, const DWARFFormValue &FormValue) const;
 
     friend class NameIndex;
     friend class ValueIterator;
@@ -513,6 +541,19 @@ public:
     const char *getString() const {
       uint64_t Off = StringOffset;
       return StrData.getCStr(&Off);
+    }
+
+    /// Compares the name of this entry against Target, returning true if they
+    /// are equal. This is more efficient in hot code paths that do not need the
+    /// length of the name.
+    bool sameNameAs(StringRef Target) const {
+      // Note: this is not the name, but the rest of debug_str starting from
+      // name. This handles corrupt data (non-null terminated) without
+      // overrunning the buffer.
+      StringRef Data = StrData.getData().substr(StringOffset);
+      size_t TargetSize = Target.size();
+      return Data.size() > TargetSize && !Data[TargetSize] &&
+             strncmp(Data.data(), Target.data(), TargetSize) == 0;
     }
 
     /// Returns the offset of the first Entry in the list.
@@ -591,6 +632,13 @@ public:
     }
 
     Expected<Entry> getEntry(uint64_t *Offset) const;
+
+    /// Returns the Entry at the relative `Offset` from the start of the Entry
+    /// pool.
+    Expected<Entry> getEntryAtRelativeOffset(uint64_t Offset) const {
+      auto OffsetFromSection = Offset + this->EntriesBase;
+      return getEntry(&OffsetFromSection);
+    }
 
     /// Look up all entries in this Name Index matching \c Key.
     iterator_range<ValueIterator> equal_range(StringRef Key) const;

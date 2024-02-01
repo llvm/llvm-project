@@ -753,6 +753,7 @@ void LoopConvertCheck::doConversion(
   bool IsCheapToCopy =
       !Descriptor.ElemType.isNull() &&
       Descriptor.ElemType.isTriviallyCopyableType(*Context) &&
+      !Descriptor.ElemType->isDependentSizedArrayType() &&
       // TypeInfo::Width is in bits.
       Context->getTypeInfo(Descriptor.ElemType).Width <= 8 * MaxCopySize;
   bool UseCopy = CanCopy && ((VarNameFromAlias && !AliasVarIsRef) ||
@@ -941,11 +942,15 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
         CanonicalInitVarType->isPointerType()) {
       // If the initializer and the variable are both pointers check if the
       // un-qualified pointee types match, otherwise we don't use auto.
-      if (!Context->hasSameUnqualifiedType(
-              CanonicalBeginType->getPointeeType(),
-              CanonicalInitVarType->getPointeeType()))
-        return false;
+      return Context->hasSameUnqualifiedType(
+          CanonicalBeginType->getPointeeType(),
+          CanonicalInitVarType->getPointeeType());
     }
+
+    if (CanonicalBeginType->isBuiltinType() ||
+        CanonicalInitVarType->isBuiltinType())
+      return false;
+
   } else if (FixerKind == LFK_PseudoArray) {
     if (const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName)) {
       // This call is required to obtain the container.

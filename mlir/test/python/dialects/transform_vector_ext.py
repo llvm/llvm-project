@@ -94,30 +94,24 @@ def enum_configurable_patterns():
     )
 
     # CHECK: transform.apply_patterns.vector.lower_transpose
-    # CHECK-SAME: lowering_strategy = eltwise
-    # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_transpose
-    # CHECK-SAME: lowering_strategy = eltwise
-    # CHECK-SAME: avx2_lowering_strategy = false
+    # This is the default strategy, not printed.
     vector.ApplyLowerTransposePatternsOp(
         lowering_strategy=vector.VectorTransposeLowering.EltWise
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = flat_transpose
-    # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp(
         lowering_strategy=vector.VectorTransposeLowering.Flat
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = shuffle_1d
-    # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp(
         lowering_strategy=vector.VectorTransposeLowering.Shuffle1D
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = shuffle_16x16
-    # CHECK-SAME: avx2_lowering_strategy = false
     vector.ApplyLowerTransposePatternsOp(
         lowering_strategy=vector.VectorTransposeLowering.Shuffle16x16
     )

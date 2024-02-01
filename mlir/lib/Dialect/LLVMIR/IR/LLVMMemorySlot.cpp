@@ -32,7 +32,7 @@ llvm::SmallVector<MemorySlot> LLVM::AllocaOp::getPromotableSlots() {
   if (!getOperation()->getBlock()->isEntryBlock())
     return {};
 
-  return {MemorySlot{getResult(), getResultPtrElementType()}};
+  return {MemorySlot{getResult(), getElemType()}};
 }
 
 Value LLVM::AllocaOp::getDefaultValue(const MemorySlot &slot,
@@ -46,7 +46,8 @@ void LLVM::AllocaOp::handleBlockArgument(const MemorySlot &slot,
   for (Operation *user : getOperation()->getUsers())
     if (auto declareOp = llvm::dyn_cast<LLVM::DbgDeclareOp>(user))
       rewriter.create<LLVM::DbgValueOp>(declareOp.getLoc(), argument,
-                                        declareOp.getVarInfo());
+                                        declareOp.getVarInfo(),
+                                        declareOp.getLocationExpr());
 }
 
 void LLVM::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
@@ -61,8 +62,7 @@ SmallVector<DestructurableMemorySlot> LLVM::AllocaOp::getDestructurableSlots() {
   if (!mlir::matchPattern(getArraySize(), m_One()))
     return {};
 
-  Type elemType = getResultPtrElementType();
-  auto destructurable = dyn_cast<DestructurableTypeInterface>(elemType);
+  auto destructurable = dyn_cast<DestructurableTypeInterface>(getElemType());
   if (!destructurable)
     return {};
 
@@ -75,7 +75,8 @@ SmallVector<DestructurableMemorySlot> LLVM::AllocaOp::getDestructurableSlots() {
   for (Attribute index : llvm::make_first_range(destructuredType.value()))
     allocaTypeMap.insert({index, LLVM::LLVMPointerType::get(getContext())});
 
-  return {DestructurableMemorySlot{{getResult(), elemType}, {allocaTypeMap}}};
+  return {
+      DestructurableMemorySlot{{getResult(), getElemType()}, {allocaTypeMap}}};
 }
 
 DenseMap<Attribute, MemorySlot>
@@ -83,12 +84,9 @@ LLVM::AllocaOp::destructure(const DestructurableMemorySlot &slot,
                             const SmallPtrSetImpl<Attribute> &usedIndices,
                             RewriterBase &rewriter) {
   assert(slot.ptr == getResult());
-  Type elemType =
-      getElemType() ? *getElemType() : getResult().getType().getElementType();
-
   rewriter.setInsertionPointAfter(*this);
 
-  auto destructurableType = cast<DestructurableTypeInterface>(elemType);
+  auto destructurableType = cast<DestructurableTypeInterface>(getElemType());
   DenseMap<Attribute, MemorySlot> slotMap;
   for (Attribute index : usedIndices) {
     Type elemType = destructurableType.getTypeAtIndex(index);
@@ -177,7 +175,8 @@ DeletionKind LLVM::StoreOp::removeBlockingUses(
   for (Operation *user : slot.ptr.getUsers())
     if (auto declareOp = dyn_cast<LLVM::DbgDeclareOp>(user))
       rewriter.create<LLVM::DbgValueOp>(declareOp->getLoc(), getValue(),
-                                        declareOp.getVarInfo());
+                                        declareOp.getVarInfo(),
+                                        declareOp.getLocationExpr());
   return DeletionKind::Delete;
 }
 
@@ -249,6 +248,28 @@ DeletionKind LLVM::LifetimeEndOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::InvariantStartOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  return true;
+}
+
+DeletionKind LLVM::InvariantStartOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  return DeletionKind::Delete;
+}
+
+bool LLVM::InvariantEndOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  return true;
+}
+
+DeletionKind LLVM::InvariantEndOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  return DeletionKind::Delete;
+}
+
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
@@ -280,7 +301,7 @@ DeletionKind LLVM::DbgValueOp::removeBlockingUses(
   // the variable has been optimized out.
   auto undef =
       rewriter.create<UndefOp>(getValue().getLoc(), getValue().getType());
-  rewriter.updateRootInPlace(*this, [&] { getValueMutable().assign(undef); });
+  rewriter.modifyOpInPlace(*this, [&] { getValueMutable().assign(undef); });
   return DeletionKind::Keep;
 }
 
@@ -337,11 +358,6 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
   if (!basePtrType)
     return false;
 
-  // Typed pointers are not supported. This should be removed once typed
-  // pointers are removed from the LLVM dialect.
-  if (!basePtrType.isOpaque())
-    return false;
-
   if (getBase() != slot.ptr || slot.elemType != getElemType())
     return false;
   if (!isFirstIndexZero(*this))
@@ -378,7 +394,7 @@ DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
     return DeletionKind::Delete;
   }
 
-  rewriter.updateRootInPlace(*this, [&]() {
+  rewriter.modifyOpInPlace(*this, [&]() {
     // Rewire the indices by popping off the second index.
     // Start with a single zero, then add the indices beyond the second.
     SmallVector<int32_t> newIndices(1);

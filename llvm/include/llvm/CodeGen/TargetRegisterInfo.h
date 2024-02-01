@@ -119,6 +119,9 @@ public:
   /// registers.
   bool isAllocatable() const { return MC->isAllocatable(); }
 
+  /// Return true if this register class has a defined BaseClassOrder.
+  bool isBaseClass() const { return MC->isBaseClass(); }
+
   /// Return true if the specified TargetRegisterClass
   /// is a proper sub-class of this TargetRegisterClass.
   bool hasSubClass(const TargetRegisterClass *RC) const {
@@ -266,6 +269,11 @@ protected:
   virtual ~TargetRegisterInfo();
 
 public:
+  /// Return the number of registers for the function. (may overestimate)
+  virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
+    return getNumRegs();
+  }
+
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
   //
@@ -278,8 +286,8 @@ public:
   // DenseMapInfo<unsigned> uses -1u and -2u.
 
   /// Return the size in bits of a register from class RC.
-  unsigned getRegSizeInBits(const TargetRegisterClass &RC) const {
-    return getRegClassInfo(RC).RegSize;
+  TypeSize getRegSizeInBits(const TargetRegisterClass &RC) const {
+    return TypeSize::getFixed(getRegClassInfo(RC).RegSize);
   }
 
   /// Return the size in bytes of the stack slot allocated to hold a spilled
@@ -853,7 +861,7 @@ public:
     const TargetRegisterClass *RC) const = 0;
 
   /// Returns size in bits of a phys/virtual/generic register.
-  unsigned getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
+  TypeSize getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
 
   /// Get the weight in units of pressure for this register unit.
   virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;

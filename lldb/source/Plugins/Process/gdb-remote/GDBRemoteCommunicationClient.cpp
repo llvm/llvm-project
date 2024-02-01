@@ -1180,7 +1180,8 @@ bool GDBRemoteCommunicationClient::GetDefaultThreadId(lldb::tid_t &tid) {
 static void ParseOSType(llvm::StringRef value, std::string &os_name,
                         std::string &environment) {
   if (value.equals("iossimulator") || value.equals("tvossimulator") ||
-      value.equals("watchossimulator")) {
+      value.equals("watchossimulator") || value.equals("xrossimulator") ||
+      value.equals("visionossimulator")) {
     environment = "simulator";
     os_name = value.drop_back(environment.size()).str();
   } else if (value.equals("maccatalyst")) {
@@ -2649,10 +2650,12 @@ size_t GDBRemoteCommunicationClient::QueryGDBServer(
     return 0;
 
   for (size_t i = 0, count = array->GetSize(); i < count; ++i) {
-    StructuredData::Dictionary *element = nullptr;
-    if (!array->GetItemAtIndexAsDictionary(i, element))
+    std::optional<StructuredData::Dictionary *> maybe_element =
+        array->GetItemAtIndexAsDictionary(i);
+    if (!maybe_element)
       continue;
 
+    StructuredData::Dictionary *element = *maybe_element;
     uint16_t port = 0;
     if (StructuredData::ObjectSP port_osp =
             element->GetValueForKey(llvm::StringRef("port")))
@@ -4040,7 +4043,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
           return;
         } else {
           llvm::StringRef response_str(response.GetStringRef());
-          if (response_str.startswith("qSymbol:")) {
+          if (response_str.starts_with("qSymbol:")) {
             response.SetFilePos(strlen("qSymbol:"));
             std::string symbol_name;
             if (response.GetHexByteString(symbol_name)) {

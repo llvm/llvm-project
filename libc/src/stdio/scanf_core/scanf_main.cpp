@@ -16,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 int scanf_main(Reader *reader, const char *__restrict str,
@@ -38,13 +38,8 @@ int scanf_main(Reader *reader, const char *__restrict str,
     }
   }
 
-  if (conversions == 0 && reader->has_error()) {
-    // This is intended to be converted to EOF in the client call to avoid
-    // including stdio.h in this internal file.
-    return -1;
-  }
   return conversions;
 }
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

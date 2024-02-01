@@ -34,10 +34,13 @@ for header in public_headers:
 // UNSUPPORTED{BLOCKLIT}: LIBCXX-AIX-FIXME
 
 // The Android headers don't appear to be compatible with modules yet
-// XFAIL{BLOCKLIT}: LIBCXX-ANDROID-FIXME
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-ANDROID-FIXME
 
 // TODO: Investigate this failure
 // UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME
+
+// TODO: Investigate this failure
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-PICOLIBC-FIXME
 
 {lit_header_restrictions.get(header, '')}
 
@@ -64,7 +67,7 @@ print(f"""\
 // UNSUPPORTED{BLOCKLIT}: LIBCXX-AIX-FIXME
 
 // The Android headers don't appear to be compatible with modules yet
-// XFAIL{BLOCKLIT}: LIBCXX-ANDROID-FIXME
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-ANDROID-FIXME
 
 // TODO: Investigate this failure
 // UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME

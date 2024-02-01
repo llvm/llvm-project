@@ -142,7 +142,7 @@ func.func @transpose_bad_rank(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(o
 // -----
 
 func.func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
-  // expected-error @+1 {{output type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' does not match transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>'}}
+  // expected-error @+1 {{result type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' is not equivalent to the canonical transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 + s0 + d1 * s1)>>'}}
   memref.transpose %v (i, j) -> (j, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
@@ -611,6 +611,22 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
+  // expected-error@+1 {{expected offsets to be non-negative, but got -1}}
+  %0 = memref.subview %input[-1, 256] [2, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+  return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+}
+
+// -----
+
+func.func @invalid_subview(%input: memref<4x1024xf32>) -> memref<2x256xf32, strided<[1024, 1], offset: 2304>> {
+  // expected-error@+1 {{expected sizes to be non-negative, but got -1}}
+  %0 = memref.subview %input[2, 256] [-1, 256] [1, 1] : memref<4x1024xf32> to memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+  return %0 : memref<2x256xf32, strided<[1024, 1], offset: 2304>>
+}
+
+// -----
+
 func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
   // expected-error@+1 {{expected mixed offsets rank to match mixed sizes rank (2 vs 3) so the rank of the result type is well-formed}}
@@ -880,6 +896,15 @@ func.func @bad_alloc_wrong_symbol_count() {
 
 // -----
 
+func.func @load_invalid_memref_indexes() {
+  %0 = memref.alloca() : memref<10xi32>
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{incorrect number of indices for load, expected 1 but got 2}}
+  %1 = memref.load %0[%c0, %c0] : memref<10xi32>
+}
+
+// -----
+
 func.func @test_store_zero_results() {
 ^bb0:
   %0 = memref.alloc() : memref<1024x64xf32, affine_map<(d0, d1) -> (d0, d1)>, 1>
@@ -1046,5 +1071,14 @@ func.func @memref_realloc_type(%src : memref<256xf32>) -> memref<?xi32>{
 // Asking the dimension of a 0-D shape doesn't make sense.
 func.func @dim_0_ranked(%arg : memref<f32>, %arg1 : index) {
   memref.dim %arg, %arg1 : memref<f32> // expected-error {{'memref.dim' op operand #0 must be unranked.memref of any type values or non-0-ranked.memref of any type values, but got 'memref<f32>'}}
+  return
+}
+
+// -----
+
+func.func @subview_invalid_strides(%m: memref<7x22x333x4444xi32>) {
+  // expected-error @below{{expected result type to be 'memref<7x11x333x4444xi32, strided<[32556744, 2959704, 4444, 1]>>' or a rank-reduced version. (mismatch of result layout)}}
+  %subview = memref.subview %m[0, 0, 0, 0] [7, 11, 333, 4444] [1, 2, 1, 1]
+      : memref<7x22x333x4444xi32> to memref<7x11x333x4444xi32>
   return
 }

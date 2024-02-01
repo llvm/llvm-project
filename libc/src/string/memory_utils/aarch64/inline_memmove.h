@@ -16,7 +16,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void inline_memmove_aarch64(Ptr dst, CPtr src, size_t count) {
   static_assert(aarch64::kNeon, "aarch64 supports vector types");
@@ -48,6 +48,6 @@ LIBC_INLINE void inline_memmove_aarch64(Ptr dst, CPtr src, size_t count) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMMOVE_H

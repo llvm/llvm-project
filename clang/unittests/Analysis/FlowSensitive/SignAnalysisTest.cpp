@@ -133,7 +133,7 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
                     LatticeTransferState &State) {
   auto &A = State.Env.arena();
   const Formula *Comp;
-  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValue(*BO))) {
+  if (BoolValue *V = State.Env.get<BoolValue>(*BO)) {
     Comp = &V->formula();
   } else {
     Comp = &A.makeAtomRef(A.makeAtom());
@@ -157,44 +157,44 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
   switch (BO->getOpcode()) {
   case BO_GT:
     // pos > pos
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Pos->formula(),
                                            LHSProps.Pos->formula())));
     // pos > zero
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Zero->formula(),
                                            LHSProps.Pos->formula())));
     break;
   case BO_LT:
     // neg < neg
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Neg->formula(),
                                            LHSProps.Neg->formula())));
     // neg < zero
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Zero->formula(),
                                            LHSProps.Neg->formula())));
     break;
   case BO_GE:
     // pos >= pos
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Pos->formula(),
                                            LHSProps.Pos->formula())));
     break;
   case BO_LE:
     // neg <= neg
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Neg->formula(),
                                            LHSProps.Neg->formula())));
     break;
   case BO_EQ:
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Neg->formula(),
                                            LHSProps.Neg->formula())));
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Zero->formula(),
                                            LHSProps.Zero->formula())));
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeImplies(*Comp, A.makeImplies(RHSProps.Pos->formula(),
                                            LHSProps.Pos->formula())));
     break;
@@ -215,14 +215,14 @@ void transferUnaryMinus(const UnaryOperator *UO,
     return;
 
   // a is pos ==> -a is neg
-  State.Env.addToFlowCondition(
+  State.Env.assume(
       A.makeImplies(OperandProps.Pos->formula(), UnaryOpProps.Neg->formula()));
   // a is neg ==> -a is pos
-  State.Env.addToFlowCondition(
+  State.Env.assume(
       A.makeImplies(OperandProps.Neg->formula(), UnaryOpProps.Pos->formula()));
   // a is zero ==> -a is zero
-  State.Env.addToFlowCondition(A.makeImplies(OperandProps.Zero->formula(),
-                                             UnaryOpProps.Zero->formula()));
+  State.Env.assume(A.makeImplies(OperandProps.Zero->formula(),
+                                 UnaryOpProps.Zero->formula()));
 }
 
 void transferUnaryNot(const UnaryOperator *UO,
@@ -235,7 +235,7 @@ void transferUnaryNot(const UnaryOperator *UO,
     return;
 
   // a is neg or pos ==> !a is zero
-  State.Env.addToFlowCondition(A.makeImplies(
+  State.Env.assume(A.makeImplies(
       A.makeOr(OperandProps.Pos->formula(), OperandProps.Neg->formula()),
       UnaryOpProps.Zero->formula()));
 
@@ -243,11 +243,11 @@ void transferUnaryNot(const UnaryOperator *UO,
   // put the generic handler, transferExpr maybe?
   if (auto *UOBoolVal = dyn_cast<BoolValue>(UnaryOpValue)) {
     // !a <==> a is zero
-    State.Env.addToFlowCondition(
+    State.Env.assume(
         A.makeEquals(UOBoolVal->formula(), OperandProps.Zero->formula()));
     // !a <==> !a is not zero
-    State.Env.addToFlowCondition(A.makeEquals(
-        UOBoolVal->formula(), A.makeNot(UnaryOpProps.Zero->formula())));
+    State.Env.assume(A.makeEquals(UOBoolVal->formula(),
+                                  A.makeNot(UnaryOpProps.Zero->formula())));
   }
 }
 
@@ -391,11 +391,10 @@ BoolValue &mergeBoolValues(BoolValue &Bool1, const Environment &Env1,
   // path taken - this simplifies the flow condition tracked in `MergedEnv`.
   // Otherwise, information about which path was taken is used to associate
   // `MergedBool` with `Bool1` and `Bool2`.
-  if (Env1.flowConditionImplies(B1) && Env2.flowConditionImplies(B2)) {
-    MergedEnv.addToFlowCondition(MergedBool.formula());
-  } else if (Env1.flowConditionImplies(A.makeNot(B1)) &&
-             Env2.flowConditionImplies(A.makeNot(B2))) {
-    MergedEnv.addToFlowCondition(A.makeNot(MergedBool.formula()));
+  if (Env1.proves(B1) && Env2.proves(B2)) {
+    MergedEnv.assume(MergedBool.formula());
+  } else if (Env1.proves(A.makeNot(B1)) && Env2.proves(A.makeNot(B2))) {
+    MergedEnv.assume(A.makeNot(MergedBool.formula()));
   }
   return MergedBool;
 }
@@ -484,7 +483,7 @@ testing::AssertionResult isPropertyImplied(const Environment &Env,
   if (!Prop)
     return Result;
   auto *BVProp = cast<BoolValue>(Prop);
-  if (Env.flowConditionImplies(BVProp->formula()) != Implies)
+  if (Env.proves(BVProp->formula()) != Implies)
     return testing::AssertionFailure()
            << Property << " is " << (Implies ? "not" : "") << " implied"
            << ", but should " << (Implies ? "" : "not ") << "be";
@@ -892,6 +891,33 @@ TEST(SignAnalysisTest, BinaryEQ) {
         EXPECT_TRUE(isZero(A, ASTCtx, EnvZ));
         // p
         EXPECT_TRUE(isPositive(A, ASTCtx, EnvP));
+      },
+      LangStandard::lang_cxx17);
+}
+
+TEST(SignAnalysisTest, ComplexLoopCondition) {
+  std::string Code = R"(
+    int foo();
+    void fun() {
+      int a, b;
+      while ((a = foo()) > 0 && (b = foo()) > 0) {
+        a;
+        b;
+        // [[p]]
+      }
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *A = findValueDecl(ASTCtx, "a");
+        const ValueDecl *B = findValueDecl(ASTCtx, "b");
+
+        EXPECT_TRUE(isPositive(A, ASTCtx, Env));
+        EXPECT_TRUE(isPositive(B, ASTCtx, Env));
       },
       LangStandard::lang_cxx17);
 }

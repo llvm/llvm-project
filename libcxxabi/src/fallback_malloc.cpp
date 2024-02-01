@@ -7,8 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "fallback_malloc.h"
+#include "abort_message.h"
 
-#include <__threading_support>
+// TODO: Temporary workaround, see https://github.com/llvm/llvm-project/pull/79654#issuecomment-1919397302
+#if __has_include(<__thread/support.h>)
+#  include <__thread/support.h>
+#else
+#  include <__threading_support>
+#endif
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 #if defined(__ELF__) && defined(_LIBCXXABI_LINK_PTHREAD_LIB)
 #pragma comment(lib, "pthread")
@@ -16,7 +22,7 @@
 #endif
 
 #include <__memory/aligned_alloc.h>
-#include <assert.h>
+#include <__assert>
 #include <stdlib.h> // for malloc, calloc, free
 #include <string.h> // for memset
 
@@ -142,7 +148,7 @@ void* fallback_malloc(size_t len) {
 
     // Check the invariant that all heap_nodes pointers 'p' are aligned
     // so that 'p + 1' has an alignment of at least RequiredAlignment
-    assert(reinterpret_cast<size_t>(p + 1) % RequiredAlignment == 0);
+    _LIBCXXABI_ASSERT(reinterpret_cast<size_t>(p + 1) % RequiredAlignment == 0, "");
 
     // Calculate the number of extra padding elements needed in order
     // to split 'p' and create a properly aligned heap_node from the tail
@@ -163,7 +169,7 @@ void* fallback_malloc(size_t len) {
       q->next_node = 0;
       q->len = static_cast<heap_size>(aligned_nelems);
       void* ptr = q + 1;
-      assert(reinterpret_cast<size_t>(ptr) % RequiredAlignment == 0);
+      _LIBCXXABI_ASSERT(reinterpret_cast<size_t>(ptr) % RequiredAlignment == 0, "");
       return ptr;
     }
 
@@ -176,7 +182,7 @@ void* fallback_malloc(size_t len) {
         prev->next_node = p->next_node;
       p->next_node = 0;
       void* ptr = p + 1;
-      assert(reinterpret_cast<size_t>(ptr) % RequiredAlignment == 0);
+      _LIBCXXABI_ASSERT(reinterpret_cast<size_t>(ptr) % RequiredAlignment == 0, "");
       return ptr;
     }
   }

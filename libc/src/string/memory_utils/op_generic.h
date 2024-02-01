@@ -41,14 +41,14 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
 #define LLVM_LIBC_HAS_UINT64
 #endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 // Compiler types using the vector attributes.
 using generic_v128 = uint8_t __attribute__((__vector_size__(16)));
 using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
 using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-namespace __llvm_libc::generic {
+namespace LIBC_NAMESPACE::generic {
 
 // We accept three types of values as elements for generic operations:
 // - scalar : unsigned integral types,
@@ -92,7 +92,7 @@ template <typename T> constexpr size_t array_size_v = array_size<T>::value;
 template <typename T> T load(CPtr src) {
   static_assert(is_element_type_v<T>);
   if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-    return ::__llvm_libc::load<T>(src);
+    return ::LIBC_NAMESPACE::load<T>(src);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
     T Value;
@@ -105,7 +105,7 @@ template <typename T> T load(CPtr src) {
 template <typename T> void store(Ptr dst, T value) {
   static_assert(is_element_type_v<T>);
   if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-    ::__llvm_libc::store<T>(dst, value);
+    ::LIBC_NAMESPACE::store<T>(dst, value);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
     for (size_t I = 0; I < array_size_v<T>; ++I)
@@ -154,14 +154,18 @@ template <typename T> struct Memset {
     tail(dst, value, count);
   }
 
-  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+  LIBC_INLINE static void loop_and_tail_offset(Ptr dst, uint8_t value,
+                                               size_t count, size_t offset) {
     static_assert(SIZE > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
     do {
       block(dst + offset, value);
       offset += SIZE;
     } while (offset < count - SIZE);
     tail(dst, value, count);
+  }
+
+  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+    return loop_and_tail_offset(dst, value, count, 0);
   }
 };
 
@@ -319,7 +323,7 @@ template <typename T> struct Memmove {
 // Making the offset explicit hints the compiler to use relevant addressing mode
 // consistently.
 template <typename T> LIBC_INLINE T load(CPtr ptr, size_t offset) {
-  return ::__llvm_libc::load<T>(ptr + offset);
+  return ::LIBC_NAMESPACE::load<T>(ptr + offset);
 }
 
 // Same as above but also makes sure the loaded value is in big endian format.
@@ -564,6 +568,6 @@ LIBC_INLINE MemcmpReturnType cmp<uint8_t>(CPtr p1, CPtr p2, size_t offset) {
 template <>
 LIBC_INLINE MemcmpReturnType cmp_neq<uint8_t>(CPtr p1, CPtr p2, size_t offset);
 
-} // namespace __llvm_libc::generic
+} // namespace LIBC_NAMESPACE::generic
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_GENERIC_H

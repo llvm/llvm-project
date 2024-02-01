@@ -34,7 +34,9 @@ export namespace std {
   using std::string;
   using std::u16string;
   using std::u32string;
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
   using std::u8string;
+#endif
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::wstring;
 #endif
@@ -58,7 +60,9 @@ export namespace std {
     using std::pmr::string;
     using std::pmr::u16string;
     using std::pmr::u32string;
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
     using std::pmr::u8string;
+#endif
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     using std::pmr::wstring;
 #endif
@@ -67,15 +71,10 @@ export namespace std {
   // [basic.string.hash], hash support
   using std::hash;
 
-  // TODO MODULES is this a bug?
-#if _LIBCPP_STD_VER >= 23
-  using std::operator""s;
-#else
   inline namespace literals {
     inline namespace string_literals {
       // [basic.string.literals], suffix for basic_string literals
       using std::literals::string_literals::operator""s;
     } // namespace string_literals
-  }   // namespace literals
-#endif
+  } // namespace literals
 } // namespace std

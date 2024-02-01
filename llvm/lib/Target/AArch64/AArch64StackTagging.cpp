@@ -11,8 +11,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -580,6 +578,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // Fixup debug intrinsics to point to the new alloca.
     for (auto *DVI : Info.DbgVariableIntrinsics)
       DVI->replaceVariableLocationOp(OldAI, Info.AI);
+    for (auto *DPV : Info.DbgVariableRecords)
+      DPV->replaceVariableLocationOp(OldAI, Info.AI);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime

@@ -10,4 +10,4 @@
 
 #include "src/math/floorl.h"
 
-LIST_FLOOR_TESTS(long double, __llvm_libc::floorl)
+LIST_FLOOR_TESTS(long double, LIBC_NAMESPACE::floorl)

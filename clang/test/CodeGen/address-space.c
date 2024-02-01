@@ -53,7 +53,7 @@ void test4(MyStruct __attribute__((address_space(2))) *pPtr) {
 // X86: [[ALLOCA:%.*]] = alloca ptr addrspace(1)
 // X86-NEXT: store ptr addrspace(1) %arg, ptr [[ALLOCA]]
 // X86-NEXT: load ptr addrspace(1), ptr [[ALLOCA]]
-// X86-NEXT: getelementptr i8, ptr addrspace(1)
+// X86-NEXT: getelementptr inbounds i8, ptr addrspace(1)
 // X86-NEXT: ret ptr addrspace(1)
 void __attribute__((address_space(1)))*
 void_ptr_arithmetic_test(void __attribute__((address_space(1))) *arg) {

@@ -20,11 +20,11 @@ define void @test_no_stackslot_scavenging(float %f) #0 {
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x24, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
 ; CHECK-NEXT:    bl use_f

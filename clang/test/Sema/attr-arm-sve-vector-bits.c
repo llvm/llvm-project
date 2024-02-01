@@ -25,7 +25,7 @@ typedef __SVFloat64_t svfloat64_t;
 
 #if defined(__ARM_FEATURE_SVE_BF16)
 typedef __bf16 bfloat16_t;
-typedef __SVBFloat16_t svbfloat16_t;
+typedef __SVBfloat16_t svbfloat16_t;
 #endif
 
 typedef __SVBool_t svbool_t;

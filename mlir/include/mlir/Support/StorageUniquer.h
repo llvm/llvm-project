@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include <utility>
 
 namespace mlir {
 namespace detail {
@@ -207,7 +208,7 @@ public:
 
     // Generate a constructor function for the derived storage.
     auto ctorFn = [&](StorageAllocator &allocator) {
-      auto *storage = Storage::construct(allocator, derivedKey);
+      auto *storage = Storage::construct(allocator, std::move(derivedKey));
       if (initFn)
         initFn(storage);
       return storage;
@@ -300,9 +301,9 @@ private:
   static typename ImplTy::KeyTy getKey(Args &&...args) {
     if constexpr (llvm::is_detected<detail::has_impltype_getkey_t, ImplTy,
                                     Args...>::value)
-      return ImplTy::getKey(args...);
+      return ImplTy::getKey(std::forward<Args>(args)...);
     else
-      return typename ImplTy::KeyTy(args...);
+      return typename ImplTy::KeyTy(std::forward<Args>(args)...);
   }
 
   //===--------------------------------------------------------------------===//

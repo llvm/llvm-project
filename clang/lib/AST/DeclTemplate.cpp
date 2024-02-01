@@ -920,7 +920,7 @@ ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
 
 ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
                                                                  Kind DK)
-    : CXXRecordDecl(DK, TTK_Struct, C, nullptr, SourceLocation(),
+    : CXXRecordDecl(DK, TagTypeKind::Struct, C, nullptr, SourceLocation(),
                     SourceLocation(), nullptr, nullptr),
       SpecializationKind(TSK_Undeclared) {}
 
@@ -1193,19 +1193,6 @@ TypeAliasTemplateDecl::newCommon(ASTContext &C) const {
   auto *CommonPtr = new (C) Common;
   C.addDestruction(CommonPtr);
   return CommonPtr;
-}
-
-//===----------------------------------------------------------------------===//
-// ClassScopeFunctionSpecializationDecl Implementation
-//===----------------------------------------------------------------------===//
-
-void ClassScopeFunctionSpecializationDecl::anchor() {}
-
-ClassScopeFunctionSpecializationDecl *
-ClassScopeFunctionSpecializationDecl::CreateDeserialized(ASTContext &C,
-                                                         unsigned ID) {
-  return new (C, ID) ClassScopeFunctionSpecializationDecl(
-      nullptr, SourceLocation(), nullptr, nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1596,6 +1583,10 @@ void TemplateParamObjectDecl::printAsInit(llvm::raw_ostream &OS,
 
 TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
   switch (D->getKind()) {
+  case Decl::Kind::CXXRecord:
+    return cast<CXXRecordDecl>(D)
+        ->getDescribedTemplate()
+        ->getTemplateParameters();
   case Decl::Kind::ClassTemplate:
     return cast<ClassTemplateDecl>(D)->getTemplateParameters();
   case Decl::Kind::ClassTemplateSpecialization: {

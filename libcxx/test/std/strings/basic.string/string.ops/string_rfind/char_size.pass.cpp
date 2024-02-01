@@ -33,64 +33,39 @@ TEST_CONSTEXPR_CXX20 void test(const S& s, typename S::value_type c, typename S:
     assert(x + 1 <= s.size());
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S(""), 'b', 0, S::npos);
+  test(S(""), 'b', 1, S::npos);
+  test(S("abcde"), 'b', 0, S::npos);
+  test(S("abcde"), 'b', 1, 1);
+  test(S("abcde"), 'b', 2, 1);
+  test(S("abcde"), 'b', 4, 1);
+  test(S("abcde"), 'b', 5, 1);
+  test(S("abcde"), 'b', 6, 1);
+  test(S("abcdeabcde"), 'b', 0, S::npos);
+  test(S("abcdeabcde"), 'b', 1, 1);
+  test(S("abcdeabcde"), 'b', 5, 1);
+  test(S("abcdeabcde"), 'b', 9, 6);
+  test(S("abcdeabcde"), 'b', 10, 6);
+  test(S("abcdeabcde"), 'b', 11, 6);
+  test(S("abcdeabcdeabcdeabcde"), 'b', 0, S::npos);
+  test(S("abcdeabcdeabcdeabcde"), 'b', 1, 1);
+  test(S("abcdeabcdeabcdeabcde"), 'b', 10, 6);
+  test(S("abcdeabcdeabcdeabcde"), 'b', 19, 16);
+  test(S("abcdeabcdeabcdeabcde"), 'b', 20, 16);
+  test(S("abcdeabcdeabcdeabcde"), 'b', 21, 16);
+
+  test(S(""), 'b', S::npos);
+  test(S("abcde"), 'b', 1);
+  test(S("abcdeabcde"), 'b', 6);
+  test(S("abcdeabcdeabcdeabcde"), 'b', 16);
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test(S(""), 'b', 0, S::npos);
-    test(S(""), 'b', 1, S::npos);
-    test(S("abcde"), 'b', 0, S::npos);
-    test(S("abcde"), 'b', 1, 1);
-    test(S("abcde"), 'b', 2, 1);
-    test(S("abcde"), 'b', 4, 1);
-    test(S("abcde"), 'b', 5, 1);
-    test(S("abcde"), 'b', 6, 1);
-    test(S("abcdeabcde"), 'b', 0, S::npos);
-    test(S("abcdeabcde"), 'b', 1, 1);
-    test(S("abcdeabcde"), 'b', 5, 1);
-    test(S("abcdeabcde"), 'b', 9, 6);
-    test(S("abcdeabcde"), 'b', 10, 6);
-    test(S("abcdeabcde"), 'b', 11, 6);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 0, S::npos);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 1, 1);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 10, 6);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 19, 16);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 20, 16);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 21, 16);
-
-    test(S(""), 'b', S::npos);
-    test(S("abcde"), 'b', 1);
-    test(S("abcdeabcde"), 'b', 6);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 16);
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S(""), 'b', 0, S::npos);
-    test(S(""), 'b', 1, S::npos);
-    test(S("abcde"), 'b', 0, S::npos);
-    test(S("abcde"), 'b', 1, 1);
-    test(S("abcde"), 'b', 2, 1);
-    test(S("abcde"), 'b', 4, 1);
-    test(S("abcde"), 'b', 5, 1);
-    test(S("abcde"), 'b', 6, 1);
-    test(S("abcdeabcde"), 'b', 0, S::npos);
-    test(S("abcdeabcde"), 'b', 1, 1);
-    test(S("abcdeabcde"), 'b', 5, 1);
-    test(S("abcdeabcde"), 'b', 9, 6);
-    test(S("abcdeabcde"), 'b', 10, 6);
-    test(S("abcdeabcde"), 'b', 11, 6);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 0, S::npos);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 1, 1);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 10, 6);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 19, 16);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 20, 16);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 21, 16);
-
-    test(S(""), 'b', S::npos);
-    test(S("abcde"), 'b', 1);
-    test(S("abcdeabcde"), 'b', 6);
-    test(S("abcdeabcdeabcdeabcde"), 'b', 16);
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return true;

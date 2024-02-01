@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, ferror, (::FILE * stream)) {
   int ret;
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, ferror, (::FILE * stream)) {
   return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -570,10 +570,13 @@ define i64 @test30(i32 %A, i32 %B) {
 @PR22087 = external global i32
 define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[V:%.*]], shl (i32 1, i32 zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32))
-; CHECK-NEXT:    ret i32 [[MUL]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[MUL1]]
 ;
-  %mul = mul i32 %V, shl (i32 1, i32 zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32))
+  %ext = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+  %shl = shl i32 1, %ext
+  %mul = mul i32 %V, %shl
   ret i32 %mul
 }
 
@@ -669,9 +672,8 @@ define <2 x i32> @test_mul_canonicalize_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @test_mul_canonicalize_multiple_uses(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_canonicalize_multiple_uses(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL]], [[NEG]]
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL_NEG]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]
 ;
   %neg = sub i32 0, %x

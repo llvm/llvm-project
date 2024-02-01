@@ -550,5 +550,10 @@ TEST(WalkAST, Concepts) {
   // FIXME: Foo should be explicitly referenced.
   testWalk("template<typename T> concept Foo = true;", "void func() { ^Foo auto x = 1; }");
 }
+
+TEST(WalkAST, FriendDecl) {
+  testWalk("void $explicit^foo();", "struct Bar { friend void ^foo(); };");
+  testWalk("struct $explicit^Foo {};", "struct Bar { friend struct ^Foo; };");
+}
 } // namespace
 } // namespace clang::include_cleaner

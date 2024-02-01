@@ -69,7 +69,7 @@ static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
 
 llvm::Expected<ControlFlowContext>
 ControlFlowContext::build(const FunctionDecl &Func) {
-  if (!Func.hasBody())
+  if (!Func.doesThisDeclarationHaveABody())
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Cannot analyze function without a body");
@@ -97,6 +97,7 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
   Options.AddTemporaryDtors = true;
   Options.AddInitializers = true;
   Options.AddCXXDefaultInitExprInCtors = true;
+  Options.AddLifetime = true;
 
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();

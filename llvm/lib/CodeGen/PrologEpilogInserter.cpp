@@ -337,7 +337,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "StackSize",
                                              MF.getFunction().getSubprogram(),
                                              &MF.front())
-           << ore::NV("NumStackBytes", StackSize) << " stack bytes in function";
+           << ore::NV("NumStackBytes", StackSize)
+           << " stack bytes in function '"
+           << ore::NV("Function", MF.getFunction().getName()) << "'";
   });
 
   delete RS;
@@ -1497,7 +1499,7 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
 
     // Step backwards to get the liveness state at (immedately after) MI.
     if (LocalRS)
-      LocalRS->backward(MI);
+      LocalRS->backward(I);
 
     bool RemovedMI = false;
     for (const auto &[Idx, Op] : enumerate(MI.operands())) {
@@ -1512,11 +1514,6 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
       if (RemovedMI)
         break;
     }
-
-    // Refresh the scavenger's internal iterator in case MI was removed or more
-    // instructions were inserted after it.
-    if (LocalRS)
-      LocalRS->skipTo(std::prev(I));
 
     if (!RemovedMI)
       --I;

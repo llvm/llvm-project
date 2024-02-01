@@ -10,8 +10,8 @@
 
 #include "src/stdlib/abort.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, abort, ()) { __builtin_trap(); }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

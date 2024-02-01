@@ -134,7 +134,8 @@ public:
     DCC_FastCall,
     DCC_StdCall,
     DCC_VectorCall,
-    DCC_RegCall
+    DCC_RegCall,
+    DCC_RtdCall
   };
 
   enum AddrSpaceMapMangling { ASMM_Target, ASMM_On, ASMM_Off };
@@ -151,6 +152,7 @@ public:
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
+    MSVC2022_3 = 1933,
   };
 
   enum SYCLMajorVersion {
@@ -379,6 +381,28 @@ public:
     All,
   };
 
+  enum class VisibilityForcedKinds {
+    /// Force hidden visibility
+    ForceHidden,
+    /// Force protected visibility
+    ForceProtected,
+    /// Force default visibility
+    ForceDefault,
+    /// Don't alter the visibility
+    Source,
+  };
+
+  enum class VisibilityFromDLLStorageClassKinds {
+    /// Keep the IR-gen assigned visibility.
+    Keep,
+    /// Override the IR-gen assigned visibility with default visibility.
+    Default,
+    /// Override the IR-gen assigned visibility with hidden visibility.
+    Hidden,
+    /// Override the IR-gen assigned visibility with protected visibility.
+    Protected,
+  };
+
   enum class StrictFlexArraysLevelKind {
     /// Any trailing array member is a FAM.
     Default = 0,
@@ -389,6 +413,8 @@ public:
     /// Any trailing array member of undefined size is a FAM.
     IncompleteOnly = 3,
   };
+
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran, CX_None };
 
 public:
   /// The used language standard.
@@ -501,6 +527,11 @@ public:
   // received as a result of a standard operator new (-fcheck-new)
   bool CheckNew = false;
 
+  // In OpenACC mode, contains a user provided override for the _OPENACC macro.
+  // This exists so that we can override the macro value and test our incomplete
+  // implementation on real-world examples.
+  std::string OpenACCMacroOverride;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -596,6 +627,9 @@ public:
     return !requiresStrictPrototypes() && !OpenCL;
   }
 
+  /// Returns true if the language supports calling the 'atexit' function.
+  bool hasAtExit() const { return !(OpenMP && OpenMPIsTargetDevice); }
+
   /// Returns true if implicit int is part of the language requirements.
   bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }
 
@@ -648,6 +682,26 @@ public:
   bool isAllDefaultVisibilityExportMapping() const {
     return getDefaultVisibilityExportMapping() ==
            DefaultVisiblityExportMapping::All;
+  }
+
+  bool hasGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() !=
+           VisibilityForcedKinds::Source;
+  }
+
+  bool hasDefaultGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceDefault;
+  }
+
+  bool hasProtectedGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceProtected;
+  }
+
+  bool hasHiddenGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceHidden;
   }
 
   /// Remap path prefix according to -fmacro-prefix-path option.
@@ -731,6 +785,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setComplexRange(LO.getComplexRange());
   }
 
   bool allowFPContractWithinStatement() const {

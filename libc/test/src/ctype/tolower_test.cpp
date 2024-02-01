@@ -13,8 +13,8 @@ TEST(LlvmLibcToLower, DefaultLocale) {
   for (int ch = -255; ch < 255; ++ch) {
     // This follows pattern 'A' + 32 = 'a'.
     if ('A' <= ch && ch <= 'Z')
-      EXPECT_EQ(__llvm_libc::tolower(ch), ch + 32);
+      EXPECT_EQ(LIBC_NAMESPACE::tolower(ch), ch + 32);
     else
-      EXPECT_EQ(__llvm_libc::tolower(ch), ch);
+      EXPECT_EQ(LIBC_NAMESPACE::tolower(ch), ch);
   }
 }

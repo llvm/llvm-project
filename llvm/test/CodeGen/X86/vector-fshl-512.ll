@@ -227,9 +227,9 @@ define <64 x i8> @var_funnnel_v64i8(<64 x i8> %x, <64 x i8> %y, <64 x i8> %amt) 
 ; AVX512F-NEXT:    vpsrlw $4, %ymm5, %ymm3
 ; AVX512F-NEXT:    vpbroadcastb {{.*#+}} ymm6 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512F-NEXT:    vpand %ymm6, %ymm3, %ymm7
-; AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm8 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; AVX512F-NEXT:    vpandq %zmm8, %zmm2, %zmm2
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
-; AVX512F-NEXT:    vpbroadcastb {{.*#+}} ymm8 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
 ; AVX512F-NEXT:    vpxor %ymm3, %ymm8, %ymm9
 ; AVX512F-NEXT:    vpsllw $5, %ymm9, %ymm9
 ; AVX512F-NEXT:    vpblendvb %ymm9, %ymm7, %ymm5, %ymm5
@@ -296,9 +296,9 @@ define <64 x i8> @var_funnnel_v64i8(<64 x i8> %x, <64 x i8> %y, <64 x i8> %amt) 
 ; AVX512VL-NEXT:    vpsrlw $4, %ymm5, %ymm3
 ; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm6 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512VL-NEXT:    vpand %ymm6, %ymm3, %ymm7
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} zmm8 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; AVX512VL-NEXT:    vpandq %zmm8, %zmm2, %zmm2
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm8 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
 ; AVX512VL-NEXT:    vpxor %ymm3, %ymm8, %ymm9
 ; AVX512VL-NEXT:    vpsllw $5, %ymm9, %ymm9
 ; AVX512VL-NEXT:    vpblendvb %ymm9, %ymm7, %ymm5, %ymm5
@@ -806,7 +806,7 @@ define <32 x i16> @constant_funnnel_v32i16(<32 x i16> %x, <32 x i16> %y) nounwin
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; AVX512F-NEXT:    vpsrlw $1, %ymm2, %ymm2
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = <2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,u>
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,u]
 ; AVX512F-NEXT:    vpmulhuw %ymm3, %ymm2, %ymm4
 ; AVX512F-NEXT:    vpblendw {{.*#+}} ymm2 = ymm4[0,1,2,3,4,5,6],ymm2[7],ymm4[8,9,10,11,12,13,14],ymm2[15]
 ; AVX512F-NEXT:    vpblendd {{.*#+}} ymm2 = ymm4[0,1,2,3],ymm2[4,5,6,7]
@@ -827,7 +827,7 @@ define <32 x i16> @constant_funnnel_v32i16(<32 x i16> %x, <32 x i16> %y) nounwin
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; AVX512VL-NEXT:    vpsrlw $1, %ymm2, %ymm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = <2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,u>
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,u]
 ; AVX512VL-NEXT:    vpmulhuw %ymm3, %ymm2, %ymm4
 ; AVX512VL-NEXT:    vpblendw {{.*#+}} ymm2 = ymm4[0,1,2,3,4,5,6],ymm2[7],ymm4[8,9,10,11,12,13,14],ymm2[15]
 ; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm2 = ymm4[0,1,2,3],ymm2[4,5,6,7]
@@ -1124,7 +1124,7 @@ define <64 x i8> @splatconstant_funnnel_v64i8(<64 x i8> %x, <64 x i8> %y) nounwi
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm0
+; AVX512F-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatconstant_funnnel_v64i8:
@@ -1137,35 +1137,35 @@ define <64 x i8> @splatconstant_funnnel_v64i8(<64 x i8> %x, <64 x i8> %y) nounwi
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; AVX512VL-NEXT:    vpsrlw $4, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm0
+; AVX512VL-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: splatconstant_funnnel_v64i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllw $4, %zmm0, %zmm2
 ; AVX512BW-NEXT:    vpsrlw $4, %zmm1, %zmm0
-; AVX512BW-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VBMI2-LABEL: splatconstant_funnnel_v64i8:
 ; AVX512VBMI2:       # %bb.0:
 ; AVX512VBMI2-NEXT:    vpsllw $4, %zmm0, %zmm2
 ; AVX512VBMI2-NEXT:    vpsrlw $4, %zmm1, %zmm0
-; AVX512VBMI2-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm0
+; AVX512VBMI2-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
 ; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: splatconstant_funnnel_v64i8:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpsllw $4, %zmm0, %zmm2
 ; AVX512VLBW-NEXT:    vpsrlw $4, %zmm1, %zmm0
-; AVX512VLBW-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm0
+; AVX512VLBW-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VLVBMI2-LABEL: splatconstant_funnnel_v64i8:
 ; AVX512VLVBMI2:       # %bb.0:
 ; AVX512VLVBMI2-NEXT:    vpsllw $4, %zmm0, %zmm2
 ; AVX512VLVBMI2-NEXT:    vpsrlw $4, %zmm1, %zmm0
-; AVX512VLVBMI2-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm0
+; AVX512VLVBMI2-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
 ; AVX512VLVBMI2-NEXT:    retq
   %res = call <64 x i8> @llvm.fshl.v64i8(<64 x i8> %x, <64 x i8> %y, <64 x i8> <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>)
   ret <64 x i8> %res

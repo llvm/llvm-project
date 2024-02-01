@@ -1,4 +1,5 @@
 ; RUN: llc -O0 < %s | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 < %s | FileCheck %s
 
 source_filename = "t.c"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
@@ -90,6 +91,8 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK:         .cv_loc {{.*}} # t.c:4:5
 ; CHECK:         jmp     LBB{{.*}}
 ; CHECK: LBB2_{{.*}}:                                 # %if.end
+; CHECK-NEXT: L{{.*}}:
+; CHECK-NEXT: DEBUG_VALUE: lea_dbg_value:
 ; CHECK-NEXT:    .cv_loc {{.*}} # t.c:5:3
 ; CHECK:         leal 4(%esp), %[[reg:[^ ]*]]
 ; CHECK:         movl    %[[reg]], (%esp)

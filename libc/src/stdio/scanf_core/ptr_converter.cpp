@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 int convert_pointer(Reader *reader, const FormatSection &to_conv) {
   static const char nullptr_string[] = "(nullptr)";
@@ -40,4 +40,4 @@ int convert_pointer(Reader *reader, const FormatSection &to_conv) {
   return convert_int(reader, to_conv);
 }
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

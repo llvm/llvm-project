@@ -11,10 +11,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_MALLOC_H
 #define LLVM_LIBC_SRC_STDLIB_MALLOC_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void *malloc(size_t size);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_MALLOC_H

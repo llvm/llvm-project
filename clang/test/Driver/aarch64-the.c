@@ -22,5 +22,5 @@
 // INVALID: error: unsupported argument 'armv7-a+the' to option '-march='
 // ENABLED: "-target-feature" "+the"
 // NOT_ENABLED-NOT: "-target-feature" "+the"
-// DISABLED: "-target-feature" "-the"
+// DISABLED-NOT: "-target-feature" "{{[-+]}}the"
 

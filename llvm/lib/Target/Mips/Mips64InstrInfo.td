@@ -164,20 +164,20 @@ def NOR64  : LogicNOR<"nor", GPR64Opnd>, ADD_FM<0, 0x27>, GPR_64;
 
 /// Shift Instructions
 let AdditionalPredicates = [NotInMicroMips] in {
-  def DSLL : shift_rotate_imm<"dsll", uimm6, GPR64Opnd, II_DSLL, shl,
+  def DSLL : shift_rotate_imm<"dsll", uimm6, GPR64Opnd, II_DSLL, mshl_64,
                               immZExt6>,
              SRA_FM<0x38, 0>, ISA_MIPS3;
-  def DSRL : shift_rotate_imm<"dsrl", uimm6, GPR64Opnd, II_DSRL, srl,
+  def DSRL : shift_rotate_imm<"dsrl", uimm6, GPR64Opnd, II_DSRL, msrl_64,
                               immZExt6>,
              SRA_FM<0x3a, 0>, ISA_MIPS3;
-  def DSRA : shift_rotate_imm<"dsra", uimm6, GPR64Opnd, II_DSRA, sra,
+  def DSRA : shift_rotate_imm<"dsra", uimm6, GPR64Opnd, II_DSRA, msra_64,
                               immZExt6>,
              SRA_FM<0x3b, 0>, ISA_MIPS3;
-  def DSLLV  : shift_rotate_reg<"dsllv", GPR64Opnd, II_DSLLV, shl>,
+  def DSLLV  : shift_rotate_reg<"dsllv", GPR64Opnd, II_DSLLV, mshl_64>,
                SRLV_FM<0x14, 0>, ISA_MIPS3;
-  def DSRAV  : shift_rotate_reg<"dsrav", GPR64Opnd, II_DSRAV, sra>,
+  def DSRAV  : shift_rotate_reg<"dsrav", GPR64Opnd, II_DSRAV, msra_64>,
                SRLV_FM<0x17, 0>, ISA_MIPS3;
-  def DSRLV  : shift_rotate_reg<"dsrlv", GPR64Opnd, II_DSRLV, srl>,
+  def DSRLV  : shift_rotate_reg<"dsrlv", GPR64Opnd, II_DSRLV, msrl_64>,
                SRLV_FM<0x16, 0>, ISA_MIPS3;
   def DSLL32 : shift_rotate_imm<"dsll32", uimm5, GPR64Opnd, II_DSLL32>,
                SRA_FM<0x3c, 0>, ISA_MIPS3;

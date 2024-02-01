@@ -72,6 +72,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
   case CC_Swift: return llvm::CallingConv::Swift;
   case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
+  case CC_M68kRTD: return llvm::CallingConv::M68k_RTD;
   }
 }
 
@@ -252,6 +253,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
   if (D->hasAttr<PreserveAllAttr>())
     return CC_PreserveAll;
 
+  if (D->hasAttr<M68kRTDAttr>())
+    return CC_M68kRTD;
+
   return CC_C;
 }
 
@@ -298,7 +302,7 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
   setCUDAKernelCallingConvention(FT, CGM, MD);
   auto prototype = FT.getAs<FunctionProtoType>();
 
-  if (MD->isInstance()) {
+  if (MD->isImplicitObjectMemberFunction()) {
     // The abstract case is perfectly fine.
     const CXXRecordDecl *ThisType = TheCXXABI.getThisArgumentTypeForMethod(MD);
     return arrangeCXXMethodType(ThisType, prototype.getTypePtr(), MD);
@@ -448,7 +452,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
 const CGFunctionInfo &
 CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
-    if (MD->isInstance())
+    if (MD->isImplicitObjectMemberFunction())
       return arrangeCXXMethodDeclaration(MD);
 
   CanQualType FTy = FD->getType()->getCanonicalTypeUnqualified();
@@ -1376,7 +1380,7 @@ static void CreateCoercedStore(llvm::Value *Src,
   llvm::PointerType *DstPtrTy = llvm::dyn_cast<llvm::PointerType>(DstTy);
   if (SrcPtrTy && DstPtrTy &&
       SrcPtrTy->getAddressSpace() != DstPtrTy->getAddressSpace()) {
-    Src = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Src, DstTy);
+    Src = CGF.Builder.CreateAddrSpaceCast(Src, DstTy);
     CGF.Builder.CreateStore(Src, Dst, DstIsVolatile);
     return;
   }
@@ -1763,14 +1767,31 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
       FPT->isNothrow())
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
 
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+  unsigned SMEBits = FPT->getAArch64SMEAttributes();
+  if (SMEBits & FunctionType::SME_PStateSMEnabledMask)
     FuncAttrs.addAttribute("aarch64_pstate_sm_enabled");
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask)
+  if (SMEBits & FunctionType::SME_PStateSMCompatibleMask)
     FuncAttrs.addAttribute("aarch64_pstate_sm_compatible");
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateZASharedMask)
-    FuncAttrs.addAttribute("aarch64_pstate_za_shared");
-  if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateZAPreservedMask)
-    FuncAttrs.addAttribute("aarch64_pstate_za_preserved");
+
+  // ZA
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves)
+    FuncAttrs.addAttribute("aarch64_preserves_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In)
+    FuncAttrs.addAttribute("aarch64_in_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Out)
+    FuncAttrs.addAttribute("aarch64_out_za");
+  if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_InOut)
+    FuncAttrs.addAttribute("aarch64_inout_za");
+
+  // ZT0
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Preserves)
+    FuncAttrs.addAttribute("aarch64_preserves_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_In)
+    FuncAttrs.addAttribute("aarch64_in_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_Out)
+    FuncAttrs.addAttribute("aarch64_out_zt0");
+  if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
+    FuncAttrs.addAttribute("aarch64_inout_zt0");
 }
 
 static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,
@@ -2442,9 +2463,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
-
-    if (TargetDecl->hasAttr<ArmNewZAAttr>())
-      FuncAttrs.addAttribute("aarch64_pstate_za_new");
   }
 
   // Attach "no-builtins" attributes to:
@@ -2608,6 +2626,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   if (IRFunctionArgs.hasSRetArg()) {
     llvm::AttrBuilder SRETAttrs(getLLVMContext());
     SRETAttrs.addStructRetAttr(getTypes().ConvertTypeForMem(RetTy));
+    SRETAttrs.addAttribute(llvm::Attribute::Writable);
+    SRETAttrs.addAttribute(llvm::Attribute::DeadOnUnwind);
     hasUsedSRet = true;
     if (RetAI.getInReg())
       SRETAttrs.addAttribute(llvm::Attribute::InReg);
@@ -2715,7 +2735,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
       auto *Decl = ParamType->getAsRecordDecl();
       if (CodeGenOpts.PassByValueIsNoAlias && Decl &&
-          Decl->getArgPassingRestrictions() == RecordDecl::APK_CanPassInRegs)
+          Decl->getArgPassingRestrictions() ==
+              RecordArgPassingKind::CanPassInRegs)
         // When calling the function, the pointer passed in will be the only
         // reference to the underlying object. Mark it accordingly.
         Attrs.addAttribute(llvm::Attribute::NoAlias);
@@ -3058,7 +3079,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // indicates dereferenceability, and if the size is constant we can
             // use the dereferenceable attribute (which requires the size in
             // bytes).
-            if (ArrTy->getSizeModifier() == ArrayType::Static) {
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
@@ -3082,7 +3103,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // For C99 VLAs with the static keyword, we don't know the size so
             // we can't use the dereferenceable attribute, but in addrspace(0)
             // we know that it must be nonnull.
-            if (ArrTy->getSizeModifier() == VariableArrayType::Static) {
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
@@ -3502,7 +3523,9 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
       return nullptr;
     // These aren't actually possible for non-coerced returns, and we
     // only care about non-coerced returns on this code path.
-    assert(!SI->isAtomic() && !SI->isVolatile());
+    // All memory instructions inside __try block are volatile.
+    assert(!SI->isAtomic() &&
+           (!SI->isVolatile() || CGF.currentFunctionUsesSEHTry()));
     return SI;
   };
   // If there are multiple uses of the return-value slot, just check
@@ -5600,6 +5623,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     CI = Builder.CreateInvoke(IRFuncTy, CalleePtr, Cont, InvokeDest, IRCallArgs,
                               BundleList);
     EmitBlock(Cont);
+  }
+  if (CI->getCalledFunction() && CI->getCalledFunction()->hasName() &&
+      CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
+    SetSqrtFPAccuracy(CI);
   }
   if (callOrInvoke)
     *callOrInvoke = CI;

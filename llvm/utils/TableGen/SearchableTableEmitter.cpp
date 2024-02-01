@@ -31,12 +31,12 @@ using namespace llvm;
 
 namespace {
 
-int getAsInt(Init *B) {
+int64_t getAsInt(Init *B) {
   return cast<IntInit>(
              B->convertInitializerTo(IntRecTy::get(B->getRecordKeeper())))
       ->getValue();
 }
-int getInt(Record *R, StringRef Field) {
+int64_t getInt(Record *R, StringRef Field) {
   return getAsInt(R->getValueInit(Field));
 }
 

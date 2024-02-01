@@ -21,7 +21,7 @@
 
 #include "src/__support/macros/sanitizer.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 namespace internal {
@@ -642,6 +642,6 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 #endif
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H

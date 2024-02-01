@@ -19,21 +19,9 @@ F:              ; preds = %0
 
 define void @foo_switch(i64 %C, ptr %P) {
 ; CHECK-LABEL: @foo_switch(
-; CHECK-NEXT:    switch i64 [[C:%.*]], label [[BB0:%.*]] [
-; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       bb0:
+; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    store i32 7, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    store i32 7, ptr [[P]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       bb2:
-; CHECK-NEXT:    store i32 7, ptr [[P]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    ret void
 ;
   switch i64 %C, label %bb0 [
   i64 1, label %bb1
@@ -105,4 +93,64 @@ bb2:
 end:
   %cond = phi fast float [ 0.0, %bb0 ], [ %x, %bb1 ], [ %x, %bb2 ]
   ret float %cond
+}
+
+define i32 @hoist_zext_flags_preserve(i1 %C, i8 %x) {
+; CHECK-LABEL: @hoist_zext_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = zext nneg i8 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = zext nneg i8 %x to i32
+  ret i32 %z1
+F:
+  %z2 = zext nneg i8 %x to i32
+  ret i32 %z2
+}
+
+define i32 @hoist_zext_flags_drop(i1 %C, i8 %x) {
+; CHECK-LABEL: @hoist_zext_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = zext nneg i8 %x to i32
+  ret i32 %z1
+F:
+  %z2 = zext i8 %x to i32
+  ret i32 %z2
+}
+
+define i32 @hoist_or_flags_preserve(i1 %C, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_or_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = or disjoint i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = or disjoint i32 %x, %y
+  ret i32 %z1
+F:
+  %z2 = or disjoint i32 %x, %y
+  ret i32 %z2
+}
+
+define i32 @hoist_or_flags_drop(i1 %C, i32 %x, i32 %y) {
+; CHECK-LABEL: @hoist_or_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = or i32 %x, %y
+  ret i32 %z1
+F:
+  %z2 = or disjoint i32 %x, %y
+  ret i32 %z2
 }

@@ -95,6 +95,15 @@ private:
   /// from meta data in the file.
   void discoverFileObjects();
 
+  /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
+  /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
+  /// found.
+  Error discoverRtFiniAddress();
+
+  /// If DT_FINI_ARRAY is used for instrumentation, update the relocation of its
+  /// first entry to point to the instrumentation library's fini address.
+  void updateRtFiniReloc();
+
   /// Create and initialize metadata rewriters for this instance.
   void initializeMetadataManager();
 
@@ -173,6 +182,9 @@ private:
 
   /// Process metadata in special sections after CFG is built for functions.
   void processMetadataPostCFG();
+
+  /// Make changes to metadata before the binary is emitted.
+  void finalizeMetadataPreEmit();
 
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
@@ -391,12 +403,6 @@ private:
   /// Manage a pipeline of metadata handlers.
   class MetadataManager MetadataManager;
 
-  /// Get the contents of the LSDA section for this binary.
-  ArrayRef<uint8_t> getLSDAData();
-
-  /// Get the mapped address of the LSDA section for this binary.
-  uint64_t getLSDAAddress();
-
   static const char TimerGroupName[];
 
   static const char TimerGroupDesc[];
@@ -421,6 +427,7 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;
@@ -509,11 +516,11 @@ private:
   };
 
   /// AArch64 PLT sections.
-  const PLTSectionInfo AArch64_PLTSections[3] = {
-      {".plt"}, {".iplt"}, {nullptr}};
+  const PLTSectionInfo AArch64_PLTSections[4] = {
+      {".plt"}, {".plt.got"}, {".iplt"}, {nullptr}};
 
   /// RISCV PLT sections.
-  const PLTSectionInfo RISCV_PLTSections[3] = {{".plt"}, {nullptr}};
+  const PLTSectionInfo RISCV_PLTSections[2] = {{".plt"}, {nullptr}};
 
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.
@@ -540,7 +547,6 @@ private:
   }
 
   /// Exception handling and stack unwinding information in this binary.
-  ErrorOr<BinarySection &> LSDASection{std::errc::bad_address};
   ErrorOr<BinarySection &> EHFrameSection{std::errc::bad_address};
 
   /// .note.gnu.build-id section.
@@ -584,7 +590,8 @@ private:
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
-                                   const MCRegisterInfo *RegInfo);
+                                   const MCRegisterInfo *RegInfo,
+                                   const MCSubtargetInfo *STI);
 
 } // namespace bolt
 } // namespace llvm

@@ -1160,7 +1160,11 @@ Status CommandInterpreter::AddUserCommand(llvm::StringRef name,
 
   if (UserCommandExists(name)) {
     if (!can_replace) {
-      result.SetErrorString("user command exists and force replace not set");
+      result.SetErrorStringWithFormatv(
+          "user command \"{0}\" already exists and force replace was not set "
+          "by --overwrite or 'settings set interpreter.require-overwrite "
+          "false'",
+          name);
       return result;
     }
     if (cmd_sp->IsMultiwordObject()) {
@@ -1773,7 +1777,7 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
 
       StreamString value_strm;
       const bool show_type = false;
-      scalar.GetValue(&value_strm, show_type);
+      scalar.GetValue(value_strm, show_type);
       size_t value_string_size = value_strm.GetSize();
       if (value_string_size) {
         expr_str = value_strm.GetData();

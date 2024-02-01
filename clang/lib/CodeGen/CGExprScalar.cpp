@@ -904,6 +904,9 @@ public:
   }
   Value *VisitAsTypeExpr(AsTypeExpr *CE);
   Value *VisitAtomicExpr(AtomicExpr *AE);
+  Value *VisitPackIndexingExpr(PackIndexingExpr *E) {
+    return Visit(E->getSelectedExpr());
+  }
 };
 }  // end anonymous namespace.
 
@@ -1894,8 +1897,8 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // initializer, since LLVM optimizers generally do not want to touch
   // shuffles.
   unsigned CurIdx = 0;
-  bool VIsUndefShuffle = false;
-  llvm::Value *V = llvm::UndefValue::get(VType);
+  bool VIsPoisonShuffle = false;
+  llvm::Value *V = llvm::PoisonValue::get(VType);
   for (unsigned i = 0; i != NumInitElements; ++i) {
     Expr *IE = E->getInit(i);
     Value *Init = Visit(IE);
@@ -1915,16 +1918,16 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
           llvm::ConstantInt *C = cast<llvm::ConstantInt>(EI->getIndexOperand());
           Value *LHS = nullptr, *RHS = nullptr;
           if (CurIdx == 0) {
-            // insert into undef -> shuffle (src, undef)
+            // insert into poison -> shuffle (src, poison)
             // shufflemask must use an i32
             Args.push_back(getAsInt32(C, CGF.Int32Ty));
             Args.resize(ResElts, -1);
 
             LHS = EI->getVectorOperand();
             RHS = V;
-            VIsUndefShuffle = true;
-          } else if (VIsUndefShuffle) {
-            // insert into undefshuffle && size match -> shuffle (v, src)
+            VIsPoisonShuffle = true;
+          } else if (VIsPoisonShuffle) {
+            // insert into poison shuffle && size match -> shuffle (v, src)
             llvm::ShuffleVectorInst *SVV = cast<llvm::ShuffleVectorInst>(V);
             for (unsigned j = 0; j != CurIdx; ++j)
               Args.push_back(getMaskElt(SVV, j, 0));
@@ -1933,7 +1936,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
             LHS = cast<llvm::ShuffleVectorInst>(V)->getOperand(0);
             RHS = EI->getVectorOperand();
-            VIsUndefShuffle = false;
+            VIsPoisonShuffle = false;
           }
           if (!Args.empty()) {
             V = Builder.CreateShuffleVector(LHS, RHS, Args);
@@ -1944,7 +1947,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       }
       V = Builder.CreateInsertElement(V, Init, Builder.getInt32(CurIdx),
                                       "vecinit");
-      VIsUndefShuffle = false;
+      VIsPoisonShuffle = false;
       ++CurIdx;
       continue;
     }
@@ -1962,9 +1965,9 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
       if (OpTy->getNumElements() == ResElts) {
         for (unsigned j = 0; j != CurIdx; ++j) {
-          // If the current vector initializer is a shuffle with undef, merge
+          // If the current vector initializer is a shuffle with poison, merge
           // this shuffle directly into it.
-          if (VIsUndefShuffle) {
+          if (VIsPoisonShuffle) {
             Args.push_back(getMaskElt(cast<llvm::ShuffleVectorInst>(V), j, 0));
           } else {
             Args.push_back(j);
@@ -1974,7 +1977,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
           Args.push_back(getMaskElt(SVI, j, Offset));
         Args.resize(ResElts, -1);
 
-        if (VIsUndefShuffle)
+        if (VIsPoisonShuffle)
           V = cast<llvm::ShuffleVectorInst>(V)->getOperand(0);
 
         Init = SVOp;
@@ -1997,12 +2000,12 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       Args.resize(ResElts, -1);
     }
 
-    // If V is undef, make sure it ends up on the RHS of the shuffle to aid
+    // If V is poison, make sure it ends up on the RHS of the shuffle to aid
     // merging subsequent shuffles into this one.
     if (CurIdx == 0)
       std::swap(V, Init);
     V = Builder.CreateShuffleVector(V, Init, Args, "vecinit");
-    VIsUndefShuffle = isa<llvm::UndefValue>(Init);
+    VIsPoisonShuffle = isa<llvm::PoisonValue>(Init);
     CurIdx += InitElts;
   }
 
@@ -2084,11 +2087,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     Value *Src = Visit(const_cast<Expr*>(E));
     llvm::Type *SrcTy = Src->getType();
     llvm::Type *DstTy = ConvertType(DestTy);
-    if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
-        SrcTy->getPointerAddressSpace() != DstTy->getPointerAddressSpace()) {
-      llvm_unreachable("wrong cast for pointers in different address spaces"
-                       "(must be an address space cast)!");
-    }
+    assert(
+        (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
+         SrcTy->getPointerAddressSpace() == DstTy->getPointerAddressSpace()) &&
+        "Address-space cast must be used to convert address spaces");
 
     if (CGF.SanOpts.has(SanitizerKind::CFIUnrelatedCast)) {
       if (auto *PT = DestTy->getAs<PointerType>()) {
@@ -2225,16 +2227,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Visit(const_cast<Expr*>(E));
 
   case CK_NoOp: {
-    llvm::Value *V = Visit(const_cast<Expr *>(E));
-    if (V) {
-      // CK_NoOp can model a pointer qualification conversion, which can remove
-      // an array bound and change the IR type.
-      // FIXME: Once pointee types are removed from IR, remove this.
-      llvm::Type *T = ConvertType(DestTy);
-      if (T != V->getType())
-        V = Builder.CreateBitCast(V, T);
-    }
-    return V;
+    return CE->changesVolatileQualification() ? EmitLoadOfLValue(CE)
+                                              : Visit(const_cast<Expr *>(E));
   }
 
   case CK_BaseToDerived: {
@@ -2580,7 +2574,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       // For atomic bool increment, we just store true and return it for
       // preincrement, do an atomic swap with true for postincrement
       return Builder.CreateAtomicRMW(
-          llvm::AtomicRMWInst::Xchg, LV.getPointer(CGF), True,
+          llvm::AtomicRMWInst::Xchg, LV.getAddress(CGF), True,
           llvm::AtomicOrdering::SequentiallyConsistent);
     }
     // Special case for atomic increment / decrement on integers, emit
@@ -2598,7 +2592,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       llvm::Value *amt = CGF.EmitToMemory(
           llvm::ConstantInt::get(ConvertType(type), 1, true), type);
       llvm::Value *old =
-          Builder.CreateAtomicRMW(aop, LV.getPointer(CGF), amt,
+          Builder.CreateAtomicRMW(aop, LV.getAddress(CGF), amt,
                                   llvm::AtomicOrdering::SequentiallyConsistent);
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
@@ -2930,7 +2924,7 @@ Value *ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
   // Perform vector logical not on comparison with zero vector.
   if (E->getType()->isVectorType() &&
       E->getType()->castAs<VectorType>()->getVectorKind() ==
-          VectorType::GenericVector) {
+          VectorKind::Generic) {
     Value *Oper = Visit(E->getSubExpr());
     Value *Zero = llvm::Constant::getNullValue(Oper->getType());
     Value *Result;
@@ -3052,9 +3046,10 @@ Value *
 ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                               const UnaryExprOrTypeTraitExpr *E) {
   QualType TypeToSize = E->getTypeOfArgument();
-  if (E->getKind() == UETT_SizeOf) {
+  if (auto Kind = E->getKind();
+      Kind == UETT_SizeOf || Kind == UETT_DataSizeOf) {
     if (const VariableArrayType *VAT =
-          CGF.getContext().getAsVariableArrayType(TypeToSize)) {
+            CGF.getContext().getAsVariableArrayType(TypeToSize)) {
       if (E->isArgumentType()) {
         // sizeof(type) - make sure to emit the VLA size.
         CGF.EmitVariablyModifiedType(TypeToSize);
@@ -3081,6 +3076,9 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                 E->getTypeOfArgument()->getPointeeType()))
             .getQuantity();
     return llvm::ConstantInt::get(CGF.SizeTy, Alignment);
+  } else if (E->getKind() == UETT_VectorElements) {
+    auto *VecTy = cast<llvm::VectorType>(ConvertType(E->getTypeOfArgument()));
+    return Builder.CreateElementCount(CGF.SizeTy, VecTy->getElementCount());
   }
 
   // If this isn't sizeof(vla), the result must be constant; use the constant
@@ -3319,7 +3317,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
                                  E->getExprLoc()),
             LHSTy);
         Value *OldVal = Builder.CreateAtomicRMW(
-            AtomicOp, LHSLV.getPointer(CGF), Amt,
+            AtomicOp, LHSLV.getAddress(CGF), Amt,
             llvm::AtomicOrdering::SequentiallyConsistent);
 
         // Since operation is atomic, the result type is guaranteed to be the
@@ -3721,10 +3719,12 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   // Explicitly handle GNU void* and function pointer arithmetic extensions. The
   // GNU void* casts amount to no-ops since our void* type is i8*, but this is
   // future proof.
+  llvm::Type *elemTy;
   if (elementType->isVoidType() || elementType->isFunctionType())
-    return CGF.Builder.CreateGEP(CGF.Int8Ty, pointer, index, "add.ptr");
+    elemTy = CGF.Int8Ty;
+  else
+    elemTy = CGF.ConvertTypeForMem(elementType);
 
-  llvm::Type *elemTy = CGF.ConvertTypeForMem(elementType);
   if (CGF.getLangOpts().isSignedOverflowDefined())
     return CGF.Builder.CreateGEP(elemTy, pointer, index, "add.ptr");
 
@@ -4567,6 +4567,12 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
     if (LHSCondVal) { // If we have 1 && X, just emit X.
       CGF.incrementProfileCounter(E);
 
+      // If the top of the logical operator nest, reset the MCDC temp to 0.
+      if (CGF.MCDCLogOpStack.empty())
+        CGF.maybeResetMCDCCondBitmap(E);
+
+      CGF.MCDCLogOpStack.push_back(E);
+
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
       // If we're generating for profiling or coverage, generate a branch to a
@@ -4575,6 +4581,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
       // "FalseBlock" after the increment is done.
       if (InstrumentRegions &&
           CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
+        CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
         llvm::BasicBlock *FBlock = CGF.createBasicBlock("land.end");
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("land.rhscnt");
         Builder.CreateCondBr(RHSCond, RHSBlockCnt, FBlock);
@@ -4584,6 +4591,11 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
         CGF.EmitBlock(FBlock);
       }
 
+      CGF.MCDCLogOpStack.pop_back();
+      // If the top of the logical operator nest, update the MCDC bitmap.
+      if (CGF.MCDCLogOpStack.empty())
+        CGF.maybeUpdateMCDCTestVectorBitmap(E);
+
       // ZExt result to int or bool.
       return Builder.CreateZExtOrBitCast(RHSCond, ResTy, "land.ext");
     }
@@ -4592,6 +4604,12 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
     if (!CGF.ContainsLabel(E->getRHS()))
       return llvm::Constant::getNullValue(ResTy);
   }
+
+  // If the top of the logical operator nest, reset the MCDC temp to 0.
+  if (CGF.MCDCLogOpStack.empty())
+    CGF.maybeResetMCDCCondBitmap(E);
+
+  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("land.end");
   llvm::BasicBlock *RHSBlock  = CGF.createBasicBlock("land.rhs");
@@ -4625,6 +4643,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   // condition coverage.
   if (InstrumentRegions &&
       CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
+    CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
     llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("land.rhscnt");
     Builder.CreateCondBr(RHSCond, RHSBlockCnt, ContBlock);
     CGF.EmitBlock(RHSBlockCnt);
@@ -4641,6 +4660,11 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   }
   // Insert an entry into the phi node for the edge with the value of RHSCond.
   PN->addIncoming(RHSCond, RHSBlock);
+
+  CGF.MCDCLogOpStack.pop_back();
+  // If the top of the logical operator nest, update the MCDC bitmap.
+  if (CGF.MCDCLogOpStack.empty())
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // Artificial location to preserve the scope information
   {
@@ -4683,6 +4707,12 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
     if (!LHSCondVal) { // If we have 0 || X, just emit X.
       CGF.incrementProfileCounter(E);
 
+      // If the top of the logical operator nest, reset the MCDC temp to 0.
+      if (CGF.MCDCLogOpStack.empty())
+        CGF.maybeResetMCDCCondBitmap(E);
+
+      CGF.MCDCLogOpStack.push_back(E);
+
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
       // If we're generating for profiling or coverage, generate a branch to a
@@ -4691,6 +4721,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
       // "FalseBlock" after the increment is done.
       if (InstrumentRegions &&
           CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
+        CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
         llvm::BasicBlock *FBlock = CGF.createBasicBlock("lor.end");
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("lor.rhscnt");
         Builder.CreateCondBr(RHSCond, FBlock, RHSBlockCnt);
@@ -4700,6 +4731,11 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
         CGF.EmitBlock(FBlock);
       }
 
+      CGF.MCDCLogOpStack.pop_back();
+      // If the top of the logical operator nest, update the MCDC bitmap.
+      if (CGF.MCDCLogOpStack.empty())
+        CGF.maybeUpdateMCDCTestVectorBitmap(E);
+
       // ZExt result to int or bool.
       return Builder.CreateZExtOrBitCast(RHSCond, ResTy, "lor.ext");
     }
@@ -4708,6 +4744,12 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
     if (!CGF.ContainsLabel(E->getRHS()))
       return llvm::ConstantInt::get(ResTy, 1);
   }
+
+  // If the top of the logical operator nest, reset the MCDC temp to 0.
+  if (CGF.MCDCLogOpStack.empty())
+    CGF.maybeResetMCDCCondBitmap(E);
+
+  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("lor.end");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("lor.rhs");
@@ -4745,6 +4787,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   // condition coverage.
   if (InstrumentRegions &&
       CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
+    CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
     llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("lor.rhscnt");
     Builder.CreateCondBr(RHSCond, ContBlock, RHSBlockCnt);
     CGF.EmitBlock(RHSBlockCnt);
@@ -4757,6 +4800,11 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   // into the phi node for the edge with the value of RHSCond.
   CGF.EmitBlock(ContBlock);
   PN->addIncoming(RHSCond, RHSBlock);
+
+  CGF.MCDCLogOpStack.pop_back();
+  // If the top of the logical operator nest, update the MCDC bitmap.
+  if (CGF.MCDCLogOpStack.empty())
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // ZExt result to int.
   return Builder.CreateZExtOrBitCast(PN, ResTy, "lor.ext");
@@ -4902,6 +4950,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
     return Builder.CreateSelect(CondV, LHS, RHS, "cond");
   }
 
+  // If the top of the logical operator nest, reset the MCDC temp to 0.
+  if (CGF.MCDCLogOpStack.empty())
+    CGF.maybeResetMCDCCondBitmap(condExpr);
+
   llvm::BasicBlock *LHSBlock = CGF.createBasicBlock("cond.true");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("cond.false");
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("cond.end");
@@ -4911,6 +4963,13 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
                            CGF.getProfileCount(lhsExpr));
 
   CGF.EmitBlock(LHSBlock);
+
+  // If the top of the logical operator nest, update the MCDC bitmap for the
+  // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
+  // may also contain a boolean expression.
+  if (CGF.MCDCLogOpStack.empty())
+    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+
   CGF.incrementProfileCounter(E);
   eval.begin(CGF);
   Value *LHS = Visit(lhsExpr);
@@ -4920,6 +4979,13 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   Builder.CreateBr(ContBlock);
 
   CGF.EmitBlock(RHSBlock);
+
+  // If the top of the logical operator nest, update the MCDC bitmap for the
+  // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
+  // may also contain a boolean expression.
+  if (CGF.MCDCLogOpStack.empty())
+    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+
   eval.begin(CGF);
   Value *RHS = Visit(rhsExpr);
   eval.end(CGF);
@@ -4937,6 +5003,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   llvm::PHINode *PN = Builder.CreatePHI(LHS->getType(), 2, "cond");
   PN->addIncoming(LHS, LHSBlock);
   PN->addIncoming(RHS, RHSBlock);
+
   return PN;
 }
 
@@ -5295,8 +5362,8 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
     } else {
       // Otherwise this is array-like indexing. The local offset is the index
       // multiplied by the element size.
-      auto *ElementSize = llvm::ConstantInt::get(
-          IntPtrTy, DL.getTypeAllocSize(GTI.getIndexedType()));
+      auto *ElementSize =
+          llvm::ConstantInt::get(IntPtrTy, GTI.getSequentialElementStride(DL));
       auto *IndexS = Builder.CreateIntCast(Index, IntPtrTy, /*isSigned=*/true);
       LocalOffset = eval(BO_Mul, ElementSize, IndexS);
     }

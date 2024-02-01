@@ -530,19 +530,19 @@ TEST_F(FormatTestCSharp, AttributesIndentation) {
   verifyFormat("[SuppressMessage(\"A\", \"B\", Justification = \"C\")]\n"
                "public override X Y()\n"
                "{\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("[SuppressMessage]\n"
                "public X Y()\n"
                "{\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("[SuppressMessage]\n"
                "public override X Y()\n"
                "{\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("public A(B b) : base(b)\n"
@@ -551,7 +551,7 @@ TEST_F(FormatTestCSharp, AttributesIndentation) {
                "    public override X Y()\n"
                "    {\n"
                "    }\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("public A : Base\n"
@@ -560,7 +560,7 @@ TEST_F(FormatTestCSharp, AttributesIndentation) {
                "[Test]\n"
                "public Foo()\n"
                "{\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("namespace\n"
@@ -572,7 +572,7 @@ TEST_F(FormatTestCSharp, AttributesIndentation) {
                "public Foo()\n"
                "{\n"
                "}\n"
-               "}\n",
+               "}",
                Style);
 }
 
@@ -1304,6 +1304,18 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
                "}",
                Style);
 
+  // When the "where" line is not to be formatted, following lines should not
+  // take on its indentation.
+  verifyFormat("class ItemFactory<T>\n"
+               "    where T : new() {\n"
+               "  int f() {}\n"
+               "}",
+               "class ItemFactory<T>\n"
+               "    where T : new() {\n"
+               "  int f() {}\n"
+               "}",
+               Style, {tooling::Range(43, 13)});
+
   verifyFormat("class Dictionary<TKey, TVal>\n"
                "    where TKey : IComparable<TKey>\n"
                "    where TVal : IMyInterface {\n"
@@ -1561,7 +1573,7 @@ TEST_F(FormatTestCSharp, NamespaceIndentation) {
                "public interface Name1\n"
                "{\n"
                "}\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("namespace A.B\n"
@@ -1569,7 +1581,7 @@ TEST_F(FormatTestCSharp, NamespaceIndentation) {
                "public interface Name1\n"
                "{\n"
                "}\n"
-               "}\n",
+               "}",
                Style);
 
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
@@ -1582,7 +1594,7 @@ TEST_F(FormatTestCSharp, NamespaceIndentation) {
                "    {\n"
                "    }\n"
                "}\n"
-               "}\n",
+               "}",
                Style);
 
   Style.NamespaceIndentation = FormatStyle::NI_All;
@@ -1592,7 +1604,7 @@ TEST_F(FormatTestCSharp, NamespaceIndentation) {
                "    public interface Name1\n"
                "    {\n"
                "    }\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("namespace A\n"
@@ -1603,7 +1615,7 @@ TEST_F(FormatTestCSharp, NamespaceIndentation) {
                "        {\n"
                "        }\n"
                "    }\n"
-               "}\n",
+               "}",
                Style);
 }
 
@@ -1613,7 +1625,7 @@ TEST_F(FormatTestCSharp, SwitchExpression) {
                "    1 => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0),\n"
                "    2 => 1,\n"
                "    _ => 2\n"
-               "};\n",
+               "};",
                Style);
 }
 
@@ -1625,12 +1637,12 @@ TEST_F(FormatTestCSharp, EmptyShortBlock) {
                "  doA();\n"
                "} catch (Exception e) {\n"
                "  e.printStackTrace();\n"
-               "}\n",
+               "}",
                Style);
 
   verifyFormat("try {\n"
                "  doA();\n"
-               "} catch (Exception e) {}\n",
+               "} catch (Exception e) {}",
                Style);
 }
 

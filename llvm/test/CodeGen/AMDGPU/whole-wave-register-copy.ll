@@ -19,7 +19,7 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    buffer_store_dword a32, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX90A-NEXT:    v_writelane_b32 v40, s16, 2
-; GFX90A-NEXT:    ; implicit-def: $vgpr0
+; GFX90A-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX90A-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1

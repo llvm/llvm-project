@@ -176,8 +176,7 @@ packLinalgMetadataOnce(SmallVectorImpl<AffineMap> &indexingMaps,
     }
 
     // We can only pack AffineDimExpr atm.
-    if (!map.getResult(maybeOperandDimensionToPack.value())
-             .isa<AffineDimExpr>())
+    if (!isa<AffineDimExpr>(map.getResult(maybeOperandDimensionToPack.value())))
       return failure();
 
     // Add `newDim` to the results of the map.
@@ -203,7 +202,7 @@ struct PackedOperandsDim {
 
 /// Helper struct to encode packing along all dimensions of a LinalgOp.
 struct PackedOperandsDimList {
-  void push_back(PackedOperandsDim &&packedOperandsDims) {
+  void pushBack(PackedOperandsDim &&packedOperandsDims) {
     spec.emplace_back(packedOperandsDims);
   }
   /// Return all the dims that have been packed for operand @ `operandPos`.
@@ -378,20 +377,17 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
                                                    tensor::UnPackOp unPackOp) {
   // 1. Filter out NYI cases.
-  if (!unPackOp.getOuterDimsPerm().empty())
-    return rewriter.notifyMatchFailure(unPackOp, "outer dims perm NYI");
-
-  RankedTensorType packedTensorType = unPackOp.getSourceType();
-  if (!packedTensorType.hasStaticShape()) {
-    return rewriter.notifyMatchFailure(
-        unPackOp,
-        "non-static shape NYI, needs a more powerful tensor.expand_shape op");
+  if (!unPackOp.getOuterDimsPerm().empty() &&
+      !isIdentityPermutation(unPackOp.getOuterDimsPerm())) {
+    return rewriter.notifyMatchFailure(unPackOp,
+                                       "non-identity outer dims perm NYI");
   }
 
   Location loc = unPackOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unPackOp);
 
+  RankedTensorType packedTensorType = unPackOp.getSourceType();
   int64_t packedRank = packedTensorType.getRank();
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
@@ -435,8 +431,14 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
   RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
       stripMinedTensorType, packingMetadata.reassociations);
-  auto emptyOp =
-      rewriter.create<tensor::EmptyOp>(loc, stripMinedTensorType, ValueRange{});
+
+  // Get dynamic dims from input tensor based on lastDimsToInsertPositionsPerm
+  // permutation.
+  SmallVector<OpFoldResult, 4> dims =
+      tensor::getMixedSizes(rewriter, loc, unPackOp.getSource());
+  applyPermutationToVector(dims, lastDimsToInsertPositionsPerm);
+  auto emptyOp = rewriter.create<tensor::EmptyOp>(
+      loc, dims, stripMinedTensorType.getElementType());
   auto transposeOp = rewriter.create<linalg::TransposeOp>(
       loc, unPackOp.getSource(), emptyOp, lastDimsToInsertPositionsPerm);
 
@@ -467,7 +469,7 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
   auto extractSliceOp = rewriter.create<tensor::ExtractSliceOp>(
       loc, destTensorType, reshapeOp->getResult(0),
       SmallVector<OpFoldResult>(destRank, zero),
-      tensor::getMixedSizes(rewriter, loc, unPackOp->getResult(0)),
+      tensor::getMixedSizes(rewriter, loc, unPackOp.getDest()),
       SmallVector<OpFoldResult>(destRank, one));
 
   // 7. Inject a copy to preserve DPS.
@@ -483,10 +485,10 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
 SmallVector<int64_t>
 PackedOperandsDimList::extractPackedDimsForOperand(int64_t operandPos) {
   SmallVector<int64_t> res;
-  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
-    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+  for (auto &i : spec) {
+    if (!i.packedDimForEachOperand[operandPos].has_value())
       continue;
-    res.push_back(spec[i].packedDimForEachOperand[operandPos].value());
+    res.push_back(i.packedDimForEachOperand[operandPos].value());
   }
   return res;
 }
@@ -494,10 +496,10 @@ PackedOperandsDimList::extractPackedDimsForOperand(int64_t operandPos) {
 SmallVector<OpFoldResult>
 PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
   SmallVector<OpFoldResult> res;
-  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
-    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+  for (auto &i : spec) {
+    if (!i.packedDimForEachOperand[operandPos].has_value())
       continue;
-    res.push_back(spec[i].packedSize);
+    res.push_back(i.packedSize);
   }
   return res;
 }
@@ -540,7 +542,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     if (failed(maybePackedDimForEachOperand))
       return failure();
     packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
-    listOfPackedOperandsDim.push_back(std::move(packedOperandsDims));
+    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
 
     LLVM_DEBUG(
         DBGS() << "++++ After pack size #" << i << ": " << packedSizes[i]
@@ -1256,6 +1258,7 @@ LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   SmallVector<OpFoldResult> readStrides(srcRank, oneIdxAttr);
   SmallVector<OpFoldResult> readSizes;
   SmallVector<int64_t> readShape;
+  SmallVector<Value> dynamicDims;
   for (auto i : llvm::seq<unsigned>(0, destRank)) {
     if (dimAndTileMapping.count(i)) {
       readSizes.push_back(oneIdxAttr);
@@ -1263,8 +1266,10 @@ LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     }
 
     if (ShapedType::isDynamic(srcShape[i])) {
-      readSizes.push_back(
-          rewriter.create<tensor::DimOp>(loc, source, i).getResult());
+      Value dynamicDim =
+          rewriter.create<tensor::DimOp>(loc, source, i).getResult();
+      readSizes.push_back(dynamicDim);
+      dynamicDims.push_back(dynamicDim);
     } else {
       readSizes.push_back(rewriter.getIndexAttr(srcShape[i]));
     }
@@ -1292,7 +1297,8 @@ LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   SmallVector<int64_t> transpShape(readShape);
   applyPermutationToVector<int64_t>(transpShape, perm);
 
-  Value empty = rewriter.create<tensor::EmptyOp>(loc, transpShape, elemType);
+  Value empty =
+      rewriter.create<tensor::EmptyOp>(loc, transpShape, elemType, dynamicDims);
   auto transposedOp =
       rewriter.create<linalg::TransposeOp>(loc, innerTile, empty, perm);
 
@@ -1341,7 +1347,7 @@ LogicalResult GeneralizeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
 template <typename Conv2DOp, typename Conv1DOp>
 FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
     returningMatchAndRewrite(Conv2DOp convOp, PatternRewriter &rewriter) const {
-  if (convOp.hasBufferSemantics())
+  if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
   Value input = convOp.getInputs().front();
@@ -1465,7 +1471,7 @@ template struct linalg::DownscaleSizeOneWindowed2DConvolution<PoolingNchwMaxOp,
 FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
     DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
-  if (convOp.hasBufferSemantics())
+  if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
   Value input = convOp.getInputs().front();
@@ -1533,7 +1539,7 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
 FailureOr<Conv1DOp>
 DownscaleConv2DOp::returningMatchAndRewrite(Conv2DOp convOp,
                                             PatternRewriter &rewriter) const {
-  if (convOp.hasBufferSemantics())
+  if (convOp.hasPureBufferSemantics())
     return failure(); // To be implemented.
 
   Value input = convOp.getInputs().front();

@@ -611,6 +611,10 @@ DWARFDebugNames::Entry::lookup(dwarf::Index Index) const {
   return std::nullopt;
 }
 
+bool DWARFDebugNames::Entry::hasParentInformation() const {
+  return lookup(dwarf::DW_IDX_parent).has_value();
+}
+
 std::optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_die_offset))
     return Off->getAsReferenceUVal();
@@ -621,7 +625,10 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
-  // implicitly refer to the single CU.
+  // implicitly refer to the single CU, but only if we don't have a
+  // DW_IDX_type_unit.
+  if (lookup(dwarf::DW_IDX_type_unit).has_value())
+    return std::nullopt;
   if (NameIdx->getCUCount() == 1)
     return 0;
   return std::nullopt;
@@ -634,13 +641,61 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
   return NameIdx->getCUOffset(*Index);
 }
 
+std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
+  std::optional<uint64_t> Index = getLocalTUIndex();
+  if (!Index || *Index >= NameIdx->getLocalTUCount())
+    return std::nullopt;
+  return NameIdx->getLocalTUOffset(*Index);
+}
+
+std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
+  if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
+    return Off->getAsUnsignedConstant();
+  return std::nullopt;
+}
+
+Expected<std::optional<DWARFDebugNames::Entry>>
+DWARFDebugNames::Entry::getParentDIEEntry() const {
+  // The offset of the accelerator table entry for the parent.
+  std::optional<DWARFFormValue> ParentEntryOff = lookup(dwarf::DW_IDX_parent);
+  assert(ParentEntryOff.has_value() && "hasParentInformation() must be called");
+
+  if (ParentEntryOff->getForm() == dwarf::Form::DW_FORM_flag_present)
+    return std::nullopt;
+  return NameIdx->getEntryAtRelativeOffset(ParentEntryOff->getRawUValue());
+}
+
+void DWARFDebugNames::Entry::dumpParentIdx(
+    ScopedPrinter &W, const DWARFFormValue &FormValue) const {
+  Expected<std::optional<Entry>> ParentEntry = getParentDIEEntry();
+  if (!ParentEntry) {
+    W.getOStream() << "<invalid offset data>";
+    consumeError(ParentEntry.takeError());
+    return;
+  }
+
+  if (!ParentEntry->has_value()) {
+    W.getOStream() << "<parent not indexed>";
+    return;
+  }
+
+  auto AbsoluteOffset = NameIdx->EntriesBase + FormValue.getRawUValue();
+  W.getOStream() << "Entry @ 0x" + Twine::utohexstr(AbsoluteOffset);
+}
+
 void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
-  W.printHex("Abbrev", Abbr->Code);
+  W.startLine() << formatv("Abbrev: {0:x}\n", Abbr->Code);
   W.startLine() << formatv("Tag: {0}\n", Abbr->Tag);
   assert(Abbr->Attributes.size() == Values.size());
   for (auto Tuple : zip_first(Abbr->Attributes, Values)) {
-    W.startLine() << formatv("{0}: ", std::get<0>(Tuple).Index);
-    std::get<1>(Tuple).dump(W.getOStream());
+    auto Index = std::get<0>(Tuple).Index;
+    W.startLine() << formatv("{0}: ", Index);
+
+    auto FormValue = std::get<1>(Tuple);
+    if (Index == dwarf::Index::DW_IDX_parent)
+      dumpParentIdx(W, FormValue);
+    else
+      FormValue.dump(W.getOStream());
     W.getOStream() << '\n';
   }
 }
@@ -866,7 +921,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
   if (Hdr.BucketCount == 0) {
     // No Hash Table, We need to search through all names in the Name Index.
     for (const NameTableEntry &NTE : *CurrentIndex) {
-      if (NTE.getString() == Key)
+      if (NTE.sameNameAs(Key))
         return NTE.getEntryOffset();
     }
     return std::nullopt;
@@ -882,12 +937,15 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
     return std::nullopt; // Empty bucket
 
   for (; Index <= Hdr.NameCount; ++Index) {
-    uint32_t Hash = CurrentIndex->getHashArrayEntry(Index);
-    if (Hash % Hdr.BucketCount != Bucket)
+    uint32_t HashAtIndex = CurrentIndex->getHashArrayEntry(Index);
+    if (HashAtIndex % Hdr.BucketCount != Bucket)
       return std::nullopt; // End of bucket
+    // Only compare names if the hashes match.
+    if (HashAtIndex != Hash)
+      continue;
 
     NameTableEntry NTE = CurrentIndex->getNameTableEntry(Index);
-    if (NTE.getString() == Key)
+    if (NTE.sameNameAs(Key))
       return NTE.getEntryOffset();
   }
   return std::nullopt;
@@ -1014,7 +1072,7 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   //
   // We look for > at the end but if it does not contain any < then we
   // have something like operator>>. We check for the operator<=> case.
-  if (!Name.endswith(">") || Name.count("<") == 0 || Name.endswith("<=>"))
+  if (!Name.ends_with(">") || Name.count("<") == 0 || Name.ends_with("<=>"))
     return {};
 
   // How many < until we have the start of the template parameters.

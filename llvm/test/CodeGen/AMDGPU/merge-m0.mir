@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -amdgpu-enable-merge-m0 -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -amdgpu-enable-merge-m0 -verify-machineinstrs -run-pass si-fix-sgpr-copies %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: merge-m0-many-init
 # GCN:    bb.0.entry:

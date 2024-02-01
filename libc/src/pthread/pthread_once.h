@@ -11,10 +11,10 @@
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_once(pthread_once_t *flag, __pthread_once_func_t func);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ONCE_H

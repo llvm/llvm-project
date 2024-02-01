@@ -171,27 +171,27 @@ define void @test_runtime_trip_count(i32 %N) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER7:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [58 x double], ptr @b, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x double>, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [58 x double], ptr @c, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr [[TMP2]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[WIDE_LOAD]], [[WIDE_LOAD5]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[WIDE_LOAD4]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [58 x double], ptr @a, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TMP6]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

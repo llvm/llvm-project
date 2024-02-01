@@ -27,10 +27,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 // Constructor
-DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
-                               lldb_private::DWARFContext &context)
+DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf, DWARFContext &context)
     : m_dwarf(dwarf), m_context(context), m_units(), m_cu_aranges_up() {}
 
 const DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
@@ -190,4 +190,10 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   if (cu)
     return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
   return DWARFDIE(); // Not found
+}
+
+llvm::StringRef DWARFDebugInfo::PeekDIEName(const DIERef &die_ref) {
+  if (DWARFUnit *cu = GetUnit(die_ref))
+    return cu->GetNonSkeletonUnit().PeekDIEName(die_ref.die_offset());
+  return llvm::StringRef();
 }

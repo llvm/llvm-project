@@ -248,6 +248,14 @@ void LambdaScopeInfo::visitPotentialCaptures(
   }
 }
 
+bool LambdaScopeInfo::lambdaCaptureShouldBeConst() const {
+  if (ExplicitObjectParameter)
+    return ExplicitObjectParameter->getType()
+        .getNonReferenceType()
+        .isConstQualified();
+  return !Mutable;
+}
+
 FunctionScopeInfo::~FunctionScopeInfo() { }
 BlockScopeInfo::~BlockScopeInfo() { }
 CapturedRegionScopeInfo::~CapturedRegionScopeInfo() { }
