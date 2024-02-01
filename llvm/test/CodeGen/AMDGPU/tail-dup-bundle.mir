@@ -11,7 +11,6 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   BUNDLE {
   ; GCN-NEXT:     S_NOP 0
