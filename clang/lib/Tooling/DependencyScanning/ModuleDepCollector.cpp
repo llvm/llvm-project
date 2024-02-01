@@ -211,6 +211,10 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
       ScanInstance.getFileManager().getFile(Deps.ClangModuleMapFile);
   assert(CurrentModuleMapEntry && "module map file entry not found");
 
+  // Remove directly passed modulemap files. They will get added back if they
+  // were actually used.
+  CI.getMutFrontendOpts().ModuleMapFiles.clear();
+
   auto DepModuleMapFiles = collectModuleMapFiles(Deps.ClangModuleDeps);
   for (StringRef ModuleMapFile : Deps.ModuleMapFileDeps) {
     // TODO: Track these as `FileEntryRef` to simplify the equality check below.
