@@ -55,33 +55,29 @@ define preserve_nonecc void @caller2(ptr %a) {
 }
 
 ; Preserve_none function can use more registers to pass parameters.
+declare preserve_nonecc i64 @callee_with_many_param2(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11)
 define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12) {
 ; CHECK-LABEL: callee_with_many_param:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addq %rdi, %rsi
-; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    addq %rsi, %rcx
-; CHECK-NEXT:    leaq (%r8,%r9), %rdx
-; CHECK-NEXT:    addq %r11, %rdx
-; CHECK-NEXT:    addq %rcx, %rdx
-; CHECK-NEXT:    leaq (%r12,%r13), %rcx
-; CHECK-NEXT:    addq %r14, %rcx
-; CHECK-NEXT:    addq %r15, %rcx
-; CHECK-NEXT:    addq %rdx, %rcx
-; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    movq %rdx, %rsi
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    movq %r8, %rcx
+; CHECK-NEXT:    movq %r9, %r8
+; CHECK-NEXT:    movq %r11, %r9
+; CHECK-NEXT:    movq %r12, %r11
+; CHECK-NEXT:    movq %r13, %r12
+; CHECK-NEXT:    movq %r14, %r13
+; CHECK-NEXT:    movq %r15, %r14
+; CHECK-NEXT:    movq %rax, %r15
+; CHECK-NEXT:    callq callee_with_many_param2@PLT
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %v1 = add i64 %a1, %a2
-  %v2 = add i64 %v1, %a3
-  %v3 = add i64 %v2, %a4
-  %v4 = add i64 %v3, %a5
-  %v5 = add i64 %v4, %a6
-  %v6 = add i64 %v5, %a7
-  %v7 = add i64 %v6, %a8
-  %v8 = add i64 %v7, %a9
-  %v9 = add i64 %v8, %a10
-  %v10 = add i64 %v9, %a11
-  %v11 = add i64 %v10, %a12
-  ret i64 %v11
+  %ret = call preserve_nonecc i64 @callee_with_many_param2(i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12)
+  ret i64 %ret
 }
 
 define i64 @caller3() {
