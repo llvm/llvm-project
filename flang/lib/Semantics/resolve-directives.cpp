@@ -13,6 +13,7 @@
 #include "resolve-names-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
@@ -266,7 +267,7 @@ private:
       Symbol::Flag::AccDevicePtr, Symbol::Flag::AccDeviceResident,
       Symbol::Flag::AccLink, Symbol::Flag::AccPresent};
 
-  void CheckAssociatedLoopIndex(const parser::OpenACCLoopConstruct &);
+  void CheckAssociatedLoop(const parser::DoConstruct &);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
@@ -882,7 +883,8 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
   }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
-  CheckAssociatedLoopIndex(x);
+  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
+  CheckAssociatedLoop(*outer);
   return true;
 }
 
@@ -1087,6 +1089,10 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   default:
     break;
   }
+  const auto &clauseList{std::get<parser::AccClauseList>(beginBlockDir.t)};
+  SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
+  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
+  CheckAssociatedLoop(*outer);
   ClearDataSharingAttributeObjects();
   return true;
 }
@@ -1218,8 +1224,8 @@ std::int64_t AccAttributeVisitor::GetAssociatedLoopLevelFromClauses(
   return 1; // default is outermost loop
 }
 
-void AccAttributeVisitor::CheckAssociatedLoopIndex(
-    const parser::OpenACCLoopConstruct &x) {
+void AccAttributeVisitor::CheckAssociatedLoop(
+    const parser::DoConstruct &outerDoConstruct) {
   std::int64_t level{GetContext().associatedLoopLevel};
   if (level <= 0) { // collapse value was negative or 0
     return;
@@ -1250,10 +1256,41 @@ void AccAttributeVisitor::CheckAssociatedLoopIndex(
     return nullptr;
   };
 
-  const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;) {
+  auto checkExprHasSymbols = [&](llvm::SmallVector<Symbol *> &ivs,
+                                 semantics::UnorderedSymbolSet &symbols) {
+    for (auto iv : ivs) {
+      if (symbols.count(*iv) != 0) {
+        context_.Say(GetContext().directiveSource,
+            "Trip count must be computable and invariant"_err_en_US);
+      }
+    }
+  };
+
+  Symbol::Flag flag = Symbol::Flag::AccPrivate;
+  llvm::SmallVector<Symbol *> ivs;
+  using Bounds = parser::LoopControl::Bounds;
+  for (const parser::DoConstruct *loop{&outerDoConstruct}; loop && level > 0;) {
     // Go through all nested loops to ensure index variable exists.
-    GetLoopIndex(*loop);
+    if (const parser::Name * ivName{GetLoopIndex(*loop)}) {
+      if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
+        if (auto &control{loop->GetLoopControl()}) {
+          if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
+            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->lower)}) {
+              semantics::UnorderedSymbolSet lowerSyms =
+                  evaluate::CollectSymbols(*lowerExpr);
+              checkExprHasSymbols(ivs, lowerSyms);
+            }
+            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->upper)}) {
+              semantics::UnorderedSymbolSet upperSyms =
+                  evaluate::CollectSymbols(*upperExpr);
+              checkExprHasSymbols(ivs, upperSyms);
+            }
+          }
+        }
+        ivs.push_back(symbol);
+      }
+    }
+
     const auto &block{std::get<parser::Block>(loop->t)};
     --level;
     loop = getNextDoConstruct(block, level);

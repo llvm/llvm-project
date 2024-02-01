@@ -35,6 +35,12 @@
 // RUN: %clang -### -target x86_64 -ffast-math -fno-cx-limited-range -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=FULL %s
 
+// RUN: %clang -### -Werror -target x86_64 -fcx-limited-range -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=LMTD %s
+
+// RUN: %clang -### -Werror -target x86_64 -fcx-fortran-rules -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=FRTRN %s
+
 // LMTD: -complex-range=limited
 // FULL: -complex-range=full
 // LMTD-NOT: -complex-range=fortran

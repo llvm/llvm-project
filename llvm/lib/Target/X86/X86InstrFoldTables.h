@@ -44,6 +44,11 @@ const X86FoldTableEntry *lookupTwoAddrFoldTable(unsigned RegOp);
 // operand OpNum.
 const X86FoldTableEntry *lookupFoldTable(unsigned RegOp, unsigned OpNum);
 
+// Look up the broadcast folding table entry for folding a broadcast with
+// operand OpNum.
+const X86FoldTableEntry *lookupBroadcastFoldTable(unsigned RegOp,
+                                                  unsigned OpNum);
+
 // Look up the memory unfolding table entry for this instruction.
 const X86FoldTableEntry *lookupUnfoldTable(unsigned MemOp);
 
@@ -52,6 +57,7 @@ const X86FoldTableEntry *lookupUnfoldTable(unsigned MemOp);
 const X86FoldTableEntry *lookupBroadcastFoldTableBySize(unsigned MemOp,
                                                         unsigned BroadcastBits);
 
+bool matchBroadcastSize(const X86FoldTableEntry &Entry, unsigned BroadcastBits);
 } // namespace llvm
 
 #endif

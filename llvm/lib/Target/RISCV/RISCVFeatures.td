@@ -177,6 +177,13 @@ def HasStdExtAOrZaamo
                          "'A' (Atomic Instructions) or "
                          "'Zaamo' (Atomic Memory Operations)">;
 
+def FeatureStdExtZabha
+    : SubtargetFeature<"experimental-zabha", "HasStdExtZabha", "true",
+                       "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZabha),
+                         "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+
 def FeatureStdExtZacas
     : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
                        "'Zacas' (Atomic Compare-And-Swap Instructions)">;
