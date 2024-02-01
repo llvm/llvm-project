@@ -35,19 +35,7 @@ concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
 template <class T>
 concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
-struct NoConstView : std::ranges::view_base {
-  int* begin();
-  int* end();
-};
-
-struct UnsimpleConstView : std::ranges::view_base {
-  double* begin();
-  int* begin() const;
-
-  double* end();
-  int* end() const;
-};
-static_assert(HasOnlyNonConstBegin<std::ranges::stride_view<NoConstView>>);
+static_assert(HasOnlyNonConstBegin<std::ranges::stride_view<UnSimpleNoConstCommonView>>);
 static_assert(HasOnlyConstBegin<std::ranges::stride_view<BasicTestView<int*, int*>>>);
 static_assert(HasConstAndNonConstBegin<std::ranges::stride_view<UnsimpleConstView>>);
 

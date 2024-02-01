@@ -18,31 +18,33 @@
 #include "types.h"
 
 template <typename T>
-concept hasLValueQualifiedBase = requires(T&& t) { t.base(); };
+constexpr bool hasLValueQualifiedBase(T&& t) {
+  return requires { t.base(); };
+}
 
 constexpr bool test() {
   int buff[] = {1, 2, 3, 4, 5, 6, 7, 8};
-
+  constexpr int N = 8;
   {
     using CopyableInputView = CopyableView<cpp17_input_iterator<int*>>;
     auto str(std::ranges::stride_view<CopyableInputView>(
-        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + 8)), 1));
+        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
     assert(*str.base().begin() == *buff);
     assert(*(std::move(str)).base().begin() == *buff);
 
     ASSERT_SAME_TYPE(decltype(str.base()), CopyableInputView);
     ASSERT_SAME_TYPE(decltype(std::move(str).base()), CopyableInputView);
-    static_assert(hasLValueQualifiedBase<decltype(str)>);
+    static_assert(hasLValueQualifiedBase(str));
   }
 
   {
     using MoveOnlyInputView = MoveOnlyView<cpp17_input_iterator<int*>>;
     auto str(std::ranges::stride_view<MoveOnlyInputView>(
-        MoveOnlyInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + 8)), 1));
+        MoveOnlyInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + N)), 1));
     assert(*(std::move(str)).base().begin() == *buff);
 
     ASSERT_SAME_TYPE(decltype(std::move(str).base()), MoveOnlyInputView);
-    static_assert(!hasLValueQualifiedBase<decltype(str)>);
+    static_assert(!hasLValueQualifiedBase(str));
   }
   return true;
 }
