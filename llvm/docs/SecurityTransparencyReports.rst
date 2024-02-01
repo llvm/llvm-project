@@ -100,7 +100,7 @@ on an old version of xml2js with a CVE filed against it.
 https://bugs.chromium.org/p/llvm/issues/detail?id=45 reports a number of
 dependencies that have had vulnerabilities reported against them.
 
-https://bugs.chromium.org/p/llvm/issues/detail?id=46 is related to issue 43
+https://bugs.chromium.org/p/llvm/issues/detail?id=46 is related to issue 43.
 
 https://bugs.chromium.org/p/llvm/issues/detail?id=48 reports a buffer overflow
 in std::format from -fexperimental-library.
