@@ -855,6 +855,7 @@ Experimental extensions
     zicfiss             0.4
     zimop               0.1
     zaamo               0.2
+    zabha               1.0
     zacas               1.0
     zalrsc              0.2
     zfbfmin             1.0

@@ -82,6 +82,11 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (isCsect() && getMappingClass() == XCOFF::XMC_TD) {
+    // Common csect type (uninitialized storage) does not have to print csect
+    // directive for section switching unless it is local.
+    if (getKind().isCommon() && !getKind().isBSSLocal())
+      return;
+
     assert((getKind().isBSSExtern() || getKind().isBSSLocal()) &&
            "Unexepected section kind for toc-data");
     printCsectDirective(OS);
@@ -135,5 +140,7 @@ bool MCSectionXCOFF::isVirtualSection() const {
     return false;
   assert(isCsect() &&
          "Handling for isVirtualSection not implemented for this section!");
-  return XCOFF::XTY_CM == CsectProp->Type;
+  // XTY_CM sections are virtual except for toc-data symbols.
+  return (XCOFF::XTY_CM == CsectProp->Type) &&
+         (getMappingClass() != XCOFF::XMC_TD);
 }

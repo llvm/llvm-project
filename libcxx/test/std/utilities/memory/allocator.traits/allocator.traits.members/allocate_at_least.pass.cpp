@@ -39,22 +39,22 @@ struct has_allocate_at_least {
 
   constexpr T* allocate(std::size_t) { return &t1; }
   constexpr void deallocate(T*, std::size_t) {}
-  constexpr std::allocation_result<T*> allocate_at_least(std::size_t) {
-    return {&t2, 2};
-  }
+  constexpr std::allocation_result<T*> allocate_at_least(std::size_t) { return {&t2, 2}; }
 };
 
 constexpr bool test() {
   { // check that std::allocate_at_least forwards to allocator::allocate if no allocate_at_least exists
     no_allocate_at_least<int> alloc;
-    std::same_as<std::allocation_result<int*>> decltype(auto) ret = std::allocate_at_least(alloc, 1);
+    std::same_as<std::allocation_result<int*>> decltype(auto) ret =
+        std::allocator_traits<decltype(alloc)>::allocate_at_least(alloc, 1);
     assert(ret.count == 1);
     assert(ret.ptr == &alloc.t);
   }
 
   { // check that std::allocate_at_least forwards to allocator::allocate_at_least if allocate_at_least exists
     has_allocate_at_least<int> alloc;
-    std::same_as<std::allocation_result<int*>> decltype(auto) ret = std::allocate_at_least(alloc, 1);
+    std::same_as<std::allocation_result<int*>> decltype(auto) ret =
+        std::allocator_traits<decltype(alloc)>::allocate_at_least(alloc, 1);
     assert(ret.count == 2);
     assert(ret.ptr == &alloc.t2);
   }

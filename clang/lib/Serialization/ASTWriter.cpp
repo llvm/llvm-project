@@ -6064,7 +6064,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(DefinitionBits);
 
   // We only perform ODR checks for decls not in GMF.
-  if (!isFromExplicitGMF(D)) {
+  if (!shouldSkipCheckingODR(D)) {
     // getODRHash will compute the ODRHash if it has not been previously
     // computed.
     Record->push_back(D->getODRHash());
@@ -6697,6 +6697,8 @@ void OMPClauseWriter::VisitOMPAcquireClause(OMPAcquireClause *) {}
 void OMPClauseWriter::VisitOMPReleaseClause(OMPReleaseClause *) {}
 
 void OMPClauseWriter::VisitOMPRelaxedClause(OMPRelaxedClause *) {}
+
+void OMPClauseWriter::VisitOMPWeakClause(OMPWeakClause *) {}
 
 void OMPClauseWriter::VisitOMPThreadsClause(OMPThreadsClause *) {}
 
