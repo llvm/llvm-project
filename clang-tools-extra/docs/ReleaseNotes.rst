@@ -142,7 +142,7 @@ Changes in existing checks
   option `HeaderFileExtensions` by the global option of the same name.
 
 - Improved :doc:`misc-use-anonymous-namespace
-  <clang-tidy/checks/misc/misc-use-anonymous-namespace>` check by replacing the local
+  <clang-tidy/checks/misc/use-anonymous-namespace>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
 
 - Improved :doc:`modernize-avoid-c-arrays
