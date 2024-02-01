@@ -1620,10 +1620,6 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   }
 }
 
-int32_t __tgt_rtl_supports_empty_images() {
-  return Plugin::get().supportsEmptyImages();
-}
-
 int32_t __tgt_rtl_init_device(int32_t DeviceId) {
   auto Err = Plugin::get().initDevice(DeviceId);
   if (Err) {
