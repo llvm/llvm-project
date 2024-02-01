@@ -219,7 +219,7 @@ void EmitBuiltinDef(llvm::raw_ostream &OS, StringRef Substitution,
     break;
   }
   case BuiltinType::TargetBuiltin:
-    OS << ", \"\"";
+    OS << ", \"" << Builtin->getValueAsString("Features") << "\"";
     break;
   case BuiltinType::AtomicBuiltin:
   case BuiltinType::Builtin:
