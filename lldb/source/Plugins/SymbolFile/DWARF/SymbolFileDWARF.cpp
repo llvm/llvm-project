@@ -2667,6 +2667,29 @@ static bool UpdateCompilerContextForSimpleTemplateNames(TypeQuery &match) {
   }
   return any_context_updated;
 }
+
+uint64_t SymbolFileDWARF::GetDebugInfoSize() {
+  DWARFDebugInfo &info = DebugInfo();
+  uint32_t num_comp_units = info.GetNumUnits();
+
+  uint64_t debug_info_size = SymbolFileCommon::GetDebugInfoSize();
+  // In dwp scenario, debug info == skeleton debug info + dwp debug info.
+  if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
+    return debug_info_size + dwp_sp->GetDebugInfoSize();
+
+  // In dwo scenario, debug info == skeleton debug info + all dwo debug info.
+  for (uint32_t i = 0; i < num_comp_units; i++) {
+    DWARFUnit *cu = info.GetUnitAtIndex(i);
+    if (cu == nullptr)
+      continue;
+
+    SymbolFileDWARFDwo *dwo = cu->GetDwoSymbolFile();
+    if (dwo)
+      debug_info_size += dwo->GetDebugInfoSize();
+  }
+  return debug_info_size;
+}
+
 void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
 
   // Make sure we haven't already searched this SymbolFile before.
