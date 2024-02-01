@@ -31,8 +31,7 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     : StoppointSite(0, addr, size, hardware), m_target(target),
       m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
       m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
-      m_watch_write(0), m_watch_modify(0), m_ignore_count(0),
-      m_being_created(true) {
+      m_watch_write(0), m_watch_modify(0), m_ignore_count(0) {
 
   if (type && type->IsValid())
     m_type = *type;
@@ -60,7 +59,6 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     m_target.GetProcessSP()->CalculateExecutionContext(exe_ctx);
     CaptureWatchedValue(exe_ctx);
   }
-  m_being_created = false;
 }
 
 Watchpoint::~Watchpoint() = default;
@@ -462,8 +460,8 @@ const char *Watchpoint::GetConditionText() const {
 
 void Watchpoint::SendWatchpointChangedEvent(
     lldb::WatchpointEventType eventKind) {
-  if (!m_being_created && GetTarget().EventTypeHasListeners(
-                              Target::eBroadcastBitWatchpointChanged)) {
+  if (GetTarget().EventTypeHasListeners(
+          Target::eBroadcastBitWatchpointChanged)) {
     auto data_sp =
         std::make_shared<WatchpointEventData>(eventKind, shared_from_this());
     GetTarget().BroadcastEvent(Target::eBroadcastBitWatchpointChanged, data_sp);
