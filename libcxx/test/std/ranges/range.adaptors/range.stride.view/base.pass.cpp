@@ -23,7 +23,7 @@ constexpr bool hasLValueQualifiedBase(T&& t) {
 }
 
 constexpr bool test() {
-  int buff[] = {1, 2, 3, 4, 5, 6, 7, 8};
+  int buff[]      = {1, 2, 3, 4, 5, 6, 7, 8};
   constexpr int N = 8;
   {
     using CopyableInputView = CopyableView<cpp17_input_iterator<int*>>;
