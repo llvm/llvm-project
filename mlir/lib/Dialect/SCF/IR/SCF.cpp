@@ -3254,6 +3254,110 @@ LogicalResult scf::WhileOp::verify() {
   return success(afterTerminator != nullptr);
 }
 
+/// Create zero-trip-check for a `while` op. Given an example below:
+///
+///   scf.while (%arg0 = %init) : (i32) -> i64 {
+///     %val = .., %arg0 : i64
+///     %cond = arith.cmpi .., %arg0 : i32
+///     scf.condition(%cond) %val : i64
+///   } do {
+///   ^bb0(%arg1: i64):
+///     %next = .., %arg1 : i32
+///     scf.yield %next : i32
+///   }
+///
+/// First clone before block to the front of the loop:
+///
+///   %pre_val = .., %init : i64
+///   %pre_cond = arith.cmpi .., %init : i32
+///   scf.while (%arg0 = %init) : (i32) -> i64 {
+///     %val = .., %arg0 : i64
+///     %cond = arith.cmpi .., %arg0 : i32
+///     scf.condition(%cond) %val : i64
+///   } do {
+///   ^bb0(%arg1: i64):
+///     %next = .., %arg1 : i32
+///     scf.yield %next : i32
+///   }
+///
+/// Create `if` op with the condition, rotate and move the loop into the else
+/// branch:
+///
+///   %pre_val = .., %init : i64
+///   %pre_cond = arith.cmpi .., %init : i32
+///   scf.if %pre_cond -> i64 {
+///     %res = scf.while (%arg1 = %va0) : (i64) -> i64 {
+///       // Original after block
+///       %next = .., %arg1 : i32
+///       // Original before block
+///       %val = .., %next : i64
+///       %cond = arith.cmpi .., %next : i32
+///       scf.condition(%cond) %val : i64
+///     } do {
+///     ^bb0(%arg2: i64):
+///       %scf.yield %arg2 : i32
+///     }
+///     scf.yield %res : i64
+///   } else {
+///     scf.yield %pre_val : i64
+///   }
+FailureOr<LoopLikeOpInterface>
+scf::WhileOp::replaceWithZeroTripCheck(RewriterBase &rewriter) {
+  IRMapping mapper;
+  Block *beforeBlock = this->getBeforeBody();
+  // Clone before block before the loop for zero-trip-check.
+  for (auto [arg, init] :
+       llvm::zip_equal(beforeBlock->getArguments(), this->getInits())) {
+    mapper.map(arg, init);
+  }
+  rewriter.setInsertionPoint(*this);
+  for (auto &op : *beforeBlock) {
+    if (isa<scf::ConditionOp>(op)) {
+      break;
+    }
+    // Safe to clone everything as in a single block all defs have been cloned
+    // and added to mapper in order.
+    rewriter.insert(op.clone(mapper));
+  }
+
+  auto condOp = this->getConditionOp();
+  auto clonedCondition = mapper.lookupOrDefault(condOp.getCondition());
+  auto clonedCondArgs = llvm::map_to_vector(
+      condOp.getArgs(), [&](Value arg) { return mapper.lookupOrDefault(arg); });
+
+  // Create zero-trip-check and move the while loop in.
+  scf::WhileOp newLoop = nullptr;
+  auto ifOp = rewriter.create<scf::IfOp>(
+      this->getLoc(), clonedCondition,
+      [&](OpBuilder &builder, Location loc) {
+        // Then runs the while loop.
+        newLoop = builder.create<scf::WhileOp>(
+            loc, this->getResultTypes(), clonedCondArgs,
+            [&](OpBuilder &builder, Location loc, ValueRange args) {
+              // Rotate and move the loop body into before block.
+              auto newBlock = builder.getBlock();
+              rewriter.mergeBlocks(this->getAfterBody(), newBlock, args);
+              auto yieldOp = cast<scf::YieldOp>(newBlock->getTerminator());
+              rewriter.mergeBlocks(this->getBeforeBody(), newBlock,
+                                   yieldOp.getResults());
+              rewriter.eraseOp(yieldOp);
+            },
+            [&](OpBuilder &builder, Location loc, ValueRange args) {
+              // Pass-through values.
+              builder.create<scf::YieldOp>(loc, args);
+            });
+        builder.create<scf::YieldOp>(loc, newLoop.getResults());
+      },
+      [&](OpBuilder &builder, Location loc) {
+        // Else returns the results from zero-trip-check.
+        builder.create<scf::YieldOp>(loc, clonedCondArgs);
+      });
+
+  rewriter.replaceOp(*this, ifOp);
+
+  return cast<LoopLikeOpInterface>(newLoop.getOperation());
+}
+
 namespace {
 /// Replace uses of the condition within the do block with true, since otherwise
 /// the block would not be evaluated.
