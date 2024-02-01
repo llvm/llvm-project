@@ -114,6 +114,11 @@ Changes in existing checks
   by :doc:`cppcoreguidelines-use-default-member-init
   <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`.
 
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
+  `AllowStringArrays` option, enabling the exclusion of array types with deduced
+  length initialized from string literals.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
