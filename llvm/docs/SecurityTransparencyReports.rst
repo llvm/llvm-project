@@ -109,7 +109,7 @@ https://bugs.chromium.org/p/llvm/issues/detail?id=54 reports a memory leak in
 basic_string move assignment when built with libc++ versions <=6.0 and run against
 newer libc++ shared/dylibs.
 
-https://bugs.chromium.org/p/llvm/issues/detail?id=56 reports a out of bounds buffer
+https://bugs.chromium.org/p/llvm/issues/detail?id=56 reports an out of bounds buffer
 store introduced by LLVM backends, that regressed due to a procedural oversight.
 
 No dedicated LLVM releases were made for any of the above issues.
