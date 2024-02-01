@@ -1980,10 +1980,9 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_prof))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
       if (MDS->getString().equals("function_entry_count"))
-        for (unsigned i = 2; i < MD->getNumOperands(); i++)
-          R.insert(mdconst::extract<ConstantInt>(MD->getOperand(i))
-                       ->getValue()
-                       .getZExtValue());
+        for (const MDOperand &MDO : llvm::drop_begin(MD->operands(), 2))
+          R.insert(
+              mdconst::extract<ConstantInt>(MDO)->getValue().getZExtValue());
   return R;
 }
 
