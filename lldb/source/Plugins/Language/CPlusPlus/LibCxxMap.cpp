@@ -181,7 +181,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  CacheState Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -405,16 +405,16 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   return potential_child_sp;
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_count = UINT32_MAX;
   m_tree = m_root_node = nullptr;
   m_iterators.clear();
   m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::

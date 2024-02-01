@@ -53,7 +53,7 @@ public:
   // This function checks for a '__size' member to determine the number
   // of elements in the span. If no such member exists, we get the size
   // from the only other place it can be: the template argument.
-  CacheState Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -93,13 +93,13 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::GetChildAtIndex(
                                       m_element_type);
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   // Get element type.
   ValueObjectSP data_type_finder_sp = GetChildMemberWithName(
       m_backend, {ConstString("__data_"), ConstString("__data")});
   if (!data_type_finder_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
 
@@ -123,7 +123,7 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
     }
   }
 
-  return CacheState::Valid;
+  return lldb::ChildCacheState::eConstant;
 }
 
 bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::

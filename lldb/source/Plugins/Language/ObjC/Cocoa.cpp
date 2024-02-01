@@ -1044,7 +1044,9 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  CacheState Update() override { return CacheState::Invalid; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eDynamic;
+  }
 
   bool MightHaveChildren() override { return false; }
 

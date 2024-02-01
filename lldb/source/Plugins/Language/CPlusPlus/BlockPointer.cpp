@@ -136,7 +136,9 @@ public:
 
   // return true if this object is now safe to use forever without ever
   // updating again; the typical (and tested) answer here is 'false'
-  CacheState Update() override { return CacheState::Invalid; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eDynamic;
+  }
 
   // maybe return false if the block pointer is, say, null
   bool MightHaveChildren() override { return true; }

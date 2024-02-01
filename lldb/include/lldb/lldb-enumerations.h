@@ -1305,6 +1305,14 @@ enum CompletionType {
   eTerminatorCompletion = (1ul << 27)
 };
 
+/// Specifies if children need to be re-computed
+/// after a call to \ref SyntheticChildrenFrontEnd::Update.
+enum class ChildCacheState {
+  eDynamic = 0, ///< Children need to be recomputed dynamically.
+  eConstant =
+      1, ///< Children will never change and don't need to be recomputed.
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

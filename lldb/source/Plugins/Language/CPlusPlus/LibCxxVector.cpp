@@ -29,7 +29,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  CacheState Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -50,7 +50,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  CacheState Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override { return true; }
 
@@ -116,18 +116,18 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
                                       m_element_type);
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   m_start = m_finish = nullptr;
   ValueObjectSP data_type_finder_sp(
       m_backend.GetChildMemberWithName("__end_cap_"));
   if (!data_type_finder_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   data_type_finder_sp =
       GetFirstValueOfLibCXXCompressedPair(*data_type_finder_sp);
   if (!data_type_finder_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
   if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
@@ -139,7 +139,7 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
       m_finish = m_backend.GetChildMemberWithName("__end_").get();
     }
   }
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
@@ -227,30 +227,30 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
  }
  }*/
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::Update() {
   m_children.clear();
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   ValueObjectSP size_sp(valobj_sp->GetChildMemberWithName("__size_"));
   if (!size_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   m_count = size_sp->GetValueAsUnsigned(0);
   if (!m_count)
-    return CacheState::Valid;
+    return lldb::ChildCacheState::eConstant;
   ValueObjectSP begin_sp(valobj_sp->GetChildMemberWithName("__begin_"));
   if (!begin_sp) {
     m_count = 0;
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   }
   m_base_data_address = begin_sp->GetValueAsUnsigned(0);
   if (!m_base_data_address) {
     m_count = 0;
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   }
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 size_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::

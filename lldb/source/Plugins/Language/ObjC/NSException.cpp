@@ -137,7 +137,7 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  CacheState Update() override {
+  lldb::ChildCacheState Update() override {
     m_name_sp.reset();
     m_reason_sp.reset();
     m_userinfo_sp.reset();
@@ -146,7 +146,8 @@ public:
     const auto ret = ExtractFields(m_backend, &m_name_sp, &m_reason_sp,
                                    &m_userinfo_sp, &m_reserved_sp);
 
-    return ret ? CacheState::Valid : CacheState::Invalid;
+    return ret ? lldb::ChildCacheState::eConstant
+               : lldb::ChildCacheState::eDynamic;
   }
 
   bool MightHaveChildren() override { return true; }

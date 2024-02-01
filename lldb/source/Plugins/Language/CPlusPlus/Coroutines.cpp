@@ -125,7 +125,7 @@ lldb::ValueObjectSP lldb_private::formatters::
   return lldb::ValueObjectSP();
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   m_resume_ptr_sp.reset();
   m_destroy_ptr_sp.reset();
@@ -133,16 +133,16 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
 
   ValueObjectSP valobj_sp = m_backend.GetNonSyntheticValue();
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   lldb::addr_t frame_ptr_addr = GetCoroFramePtrFromHandle(valobj_sp);
   if (frame_ptr_addr == 0 || frame_ptr_addr == LLDB_INVALID_ADDRESS)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   auto ts = valobj_sp->GetCompilerType().GetTypeSystem();
   auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
   if (!ast_ctx)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   // Create the `resume` and `destroy` children.
   lldb::TargetSP target_sp = m_backend.GetTargetSP();
@@ -165,7 +165,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   CompilerType promise_type(
       valobj_sp->GetCompilerType().GetTypeTemplateArgument(0));
   if (!promise_type)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   // Try to infer the promise_type if it was type-erased
   if (promise_type.IsVoidType()) {
@@ -180,7 +180,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   // If we don't know the promise type, we don't display the `promise` member.
   // `CreateValueObjectFromAddress` below would fail for `void` types.
   if (promise_type.IsVoidType()) {
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   }
 
   // Add the `promise` member. We intentionally add `promise` as a pointer type
@@ -194,7 +194,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   if (error.Success())
     m_promise_ptr_sp = promisePtr->Clone(ConstString("promise"));
 
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::

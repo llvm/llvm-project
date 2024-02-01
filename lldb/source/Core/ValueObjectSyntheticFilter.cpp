@@ -43,7 +43,9 @@ public:
 
   bool MightHaveChildren() override { return m_backend.MightHaveChildren(); }
 
-  CacheState Update() override { return CacheState::Invalid; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eConstant;
+  }
 };
 
 ValueObjectSynthetic::ValueObjectSynthetic(ValueObject &parent,
@@ -177,8 +179,7 @@ bool ValueObjectSynthetic::UpdateValue() {
   }
 
   // let our backend do its update
-  if (m_synth_filter_up->Update() ==
-      SyntheticChildrenFrontEnd::CacheState::Invalid) {
+  if (m_synth_filter_up->Update() == lldb::ChildCacheState::eConstant) {
     LLDB_LOGF(log,
               "[ValueObjectSynthetic::UpdateValue] name=%s, synthetic "
               "filter said caches are stale - clearing",

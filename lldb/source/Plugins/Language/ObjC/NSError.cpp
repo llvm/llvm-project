@@ -133,17 +133,17 @@ public:
     return m_child_sp;
   }
 
-  CacheState Update() override {
+  lldb::ChildCacheState Update() override {
     m_child_ptr = nullptr;
     m_child_sp.reset();
 
     ProcessSP process_sp(m_backend.GetProcessSP());
     if (!process_sp)
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
 
     lldb::addr_t userinfo_location = DerefToNSErrorPointer(m_backend);
     if (userinfo_location == LLDB_INVALID_ADDRESS)
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
 
     size_t ptr_size = process_sp->GetAddressByteSize();
 
@@ -152,17 +152,17 @@ public:
     lldb::addr_t userinfo =
         process_sp->ReadPointerFromMemory(userinfo_location, error);
     if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
     InferiorSizedWord isw(userinfo, *process_sp);
     TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
     if (!scratch_ts_sp)
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
     m_child_sp = CreateValueObjectFromData(
         "_userInfo", isw.GetAsData(process_sp->GetByteOrder()),
         m_backend.GetExecutionContextRef(),
         scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   }
 
   bool MightHaveChildren() override { return true; }

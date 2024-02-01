@@ -231,22 +231,22 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     Update();
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   m_pair_sp.reset();
   m_pair_ptr = nullptr;
 
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   TargetSP target_sp(valobj_sp->GetTargetSP());
 
   if (!target_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   // this must be a ValueObject* because it is a child of the ValueObject we
   // are producing children for it if were a ValueObjectSP, we would end up
@@ -279,7 +279,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
       auto __i_(valobj_sp->GetChildMemberWithName("__i_"));
       if (!__i_) {
         m_pair_ptr = nullptr;
-        return CacheState::Invalid;
+        return lldb::ChildCacheState::eDynamic;
       }
       CompilerType pair_type(
           __i_->GetCompilerType().GetTypeTemplateArgument(0));
@@ -291,7 +291,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
           0, name, &bit_offset_ptr, &bitfield_bit_size_ptr, &is_bitfield_ptr);
       if (!pair_type) {
         m_pair_ptr = nullptr;
-        return CacheState::Invalid;
+        return lldb::ChildCacheState::eDynamic;
       }
 
       auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
@@ -300,7 +300,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         auto ts = pair_type.GetTypeSystem();
         auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
         if (!ast_ctx)
-          return CacheState::Invalid;
+          return lldb::ChildCacheState::eDynamic;
 
         // Mimick layout of std::__tree_iterator::__ptr_ and read it in
         // from process memory.
@@ -329,14 +329,14 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
              {"payload", pair_type}});
         std::optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
         if (!size)
-          return CacheState::Invalid;
+          return lldb::ChildCacheState::eDynamic;
         WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
         ProcessSP process_sp(target_sp->GetProcessSP());
         Status error;
         process_sp->ReadMemory(addr, buffer_sp->GetBytes(),
                                buffer_sp->GetByteSize(), error);
         if (error.Fail())
-          return CacheState::Invalid;
+          return lldb::ChildCacheState::eDynamic;
         DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
                                 process_sp->GetAddressByteSize());
         auto pair_sp = CreateValueObjectFromData(
@@ -348,7 +348,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
     }
   }
 
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
@@ -400,22 +400,22 @@ lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     Update();
 }
 
-SyntheticChildrenFrontEnd::CacheState lldb_private::formatters::
+lldb::ChildCacheState lldb_private::formatters::
     LibCxxUnorderedMapIteratorSyntheticFrontEnd::Update() {
   m_pair_sp.reset();
   m_iter_ptr = nullptr;
 
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   TargetSP target_sp(valobj_sp->GetTargetSP());
 
   if (!target_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   auto exprPathOptions = ValueObject::GetValueForExpressionPathOptions()
                              .DontCheckDotVsArrowSyntax()
@@ -438,7 +438,7 @@ SyntheticChildrenFrontEnd::CacheState lldb_private::formatters::
     auto iter_child(valobj_sp->GetChildMemberWithName("__i_"));
     if (!iter_child) {
       m_iter_ptr = nullptr;
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
     }
 
     CompilerType node_type(iter_child->GetCompilerType()
@@ -456,19 +456,19 @@ SyntheticChildrenFrontEnd::CacheState lldb_private::formatters::
         0, name, &bit_offset_ptr, &bitfield_bit_size_ptr, &is_bitfield_ptr);
     if (!pair_type) {
       m_iter_ptr = nullptr;
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
     }
 
     uint64_t addr = m_iter_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
     m_iter_ptr = nullptr;
 
     if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
 
     auto ts = pair_type.GetTypeSystem();
     auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
     if (!ast_ctx)
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
 
     // Mimick layout of std::__hash_iterator::__node_ and read it in
     // from process memory.
@@ -490,14 +490,14 @@ SyntheticChildrenFrontEnd::CacheState lldb_private::formatters::
          {"__value_", pair_type}});
     std::optional<uint64_t> size = tree_node_type.GetByteSize(nullptr);
     if (!size)
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
     WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));
     ProcessSP process_sp(target_sp->GetProcessSP());
     Status error;
     process_sp->ReadMemory(addr, buffer_sp->GetBytes(),
                            buffer_sp->GetByteSize(), error);
     if (error.Fail())
-      return CacheState::Invalid;
+      return lldb::ChildCacheState::eDynamic;
     DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
                             process_sp->GetAddressByteSize());
     auto pair_sp = CreateValueObjectFromData(
@@ -506,7 +506,7 @@ SyntheticChildrenFrontEnd::CacheState lldb_private::formatters::
       m_pair_sp = pair_sp->GetChildAtIndex(2);
   }
 
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
@@ -601,23 +601,23 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
   return lldb::ValueObjectSP();
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   m_cntrl = nullptr;
 
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   TargetSP target_sp(valobj_sp->GetTargetSP());
   if (!target_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   lldb::ValueObjectSP cntrl_sp(valobj_sp->GetChildMemberWithName("__cntrl_"));
 
   m_cntrl = cntrl_sp.get(); // need to store the raw pointer to avoid a circular
                             // dependency
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 bool lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -691,15 +691,15 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::GetChildAtIndex(
   return lldb::ValueObjectSP();
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
   if (!ptr_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   // Retrieve the actual pointer and the deleter, and clone them to give them
   // user-friendly names.
@@ -711,7 +711,7 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (deleter_sp)
     m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
 
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::

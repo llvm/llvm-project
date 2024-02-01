@@ -30,7 +30,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  CacheState Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -53,13 +53,12 @@ LibStdcppTupleSyntheticFrontEnd::LibStdcppTupleSyntheticFrontEnd(
   Update();
 }
 
-SyntheticChildrenFrontEnd::CacheState
-LibStdcppTupleSyntheticFrontEnd::Update() {
+lldb::ChildCacheState LibStdcppTupleSyntheticFrontEnd::Update() {
   m_members.clear();
 
   ValueObjectSP valobj_backend_sp = m_backend.GetSP();
   if (!valobj_backend_sp)
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   ValueObjectSP next_child_sp = valobj_backend_sp->GetNonSyntheticValue();
   while (next_child_sp != nullptr) {
@@ -84,7 +83,7 @@ LibStdcppTupleSyntheticFrontEnd::Update() {
     }
   }
 
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 bool LibStdcppTupleSyntheticFrontEnd::MightHaveChildren() { return true; }

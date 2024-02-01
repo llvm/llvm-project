@@ -30,7 +30,7 @@ public:
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
 
-  CacheState Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override;
 
@@ -82,13 +82,13 @@ lldb::ValueObjectSP lldb_private::formatters::
                                       m_element_type);
 }
 
-SyntheticChildrenFrontEnd::CacheState
+lldb::ChildCacheState
 lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
   m_start = nullptr;
   m_num_elements = 0;
   m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
   if (!m_element_type.IsValid())
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
 
   if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
@@ -96,7 +96,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
     m_start = m_backend.GetChildMemberWithName("__begin_").get();
   }
 
-  return CacheState::Invalid;
+  return lldb::ChildCacheState::eDynamic;
 }
 
 bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::

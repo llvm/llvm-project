@@ -245,7 +245,7 @@ public:
     return child_sp;
   }
 
-  CacheState Update() override {
+  lldb::ChildCacheState Update() override {
     m_parent_format = m_backend.GetFormat();
     CompilerType parent_type(m_backend.GetCompilerType());
     CompilerType element_type;
@@ -258,7 +258,7 @@ public:
         ::CalculateNumChildren(element_type, num_elements, m_child_type)
             .value_or(0);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
-    return CacheState::Invalid;
+    return lldb::ChildCacheState::eDynamic;
   }
 
   bool MightHaveChildren() override { return true; }
