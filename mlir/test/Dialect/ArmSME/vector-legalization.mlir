@@ -302,3 +302,43 @@ func.func @non_constant_extract_from_vector_create_mask_non_constant(%index: ind
   %extract = vector.extract %mask[%index] : vector<[4]x[4]xi1> from vector<4x[4]x[4]xi1>
   return %extract : vector<[4]x[4]xi1>
 }
+
+// -----
+
+// CHECK-LABEL: @extract_from_arith_ext(
+// CHECK-SAME:                          %[[SRC:.*]]: vector<4x[8]xi8>
+// CHECK: %[[EXTRACT:.*]] = vector.extract %[[SRC]][0] : vector<[8]xi8> from vector<4x[8]xi8>
+// CHECK: %[[EXTEND:.*]] = arith.extsi %[[EXTRACT]] : vector<[8]xi8> to vector<[8]xi32>
+// CHECK: return %[[EXTEND]]
+func.func @extract_from_arith_ext(%src: vector<4x[8]xi8>) -> vector<[8]xi32> {
+  %0 = arith.extsi %src : vector<4x[8]xi8> to vector<4x[8]xi32>
+  %1 = vector.extract %0[0] : vector<[8]xi32> from vector<4x[8]xi32>
+  return %1 : vector<[8]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @non_constant_extract_from_arith_ext(
+// CHECK-SAME:                                       %[[SRC:[a-z0-9]+]]: vector<4x[8]xi8>,
+// CHECK-SAME:                                       %[[DIM:[a-z0-9]+]]: index
+// CHECK: %[[EXTRACT:.*]] = vector.extract %[[SRC]][%[[DIM]]] : vector<[8]xi8> from vector<4x[8]xi8>
+// CHECK: %[[EXTEND:.*]] = arith.extsi %[[EXTRACT]] : vector<[8]xi8> to vector<[8]xi32>
+// CHECK: return %[[EXTEND]]
+func.func @non_constant_extract_from_arith_ext(%src: vector<4x[8]xi8>, %dim: index) -> vector<[8]xi32> {
+  %0 = arith.extsi %src : vector<4x[8]xi8> to vector<4x[8]xi32>
+  %1 = vector.extract %0[%dim] : vector<[8]xi32> from vector<4x[8]xi32>
+  return %1 : vector<[8]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @scalable_extract_from_arith_ext(
+// CHECK-SAME:                                   %[[SRC:.*]]: vector<[8]xi8>
+// CHECK: %[[EXTRACT:.*]] = vector.scalable.extract %[[SRC]][0] : vector<[4]xi8> from vector<[8]xi8>
+// CHECK: %[[EXTEND:.*]] = arith.extsi %[[EXTRACT]] : vector<[4]xi8> to vector<[4]xi32>
+// CHECK: return %[[EXTEND]]
+func.func @scalable_extract_from_arith_ext(%src: vector<[8]xi8>) -> vector<[4]xi32> {
+  %0 = arith.extsi %src : vector<[8]xi8> to vector<[8]xi32>
+  %1 = vector.scalable.extract %0[0] : vector<[4]xi32> from vector<[8]xi32>
+  return %1 : vector<[4]xi32>
+}

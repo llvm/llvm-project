@@ -415,6 +415,105 @@ struct FoldExtractFromVectorOfSMELikeCreateMasks
   }
 };
 
+// Shuffles arith extend ops after vector.extract op.
+//
+// This transforms IR like:
+//   %0 = arith.extsi %src : vector<4x[8]xi8> to vector<4x[8]xi32>
+//   %1 = vector.extract %0[0] : vector<[8]xi32> from vector<4x[8]xi32>
+// Into:
+//   %0 = vector.extract %src[0] : vector<[8]xi8> from vector<4x[8]xi8>
+//   %1 = arith.extsi %0 : vector<[8]xi8> to vector<[8]xi32>
+//
+// This enables outer product fusion in the `-arm-sme-outer-product-fusion`
+// pass when the result is the input to an outer product.
+struct SwapVectorExtractOfArithExtend
+    : public OpRewritePattern<vector::ExtractOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType resultType = llvm::dyn_cast<VectorType>(extractOp.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "extracted type is not a vector type");
+
+    auto numScalableDims = llvm::count(resultType.getScalableDims(), true);
+    if (numScalableDims != 1)
+      return rewriter.notifyMatchFailure(
+          extractOp, "extracted type is not a 1-D scalable vector type");
+
+    auto *extendOp = extractOp.getVector().getDefiningOp();
+    if (!isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(
+            extendOp))
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "extract not from extend op");
+
+    auto loc = extractOp.getLoc();
+    StringAttr extendOpName = extendOp->getName().getIdentifier();
+    Value extendSource = extendOp->getOperand(0);
+
+    // Create new extract from source of extend.
+    Value newExtract = rewriter.create<vector::ExtractOp>(
+        loc, extendSource, extractOp.getMixedPosition());
+
+    // Extend new extract to original result type.
+    Operation *newExtend =
+        rewriter.create(loc, extendOpName, Value(newExtract), resultType);
+
+    rewriter.replaceOp(extractOp, newExtend->getResult(0));
+
+    return success();
+  }
+};
+
+// Shuffles arith extend ops after vector.scalable.extract op.
+//
+// This transforms IR like:
+//   %0 = arith.extsi %src : vector<[8]xi8> to vector<[8]xi32>
+//   %1 = vector.scalable.extract %0[0] : vector<[4]xi32> from vector<[8]xi32>
+// Into:
+//   %0 = vector.scalable.extract %src[0] : vector<[4]xi8> from vector<[8]xi8>
+//   %1 = arith.extsi %0 : vector<[4]xi8> to vector<[4]xi32>
+//
+// This enables outer product fusion in the `-arm-sme-outer-product-fusion`
+// pass when the result is the input to an outer product.
+struct SwapVectorScalableExtractOfArithExtend
+    : public OpRewritePattern<vector::ScalableExtractOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ScalableExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto *extendOp = extractOp.getSource().getDefiningOp();
+    if (!isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(
+            extendOp))
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "extract not from extend op");
+
+    auto loc = extractOp.getLoc();
+    VectorType resultType = extractOp.getResultVectorType();
+
+    Value extendSource = extendOp->getOperand(0);
+    StringAttr extendOpName = extendOp->getName().getIdentifier();
+    VectorType extendSourceVectorType =
+        cast<VectorType>(extendSource.getType());
+
+    // Create new extract from source of extend.
+    VectorType extractResultVectorType =
+        VectorType::Builder(resultType)
+            .setElementType(extendSourceVectorType.getElementType());
+    Value newExtract = rewriter.create<vector::ScalableExtractOp>(
+        loc, extractResultVectorType, extendSource, extractOp.getPos());
+
+    // Extend new extract to original result type.
+    Operation *newExtend =
+        rewriter.create(loc, extendOpName, Value(newExtract), resultType);
+
+    rewriter.replaceOp(extractOp, newExtend->getResult(0));
+
+    return success();
+  }
+};
+
 struct VectorLegalizationPass
     : public arm_sme::impl::VectorLegalizationBase<VectorLegalizationPass> {
   void runOnOperation() override {
@@ -434,7 +533,10 @@ struct VectorLegalizationPass
           return success();
         });
 
-    patterns.add<FoldExtractFromVectorOfSMELikeCreateMasks>(context);
+    patterns.add<FoldExtractFromVectorOfSMELikeCreateMasks,
+                 SwapVectorExtractOfArithExtend,
+                 SwapVectorScalableExtractOfArithExtend>(context);
+
     // Note: High benefit to ensure masked outer products are lowered first.
     patterns.add<LegalizeMaskedVectorOuterProductOpsByDecomposition>(
         converter, context, 1024);
