@@ -106,7 +106,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // Though nothing is known about them, they would only alias with targets or
   // pointers
   bool directSourceToNonTargetOrPointer = false;
-  if (lhsSrc.u != rhsSrc.u) {
+  if (lhsSrc.u != rhsSrc.u || lhsSrc.kind != rhsSrc.kind) {
     if ((lhsSrc.kind == SourceKind::Direct && !rhsSrc.isTargetOrPointer()) ||
         (rhsSrc.kind == SourceKind::Direct && !lhsSrc.isTargetOrPointer()))
       directSourceToNonTargetOrPointer = true;
