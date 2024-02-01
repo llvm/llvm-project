@@ -17,7 +17,18 @@ add_libc_test(
 
 # stdbit_test only tests our generated stdbit.h, which is not generated in
 # overlay mode.
-if(LLVM_LIBC_FULL_BUILD AND libc.include.stdbit IN_LIST TARGET_PUBLIC_HEADERS)
+message(STATUS "TARGET_PUBLIC_HEADERS is ${TARGET_PUBLIC_HEADERS}")
+if(LLVM_LIBC_FULL_BUILD AND libc.include.stdbit IN_LIST TARGET_PUBLIC_HEADERS
+    AND libc.src.stdbit.stdc_leading_zeros_uc IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_zeros_us IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_zeros_ui IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_zeros_ul IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_zeros_ull IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_ones_uc IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_ones_us IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_ones_ui IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_ones_ul IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS
+    AND libc.src.stdbit.stdc_leading_ones_ull IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
   add_libc_test(
     stdbit_test
     SUITE
