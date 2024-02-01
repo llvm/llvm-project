@@ -95,8 +95,6 @@ public:
 #endif
 
 public:
-  enum class TargetType { Span, Array };
-
   UnsafeBufferUsageHandler() = default;
   virtual ~UnsafeBufferUsageHandler() = default;
 
